@@ -74,6 +74,21 @@ of a million rows that keeps a 120 Hz display at full rate.
 | A size limit per session, oldest flows dropped first | Beta | Free |
 | Compare two flows side by side | 1.x | Pro |
 
+## Layout
+
+Every panel can be moved, resized or hidden, and the window remembers it.
+Dragging is never the only way: each move is also in the View menu and on the
+keyboard.
+
+| Feature | Milestone | Plan |
+|---|---|---|
+| The inspector beside the list or below it: drag it by its handle, use the toolbar's layout buttons, or a shortcut | Beta | Free |
+| Resize panels by dragging the dividers; hide the sidebar or the inspector | Beta | Free |
+| Request and response as tabs, side by side, or one above the other | Beta | Free |
+| The layout is kept per window and restored at the next start | Beta | Free |
+| The inspector in a window of its own, for a second display | 1.x | Free |
+| Named layouts to switch between (for example "Phone" and "API") | 1.x | Free |
+
 ## The inspector
 
 | Feature | Milestone | Plan |
