@@ -18,6 +18,7 @@ use tracewing_proxy::{
     capture::{CHECK_HOST, Check},
     rules::HostRules,
     run_proxy,
+    traffic_rules::{Action, TrafficRule, TrafficRules},
 };
 use tracewing_store::{
     search,
@@ -29,6 +30,7 @@ struct Harness {
     ws_port: u16,
     recording: Arc<AtomicBool>,
     rules: Arc<RwLock<HostRules>>,
+    traffic_rules: Arc<RwLock<TrafficRules>>,
     check: Arc<Check>,
     dir: PathBuf,
     proxy_url: String,
@@ -84,6 +86,7 @@ impl Harness {
         let rules = Arc::new(RwLock::new(HostRules {
             no_decrypt: Vec::new(),
         }));
+        let traffic_rules = Arc::new(RwLock::new(TrafficRules::default()));
         let check = Arc::new(Check::default());
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
@@ -98,6 +101,7 @@ impl Harness {
                 shared: Default::default(),
                 recording: Arc::clone(&recording),
                 rules: Arc::clone(&rules),
+                traffic_rules: Arc::clone(&traffic_rules),
                 check: Arc::clone(&check),
                 leave_index: false,
                 stop_limit: Duration::from_secs(1),
@@ -114,6 +118,7 @@ impl Harness {
             ws_port,
             recording,
             rules,
+            traffic_rules,
             check,
             dir,
             proxy_url,
@@ -1159,5 +1164,163 @@ async fn websocket_bench() {
         .unwrap();
     println!("{kept} messages kept, {summary:?}");
     assert!(kept as u64 >= count * 4, "both ways, twice");
+    clean_up(conn, dir);
+}
+
+fn rule(url: &str, action: Action) -> TrafficRule {
+    TrafficRule {
+        name: format!("rule for {url}"),
+        enabled: true,
+        url: url.to_owned(),
+        method: String::new(),
+        action,
+    }
+}
+
+/// Every action, through the real proxy, and each flow saying which rule touched it.
+#[tokio::test(flavor = "multi_thread")]
+async fn rules_change_traffic_and_say_so() {
+    let h = Harness::start("traffic-rules").await;
+    let port = h.origin.rsplit(':').next().unwrap().to_owned();
+    let folder = h.dir.join("mock");
+    std::fs::create_dir_all(folder.join("v1")).unwrap();
+    std::fs::write(folder.join("v1/me.json"), r#"{"name":"mocked"}"#).unwrap();
+    std::fs::write(h.dir.join("secret"), "not this").unwrap();
+    *h.traffic_rules.write().unwrap() = TrafficRules {
+        rules: vec![
+            rule("blocked.test", Action::Block { status: 451 }),
+            rule(
+                "mock.test/*",
+                Action::MapLocal {
+                    path: folder.clone(),
+                },
+            ),
+            rule(
+                "elsewhere.test",
+                Action::MapRemote {
+                    to: h.origin.clone(),
+                },
+            ),
+            rule(
+                &format!("localhost:{port}/json?size=33*"),
+                Action::SetResponseHeader {
+                    header: "x-from-rule".to_owned(),
+                    value: "yes".to_owned(),
+                },
+            ),
+        ],
+    };
+    let client = h.client(false);
+
+    let res = client.get("https://blocked.test/").send().await.unwrap();
+    assert_eq!(res.status(), 451, "with no server anywhere");
+
+    let res = client
+        .get("https://mock.test/v1/me.json?x=1")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.headers()["content-type"], "application/json");
+    assert_eq!(res.text().await.unwrap(), r#"{"name":"mocked"}"#);
+
+    let res = client
+        .get("https://mock.test/../secret")
+        .send()
+        .await
+        .unwrap();
+    assert_ne!(
+        res.text().await.unwrap(),
+        "not this",
+        "no way out of the folder"
+    );
+    let res = client
+        .get("https://mock.test/v1/%2e%2e/%2e%2e/secret")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 404);
+
+    let res = client
+        .get("https://elsewhere.test/json?size=40")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.bytes().await.unwrap().len(), 40, "the path went along");
+
+    let res = client
+        .get(format!("{}/json?size=33", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.headers()["x-from-rule"], "yes");
+    res.bytes().await.unwrap();
+
+    // Off applies at once, and the plain request is not touched.
+    h.traffic_rules.write().unwrap().rules.clear();
+    let res = client
+        .get(format!("{}/json?size=34", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert!(res.headers().get("x-from-rule").is_none());
+    res.bytes().await.unwrap();
+
+    let (_, conn, dir) = h.finish(7).await;
+    let rows: Vec<(String, Option<i64>, Option<String>)> = conn
+        .prepare("SELECT host, status, rule FROM flows ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(rows.len(), 7, "{rows:?}");
+    assert_eq!(
+        rows[0],
+        (
+            "blocked.test".to_owned(),
+            Some(451),
+            Some("rule for blocked.test".to_owned())
+        )
+    );
+    assert_eq!(rows[1].0, "mock.test", "the URL as the client asked");
+    let server: Option<String> = conn
+        .query_row("SELECT server_version FROM flows WHERE id = 2", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(server, None, "no server was asked");
+    assert_eq!(rows[4].0, "elsewhere.test", "the URL as the client asked");
+    assert_eq!(rows[4].2.as_deref(), Some("rule for elsewhere.test"));
+    assert!(rows[5].2.is_some());
+    assert_eq!(rows[6].2, None);
+    assert_eq!(
+        response_of(&conn, &dir, 2).unwrap(),
+        br#"{"name":"mocked"}"#,
+        "what the rule answered is recorded too"
+    );
+    clean_up(conn, dir);
+}
+
+/// Paused, rules still apply: they are about the app under test, not the recording.
+#[tokio::test(flavor = "multi_thread")]
+async fn rules_apply_while_paused() {
+    let h = Harness::start("rules-paused").await;
+    h.traffic_rules
+        .write()
+        .unwrap()
+        .rules
+        .push(rule("blocked.test", Action::Block { status: 451 }));
+    h.recording.store(false, Ordering::Relaxed);
+    let res = h
+        .client(false)
+        .get("https://blocked.test/")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 451);
+    let (summary, conn, dir) = h.finish(0).await;
+    assert_eq!(summary.written, 0);
     clean_up(conn, dir);
 }

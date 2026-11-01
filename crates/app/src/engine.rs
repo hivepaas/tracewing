@@ -11,7 +11,9 @@ use std::{
     thread::JoinHandle,
 };
 use tokio::sync::oneshot;
-use tracewing_proxy::{ProxyOptions, capture::Check, rules::HostRules, run_proxy};
+use tracewing_proxy::{
+    ProxyOptions, capture::Check, rules::HostRules, run_proxy, traffic_rules::TrafficRules,
+};
 use tracewing_store::{
     session::{self, Shared},
     settings::StorageSettings,
@@ -24,6 +26,7 @@ pub struct EngineOptions {
     pub data_dir: PathBuf,
     pub settings: StorageSettings,
     pub rules: HostRules,
+    pub traffic_rules: TrafficRules,
     pub ports: std::ops::Range<u16>,
     /// Extra roots to trust upstream. Only tests have any.
     pub extra_roots: Vec<PathBuf>,
@@ -36,6 +39,7 @@ pub struct Engine {
     pub shared: Arc<Shared>,
     pub recording: Arc<AtomicBool>,
     pub rules: Arc<RwLock<HostRules>>,
+    pub traffic_rules: Arc<RwLock<TrafficRules>>,
     pub check: Arc<Check>,
     /// Why the proxy stopped, if it did by itself.
     pub failure: Arc<Mutex<Option<String>>>,
@@ -55,6 +59,7 @@ impl Engine {
         let failure = Arc::new(Mutex::new(None));
         let check = Arc::new(Check::default());
         let rules = Arc::new(RwLock::new(opts.rules));
+        let traffic_rules = Arc::new(RwLock::new(opts.traffic_rules));
         let (stop, stopped) = oneshot::channel::<()>();
         let proxy = ProxyOptions {
             listener: None,
@@ -68,6 +73,7 @@ impl Engine {
             shared: Arc::clone(&shared),
             recording: Arc::clone(&recording),
             rules: Arc::clone(&rules),
+            traffic_rules: Arc::clone(&traffic_rules),
             check: Arc::clone(&check),
             leave_index: true,
             stop_limit: std::time::Duration::from_secs(2),
@@ -99,6 +105,7 @@ impl Engine {
             shared,
             recording,
             rules,
+            traffic_rules,
             check,
             failure,
             stop: Some(stop),

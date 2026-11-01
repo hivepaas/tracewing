@@ -14,6 +14,7 @@ pub mod inspector;
 pub mod layout;
 pub mod messages;
 pub mod placement;
+pub mod rules_page;
 pub mod sessions_page;
 pub mod settings_page;
 pub mod setup_page;
@@ -79,6 +80,7 @@ const ICONS: &[(&str, &[u8])] = icons![
     "appearance-system",
     "setup",
     "sessions",
+    "rules",
 ];
 
 pub struct Assets;

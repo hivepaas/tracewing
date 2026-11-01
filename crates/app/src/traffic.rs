@@ -4,7 +4,6 @@
 //! that can take long is done on a worker thread, so a flood or a million rows
 //! never holds up a frame.
 
-use crate::sessions_page::{SessionsPage, when_text};
 use crate::{
     chrome,
     colors::{self, colors, with_alpha},
@@ -18,6 +17,10 @@ use crate::{
     settings_page::SettingsPage,
     system::{CaState, ProxySwitch, SystemState},
     widgets::{eyebrow, icon, status_colors},
+};
+use crate::{
+    rules_page::RulesPage,
+    sessions_page::{SessionsPage, when_text},
 };
 use gpui::{
     Bounds, ClickEvent, Context, Div, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent,
@@ -145,6 +148,7 @@ pub enum Drag {
 pub enum Screen {
     Setup,
     Traffic,
+    Rules,
     Sessions,
     Settings,
 }
@@ -165,6 +169,7 @@ pub struct Traffic {
     /// When it started, for a session with no name.
     viewing_started: String,
     pub sessions_page: SessionsPage,
+    pub(crate) rules_page: Option<RulesPage>,
     /// The system's own appearance is dark.
     system_dark: bool,
     pub(crate) data_dir: PathBuf,
@@ -282,6 +287,7 @@ impl Traffic {
             catching_up: None,
             viewing_started: String::new(),
             sessions_page: SessionsPage::default(),
+            rules_page: None,
             system_dark,
             data_dir: data_dir.to_owned(),
             screen: Screen::Traffic,
@@ -1515,6 +1521,7 @@ impl Traffic {
             )
             .child(item("rail-setup", "Set up", "setup", Screen::Setup))
             .child(item("rail-traffic", "Traffic", "traffic", Screen::Traffic))
+            .child(item("rail-rules", "Rules", "rules", Screen::Rules))
             .child(item(
                 "rail-sessions",
                 "Sessions",
@@ -1637,6 +1644,8 @@ impl Render for Traffic {
         let banner = self
             .render_viewing_banner(cx)
             .map(IntoElement::into_any_element);
+        let rules =
+            (self.screen == Screen::Rules).then(|| self.render_rules(cx).into_any_element());
         let settings = (self.screen == Screen::Settings)
             .then(|| self.render_settings(window, cx).into_any_element());
         let content_bounds = Rc::clone(&self.content);
@@ -1714,6 +1723,7 @@ impl Render for Traffic {
                     .pb(px(10.))
                     .pl(px(4.))
                     .when_some(setup, |d, setup| d.child(setup))
+                    .when_some(rules, |d, rules| d.child(rules))
                     .when_some(sessions, |d, sessions| d.child(sessions))
                     .when_some(settings, |d, settings| d.child(settings))
                     .when(self.screen == Screen::Traffic, |d| {
@@ -1871,8 +1881,8 @@ fn render_row(row: Row, selected: bool) -> Stateful<Div> {
                         .child(div().min_w_0().truncate().child(row.path))
                         .children(row.note.map(|note| {
                             div()
-                                .flex_shrink_0()
-                                .max_w(px(220.))
+                                .min_w_0()
+                                .max_w(gpui::relative(0.6))
                                 .truncate()
                                 .pl(px(10.))
                                 .text_color(rgb(c.muted))

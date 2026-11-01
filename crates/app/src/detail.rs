@@ -42,6 +42,8 @@ pub struct Detail {
     pub kind: String,
     /// A stream still going.
     pub open: bool,
+    /// The rules that changed it.
+    pub rule: Option<String>,
     pub status: Option<u16>,
     pub client_version: String,
     pub server_version: Option<String>,
@@ -59,7 +61,7 @@ pub struct Detail {
 impl Detail {
     pub fn load(flows: &Connection, session_dir: &Path, id: i64) -> Result<Self> {
         let columns = format!(
-            "open, kind, scheme, host, path, method, status, client_version, server_version, client,
+            "rule, open, kind, scheme, host, path, method, status, client_version, server_version, client,
              content_type, ttfb_us, duration_us, error,
              req_bytes, req_truncated, req_shed, req_spool_lost, {},
              resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}",
@@ -70,10 +72,10 @@ impl Detail {
             &format!("SELECT {columns} FROM flows WHERE id = ?1"),
             params![id],
             |r| {
-                let kind: String = r.get(1)?;
-                let scheme: String = r.get(2)?;
-                let host: String = r.get(3)?;
-                let path: String = r.get(4)?;
+                let kind: String = r.get(2)?;
+                let scheme: String = r.get(3)?;
+                let host: String = r.get(4)?;
+                let path: String = r.get(5)?;
                 let facts = |first: usize| -> rusqlite::Result<BodyFacts> {
                     Ok(BodyFacts {
                         bytes: r.get::<_, i64>(first)? as u64,
@@ -87,19 +89,20 @@ impl Detail {
                     id,
                     url: format!("{}://{host}{path}", shown_scheme(&kind, &scheme)),
                     host,
-                    open: r.get(0)?,
+                    rule: r.get(0)?,
+                    open: r.get(1)?,
                     kind,
-                    method: r.get(5)?,
-                    status: r.get(6)?,
-                    client_version: r.get(7)?,
-                    server_version: r.get(8)?,
-                    client: r.get(9)?,
-                    content_type: r.get(10)?,
-                    ttfb_us: r.get(11)?,
-                    duration_us: r.get(12)?,
-                    error: r.get(13)?,
-                    request: facts(14)?,
-                    response: facts(24)?,
+                    method: r.get(6)?,
+                    status: r.get(7)?,
+                    client_version: r.get(8)?,
+                    server_version: r.get(9)?,
+                    client: r.get(10)?,
+                    content_type: r.get(11)?,
+                    ttfb_us: r.get(12)?,
+                    duration_us: r.get(13)?,
+                    error: r.get(14)?,
+                    request: facts(15)?,
+                    response: facts(25)?,
                     headers: None,
                 })
             },
@@ -179,6 +182,7 @@ mod tests {
             host: "a.dev".into(),
             kind: "http".into(),
             open: false,
+            rule: None,
             status: Some(200),
             client_version: client.into(),
             server_version: server.map(str::to_owned),

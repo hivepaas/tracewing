@@ -10,7 +10,9 @@ use tracewing::{
     placement,
     traffic::Traffic,
 };
-use tracewing_proxy::{crypto_provider, default_data_dir, rules::HostRules};
+use tracewing_proxy::{
+    crypto_provider, default_data_dir, rules::HostRules, traffic_rules::TrafficRules,
+};
 use tracewing_store::settings::StorageSettings;
 use tracewing_system as system;
 
@@ -56,11 +58,17 @@ fn main() -> Result<()> {
         Ok(rules) => (rules, None),
         Err(e) => (HostRules::default(), Some(format!("{e:#}"))),
     };
-    let settings_problem = settings_problem.or(rules_problem);
+    let (traffic_rules, traffic_problem) =
+        match TrafficRules::load(&data_dir.join("traffic-rules.toml")) {
+            Ok(rules) => (rules, None),
+            Err(e) => (TrafficRules::default(), Some(format!("{e:#}"))),
+        };
+    let settings_problem = settings_problem.or(rules_problem).or(traffic_problem);
     let engine = Engine::start(EngineOptions {
         data_dir: data_dir.clone(),
         settings,
         rules,
+        traffic_rules,
         ports: PORTS,
         extra_roots: Vec::new(),
     })?;

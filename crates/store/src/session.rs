@@ -105,7 +105,7 @@ pub struct SessionInfo {
 }
 
 /// Rows of the format this version writes.
-const VERSION: i64 = 2;
+const VERSION: i64 = 3;
 
 fn dir_bytes(dir: &Path) -> u64 {
     let Ok(entries) = fs::read_dir(dir) else {
@@ -638,7 +638,7 @@ mod tests {
         create(&dir).unwrap();
         let db = Connection::open(flows_db(&dir)).unwrap();
         db.execute_batch(
-            "PRAGMA user_version = 2; CREATE TABLE flows (id INTEGER PRIMARY KEY, started_us INTEGER);",
+            "PRAGMA user_version = 3; CREATE TABLE flows (id INTEGER PRIMARY KEY, started_us INTEGER);",
         )
         .unwrap();
         for id in 1..=flows {

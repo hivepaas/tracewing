@@ -93,6 +93,7 @@ fn streams_show_as_they_come() {
             ..StorageSettings::default()
         },
         rules: Default::default(),
+        traffic_rules: Default::default(),
         ports: 19_590..19_600,
         extra_roots: vec![origin_ca, ws_ca],
     })

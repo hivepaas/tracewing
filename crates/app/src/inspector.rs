@@ -272,6 +272,7 @@ impl Traffic {
             .unwrap_or_else(|e| e.into_inner())
             .leaves_alone(&detail.host);
         let host = detail.host.clone();
+        let url = detail.url.clone();
         let text = if left_alone {
             "Not decrypted. New connections to this host go through unread."
         } else {
@@ -290,6 +291,25 @@ impl Traffic {
                     .text_size(px(12.))
                     .text_color(rgb(c.muted))
                     .child(text),
+            )
+            .child(
+                div()
+                    .id("make-rule")
+                    .flex_shrink_0()
+                    .h(px(28.))
+                    .px(px(10.))
+                    .rounded(px(14.))
+                    .flex()
+                    .items_center()
+                    .cursor_pointer()
+                    .bg(rgb(c.chip))
+                    .text_color(rgb(c.on_chip))
+                    .text_size(px(12.))
+                    .font_weight(FontWeight::BOLD)
+                    .child("Make a rule")
+                    .on_click(cx.listener(move |view, _, _, cx| {
+                        view.start_rule_for(&url, cx);
+                    })),
             )
             .child(
                 div()
@@ -540,6 +560,12 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
         .flex_shrink_0()
         .gap(px(6.))
         .child(chip(status_text(detail.status), ground, ink))
+        .children(
+            detail
+                .rule
+                .clone()
+                .map(|rule| chip(format!("Rule: {rule}"), c.tonal, c.on_tonal)),
+        )
         .child(plain(detail.protocols()))
         .children(if detail.open {
             Some(chip("Open", c.ok_ground, c.ok))

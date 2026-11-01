@@ -116,6 +116,7 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             ..StorageSettings::default()
         },
         rules: Default::default(),
+        traffic_rules: Default::default(),
         ports: 19_390..19_400,
         extra_roots: Vec::new(),
     })
