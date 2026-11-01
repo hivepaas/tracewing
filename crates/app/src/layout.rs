@@ -16,6 +16,28 @@ pub enum Place {
     Below,
 }
 
+/// How the window was left.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WindowMode {
+    #[default]
+    Windowed,
+    Maximized,
+    Fullscreen,
+}
+
+/// Where the window was when last seen, in logical pixels. For a maximised or
+/// fullscreen window, the bounds it returns to.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct WindowState {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+    #[serde(default)]
+    pub mode: WindowMode,
+}
+
 /// The look the window wears.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -57,6 +79,8 @@ pub struct Layout {
     pub inspector_w: f32,
     /// Below it.
     pub inspector_h: f32,
+    /// `None` until the window has been seen once.
+    pub window: Option<WindowState>,
 }
 
 impl Default for Layout {
@@ -69,6 +93,7 @@ impl Default for Layout {
             sidebar_w: 220.,
             inspector_w: 460.,
             inspector_h: 380.,
+            window: None,
         }
     }
 }
@@ -118,6 +143,13 @@ mod tests {
             place: Place::Below,
             sidebar_shown: false,
             inspector_h: 300.,
+            window: Some(WindowState {
+                x: 10.,
+                y: 20.,
+                width: 1000.,
+                height: 700.,
+                mode: WindowMode::Maximized,
+            }),
             ..Layout::default()
         };
         layout.save(&path);

@@ -13,6 +13,7 @@ use crate::{
     input::{Changed, TextInput},
     inspector::InspectorState,
     layout::{Appearance, INSPECTOR_MIN, LIST_MIN, Layout, Place, SIDEBAR_MAX, SIDEBAR_MIN},
+    placement,
     settings_page::SettingsPage,
     system::{CaState, ProxySwitch, SystemState},
     widgets::{eyebrow, icon, status_colors},
@@ -45,6 +46,9 @@ const WORK_SHARE: u32 = 10;
 const WORK_EVERY: Duration = Duration::from_secs(1);
 const HOSTS_SHOWN: i64 = 500;
 const BAR_W: f32 = 10.;
+/// How long after the last change of the window's size to write it down: a drag
+/// changes it many times a second.
+const SAVE_BOUNDS: Duration = Duration::from_millis(400);
 const THUMB_MIN: f32 = 28.;
 
 /// What the worker thread does: anything that may read a large part of a session.
@@ -191,6 +195,7 @@ pub struct Traffic {
     last_count: usize,
     rows_missing: bool,
     places_asked: usize,
+    bounds_change: u64,
 }
 
 impl Traffic {
@@ -224,7 +229,11 @@ impl Traffic {
             }
         })
         .detach();
+        cx.observe_window_bounds(window, Self::bounds_changed)
+            .detach();
+        cx.defer_in(window, Self::bounds_changed);
         cx.on_app_quit(|this, _| {
+            this.save_layout();
             this.release_system_proxy();
             this.engine.stop();
             async {}
@@ -289,6 +298,7 @@ impl Traffic {
             last_count: 0,
             rows_missing: false,
             places_asked: 0,
+            bounds_change: 0,
         }
     }
 
@@ -575,6 +585,23 @@ impl Traffic {
         self.layout.inspector_shown = !self.layout.inspector_shown;
         self.save_layout();
         cx.notify();
+    }
+
+    /// Remembers the window's size and place for the next start: saved shortly after
+    /// they change, and when the app quits.
+    fn bounds_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.layout.window = Some(placement::state(window.window_bounds()));
+        self.bounds_change += 1;
+        let change = self.bounds_change;
+        cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(SAVE_BOUNDS).await;
+            let _ = this.update(cx, |this, _| {
+                if this.bounds_change == change {
+                    this.save_layout();
+                }
+            });
+        })
+        .detach();
     }
 
     fn save_layout(&self) {
