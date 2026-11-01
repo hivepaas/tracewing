@@ -14,8 +14,9 @@
 //! to maximise, the window menu and the Snap Layouts flyout over the maximise
 //! button all work as in native apps.
 //!
-//! On Linux the buttons sit where the desktop lays them out (GNOME's
-//! `button-layout`).
+//! Beside the window's buttons, on their inner side, a switch goes round the
+//! light look, the dark one and the system's. On Linux the buttons sit where the
+//! desktop lays them out (GNOME's `button-layout`).
 //!
 //! Resizing works as in GTK apps: an invisible margin (the client inset) runs
 //! around the visible window, and pressing there resizes. Near a corner a longer
@@ -30,6 +31,8 @@ use gpui::{
 };
 
 use crate::colors::colors;
+use crate::layout::Appearance;
+use crate::widgets::tip;
 
 /// The title bar: as tall as GNOME's own on Linux; on macOS and Windows a
 /// little more than the system's own.
@@ -115,6 +118,25 @@ const GNOME_LAYOUT: WindowButtonLayout = WindowButtonLayout {
     ],
 };
 
+/// An end of the title bar.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum End {
+    Left,
+    Right,
+}
+
+/// The end the appearance switch takes on Linux: the one the window's buttons are
+/// at, beside them on their inner side; the right where they are at both, or at
+/// neither.
+fn switch_end(layout: &WindowButtonLayout) -> End {
+    let has = |side: &[Option<WindowButton>; 3]| side.iter().any(Option::is_some);
+    if has(&layout.left) && !has(&layout.right) {
+        End::Left
+    } else {
+        End::Right
+    }
+}
+
 /// A round button with a symbolic icon, as GNOME draws the window's.
 fn gnome_button(b: WindowButton) -> Stateful<Div> {
     let (icon, act): (&str, fn(&mut Window)) = match b {
@@ -139,6 +161,46 @@ fn gnome_button(b: WindowButton) -> Stateful<Div> {
                 .size(px(14.))
                 .text_color(rgb(colors().text)),
         )
+}
+
+/// The title bar's switch between the light look, the dark one and the system's:
+/// it shows the one in use, and a click takes the next. Drawn as the window's
+/// buttons beside it are; it takes the press itself, so the bar under it neither
+/// moves the window nor, on Windows, counts it its own.
+pub fn appearance_switch(now: Appearance) -> Stateful<Div> {
+    let c = colors();
+    let icon = match now {
+        Appearance::Light => "icons/appearance-light.svg",
+        Appearance::Dark => "icons/appearance-dark.svg",
+        Appearance::System => "icons/appearance-system.svg",
+    };
+    let said = format!(
+        "Appearance: {}. Click for {}.",
+        now.name(),
+        now.next().name()
+    );
+    div()
+        .id("appearance")
+        .flex()
+        .flex_shrink_0()
+        .items_center()
+        .justify_center()
+        .occlude()
+        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .tooltip(tip(said))
+        .map(|d| {
+            if cfg!(target_os = "windows") {
+                d.w(px(CAPTION_W)).h_full().hover(|s| s.bg(rgb(c.hover)))
+            } else if cfg!(target_os = "macos") {
+                d.size(px(26.)).rounded_full().hover(|s| s.bg(rgb(c.hover)))
+            } else {
+                d.size(px(24.))
+                    .rounded_full()
+                    .bg(rgb(c.button))
+                    .hover(|s| s.bg(rgb(c.button_hover)))
+            }
+        })
+        .child(svg().path(icon).size(px(14.)).text_color(rgb(c.text)))
 }
 
 /// Flat full-height buttons, as Windows draws them. They do nothing on a
@@ -190,8 +252,15 @@ fn windows_buttons(window: &Window) -> Div {
 }
 
 /// The window frame around `content`, with a title bar in `bg` above it where
-/// the app draws one: the window's name and buttons.
-pub fn window_chrome(content: Div, bg: Hsla, window: &mut Window, cx: &App) -> Div {
+/// the app draws one: the window's name and buttons, and beside them the
+/// appearance `switch` ([`appearance_switch`]).
+pub fn window_chrome(
+    content: Div,
+    bg: Hsla,
+    switch: Stateful<Div>,
+    window: &mut Window,
+    cx: &App,
+) -> Div {
     let t = tiling(window);
     let client_side = matches!(window.window_decorations(), Decorations::Client { .. });
     if client_side {
@@ -202,36 +271,40 @@ pub fn window_chrome(content: Div, bg: Hsla, window: &mut Window, cx: &App) -> D
     let fullscreen = window.is_fullscreen();
     let (mac, windows) = (cfg!(target_os = "macos"), cfg!(target_os = "windows"));
     let row = || div().flex().items_center().h_full();
+    let mut switch = Some(switch);
     let (left, right) = if windows {
         // Full screen has no caption: Windows ignores the control areas then.
         let buttons = (!fullscreen).then(|| windows_buttons(window));
-        (row(), row().pl(px(6.)).children(buttons))
+        (
+            row(),
+            row().pl(px(6.)).children(switch.take()).children(buttons),
+        )
     } else if mac {
         // The system draws the traffic lights over the left end.
-        (
-            row().pl(TRAFFIC_LIGHTS.x + px(TRAFFIC_LIGHTS_W + 10.)),
-            row(),
-        )
+        let after = TRAFFIC_LIGHTS.x + px(TRAFFIC_LIGHTS_W + 10.);
+        (row().pl(after).children(switch.take()), row())
     } else {
         let layout = cx.button_layout().unwrap_or(GNOME_LAYOUT);
+        let end = switch_end(&layout);
         let buttons = |side: &[Option<WindowButton>; 3]| {
             side.iter()
                 .flatten()
                 .map(|&b| gnome_button(b))
                 .collect::<Vec<_>>()
         };
-        (
-            row()
-                .gap(px(10.))
-                .pl(px(10.))
-                .pr(px(6.))
-                .children(buttons(&layout.left)),
-            row()
-                .gap(px(10.))
-                .pl(px(6.))
-                .pr(px(10.))
-                .children(buttons(&layout.right)),
-        )
+        let left = row()
+            .gap(px(10.))
+            .pl(px(10.))
+            .pr(px(6.))
+            .children(buttons(&layout.left))
+            .children(switch.take_if(|_| end == End::Left));
+        let right = row()
+            .gap(px(10.))
+            .pl(px(6.))
+            .pr(px(10.))
+            .children(switch.take_if(|_| end == End::Right))
+            .children(buttons(&layout.right));
+        (left, right)
     };
     let titlebar = draws_title_bar(window).then(|| {
         div()
@@ -404,6 +477,18 @@ mod tests {
         assert_eq!(edge(5., 5., t), Some(ResizeEdge::TopLeft));
         assert_eq!(edge(W / 2., H - 4., t), Some(ResizeEdge::Bottom));
         assert_eq!(edge(4., H / 2., t), Some(ResizeEdge::Left));
+    }
+
+    #[test]
+    fn the_switch_sits_beside_the_window_s_buttons() {
+        use WindowButton::*;
+        let layout = |left: [Option<WindowButton>; 3], right| WindowButtonLayout { left, right };
+        assert_eq!(switch_end(&GNOME_LAYOUT), End::Right);
+        let all_left = layout([Some(Close), Some(Minimize), Some(Maximize)], [None; 3]);
+        assert_eq!(switch_end(&all_left), End::Left);
+        let split = layout([Some(Close), None, None], [Some(Minimize), None, None]);
+        assert_eq!(switch_end(&split), End::Right);
+        assert_eq!(switch_end(&layout([None; 3], [None; 3])), End::Right);
     }
 
     #[test]

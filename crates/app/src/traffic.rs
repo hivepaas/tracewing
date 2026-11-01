@@ -6,13 +6,13 @@
 
 use crate::{
     chrome,
-    colors::{colors, with_alpha},
+    colors::{self, colors, with_alpha},
     engine::Engine,
     filter::{Filter, Kind},
     flows::{Flows, Row, group_digits},
     input::{Changed, TextInput},
     inspector::InspectorState,
-    layout::{INSPECTOR_MIN, LIST_MIN, Layout, Place, SIDEBAR_MAX, SIDEBAR_MIN},
+    layout::{Appearance, INSPECTOR_MIN, LIST_MIN, Layout, Place, SIDEBAR_MAX, SIDEBAR_MIN},
     settings_page::SettingsPage,
     system::{CaState, ProxySwitch, SystemState},
     widgets::{eyebrow, icon, status_colors},
@@ -21,7 +21,7 @@ use gpui::{
     Bounds, ClickEvent, Context, Div, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent,
     MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, Render,
     ScrollStrategy, ScrollWheelEvent, SharedString, Stateful, UniformListScrollHandle, Window,
-    canvas, div, point, prelude::*, px, rgb, rgba, uniform_list,
+    WindowAppearance, canvas, div, point, prelude::*, px, rgb, rgba, uniform_list,
 };
 use rusqlite::{Connection, OpenFlags};
 use std::{
@@ -141,8 +141,17 @@ pub enum Screen {
     Settings,
 }
 
+fn looks_dark(window: &Window) -> bool {
+    matches!(
+        window.appearance(),
+        WindowAppearance::Dark | WindowAppearance::VibrantDark
+    )
+}
+
 pub struct Traffic {
     pub(crate) engine: Engine,
+    /// The system's own appearance is dark.
+    system_dark: bool,
     pub(crate) data_dir: PathBuf,
     pub screen: Screen,
     pub system: SystemState,
@@ -227,14 +236,30 @@ impl Traffic {
         let layout_path = data_dir.join("layout.toml");
         let now = Instant::now();
         cx.defer_in(window, |this, _, cx| this.start_ca_check(cx));
+        // The desktop may move the window's buttons to the other end.
+        cx.observe_button_layout_changed(window, |_, _, cx| cx.notify())
+            .detach();
+        cx.observe_window_appearance(window, |this, window, cx| {
+            this.system_dark = looks_dark(window);
+            this.apply_appearance(window, cx);
+        })
+        .detach();
+        let system_dark = looks_dark(window);
+        let layout = Layout::load(&layout_path);
+        colors::set_dark(match layout.appearance {
+            Appearance::Light => false,
+            Appearance::Dark => true,
+            Appearance::System => system_dark,
+        });
         Self {
             engine,
+            system_dark,
             data_dir: data_dir.to_owned(),
             screen: Screen::Traffic,
             system: SystemState::default(),
             settings_page: None,
             settings_problem: None,
-            layout: Layout::load(&layout_path),
+            layout,
             layout_path,
             flows: None,
             jobs: job_tx,
@@ -265,6 +290,27 @@ impl Traffic {
             rows_missing: false,
             places_asked: 0,
         }
+    }
+
+    fn apply_appearance(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        colors::set_dark(match self.layout.appearance {
+            Appearance::Light => false,
+            Appearance::Dark => true,
+            Appearance::System => self.system_dark,
+        });
+        window.refresh();
+        cx.notify();
+    }
+
+    pub fn set_appearance(
+        &mut self,
+        appearance: Appearance,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.layout.appearance = appearance;
+        self.save_layout();
+        self.apply_appearance(window, cx);
     }
 
     pub fn settings_path(&self) -> PathBuf {
@@ -1442,7 +1488,13 @@ impl Render for Traffic {
                     })
                     .child(self.render_footer(cx)),
             );
-        chrome::window_chrome(body, rgb(c.page).into(), window, cx)
+        let switch = chrome::appearance_switch(self.layout.appearance).on_click(cx.listener(
+            |this, _, window, cx| {
+                let next = this.layout.appearance.next();
+                this.set_appearance(next, window, cx);
+            },
+        ));
+        chrome::window_chrome(body, rgb(c.page).into(), switch, window, cx)
     }
 }
 

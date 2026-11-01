@@ -16,9 +16,39 @@ pub enum Place {
     Below,
 }
 
+/// The look the window wears.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Appearance {
+    Light,
+    Dark,
+    #[default]
+    System,
+}
+
+impl Appearance {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Light => "Light",
+            Self::Dark => "Dark",
+            Self::System => "System",
+        }
+    }
+
+    /// The one after this, as the title bar's switch goes round them.
+    pub fn next(self) -> Self {
+        match self {
+            Self::System => Self::Light,
+            Self::Light => Self::Dark,
+            Self::Dark => Self::System,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Layout {
+    pub appearance: Appearance,
     pub place: Place,
     pub sidebar_shown: bool,
     pub inspector_shown: bool,
@@ -32,6 +62,7 @@ pub struct Layout {
 impl Default for Layout {
     fn default() -> Self {
         Self {
+            appearance: Appearance::System,
             place: Place::Beside,
             sidebar_shown: true,
             inspector_shown: true,
@@ -63,11 +94,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_switch_goes_round_all_three() {
+        let start = Appearance::System;
+        assert_eq!(start.next(), Appearance::Light);
+        assert_eq!(start.next().next(), Appearance::Dark);
+        assert_eq!(start.next().next().next(), start);
+    }
+
+    #[test]
+    fn a_file_from_before_the_switch_still_loads() {
+        let layout: Layout = toml::from_str("place = \"below\"").unwrap();
+        assert_eq!(layout.place, Place::Below);
+        assert_eq!(layout.appearance, Appearance::System);
+    }
+
+    #[test]
     fn it_comes_back_as_it_was_left() {
         let dir = std::env::temp_dir().join(format!("layout-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("layout.toml");
         let layout = Layout {
+            appearance: Appearance::Dark,
             place: Place::Below,
             sidebar_shown: false,
             inspector_h: 300.,

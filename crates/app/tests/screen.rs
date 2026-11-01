@@ -13,10 +13,11 @@ use std::{
 };
 use tracewing::{
     bodyview::BodyView,
+    colors,
     detail::Side,
     engine::{Engine, EngineOptions},
     inspector::{BodyState, Part},
-    layout::Place,
+    layout::{Appearance, Place},
     traffic::Traffic,
 };
 use tracewing_dev::benchkit;
@@ -264,6 +265,25 @@ fn the_window_shows_real_traffic() {
     save(&mut cx, window.into(), "7-below");
     let layout = std::fs::read_to_string(Path::new(&dir).join("layout.toml")).unwrap();
     assert!(layout.contains("place = \"below\""), "{layout}");
+
+    // The other look, kept for next time, then back for the pictures after it.
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.set_appearance(Appearance::Light, window, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
+    assert_eq!(colors::colors().page, 0xf4f6fb);
+    save(&mut cx, window.into(), "7-below-light");
+    let layout = std::fs::read_to_string(Path::new(&dir).join("layout.toml")).unwrap();
+    assert!(layout.contains("appearance = \"light\""), "{layout}");
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.set_appearance(Appearance::Dark, window, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
+    assert_eq!(colors::colors().page, 0x141517);
 
     window
         .update(&mut cx, |view, _, cx| view.begin_inspector_drag(cx))

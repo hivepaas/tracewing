@@ -1,8 +1,11 @@
-//! The app's colors, in one place: what each one is for, and its value in
-//! Graphite, the dark palette picked for tracewing. Views ask [`colors`] for a
-//! role, never for a value, so a palette is changed here alone.
+//! The app's colors, in one place: what each one is for, and its value in the
+//! design's light palette and in Graphite, the dark one picked for tracewing. Views
+//! ask [`colors`] for a role, never for a value, so a palette is changed here alone.
+//! The window picks one with [`set_dark`] and redraws.
 //!
 //! Values are `0xRRGGBB` for `gpui::rgb`.
+
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Every color the app draws with, by what it is for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -61,6 +64,51 @@ pub struct Palette {
     pub shadow: u32,
 }
 
+const LIGHT: Palette = Palette {
+    page: 0xf4f6fb,
+    surface: 0xffffff,
+    input: 0xe4e9f4,
+    code: 0xf8f9fc,
+    tab_on: 0xffffff,
+    line: 0xe4e9f4,
+    track: 0xe4e9f4,
+    tonal: 0xd7e2ff,
+    on_tonal: 0x0b2557,
+    accent: 0x2f55b4,
+    on_accent: 0xffffff,
+    link: 0x2f55b4,
+    text: 0x161b26,
+    muted: 0x4a5263,
+    faint: 0x8a93a6,
+    soft: 0xc9d2e6,
+    splitter: 0xc9d2e6,
+    chip: 0xeef1f7,
+    on_chip: 0x2e3545,
+    ok_ground: 0xd3f0dc,
+    ok: 0x0e4d24,
+    record: 0xd92d20,
+    selected_row: 0xdce4f7,
+    slow: 0x8a3a00,
+    warn_ground: 0xffe1cc,
+    warn: 0x6b2c05,
+    error_ground: 0xffdad6,
+    error: 0x7a1e16,
+    plain_ground: 0xe4e9f4,
+    plain: 0x2e3545,
+    json_key: 0x2f55b4,
+    json_string: 0x9a3412,
+    json_number: 0x6d28d9,
+    json_literal: 0xb54708,
+    json_punct: 0x4a5263,
+    wait: 0x2f55b4,
+    download: 0x1a7f37,
+    button: 0xe4e9f4,
+    button_hover: 0xc9d2e6,
+    hover: 0xeef1f7,
+    window_edge: 0xc9d2e6,
+    shadow: 0x00000033,
+};
+
 const GRAPHITE: Palette = Palette {
     page: 0x141517,
     surface: 0x1c1d21,
@@ -106,8 +154,21 @@ const GRAPHITE: Palette = Palette {
     shadow: 0x00000066,
 };
 
+/// The dark palette is in use.
+static DARK_IN_USE: AtomicBool = AtomicBool::new(true);
+
+/// The palette in use.
 pub fn colors() -> &'static Palette {
-    &GRAPHITE
+    if DARK_IN_USE.load(Ordering::Relaxed) {
+        &GRAPHITE
+    } else {
+        &LIGHT
+    }
+}
+
+/// Chooses the palette; the caller redraws.
+pub fn set_dark(dark: bool) {
+    DARK_IN_USE.store(dark, Ordering::Relaxed);
 }
 
 /// `0xRRGGBBAA` for `gpui::rgba`.

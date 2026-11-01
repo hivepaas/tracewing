@@ -70,6 +70,9 @@ const ICONS: &[(&str, &[u8])] = icons![
     "win-maximize",
     "win-restore",
     "win-close",
+    "appearance-dark",
+    "appearance-light",
+    "appearance-system",
 ];
 
 pub struct Assets;
