@@ -6562,6 +6562,7 @@ dependencies = [
  "tracewing-dev",
  "tracewing-proxy",
  "tracewing-store",
+ "tracewing-system",
  "unicode-segmentation",
 ]
 

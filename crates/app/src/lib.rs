@@ -11,6 +11,8 @@ pub mod flows;
 pub mod input;
 pub mod inspector;
 pub mod layout;
+pub mod settings_page;
+pub mod system;
 pub mod traffic;
 pub mod widgets;
 
@@ -45,8 +47,21 @@ macro_rules! icons {
 }
 
 const ICONS: &[(&str, &[u8])] = icons![
-    "logo", "traffic", "trash", "search", "beside", "below", "sidebar", "down", "check", "grip",
-    "record", "pause",
+    "logo",
+    "traffic",
+    "trash",
+    "search",
+    "beside",
+    "below",
+    "sidebar",
+    "down",
+    "check",
+    "grip",
+    "record",
+    "pause",
+    "shield",
+    "shield-off",
+    "settings",
 ];
 
 pub struct Assets;
