@@ -26,6 +26,7 @@ use tracewing_store::{
 };
 
 struct Harness {
+    ws_port: u16,
     recording: Arc<AtomicBool>,
     rules: Arc<RwLock<HostRules>>,
     check: Arc<Check>,
@@ -67,6 +68,15 @@ impl Harness {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
 
+        let ws_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let ws_port = ws_listener.local_addr().unwrap().port();
+        let ws_ca = dir.join("ws-ca.pem");
+        let ca_out = ws_ca.clone();
+        tokio::spawn(async move { benchkit::serve_ws_origin(ws_listener, &ca_out).await });
+        while !ws_ca.exists() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let proxy_url = format!("http://{}", listener.local_addr().unwrap());
         let (stop, stopped) = oneshot::channel::<()>();
@@ -82,7 +92,7 @@ impl Harness {
                 data_dir: dir.join("ca"),
                 session: dir.join("session"),
                 settings,
-                extra_roots: vec![origin_ca],
+                extra_roots: vec![origin_ca, ws_ca],
                 queue: 10_000,
                 stats_every: None,
                 shared: Default::default(),
@@ -101,6 +111,7 @@ impl Harness {
         }
 
         Self {
+            ws_port,
             recording,
             rules,
             check,
@@ -881,4 +892,272 @@ fn a_session_survives_being_killed() {
     assert!(text.starts_with(b"{\"id\":"), "{:?}", &text[..20]);
     drop(conn);
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// The stream's row, once the writer has got there: open, status, messages so far.
+fn stream_row(conn: &Connection, kind: &str) -> Option<(bool, Option<i64>, i64)> {
+    conn.query_row(
+        "SELECT open, status, (SELECT count(*) FROM messages WHERE flow_id = flows.id)
+         FROM flows WHERE kind = ?1",
+        [kind],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )
+    .ok()
+}
+
+async fn wait_for_row(
+    conn: &Connection,
+    kind: &str,
+    done: impl Fn(&(bool, Option<i64>, i64)) -> bool,
+) -> (bool, Option<i64>, i64) {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let row = stream_row(conn, kind);
+        if let Some(row) = row.filter(&done) {
+            return row;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "{kind}: {:?}",
+            stream_row(conn, kind)
+        );
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+}
+
+/// Server-sent events show as they come, not when the stream ends.
+#[tokio::test(flavor = "multi_thread")]
+async fn events_show_while_the_stream_lasts() {
+    let h = Harness::start("events").await;
+    let session_dir = h.dir.join("session");
+    let mut res = h
+        .client(false)
+        .get(format!("{}/stream?events=4&gap_ms=150", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert!(res.chunk().await.unwrap().is_some());
+    let conn = Connection::open(session_dir.join("flows.db")).unwrap();
+    let row = wait_for_row(&conn, "sse", |row| row.2 >= 1).await;
+    assert!(row.0, "it is listed while it is still going: {row:?}");
+    assert_eq!(row.1, Some(200));
+    while res.chunk().await.unwrap().is_some() {}
+    drop(conn);
+
+    let (_, conn, dir) = h.finish(1).await;
+    let row = wait_for_row(&conn, "sse", |row| !row.0).await;
+    assert_eq!(row.2, 4, "{row:?}");
+    let (id, bytes): (i64, i64) = conn
+        .query_row(
+            "SELECT id, resp_bytes FROM flows WHERE kind = 'sse'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(id, 1, "written again in the same place");
+    assert!(bytes > 0, "the whole body is known at the end");
+    assert_eq!(
+        response_of(&conn, &dir, 1).unwrap().len() as i64,
+        bytes,
+        "and kept as well"
+    );
+    let messages = session::stored_messages(&conn, 1, 0, 100).unwrap();
+    assert_eq!(messages.len(), 4);
+    let mut reader = BodyReader::new(&dir.join("session"));
+    for (i, message) in messages.iter().enumerate() {
+        assert_eq!(message.kind, "event");
+        assert!(!message.from_client);
+        let text = reader.read_place(message.place.unwrap()).unwrap();
+        assert_eq!(text, format!("data: event {i}").as_bytes());
+    }
+    drop(reader);
+    clean_up(conn, dir);
+}
+
+/// A WebSocket has a row from its upgrade, and each message on it, both ways.
+#[tokio::test(flavor = "multi_thread")]
+async fn websocket_messages_are_recorded_both_ways() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::tungstenite::Message,
+    };
+    let h = Harness::start("websocket").await;
+    let proxy: std::net::SocketAddr = h.proxy_url.trim_start_matches("http://").parse().unwrap();
+    let mut ws = benchkit::websocket_through_proxy(
+        proxy,
+        &h.dir.join("ca/ca.pem"),
+        "localhost",
+        h.ws_port,
+        "/chat?room=1",
+    )
+    .await
+    .unwrap();
+
+    ws.send(Message::text("xin chào")).await.unwrap();
+    assert_eq!(
+        ws.next().await.unwrap().unwrap(),
+        Message::text("xin chào"),
+        "it reached the server and back"
+    );
+    ws.send(Message::binary(vec![1, 2, 3])).await.unwrap();
+    assert!(ws.next().await.unwrap().unwrap().is_binary());
+
+    let conn = Connection::open(h.dir.join("session/flows.db")).unwrap();
+    let row = wait_for_row(&conn, "websocket", |row| row.2 >= 4).await;
+    assert!(row.0, "still open: {row:?}");
+    assert_eq!(row.1, Some(101), "not shown as an error");
+    drop(conn);
+
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+    let (_, conn, dir) = h.finish(1).await;
+    let row = wait_for_row(&conn, "websocket", |row| !row.0).await;
+    assert_eq!(row.1, Some(101));
+    let path: String = conn
+        .query_row("SELECT path FROM flows WHERE kind = 'websocket'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(path, "/chat?room=1");
+
+    let messages = session::stored_messages(&conn, 1, 0, 100).unwrap();
+    let mut reader = BodyReader::new(&dir.join("session"));
+    let seen: Vec<(bool, &str, Vec<u8>)> = messages
+        .iter()
+        .take(4)
+        .map(|m| {
+            (
+                m.from_client,
+                m.kind.as_str(),
+                reader.read_place(m.place.unwrap()).unwrap(),
+            )
+        })
+        .collect();
+    let hello = "xin chào".as_bytes().to_vec();
+    assert_eq!(
+        seen,
+        [
+            (true, "text", hello.clone()),
+            (false, "text", hello),
+            (true, "binary", vec![1, 2, 3]),
+            (false, "binary", vec![1, 2, 3]),
+        ]
+    );
+    assert!(
+        messages.iter().any(|m| m.kind == "close" && m.from_client),
+        "{messages:?}"
+    );
+    drop(reader);
+    clean_up(conn, dir);
+}
+
+/// Dropping the oldest flows takes their messages along.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_full_session_drops_messages_with_their_flows() {
+    use hudsucker::{futures::SinkExt, tokio_tungstenite::tungstenite::Message};
+    let h = Harness::start_with(
+        "trim-messages",
+        StorageSettings {
+            session_max_mib: 64,
+            compress_stored: false,
+            index_bodies: false,
+            ..StorageSettings::default()
+        },
+    )
+    .await;
+    let proxy: std::net::SocketAddr = h.proxy_url.trim_start_matches("http://").parse().unwrap();
+    let mut ws = benchkit::websocket_through_proxy(
+        proxy,
+        &h.dir.join("ca/ca.pem"),
+        "localhost",
+        h.ws_port,
+        "/",
+    )
+    .await
+    .unwrap();
+    ws.send(Message::text("early")).await.unwrap();
+    ws.close(None).await.unwrap();
+    let client = h.client(false);
+    for _ in 0..1200 {
+        client
+            .get(format!("{}/json?size=60000", h.origin))
+            .send()
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap();
+    }
+    let (summary, conn, dir) = h.finish(0).await;
+    assert!(summary.trimmed > 0, "{summary:?}");
+    let first: i64 = conn
+        .query_row("SELECT min(id) FROM flows", [], |r| r.get(0))
+        .unwrap();
+    let orphans: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM messages WHERE flow_id < ?1",
+            [first],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(orphans, 0);
+    clean_up(conn, dir);
+}
+
+/// What writing messages down costs a busy WebSocket: the same round trips with
+/// recording on and off. Prints, and checks only that nothing was lost.
+///
+/// `WS_BENCH=200000 cargo test --release -p tracewing-dev --test e2e websocket_bench -- --nocapture`
+#[tokio::test(flavor = "multi_thread")]
+async fn websocket_bench() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::tungstenite::Message,
+    };
+    let Some(count) = std::env::var("WS_BENCH").ok() else {
+        return;
+    };
+    let count: u64 = count.parse().unwrap();
+    let h = Harness::start_with(
+        "ws-bench",
+        StorageSettings {
+            disk_reserve_mib: 1,
+            ..StorageSettings::default()
+        },
+    )
+    .await;
+    let proxy: std::net::SocketAddr = h.proxy_url.trim_start_matches("http://").parse().unwrap();
+    let body = "x".repeat(500);
+    for recording in [false, true, false, true] {
+        h.recording.store(recording, Ordering::Relaxed);
+        let mut ws = benchkit::websocket_through_proxy(
+            proxy,
+            &h.dir.join("ca/ca.pem"),
+            "localhost",
+            h.ws_port,
+            "/",
+        )
+        .await
+        .unwrap();
+        let started = Instant::now();
+        for _ in 0..count {
+            ws.send(Message::text(body.clone())).await.unwrap();
+            ws.next().await.unwrap().unwrap();
+        }
+        let took = started.elapsed().as_secs_f64();
+        println!(
+            "recording {recording}: {:.0} round trips/s, {:.1} µs each",
+            count as f64 / took,
+            took * 1e6 / count as f64
+        );
+        ws.close(None).await.unwrap();
+        while ws.next().await.is_some() {}
+    }
+    let (summary, conn, dir) = h.finish(0).await;
+    let kept: i64 = conn
+        .query_row("SELECT count(*) FROM messages", [], |r| r.get(0))
+        .unwrap();
+    println!("{kept} messages kept, {summary:?}");
+    assert!(kept as u64 >= count * 4, "both ways, twice");
+    clean_up(conn, dir);
 }

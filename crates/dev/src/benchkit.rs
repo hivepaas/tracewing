@@ -7,10 +7,13 @@ use bytes::Bytes;
 use http::{Request, Response, StatusCode, header};
 use http_body_util::{BodyExt, Full, StreamBody, combinators::BoxBody};
 use hudsucker::{
+    futures::{SinkExt, StreamExt},
     rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, Issuer, KeyPair, KeyUsagePurpose},
     rustls::{
         ServerConfig,
-        pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer},
+        pki_types::{
+            CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, ServerName, pem::PemObject,
+        },
     },
 };
 use hyper::{body::Frame, body::Incoming, service::service_fn};
@@ -29,7 +32,10 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use tokio::net::TcpListener;
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpListener,
+};
 use tokio_rustls::TlsAcceptor;
 
 type OriginBody = BoxBody<Bytes, Infallible>;
@@ -188,6 +194,76 @@ fn parse_query(query: &str) -> BTreeMap<&str, &str> {
         .split('&')
         .filter_map(|pair| pair.split_once('='))
         .collect()
+}
+
+/// A WebSocket origin over TLS that sends back whatever it gets. It has a CA of its
+/// own, written to `ca_out`.
+pub async fn serve_ws_origin(listener: TcpListener, ca_out: &Path) -> Result<()> {
+    let mut config = origin_tls(ca_out)?;
+    config.alpn_protocols = vec![b"http/1.1".to_vec()];
+    let acceptor = TlsAcceptor::from(Arc::new(config));
+    loop {
+        let (tcp, _) = listener.accept().await?;
+        let acceptor = acceptor.clone();
+        tokio::spawn(async move {
+            let Ok(tls) = acceptor.accept(tcp).await else {
+                return;
+            };
+            let Ok(mut ws) = hudsucker::tokio_tungstenite::accept_async(tls).await else {
+                return;
+            };
+            while let Some(Ok(message)) = ws.next().await {
+                if message.is_close() {
+                    break;
+                }
+                if (message.is_text() || message.is_binary()) && ws.send(message).await.is_err() {
+                    break;
+                }
+            }
+        });
+    }
+}
+
+pub type ClientWebSocket = hudsucker::tokio_tungstenite::WebSocketStream<
+    tokio_rustls::client::TlsStream<tokio::net::TcpStream>,
+>;
+
+/// Opens a WebSocket through the proxy, as a browser does: CONNECT, TLS with the
+/// proxy's certificate, and the upgrade inside.
+pub async fn websocket_through_proxy(
+    proxy: std::net::SocketAddr,
+    proxy_ca: &Path,
+    host: &str,
+    port: u16,
+    path: &str,
+) -> Result<ClientWebSocket> {
+    let mut tcp = tokio::net::TcpStream::connect(proxy).await?;
+    let connect = format!("CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\n\r\n");
+    tcp.write_all(connect.as_bytes()).await?;
+    let mut reply = Vec::new();
+    while !reply.ends_with(b"\r\n\r\n") {
+        let mut byte = [0];
+        tcp.read_exact(&mut byte).await?;
+        reply.push(byte[0]);
+    }
+    anyhow::ensure!(reply.starts_with(b"HTTP/1.1 200"), "CONNECT refused");
+
+    let mut roots = hudsucker::rustls::RootCertStore::empty();
+    for cert in CertificateDer::pem_file_iter(proxy_ca)? {
+        roots.add(cert?)?;
+    }
+    let config = hudsucker::rustls::ClientConfig::builder_with_provider(Arc::new(
+        tracewing_proxy::crypto_provider(),
+    ))
+    .with_safe_default_protocol_versions()?
+    .with_root_certificates(roots)
+    .with_no_client_auth();
+    let tls = tokio_rustls::TlsConnector::from(Arc::new(config))
+        .connect(ServerName::try_from(host.to_owned())?, tcp)
+        .await?;
+    let url = format!("wss://{host}:{port}{path}");
+    let (ws, _) = hudsucker::tokio_tungstenite::client_async(url, tls).await?;
+    Ok(ws)
 }
 
 /// A CA and a `localhost`/`127.0.0.1` leaf for the origin.

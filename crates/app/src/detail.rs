@@ -38,8 +38,10 @@ pub struct Detail {
     pub method: String,
     pub url: String,
     pub host: String,
-    /// `http`, `websocket`, or `tunnel` for a host left alone.
+    /// `http`, `websocket`, `sse`, or `tunnel` for a host left alone.
     pub kind: String,
+    /// A stream still going.
+    pub open: bool,
     pub status: Option<u16>,
     pub client_version: String,
     pub server_version: Option<String>,
@@ -57,7 +59,7 @@ pub struct Detail {
 impl Detail {
     pub fn load(flows: &Connection, session_dir: &Path, id: i64) -> Result<Self> {
         let columns = format!(
-            "kind, scheme, host, path, method, status, client_version, server_version, client,
+            "open, kind, scheme, host, path, method, status, client_version, server_version, client,
              content_type, ttfb_us, duration_us, error,
              req_bytes, req_truncated, req_shed, req_spool_lost, {},
              resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}",
@@ -68,9 +70,10 @@ impl Detail {
             &format!("SELECT {columns} FROM flows WHERE id = ?1"),
             params![id],
             |r| {
-                let scheme: String = r.get(1)?;
-                let host: String = r.get(2)?;
-                let path: String = r.get(3)?;
+                let kind: String = r.get(1)?;
+                let scheme: String = r.get(2)?;
+                let host: String = r.get(3)?;
+                let path: String = r.get(4)?;
                 let facts = |first: usize| -> rusqlite::Result<BodyFacts> {
                     Ok(BodyFacts {
                         bytes: r.get::<_, i64>(first)? as u64,
@@ -82,20 +85,21 @@ impl Detail {
                 };
                 Ok(Self {
                     id,
-                    url: format!("{scheme}://{host}{path}"),
+                    url: format!("{}://{host}{path}", shown_scheme(&kind, &scheme)),
                     host,
-                    kind: r.get(0)?,
-                    method: r.get(4)?,
-                    status: r.get(5)?,
-                    client_version: r.get(6)?,
-                    server_version: r.get(7)?,
-                    client: r.get(8)?,
-                    content_type: r.get(9)?,
-                    ttfb_us: r.get(10)?,
-                    duration_us: r.get(11)?,
-                    error: r.get(12)?,
-                    request: facts(13)?,
-                    response: facts(23)?,
+                    open: r.get(0)?,
+                    kind,
+                    method: r.get(5)?,
+                    status: r.get(6)?,
+                    client_version: r.get(7)?,
+                    server_version: r.get(8)?,
+                    client: r.get(9)?,
+                    content_type: r.get(10)?,
+                    ttfb_us: r.get(11)?,
+                    duration_us: r.get(12)?,
+                    error: r.get(13)?,
+                    request: facts(14)?,
+                    response: facts(24)?,
                     headers: None,
                 })
             },
@@ -136,6 +140,15 @@ impl Detail {
     }
 }
 
+/// A WebSocket's URL as the client wrote it: what comes through the proxy says https.
+fn shown_scheme<'a>(kind: &str, scheme: &'a str) -> &'a str {
+    match (kind, scheme) {
+        ("websocket", "https") => "wss",
+        ("websocket", "http") => "ws",
+        _ => scheme,
+    }
+}
+
 /// Writes a body, unpacked, where a viewer can map it. Returns its size and whether
 /// it was already there. `None` if it is gone or cannot be read.
 pub fn body_file(
@@ -165,6 +178,7 @@ mod tests {
             url: "https://a.dev/".into(),
             host: "a.dev".into(),
             kind: "http".into(),
+            open: false,
             status: Some(200),
             client_version: client.into(),
             server_version: server.map(str::to_owned),
@@ -177,6 +191,13 @@ mod tests {
             response: BodyFacts::default(),
             headers: None,
         }
+    }
+
+    #[test]
+    fn a_websocket_url_says_so() {
+        assert_eq!(shown_scheme("websocket", "https"), "wss");
+        assert_eq!(shown_scheme("websocket", "http"), "ws");
+        assert_eq!(shown_scheme("http", "https"), "https");
     }
 
     #[test]

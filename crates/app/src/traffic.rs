@@ -389,6 +389,12 @@ impl Traffic {
         self.viewing.as_deref().unwrap_or(&self.engine.session)
     }
 
+    pub(crate) fn forget_row(&mut self, id: i64) {
+        if let Some(flows) = &mut self.flows {
+            flows.forget(id);
+        }
+    }
+
     pub fn is_viewing(&self) -> bool {
         self.viewing.is_some()
     }
@@ -563,7 +569,7 @@ impl Traffic {
     /// One look at the session: what has arrived, what the worker has done.
     pub fn look(&mut self, cx: &mut Context<Self>) {
         if self.flows.is_none() {
-            self.flows = Flows::open(self.session_dir()).ok();
+            self.flows = Flows::open(self.session_dir(), self.viewing.is_none()).ok();
         }
         let mut changed = false;
         if let Some(flows) = &self.flows {
@@ -598,6 +604,7 @@ impl Traffic {
             self.filter_seen = -1;
             changed = true;
         }
+        changed |= self.look_at_stream(cx);
         let visit = self.engine.check.last();
         if visit != self.check_visit {
             self.check_visit = visit;
@@ -960,11 +967,13 @@ impl Traffic {
             .as_mut()
             .map_or_else(Vec::new, |flows| flows.rows(&ids));
         rows.resize(range.len(), None);
+        // A row missing gets another try, and one still going will change.
         let mut gaps = false;
         let elements = range
             .zip(rows)
             .map(|(place, row)| match row {
                 Some(row) => {
+                    gaps |= row.going;
                     let id = row.id;
                     render_row(row, selected == Some(id)).on_click(cx.listener(
                         move |this, _: &ClickEvent, _, cx| {
@@ -1299,7 +1308,7 @@ impl Traffic {
                                 ),
                         )
                     })
-                    .when(!self.follow && count > 0, |d| {
+                    .when(!self.follow && self.list_max_scroll() > 0., |d| {
                         d.child(
                             div()
                                 .id("newest")
@@ -1599,7 +1608,10 @@ impl Traffic {
             .min_h(px(28.))
             .text_size(px(12.))
             .text_color(rgb(c.muted))
-            .child(format!("{} flows", group_digits(self.total() as u64)))
+            .child(match self.total() {
+                1 => "1 flow".to_owned(),
+                total => format!("{} flows", group_digits(total as u64)),
+            })
             .child(self.render_ca(cx))
             .children(
                 notes

@@ -23,15 +23,19 @@ pub struct Row {
     pub size: SharedString,
     pub time: SharedString,
     pub slow: bool,
+    /// A stream still going, which will change.
+    pub going: bool,
 }
 
 pub struct Flows {
     conn: Connection,
     cache: HashMap<i64, Row>,
+    /// The session recording now. In an earlier one, what was open never finished.
+    live: bool,
 }
 
 impl Flows {
-    pub fn open(session_dir: &Path) -> Result<Self> {
+    pub fn open(session_dir: &Path, live: bool) -> Result<Self> {
         let path = session::flows_db(session_dir);
         let conn = Connection::open_with_flags(
             &path,
@@ -41,6 +45,7 @@ impl Flows {
         Ok(Self {
             conn,
             cache: HashMap::new(),
+            live,
         })
     }
 
@@ -73,10 +78,25 @@ impl Flows {
             .filter(|id| !self.cache.contains_key(id))
             .collect();
         let _ = self.fetch(&missing);
-        ids.iter().map(|id| self.cache.get(id).cloned()).collect()
+        ids.iter()
+            .map(|id| {
+                let row = self.cache.get(id).cloned();
+                // Not kept: it says something else when it ends.
+                if row.as_ref().is_some_and(|row| row.going) {
+                    self.cache.remove(id);
+                }
+                row
+            })
+            .collect()
+    }
+
+    /// A row still going changes when it ends, so it is read again.
+    pub fn forget(&mut self, id: i64) {
+        self.cache.remove(&id);
     }
 
     fn fetch(&mut self, ids: &[i64]) -> Result<()> {
+        let live = self.live;
         // Scrolling asks for runs of ids, which one query reads far faster.
         let mut at = 0;
         while at < ids.len() {
@@ -85,7 +105,7 @@ impl Flows {
                 end += 1;
             }
             let mut stmt = self.conn.prepare_cached(
-                "SELECT id, method, status, host, path, resp_bytes, duration_us, error, kind
+                "SELECT id, method, status, host, path, resp_bytes, duration_us, error, kind, open
                  FROM flows WHERE id >= ?1 AND id <= ?2",
             )?;
             let rows = stmt.query_map(params![ids[at], ids[end - 1]], |r| {
@@ -93,6 +113,8 @@ impl Flows {
                 let duration: Option<i64> = r.get(6)?;
                 let error: Option<String> = r.get(7)?;
                 let kind: String = r.get(8)?;
+                let open: bool = r.get(9)?;
+                let going = open && live;
                 Ok(Row {
                     id,
                     number: group_digits(id as u64).into(),
@@ -104,6 +126,7 @@ impl Flows {
                         .map(SharedString::from)
                         .or_else(|| match kind.as_str() {
                             "websocket" => Some("WebSocket".into()),
+                            "sse" => Some("Events".into()),
                             "tunnel" => Some("Not decrypted".into()),
                             _ => None,
                         }),
@@ -113,8 +136,13 @@ impl Flows {
                     } else {
                         size_text(r.get::<_, i64>(5)? as u64).into()
                     },
-                    time: duration.map(time_text).unwrap_or_default().into(),
+                    time: if going {
+                        "open".into()
+                    } else {
+                        duration.map(time_text).unwrap_or_default().into()
+                    },
                     slow: duration.is_some_and(|d| d >= 1_000_000),
+                    going,
                 })
             })?;
             for row in rows {

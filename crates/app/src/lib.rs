@@ -12,6 +12,7 @@ pub mod flows;
 pub mod input;
 pub mod inspector;
 pub mod layout;
+pub mod messages;
 pub mod placement;
 pub mod sessions_page;
 pub mod settings_page;

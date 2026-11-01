@@ -105,7 +105,7 @@ pub struct SessionInfo {
 }
 
 /// Rows of the format this version writes.
-const VERSION: i64 = 1;
+const VERSION: i64 = 2;
 
 fn dir_bytes(dir: &Path) -> u64 {
     let Ok(entries) = fs::read_dir(dir) else {
@@ -510,6 +510,55 @@ pub fn stored_headers(
     Ok(Some((parse_headers(request), parse_headers(response))))
 }
 
+/// One message of a stream, as kept.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StoredMessage {
+    pub id: i64,
+    pub at_us: i64,
+    pub from_client: bool,
+    /// `text`, `binary`, `ping`, `pong`, `close`, or `event` for server-sent events.
+    pub kind: String,
+    /// How long it was on the wire. What is kept stops at `log_max`.
+    pub bytes: u64,
+    pub place: Option<LogPlace>,
+    /// Let go: too much was waiting, or the disk had no room.
+    pub shed: bool,
+}
+
+/// A flow's messages after this one, the oldest first.
+pub fn stored_messages(
+    flows: &Connection,
+    flow_id: i64,
+    after: i64,
+    limit: i64,
+) -> rusqlite::Result<Vec<StoredMessage>> {
+    let mut stmt = flows.prepare_cached(
+        "SELECT id, at_us, from_client, kind, bytes, segment, offset, len, shed FROM messages
+         WHERE flow_id = ?1 AND id > ?2 ORDER BY id LIMIT ?3",
+    )?;
+    let rows = stmt.query_map(params![flow_id, after, limit], |r| {
+        let segment: Option<i64> = r.get(5)?;
+        let place = match segment {
+            Some(segment) => Some(LogPlace {
+                segment: segment as u32,
+                offset: r.get::<_, i64>(6)? as u64,
+                len: r.get::<_, i64>(7)? as u32,
+            }),
+            None => None,
+        };
+        Ok(StoredMessage {
+            id: r.get(0)?,
+            at_us: r.get(1)?,
+            from_client: r.get(2)?,
+            kind: r.get(3)?,
+            bytes: r.get::<_, i64>(4)? as u64,
+            place,
+            shed: r.get(8)?,
+        })
+    })?;
+    rows.collect()
+}
+
 /// How one body of a flow was kept, by flow id and `req` or `resp`.
 pub fn stored_body(flows: &Connection, id: i64, side: &str) -> Result<StoredBody> {
     Ok(flows.query_row(
@@ -589,7 +638,7 @@ mod tests {
         create(&dir).unwrap();
         let db = Connection::open(flows_db(&dir)).unwrap();
         db.execute_batch(
-            "PRAGMA user_version = 1; CREATE TABLE flows (id INTEGER PRIMARY KEY, started_us INTEGER);",
+            "PRAGMA user_version = 2; CREATE TABLE flows (id INTEGER PRIMARY KEY, started_us INTEGER);",
         )
         .unwrap();
         for id in 1..=flows {

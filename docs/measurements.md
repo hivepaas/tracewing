@@ -420,13 +420,31 @@ Two bugs this found, kept here so they stay found:
   first to learn their height, took zero, and asked for every row: 51 GB, until the
   kernel stopped it. The list now always returns as many elements as it is asked for.
 
+## A busy WebSocket (`crates/dev/tests/e2e.rs`, 2026-11-01)
+
+One WebSocket through the proxy, 500 byte messages, each sent and echoed before the
+next, with client, proxy and origin in one process. Messages are written to the log
+by the same writer thread as flows.
+
+| 100,000 round trips | Round trips/s | Each |
+|---|---|---|
+| Recording off | 50,200–50,900 | 19.7–19.9 µs |
+| Recording on | 46,100–47,500 | 21.1–21.7 µs |
+
+All 400,002 messages of the two recorded runs were kept: two for each round trip, and
+the two closes. `WS_BENCH=100000` repeats it.
+
 ## Known gaps
 
 - hudsucker always offers `h2, http/1.1` to the client instead of mirroring
   what the origin chose, and builds leaves from the SNI/`CONNECT` host only.
 - CONNECT tunnels run in detached tasks, so on shutdown the writer is closed
   explicitly and flows from still-open tunnels are counted as dropped.
-- WebSocket messages are not recorded (only the upgrade request).
+- Messages of streams are not in the search index, and neither are the bodies of
+  server-sent events, whose row is indexed as it opens.
+- Server-sent events that come compressed are listed but not cut into messages. The
+  whole body is still kept when they end.
+- A stream whose upgrade fails at the server stays "open" until the session ends.
 - A session cannot be reopened and carried on with; each run makes a new one. An
   app that quits during catch-up must finish the index next time it opens it.
 - Text past `index_kib_per_body` is not found. The app needs a slower scan for it.

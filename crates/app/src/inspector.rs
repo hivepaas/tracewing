@@ -8,6 +8,7 @@ use crate::{
     curl,
     detail::{Detail, Side, body_file},
     flows::{size_text, time_text},
+    messages::MessagesState,
     traffic::Traffic,
     widgets::{chip, eyebrow, icon, status_colors},
 };
@@ -28,6 +29,8 @@ pub enum Part {
     #[default]
     Body,
     Headers,
+    /// A WebSocket's or server-sent events' messages.
+    Messages,
 }
 
 #[derive(Default)]
@@ -45,6 +48,8 @@ pub struct InspectorState {
     pub side: Side,
     pub part: Part,
     pub body: BodyState,
+    /// Of the flow chosen, if it is a stream.
+    pub messages: Option<MessagesState>,
     /// Which load the body is waiting for, so that a late one is ignored.
     load: u64,
     copied: bool,
@@ -57,8 +62,16 @@ impl Traffic {
         };
         match Detail::load(flows.conn(), self.session_dir(), id) {
             Ok(detail) => {
+                let stream = matches!(detail.kind.as_str(), "websocket" | "sse");
+                self.inspector.messages = stream.then(|| MessagesState::new(id));
+                self.inspector.part = match (stream, self.inspector.part) {
+                    (true, _) => Part::Messages,
+                    (false, Part::Messages) => Part::Body,
+                    (false, part) => part,
+                };
                 self.inspector.detail = Some(detail);
                 self.inspector.copied = false;
+                self.take_new_messages();
                 self.load_body(cx);
             }
             Err(_) => {
@@ -120,6 +133,31 @@ impl Traffic {
             });
         })
         .detach();
+    }
+
+    /// A stream that has ended: its body and its time are known now.
+    pub(crate) fn look_at_stream(&mut self, cx: &mut Context<Self>) -> bool {
+        let got_messages = self.take_new_messages();
+        let Some(detail) = &self.inspector.detail else {
+            return got_messages;
+        };
+        if !detail.open {
+            return got_messages;
+        }
+        let id = detail.id;
+        let Some(flows) = self.flows() else {
+            return got_messages;
+        };
+        let Ok(now) = Detail::load(flows.conn(), self.session_dir(), id) else {
+            return got_messages;
+        };
+        if now.open {
+            return got_messages;
+        }
+        self.inspector.detail = Some(now);
+        self.forget_row(id);
+        self.load_body(cx);
+        true
     }
 
     pub fn set_side(&mut self, side: Side, cx: &mut Context<Self>) {
@@ -220,7 +258,7 @@ impl Traffic {
             .children(render_timing(&detail))
             .child(self.render_sides(cx))
             .child(self.render_parts(&detail, cx))
-            .child(self.render_part(&detail))
+            .child(self.render_part(&detail, cx))
     }
 
     /// Whether this host is decrypted, and the way to change that. An app that fails
@@ -348,6 +386,16 @@ impl Traffic {
             .items_center()
             .gap(px(14.))
             .text_size(px(12.5))
+            .children(self.inspector.messages.as_ref().map(|state| {
+                tab(
+                    "part-messages",
+                    format!(
+                        "Messages {}",
+                        crate::flows::group_digits(state.list.len() as u64)
+                    ),
+                    Part::Messages,
+                )
+            }))
             .child(tab("part-body", "Body".to_owned(), Part::Body))
             .child(tab(
                 "part-headers",
@@ -361,31 +409,34 @@ impl Traffic {
                     .text_color(rgb(c.muted))
                     .child(text)
             }))
-            .when(detail.kind != "tunnel", |d| {
-                d.child(
-                    div()
-                        .id("copy-curl")
-                        .h(px(28.))
-                        .px(px(10.))
-                        .rounded(px(14.))
-                        .flex()
-                        .items_center()
-                        .cursor_pointer()
-                        .bg(rgb(c.chip))
-                        .text_color(rgb(c.on_chip))
-                        .text_size(px(12.))
-                        .font_weight(FontWeight::BOLD)
-                        .child(if self.inspector.copied {
-                            "Copied"
-                        } else {
-                            "Copy as cURL"
-                        })
-                        .on_click(cx.listener(|view, _, _, cx| view.copy_as_curl(cx))),
-                )
-            })
+            .when(
+                !matches!(detail.kind.as_str(), "tunnel" | "websocket"),
+                |d| {
+                    d.child(
+                        div()
+                            .id("copy-curl")
+                            .h(px(28.))
+                            .px(px(10.))
+                            .rounded(px(14.))
+                            .flex()
+                            .items_center()
+                            .cursor_pointer()
+                            .bg(rgb(c.chip))
+                            .text_color(rgb(c.on_chip))
+                            .text_size(px(12.))
+                            .font_weight(FontWeight::BOLD)
+                            .child(if self.inspector.copied {
+                                "Copied"
+                            } else {
+                                "Copy as cURL"
+                            })
+                            .on_click(cx.listener(|view, _, _, cx| view.copy_as_curl(cx))),
+                    )
+                },
+            )
     }
 
-    fn render_part(&self, detail: &Detail) -> impl IntoElement {
+    fn render_part(&mut self, detail: &Detail, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let well = div()
             .flex_1()
@@ -394,6 +445,7 @@ impl Traffic {
             .overflow_hidden()
             .bg(rgb(c.code));
         match self.inspector.part {
+            Part::Messages => well.child(self.render_messages(cx)),
             Part::Headers => well.child(render_headers(detail.headers(self.inspector.side))),
             Part::Body => match &self.inspector.body {
                 BodyState::Shown(view) => well.py(px(8.)).child(view.clone()),
@@ -489,8 +541,12 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
         .gap(px(6.))
         .child(chip(status_text(detail.status), ground, ink))
         .child(plain(detail.protocols()))
-        .children(detail.duration_us.map(|d| plain(time_text(d))))
-        .child(plain(size))
+        .children(if detail.open {
+            Some(chip("Open", c.ok_ground, c.ok))
+        } else {
+            detail.duration_us.map(|d| plain(time_text(d)))
+        })
+        .when(detail.kind != "websocket", |d| d.child(plain(size)))
         .children(
             detail
                 .error
