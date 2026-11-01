@@ -131,11 +131,13 @@ fn the_window_shows_real_traffic() {
             disk_reserve_mib: 1,
             ..StorageSettings::default()
         },
+        rules: Default::default(),
         ports: 19_190..19_200,
         extra_roots: vec![origin_ca],
     })
     .unwrap();
     let proxy = format!("http://{}", engine.addr);
+    let proxy_for_later = proxy.clone();
     while !dir.join("ca.pem").exists() {
         std::thread::sleep(Duration::from_millis(5));
     }
@@ -290,6 +292,57 @@ fn the_window_shows_real_traffic() {
         .unwrap();
     cx.run_until_parked();
     save(&mut cx, window.into(), "8-dragging");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.cancel_drag(cx);
+            view.set_place(Place::Beside, cx);
+        })
+        .unwrap();
+
+    // A browser reaching the test page shows on Set up without anything else moving.
+    let proxy_ca = dir.join("ca.pem");
+    let client = benchkit::client_through_proxy(&proxy_for_later, &proxy_ca, false).unwrap();
+    origin_runtime
+        .block_on(async {
+            client
+                .get(format!("https://{}/", tracewing_proxy::capture::CHECK_HOST))
+                .header("user-agent", "Firefox/144.0")
+                .send()
+                .await?
+                .bytes()
+                .await
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the visit", |view, _| {
+        view.check_visit.as_ref().is_some_and(|v| v.secure)
+    });
+
+    // A host left alone: a row that says so, and the way back.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.change_rules(|rules| rules.leave_alone("localhost"), cx)
+        })
+        .unwrap();
+    let origin_url = format!("https://localhost:{origin_port}/json?size=100");
+    let trusts_origin =
+        benchkit::client_through_proxy(&proxy_for_later, &dir.join("origin-ca.pem"), false)
+            .unwrap();
+    origin_runtime
+        .block_on(async { trusts_origin.get(origin_url).send().await?.bytes().await })
+        .unwrap();
+    wait_for(&mut cx, window, "the tunnel", |view, _| view.count() == 304);
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(303, cx);
+            let detail = view.inspector.detail.as_ref().expect("a flow is chosen");
+            assert_eq!(detail.kind, "tunnel");
+            assert_eq!(detail.method, "CONNECT");
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the note", |view, _| {
+        matches!(view.inspector.body, BodyState::Note(_))
+    });
+    save(&mut cx, window.into(), "15-tunnel");
 
     drop(cx);
     origin_runtime.shutdown_background();
@@ -340,6 +393,7 @@ fn a_million_flows_while_traffic_keeps_coming() {
     let engine = Engine::start(EngineOptions {
         data_dir: dir.clone(),
         settings: StorageSettings::default(),
+        rules: Default::default(),
         ports: 19_290..19_300,
         extra_roots: vec![origin_ca],
     })

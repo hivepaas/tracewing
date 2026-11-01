@@ -33,6 +33,10 @@ pub enum CaState {
 pub struct SystemState {
     pub proxy: ProxySwitch,
     pub ca: CaState,
+    /// Where the certificate is installed, in words.
+    pub ca_places: Vec<String>,
+    /// The system's own verifier accepts it, which is not what browsers on Linux use.
+    pub ca_verified: bool,
     /// What went wrong last, in words.
     pub problem: Option<String>,
     /// Off in tests, whose program cannot be a watchdog.
@@ -48,15 +52,26 @@ fn load_ca(data_dir: &Path) -> anyhow::Result<LocalCa> {
     LocalCa::load_or_create(data_dir, crypto_provider())
 }
 
-fn check_ca(data_dir: &Path) -> anyhow::Result<bool> {
-    let ca = load_ca(data_dir)?;
-    Ok(system::verify_ca(&ca, crypto_provider()).is_ok())
+struct CaFound {
+    verified: bool,
+    places: Vec<String>,
 }
 
-fn install_ca(data_dir: &Path) -> anyhow::Result<bool> {
+fn look_for_ca(ca: &LocalCa) -> anyhow::Result<CaFound> {
+    Ok(CaFound {
+        verified: system::verify_ca(ca, crypto_provider()).is_ok(),
+        places: system::ca_locations(ca.cert_path())?,
+    })
+}
+
+fn check_ca(data_dir: &Path) -> anyhow::Result<CaFound> {
+    look_for_ca(&load_ca(data_dir)?)
+}
+
+fn install_ca(data_dir: &Path, scope: Scope) -> anyhow::Result<CaFound> {
     let ca = load_ca(data_dir)?;
-    system::ca_install(ca.cert_path(), Scope::User)?;
-    Ok(system::verify_ca(&ca, crypto_provider()).is_ok())
+    system::ca_install(ca.cert_path(), scope)?;
+    look_for_ca(&ca)
 }
 
 impl Traffic {
@@ -65,28 +80,37 @@ impl Traffic {
         self.run_ca_job(move || check_ca(&data_dir), cx);
     }
 
-    pub fn install_certificate(&mut self, cx: &mut Context<Self>) {
+    pub fn install_certificate(&mut self, scope: Scope, cx: &mut Context<Self>) {
         if self.system.ca == CaState::Installing {
             return;
         }
         self.system.ca = CaState::Installing;
         self.system.problem = None;
         let data_dir = self.data_dir.clone();
-        self.run_ca_job(move || install_ca(&data_dir), cx);
+        self.run_ca_job(move || install_ca(&data_dir, scope), cx);
         cx.notify();
     }
 
     fn run_ca_job(
         &mut self,
-        job: impl FnOnce() -> anyhow::Result<bool> + Send + 'static,
+        job: impl FnOnce() -> anyhow::Result<CaFound> + Send + 'static,
         cx: &mut Context<Self>,
     ) {
         cx.spawn(async move |this, cx| {
             let result = cx.background_spawn(async move { job() }).await;
             let _ = this.update(cx, |this, cx| {
                 match result {
-                    Ok(true) => this.system.ca = CaState::Trusted,
-                    Ok(false) => this.system.ca = CaState::NotTrusted,
+                    // On Linux the system's verifier does not read the browsers'
+                    // stores, so being in one of those counts as well.
+                    Ok(found) => {
+                        this.system.ca = if found.verified || !found.places.is_empty() {
+                            CaState::Trusted
+                        } else {
+                            CaState::NotTrusted
+                        };
+                        this.system.ca_verified = found.verified;
+                        this.system.ca_places = found.places;
+                    }
                     Err(e) => {
                         this.system.ca = CaState::NotTrusted;
                         this.system.problem = Some(format!("The certificate: {e:#}"));

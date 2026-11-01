@@ -6,14 +6,19 @@ use rusqlite::Connection;
 use std::{
     path::PathBuf,
     sync::{
-        Arc,
+        Arc, RwLock,
         atomic::{AtomicBool, Ordering},
     },
     time::{Duration, Instant},
 };
 use tokio::{net::TcpListener, sync::oneshot, task::JoinHandle};
 use tracewing_dev::benchkit;
-use tracewing_proxy::{ProxyOptions, ProxySummary, run_proxy};
+use tracewing_proxy::{
+    ProxyOptions, ProxySummary,
+    capture::{CHECK_HOST, Check},
+    rules::HostRules,
+    run_proxy,
+};
 use tracewing_store::{
     search,
     session::{self, BodyReader, stored_body},
@@ -22,6 +27,8 @@ use tracewing_store::{
 
 struct Harness {
     recording: Arc<AtomicBool>,
+    rules: Arc<RwLock<HostRules>>,
+    check: Arc<Check>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -64,6 +71,10 @@ impl Harness {
         let proxy_url = format!("http://{}", listener.local_addr().unwrap());
         let (stop, stopped) = oneshot::channel::<()>();
         let recording = Arc::new(AtomicBool::new(true));
+        let rules = Arc::new(RwLock::new(HostRules {
+            no_decrypt: Vec::new(),
+        }));
+        let check = Arc::new(Check::default());
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -76,6 +87,8 @@ impl Harness {
                 stats_every: None,
                 shared: Default::default(),
                 recording: Arc::clone(&recording),
+                rules: Arc::clone(&rules),
+                check: Arc::clone(&check),
                 leave_index: false,
                 stop_limit: Duration::from_secs(1),
             },
@@ -89,6 +102,8 @@ impl Harness {
 
         Self {
             recording,
+            rules,
+            check,
             dir,
             proxy_url,
             origin: format!("https://localhost:{origin_port}"),
@@ -640,7 +655,7 @@ async fn a_full_queue_sheds_bodies_and_keeps_the_rows() {
 async fn headers_are_kept() {
     let h = Harness::start("headers").await;
     h.client(false)
-        .post(format!("{}/json?size=10", h.origin))
+        .post(format!("{}/json?size=30", h.origin))
         .header("x-trace", "đặt-hàng".as_bytes())
         .body("{}")
         .send()
@@ -726,5 +741,100 @@ async fn an_open_stream_does_not_hold_up_a_stop() {
         started.elapsed()
     );
     drop(res);
+    clean_up(conn, dir);
+}
+
+/// A host left alone reaches the client with its own certificate, so a client that
+/// trusts only the origin's CA gets through; decrypted, it would not.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_host_left_alone_is_not_decrypted() {
+    let h = Harness::start("left-alone").await;
+    let origin_ca = h.dir.join("origin-ca.pem");
+    let trusts_origin = benchkit::client_through_proxy(&h.proxy_url, &origin_ca, false).unwrap();
+
+    // Decrypted first: the proxy's certificate is not one this client trusts.
+    let refused = trusts_origin
+        .get(format!("{}/json?size=30", h.origin))
+        .send()
+        .await;
+    assert!(refused.is_err(), "the proxy decrypted it");
+
+    h.rules.write().unwrap().leave_alone("localhost");
+    let trusts_origin = benchkit::client_through_proxy(&h.proxy_url, &origin_ca, false).unwrap();
+    let body = trusts_origin
+        .get(format!("{}/json?size=30", h.origin))
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    assert_eq!(body.len(), 30, "it reached the client as it was");
+
+    // And back: the next connection is decrypted again.
+    h.rules.write().unwrap().decrypt("localhost");
+    let body = h
+        .client(false)
+        .get(format!("{}/json?size=20", h.origin))
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    assert_eq!(body.len(), 20);
+
+    let (_, conn, dir) = h.finish(2).await;
+    let tunnels: Vec<(String, String, String)> = conn
+        .prepare("SELECT method, host, path FROM flows WHERE kind = 'tunnel'")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(tunnels.len(), 1, "{tunnels:?}");
+    assert_eq!(tunnels[0].0, "CONNECT");
+    assert!(tunnels[0].1.starts_with("localhost"), "{tunnels:?}");
+    assert_eq!(tunnels[0].2, "", "where it went is all that is known");
+    let decrypted: i64 = conn
+        .query_row("SELECT count(*) FROM flows WHERE kind = 'http'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(decrypted, 1, "only the last request was read");
+    clean_up(conn, dir);
+}
+
+/// The test page has no server: the proxy answers, and says who came.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_test_page_says_who_reached_it() {
+    let h = Harness::start("check").await;
+    assert_eq!(h.check.last(), None);
+    let page = h
+        .client(false)
+        .get(format!("https://{CHECK_HOST}/"))
+        .header("user-agent", "Firefox/144.0")
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert!(page.contains("It works"), "{page}");
+    let visit = h.check.last().expect("seen");
+    assert_eq!(visit.user_agent, "Firefox/144.0");
+    assert!(visit.secure);
+
+    let plain = h
+        .client(true)
+        .get(format!("http://{CHECK_HOST}/"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(plain.status(), 200);
+    assert!(!h.check.last().expect("seen").secure);
+
+    let (summary, conn, dir) = h.finish(0).await;
+    assert_eq!(summary.written, 0, "the test is not traffic");
     clean_up(conn, dir);
 }

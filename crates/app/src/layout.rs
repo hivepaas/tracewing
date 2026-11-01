@@ -71,6 +71,8 @@ impl Appearance {
 #[serde(default)]
 pub struct Layout {
     pub appearance: Appearance,
+    /// Set up has been left once: it does not open by itself again.
+    pub setup_seen: bool,
     pub place: Place,
     pub sidebar_shown: bool,
     pub inspector_shown: bool,
@@ -87,6 +89,7 @@ impl Default for Layout {
     fn default() -> Self {
         Self {
             appearance: Appearance::System,
+            setup_seen: false,
             place: Place::Beside,
             sidebar_shown: true,
             inspector_shown: true,

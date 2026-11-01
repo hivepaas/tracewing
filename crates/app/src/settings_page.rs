@@ -5,6 +5,7 @@
 use crate::{colors::colors, input::TextInput, traffic::Traffic, widgets::eyebrow};
 use gpui::{Context, Entity, FontWeight, Window, div, prelude::*, px, rgb};
 use std::path::Path;
+use tracewing_proxy::rules::HostRules;
 use tracewing_store::settings::StorageSettings;
 
 /// One setting. `key` is its name in the file; a test sees that none is forgotten.
@@ -137,6 +138,8 @@ enum Field {
 
 pub struct SettingsPage {
     fields: Vec<(&'static str, Field)>,
+    /// Hosts not to decrypt, one a line. Applies at once, unlike the rest.
+    no_decrypt: Entity<TextInput>,
     pub problem: Option<String>,
     pub saved: bool,
 }
@@ -169,8 +172,10 @@ impl SettingsPage {
                 fields.push((row.key, field));
             }
         }
+        let no_decrypt = cx.new(|cx| TextInput::new("", cx).multiline(5, 12));
         Self {
             fields,
+            no_decrypt,
             problem: None,
             saved: false,
         }
@@ -220,20 +225,54 @@ impl Traffic {
             let shown = StorageSettings::load(&self.settings_path())
                 .unwrap_or_else(|_| self.engine.settings.clone());
             self.settings_page = Some(SettingsPage::new(&shown, cx));
+            self.show_rules(cx);
         }
         cx.notify();
     }
 
+    /// The list as it stands, in its field.
+    fn show_rules(&mut self, cx: &mut Context<Self>) {
+        let lines = self
+            .engine
+            .rules
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .to_lines();
+        if let Some(page) = &self.settings_page {
+            page.no_decrypt.update(cx, |input, cx| {
+                input.set_text(&lines, lines.len()..lines.len(), cx)
+            });
+        }
+    }
+
+    /// Types into the list. For tests.
+    #[doc(hidden)]
+    pub fn set_no_decrypt(&mut self, text: &str, cx: &mut Context<Self>) {
+        if let Some(page) = &self.settings_page {
+            page.no_decrypt.update(cx, |input, cx| {
+                input.set_text(text, text.len()..text.len(), cx)
+            });
+        }
+    }
+
     pub fn save_settings(&mut self, cx: &mut Context<Self>) {
         let path = self.settings_path();
+        let mut rules = None;
         if let Some(page) = &mut self.settings_page {
             page.save(&path, cx);
+            if page.problem.is_none() {
+                rules = Some(HostRules::from_lines(page.no_decrypt.read(cx).text()));
+            }
+        }
+        if let Some(rules) = rules {
+            self.change_rules(|now| *now = rules, cx);
         }
         cx.notify();
     }
 
     pub fn reset_settings(&mut self, cx: &mut Context<Self>) {
         self.settings_page = Some(SettingsPage::new(&StorageSettings::default(), cx));
+        self.show_rules(cx);
         cx.notify();
     }
 
@@ -382,7 +421,7 @@ impl Traffic {
         let status = match (&page.problem, page.saved) {
             (Some(problem), _) => Some((problem.clone(), c.error)),
             (None, true) => Some((
-                "Saved. It applies the next time tracewing starts.".to_owned(),
+                "Saved. The limits apply the next time tracewing starts.".to_owned(),
                 c.ok,
             )),
             _ => None,
@@ -417,6 +456,31 @@ impl Traffic {
                     .child(
                         button("settings-save", "Save", true)
                             .on_click(cx.listener(|this, _, _, cx| this.save_settings(cx))),
+                    ),
+            )
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(8.))
+                    .p(px(14.))
+                    .rounded(px(22.))
+                    .bg(rgb(c.surface))
+                    .child(eyebrow("Hosts not to decrypt").px(px(6.)))
+                    .child(
+                        div()
+                            .px(px(6.))
+                            .text_size(px(12.))
+                            .text_color(rgb(c.muted))
+                            .child("One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved."),
+                    )
+                    .child(
+                        div()
+                            .p(px(10.))
+                            .rounded(px(12.))
+                            .bg(rgb(c.input))
+                            .font_family(crate::MONO_FONT)
+                            .child(page.no_decrypt.clone()),
                     ),
             )
             .children(groups)
