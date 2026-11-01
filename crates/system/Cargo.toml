@@ -1,0 +1,20 @@
+[package]
+name = "tracewing-system"
+description = "The system proxy setting and trust stores of each OS"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tracewing-proxy.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+hudsucker.workspace = true
+rustls-platform-verifier.workspace = true
+libc.workspace = true
+tracing.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true

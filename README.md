@@ -4,7 +4,7 @@
 
 Built in Rust with [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui).
 
-> **Status:** early development. There is nothing to download yet.
+> **Status:** early development. There is nothing to download yet. The core works from the command line (see [Build](#-build)); the window is next.
 
 ## 🎯 Plans
 
@@ -12,6 +12,20 @@ Built in Rust with [GPUI](https://github.com/zed-industries/zed/tree/main/crates
 - **Big sessions stay smooth:** a million requests scroll at the display's refresh rate, and large bodies stream through instead of piling up in memory.
 - **Change traffic on the way:** breakpoints, map to a local file or another host, rewrite rules.
 - **Phones and emulators too:** set up from a QR code, with help for Android's certificate rules.
+
+## 🔨 Build
+
+Needs Rust; `rust-toolchain.toml` picks the version.
+
+```sh
+cargo test --release                        # includes end-to-end tests through the proxy
+cargo run --release -p tracewing-dev -- proxy          # listens on 127.0.0.1:9090
+curl --proxy http://127.0.0.1:9090 \
+     --cacert ~/.local/share/tracewing/ca.pem https://example.com/
+cargo run --release -p tracewing-dev -- settings       # every storage setting and its default
+```
+
+What the core has been measured to do, and why it is built this way: [docs/measurements.md](docs/measurements.md).
 
 ## 🐝 Made by HivePaaS
 
