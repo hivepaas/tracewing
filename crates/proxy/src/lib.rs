@@ -3,10 +3,11 @@
 
 pub mod ca;
 pub mod capture;
+pub mod rules;
 
 use anyhow::{Context, Result};
 use ca::LocalCa;
-use capture::{Crl, FlowHandler};
+use capture::{Check, Crl, FlowHandler};
 use hudsucker::{
     Proxy,
     rustls::{
@@ -17,10 +18,11 @@ use hudsucker::{
     tokio_tungstenite::Connector,
 };
 use hyper_util::client::legacy::connect::HttpConnector;
+use rules::HostRules;
 use std::{
     path::PathBuf,
     sync::{
-        Arc,
+        Arc, RwLock,
         atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::Duration,
@@ -63,6 +65,10 @@ pub struct ProxyOptions {
     pub shared: Arc<Shared>,
     /// Whether flows are being recorded; traffic passes either way.
     pub recording: Arc<AtomicBool>,
+    /// What not to decrypt. Changes apply to the next connection.
+    pub rules: Arc<RwLock<HostRules>>,
+    /// Who has reached the test page.
+    pub check: Arc<Check>,
     /// Stop without waiting for the search index to catch up.
     pub leave_index: bool,
     /// How long a stop waits for connections to end. A stream or a WebSocket that
@@ -161,6 +167,8 @@ pub async fn run_proxy(
         crl,
         spool.clone(),
         opts.recording,
+        opts.rules,
+        opts.check,
     );
     let stop_limit = opts.stop_limit;
     let (stopping_tx, stopping) = tokio::sync::oneshot::channel();

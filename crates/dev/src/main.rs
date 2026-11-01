@@ -224,6 +224,8 @@ async fn main() -> Result<()> {
                     stats_every: Some(Duration::from_secs(5)),
                     shared: Default::default(),
                     recording: Arc::new(AtomicBool::new(true)),
+                    rules: Default::default(),
+                    check: Default::default(),
                     leave_index: false,
                     stop_limit: Duration::from_secs(5),
                 },

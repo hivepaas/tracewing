@@ -5,13 +5,13 @@ use std::{
     net::SocketAddr,
     path::{Path, PathBuf},
     sync::{
-        Arc, Mutex,
+        Arc, Mutex, RwLock,
         atomic::{AtomicBool, Ordering},
     },
     thread::JoinHandle,
 };
 use tokio::sync::oneshot;
-use tracewing_proxy::{ProxyOptions, run_proxy};
+use tracewing_proxy::{ProxyOptions, capture::Check, rules::HostRules, run_proxy};
 use tracewing_store::{session::Shared, settings::StorageSettings};
 
 /// Where the proxy tries to listen, in this order.
@@ -20,6 +20,7 @@ pub const PORTS: std::ops::Range<u16> = 9090..9100;
 pub struct EngineOptions {
     pub data_dir: PathBuf,
     pub settings: StorageSettings,
+    pub rules: HostRules,
     pub ports: std::ops::Range<u16>,
     /// Extra roots to trust upstream. Only tests have any.
     pub extra_roots: Vec<PathBuf>,
@@ -31,6 +32,8 @@ pub struct Engine {
     pub settings: StorageSettings,
     pub shared: Arc<Shared>,
     pub recording: Arc<AtomicBool>,
+    pub rules: Arc<RwLock<HostRules>>,
+    pub check: Arc<Check>,
     /// Why the proxy stopped, if it did by itself.
     pub failure: Arc<Mutex<Option<String>>>,
     stop: Option<oneshot::Sender<()>>,
@@ -47,6 +50,8 @@ impl Engine {
         let shared = Arc::new(Shared::default());
         let recording = Arc::new(AtomicBool::new(true));
         let failure = Arc::new(Mutex::new(None));
+        let check = Arc::new(Check::default());
+        let rules = Arc::new(RwLock::new(opts.rules));
         let (stop, stopped) = oneshot::channel::<()>();
         let proxy = ProxyOptions {
             listener: None,
@@ -59,6 +64,8 @@ impl Engine {
             stats_every: None,
             shared: Arc::clone(&shared),
             recording: Arc::clone(&recording),
+            rules: Arc::clone(&rules),
+            check: Arc::clone(&check),
             leave_index: true,
             stop_limit: std::time::Duration::from_secs(2),
         };
@@ -88,6 +95,8 @@ impl Engine {
             settings: opts.settings,
             shared,
             recording,
+            rules,
+            check,
             failure,
             stop: Some(stop),
             thread: Some(thread),

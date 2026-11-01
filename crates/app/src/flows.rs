@@ -102,8 +102,17 @@ impl Flows {
                     path: r.get::<_, String>(4)?.into(),
                     note: error
                         .map(SharedString::from)
-                        .or_else(|| (kind == "websocket").then(|| "WebSocket".into())),
-                    size: size_text(r.get::<_, i64>(5)? as u64).into(),
+                        .or_else(|| match kind.as_str() {
+                            "websocket" => Some("WebSocket".into()),
+                            "tunnel" => Some("Not decrypted".into()),
+                            _ => None,
+                        }),
+                    // What goes through a tunnel is not looked at, nor counted.
+                    size: if kind == "tunnel" {
+                        "–".into()
+                    } else {
+                        size_text(r.get::<_, i64>(5)? as u64).into()
+                    },
                     time: duration.map(time_text).unwrap_or_default().into(),
                     slow: duration.is_some_and(|d| d >= 1_000_000),
                 })

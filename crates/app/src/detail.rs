@@ -37,6 +37,9 @@ pub struct Detail {
     pub id: i64,
     pub method: String,
     pub url: String,
+    pub host: String,
+    /// `http`, `websocket`, or `tunnel` for a host left alone.
+    pub kind: String,
     pub status: Option<u16>,
     pub client_version: String,
     pub server_version: Option<String>,
@@ -54,7 +57,7 @@ pub struct Detail {
 impl Detail {
     pub fn load(flows: &Connection, session_dir: &Path, id: i64) -> Result<Self> {
         let columns = format!(
-            "scheme, host, path, method, status, client_version, server_version, client,
+            "kind, scheme, host, path, method, status, client_version, server_version, client,
              content_type, ttfb_us, duration_us, error,
              req_bytes, req_truncated, req_shed, req_spool_lost, {},
              resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}",
@@ -65,9 +68,9 @@ impl Detail {
             &format!("SELECT {columns} FROM flows WHERE id = ?1"),
             params![id],
             |r| {
-                let scheme: String = r.get(0)?;
-                let host: String = r.get(1)?;
-                let path: String = r.get(2)?;
+                let scheme: String = r.get(1)?;
+                let host: String = r.get(2)?;
+                let path: String = r.get(3)?;
                 let facts = |first: usize| -> rusqlite::Result<BodyFacts> {
                     Ok(BodyFacts {
                         bytes: r.get::<_, i64>(first)? as u64,
@@ -80,17 +83,19 @@ impl Detail {
                 Ok(Self {
                     id,
                     url: format!("{scheme}://{host}{path}"),
-                    method: r.get(3)?,
-                    status: r.get(4)?,
-                    client_version: r.get(5)?,
-                    server_version: r.get(6)?,
-                    client: r.get(7)?,
-                    content_type: r.get(8)?,
-                    ttfb_us: r.get(9)?,
-                    duration_us: r.get(10)?,
-                    error: r.get(11)?,
-                    request: facts(12)?,
-                    response: facts(22)?,
+                    host,
+                    kind: r.get(0)?,
+                    method: r.get(4)?,
+                    status: r.get(5)?,
+                    client_version: r.get(6)?,
+                    server_version: r.get(7)?,
+                    client: r.get(8)?,
+                    content_type: r.get(9)?,
+                    ttfb_us: r.get(10)?,
+                    duration_us: r.get(11)?,
+                    error: r.get(12)?,
+                    request: facts(13)?,
+                    response: facts(23)?,
                     headers: None,
                 })
             },
@@ -158,6 +163,8 @@ mod tests {
             id: 1,
             method: "GET".into(),
             url: "https://a.dev/".into(),
+            host: "a.dev".into(),
+            kind: "http".into(),
             status: Some(200),
             client_version: client.into(),
             server_version: server.map(str::to_owned),

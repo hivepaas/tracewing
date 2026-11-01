@@ -10,7 +10,7 @@ use tracewing::{
     placement,
     traffic::Traffic,
 };
-use tracewing_proxy::{crypto_provider, default_data_dir};
+use tracewing_proxy::{crypto_provider, default_data_dir, rules::HostRules};
 use tracewing_store::settings::StorageSettings;
 use tracewing_system as system;
 
@@ -51,9 +51,16 @@ fn main() -> Result<()> {
     } else {
         (StorageSettings::default(), None)
     };
+    let rules_path = data_dir.join("decrypt.toml");
+    let (rules, rules_problem) = match HostRules::load(&rules_path) {
+        Ok(rules) => (rules, None),
+        Err(e) => (HostRules::default(), Some(format!("{e:#}"))),
+    };
+    let settings_problem = settings_problem.or(rules_problem);
     let engine = Engine::start(EngineOptions {
         data_dir: data_dir.clone(),
         settings,
+        rules,
         ports: PORTS,
         extra_roots: Vec::new(),
     })?;
@@ -89,6 +96,7 @@ fn main() -> Result<()> {
                     cx.new(|cx| {
                         let mut view = Traffic::new(engine, &data_dir, window, cx);
                         view.settings_problem = settings_problem;
+                        view.open_first_screen();
                         view
                     })
                 },

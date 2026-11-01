@@ -80,7 +80,9 @@ impl Traffic {
         let load = self.inspector.load;
         if !facts.stored.exists() {
             self.inspector.body = BodyState::Note(
-                if facts.bytes == 0 {
+                if detail.kind == "tunnel" {
+                    "This host is not decrypted, so what it sends cannot be seen."
+                } else if facts.bytes == 0 {
                     "No body."
                 } else if facts.shed {
                     "This body was not kept: the disk was nearly full, or too much was waiting for it."
@@ -213,11 +215,77 @@ impl Traffic {
         };
         panel
             .child(render_title(&detail))
+            .child(self.render_decrypt_choice(&detail, cx))
             .child(render_chips(&detail))
             .children(render_timing(&detail))
             .child(self.render_sides(cx))
             .child(self.render_parts(&detail, cx))
             .child(self.render_part(&detail))
+    }
+
+    /// Whether this host is decrypted, and the way to change that. An app that fails
+    /// through the proxy usually pins its certificates, and this is the way out.
+    fn render_decrypt_choice(&self, detail: &Detail, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = colors();
+        let left_alone = self
+            .engine
+            .rules
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .leaves_alone(&detail.host);
+        let host = detail.host.clone();
+        let text = if left_alone {
+            "Not decrypted. New connections to this host go through unread."
+        } else {
+            "If an app fails with this host, it may pin its certificates."
+        };
+        div()
+            .flex()
+            .flex_row()
+            .flex_shrink_0()
+            .items_center()
+            .gap(px(10.))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .text_size(px(12.))
+                    .text_color(rgb(c.muted))
+                    .child(text),
+            )
+            .child(
+                div()
+                    .id("decrypt-choice")
+                    .flex_shrink_0()
+                    .h(px(28.))
+                    .px(px(10.))
+                    .rounded(px(14.))
+                    .flex()
+                    .items_center()
+                    .cursor_pointer()
+                    .bg(rgb(c.chip))
+                    .text_color(rgb(c.on_chip))
+                    .text_size(px(12.))
+                    .font_weight(FontWeight::BOLD)
+                    .child(if left_alone {
+                        "Decrypt this host"
+                    } else {
+                        "Do not decrypt this host"
+                    })
+                    .on_click(cx.listener(move |view, _, _, cx| {
+                        let host = host.clone();
+                        view.change_rules(
+                            |rules| {
+                                if left_alone {
+                                    rules.decrypt(&host);
+                                } else {
+                                    rules.leave_alone(&host);
+                                }
+                            },
+                            cx,
+                        );
+                    })),
+            )
     }
 
     fn render_sides(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -293,26 +361,28 @@ impl Traffic {
                     .text_color(rgb(c.muted))
                     .child(text)
             }))
-            .child(
-                div()
-                    .id("copy-curl")
-                    .h(px(28.))
-                    .px(px(10.))
-                    .rounded(px(14.))
-                    .flex()
-                    .items_center()
-                    .cursor_pointer()
-                    .bg(rgb(c.chip))
-                    .text_color(rgb(c.on_chip))
-                    .text_size(px(12.))
-                    .font_weight(FontWeight::BOLD)
-                    .child(if self.inspector.copied {
-                        "Copied"
-                    } else {
-                        "Copy as cURL"
-                    })
-                    .on_click(cx.listener(|view, _, _, cx| view.copy_as_curl(cx))),
-            )
+            .when(detail.kind != "tunnel", |d| {
+                d.child(
+                    div()
+                        .id("copy-curl")
+                        .h(px(28.))
+                        .px(px(10.))
+                        .rounded(px(14.))
+                        .flex()
+                        .items_center()
+                        .cursor_pointer()
+                        .bg(rgb(c.chip))
+                        .text_color(rgb(c.on_chip))
+                        .text_size(px(12.))
+                        .font_weight(FontWeight::BOLD)
+                        .child(if self.inspector.copied {
+                            "Copied"
+                        } else {
+                            "Copy as cURL"
+                        })
+                        .on_click(cx.listener(|view, _, _, cx| view.copy_as_curl(cx))),
+                )
+            })
     }
 
     fn render_part(&self, detail: &Detail) -> impl IntoElement {
@@ -397,6 +467,15 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
     let c = colors();
     let (ground, ink) = status_colors(detail.status);
     let plain = |text: String| chip(text, c.chip, c.on_chip);
+    // All a tunnel tells is that it was opened: nothing in it is read or counted.
+    if detail.kind == "tunnel" {
+        return div()
+            .flex()
+            .flex_row()
+            .flex_shrink_0()
+            .gap(px(6.))
+            .child(plain("Tunnel, not decrypted".to_owned()));
+    }
     let encoding = detail.response.stored.encoding.clone();
     let size = match encoding {
         Some(encoding) => format!("{} · {encoding}", size_text(detail.response.bytes)),

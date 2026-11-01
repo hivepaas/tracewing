@@ -23,8 +23,19 @@ use tracewing::{
     traffic::{Screen, Traffic},
 };
 use tracewing_store::settings::StorageSettings;
+use tracewing_system::Scope;
 
 /// A `gsettings` that keeps its values in files in a folder.
+/// A `certutil` that keeps one certificate as a file. `-N` makes a database.
+const FAKE_CERTUTIL: &str = r#"#!/bin/sh
+store="$FAKE_GSETTINGS_DIR"
+case "$1" in
+-N) db=$(echo "$4" | sed 's/^sql://'); touch "$db/cert9.db" ;;
+-A) touch "$store/certutil-added" ;;
+-L) test -e "$store/certutil-added" ;;
+esac
+"#;
+
 const FAKE_GSETTINGS: &str = r#"#!/bin/sh
 store="$FAKE_GSETTINGS_DIR"
 case "$1" in
@@ -80,6 +91,11 @@ fn the_system_proxy_and_the_settings_from_the_window() {
     std::fs::write(&fake, FAKE_GSETTINGS).unwrap();
     std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
     std::fs::write(store.join("org.gnome.system.proxy.mode"), "'auto'").unwrap();
+    let certutil = bin.join("certutil");
+    std::fs::write(&certutil, FAKE_CERTUTIL).unwrap();
+    std::fs::set_permissions(&certutil, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let home = dir.join("home");
+    std::fs::create_dir_all(&home).unwrap();
     let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap());
     // SAFETY: the only test in this binary, before it starts any thread of its own.
     unsafe {
@@ -87,6 +103,7 @@ fn the_system_proxy_and_the_settings_from_the_window() {
         std::env::set_var("FAKE_GSETTINGS_DIR", &store);
         std::env::set_var("XDG_CURRENT_DESKTOP", "GNOME");
         std::env::remove_var("KDE_SESSION_VERSION");
+        std::env::set_var("HOME", &home);
     }
 
     let _ = tracewing_proxy::crypto_provider().install_default();
@@ -98,6 +115,7 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             disk_reserve_mib: 1,
             ..StorageSettings::default()
         },
+        rules: Default::default(),
         ports: 19_390..19_400,
         extra_roots: Vec::new(),
     })
@@ -131,6 +149,41 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             );
         })
         .unwrap();
+
+    // The certificate, with a stand-in for certutil and a home of its own. It goes
+    // in the browsers' stores, which the system's verifier does not read, and the
+    // window must still call it trusted.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Setup, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    save_shot(&mut cx, window.into(), "13-setup");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.install_certificate(Scope::User, cx)
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the install", |view| {
+        !matches!(view.system.ca, CaState::Installing)
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            assert_eq!(view.system.problem, None);
+            assert_eq!(view.system.ca, CaState::Trusted);
+            assert_eq!(
+                view.system.ca_places.len(),
+                1,
+                "{:?}",
+                view.system.ca_places
+            );
+            assert!(!view.system.ca_verified);
+        })
+        .unwrap();
+    assert!(store.join("certutil-added").exists());
+    cx.run_until_parked();
+    save_shot(&mut cx, window.into(), "14-setup-trusted");
 
     // On, and what was there before comes back when it goes off.
     window
@@ -190,6 +243,22 @@ fn the_system_proxy_and_the_settings_from_the_window() {
     cx.run_until_parked();
     save_shot(&mut cx, window.into(), "12-settings-saved");
     let saved = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();
+    // The list of hosts applies at once, and is kept.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_no_decrypt("*.Bank.vn\n\npinned.dev", cx);
+            view.save_settings(cx);
+            let rules = view.engine.rules.read().unwrap();
+            assert!(rules.leaves_alone("www.bank.vn:443"));
+            assert!(rules.leaves_alone("pinned.dev"));
+            assert!(
+                !rules.leaves_alone("gateway.icloud.com"),
+                "replaced the defaults"
+            );
+        })
+        .unwrap();
+    let kept = tracewing_proxy::rules::HostRules::load(&data_dir.join("decrypt.toml")).unwrap();
+    assert_eq!(kept.no_decrypt, ["*.bank.vn", "pinned.dev"]);
     assert_eq!(saved.session_max_mib, 512);
     assert_eq!(saved.index_bodies, StorageSettings::default().index_bodies);
     drop(cx);

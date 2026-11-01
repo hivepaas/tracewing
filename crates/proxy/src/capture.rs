@@ -6,6 +6,7 @@
 //! it (the handler, the request body, the response body) is dropped.
 
 use crate::ca::CRL_PATH;
+use crate::rules::HostRules;
 use bytes::Bytes;
 use http::{Method, Request, Response, StatusCode, header};
 use http_body::{Frame, SizeHint};
@@ -16,7 +17,7 @@ use std::{
     net::SocketAddr,
     pin::Pin,
     sync::{
-        Arc, Mutex,
+        Arc, Mutex, RwLock,
         atomic::{AtomicBool, Ordering},
     },
     task::{Context, Poll},
@@ -32,6 +33,43 @@ pub struct Crl {
     pub der: Bytes,
 }
 
+/// A host that exists only here: the proxy answers for it. A browser that gets the
+/// page over HTTPS went through the proxy and trusts its certificate, which no other
+/// check can tell, as browsers keep trust stores of their own.
+pub const CHECK_HOST: &str = "tracewing.test";
+
+const CHECK_PAGE: &str = r#"<!doctype html>
+<html><head><meta charset="utf-8"><title>tracewing</title>
+<style>
+body { font: 16px system-ui, sans-serif; margin: 15vh auto; max-width: 30em; padding: 0 1em;
+       color: #161b26; background: #f4f6fb; }
+@media (prefers-color-scheme: dark) { body { color: #e4e5e8; background: #141517; } }
+</style></head>
+<body><h1>It works</h1>
+<p>This browser's traffic goes through tracewing. You can close this page.</p></body></html>
+"#;
+
+/// The last browser to reach the test page.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CheckVisit {
+    pub user_agent: String,
+    /// Over HTTPS, so the browser trusts the certificate.
+    pub secure: bool,
+}
+
+#[derive(Debug, Default)]
+pub struct Check(Mutex<Option<CheckVisit>>);
+
+impl Check {
+    pub fn last(&self) -> Option<CheckVisit> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+
+    fn saw(&self, visit: CheckVisit) {
+        *self.0.lock().unwrap_or_else(|e| e.into_inner()) = Some(visit);
+    }
+}
+
 #[derive(Clone)]
 pub struct FlowHandler {
     recorder: Recorder,
@@ -39,6 +77,8 @@ pub struct FlowHandler {
     crl: Crl,
     spool: Spool,
     recording: Arc<AtomicBool>,
+    rules: Arc<RwLock<HostRules>>,
+    check: Arc<Check>,
     /// The flow of the request this clone is handling. hudsucker clones the
     /// handler per request, so request and response see the same value.
     flow: Option<Arc<Flow>>,
@@ -51,6 +91,8 @@ impl FlowHandler {
         crl: Crl,
         spool: Spool,
         recording: Arc<AtomicBool>,
+        rules: Arc<RwLock<HostRules>>,
+        check: Arc<Check>,
     ) -> Self {
         Self {
             recorder,
@@ -58,6 +100,8 @@ impl FlowHandler {
             crl,
             spool,
             recording,
+            rules,
+            check,
             flow: None,
         }
     }
@@ -79,6 +123,20 @@ impl HttpHandler for FlowHandler {
                 .into();
         }
 
+        let scheme = req.uri().scheme_str().unwrap_or("http");
+        if request_host(&req).map(|host| without_default_port(host, scheme)) == Some(CHECK_HOST) {
+            self.check.saw(CheckVisit {
+                user_agent: header_text(req.headers(), header::USER_AGENT).unwrap_or_default(),
+                secure: scheme == "https",
+            });
+            return Response::builder()
+                .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+                .body(Body::from(http_body_util::Full::new(Bytes::from_static(
+                    CHECK_PAGE.as_bytes(),
+                ))))
+                .expect("valid response")
+                .into();
+        }
         // Paused: traffic goes through as if nothing were watching.
         if !self.recording.load(Ordering::Relaxed) {
             return req.into();
@@ -89,6 +147,41 @@ impl HttpHandler for FlowHandler {
         let req = req.map(move |body| TapBody::wrap(body, tapped, Side::Request, cap, spool));
         self.flow = Some(flow);
         req.into()
+    }
+
+    /// Left alone, a connection is a row and nothing more: all that can be known is
+    /// where it went.
+    async fn should_intercept_connect(&mut self, ctx: &HttpContext, req: &Request<Body>) -> bool {
+        let Some(host) = req.uri().authority().map(|a| a.as_str()) else {
+            return true;
+        };
+        let leave = self
+            .rules
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .leaves_alone(host);
+        if leave && self.recording.load(Ordering::Relaxed) {
+            self.recorder.submit(FlowRecord {
+                started_us: unix_micros(),
+                client: ctx.client_addr.to_string(),
+                kind: "tunnel",
+                method: "CONNECT".to_owned(),
+                scheme: "https".to_owned(),
+                host: without_default_port(host, "https").to_owned(),
+                client_version: format!("{:?}", req.version()),
+                status: Some(200),
+                request: BodyRecord {
+                    complete: true,
+                    ..BodyRecord::default()
+                },
+                response: BodyRecord {
+                    complete: true,
+                    ..BodyRecord::default()
+                },
+                ..FlowRecord::default()
+            });
+        }
+        !leave
     }
 
     async fn handle_response(&mut self, _ctx: &HttpContext, res: Response<Body>) -> Response<Body> {

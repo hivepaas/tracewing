@@ -37,6 +37,7 @@ use std::{
     },
     time::{Duration, Instant},
 };
+use tracewing_proxy::{capture::CheckVisit, rules::HostRules};
 use tracewing_store::session;
 
 pub const ROW_HEIGHT: f32 = 32.;
@@ -141,6 +142,7 @@ pub enum Drag {
 /// What the rail switches between.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Screen {
+    Setup,
     Traffic,
     Settings,
 }
@@ -153,7 +155,7 @@ fn looks_dark(window: &Window) -> bool {
 }
 
 pub struct Traffic {
-    pub(crate) engine: Engine,
+    pub engine: Engine,
     /// The system's own appearance is dark.
     system_dark: bool,
     pub(crate) data_dir: PathBuf,
@@ -196,6 +198,8 @@ pub struct Traffic {
     rows_missing: bool,
     places_asked: usize,
     bounds_change: u64,
+    /// Who last reached the test page, as the window has seen it.
+    pub check_visit: Option<CheckVisit>,
 }
 
 impl Traffic {
@@ -299,6 +303,7 @@ impl Traffic {
             rows_missing: false,
             places_asked: 0,
             bounds_change: 0,
+            check_visit: None,
         }
     }
 
@@ -323,11 +328,40 @@ impl Traffic {
         self.apply_appearance(window, cx);
     }
 
+    /// What opens first: Set up, until it has been seen once.
+    pub fn open_first_screen(&mut self) {
+        if !self.layout.setup_seen {
+            self.screen = Screen::Setup;
+        }
+    }
+
+    fn rules_path(&self) -> PathBuf {
+        self.data_dir.join("decrypt.toml")
+    }
+
+    /// Changes what is not decrypted, from the next connection on, and keeps it.
+    pub fn change_rules(&mut self, change: impl FnOnce(&mut HostRules), cx: &mut Context<Self>) {
+        let rules = {
+            let mut rules = self.engine.rules.write().unwrap_or_else(|e| e.into_inner());
+            change(&mut rules);
+            rules.clone()
+        };
+        if let Err(e) = rules.save(&self.rules_path()) {
+            self.system.problem = Some(format!("{e:#}"));
+        }
+        cx.notify();
+    }
+
     pub fn settings_path(&self) -> PathBuf {
         self.data_dir.join("settings.toml")
     }
 
     pub fn set_screen(&mut self, screen: Screen, cx: &mut Context<Self>) {
+        // Once left, it does not open by itself again.
+        if self.screen == Screen::Setup && !self.layout.setup_seen {
+            self.layout.setup_seen = true;
+            self.save_layout();
+        }
         self.screen = screen;
         cx.notify();
     }
@@ -421,6 +455,11 @@ impl Traffic {
                     self.hosts_due = Instant::now() + WORK_EVERY.max(took * WORK_SHARE);
                 }
             }
+        }
+        let visit = self.engine.check.last();
+        if visit != self.check_visit {
+            self.check_visit = visit;
+            changed = true;
         }
         let newest = self.bounds.map_or(0, |(_, last)| last);
         let now = Instant::now();
@@ -621,6 +660,11 @@ impl Traffic {
         } else {
             Place::Below
         }
+    }
+
+    pub fn cancel_drag(&mut self, cx: &mut Context<Self>) {
+        self.drag = None;
+        cx.notify();
     }
 
     pub fn begin_inspector_drag(&mut self, cx: &mut Context<Self>) {
@@ -1303,6 +1347,7 @@ impl Traffic {
                     .bg(rgb(c.accent))
                     .child(icon("logo", 24., c.on_accent)),
             )
+            .child(item("rail-setup", "Set up", "setup", Screen::Setup))
             .child(item("rail-traffic", "Traffic", "traffic", Screen::Traffic))
             .child(item(
                 "rail-settings",
@@ -1329,8 +1374,8 @@ impl Traffic {
                 .cursor_pointer()
                 .text_color(rgb(c.warn))
                 .child(icon("shield-off", 14., c.warn))
-                .child("HTTPS will fail: install the certificate")
-                .on_click(cx.listener(|this, _, _, cx| this.install_certificate(cx)))
+                .child("HTTPS will fail until the certificate is trusted: set up")
+                .on_click(cx.listener(|this, _, _, cx| this.set_screen(Screen::Setup, cx)))
                 .into_any_element(),
         }
     }
@@ -1410,6 +1455,8 @@ impl Focusable for Traffic {
 impl Render for Traffic {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
+        let setup =
+            (self.screen == Screen::Setup).then(|| self.render_setup(cx).into_any_element());
         let settings = (self.screen == Screen::Settings)
             .then(|| self.render_settings(window, cx).into_any_element());
         let content_bounds = Rc::clone(&self.content);
@@ -1486,6 +1533,7 @@ impl Render for Traffic {
                     .pr(px(14.))
                     .pb(px(10.))
                     .pl(px(4.))
+                    .when_some(setup, |d, setup| d.child(setup))
                     .when_some(settings, |d, settings| d.child(settings))
                     .when(self.screen == Screen::Traffic, |d| {
                         d.child(self.render_toolbar(cx)).child(
