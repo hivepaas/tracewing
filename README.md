@@ -18,8 +18,9 @@ Built in Rust with [GPUI](https://github.com/zed-industries/zed/tree/main/crates
 Needs Rust; `rust-toolchain.toml` picks the version. On Linux, the window also needs the packages listed in `.github/workflows/ci.yml`. It builds for Wayland by default: add `--features x11` for X11.
 
 ```sh
-cargo test --release                        # includes end-to-end tests through the proxy
-cargo run --release -p tracewing                       # the window; listens on 127.0.0.1:9090
+make release                                # the window; listens on 127.0.0.1:9090
+make debug                                  # the same, built for debugging
+make test                                   # includes end-to-end tests through the proxy
 curl --proxy http://127.0.0.1:9090 \
      --cacert ~/.local/share/tracewing/ca.pem https://example.com/
 cargo run --release -p tracewing-dev -- settings       # every storage setting and its default
