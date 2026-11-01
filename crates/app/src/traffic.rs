@@ -4,6 +4,7 @@
 //! that can take long is done on a worker thread, so a flood or a million rows
 //! never holds up a frame.
 
+use crate::sessions_page::{SessionsPage, when_text};
 use crate::{
     chrome,
     colors::{self, colors, with_alpha},
@@ -38,7 +39,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tracewing_proxy::{capture::CheckVisit, rules::HostRules};
-use tracewing_store::session;
+use tracewing_store::{search::Indexer, session};
 
 pub const ROW_HEIGHT: f32 = 32.;
 const LOOK_EVERY: Duration = Duration::from_millis(100);
@@ -144,6 +145,7 @@ pub enum Drag {
 pub enum Screen {
     Setup,
     Traffic,
+    Sessions,
     Settings,
 }
 
@@ -156,6 +158,13 @@ fn looks_dark(window: &Window) -> bool {
 
 pub struct Traffic {
     pub engine: Engine,
+    /// An old session on show, with recording going on behind it.
+    pub(crate) viewing: Option<PathBuf>,
+    /// Finishing the search index of the one on show.
+    catching_up: Option<Indexer>,
+    /// When it started, for a session with no name.
+    viewing_started: String,
+    pub sessions_page: SessionsPage,
     /// The system's own appearance is dark.
     system_dark: bool,
     pub(crate) data_dir: PathBuf,
@@ -238,6 +247,9 @@ impl Traffic {
         cx.defer_in(window, Self::bounds_changed);
         cx.on_app_quit(|this, _| {
             this.save_layout();
+            if let Some(indexer) = this.catching_up.take() {
+                let _ = indexer.leave();
+            }
             this.release_system_proxy();
             this.engine.stop();
             async {}
@@ -266,6 +278,10 @@ impl Traffic {
         });
         Self {
             engine,
+            viewing: None,
+            catching_up: None,
+            viewing_started: String::new(),
+            sessions_page: SessionsPage::default(),
             system_dark,
             data_dir: data_dir.to_owned(),
             screen: Screen::Traffic,
@@ -363,11 +379,131 @@ impl Traffic {
             self.save_layout();
         }
         self.screen = screen;
+        if screen == Screen::Sessions {
+            self.refresh_sessions(cx);
+        }
         cx.notify();
     }
 
     pub fn session_dir(&self) -> &Path {
-        &self.engine.session
+        self.viewing.as_deref().unwrap_or(&self.engine.session)
+    }
+
+    pub fn is_viewing(&self) -> bool {
+        self.viewing.is_some()
+    }
+
+    pub fn is_catching_up(&self) -> bool {
+        self.catching_up.is_some()
+    }
+
+    fn start_worker(&mut self, session_dir: PathBuf) {
+        let (job_tx, job_rx) = mpsc::channel();
+        let (done_tx, done_rx) = mpsc::channel();
+        std::thread::Builder::new()
+            .name("traffic-worker".into())
+            .spawn(move || work(session_dir, job_rx, done_tx))
+            .expect("a thread can start");
+        // Without the sender the old worker ends by itself.
+        self.jobs = job_tx;
+        self.done = done_rx;
+    }
+
+    /// Whatever session is on show, from its start.
+    fn show_session(&mut self, cx: &mut Context<Self>) {
+        self.leave_catching_up(cx);
+        self.flows = None;
+        self.bounds = None;
+        self.hosts.clear();
+        self.hosts_seen = 0;
+        self.hosts_asked = false;
+        self.hosts_due = Instant::now();
+        self.cleared_to = 0;
+        self.selected = None;
+        self.inspector = InspectorState::default();
+        self.start_worker(self.session_dir().to_owned());
+        self.look_for_bottom = false;
+        self.scroll
+            .0
+            .borrow()
+            .base_handle
+            .set_offset(point(px(0.), px(0.)));
+        self.refilter(cx);
+    }
+
+    /// Shows an old session, and finishes its search index if a crash or an early
+    /// close left it short.
+    pub fn open_session(&mut self, dir: &Path, cx: &mut Context<Self>) {
+        if dir == self.engine.session {
+            self.back_to_live(cx);
+            return;
+        }
+        self.viewing = Some(dir.to_owned());
+        self.viewing_started = when_text(session::info(dir).first_us);
+        self.show_session(cx);
+        match Indexer::catch_up(dir, &self.engine.settings) {
+            Ok(indexer) => self.catching_up = Some(indexer),
+            Err(e) => self.system.problem = Some(format!("The search index: {e:#}")),
+        }
+    }
+
+    pub fn back_to_live(&mut self, cx: &mut Context<Self>) {
+        self.viewing = None;
+        self.show_session(cx);
+    }
+
+    fn leave_catching_up(&mut self, cx: &mut Context<Self>) {
+        if let Some(indexer) = self.catching_up.take() {
+            cx.background_spawn(async move {
+                let _ = indexer.leave();
+            })
+            .detach();
+        }
+    }
+
+    fn render_viewing_banner(&self, cx: &mut Context<Self>) -> Option<impl IntoElement + use<>> {
+        let dir = self.viewing.as_ref()?;
+        let c = colors();
+        let name = session::name_of(dir).unwrap_or_else(|| self.viewing_started.clone());
+        Some(
+            div()
+                .flex()
+                .flex_row()
+                .flex_wrap()
+                .items_center()
+                .gap(px(10.))
+                .px(px(14.))
+                .py(px(8.))
+                .rounded(px(16.))
+                .bg(rgb(c.tonal))
+                .text_color(rgb(c.on_tonal))
+                .child(
+                    div()
+                        .font_weight(FontWeight::BOLD)
+                        .child(format!("An earlier session: {name}")),
+                )
+                .child(div().child(if self.catching_up.is_some() {
+                    "Read-only. Search covers more as its index is finished. Recording goes on."
+                } else {
+                    "Read-only. Recording goes on."
+                }))
+                .child(div().flex_1())
+                .child(
+                    div()
+                        .id("back-to-live")
+                        .h(px(30.))
+                        .px(px(14.))
+                        .rounded(px(15.))
+                        .flex()
+                        .items_center()
+                        .cursor_pointer()
+                        .bg(rgb(c.accent))
+                        .text_color(rgb(c.on_accent))
+                        .font_weight(FontWeight::BOLD)
+                        .child("Back to live")
+                        .on_click(cx.listener(|this, _, _, cx| this.back_to_live(cx))),
+                ),
+        )
     }
 
     pub fn proxy_addr(&self) -> std::net::SocketAddr {
@@ -427,7 +563,7 @@ impl Traffic {
     /// One look at the session: what has arrived, what the worker has done.
     pub fn look(&mut self, cx: &mut Context<Self>) {
         if self.flows.is_none() {
-            self.flows = Flows::open(&self.engine.session).ok();
+            self.flows = Flows::open(self.session_dir()).ok();
         }
         let mut changed = false;
         if let Some(flows) = &self.flows {
@@ -455,6 +591,12 @@ impl Traffic {
                     self.hosts_due = Instant::now() + WORK_EVERY.max(took * WORK_SHARE);
                 }
             }
+        }
+        if self.catching_up.as_ref().is_some_and(Indexer::is_finished) {
+            self.leave_catching_up(cx);
+            // What it found is now there to find.
+            self.filter_seen = -1;
+            changed = true;
         }
         let visit = self.engine.check.last();
         if visit != self.check_visit {
@@ -522,8 +664,17 @@ impl Traffic {
         } else {
             self.ask_filter();
         }
-        self.follow = true;
+        // Live, the newest is what matters; nothing new comes to an earlier session,
+        // so its answer starts at the top.
+        self.follow = self.viewing.is_none();
         self.last_count = usize::MAX;
+        if self.viewing.is_some() {
+            self.scroll
+                .0
+                .borrow()
+                .base_handle
+                .set_offset(point(px(0.), px(0.)));
+        }
         cx.notify();
     }
 
@@ -557,6 +708,12 @@ impl Traffic {
     pub fn lose_the_session(&mut self, cx: &mut Context<Self>) {
         self.flows = None;
         cx.notify();
+    }
+
+    /// The place of the row at the top of the list.
+    pub fn first_row_in_view(&self) -> usize {
+        let offset = -f32::from(self.scroll.0.borrow().base_handle.offset().y);
+        (offset / ROW_HEIGHT) as usize
     }
 
     pub fn is_filtering(&self) -> bool {
@@ -1350,6 +1507,12 @@ impl Traffic {
             .child(item("rail-setup", "Set up", "setup", Screen::Setup))
             .child(item("rail-traffic", "Traffic", "traffic", Screen::Traffic))
             .child(item(
+                "rail-sessions",
+                "Sessions",
+                "sessions",
+                Screen::Sessions,
+            ))
+            .child(item(
                 "rail-settings",
                 "Settings",
                 "settings",
@@ -1457,6 +1620,11 @@ impl Render for Traffic {
         let c = colors();
         let setup =
             (self.screen == Screen::Setup).then(|| self.render_setup(cx).into_any_element());
+        let sessions =
+            (self.screen == Screen::Sessions).then(|| self.render_sessions(cx).into_any_element());
+        let banner = self
+            .render_viewing_banner(cx)
+            .map(IntoElement::into_any_element);
         let settings = (self.screen == Screen::Settings)
             .then(|| self.render_settings(window, cx).into_any_element());
         let content_bounds = Rc::clone(&self.content);
@@ -1534,9 +1702,10 @@ impl Render for Traffic {
                     .pb(px(10.))
                     .pl(px(4.))
                     .when_some(setup, |d, setup| d.child(setup))
+                    .when_some(sessions, |d, sessions| d.child(sessions))
                     .when_some(settings, |d, settings| d.child(settings))
                     .when(self.screen == Screen::Traffic, |d| {
-                        d.child(self.render_toolbar(cx)).child(
+                        d.child(self.render_toolbar(cx)).children(banner).child(
                             div()
                                 .flex_1()
                                 .min_h_0()

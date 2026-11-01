@@ -838,3 +838,47 @@ async fn the_test_page_says_who_reached_it() {
     assert_eq!(summary.written, 0, "the test is not traffic");
     clean_up(conn, dir);
 }
+
+/// A session cut off by a crash can still be read, and its index finished.
+#[test]
+fn a_session_survives_being_killed() {
+    let dir = std::env::temp_dir().join(format!("tracewing-killed-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let session_dir = dir.join("session");
+    let mut seeding = std::process::Command::new(env!("CARGO_BIN_EXE_tracewing-dev"))
+        .args(["seed", "--rich", "--rows", "100000000", "--session"])
+        .arg(&session_dir)
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let body_written = session_dir.join("bodies/00000001.log");
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while std::fs::metadata(&body_written).map_or(0, |m| m.len()) < 20 << 20 {
+        assert!(Instant::now() < deadline, "nothing written");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    seeding.kill().unwrap();
+    seeding.wait().unwrap();
+
+    let about = session::info(&session_dir);
+    assert!(about.readable);
+    assert!(about.flows > 0, "{about:?}");
+    let settings = StorageSettings::default();
+    let indexer = search::Indexer::catch_up(&session_dir, &settings).unwrap();
+    let stats = indexer.stats();
+    indexer.finish().unwrap();
+    assert_eq!(stats.indexed.load(Ordering::Relaxed), about.flows);
+    assert_eq!(stats.errors.load(Ordering::Relaxed), 0);
+
+    let conn = Connection::open(session_dir.join("flows.db")).unwrap();
+    let mut reader = BodyReader::new(&session_dir);
+    let last = about.flows as i64;
+    let body = stored_body(&conn, last, "resp").unwrap();
+    let text = reader
+        .unpacked(&body, usize::MAX)
+        .expect("the last row's body was flushed before it");
+    assert!(text.starts_with(b"{\"id\":"), "{:?}", &text[..20]);
+    drop(conn);
+    std::fs::remove_dir_all(&dir).unwrap();
+}
