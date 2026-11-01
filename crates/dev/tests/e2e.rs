@@ -5,6 +5,10 @@
 use rusqlite::Connection;
 use std::{
     path::PathBuf,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{Duration, Instant},
 };
 use tokio::{net::TcpListener, sync::oneshot, task::JoinHandle};
@@ -17,6 +21,7 @@ use tracewing_store::{
 };
 
 struct Harness {
+    recording: Arc<AtomicBool>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -58,15 +63,21 @@ impl Harness {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let proxy_url = format!("http://{}", listener.local_addr().unwrap());
         let (stop, stopped) = oneshot::channel::<()>();
+        let recording = Arc::new(AtomicBool::new(true));
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
-                listener,
+                listener: Some(listener),
+                std_listener: None,
                 data_dir: dir.join("ca"),
                 session: dir.join("session"),
                 settings,
                 extra_roots: vec![origin_ca],
                 queue: 10_000,
                 stats_every: None,
+                shared: Default::default(),
+                recording: Arc::clone(&recording),
+                leave_index: false,
+                stop_limit: Duration::from_secs(1),
             },
             async {
                 let _ = stopped.await;
@@ -77,6 +88,7 @@ impl Harness {
         }
 
         Self {
+            recording,
             dir,
             proxy_url,
             origin: format!("https://localhost:{origin_port}"),
@@ -620,5 +632,99 @@ async fn a_full_queue_sheds_bodies_and_keeps_the_rows() {
     assert_eq!(bytes, 500, "the row still knows the size");
     assert_eq!(response_of(&conn, &dir, 1), None);
     assert_eq!(shed, 1, "and says the body was let go");
+    clean_up(conn, dir);
+}
+
+/// Headers come back in the inspector, from the log rather than the row.
+#[tokio::test(flavor = "multi_thread")]
+async fn headers_are_kept() {
+    let h = Harness::start("headers").await;
+    h.client(false)
+        .post(format!("{}/json?size=10", h.origin))
+        .header("x-trace", "đặt-hàng".as_bytes())
+        .body("{}")
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    let (_, conn, dir) = h.finish(1).await;
+    let mut reader = BodyReader::new(&dir.join("session"));
+    let (request, response) = session::stored_headers(&conn, &mut reader, 1)
+        .unwrap()
+        .expect("kept");
+    drop(reader);
+    assert!(
+        request
+            .iter()
+            .any(|(n, v)| n == "x-trace" && v == "đặt-hàng"),
+        "{request:?}"
+    );
+    assert!(
+        response
+            .iter()
+            .any(|(n, v)| n == "content-type" && v == "application/json"),
+        "{response:?}"
+    );
+    clean_up(conn, dir);
+}
+
+/// Paused, traffic goes through and nothing is written down.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_pause_records_nothing_and_lets_traffic_through() {
+    let h = Harness::start("pause").await;
+    let client = h.client(false);
+    let get = |size: u32| {
+        let (client, origin) = (client.clone(), h.origin.clone());
+        async move {
+            client
+                .get(format!("{origin}/json?size={size}"))
+                .send()
+                .await
+                .unwrap()
+                .bytes()
+                .await
+                .unwrap()
+                .len()
+        }
+    };
+    assert_eq!(get(100).await, 100);
+    h.recording.store(false, Ordering::Relaxed);
+    assert_eq!(get(200).await, 200);
+    h.recording.store(true, Ordering::Relaxed);
+    assert_eq!(get(300).await, 300);
+    let (summary, conn, dir) = h.finish(2).await;
+    assert_eq!(summary.written, 2);
+    let sizes: Vec<i64> = conn
+        .prepare("SELECT resp_bytes FROM flows ORDER BY id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(sizes, [100, 300]);
+    clean_up(conn, dir);
+}
+
+/// A stream that goes on must not keep the app from closing.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_open_stream_does_not_hold_up_a_stop() {
+    let h = Harness::start("open-stream").await;
+    let mut res = h
+        .client(false)
+        .get(format!("{}/stream?events=100000&gap_ms=100", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert!(res.chunk().await.unwrap().is_some(), "it has started");
+    let started = Instant::now();
+    let (_, conn, dir) = h.finish(0).await;
+    assert!(
+        started.elapsed() < Duration::from_secs(4),
+        "took {:?}",
+        started.elapsed()
+    );
+    drop(res);
     clean_up(conn, dir);
 }

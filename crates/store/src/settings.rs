@@ -38,6 +38,8 @@ pub struct StorageSettings {
     /// Past these, bodies stop being kept; traffic is never held back.
     pub queue_budget_mib: u64,
     pub spool_budget_mib: u64,
+    /// How many earlier sessions to leave on the disk when a new one starts.
+    pub sessions_kept: u64,
 }
 
 impl Default for StorageSettings {
@@ -55,6 +57,7 @@ impl Default for StorageSettings {
             disk_reserve_mib: 2048,
             queue_budget_mib: 256,
             spool_budget_mib: 256,
+            sessions_kept: 5,
         }
     }
 }

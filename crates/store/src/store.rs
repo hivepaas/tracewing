@@ -59,6 +59,11 @@ pub struct FlowRecord {
     pub req_content_type: Option<String>,
     pub req_encoding: Option<String>,
     pub resp_encoding: Option<String>,
+    /// `name: value` lines. They go in the log, not the row: the rows stay small,
+    /// which is what keeps the list fast.
+    pub req_headers: String,
+    pub resp_headers: String,
+    pub head: Option<LogPlace>,
     pub ttfb_us: Option<i64>,
     pub duration_us: Option<i64>,
     pub request: BodyRecord,
@@ -161,7 +166,7 @@ impl Recorder {
     ) -> Result<(Self, WriterThread)> {
         let conn = open(&session::flows_db(session))?;
         let (tx, rx) = mpsc::sync_channel(queue);
-        let stats = Arc::new(Stats::default());
+        let stats = Arc::clone(&shared.stats);
         let budget = settings.queue_budget();
 
         let queued = Arc::new(AtomicU64::new(0));
@@ -302,7 +307,10 @@ fn open(path: &Path) -> Result<Connection> {
              resp_zstd INTEGER NOT NULL,
              resp_spool TEXT,
              resp_spool_lost INTEGER NOT NULL,
-             resp_shed INTEGER NOT NULL
+             resp_shed INTEGER NOT NULL,
+             head_segment INTEGER,
+             head_offset INTEGER,
+             head_len INTEGER
          );
          CREATE INDEX IF NOT EXISTS flows_host ON flows (host);",
     )?;
@@ -460,6 +468,7 @@ impl Writer {
                 record.resp_encoding.as_deref(),
                 response_type.as_deref(),
             );
+            self.keep_headers(record);
             let in_files = file_bytes(record, self.settings.body_max());
             let segment = self.segments.back_mut().expect("never empty");
             segment.bytes += in_files;
@@ -490,6 +499,14 @@ impl Writer {
                 .low_disk
                 .store(free < self.settings.disk_reserve(), Ordering::Relaxed);
         }
+    }
+
+    fn keep_headers(&mut self, record: &mut FlowRecord) {
+        if self.shared.low_disk.load(Ordering::Relaxed) {
+            return;
+        }
+        let both = session::join_headers(&record.req_headers, &record.resp_headers);
+        record.head = Some(self.log.append(both.as_bytes()));
     }
 
     fn keep_body(
@@ -546,6 +563,7 @@ impl Writer {
             self.warn(format_args!("bodies not written: {e}"));
             self.stats.log_errors.fetch_add(1, Ordering::Relaxed);
             for record in batch {
+                record.head = None;
                 for body in [&mut record.request, &mut record.response] {
                     if body.place.take().is_some() {
                         body.shed = true;
@@ -680,10 +698,11 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                  req_bytes, req_truncated, req_complete, req_encoding,
                  req_segment, req_offset, req_len, req_zstd, req_spool, req_spool_lost, req_shed,
                  resp_bytes, resp_truncated, resp_complete, resp_encoding,
-                 resp_segment, resp_offset, resp_len, resp_zstd, resp_spool, resp_spool_lost, resp_shed
+                 resp_segment, resp_offset, resp_len, resp_zstd, resp_spool, resp_spool_lost, resp_shed,
+                 head_segment, head_offset, head_len
              ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
                        ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27,
-                       ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38)",
+                       ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41)",
         )?;
         for (i, r) in batch.iter().enumerate() {
             let (req, resp) = (r.request.place, r.response.place);
@@ -726,6 +745,9 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                 r.response.spool_file,
                 r.response.spool_lost,
                 r.response.shed,
+                r.head.map(|p| p.segment),
+                r.head.map(|p| p.offset as i64),
+                r.head.map(|p| p.len),
             ])?;
         }
     }

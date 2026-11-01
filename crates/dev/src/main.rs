@@ -4,6 +4,7 @@ use std::{
     io::Write,
     net::SocketAddr,
     path::{Path, PathBuf},
+    sync::{Arc, atomic::AtomicBool},
     time::Duration,
 };
 use tokio::net::TcpListener;
@@ -213,13 +214,18 @@ async fn main() -> Result<()> {
             );
             let summary = run_proxy(
                 ProxyOptions {
-                    listener,
+                    listener: Some(listener),
+                    std_listener: None,
                     data_dir,
                     session,
                     settings,
                     extra_roots: extra_root,
                     queue,
                     stats_every: Some(Duration::from_secs(5)),
+                    shared: Default::default(),
+                    recording: Arc::new(AtomicBool::new(true)),
+                    leave_index: false,
+                    stop_limit: Duration::from_secs(5),
                 },
                 async move {
                     match exit_after {

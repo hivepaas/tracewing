@@ -15,7 +15,10 @@ use std::{
     error::Error as StdError,
     net::SocketAddr,
     pin::Pin,
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
     task::{Context, Poll},
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
@@ -35,18 +38,26 @@ pub struct FlowHandler {
     log_max: usize,
     crl: Crl,
     spool: Spool,
+    recording: Arc<AtomicBool>,
     /// The flow of the request this clone is handling. hudsucker clones the
     /// handler per request, so request and response see the same value.
     flow: Option<Arc<Flow>>,
 }
 
 impl FlowHandler {
-    pub fn new(recorder: Recorder, log_max: usize, crl: Crl, spool: Spool) -> Self {
+    pub fn new(
+        recorder: Recorder,
+        log_max: usize,
+        crl: Crl,
+        spool: Spool,
+        recording: Arc<AtomicBool>,
+    ) -> Self {
         Self {
             recorder,
             log_max,
             crl,
             spool,
+            recording,
             flow: None,
         }
     }
@@ -66,6 +77,11 @@ impl HttpHandler for FlowHandler {
                 .body(Body::from(http_body_util::Full::new(self.crl.der.clone())))
                 .expect("valid response")
                 .into();
+        }
+
+        // Paused: traffic goes through as if nothing were watching.
+        if !self.recording.load(Ordering::Relaxed) {
+            return req.into();
         }
 
         let flow = Arc::new(Flow::start(self.recorder.clone(), ctx.client_addr, &req));
@@ -127,6 +143,17 @@ fn header_text(headers: &http::HeaderMap, name: header::HeaderName) -> Option<St
         .map(str::to_owned)
 }
 
+fn header_lines(headers: &http::HeaderMap) -> String {
+    let mut lines = String::new();
+    for (name, value) in headers {
+        lines.push_str(name.as_str());
+        lines.push_str(": ");
+        lines.push_str(&String::from_utf8_lossy(value.as_bytes()));
+        lines.push('\n');
+    }
+    lines
+}
+
 pub struct Flow {
     recorder: Recorder,
     started: Instant,
@@ -157,6 +184,7 @@ impl Flow {
             client_version: format!("{:?}", req.version()),
             req_content_type: header_text(req.headers(), header::CONTENT_TYPE),
             req_encoding: header_text(req.headers(), header::CONTENT_ENCODING),
+            req_headers: header_lines(req.headers()),
             ..FlowRecord::default()
         };
 
@@ -173,6 +201,7 @@ impl Flow {
         record.server_version = Some(format!("{:?}", res.version()));
         record.content_type = header_text(res.headers(), header::CONTENT_TYPE);
         record.resp_encoding = header_text(res.headers(), header::CONTENT_ENCODING);
+        record.resp_headers = header_lines(res.headers());
         record.ttfb_us = Some(self.elapsed_us());
     }
 

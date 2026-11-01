@@ -21,7 +21,7 @@ use std::{
     path::PathBuf,
     sync::{
         Arc,
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::Duration,
 };
@@ -46,7 +46,9 @@ pub fn default_data_dir() -> PathBuf {
 }
 
 pub struct ProxyOptions {
-    pub listener: TcpListener,
+    pub listener: Option<TcpListener>,
+    /// The same, bound by a thread with no runtime. Used if `listener` is `None`.
+    pub std_listener: Option<std::net::TcpListener>,
     /// Where the root CA lives.
     pub data_dir: PathBuf,
     /// The session's directory, which must not hold one yet.
@@ -57,6 +59,15 @@ pub struct ProxyOptions {
     /// How many finished flows may wait for the writer.
     pub queue: usize,
     pub stats_every: Option<Duration>,
+    /// What the session's threads share, for whoever wants to watch them.
+    pub shared: Arc<Shared>,
+    /// Whether flows are being recorded; traffic passes either way.
+    pub recording: Arc<AtomicBool>,
+    /// Stop without waiting for the search index to catch up.
+    pub leave_index: bool,
+    /// How long a stop waits for connections to end. A stream or a WebSocket that
+    /// is still open would otherwise hold it up for as long as it stays open.
+    pub stop_limit: Duration,
 }
 
 #[derive(Debug)]
@@ -95,8 +106,13 @@ pub async fn run_proxy(
     opts: ProxyOptions,
     shutdown: impl Future<Output = ()> + Send + 'static,
 ) -> Result<ProxySummary> {
+    let listener = match (opts.listener, opts.std_listener) {
+        (Some(listener), _) => listener,
+        (None, Some(listener)) => TcpListener::from_std(listener)?,
+        (None, None) => anyhow::bail!("nothing to listen on"),
+    };
     let mut ca = LocalCa::load_or_create(&opts.data_dir, crypto_provider())?;
-    let listen_addr = opts.listener.local_addr()?;
+    let listen_addr = listener.local_addr()?;
     ca.serve_crl_at(listen_addr);
     let crl = Crl {
         host: listen_addr.to_string(),
@@ -104,7 +120,7 @@ pub async fn run_proxy(
     };
     opts.settings.check()?;
     session::create(&opts.session)?;
-    let shared = Arc::new(Shared::default());
+    let shared = opts.shared;
     let (spool, spool_thread) = Spool::spawn(
         &session::files_dir(&opts.session),
         opts.settings.spool_budget(),
@@ -126,7 +142,7 @@ pub async fn run_proxy(
 
     // Without TCP_NODELAY, small writes wait for delayed ACKs and the tail
     // latency jumps to ~40 ms. Linux copies the flag to accepted sockets.
-    socket2::SockRef::from(&opts.listener).set_tcp_nodelay(true)?;
+    socket2::SockRef::from(&listener).set_tcp_nodelay(true)?;
     let mut http = HttpConnector::new();
     http.enforce_http(false);
     http.set_nodelay(true);
@@ -139,21 +155,38 @@ pub async fn run_proxy(
         .enable_http2()
         .wrap_connector(http);
 
-    let handler = FlowHandler::new(recorder, opts.settings.log_max(), crl, spool.clone());
+    let handler = FlowHandler::new(
+        recorder,
+        opts.settings.log_max(),
+        crl,
+        spool.clone(),
+        opts.recording,
+    );
+    let stop_limit = opts.stop_limit;
+    let (stopping_tx, stopping) = tokio::sync::oneshot::channel();
     let proxy = Proxy::builder()
-        .with_listener(opts.listener)
+        .with_listener(listener)
         .with_ca(ca)
         .with_http_connector(connector)
         .with_http_handler(handler.clone())
         .with_websocket_handler(handler)
         .with_websocket_connector(Connector::Rustls(Arc::new(upstream_tls)))
-        .with_graceful_shutdown(shutdown)
+        .with_graceful_shutdown(async move {
+            shutdown.await;
+            let _ = stopping_tx.send(());
+        })
         .build()?;
 
     let reporter = opts
         .stats_every
         .map(|every| tokio::spawn(report(Arc::clone(&stats), every)));
-    proxy.start().await?;
+    tokio::select! {
+        result = proxy.start() => result?,
+        _ = async {
+            let _ = stopping.await;
+            tokio::time::sleep(stop_limit).await;
+        } => {}
+    }
     if let Some(reporter) = reporter {
         reporter.abort();
     }
@@ -172,7 +205,15 @@ pub async fn run_proxy(
     if let Some(indexer) = indexer {
         let progress = indexer.stats();
         let started = std::time::Instant::now();
-        tokio::task::spawn_blocking(move || indexer.finish()).await??;
+        let leave_index = opts.leave_index;
+        tokio::task::spawn_blocking(move || {
+            if leave_index {
+                indexer.leave()
+            } else {
+                indexer.finish()
+            }
+        })
+        .await??;
         index_lag = started.elapsed();
         indexed = progress.indexed.load(Ordering::Relaxed);
         index_errors = progress.errors.load(Ordering::Relaxed);

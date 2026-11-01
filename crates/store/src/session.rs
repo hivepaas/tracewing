@@ -18,10 +18,16 @@ use std::{
     fs::{self, File},
     io::{self, Cursor, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
-    sync::atomic::{AtomicBool, AtomicI64, AtomicU64},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicI64, AtomicU64},
+    },
 };
 
-use crate::decode::{self, Encoding};
+use crate::{
+    decode::{self, Encoding},
+    store::Stats,
+};
 
 pub fn flows_db(session: &Path) -> PathBuf {
     session.join("flows.db")
@@ -60,6 +66,7 @@ pub struct Shared {
     pub first_live: AtomicI64,
     /// The size of the search index, which counts towards the session's.
     pub index_bytes: AtomicU64,
+    pub stats: Arc<Stats>,
 }
 
 /// Room left on the disk holding `path`, for this user.
@@ -257,7 +264,7 @@ impl BodyReader {
         }
     }
 
-    fn read_place(&mut self, place: LogPlace) -> io::Result<Vec<u8>> {
+    pub fn read_place(&mut self, place: LogPlace) -> io::Result<Vec<u8>> {
         if self.open.as_ref().is_none_or(|(n, _)| *n != place.segment) {
             let path = segment_path(&bodies_dir(&self.session), place.segment);
             self.open = Some((place.segment, File::open(path)?));
@@ -297,6 +304,55 @@ impl BodyReader {
         let source = self.source(body).ok()?;
         decode::unpack_into(source, body.packing(), max, out)
     }
+}
+
+/// A flow's headers as one string: the two parts can hold anything but a NUL,
+/// which HTTP does not allow in a header.
+pub fn join_headers(request: &str, response: &str) -> String {
+    format!("{request}\0{response}")
+}
+
+pub type Headers = Vec<(String, String)>;
+
+/// `name: value` lines, one per header, as the capture writes them.
+pub fn parse_headers(lines: &str) -> Headers {
+    lines
+        .lines()
+        .filter_map(|line| line.split_once(": "))
+        .map(|(name, value)| (name.to_owned(), value.to_owned()))
+        .collect()
+}
+
+/// A flow's request and response headers, if they were kept.
+pub fn stored_headers(
+    flows: &Connection,
+    reader: &mut BodyReader,
+    id: i64,
+) -> Result<Option<(Headers, Headers)>> {
+    let place: Option<LogPlace> = flows.query_row(
+        "SELECT head_segment, head_offset, head_len FROM flows WHERE id = ?1",
+        params![id],
+        |row| {
+            let segment: Option<i64> = row.get(0)?;
+            Ok(match segment {
+                Some(segment) => Some(LogPlace {
+                    segment: segment as u32,
+                    offset: row.get::<_, i64>(1)? as u64,
+                    len: row.get::<_, i64>(2)? as u32,
+                }),
+                None => None,
+            })
+        },
+    )?;
+    let Some(place) = place else {
+        return Ok(None);
+    };
+    let Ok(both) = reader.read_place(place) else {
+        return Ok(None);
+    };
+    let both = String::from_utf8_lossy(&both);
+    let (request, response) = both.split_once('\0').unwrap_or((&both, ""));
+    Ok(Some((parse_headers(request), parse_headers(response))))
 }
 
 /// How one body of a flow was kept, by flow id and `req` or `resp`.

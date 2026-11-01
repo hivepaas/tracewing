@@ -52,6 +52,7 @@ pub struct IndexerStats {
 pub struct Indexer {
     handle: JoinHandle<Result<()>>,
     stop: Arc<AtomicBool>,
+    leave: Arc<AtomicBool>,
     stats: Arc<IndexerStats>,
 }
 
@@ -63,24 +64,35 @@ impl Indexer {
             settings,
         )?;
         let stop = Arc::new(AtomicBool::new(false));
+        let leave = Arc::new(AtomicBool::new(false));
         let stats = Arc::new(IndexerStats::default());
         let handle = {
             let session = session.to_owned();
             let settings = settings.clone();
-            let (stop, stats) = (Arc::clone(&stop), Arc::clone(&stats));
+            let (stop, leave, stats) = (Arc::clone(&stop), Arc::clone(&leave), Arc::clone(&stats));
             std::thread::Builder::new()
                 .name("search-index".into())
-                .spawn(move || follow(&session, &settings, pieces, &shared, &stop, &stats))?
+                .spawn(move || {
+                    follow(&session, &settings, pieces, &shared, &stop, &leave, &stats)
+                })?
         };
         Ok(Self {
             handle,
             stop,
+            leave,
             stats,
         })
     }
 
     pub fn stats(&self) -> Arc<IndexerStats> {
         Arc::clone(&self.stats)
+    }
+
+    /// Stops after the batch in hand, leaving the rest. A window closing should not
+    /// have to wait: on a slow disk the index can be minutes behind.
+    pub fn leave(self) -> Result<()> {
+        self.leave.store(true, Ordering::Relaxed);
+        self.finish()
     }
 
     /// Indexes what is left and stops.
@@ -253,6 +265,7 @@ fn follow(
     mut pieces: Pieces,
     shared: &Shared,
     stop: &AtomicBool,
+    leave: &AtomicBool,
     stats: &IndexerStats,
 ) -> Result<()> {
     // The writer makes the file before the proxy starts; reading never blocks it.
@@ -272,6 +285,9 @@ fn follow(
     loop {
         // Asked before the batch, so that a stop still sees everything written.
         let stopping = stop.load(Ordering::Relaxed);
+        if leave.load(Ordering::Relaxed) {
+            return Ok(());
+        }
         // What the index writes needs the room that is running out. It can catch
         // up when there is some; on the way out it is left behind.
         if shared.low_disk.load(Ordering::Relaxed) {
