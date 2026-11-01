@@ -4,10 +4,11 @@
 pub mod ca;
 pub mod capture;
 pub mod rules;
+pub mod traffic_rules;
 
 use anyhow::{Context, Result};
 use ca::LocalCa;
-use capture::{Check, Crl, FlowHandler};
+use capture::{Check, Controls, Crl, FlowHandler};
 use hudsucker::{
     Proxy,
     rustls::{
@@ -35,6 +36,7 @@ use tracewing_store::{
     spool::{Spool, SpoolStats},
     store::{Recorder, Stats},
 };
+use traffic_rules::TrafficRules;
 
 /// Where the root CA and other per-machine state live by default.
 pub fn default_data_dir() -> PathBuf {
@@ -67,6 +69,8 @@ pub struct ProxyOptions {
     pub recording: Arc<AtomicBool>,
     /// What not to decrypt. Changes apply to the next connection.
     pub rules: Arc<RwLock<HostRules>>,
+    /// What to change on traffic's way. Changes apply to the next request.
+    pub traffic_rules: Arc<RwLock<TrafficRules>>,
     /// Who has reached the test page.
     pub check: Arc<Check>,
     /// Stop without waiting for the search index to catch up.
@@ -166,9 +170,12 @@ pub async fn run_proxy(
         opts.settings.log_max(),
         crl,
         spool.clone(),
-        opts.recording,
-        opts.rules,
-        opts.check,
+        Controls {
+            recording: opts.recording,
+            rules: opts.rules,
+            traffic_rules: opts.traffic_rules,
+            check: opts.check,
+        },
     );
     let stop_limit = opts.stop_limit;
     let (stopping_tx, stopping) = tokio::sync::oneshot::channel();

@@ -105,7 +105,7 @@ impl Flows {
                 end += 1;
             }
             let mut stmt = self.conn.prepare_cached(
-                "SELECT id, method, status, host, path, resp_bytes, duration_us, error, kind, open
+                "SELECT id, method, status, host, path, resp_bytes, duration_us, error, kind, open, rule
                  FROM flows WHERE id >= ?1 AND id <= ?2",
             )?;
             let rows = stmt.query_map(params![ids[at], ids[end - 1]], |r| {
@@ -115,6 +115,7 @@ impl Flows {
                 let kind: String = r.get(8)?;
                 let open: bool = r.get(9)?;
                 let going = open && live;
+                let rule: Option<String> = r.get(10)?;
                 Ok(Row {
                     id,
                     number: group_digits(id as u64).into(),
@@ -124,6 +125,7 @@ impl Flows {
                     path: r.get::<_, String>(4)?.into(),
                     note: error
                         .map(SharedString::from)
+                        .or_else(|| rule.map(|rule| format!("Rule: {rule}").into()))
                         .or_else(|| match kind.as_str() {
                             "websocket" => Some("WebSocket".into()),
                             "sse" => Some("Events".into()),

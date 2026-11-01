@@ -132,6 +132,7 @@ fn the_window_shows_real_traffic() {
             ..StorageSettings::default()
         },
         rules: Default::default(),
+        traffic_rules: Default::default(),
         ports: 19_190..19_200,
         extra_roots: vec![origin_ca],
     })
@@ -394,6 +395,7 @@ fn a_million_flows_while_traffic_keeps_coming() {
         data_dir: dir.clone(),
         settings: StorageSettings::default(),
         rules: Default::default(),
+        traffic_rules: Default::default(),
         ports: 19_290..19_300,
         extra_roots: vec![origin_ca],
     })

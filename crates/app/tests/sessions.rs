@@ -70,6 +70,7 @@ fn an_earlier_session_opens_again() {
             ..StorageSettings::default()
         },
         rules: Default::default(),
+        traffic_rules: Default::default(),
         ports: 19_490..19_500,
         extra_roots: Vec::new(),
     })

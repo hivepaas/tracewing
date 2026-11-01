@@ -10,8 +10,9 @@
 
 use crate::ca::CRL_PATH;
 use crate::rules::HostRules;
+use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of};
 use bytes::Bytes;
-use http::{Method, Request, Response, StatusCode, header};
+use http::{HeaderName, HeaderValue, Method, Request, Response, StatusCode, header};
 use http_body::{Frame, SizeHint};
 use http_body_util::combinators::BoxBody;
 use hudsucker::{
@@ -23,6 +24,7 @@ use std::{
     collections::HashMap,
     error::Error as StdError,
     net::SocketAddr,
+    path::PathBuf,
     pin::Pin,
     sync::{
         Arc, Mutex, RwLock,
@@ -86,7 +88,10 @@ pub struct FlowHandler {
     spool: Spool,
     recording: Arc<AtomicBool>,
     rules: Arc<RwLock<HostRules>>,
+    traffic_rules: Arc<RwLock<TrafficRules>>,
     check: Arc<Check>,
+    /// Headers rules set on the response of the request this clone is handling.
+    response_headers: Vec<(HeaderName, HeaderValue)>,
     /// WebSockets from their upgrade until they end. hudsucker tells the handler of
     /// messages only by client and URL, and this is what ties those to a flow.
     websockets: Arc<Mutex<HashMap<WsKey, Arc<Flow>>>>,
@@ -95,28 +100,134 @@ pub struct FlowHandler {
     flow: Option<Arc<Flow>>,
 }
 
+/// What can be changed, or seen, while the proxy runs.
+pub struct Controls {
+    pub recording: Arc<AtomicBool>,
+    pub rules: Arc<RwLock<HostRules>>,
+    pub traffic_rules: Arc<RwLock<TrafficRules>>,
+    pub check: Arc<Check>,
+}
+
 impl FlowHandler {
     pub fn new(
         recorder: Recorder,
         log_max: usize,
         crl: Crl,
         spool: Spool,
-        recording: Arc<AtomicBool>,
-        rules: Arc<RwLock<HostRules>>,
-        check: Arc<Check>,
+        controls: Controls,
     ) -> Self {
         Self {
             recorder,
             log_max,
             crl,
             spool,
-            recording,
-            rules,
-            check,
+            recording: controls.recording,
+            rules: controls.rules,
+            traffic_rules: controls.traffic_rules,
+            check: controls.check,
+            response_headers: Vec::new(),
             websockets: Arc::default(),
             flow: None,
         }
     }
+}
+
+impl FlowHandler {
+    /// What the rules make of a request. With no rules that is one lock and one look,
+    /// which is all most traffic ever pays.
+    fn plan_for<T>(&self, req: &Request<T>) -> Plan {
+        let rules = self.traffic_rules.read().unwrap_or_else(|e| e.into_inner());
+        if rules.is_empty() {
+            return Plan::default();
+        }
+        let uri = req.uri();
+        let scheme = uri.scheme_str().unwrap_or("http");
+        let host = without_default_port(request_host(req).unwrap_or_default(), scheme);
+        let path = uri.path_and_query().map_or("/", |p| p.as_str());
+        rules.plan(req.method().as_str(), &format!("{host}{path}"))
+    }
+
+    /// A rule's answer: no server was asked, so none is on record.
+    fn answer_as_rule(&mut self, flow: Option<Arc<Flow>>, res: Response<Body>) -> Response<Body> {
+        let kept = flow.clone();
+        let res = self.answer(flow, res);
+        if let Some(flow) = kept {
+            flow.lock().server_version = None;
+        }
+        res
+    }
+
+    /// A response on its way to the client, from the server or from a rule.
+    fn answer(&mut self, flow: Option<Arc<Flow>>, mut res: Response<Body>) -> Response<Body> {
+        for (name, value) in std::mem::take(&mut self.response_headers) {
+            res.headers_mut().insert(name, value);
+        }
+        let Some(flow) = flow else {
+            return res;
+        };
+        flow.on_response(&res);
+        // Text only: events that come compressed cannot be told apart as they come.
+        let events = is_event_stream(&res) && !res.headers().contains_key(header::CONTENT_ENCODING);
+        if events {
+            flow.opened_as("sse", None);
+        }
+        let stream = events.then(|| flow.stream()).flatten();
+        let (cap, spool) = (self.log_max, self.spool.clone());
+        res.map(move |body| TapBody::wrap(body, flow, Side::Response, cap, spool, stream))
+    }
+}
+
+const LOCAL_FILE_MAX: u64 = 1 << 30;
+
+async fn answer_from_file(file: Option<PathBuf>) -> Response<Body> {
+    let plain = |status: StatusCode, text: String| {
+        Response::builder()
+            .status(status)
+            .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
+            .body(Body::from(http_body_util::Full::new(Bytes::from(text))))
+            .expect("valid response")
+    };
+    let Some(path) = file else {
+        return plain(
+            StatusCode::NOT_FOUND,
+            "tracewing: a rule maps this URL to a file that is not there\n".to_owned(),
+        );
+    };
+    let too_big = tokio::fs::metadata(&path)
+        .await
+        .is_ok_and(|meta| meta.len() > LOCAL_FILE_MAX);
+    if too_big {
+        return plain(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!(
+                "tracewing: {} is too large to answer with\n",
+                path.display()
+            ),
+        );
+    }
+    match tokio::fs::read(&path).await {
+        Ok(data) => Response::builder()
+            .header(header::CONTENT_TYPE, content_type_of(&path))
+            .body(Body::from(http_body_util::Full::new(Bytes::from(data))))
+            .expect("valid response"),
+        Err(e) => plain(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("tracewing: cannot read {}: {e}\n", path.display()),
+        ),
+    }
+}
+
+/// Keeps the path and query, and changes where it goes.
+fn send_elsewhere(req: &mut Request<Body>, to: &http::Uri) {
+    let mut parts = to.clone().into_parts();
+    parts.path_and_query = req.uri().path_and_query().cloned();
+    let Ok(uri) = http::Uri::from_parts(parts) else {
+        return;
+    };
+    if let Some(Ok(host)) = uri.authority().map(|a| HeaderValue::from_str(a.as_str())) {
+        req.headers_mut().insert(header::HOST, host);
+    }
+    *req.uri_mut() = uri;
 }
 
 impl HttpHandler for FlowHandler {
@@ -149,12 +260,40 @@ impl HttpHandler for FlowHandler {
                 .expect("valid response")
                 .into();
         }
-        // Paused: traffic goes through as if nothing were watching.
-        if !self.recording.load(Ordering::Relaxed) {
-            return req.into();
+        let mut req = req;
+        let plan = self.plan_for(&req);
+        // Paused: traffic goes through as if nothing were watching, rules and all.
+        let recording = self.recording.load(Ordering::Relaxed);
+        let flow =
+            recording.then(|| Arc::new(Flow::start(self.recorder.clone(), ctx.client_addr, &req)));
+        if let Some(flow) = &flow
+            && !plan.names.is_empty()
+        {
+            flow.lock().rule = Some(plan.names.join(", "));
         }
-
-        let flow = Arc::new(Flow::start(self.recorder.clone(), ctx.client_addr, &req));
+        self.response_headers = plan.response_headers;
+        for (name, value) in plan.request_headers {
+            req.headers_mut().insert(name, value);
+        }
+        match plan.end {
+            Some(End::Block(status)) => {
+                let res = Response::builder()
+                    .status(status)
+                    .body(Body::empty())
+                    .unwrap_or_else(|_| Response::new(Body::empty()));
+                return self.answer_as_rule(flow, res).into();
+            }
+            Some(End::Local(file)) => {
+                let res = answer_from_file(file).await;
+                return self.answer_as_rule(flow, res).into();
+            }
+            // Not a WebSocket: hudsucker ties its messages to the URL it was asked for.
+            Some(End::Remote(to)) if !is_websocket(&req) => send_elsewhere(&mut req, &to),
+            _ => {}
+        }
+        let Some(flow) = flow else {
+            return req.into();
+        };
         if is_websocket(&req) {
             // hudsucker answers an upgrade itself, and handle_response never hears.
             flow.opened_as("websocket", Some(101));
@@ -203,18 +342,8 @@ impl HttpHandler for FlowHandler {
     }
 
     async fn handle_response(&mut self, _ctx: &HttpContext, res: Response<Body>) -> Response<Body> {
-        let Some(flow) = self.flow.take() else {
-            return res;
-        };
-        flow.on_response(&res);
-        // Text only: events that come compressed cannot be told apart as they come.
-        let events = is_event_stream(&res) && !res.headers().contains_key(header::CONTENT_ENCODING);
-        if events {
-            flow.opened_as("sse", None);
-        }
-        let stream = events.then(|| flow.stream()).flatten();
-        let (cap, spool) = (self.log_max, self.spool.clone());
-        res.map(move |body| TapBody::wrap(body, flow, Side::Response, cap, spool, stream))
+        let flow = self.flow.take();
+        self.answer(flow, res)
     }
 
     async fn handle_error(
