@@ -413,6 +413,8 @@ mod tests {
         pieces.tidy(30, 15).unwrap();
         assert!(!search.join("00000001.db").exists(), "flows to 10 are gone");
         assert!(search.join("00000002.db").exists(), "it has flows to 20");
+        // Windows will not delete a database that is still open.
+        drop(pieces);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }
