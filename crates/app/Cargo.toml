@@ -23,6 +23,7 @@ tracewing-system.workspace = true
 gpui = { package = "gpui-pre", version = "=0.3.9" }
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.9", default-features = false, features = ["font-kit", "runtime_shaders"] }
 anyhow.workspace = true
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 http.workspace = true
 memchr = "2"
 memmap2 = "0.9"

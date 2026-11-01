@@ -18,7 +18,7 @@ use crate::{
     settings::StorageSettings,
 };
 use anyhow::{Context, Result};
-use rusqlite::{Connection, OpenFlags, params};
+use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
 use std::{
     collections::VecDeque,
     path::{Path, PathBuf},
@@ -84,6 +84,17 @@ impl Indexer {
         })
     }
 
+    /// Indexes what a session recorded before it stopped, and stops by itself.
+    pub fn catch_up(session: &Path, settings: &StorageSettings) -> Result<Self> {
+        let indexer = Self::spawn(session, settings, Arc::new(Shared::default()))?;
+        indexer.stop.store(true, Ordering::Relaxed);
+        Ok(indexer)
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.handle.is_finished()
+    }
+
     pub fn stats(&self) -> Arc<IndexerStats> {
         Arc::clone(&self.stats)
     }
@@ -109,7 +120,11 @@ fn open_piece(path: &Path, settings: &StorageSettings) -> Result<Connection> {
     conn.execute_batch(
         "PRAGMA journal_mode = WAL;
          PRAGMA synchronous = NORMAL;
-         PRAGMA journal_size_limit = 67108864;",
+         PRAGMA journal_size_limit = 67108864;
+         CREATE TABLE IF NOT EXISTS progress (
+             only INTEGER PRIMARY KEY CHECK (only = 1),
+             last_id INTEGER NOT NULL
+         );",
     )?;
     if settings.index_urls {
         conn.execute_batch(
@@ -126,6 +141,25 @@ fn open_piece(path: &Path, settings: &StorageSettings) -> Result<Connection> {
         )?;
     }
     Ok(conn)
+}
+
+/// How far a piece got. Written in the same transaction as what it indexed, so an
+/// index cut off by a crash goes on from exactly where it stopped.
+fn piece_progress(conn: &Connection) -> Result<i64> {
+    Ok(conn
+        .query_row("SELECT last_id FROM progress", [], |r| r.get(0))
+        .optional()?
+        .unwrap_or(0))
+}
+
+/// The pieces of an index, the oldest first.
+fn piece_paths(dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)?
+        .filter_map(|entry| Some(entry.ok()?.path()))
+        .filter(|path| path.extension().is_some_and(|e| e == "db"))
+        .collect();
+    paths.sort_unstable();
+    Ok(paths)
 }
 
 fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
@@ -157,17 +191,39 @@ struct Pieces {
 }
 
 impl Pieces {
+    /// Goes on from the pieces already there, if any.
     fn start(dir: &Path, target: u64, settings: &StorageSettings) -> Result<Self> {
-        let path = dir.join(format!("{:08}.db", 1));
-        let current = open_piece(&path, settings)?;
+        let mut paths = piece_paths(dir)?;
+        if paths.is_empty() {
+            paths.push(dir.join(format!("{:08}.db", 1)));
+        }
+        let mut list = VecDeque::new();
+        let mut current = None;
+        for path in paths {
+            let conn = open_piece(&path, settings)?;
+            list.push_back(Piece {
+                last_id: piece_progress(&conn)?,
+                path,
+            });
+            current = Some(conn);
+        }
+        let next = list
+            .back()
+            .and_then(|piece| piece.path.file_stem()?.to_str()?.parse::<u32>().ok())
+            .unwrap_or(0)
+            + 1;
         Ok(Self {
             dir: dir.to_owned(),
             target,
             settings: settings.clone(),
-            next: 2,
-            list: VecDeque::from([Piece { path, last_id: 0 }]),
-            current,
+            next,
+            list,
+            current: current.expect("there is one at least"),
         })
+    }
+
+    fn indexed_to(&self) -> i64 {
+        self.list.back().map_or(0, |piece| piece.last_id)
     }
 
     /// Starts a new piece if the current one is big enough, and drops those whose
@@ -254,6 +310,12 @@ impl Indexing<'_> {
                     .execute(params![newest, normalize(&text)])?;
             }
         }
+        if seen > 0 {
+            tx.execute(
+                "INSERT OR REPLACE INTO progress (only, last_id) VALUES (1, ?1)",
+                params![newest],
+            )?;
+        }
         tx.commit()?;
         Ok((seen, newest))
     }
@@ -281,7 +343,7 @@ fn follow(
             StoredBody::columns("resp"),
         ),
     };
-    let mut last = 0i64;
+    let mut last = pieces.indexed_to();
     loop {
         // Asked before the batch, so that a stop still sees everything written.
         let stopping = stop.load(Ordering::Relaxed);
@@ -332,11 +394,7 @@ fn follow(
 
 /// The flows a search finds, newest first. `table` is `urls` or `bodies`.
 pub fn find(session: &Path, table: &str, text: &str, first_live: i64) -> Result<Vec<i64>> {
-    let mut paths: Vec<PathBuf> = std::fs::read_dir(session::search_dir(session))?
-        .filter_map(|entry| Some(entry.ok()?.path()))
-        .filter(|path| path.extension().is_some_and(|e| e == "db"))
-        .collect();
-    paths.sort_unstable();
+    let paths = piece_paths(&session::search_dir(session))?;
     let query = format!("\"{}\"", normalize(text).replace('"', "\"\""));
     let mut found = Vec::new();
     for path in paths.iter().rev() {
@@ -396,6 +454,94 @@ mod tests {
         insert(&search.join("00000002.db"), 3, "thanh toán");
         assert_eq!(find(&dir, "bodies", "thanh toan", 1).unwrap(), [3, 2, 1]);
         assert_eq!(find(&dir, "bodies", "thanh toan", 2).unwrap(), [3, 2]);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// Flows as the recorder writes them, with bodies, in a new session.
+    fn recorded(dir: &Path, range: std::ops::Range<u32>) {
+        let (recorder, writer) = crate::store::Recorder::spawn(
+            dir,
+            &StorageSettings::default(),
+            Arc::new(Shared::default()),
+            None,
+            100_000,
+        )
+        .unwrap();
+        for i in range {
+            recorder.submit_wait(crate::store::FlowRecord {
+                kind: "http",
+                host: "a.dev".to_owned(),
+                path: format!("/v{i}"),
+                content_type: Some("application/json".to_owned()),
+                response: crate::store::BodyRecord {
+                    bytes: 12,
+                    captured: format!("word{i} thanh").into_bytes(),
+                    complete: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+        }
+        drop(recorder);
+        writer.close().unwrap();
+    }
+
+    fn settle(indexer: Indexer) -> u64 {
+        let stats = indexer.stats();
+        indexer.finish().unwrap();
+        stats.indexed.load(Ordering::Relaxed)
+    }
+
+    #[test]
+    fn catching_up_goes_on_from_where_it_stopped() {
+        let dir = temp("catch-up");
+        recorded(&dir, 0..5000);
+        let settings = StorageSettings::default();
+        // Cut off after a batch: as a crash or a closed window would leave it.
+        let indexer = Indexer::spawn(&dir, &settings, Arc::new(Shared::default())).unwrap();
+        let stats = indexer.stats();
+        while stats.indexed.load(Ordering::Relaxed) == 0 {
+            std::thread::yield_now();
+        }
+        indexer.leave().unwrap();
+        let first = stats.indexed.load(Ordering::Relaxed);
+        assert!(first > 0 && first < 5000, "{first}");
+        assert_ne!(find(&dir, "bodies", "word0", 1).unwrap(), Vec::<i64>::new());
+        assert_eq!(
+            find(&dir, "bodies", "word4999", 1).unwrap(),
+            Vec::<i64>::new()
+        );
+
+        let more = settle(Indexer::catch_up(&dir, &settings).unwrap());
+        assert_eq!(first + more, 5000, "nothing twice and nothing missed");
+        assert_eq!(find(&dir, "bodies", "word4999", 1).unwrap(), [5000]);
+        assert_eq!(find(&dir, "bodies", "thanh", 1).unwrap().len(), 5000);
+
+        assert_eq!(
+            settle(Indexer::catch_up(&dir, &settings).unwrap()),
+            0,
+            "done"
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn catching_up_keeps_to_the_last_piece() {
+        let dir = temp("catch-up-pieces");
+        let search = session::search_dir(&dir);
+        let settings = StorageSettings::default();
+        let mut pieces = Pieces::start(&search, 1, &settings).unwrap();
+        pieces.tidy(10, 1).unwrap();
+        pieces
+            .current
+            .execute("INSERT INTO progress (only, last_id) VALUES (1, 25)", [])
+            .unwrap();
+        drop(pieces);
+        let pieces = Pieces::start(&search, 1 << 30, &settings).unwrap();
+        assert_eq!(pieces.list.len(), 2);
+        assert_eq!(pieces.indexed_to(), 25);
+        assert_eq!(pieces.next, 3);
+        drop(pieces);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

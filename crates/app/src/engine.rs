@@ -12,7 +12,10 @@ use std::{
 };
 use tokio::sync::oneshot;
 use tracewing_proxy::{ProxyOptions, capture::Check, rules::HostRules, run_proxy};
-use tracewing_store::{session::Shared, settings::StorageSettings};
+use tracewing_store::{
+    session::{self, Shared},
+    settings::StorageSettings,
+};
 
 /// Where the proxy tries to listen, in this order.
 pub const PORTS: std::ops::Range<u16> = 9090..9100;
@@ -43,7 +46,7 @@ pub struct Engine {
 impl Engine {
     pub fn start(opts: EngineOptions) -> Result<Self> {
         let sessions = opts.data_dir.join("sessions");
-        forget_old_sessions(&sessions, opts.settings.sessions_kept);
+        session::forget_old(&sessions, opts.settings.sessions_kept);
         let session = sessions.join(next_session_name(&sessions));
         let (listener, addr) = bind(opts.ports)?;
 
@@ -168,42 +171,9 @@ fn next_session_name(sessions: &Path) -> String {
     name
 }
 
-/// Sessions cannot be opened again yet, but they will be, so a few stay.
-fn forget_old_sessions(sessions: &Path, kept: u64) {
-    let Ok(entries) = std::fs::read_dir(sessions) else {
-        return;
-    };
-    let mut names: Vec<PathBuf> = entries
-        .filter_map(|entry| Some(entry.ok()?.path()))
-        .filter(|path| path.join("flows.db").exists())
-        .collect();
-    names.sort_unstable();
-    let extra = names.len().saturating_sub(kept as usize);
-    for old in &names[..extra] {
-        let _ = std::fs::remove_dir_all(old);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn only_the_newest_sessions_stay() {
-        let dir = std::env::temp_dir().join(format!("sessions-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        for name in ["100", "200", "300"] {
-            std::fs::create_dir_all(dir.join(name)).unwrap();
-            std::fs::write(dir.join(name).join("flows.db"), b"").unwrap();
-        }
-        // Not a session: left alone, whatever it is.
-        std::fs::create_dir_all(dir.join("000-notes")).unwrap();
-        forget_old_sessions(&dir, 2);
-        assert!(!dir.join("100").exists());
-        assert!(dir.join("200").exists() && dir.join("300").exists());
-        assert!(dir.join("000-notes").exists());
-        std::fs::remove_dir_all(&dir).unwrap();
-    }
 
     #[test]
     fn a_taken_port_means_the_next_one() {

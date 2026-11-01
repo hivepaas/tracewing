@@ -13,7 +13,8 @@
 //!   to 32 s, and left it larger and slower.
 
 use anyhow::{Result, bail};
-use rusqlite::{Connection, Row, params};
+use rusqlite::{Connection, OpenFlags, Row, params};
+use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
     io::{self, Cursor, Read, Seek, SeekFrom, Write},
@@ -55,6 +56,160 @@ pub fn create(session: &Path) -> Result<()> {
     fs::create_dir_all(files_dir(session))?;
     fs::create_dir_all(search_dir(session))?;
     Ok(())
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct Meta {
+    name: Option<String>,
+}
+
+fn meta_path(session: &Path) -> PathBuf {
+    session.join("session.toml")
+}
+
+/// A session's name, if it was given one. A named session is kept until the user
+/// deletes it.
+pub fn name_of(session: &Path) -> Option<String> {
+    let text = fs::read_to_string(meta_path(session)).ok()?;
+    toml::from_str::<Meta>(&text).ok()?.name
+}
+
+/// Names a session, or with nothing but spaces takes its name away.
+pub fn set_name(session: &Path, name: &str) -> Result<()> {
+    let name = name.trim();
+    if name.is_empty() {
+        return match fs::remove_file(meta_path(session)) {
+            Err(e) if e.kind() != io::ErrorKind::NotFound => Err(e.into()),
+            _ => Ok(()),
+        };
+    }
+    let meta = Meta {
+        name: Some(name.to_owned()),
+    };
+    fs::write(meta_path(session), toml::to_string(&meta)?)?;
+    Ok(())
+}
+
+/// What the sessions screen says about one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionInfo {
+    pub dir: PathBuf,
+    pub name: Option<String>,
+    pub flows: u64,
+    pub bytes: u64,
+    /// When its first and last flow started, in microseconds since 1970.
+    pub first_us: Option<i64>,
+    pub last_us: Option<i64>,
+    /// False if this version cannot read it: an older one wrote it, or it is damaged.
+    pub readable: bool,
+}
+
+/// Rows of the format this version writes.
+const VERSION: i64 = 1;
+
+fn dir_bytes(dir: &Path) -> u64 {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return 0;
+    };
+    entries
+        .flatten()
+        .map(|entry| match entry.metadata() {
+            Ok(meta) if meta.is_dir() => dir_bytes(&entry.path()),
+            Ok(meta) => meta.len(),
+            Err(_) => 0,
+        })
+        .sum()
+}
+
+/// How many flows, and when the first and the last started.
+type Rows = (u64, Option<i64>, Option<i64>);
+
+fn read_rows(session: &Path) -> rusqlite::Result<Option<Rows>> {
+    let flows = Connection::open_with_flags(flows_db(session), OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let version: i64 = flows.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+    if version != VERSION {
+        return Ok(None);
+    }
+    // Ids have no gaps, and the first and last are found by the primary key.
+    let (first, last): (Option<i64>, Option<i64>) = flows.query_row(
+        "SELECT (SELECT min(id) FROM flows), (SELECT max(id) FROM flows)",
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    let at = |id: Option<i64>| -> rusqlite::Result<Option<i64>> {
+        id.map(|id| {
+            flows.query_row(
+                "SELECT started_us FROM flows WHERE id = ?1",
+                params![id],
+                |r| r.get(0),
+            )
+        })
+        .transpose()
+    };
+    let count = first.zip(last).map_or(0, |(a, b)| (b - a + 1) as u64);
+    Ok(Some((count, at(first)?, at(last)?)))
+}
+
+pub fn info(session: &Path) -> SessionInfo {
+    let rows = read_rows(session).ok().flatten();
+    SessionInfo {
+        dir: session.to_owned(),
+        name: name_of(session),
+        flows: rows.map_or(0, |r| r.0),
+        bytes: dir_bytes(session),
+        first_us: rows.and_then(|r| r.1),
+        last_us: rows.and_then(|r| r.2),
+        readable: rows.is_some(),
+    }
+}
+
+fn session_dirs(sessions: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = fs::read_dir(sessions) else {
+        return Vec::new();
+    };
+    let mut dirs: Vec<PathBuf> = entries
+        .filter_map(|entry| Some(entry.ok()?.path()))
+        .filter(|path| flows_db(path).exists())
+        .collect();
+    dirs.sort_unstable();
+    dirs
+}
+
+/// Every session in a folder, the newest first.
+pub fn list(sessions: &Path) -> Vec<SessionInfo> {
+    let mut all: Vec<SessionInfo> = session_dirs(sessions).iter().map(|d| info(d)).collect();
+    all.reverse();
+    all
+}
+
+/// Deletes a session. Only what is one: this is a whole folder going.
+pub fn delete(session: &Path) -> Result<()> {
+    if !flows_db(session).exists() {
+        bail!("{} is not a session", session.display());
+    }
+    fs::remove_dir_all(session)?;
+    Ok(())
+}
+
+/// Makes room as a session starts. A named session stays, one with no flows does
+/// not, and of the rest the newest `kept` do.
+pub fn forget_old(sessions: &Path, kept: u64) {
+    let mut unnamed = Vec::new();
+    for dir in session_dirs(sessions) {
+        let about = info(&dir);
+        if about.name.is_some() {
+            continue;
+        }
+        if about.readable && about.flows == 0 {
+            let _ = fs::remove_dir_all(&dir);
+        } else {
+            unnamed.push(dir);
+        }
+    }
+    let extra = unnamed.len().saturating_sub(kept as usize);
+    for old in &unnamed[..extra] {
+        let _ = fs::remove_dir_all(old);
+    }
 }
 
 /// What the threads of a session need to know about each other.
@@ -426,6 +581,104 @@ mod tests {
         fs::write(flows_db(&dir), b"").unwrap();
         assert!(create(&dir).is_err());
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// A session with this many flows, as far as the screen and the clean-up can tell.
+    fn make(sessions: &Path, name: &str, flows: i64) -> PathBuf {
+        let dir = sessions.join(name);
+        create(&dir).unwrap();
+        let db = Connection::open(flows_db(&dir)).unwrap();
+        db.execute_batch(
+            "PRAGMA user_version = 1; CREATE TABLE flows (id INTEGER PRIMARY KEY, started_us INTEGER);",
+        )
+        .unwrap();
+        for id in 1..=flows {
+            db.execute("INSERT INTO flows VALUES (?1, ?2)", params![id, id * 10])
+                .unwrap();
+        }
+        dir
+    }
+
+    #[test]
+    fn a_session_says_what_it_holds() {
+        let sessions = temp("info");
+        let dir = make(&sessions, "100", 3);
+        let about = info(&dir);
+        assert_eq!(about.flows, 3);
+        assert_eq!((about.first_us, about.last_us), (Some(10), Some(30)));
+        assert!(about.readable);
+        assert!(about.bytes > 0);
+        assert_eq!(about.name, None);
+        fs::remove_dir_all(&sessions).unwrap();
+    }
+
+    #[test]
+    fn an_older_format_is_not_read_and_not_lost() {
+        let sessions = temp("older");
+        let dir = make(&sessions, "100", 3);
+        Connection::open(flows_db(&dir))
+            .unwrap()
+            .execute_batch("PRAGMA user_version = 0;")
+            .unwrap();
+        let about = info(&dir);
+        assert!(!about.readable);
+        forget_old(&sessions, 5);
+        assert!(
+            dir.exists(),
+            "it has flows, so it counts as one of those kept"
+        );
+        fs::remove_dir_all(&sessions).unwrap();
+    }
+
+    #[test]
+    fn names_come_and_go() {
+        let sessions = temp("names");
+        let dir = make(&sessions, "100", 1);
+        assert_eq!(name_of(&dir), None);
+        set_name(&dir, "  checkout bug ").unwrap();
+        assert_eq!(name_of(&dir).as_deref(), Some("checkout bug"));
+        set_name(&dir, "   ").unwrap();
+        assert_eq!(name_of(&dir), None);
+        set_name(&dir, "").unwrap();
+        fs::remove_dir_all(&sessions).unwrap();
+    }
+
+    #[test]
+    fn the_clean_up_keeps_the_named_and_the_newest() {
+        let sessions = temp("forget");
+        let named = make(&sessions, "100", 1);
+        set_name(&named, "keep me").unwrap();
+        let old = make(&sessions, "200", 1);
+        let empty = make(&sessions, "300", 0);
+        let newer = make(&sessions, "400", 1);
+        let newest = make(&sessions, "500", 1);
+        // Not a session: left alone, whatever it is.
+        fs::create_dir_all(sessions.join("000-notes")).unwrap();
+        forget_old(&sessions, 2);
+        assert!(named.exists(), "named");
+        assert!(!old.exists(), "past the limit");
+        assert!(!empty.exists(), "nothing in it");
+        assert!(newer.exists() && newest.exists());
+        assert!(sessions.join("000-notes").exists());
+        let names: Vec<String> = list(&sessions)
+            .iter()
+            .map(|s| s.dir.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, ["500", "400", "100"], "the newest first");
+        fs::remove_dir_all(&sessions).unwrap();
+    }
+
+    #[test]
+    fn only_a_session_can_be_deleted() {
+        let sessions = temp("delete");
+        let other = sessions.join("not-one");
+        fs::create_dir_all(&other).unwrap();
+        assert!(delete(&other).is_err());
+        assert!(other.exists());
+        let dir = make(&sessions, "100", 1);
+        delete(&dir).unwrap();
+        assert!(!dir.exists());
+        fs::remove_dir_all(&sessions).unwrap();
     }
 
     #[test]
