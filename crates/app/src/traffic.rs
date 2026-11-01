@@ -1443,7 +1443,6 @@ impl Render for Traffic {
             .overflow_hidden()
             .flex()
             .flex_row()
-            .bg(rgb(c.page))
             .text_color(rgb(c.text))
             .font_family(crate::FONT)
             .text_size(px(13.))
