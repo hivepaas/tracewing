@@ -4,7 +4,7 @@
 
 Built in Rust with [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui).
 
-> **Status:** early development. There is nothing to download yet. The window shows traffic as it happens (see [Build](#-build)); the system proxy and settings are next.
+> **Status:** early development. There is nothing to download yet. The window shows traffic as it happens, and can be tried from source (see [Build](#-build)).
 
 ## 🎯 Plans
 

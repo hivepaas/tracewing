@@ -12,6 +12,8 @@ use crate::{
     input::{Changed, TextInput},
     inspector::InspectorState,
     layout::{INSPECTOR_MIN, LIST_MIN, Layout, Place, SIDEBAR_MAX, SIDEBAR_MIN},
+    settings_page::SettingsPage,
+    system::{CaState, ProxySwitch, SystemState},
     widgets::{eyebrow, icon, status_colors},
 };
 use gpui::{
@@ -131,8 +133,21 @@ pub enum Drag {
     ListBar,
 }
 
+/// What the rail switches between.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Screen {
+    Traffic,
+    Settings,
+}
+
 pub struct Traffic {
     pub(crate) engine: Engine,
+    pub(crate) data_dir: PathBuf,
+    pub screen: Screen,
+    pub system: SystemState,
+    pub settings_page: Option<SettingsPage>,
+    /// Why the settings file was not used, if it was not.
+    pub settings_problem: Option<String>,
     layout_path: PathBuf,
     pub(crate) layout: Layout,
     flows: Option<Flows>,
@@ -200,6 +215,7 @@ impl Traffic {
         })
         .detach();
         cx.on_app_quit(|this, _| {
+            this.release_system_proxy();
             this.engine.stop();
             async {}
         })
@@ -209,8 +225,14 @@ impl Traffic {
         window.focus(&focus, cx);
         let layout_path = data_dir.join("layout.toml");
         let now = Instant::now();
+        cx.defer_in(window, |this, _, cx| this.start_ca_check(cx));
         Self {
             engine,
+            data_dir: data_dir.to_owned(),
+            screen: Screen::Traffic,
+            system: SystemState::default(),
+            settings_page: None,
+            settings_problem: None,
             layout: Layout::load(&layout_path),
             layout_path,
             flows: None,
@@ -242,6 +264,15 @@ impl Traffic {
             rows_missing: false,
             places_asked: 0,
         }
+    }
+
+    pub fn settings_path(&self) -> PathBuf {
+        self.data_dir.join("settings.toml")
+    }
+
+    pub fn set_screen(&mut self, screen: Screen, cx: &mut Context<Self>) {
+        self.screen = screen;
+        cx.notify();
     }
 
     pub fn session_dir(&self) -> &Path {
@@ -723,20 +754,7 @@ impl Traffic {
                     .child(icon("trash", 18., c.muted))
                     .on_click(cx.listener(|this, _, _, cx| this.clear(cx))),
             )
-            .child(
-                div()
-                    .h(px(40.))
-                    .px(px(14.))
-                    .rounded(px(20.))
-                    .flex()
-                    .items_center()
-                    .gap(px(8.))
-                    .bg(rgb(c.tonal))
-                    .text_color(rgb(c.on_tonal))
-                    .font_weight(FontWeight::BOLD)
-                    .child(icon("check", 16., c.on_tonal))
-                    .child(format!("Listening on {}", self.engine.addr)),
-            )
+            .child(self.render_proxy_switch(cx))
             .child(
                 div()
                     .flex_1()
@@ -767,6 +785,28 @@ impl Traffic {
             )
             .child(self.render_kinds(cx))
             .child(self.render_layout_buttons(cx))
+    }
+
+    fn render_proxy_switch(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = colors();
+        let addr = self.engine.addr;
+        let (text, on) = match self.system.proxy {
+            ProxySwitch::Off => (format!("System proxy off · {addr}"), false),
+            ProxySwitch::Working => ("System proxy…".to_owned(), false),
+            ProxySwitch::On(_) => (format!("System proxy on · {addr}"), true),
+        };
+        pill_button("system-proxy")
+            .px(px(14.))
+            .gap(px(8.))
+            .font_weight(FontWeight::BOLD)
+            .when(on, |d| {
+                d.bg(rgb(c.tonal))
+                    .text_color(rgb(c.on_tonal))
+                    .child(icon("check", 16., c.on_tonal))
+            })
+            .when(!on, |d| d.bg(rgb(c.surface)).text_color(rgb(c.muted)))
+            .child(text)
+            .on_click(cx.listener(|this, _, _, cx| this.toggle_system_proxy(cx)))
     }
 
     fn render_kinds(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -1020,7 +1060,8 @@ impl Traffic {
             (
                 "Nothing yet".into(),
                 Some(format!(
-                    "Point an app at {addr}. To try it: curl --proxy http://{addr} --cacert <data folder>/ca.pem https://example.com/"
+                    "Turn on the system proxy above, or point an app at {addr}. To try it: curl --proxy http://{addr} --cacert {} https://example.com/",
+                    self.data_dir.join("ca.pem").display()
                 )),
             )
         };
@@ -1138,7 +1179,89 @@ impl Traffic {
             )
     }
 
-    fn render_footer(&self) -> impl IntoElement {
+    fn render_rail(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = colors();
+        let current = self.screen;
+        let item = |id: &'static str, label: &'static str, name: &'static str, screen: Screen| {
+            let on = current == screen;
+            let ink = if on { c.on_tonal } else { c.muted };
+            div()
+                .id(id)
+                .flex()
+                .flex_col()
+                .items_center()
+                .gap(px(4.))
+                .cursor_pointer()
+                .text_size(px(11.))
+                .font_weight(FontWeight::BOLD)
+                .text_color(rgb(ink))
+                .child(
+                    div()
+                        .w(px(52.))
+                        .h(px(30.))
+                        .rounded(px(15.))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .when(on, |d| d.bg(rgb(c.tonal)))
+                        .child(icon(name, 18., ink)),
+                )
+                .child(label)
+                .on_click(cx.listener(move |this, _, _, cx| this.set_screen(screen, cx)))
+        };
+        div()
+            .w(px(76.))
+            .flex_shrink_0()
+            .h_full()
+            .py(px(16.))
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(14.))
+            .child(
+                div()
+                    .size(px(44.))
+                    .mb(px(4.))
+                    .rounded(px(15.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .bg(rgb(c.accent))
+                    .child(icon("logo", 24., c.on_accent)),
+            )
+            .child(item("rail-traffic", "Traffic", "traffic", Screen::Traffic))
+            .child(item(
+                "rail-settings",
+                "Settings",
+                "settings",
+                Screen::Settings,
+            ))
+    }
+
+    fn render_ca(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = colors();
+        let row = div().flex().flex_row().items_center().gap(px(6.));
+        match self.system.ca {
+            CaState::Trusted => row
+                .child(icon("shield", 14., c.ok))
+                .child("Certificate trusted on this computer")
+                .into_any_element(),
+            CaState::Checking => row.child("Checking the certificate…").into_any_element(),
+            CaState::Installing => row
+                .child("Installing the certificate; the system may ask you to confirm…")
+                .into_any_element(),
+            CaState::NotTrusted => row
+                .id("install-ca")
+                .cursor_pointer()
+                .text_color(rgb(c.warn))
+                .child(icon("shield-off", 14., c.warn))
+                .child("HTTPS will fail: install the certificate")
+                .on_click(cx.listener(|this, _, _, cx| this.install_certificate(cx)))
+                .into_any_element(),
+        }
+    }
+
+    fn render_footer(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let stats = &self.engine.shared.stats;
         let shed = stats.shed.load(Ordering::Relaxed);
@@ -1147,6 +1270,12 @@ impl Traffic {
         let low = self.engine.shared.low_disk.load(Ordering::Relaxed);
         let trimmed = stats.trimmed.load(Ordering::Relaxed);
         let mut notes: Vec<(String, u32)> = Vec::new();
+        if let Some(problem) = &self.system.problem {
+            notes.push((problem.clone(), c.error));
+        }
+        if let Some(problem) = &self.settings_problem {
+            notes.push((format!("settings.toml was not used: {problem}"), c.error));
+        }
         if let Some(failure) = self.engine.failure() {
             notes.push((format!("The proxy stopped: {failure}"), c.error));
         }
@@ -1189,6 +1318,7 @@ impl Traffic {
             .text_size(px(12.))
             .text_color(rgb(c.muted))
             .child(format!("{} flows", group_digits(self.total() as u64)))
+            .child(self.render_ca(cx))
             .children(
                 notes
                     .into_iter()
@@ -1204,8 +1334,10 @@ impl Focusable for Traffic {
 }
 
 impl Render for Traffic {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
+        let settings = (self.screen == Screen::Settings)
+            .then(|| self.render_settings(window, cx).into_any_element());
         let content_bounds = Rc::clone(&self.content);
         let place = self.layout.place;
         let shown = self.layout.inspector_shown;
@@ -1265,7 +1397,7 @@ impl Render for Traffic {
             .text_color(rgb(c.text))
             .font_family(crate::FONT)
             .text_size(px(13.))
-            .child(render_rail())
+            .child(self.render_rail(cx))
             .child(
                 div()
                     .flex_1()
@@ -1278,78 +1410,35 @@ impl Render for Traffic {
                     .pr(px(14.))
                     .pb(px(10.))
                     .pl(px(4.))
-                    .child(self.render_toolbar(cx))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_h_0()
-                            .relative()
-                            .flex()
-                            .flex_row()
-                            .child(
-                                canvas(move |b, _, _| content_bounds.set(b), |_, _, _, _| {})
-                                    .absolute()
-                                    .size_full(),
-                            )
-                            .when(self.layout.sidebar_shown, |d| {
-                                d.child(self.render_sidebar(cx)).child(self.splitter(
-                                    "split-sidebar",
-                                    Drag::Sidebar,
-                                    true,
-                                    cx,
-                                ))
-                            })
-                            .child(center)
-                            .children(drop_zones),
-                    )
-                    .child(self.render_footer()),
+                    .when_some(settings, |d, settings| d.child(settings))
+                    .when(self.screen == Screen::Traffic, |d| {
+                        d.child(self.render_toolbar(cx)).child(
+                            div()
+                                .flex_1()
+                                .min_h_0()
+                                .relative()
+                                .flex()
+                                .flex_row()
+                                .child(
+                                    canvas(move |b, _, _| content_bounds.set(b), |_, _, _, _| {})
+                                        .absolute()
+                                        .size_full(),
+                                )
+                                .when(self.layout.sidebar_shown, |d| {
+                                    d.child(self.render_sidebar(cx)).child(self.splitter(
+                                        "split-sidebar",
+                                        Drag::Sidebar,
+                                        true,
+                                        cx,
+                                    ))
+                                })
+                                .child(center)
+                                .children(drop_zones),
+                        )
+                    })
+                    .child(self.render_footer(cx)),
             )
     }
-}
-
-fn render_rail() -> impl IntoElement {
-    let c = colors();
-    div()
-        .w(px(76.))
-        .flex_shrink_0()
-        .h_full()
-        .py(px(16.))
-        .flex()
-        .flex_col()
-        .items_center()
-        .gap(px(18.))
-        .child(
-            div()
-                .size(px(44.))
-                .rounded(px(15.))
-                .flex()
-                .items_center()
-                .justify_center()
-                .bg(rgb(c.accent))
-                .child(icon("logo", 24., c.on_accent)),
-        )
-        .child(
-            div()
-                .flex()
-                .flex_col()
-                .items_center()
-                .gap(px(4.))
-                .text_size(px(11.))
-                .font_weight(FontWeight::BOLD)
-                .text_color(rgb(c.on_tonal))
-                .child(
-                    div()
-                        .w(px(52.))
-                        .h(px(30.))
-                        .rounded(px(15.))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .bg(rgb(c.tonal))
-                        .child(icon("traffic", 18., c.on_tonal)),
-                )
-                .child("Traffic"),
-        )
 }
 
 const NUMBER_W: f32 = 76.;
