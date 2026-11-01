@@ -4,7 +4,7 @@
 
 Built in Rust with [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui).
 
-> **Status:** early development. There is nothing to download yet. The core works from the command line (see [Build](#-build)); the window is next.
+> **Status:** early development. There is nothing to download yet. The window shows traffic as it happens (see [Build](#-build)); the system proxy and settings are next.
 
 ## 🎯 Plans
 
@@ -15,14 +15,15 @@ Built in Rust with [GPUI](https://github.com/zed-industries/zed/tree/main/crates
 
 ## 🔨 Build
 
-Needs Rust; `rust-toolchain.toml` picks the version.
+Needs Rust; `rust-toolchain.toml` picks the version. On Linux, the window also needs the packages listed in `.github/workflows/ci.yml`. It builds for Wayland by default: add `--features x11` for X11.
 
 ```sh
 cargo test --release                        # includes end-to-end tests through the proxy
-cargo run --release -p tracewing-dev -- proxy          # listens on 127.0.0.1:9090
+cargo run --release -p tracewing                       # the window; listens on 127.0.0.1:9090
 curl --proxy http://127.0.0.1:9090 \
      --cacert ~/.local/share/tracewing/ca.pem https://example.com/
 cargo run --release -p tracewing-dev -- settings       # every storage setting and its default
+cargo test --release -p tracewing --features headless --test screen  # the window with no display; pictures in target/shots
 ```
 
 What the core has been measured to do, and why it is built this way: [docs/measurements.md](docs/measurements.md).

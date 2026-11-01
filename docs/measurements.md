@@ -395,6 +395,31 @@ Traffic does not feel the disk at all. What gives is bodies, in a burst far fast
 than the disk, and the index, which took up to 217 s to catch up. Stopping waits for
 it here so as to count it; the app must not.
 
+## The window with a flood coming in (`crates/app/tests/screen.rs`, 2026-11-01)
+
+A million flows through the real proxy, then the real list scrolled by script, in
+one process and with no display. This times the CPU's part of a frame (layout, rows
+from the session, paint), not drawing the pixels, so it says the list keeps up, not
+what a display will show. Each frame also looks at the session, as the app does ten
+times a second.
+
+| 1,440 × 900, 32 px rows | No traffic: p50 / p99 / max | 99,000 req/s coming in: p50 / p99 / max |
+|---|---|---|
+| Scrolling, 40 px a frame | 1.13 / 1.23 / 1.85 ms | 1.43 / 2.15 / 2.46 ms |
+| Jumping to random rows | 1.36 / 1.57 / 1.99 ms | 1.82 / 2.73 / 4.00 ms |
+
+Traffic kept 99,300 req/s with the window open, and the whole process peaked at
+205 MiB. A filter over 2 million flows (a status and a word) took 165 ms, on a worker
+thread. A million flows had 500 byte bodies sent gzipped, with headers.
+
+Two bugs this found, kept here so they stay found:
+
+- `SELECT min(id), max(id)` reads the whole table: SQLite only uses the index for
+  one of them at a time. It cost 28 ms per look at a million rows.
+- When rows could not be read, the list gave `uniform_list` none. It measures the
+  first to learn their height, took zero, and asked for every row: 51 GB, until the
+  kernel stopped it. The list now always returns as many elements as it is asked for.
+
 ## Known gaps
 
 - hudsucker always offers `h2, http/1.1` to the client instead of mirroring
