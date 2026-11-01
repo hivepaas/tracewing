@@ -2,6 +2,7 @@
 
 pub mod body;
 pub mod bodyview;
+pub mod chrome;
 pub mod colors;
 pub mod curl;
 pub mod detail;
@@ -62,6 +63,13 @@ const ICONS: &[(&str, &[u8])] = icons![
     "shield",
     "shield-off",
     "settings",
+    "minimize",
+    "maximize",
+    "close",
+    "win-minimize",
+    "win-maximize",
+    "win-restore",
+    "win-close",
 ];
 
 pub struct Assets;

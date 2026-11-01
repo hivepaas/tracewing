@@ -5,6 +5,7 @@
 //! never holds up a frame.
 
 use crate::{
+    chrome,
     colors::{colors, with_alpha},
     engine::Engine,
     filter::{Filter, Kind},
@@ -1384,13 +1385,16 @@ impl Render for Traffic {
             div().flex_1().min_w_0().h_full().flex().child(list)
         };
 
-        div()
+        let body = div()
             .track_focus(&self.focus)
             .key_context("Traffic")
             .on_key_down(cx.listener(Self::on_key))
             .on_mouse_move(cx.listener(Self::on_mouse_move))
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
-            .size_full()
+            .flex_1()
+            .min_h_0()
+            .w_full()
+            .overflow_hidden()
             .flex()
             .flex_row()
             .bg(rgb(c.page))
@@ -1437,7 +1441,8 @@ impl Render for Traffic {
                         )
                     })
                     .child(self.render_footer(cx)),
-            )
+            );
+        chrome::window_chrome(body, rgb(c.page).into(), window, cx)
     }
 }
 

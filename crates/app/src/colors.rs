@@ -52,6 +52,13 @@ pub struct Palette {
     pub json_punct: u32,
     pub wait: u32,
     pub download: u32,
+    /// The window's own buttons, and what is under the mouse.
+    pub button: u32,
+    pub button_hover: u32,
+    pub hover: u32,
+    pub window_edge: u32,
+    /// `0xRRGGBBAA`: the window's shadow.
+    pub shadow: u32,
 }
 
 const GRAPHITE: Palette = Palette {
@@ -92,6 +99,11 @@ const GRAPHITE: Palette = Palette {
     json_punct: 0xa2a5ad,
     wait: 0x7aa2ff,
     download: 0x62c985,
+    button: 0x26282d,
+    button_hover: 0x3b3e45,
+    hover: 0x2e3036,
+    window_edge: 0x2c2e33,
+    shadow: 0x00000066,
 };
 
 pub fn colors() -> &'static Palette {
