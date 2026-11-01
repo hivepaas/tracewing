@@ -1,14 +1,13 @@
 //! `tracewing`: the window. The proxy starts with it and stops with it.
 
 use anyhow::Result;
-use gpui::{
-    AppContext as _, Bounds, TitlebarOptions, WindowBounds, WindowDecorations, WindowOptions, px,
-    size,
-};
+use gpui::{AppContext as _, TitlebarOptions, WindowDecorations, WindowOptions, px, size};
 use std::path::PathBuf;
 use tracewing::{
     Assets, chrome,
     engine::{Engine, EngineOptions, PORTS},
+    layout::Layout,
+    placement,
     traffic::Traffic,
 };
 use tracewing_proxy::{crypto_provider, default_data_dir};
@@ -63,15 +62,19 @@ fn main() -> Result<()> {
         .with_assets(Assets)
         .run(move |cx| {
             tracewing::load_fonts(cx);
-            let bounds = Bounds::centered(None, size(px(1440.), px(900.)), cx);
+            let saved = Layout::load(&data_dir.join("layout.toml")).window;
+            let bounds = placement::initial(saved, cx);
             // GNOME's Wayland compositor draws no window frame, so Linux gets
             // client-side decorations. macOS and Windows keep the system's frame
             // but hide its title bar, and the app draws its own.
             let client_side = cfg!(any(target_os = "linux", target_os = "freebsd"));
             let opened = cx.open_window(
                 WindowOptions {
-                    window_bounds: Some(WindowBounds::Windowed(bounds)),
-                    window_min_size: Some(size(px(900.), px(560.))),
+                    window_bounds: Some(bounds),
+                    window_min_size: Some(size(
+                        px(placement::MIN_SIZE.0),
+                        px(placement::MIN_SIZE.1),
+                    )),
                     window_decorations: client_side.then_some(WindowDecorations::Client),
                     titlebar: (!client_side).then(|| TitlebarOptions {
                         title: Some("tracewing".into()),
