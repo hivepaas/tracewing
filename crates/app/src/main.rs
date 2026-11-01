@@ -1,10 +1,13 @@
 //! `tracewing`: the window. The proxy starts with it and stops with it.
 
 use anyhow::Result;
-use gpui::{AppContext as _, Bounds, TitlebarOptions, WindowBounds, WindowOptions, px, size};
+use gpui::{
+    AppContext as _, Bounds, TitlebarOptions, WindowBounds, WindowDecorations, WindowOptions, px,
+    size,
+};
 use std::path::PathBuf;
 use tracewing::{
-    Assets,
+    Assets, chrome,
     engine::{Engine, EngineOptions, PORTS},
     traffic::Traffic,
 };
@@ -61,13 +64,21 @@ fn main() -> Result<()> {
         .run(move |cx| {
             tracewing::load_fonts(cx);
             let bounds = Bounds::centered(None, size(px(1440.), px(900.)), cx);
+            // GNOME's Wayland compositor draws no window frame, so Linux gets
+            // client-side decorations. macOS and Windows keep the system's frame
+            // but hide its title bar, and the app draws its own.
+            let client_side = cfg!(any(target_os = "linux", target_os = "freebsd"));
             let opened = cx.open_window(
                 WindowOptions {
                     window_bounds: Some(WindowBounds::Windowed(bounds)),
-                    titlebar: Some(TitlebarOptions {
+                    window_min_size: Some(size(px(900.), px(560.))),
+                    window_decorations: client_side.then_some(WindowDecorations::Client),
+                    titlebar: (!client_side).then(|| TitlebarOptions {
                         title: Some("tracewing".into()),
-                        ..Default::default()
+                        appears_transparent: true,
+                        traffic_light_position: Some(chrome::TRAFFIC_LIGHTS),
                     }),
+                    app_id: Some("tracewing".into()),
                     focus: true,
                     ..Default::default()
                 },
