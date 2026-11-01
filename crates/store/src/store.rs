@@ -8,6 +8,10 @@
 //! with 64 KiB bodies came to 6 GB when the disk fell behind. Past the byte
 //! budget a flow keeps its row and loses its bodies, and says so.
 //!
+//! A stream (a WebSocket, or server-sent events) gets its row as it opens, so that
+//! it shows while it lasts, and its messages join it as they come. The row is written
+//! again when it ends, with what only the end can tell.
+//!
 //! The writer also keeps the session inside its limits. A disk that fills up is
 //! the same to it as any other reason a body cannot be kept: the flow says so
 //! and the writer carries on, because traffic must not notice.
@@ -21,7 +25,7 @@ use crate::{
 use anyhow::{Context, Result};
 use rusqlite::{Connection, params};
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     path::{Path, PathBuf},
     sync::{
         Arc,
@@ -41,7 +45,7 @@ const LOOK_EVERY: Duration = Duration::from_millis(500);
 const WARN_EVERY: Duration = Duration::from_secs(5);
 
 /// One finished exchange, as stored.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct FlowRecord {
     pub started_us: i64,
     pub client: String,
@@ -64,6 +68,8 @@ pub struct FlowRecord {
     pub req_headers: String,
     pub resp_headers: String,
     pub head: Option<LogPlace>,
+    /// A stream still going.
+    pub open: bool,
     pub ttfb_us: Option<i64>,
     pub duration_us: Option<i64>,
     pub request: BodyRecord,
@@ -71,7 +77,7 @@ pub struct FlowRecord {
     pub error: Option<String>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct BodyRecord {
     pub bytes: u64,
     /// The body as it went over the wire, or its first `log_max` bytes, or nothing
@@ -114,6 +120,8 @@ pub struct Stats {
     pub bytes_logged: AtomicU64,
     /// The most the session has taken on disk.
     pub peak_session: AtomicU64,
+    /// Messages of streams that could not wait for the queue.
+    pub messages_lost: AtomicU64,
 }
 
 impl Stats {
@@ -130,9 +138,88 @@ impl Stats {
     }
 }
 
+/// One message of a stream, on its way to the writer.
+#[derive(Debug)]
+pub struct StreamMessage {
+    at_us: i64,
+    from_client: bool,
+    kind: &'static str,
+    bytes: u64,
+    data: Vec<u8>,
+    shed: bool,
+}
+
 enum Message {
     Flow(Box<FlowRecord>),
+    Open(u64, Box<FlowRecord>),
+    Stream(u64, StreamMessage),
+    Finish(u64, Box<FlowRecord>),
     Close,
+}
+
+/// A stream with a row of its own, for the messages that join it.
+#[derive(Clone)]
+pub struct StreamHandle {
+    key: u64,
+    recorder: Recorder,
+}
+
+fn unix_micros() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_micros() as i64
+}
+
+impl StreamHandle {
+    /// Keeps a message, or as much of it as `log_max`, and if there is no room says
+    /// it was there. The stream never waits for the disk.
+    pub fn message(&self, from_client: bool, kind: &'static str, data: &[u8]) {
+        let recorder = &self.recorder;
+        let keep = data.len().min(recorder.log_max);
+        let queued = recorder.queued.fetch_add(keep as u64, Ordering::Relaxed) + keep as u64;
+        let shed = queued > recorder.budget || recorder.shared.low_disk.load(Ordering::Relaxed);
+        if shed {
+            recorder.queued.fetch_sub(keep as u64, Ordering::Relaxed);
+        }
+        let message = StreamMessage {
+            at_us: unix_micros(),
+            from_client,
+            kind,
+            bytes: data.len() as u64,
+            data: if shed {
+                Vec::new()
+            } else {
+                data[..keep].to_vec()
+            },
+            shed,
+        };
+        if recorder
+            .tx
+            .try_send(Message::Stream(self.key, message))
+            .is_err()
+        {
+            if !shed {
+                recorder.queued.fetch_sub(keep as u64, Ordering::Relaxed);
+            }
+            recorder.stats.messages_lost.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Writes the row again, with the stream over.
+    pub fn finish(self, mut record: FlowRecord) {
+        record.open = false;
+        let size = body_bytes(&record);
+        self.recorder.queued.fetch_add(size, Ordering::Relaxed);
+        if self
+            .recorder
+            .tx
+            .try_send(Message::Finish(self.key, Box::new(record)))
+            .is_err()
+        {
+            self.recorder.queued.fetch_sub(size, Ordering::Relaxed);
+        }
+    }
 }
 
 fn body_bytes(record: &FlowRecord) -> u64 {
@@ -153,6 +240,8 @@ pub struct Recorder {
     queued: Arc<AtomicU64>,
     budget: u64,
     shared: Arc<Shared>,
+    log_max: usize,
+    next_stream: Arc<AtomicU64>,
 }
 
 impl Recorder {
@@ -194,6 +283,8 @@ impl Recorder {
                 queued,
                 budget,
                 shared,
+                log_max: settings.log_max(),
+                next_stream: Arc::new(AtomicU64::new(1)),
             },
             writer,
         ))
@@ -222,6 +313,25 @@ impl Recorder {
                 self.queued.fetch_sub(size, Ordering::Relaxed);
                 self.stats.dropped.fetch_add(1, Ordering::Relaxed);
             }
+        }
+    }
+
+    /// Gives a stream its row now. A row that does not fit in the queue is lost, and
+    /// its messages with it, like any flow.
+    pub fn open_stream(&self, mut record: FlowRecord) -> StreamHandle {
+        record.open = true;
+        let key = self.next_stream.fetch_add(1, Ordering::Relaxed);
+        self.stats.submitted.fetch_add(1, Ordering::Relaxed);
+        if self
+            .tx
+            .try_send(Message::Open(key, Box::new(record)))
+            .is_err()
+        {
+            self.stats.dropped.fetch_add(1, Ordering::Relaxed);
+        }
+        StreamHandle {
+            key,
+            recorder: self.clone(),
         }
     }
 
@@ -269,7 +379,7 @@ fn open(path: &Path) -> Result<Connection> {
         "PRAGMA journal_mode = WAL;
          PRAGMA synchronous = NORMAL;
          PRAGMA journal_size_limit = 67108864;
-         PRAGMA user_version = 1;
+         PRAGMA user_version = 2;
          CREATE TABLE IF NOT EXISTS flows (
              id INTEGER PRIMARY KEY,
              started_us INTEGER NOT NULL,
@@ -311,8 +421,22 @@ fn open(path: &Path) -> Result<Connection> {
              resp_shed INTEGER NOT NULL,
              head_segment INTEGER,
              head_offset INTEGER,
-             head_len INTEGER
+             head_len INTEGER,
+             open INTEGER NOT NULL
          );
+         CREATE TABLE IF NOT EXISTS messages (
+             id INTEGER PRIMARY KEY,
+             flow_id INTEGER NOT NULL,
+             at_us INTEGER NOT NULL,
+             from_client INTEGER NOT NULL,
+             kind TEXT NOT NULL,
+             bytes INTEGER NOT NULL,
+             segment INTEGER,
+             offset INTEGER,
+             len INTEGER,
+             shed INTEGER NOT NULL
+         );
+         CREATE INDEX IF NOT EXISTS messages_flow ON messages (flow_id, id);
          CREATE INDEX IF NOT EXISTS flows_host ON flows (host);",
     )?;
     Ok(conn)
@@ -350,6 +474,8 @@ struct Writer {
     /// What the databases took at the last look.
     others: u64,
     last_warn: Option<Instant>,
+    /// The row of each stream still going.
+    streams: HashMap<u64, i64>,
 }
 
 impl Writer {
@@ -391,6 +517,7 @@ impl Writer {
             last_look: Instant::now(),
             others: 0,
             last_warn: None,
+            streams: HashMap::new(),
         })
     }
 
@@ -400,27 +527,28 @@ impl Writer {
         self.look_around();
         while !closing {
             match rx.recv_timeout(LOOK_EVERY) {
-                Ok(Message::Flow(record)) => batch.push(*record),
                 Ok(Message::Close) | Err(RecvTimeoutError::Disconnected) => closing = true,
+                Ok(message) => batch.push(message),
                 Err(RecvTimeoutError::Timeout) => {}
             }
             while !closing && !batch.is_empty() && batch.len() < BATCH_MAX {
                 match rx.try_recv() {
-                    Ok(Message::Flow(record)) => batch.push(*record),
                     Ok(Message::Close) | Err(TryRecvError::Disconnected) => closing = true,
+                    Ok(message) => batch.push(message),
                     Err(TryRecvError::Empty) => break,
                 }
             }
-            if !batch.is_empty() {
-                self.write_batch(&mut batch);
-                batch.clear();
-            }
+            self.write_all(&mut batch);
             if self.last_look.elapsed() >= LOOK_EVERY {
                 self.look_around();
             }
             self.keep_to_limit();
             self.trim_step();
         }
+        // Nothing is still going once the writer has stopped.
+        let _ = self
+            .conn
+            .execute("UPDATE flows SET open = 0 WHERE open = 1", []);
         self.look_around();
         self.keep_to_limit();
         while !self.trimming.is_empty() {
@@ -429,10 +557,117 @@ impl Writer {
         Ok(())
     }
 
+    /// In the order they came: a stream's row goes before its messages. Runs of the
+    /// same kind go together, in one transaction each.
+    fn write_all(&mut self, batch: &mut Vec<Message>) {
+        let mut flows = Vec::new();
+        let mut messages = Vec::new();
+        for message in batch.drain(..) {
+            if !matches!(message, Message::Flow(_)) && !flows.is_empty() {
+                self.write_batch(&mut flows);
+                flows.clear();
+            }
+            if !matches!(message, Message::Stream(..)) && !messages.is_empty() {
+                self.write_messages(&mut messages);
+                messages.clear();
+            }
+            match message {
+                Message::Flow(record) => flows.push(*record),
+                Message::Stream(key, message) => messages.push((key, message)),
+                Message::Open(key, mut record) => {
+                    let id = self.next_id;
+                    self.write_batch(std::slice::from_mut(&mut *record));
+                    if self.next_id > id {
+                        self.streams.insert(key, id);
+                    }
+                }
+                Message::Finish(key, mut record) => self.finish_stream(key, &mut record),
+                Message::Close => {}
+            }
+        }
+        if !flows.is_empty() {
+            self.write_batch(&mut flows);
+        }
+        if !messages.is_empty() {
+            self.write_messages(&mut messages);
+        }
+    }
+
+    fn write_messages(&mut self, messages: &mut [(u64, StreamMessage)]) {
+        let queued: u64 = messages.iter().map(|(_, m)| m.data.len() as u64).sum();
+        let mut places: Vec<Option<LogPlace>> = messages
+            .iter()
+            .map(|(_, m)| (!m.data.is_empty()).then(|| self.log.append(&m.data)))
+            .collect();
+        let pending = self.log.pending() as u64;
+        match self.log.flush() {
+            Ok(()) => {
+                let segment = self.segments.back_mut().expect("never empty");
+                segment.bytes += pending;
+                self.check_free_space();
+            }
+            Err(e) => {
+                self.warn(format_args!("messages not written: {e}"));
+                self.stats.log_errors.fetch_add(1, Ordering::Relaxed);
+                places.fill(None);
+            }
+        }
+        let deleted_to = self.deleted_to;
+        let streams = &self.streams;
+        let result = (|| -> Result<()> {
+            let tx = self.conn.transaction()?;
+            {
+                let mut stmt = tx.prepare_cached(
+                    "INSERT INTO messages (flow_id, at_us, from_client, kind, bytes, segment, offset, len, shed)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                )?;
+                for ((key, m), place) in messages.iter().zip(&places) {
+                    // Its row went with the oldest flows, or never got written.
+                    let Some(&id) = streams.get(key).filter(|&&id| id > deleted_to) else {
+                        continue;
+                    };
+                    stmt.execute(params![
+                        id,
+                        m.at_us,
+                        m.from_client,
+                        m.kind,
+                        m.bytes as i64,
+                        place.map(|p| p.segment),
+                        place.map(|p| p.offset as i64),
+                        place.map(|p| p.len),
+                        m.shed || (place.is_none() && !m.data.is_empty()),
+                    ])?;
+                }
+            }
+            tx.commit()?;
+            Ok(())
+        })();
+        if let Err(e) = result {
+            self.warn(format_args!("messages not written: {e:#}"));
+            self.stats
+                .messages_lost
+                .fetch_add(messages.len() as u64, Ordering::Relaxed);
+        }
+        self.queued.fetch_sub(queued, Ordering::Relaxed);
+    }
+
+    /// Writes a stream's row again in the same place, with what only its end knows.
+    fn finish_stream(&mut self, key: u64, record: &mut FlowRecord) {
+        let queued = body_bytes(record);
+        let id = self.streams.remove(&key).filter(|&id| id > self.deleted_to);
+        if let Some(id) = id {
+            self.keep_bodies(std::slice::from_mut(record), self.next_id - 1);
+            if let Err(e) = insert(&mut self.conn, id, std::slice::from_ref(record)) {
+                self.warn(format_args!("a stream's end not written: {e:#}"));
+            }
+        }
+        self.queued.fetch_sub(queued, Ordering::Relaxed);
+    }
+
     fn write_batch(&mut self, batch: &mut [FlowRecord]) {
         let queued: u64 = batch.iter().map(body_bytes).sum();
         let first_id = self.next_id;
-        self.keep_bodies(batch);
+        self.keep_bodies(batch, first_id);
         if let Err(e) = insert(&mut self.conn, first_id, batch) {
             // The rows are gone, and their bodies with them when their segment
             // goes. A full disk may have room again in a moment.
@@ -453,7 +688,7 @@ impl Writer {
     }
 
     /// Puts each flow's bodies in the log, a flow's two always in one segment.
-    fn keep_bodies(&mut self, batch: &mut [FlowRecord]) {
+    fn keep_bodies(&mut self, batch: &mut [FlowRecord], first_id: i64) {
         let mut unwritten = 0;
         for i in 0..batch.len() {
             let record = &mut batch[i];
@@ -479,7 +714,7 @@ impl Writer {
                 unwritten = i + 1;
             }
             if full {
-                self.next_segment(self.next_id + i as i64);
+                self.next_segment(first_id + i as i64);
             }
         }
         self.flush_log(&mut batch[unwritten..]);
@@ -680,6 +915,8 @@ fn delete_rows(conn: &mut Connection, spool: Option<&Spool>, from: i64, to: i64)
     let result = conn
         .prepare_cached("DELETE FROM flows WHERE id > ?1 AND id <= ?2")
         .and_then(|mut stmt| stmt.execute(params![from, to]));
+    conn.prepare_cached("DELETE FROM messages WHERE flow_id > ?1 AND flow_id <= ?2")?
+        .execute(params![from, to])?;
     if let Some(spool) = spool {
         for name in names {
             spool.remove(name);
@@ -692,7 +929,7 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
     let tx = conn.transaction()?;
     {
         let mut stmt = tx.prepare_cached(
-            "INSERT INTO flows (
+            "INSERT OR REPLACE INTO flows (
                  id, started_us, client, kind, method, scheme, host, path,
                  client_version, server_version, status, content_type, req_content_type,
                  ttfb_us, duration_us, error,
@@ -700,10 +937,10 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                  req_segment, req_offset, req_len, req_zstd, req_spool, req_spool_lost, req_shed,
                  resp_bytes, resp_truncated, resp_complete, resp_encoding,
                  resp_segment, resp_offset, resp_len, resp_zstd, resp_spool, resp_spool_lost, resp_shed,
-                 head_segment, head_offset, head_len
+                 head_segment, head_offset, head_len, open
              ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
                        ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27,
-                       ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41)",
+                       ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42)",
         )?;
         for (i, r) in batch.iter().enumerate() {
             let (req, resp) = (r.request.place, r.response.place);
@@ -749,6 +986,7 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                 r.head.map(|p| p.segment),
                 r.head.map(|p| p.offset as i64),
                 r.head.map(|p| p.len),
+                r.open,
             ])?;
         }
     }

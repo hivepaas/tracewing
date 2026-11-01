@@ -39,3 +39,5 @@ image = { version = "0.25", default-features = false, features = ["png"], option
 
 [dev-dependencies]
 tracewing-dev = { path = "../dev" }
+hudsucker.workspace = true
+reqwest.workspace = true
