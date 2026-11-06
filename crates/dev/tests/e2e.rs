@@ -103,6 +103,7 @@ impl Harness {
                 rules: Arc::clone(&rules),
                 traffic_rules: Arc::clone(&traffic_rules),
                 check: Arc::clone(&check),
+                leaf_spki: Default::default(),
                 leave_index: false,
                 stop_limit: Duration::from_secs(1),
             },

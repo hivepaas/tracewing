@@ -34,7 +34,10 @@ use windows_sys::{
     core::PWSTR,
 };
 
-use super::{Place, Saved, Scope};
+use super::{
+    Place, Saved, Scope,
+    launch::{self, Browser},
+};
 
 const RUN_ONCE: &str = r"Software\Microsoft\Windows\CurrentVersion\RunOnce";
 const RUN_ONCE_VALUE: &str = "tracewing-proxy-recovery";
@@ -373,4 +376,48 @@ pub fn ca_uninstall(_cert_pem: &Path, der: &[u8], scope: Scope) -> Result<()> {
         return Err(os_error("remove the certificate"));
     }
     Ok(())
+}
+
+/// A console with the variables set, under a line saying so. The `cmd` that
+/// starts it shows no window of its own.
+pub fn open_terminal(env: &[(&str, String)], banner: &str, _data_dir: &Path) -> Result<()> {
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let mut command = std::process::Command::new("cmd");
+    command
+        .args(["/c", "start", "tracewing", "cmd", "/k"])
+        .arg(format!("echo {banner}"))
+        .envs(env.iter().map(|(name, value)| (*name, value.as_str())));
+    std::os::windows::process::CommandExt::creation_flags(&mut command, CREATE_NO_WINDOW);
+    if let Some(home) = std::env::var_os("USERPROFILE") {
+        command.current_dir(home);
+    }
+    launch::spawn(command).context("open a console")
+}
+
+const BROWSERS: &[(&str, &str)] = &[
+    (r"Google\Chrome\Application\chrome.exe", "Chrome"),
+    (r"Microsoft\Edge\Application\msedge.exe", "Edge"),
+    (
+        r"BraveSoftware\Brave-Browser\Application\brave.exe",
+        "Brave",
+    ),
+    (r"Chromium\Application\chrome.exe", "Chromium"),
+];
+
+pub fn find_browser(profiles: &Path) -> Option<Browser> {
+    let roots: Vec<std::path::PathBuf> = ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"]
+        .iter()
+        .filter_map(|var| std::env::var_os(var).map(std::path::PathBuf::from))
+        .collect();
+    BROWSERS.iter().find_map(|(relative, name)| {
+        roots
+            .iter()
+            .map(|root| root.join(relative))
+            .find(|program| program.is_file())
+            .map(|program| Browser {
+                name,
+                program,
+                profile: profiles.join(name.to_lowercase()),
+            })
+    })
 }

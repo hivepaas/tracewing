@@ -8,7 +8,10 @@
 use anyhow::{Context, Result, bail};
 use std::{fs, net::SocketAddr, path::Path, path::PathBuf, process::Command};
 
-use super::{Place, Saved, Scope};
+use super::{
+    Place, Saved, Scope,
+    launch::{self, Browser},
+};
 
 const AGENT_LABEL: &str = "com.hivepaas.tracewing.proxy-recovery";
 const SYSTEM_KEYCHAIN: &str = "/Library/Keychains/System.keychain";
@@ -331,4 +334,46 @@ pub fn ca_uninstall(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Writes a script that sets the variables and starts the user's shell, and has
+/// Terminal run it: Terminal opens `.command` files in a window of their own.
+pub fn open_terminal(env: &[(&str, String)], banner: &str, data_dir: &Path) -> Result<()> {
+    let script = data_dir.join("terminal.command");
+    let quote = |text: &str| format!("'{}'", text.replace('\'', r"'\''"));
+    let mut text = String::from("#!/bin/sh\n");
+    for (name, value) in env {
+        text.push_str(&format!("export {name}={}\n", quote(value)));
+    }
+    text.push_str(&format!("printf '%s\\n\\n' {}\n", quote(banner)));
+    text.push_str("exec \"${SHELL:-/bin/zsh}\" -l\n");
+    fs::write(&script, text).with_context(|| format!("write {}", script.display()))?;
+    fs::set_permissions(&script, std::os::unix::fs::PermissionsExt::from_mode(0o700))?;
+    let mut command = Command::new("/usr/bin/open");
+    command.args(["-a", "Terminal"]).arg(&script);
+    launch::spawn(command).context("open Terminal")
+}
+
+const BROWSERS: &[(&str, &str)] = &[
+    ("Google Chrome", "Chrome"),
+    ("Chromium", "Chromium"),
+    ("Microsoft Edge", "Edge"),
+    ("Brave Browser", "Brave"),
+];
+
+pub fn find_browser(profiles: &Path) -> Option<Browser> {
+    let mut apps = vec![PathBuf::from("/Applications")];
+    if let Ok(home) = home() {
+        apps.push(home.join("Applications"));
+    }
+    BROWSERS.iter().find_map(|(app, name)| {
+        apps.iter()
+            .map(|dir| dir.join(format!("{app}.app/Contents/MacOS/{app}")))
+            .find(|program| program.is_file())
+            .map(|program| Browser {
+                name,
+                program,
+                profile: profiles.join(name.to_lowercase()),
+            })
+    })
 }

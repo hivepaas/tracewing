@@ -5,7 +5,7 @@ use std::{
     net::SocketAddr,
     path::{Path, PathBuf},
     sync::{
-        Arc, Mutex, RwLock,
+        Arc, Mutex, OnceLock, RwLock,
         atomic::{AtomicBool, Ordering},
     },
     thread::JoinHandle,
@@ -41,6 +41,8 @@ pub struct Engine {
     pub rules: Arc<RwLock<HostRules>>,
     pub traffic_rules: Arc<RwLock<TrafficRules>>,
     pub check: Arc<Check>,
+    /// What a browser opened from here needs when it does not trust the CA.
+    pub leaf_spki: Arc<OnceLock<String>>,
     /// Why the proxy stopped, if it did by itself.
     pub failure: Arc<Mutex<Option<String>>>,
     stop: Option<oneshot::Sender<()>>,
@@ -58,6 +60,7 @@ impl Engine {
         let recording = Arc::new(AtomicBool::new(true));
         let failure = Arc::new(Mutex::new(None));
         let check = Arc::new(Check::default());
+        let leaf_spki = Arc::new(OnceLock::new());
         let rules = Arc::new(RwLock::new(opts.rules));
         let traffic_rules = Arc::new(RwLock::new(opts.traffic_rules));
         let (stop, stopped) = oneshot::channel::<()>();
@@ -75,6 +78,7 @@ impl Engine {
             rules: Arc::clone(&rules),
             traffic_rules: Arc::clone(&traffic_rules),
             check: Arc::clone(&check),
+            leaf_spki: Arc::clone(&leaf_spki),
             leave_index: true,
             stop_limit: std::time::Duration::from_secs(2),
         };
@@ -107,6 +111,7 @@ impl Engine {
             rules,
             traffic_rules,
             check,
+            leaf_spki,
             failure,
             stop: Some(stop),
             thread: Some(thread),

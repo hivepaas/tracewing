@@ -1,0 +1,232 @@
+//! One app at a time through the proxy, with nothing else on the machine
+//! touched: a terminal whose environment points at it, and a browser with a
+//! profile of its own. The system proxy and the trust stores stay as they are.
+
+use anyhow::{Context, Result};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+use std::{
+    fs,
+    net::SocketAddr,
+    path::{Path, PathBuf},
+    process::{Command, Stdio},
+};
+
+use crate::os;
+
+/// The roots a terminal opened from here trusts, kept in the data directory.
+const TERMINAL_BUNDLE: &str = "terminal-roots.pem";
+/// Hosts that go straight out, as the system proxy leaves them too.
+const NO_PROXY: &str = "localhost,127.0.0.1,::1";
+
+/// A Chromium-based browser found on this machine.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Browser {
+    pub name: &'static str,
+    pub program: PathBuf,
+    /// Its profile for tracewing, apart from the user's own.
+    pub profile: PathBuf,
+}
+
+/// Opens a terminal whose programs go through the proxy and trust its CA.
+pub fn open_terminal(addr: SocketAddr, ca_pem: &Path, data_dir: &Path) -> Result<()> {
+    let bundle = data_dir.join(TERMINAL_BUNDLE);
+    write_bundle(ca_pem, &bundle)?;
+    let banner = format!("This terminal goes through tracewing at {addr}.");
+    os::open_terminal(&terminal_env(addr, ca_pem, &bundle), &banner, data_dir)
+}
+
+/// What a terminal's programs read. Most take a single file of every root
+/// they trust, so the bundle holds the system's roots too: hosts tracewing does
+/// not decrypt still show their own certificates. Node and Deno add a file to
+/// what they trust already, so they get the CA alone.
+pub fn terminal_env(addr: SocketAddr, ca_pem: &Path, bundle: &Path) -> Vec<(&'static str, String)> {
+    let proxy = format!("http://{addr}");
+    let bundle = bundle.display().to_string();
+    let ca = ca_pem.display().to_string();
+    let mut env = Vec::new();
+    for name in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"] {
+        env.push((name, proxy.clone()));
+    }
+    for name in ["NO_PROXY", "no_proxy"] {
+        env.push((name, NO_PROXY.to_owned()));
+    }
+    for name in [
+        "SSL_CERT_FILE",
+        "CURL_CA_BUNDLE",
+        "REQUESTS_CA_BUNDLE",
+        "GIT_SSL_CAINFO",
+        "AWS_CA_BUNDLE",
+    ] {
+        env.push((name, bundle.clone()));
+    }
+    env.push(("NODE_EXTRA_CA_CERTS", ca.clone()));
+    // Node reads HTTP_PROXY only when asked to (Node 24 and later).
+    env.push(("NODE_USE_ENV_PROXY", "1".to_owned()));
+    env.push(("DENO_CERT", ca));
+    env
+}
+
+/// Writes the system's roots and the CA into one PEM file.
+fn write_bundle(ca_pem: &Path, bundle: &Path) -> Result<()> {
+    let mut pem =
+        fs::read_to_string(ca_pem).with_context(|| format!("read {}", ca_pem.display()))?;
+    if !pem.ends_with('\n') {
+        pem.push('\n');
+    }
+    // Some roots may not load; the rest still serve.
+    for cert in rustls_native_certs::load_native_certs().certs {
+        pem.push_str(&pem_block(&cert));
+    }
+    fs::write(bundle, pem).with_context(|| format!("write {}", bundle.display()))
+}
+
+fn pem_block(der: &[u8]) -> String {
+    let body = BASE64.encode(der);
+    let mut out = String::from("-----BEGIN CERTIFICATE-----\n");
+    for line in body.as_bytes().chunks(64) {
+        out.push_str(std::str::from_utf8(line).expect("base64 is ASCII"));
+        out.push('\n');
+    }
+    out.push_str("-----END CERTIFICATE-----\n");
+    out
+}
+
+/// The first Chromium-based browser found: Chrome, Chromium, Edge or Brave.
+pub fn find_browser(data_dir: &Path) -> Option<Browser> {
+    os::find_browser(&data_dir.join("browser"))
+}
+
+/// Opens `browser` at `url`, going through the proxy. `spki` is the leaves'
+/// key hash, for when the browser does not trust the CA: Chromium then takes
+/// them anyway, in this profile only.
+pub fn open_browser(
+    browser: &Browser,
+    addr: SocketAddr,
+    spki: Option<&str>,
+    url: &str,
+) -> Result<()> {
+    fs::create_dir_all(&browser.profile)
+        .with_context(|| format!("create {}", browser.profile.display()))?;
+    let mut command = Command::new(&browser.program);
+    command.args(browser_args(&browser.profile, addr, spki, url));
+    spawn(command).with_context(|| format!("open {}", browser.program.display()))
+}
+
+pub fn browser_args(
+    profile: &Path,
+    addr: SocketAddr,
+    spki: Option<&str>,
+    url: &str,
+) -> Vec<String> {
+    let mut args = vec![
+        format!("--user-data-dir={}", profile.display()),
+        format!("--proxy-server=http://{addr}"),
+        "--no-first-run".to_owned(),
+        "--no-default-browser-check".to_owned(),
+    ];
+    if let Some(spki) = spki {
+        args.push(format!("--ignore-certificate-errors-spki-list={spki}"));
+    }
+    args.push(url.to_owned());
+    args
+}
+
+/// Starts a program that outlives the call, and reaps it when it ends. On Unix
+/// it gets a process group of its own, so a Ctrl-C meant for tracewing in the
+/// terminal it was started from does not close it as well.
+pub(crate) fn spawn(mut command: Command) -> Result<()> {
+    #[cfg(unix)]
+    std::os::unix::process::CommandExt::process_group(&mut command, 0);
+    let mut child = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()?;
+    std::thread::spawn(move || child.wait());
+    Ok(())
+}
+
+/// A program on the `PATH`, as a full path.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub(crate) fn on_path(program: &str) -> Option<PathBuf> {
+    std::env::split_paths(&std::env::var_os("PATH")?)
+        .map(|dir| dir.join(program))
+        .find(|path| path.is_file())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn addr() -> SocketAddr {
+        "127.0.0.1:9090".parse().unwrap()
+    }
+
+    #[test]
+    fn a_terminal_goes_through_the_proxy_and_trusts_both() {
+        let env = terminal_env(addr(), Path::new("/d/ca.pem"), Path::new("/d/roots.pem"));
+        let get = |name: &str| {
+            env.iter()
+                .find(|(n, _)| *n == name)
+                .map(|(_, v)| v.as_str())
+                .unwrap()
+        };
+        assert_eq!(get("HTTPS_PROXY"), "http://127.0.0.1:9090");
+        assert_eq!(get("http_proxy"), "http://127.0.0.1:9090");
+        assert_eq!(get("SSL_CERT_FILE"), "/d/roots.pem");
+        assert_eq!(get("NODE_EXTRA_CA_CERTS"), "/d/ca.pem");
+        assert_eq!(get("NO_PROXY"), NO_PROXY);
+    }
+
+    #[test]
+    fn the_bundle_holds_the_ca_first_and_the_system_roots() {
+        let dir = std::env::temp_dir().join(format!("tracewing-bundle-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let ca = dir.join("ca.pem");
+        fs::write(&ca, pem_block(b"not a real certificate")).unwrap();
+        let bundle = dir.join("roots.pem");
+        write_bundle(&ca, &bundle).unwrap();
+        let text = fs::read_to_string(&bundle).unwrap();
+        assert!(text.starts_with(&fs::read_to_string(&ca).unwrap()));
+        assert_eq!(
+            text.matches("-----BEGIN CERTIFICATE-----").count(),
+            1 + rustls_native_certs::load_native_certs().certs.len()
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn pem_lines_are_64_wide() {
+        let block = pem_block(&[7u8; 100]);
+        let lines: Vec<&str> = block.lines().collect();
+        assert_eq!(lines[0], "-----BEGIN CERTIFICATE-----");
+        assert_eq!(lines[1].len(), 64);
+        assert_eq!(*lines.last().unwrap(), "-----END CERTIFICATE-----");
+    }
+
+    #[test]
+    fn the_browser_gets_its_own_profile_and_the_proxy() {
+        let args = browser_args(
+            Path::new("/p"),
+            addr(),
+            Some("abc="),
+            "https://tracewing.test/",
+        );
+        assert_eq!(
+            args,
+            [
+                "--user-data-dir=/p",
+                "--proxy-server=http://127.0.0.1:9090",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--ignore-certificate-errors-spki-list=abc=",
+                "https://tracewing.test/",
+            ]
+        );
+        assert!(
+            !browser_args(Path::new("/p"), addr(), None, "u")
+                .iter()
+                .any(|a| a.contains("spki"))
+        );
+    }
+}

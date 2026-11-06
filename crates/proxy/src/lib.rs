@@ -23,7 +23,7 @@ use rules::HostRules;
 use std::{
     path::PathBuf,
     sync::{
-        Arc, RwLock,
+        Arc, OnceLock, RwLock,
         atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::Duration,
@@ -73,6 +73,8 @@ pub struct ProxyOptions {
     pub traffic_rules: Arc<RwLock<TrafficRules>>,
     /// Who has reached the test page.
     pub check: Arc<Check>,
+    /// Set once the CA is loaded: see `LocalCa::leaf_spki_sha256`.
+    pub leaf_spki: Arc<OnceLock<String>>,
     /// Stop without waiting for the search index to catch up.
     pub leave_index: bool,
     /// How long a stop waits for connections to end. A stream or a WebSocket that
@@ -124,6 +126,7 @@ pub async fn run_proxy(
     let mut ca = LocalCa::load_or_create(&opts.data_dir, crypto_provider())?;
     let listen_addr = listener.local_addr()?;
     ca.serve_crl_at(listen_addr);
+    let _ = opts.leaf_spki.set(ca.leaf_spki_sha256());
     let crl = Crl {
         host: listen_addr.to_string(),
         der: ca.crl_der()?.into(),
