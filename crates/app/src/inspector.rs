@@ -399,12 +399,15 @@ impl Traffic {
                 .child(label)
                 .on_click(cx.listener(move |view, _, _, cx| view.set_part(this, cx)))
         };
+        // A narrow inspector puts the buttons on a line of their own.
         div()
             .flex()
             .flex_row()
+            .flex_wrap()
             .flex_shrink_0()
             .items_center()
-            .gap(px(14.))
+            .gap_x(px(14.))
+            .gap_y(px(8.))
             .text_size(px(12.5))
             .children(self.inspector.messages.as_ref().map(|state| {
                 tab(
@@ -432,9 +435,9 @@ impl Traffic {
             .when(
                 !matches!(detail.kind.as_str(), "tunnel" | "websocket"),
                 |d| {
-                    d.child(
+                    let small = |id: &'static str, label: &'static str| {
                         div()
-                            .id("copy-curl")
+                            .id(id)
                             .h(px(28.))
                             .px(px(10.))
                             .rounded(px(14.))
@@ -445,12 +448,42 @@ impl Traffic {
                             .text_color(rgb(c.on_chip))
                             .text_size(px(12.))
                             .font_weight(FontWeight::BOLD)
-                            .child(if self.inspector.copied {
-                                "Copied"
-                            } else {
-                                "Copy as cURL"
-                            })
-                            .on_click(cx.listener(|view, _, _, cx| view.copy_as_curl(cx))),
+                            .child(label)
+                    };
+                    d.child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .gap(px(6.))
+                            .child(
+                                small("send-again", "Send again").on_click(
+                                    cx.listener(|view, _, _, cx| view.send_flow_again(cx)),
+                                ),
+                            )
+                            .child(
+                                small("edit-send", "Edit and send")
+                                    .on_click(cx.listener(|view, _, _, cx| view.edit_flow(cx))),
+                            )
+                            .child(
+                                div()
+                                    .id("copy-curl")
+                                    .h(px(28.))
+                                    .px(px(10.))
+                                    .rounded(px(14.))
+                                    .flex()
+                                    .items_center()
+                                    .cursor_pointer()
+                                    .bg(rgb(c.chip))
+                                    .text_color(rgb(c.on_chip))
+                                    .text_size(px(12.))
+                                    .font_weight(FontWeight::BOLD)
+                                    .child(if self.inspector.copied {
+                                        "Copied"
+                                    } else {
+                                        "Copy as cURL"
+                                    })
+                                    .on_click(cx.listener(|view, _, _, cx| view.copy_as_curl(cx))),
+                            ),
                     )
                 },
             )

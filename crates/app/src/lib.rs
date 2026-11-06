@@ -4,6 +4,8 @@ pub mod body;
 pub mod bodyview;
 pub mod chrome;
 pub mod colors;
+pub mod compose;
+pub mod compose_page;
 pub mod curl;
 pub mod detail;
 pub mod engine;
@@ -55,6 +57,7 @@ macro_rules! icons {
 
 const ICONS: &[(&str, &[u8])] = icons![
     "logo",
+    "send",
     "traffic",
     "trash",
     "search",

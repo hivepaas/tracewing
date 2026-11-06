@@ -19,6 +19,7 @@ use crate::{
     widgets::{eyebrow, icon, status_colors},
 };
 use crate::{
+    compose_page::ComposePage,
     paused_page::PausedPage,
     rules_page::RulesPage,
     sessions_page::{SessionsPage, when_text},
@@ -151,6 +152,7 @@ pub enum Screen {
     Traffic,
     Rules,
     Paused,
+    Compose,
     Sessions,
     Settings,
 }
@@ -173,6 +175,7 @@ pub struct Traffic {
     pub sessions_page: SessionsPage,
     pub(crate) rules_page: Option<RulesPage>,
     pub paused_page: Option<PausedPage>,
+    pub compose_page: Option<ComposePage>,
     /// The system's own appearance is dark.
     system_dark: bool,
     pub(crate) data_dir: PathBuf,
@@ -292,6 +295,7 @@ impl Traffic {
             sessions_page: SessionsPage::default(),
             rules_page: None,
             paused_page: None,
+            compose_page: None,
             system_dark,
             data_dir: data_dir.to_owned(),
             screen: Screen::Traffic,
@@ -1553,6 +1557,7 @@ impl Traffic {
                         )
                     }),
             )
+            .child(item("rail-compose", "Compose", "send", Screen::Compose))
             .child(item(
                 "rail-sessions",
                 "Sessions",
@@ -1679,6 +1684,8 @@ impl Render for Traffic {
             (self.screen == Screen::Rules).then(|| self.render_rules(cx).into_any_element());
         let paused =
             (self.screen == Screen::Paused).then(|| self.render_paused(cx).into_any_element());
+        let compose =
+            (self.screen == Screen::Compose).then(|| self.render_compose(cx).into_any_element());
         let settings = (self.screen == Screen::Settings)
             .then(|| self.render_settings(window, cx).into_any_element());
         let content_bounds = Rc::clone(&self.content);
@@ -1758,6 +1765,7 @@ impl Render for Traffic {
                     .when_some(setup, |d, setup| d.child(setup))
                     .when_some(rules, |d, rules| d.child(rules))
                     .when_some(paused, |d, paused| d.child(paused))
+                    .when_some(compose, |d, compose| d.child(compose))
                     .when_some(sessions, |d, sessions| d.child(sessions))
                     .when_some(settings, |d, settings| d.child(settings))
                     .when(self.screen == Screen::Traffic, |d| {
