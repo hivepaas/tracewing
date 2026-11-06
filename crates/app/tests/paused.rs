@@ -196,6 +196,5 @@ fn breakpoints_made_in_the_window_hold_traffic() {
     assert_eq!(runtime.block_on(first).unwrap().1.len(), 41);
     assert_eq!(runtime.block_on(second).unwrap().1.len(), 410);
 
-    drop(window);
     std::fs::remove_dir_all(&dir).ok();
 }
