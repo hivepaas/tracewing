@@ -1268,13 +1268,24 @@ async fn rules_change_traffic_and_say_so() {
     res.bytes().await.unwrap();
 
     let (_, conn, dir) = h.finish(7).await;
-    let rows: Vec<(String, Option<i64>, Option<String>)> = conn
-        .prepare("SELECT host, status, rule FROM flows ORDER BY id")
+    // A flow is written as it ends, so ids go by when each ended. The requests
+    // were sent one after another: order them by when they started.
+    let (ids, rows): (Vec<_>, Vec<_>) = conn
+        .prepare("SELECT id, host, status, rule FROM flows ORDER BY started_us, id")
         .unwrap()
-        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                (
+                    r.get::<_, String>(1)?,
+                    r.get::<_, Option<i64>>(2)?,
+                    r.get::<_, Option<String>>(3)?,
+                ),
+            ))
+        })
         .unwrap()
         .map(Result::unwrap)
-        .collect();
+        .unzip();
     assert_eq!(rows.len(), 7, "{rows:?}");
     assert_eq!(
         rows[0],
@@ -1286,17 +1297,19 @@ async fn rules_change_traffic_and_say_so() {
     );
     assert_eq!(rows[1].0, "mock.test", "the URL as the client asked");
     let server: Option<String> = conn
-        .query_row("SELECT server_version FROM flows WHERE id = 2", [], |r| {
-            r.get(0)
-        })
+        .query_row(
+            "SELECT server_version FROM flows WHERE id = ?1",
+            [ids[1]],
+            |r| r.get(0),
+        )
         .unwrap();
     assert_eq!(server, None, "no server was asked");
     assert_eq!(rows[4].0, "elsewhere.test", "the URL as the client asked");
     assert_eq!(rows[4].2.as_deref(), Some("rule for elsewhere.test"));
-    assert!(rows[5].2.is_some());
-    assert_eq!(rows[6].2, None);
+    assert!(rows[5].2.is_some(), "{rows:?}");
+    assert_eq!(rows[6].2, None, "{rows:?}");
     assert_eq!(
-        response_of(&conn, &dir, 2).unwrap(),
+        response_of(&conn, &dir, ids[1]).unwrap(),
         br#"{"name":"mocked"}"#,
         "what the rule answered is recorded too"
     );
