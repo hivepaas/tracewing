@@ -9,8 +9,8 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
-use tracewing_proxy::{ca::LocalCa, crypto_provider};
-use tracewing_system::{self as system, Place, Scope, TakenOver};
+use tracewing_proxy::{ca::LocalCa, capture::CHECK_HOST, crypto_provider};
+use tracewing_system::{self as system, Place, Scope, TakenOver, launch::Browser};
 
 #[derive(Default)]
 pub enum ProxySwitch {
@@ -41,6 +41,8 @@ pub struct SystemState {
     pub problem: Option<String>,
     /// Off in tests, whose program cannot be a watchdog.
     pub no_watchdog: bool,
+    /// The browser "Open" starts, if there is one.
+    pub browser: Option<Browser>,
 }
 
 /// The proxy makes the CA as it starts; making one here too would give two.
@@ -92,6 +94,7 @@ fn install_ca(data_dir: &Path, scope: Scope) -> anyhow::Result<CaFound> {
 
 impl Traffic {
     pub(crate) fn start_ca_check(&mut self, cx: &mut Context<Self>) {
+        self.system.browser = system::launch::find_browser(&self.data_dir);
         let data_dir = self.data_dir.clone();
         self.run_ca_job(move || check_ca(&data_dir), cx);
     }
@@ -137,6 +140,61 @@ impl Traffic {
             });
         })
         .detach();
+    }
+
+    /// A terminal that goes through the proxy, the system proxy left alone.
+    pub fn open_terminal(&mut self, cx: &mut Context<Self>) {
+        let (addr, data_dir) = (self.engine.addr, self.data_dir.clone());
+        self.run_launch(
+            "The terminal",
+            move || {
+                let ca = load_ca(&data_dir)?;
+                system::launch::open_terminal(addr, ca.cert_path(), &data_dir)
+            },
+            cx,
+        );
+    }
+
+    /// A browser with a profile of its own that goes through the proxy, at the
+    /// test page.
+    pub fn open_browser(&mut self, cx: &mut Context<Self>) {
+        let Some(browser) = self.system.browser.clone() else {
+            return;
+        };
+        let addr = self.engine.addr;
+        // Trusted, the CA is in the browser's store, and the flag would only
+        // add a warning bar.
+        let spki = (self.system.ca != CaState::Trusted)
+            .then(|| self.engine.leaf_spki.get().cloned())
+            .flatten();
+        self.run_launch(
+            browser.name,
+            move || {
+                let url = format!("https://{CHECK_HOST}/");
+                system::launch::open_browser(&browser, addr, spki.as_deref(), &url)
+            },
+            cx,
+        );
+    }
+
+    fn run_launch(
+        &mut self,
+        what: &'static str,
+        job: impl FnOnce() -> anyhow::Result<()> + Send + 'static,
+        cx: &mut Context<Self>,
+    ) {
+        self.system.problem = None;
+        cx.spawn(async move |this, cx| {
+            let result = cx.background_spawn(async move { job() }).await;
+            if let Err(e) = result {
+                let _ = this.update(cx, |this, cx| {
+                    this.system.problem = Some(format!("{what}: {e:#}"));
+                    cx.notify();
+                });
+            }
+        })
+        .detach();
+        cx.notify();
     }
 
     pub fn toggle_system_proxy(&mut self, cx: &mut Context<Self>) {

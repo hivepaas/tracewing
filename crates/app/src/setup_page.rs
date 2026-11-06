@@ -122,6 +122,36 @@ fn step(number: &'static str, done: bool, title: &'static str, text: String) -> 
         )
 }
 
+/// Another way, beside the steps: what it is, and what can be done.
+fn aside(title: &'static str, text: &'static str) -> Div {
+    let c = colors();
+    div()
+        .flex()
+        .flex_row()
+        .flex_wrap()
+        .items_center()
+        .gap(px(10.))
+        .p(px(18.))
+        .rounded(px(22.))
+        .border_1()
+        .border_color(rgb(c.surface))
+        .child(
+            div()
+                .flex_1()
+                .min_w(px(280.))
+                .flex()
+                .flex_col()
+                .gap(px(2.))
+                .child(
+                    div()
+                        .text_size(px(15.))
+                        .font_weight(FontWeight::BOLD)
+                        .child(title),
+                )
+                .child(div().text_color(rgb(c.muted)).child(text)),
+        )
+}
+
 impl Traffic {
     pub(crate) fn render_setup(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
@@ -260,6 +290,30 @@ impl Traffic {
             .child(ca_step)
             .child(proxy_step)
             .child(check_step)
+            .child(self.render_one_app(cx))
+    }
+}
+
+impl Traffic {
+    /// A terminal or a browser through tracewing, for when the system proxy
+    /// would take more than the one app being debugged.
+    fn render_one_app(&mut self, cx: &mut Context<Self>) -> Div {
+        let browser = self.system.browser.as_ref().map(|b| b.name);
+        aside(
+            "Or one app at a time",
+            "A terminal, or a browser with a profile of its own, that goes through tracewing \
+             while the system proxy and every other app are left as they are.",
+        )
+        .child(
+            button("setup-terminal", "Open a terminal", false)
+                .on_click(cx.listener(|this, _, _, cx| this.open_terminal(cx))),
+        )
+        .when_some(browser, |d, name| {
+            d.child(
+                button("setup-browser", format!("Open {name}"), false)
+                    .on_click(cx.listener(|this, _, _, cx| this.open_browser(cx))),
+            )
+        })
     }
 }
 

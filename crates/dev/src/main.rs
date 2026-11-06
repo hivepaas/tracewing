@@ -212,6 +212,15 @@ async fn main() -> Result<()> {
                 data_dir.join("ca.pem").display(),
                 session.display()
             );
+            // For a browser started by hand: see LocalCa::leaf_spki_sha256.
+            let leaf_spki = Arc::new(std::sync::OnceLock::new());
+            let spki = Arc::clone(&leaf_spki);
+            std::thread::spawn(move || {
+                while spki.get().is_none() {
+                    std::thread::sleep(Duration::from_millis(10));
+                }
+                eprintln!("leaf SPKI {}", spki.get().unwrap());
+            });
             let summary = run_proxy(
                 ProxyOptions {
                     listener: Some(listener),
@@ -227,6 +236,7 @@ async fn main() -> Result<()> {
                     rules: Default::default(),
                     traffic_rules: Default::default(),
                     check: Default::default(),
+                    leaf_spki,
                     leave_index: false,
                     stop_limit: Duration::from_secs(5),
                 },

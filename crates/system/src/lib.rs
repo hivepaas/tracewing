@@ -22,6 +22,8 @@ mod os;
 #[path = "windows.rs"]
 mod os;
 
+pub mod launch;
+
 use anyhow::{Context, Result, bail};
 use hudsucker::rustls::{
     client::danger::ServerCertVerifier,

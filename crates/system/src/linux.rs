@@ -16,7 +16,10 @@ use std::{
     process::Command,
 };
 
-use super::{Place, Saved, Scope};
+use super::{
+    Place, Saved, Scope,
+    launch::{self, Browser},
+};
 
 const NICKNAME: &str = "tracewing CA";
 const ANCHOR_NAME: &str = "tracewing-ca";
@@ -475,9 +478,145 @@ pub fn ca_uninstall(_cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
     }
 }
 
+/// Terminals, and what comes before the command each is to run.
+const TERMINALS: &[(&str, &[&str])] = &[
+    ("ptyxis", &["--new-window", "--"]),
+    ("gnome-terminal", &["--"]),
+    ("kgx", &["--"]),
+    ("konsole", &["-e"]),
+    ("xfce4-terminal", &["-x"]),
+    ("alacritty", &["-e"]),
+    ("kitty", &[]),
+    ("wezterm", &["start", "--"]),
+    ("foot", &[]),
+    ("x-terminal-emulator", &["-e"]),
+    ("xterm", &["-e"]),
+];
+
+/// The user's `$TERMINAL` first, then the known ones.
+fn find_terminal() -> Option<(PathBuf, &'static [&'static str])> {
+    let flags = |name: &str| {
+        TERMINALS
+            .iter()
+            .find(|(known, _)| *known == name)
+            .map_or(&["-e"][..], |(_, flags)| *flags)
+    };
+    if let Some(chosen) = std::env::var_os("TERMINAL").filter(|t| !t.is_empty()) {
+        let chosen = PathBuf::from(chosen);
+        let path = if chosen.is_absolute() {
+            Some(chosen.clone())
+        } else {
+            launch::on_path(&chosen.to_string_lossy())
+        };
+        if let Some(path) = path.filter(|p| p.is_file()) {
+            let name = path.file_name().unwrap_or_default().to_string_lossy();
+            return Some((path.clone(), flags(&name)));
+        }
+    }
+    TERMINALS
+        .iter()
+        .find_map(|(name, flags)| launch::on_path(name).map(|path| (path, *flags)))
+}
+
+/// What a terminal is told to run: `env` sets the variables, whatever process
+/// the terminal runs it in, then the user's shell starts under a line saying so.
+fn terminal_command(
+    flags: &[&str],
+    env: &[(&str, String)],
+    banner: &str,
+    shell: &str,
+) -> Vec<String> {
+    let mut args: Vec<String> = flags.iter().map(|f| (*f).to_owned()).collect();
+    args.push("env".to_owned());
+    args.extend(env.iter().map(|(name, value)| format!("{name}={value}")));
+    args.extend([
+        "sh".to_owned(),
+        "-c".to_owned(),
+        r#"printf '%s\n\n' "$1"; exec "$0""#.to_owned(),
+        shell.to_owned(),
+        banner.to_owned(),
+    ]);
+    args
+}
+
+pub fn open_terminal(env: &[(&str, String)], banner: &str, _data_dir: &Path) -> Result<()> {
+    let (program, flags) = find_terminal().context("no terminal found: set $TERMINAL to one")?;
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_owned());
+    let mut command = Command::new(&program);
+    command.args(terminal_command(flags, env, banner, &shell));
+    if let Ok(home) = home() {
+        command.current_dir(home);
+    }
+    launch::spawn(command).with_context(|| format!("open {}", program.display()))
+}
+
+const BROWSERS: &[(&str, &str)] = &[
+    ("google-chrome", "Chrome"),
+    ("google-chrome-stable", "Chrome"),
+    ("chromium", "Chromium"),
+    ("chromium-browser", "Chromium"),
+    ("microsoft-edge", "Edge"),
+    ("microsoft-edge-stable", "Edge"),
+    ("brave-browser", "Brave"),
+];
+
+pub fn find_browser(profiles: &Path) -> Option<Browser> {
+    BROWSERS.iter().find_map(|(program, name)| {
+        let path = launch::on_path(program)?;
+        // A snap may write only in its own folder of the home. Ubuntu's
+        // chromium-browser is a script that starts the chromium snap.
+        let snap = (path.starts_with("/snap/")
+            || program.starts_with("chromium") && Path::new("/snap/bin/chromium").exists())
+        .then(|| {
+            if program.starts_with("chromium") {
+                "chromium"
+            } else {
+                program
+            }
+        });
+        let profile = match snap {
+            Some(snap) => home()
+                .ok()?
+                .join("snap")
+                .join(snap)
+                .join("common/tracewing-profile"),
+            None => profiles.join(name.to_lowercase()),
+        };
+        Some(Browser {
+            name,
+            program: path,
+            profile,
+        })
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_terminal_runs_env_then_the_shell() {
+        let args = terminal_command(
+            &["--new-window", "--"],
+            &[("HTTPS_PROXY", "http://127.0.0.1:9090".to_owned())],
+            "hello",
+            "/bin/bash",
+        );
+        assert_eq!(
+            args,
+            [
+                "--new-window",
+                "--",
+                "env",
+                "HTTPS_PROXY=http://127.0.0.1:9090",
+                "sh",
+                "-c",
+                r#"printf '%s\n\n' "$1"; exec "$0""#,
+                "/bin/bash",
+                "hello",
+            ]
+        );
+    }
 
     #[test]
     fn a_failing_database_does_not_stop_the_rest() {

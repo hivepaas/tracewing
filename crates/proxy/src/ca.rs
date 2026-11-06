@@ -14,13 +14,14 @@
 //!   `CRYPT_E_NO_REVOCATION_CHECK`.
 
 use anyhow::{Context, Result};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use http::uri::Authority;
 use hudsucker::{
     certificate_authority::CertificateAuthority,
     rcgen::{
         BasicConstraints, CertificateParams, CertificateRevocationListParams, CrlDistributionPoint,
         DistinguishedName, DnType, ExtendedKeyUsagePurpose, IsCa, Issuer, KeyIdMethod, KeyPair,
-        KeyUsagePurpose, SanType, SerialNumber,
+        KeyUsagePurpose, PublicKeyData, SanType, SerialNumber,
     },
     rustls::{
         ServerConfig,
@@ -28,6 +29,7 @@ use hudsucker::{
         pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer},
     },
 };
+use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
     fs,
@@ -94,6 +96,13 @@ impl LocalCa {
             provider: Arc::new(provider),
             cache: Mutex::new(HashMap::new()),
         })
+    }
+
+    /// The SHA-256 of the leaves' public key, in base64: what Chromium's
+    /// `--ignore-certificate-errors-spki-list` takes. Every leaf shares the key,
+    /// and the key is new each time the proxy starts.
+    pub fn leaf_spki_sha256(&self) -> String {
+        BASE64.encode(Sha256::digest(self.leaf_key.subject_public_key_info()))
     }
 
     /// Names the proxy's own CRL in every leaf from now on.
@@ -248,4 +257,28 @@ fn hostname() -> String {
         .filter(|s| !s.is_empty())
         .or_else(|| std::env::var("COMPUTERNAME").ok())
         .unwrap_or_else(|| "local".to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_spki_hash_is_that_of_the_leaves() {
+        let dir = std::env::temp_dir().join(format!("tracewing-ca-spki-{}", std::process::id()));
+        let ca = LocalCa::load_or_create(&dir, crate::crypto_provider()).unwrap();
+        for host in ["example.com", "10.0.0.1"] {
+            let leaf = ca.issue_leaf(host).unwrap();
+            let (_, cert) = x509_parser::parse_x509_certificate(&leaf).unwrap();
+            let spki = cert.tbs_certificate.subject_pki.raw;
+            assert_eq!(ca.leaf_spki_sha256(), BASE64.encode(Sha256::digest(spki)));
+        }
+        let again = LocalCa::load_or_create(&dir, crate::crypto_provider()).unwrap();
+        assert_ne!(
+            again.leaf_spki_sha256(),
+            ca.leaf_spki_sha256(),
+            "a new start, a new leaf key"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
 }
