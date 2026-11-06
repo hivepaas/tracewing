@@ -369,6 +369,20 @@ fn nss_databases(create_shared: bool) -> Result<Vec<PathBuf>> {
     Ok(found)
 }
 
+/// Does `job` to every database, then fails if any failed: one broken profile
+/// must not keep the others, Chrome's among them, from being done.
+fn each_database(dbs: Vec<PathBuf>, mut job: impl FnMut(&Path) -> Result<()>) -> Result<()> {
+    let failed: Vec<String> = dbs
+        .iter()
+        .filter_map(|db| job(db).err().map(|e| format!("{e:#}")))
+        .collect();
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        bail!("{}", failed.join("; "))
+    }
+}
+
 fn nss_holds(db: &Path) -> bool {
     run(
         "certutil",
@@ -417,7 +431,7 @@ pub fn ca_install(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
                 bail!("browsers need certutil (libnss3-tools or nss-tools) to trust the CA");
             }
             let pem = cert_pem.display().to_string();
-            for db in nss_databases(true)? {
+            each_database(nss_databases(true)?, |db| {
                 run(
                     "certutil",
                     &[
@@ -431,9 +445,9 @@ pub fn ca_install(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
                         "-i",
                         &pem,
                     ],
-                )?;
-            }
-            Ok(())
+                )
+                .map(drop)
+            })
         }
     }
 }
@@ -449,15 +463,14 @@ pub fn ca_uninstall(_cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
             ))
         }
         Scope::User => {
-            for db in nss_databases(false)? {
-                if nss_holds(&db) {
-                    run(
-                        "certutil",
-                        &["-D", "-d", &format!("sql:{}", db.display()), "-n", NICKNAME],
-                    )?;
-                }
-            }
-            Ok(())
+            let holding = nss_databases(false)?.into_iter().filter(|db| nss_holds(db));
+            each_database(holding.collect(), |db| {
+                run(
+                    "certutil",
+                    &["-D", "-d", &format!("sql:{}", db.display()), "-n", NICKNAME],
+                )
+                .map(drop)
+            })
         }
     }
 }
@@ -465,6 +478,21 @@ pub fn ca_uninstall(_cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_failing_database_does_not_stop_the_rest() {
+        let dbs: Vec<PathBuf> = ["a", "broken", "c"].iter().map(PathBuf::from).collect();
+        let mut done = Vec::new();
+        let result = each_database(dbs, |db| {
+            if db == Path::new("broken") {
+                bail!("bad database: {}", db.display());
+            }
+            done.push(db.to_owned());
+            Ok(())
+        });
+        assert_eq!(done, [PathBuf::from("a"), PathBuf::from("c")]);
+        assert_eq!(result.unwrap_err().to_string(), "bad database: broken");
+    }
 
     #[test]
     fn exec_lines_quote_what_the_spec_reserves() {

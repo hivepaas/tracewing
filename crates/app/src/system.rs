@@ -55,6 +55,8 @@ fn load_ca(data_dir: &Path) -> anyhow::Result<LocalCa> {
 struct CaFound {
     verified: bool,
     places: Vec<Place>,
+    /// What went wrong installing, when some of it may still have gone in.
+    problem: Option<String>,
 }
 
 impl CaFound {
@@ -71,6 +73,7 @@ fn look_for_ca(ca: &LocalCa) -> anyhow::Result<CaFound> {
     Ok(CaFound {
         verified: system::verify_ca(ca, crypto_provider()).is_ok(),
         places: system::ca_locations(ca.cert_path())?,
+        problem: None,
     })
 }
 
@@ -80,8 +83,11 @@ fn check_ca(data_dir: &Path) -> anyhow::Result<CaFound> {
 
 fn install_ca(data_dir: &Path, scope: Scope) -> anyhow::Result<CaFound> {
     let ca = load_ca(data_dir)?;
-    system::ca_install(ca.cert_path(), scope)?;
-    look_for_ca(&ca)
+    let installed = system::ca_install(ca.cert_path(), scope);
+    // Some stores may have taken it although another failed: look either way.
+    let mut found = look_for_ca(&ca)?;
+    found.problem = installed.err().map(|e| format!("The certificate: {e:#}"));
+    Ok(found)
 }
 
 impl Traffic {
@@ -118,6 +124,9 @@ impl Traffic {
                         };
                         this.system.ca_verified = found.verified;
                         this.system.ca_places = found.places;
+                        if found.problem.is_some() {
+                            this.system.problem = found.problem;
+                        }
                     }
                     Err(e) => {
                         this.system.ca = CaState::NotTrusted;
@@ -204,6 +213,7 @@ mod tests {
                     browsers,
                 })
                 .collect(),
+            problem: None,
         }
     }
 
