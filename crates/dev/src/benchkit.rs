@@ -129,6 +129,13 @@ fn rich_json() -> Bytes {
 
 const POOL: u64 = 4096;
 
+/// Makes the bodies `/json?size=..&enc=..` serves, which the origin otherwise
+/// does on the first request for them: for big bodies in a debug build, that
+/// takes many seconds. Whatever times traffic should do this first.
+pub fn prepare_bodies(encoding: &str, size: usize) {
+    packed_json(encoding, size);
+}
+
 type Pools = Mutex<HashMap<(String, usize), Arc<Vec<Bytes>>>>;
 
 /// One of `POOL` bodies, each different, in the encoding asked for.

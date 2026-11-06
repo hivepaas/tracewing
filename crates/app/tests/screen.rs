@@ -161,6 +161,16 @@ fn the_window_shows_real_traffic() {
         dir.join("ca.pem"),
         format!("https://localhost:{origin_port}"),
     );
+    // The bodies send_traffic asks for, made now and not inside the wait below.
+    for (encoding, size) in [
+        ("gzip", 4000),
+        ("br", 800),
+        ("zstd", 300_000),
+        ("identity", 2000),
+        ("identity", 100),
+    ] {
+        benchkit::prepare_bodies(encoding, size);
+    }
     let sender = std::thread::spawn(move || send_traffic(proxy, ca, origin));
     wait_for(&mut cx, window, "the flows", |view, _| view.count() >= 303);
     sender.join().unwrap();
