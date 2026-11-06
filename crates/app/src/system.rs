@@ -10,7 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tracewing_proxy::{ca::LocalCa, crypto_provider};
-use tracewing_system::{self as system, Scope, TakenOver};
+use tracewing_system::{self as system, Place, Scope, TakenOver};
 
 #[derive(Default)]
 pub enum ProxySwitch {
@@ -33,8 +33,8 @@ pub enum CaState {
 pub struct SystemState {
     pub proxy: ProxySwitch,
     pub ca: CaState,
-    /// Where the certificate is installed, in words.
-    pub ca_places: Vec<String>,
+    /// Where the certificate is installed.
+    pub ca_places: Vec<Place>,
     /// The system's own verifier accepts it, which is not what browsers on Linux use.
     pub ca_verified: bool,
     /// What went wrong last, in words.
@@ -54,7 +54,17 @@ fn load_ca(data_dir: &Path) -> anyhow::Result<LocalCa> {
 
 struct CaFound {
     verified: bool,
-    places: Vec<String>,
+    places: Vec<Place>,
+}
+
+impl CaFound {
+    /// Whether a browser going through the proxy would accept its certificates.
+    /// On Linux the system's verifier reads the store command-line tools use,
+    /// and browsers read their own, so only a place they read counts there.
+    fn browsers_trust(&self) -> bool {
+        self.places.iter().any(|place| place.browsers)
+            || (self.verified && !cfg!(target_os = "linux"))
+    }
 }
 
 fn look_for_ca(ca: &LocalCa) -> anyhow::Result<CaFound> {
@@ -100,10 +110,8 @@ impl Traffic {
             let result = cx.background_spawn(async move { job() }).await;
             let _ = this.update(cx, |this, cx| {
                 match result {
-                    // On Linux the system's verifier does not read the browsers'
-                    // stores, so being in one of those counts as well.
                     Ok(found) => {
-                        this.system.ca = if found.verified || !found.places.is_empty() {
+                        this.system.ca = if found.browsers_trust() {
                             CaState::Trusted
                         } else {
                             CaState::NotTrusted
@@ -179,5 +187,40 @@ impl Traffic {
         if let ProxySwitch::On(taken) = std::mem::take(&mut self.system.proxy) {
             let _ = taken.release();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn found(verified: bool, places: &[bool]) -> CaFound {
+        CaFound {
+            verified,
+            places: places
+                .iter()
+                .map(|&browsers| Place {
+                    name: String::new(),
+                    browsers,
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn a_store_browsers_read_is_trusted() {
+        assert!(found(false, &[true]).browsers_trust());
+        assert!(found(true, &[false, true]).browsers_trust());
+        assert!(!found(false, &[]).browsers_trust());
+    }
+
+    #[test]
+    fn the_system_store_alone_is_not_enough_on_linux() {
+        let machine_only = found(true, &[false]);
+        assert_eq!(
+            machine_only.browsers_trust(),
+            !cfg!(target_os = "linux"),
+            "browsers on Linux do not read the system's store"
+        );
     }
 }

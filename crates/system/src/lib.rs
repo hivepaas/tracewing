@@ -73,8 +73,18 @@ pub fn ca_der(cert_pem: &Path) -> Result<CertificateDer<'static>> {
     CertificateDer::from_pem_file(cert_pem).with_context(|| format!("read {}", cert_pem.display()))
 }
 
+/// A store that holds the root CA.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Place {
+    /// Where, in words.
+    pub name: String,
+    /// Browsers read this store. On Linux the system's store is read by
+    /// command-line tools only, and browsers keep NSS stores of their own.
+    pub browsers: bool,
+}
+
 /// Where the root CA is installed, as far as the OS's stores can say.
-pub fn ca_locations(cert_pem: &Path) -> Result<Vec<String>> {
+pub fn ca_locations(cert_pem: &Path) -> Result<Vec<Place>> {
     os::ca_locations(cert_pem, &ca_der(cert_pem)?)
 }
 

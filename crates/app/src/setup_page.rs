@@ -135,7 +135,19 @@ impl Traffic {
             CaState::Trusted if self.system.ca_places.is_empty() => {
                 "This computer trusts it.".to_owned()
             }
-            CaState::Trusted => format!("Installed in: {}.", self.system.ca_places.join(", ")),
+            CaState::Trusted => format!(
+                "Installed in: {}.",
+                self.system
+                    .ca_places
+                    .iter()
+                    .map(|place| place.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            // Linux: in the system's store, which browsers do not read.
+            CaState::NotTrusted if !self.system.ca_places.is_empty() => {
+                "Command-line tools trust it, but browsers keep stores of their own. Until it is in them, HTTPS through tracewing fails in a browser.".to_owned()
+            }
             CaState::NotTrusted => {
                 "tracewing reads HTTPS with a certificate made for this computer alone. Until it is trusted, HTTPS through tracewing fails.".to_owned()
             }

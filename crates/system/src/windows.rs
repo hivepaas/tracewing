@@ -34,7 +34,7 @@ use windows_sys::{
     core::PWSTR,
 };
 
-use super::{Saved, Scope};
+use super::{Place, Saved, Scope};
 
 const RUN_ONCE: &str = r"Software\Microsoft\Windows\CurrentVersion\RunOnce";
 const RUN_ONCE_VALUE: &str = "tracewing-proxy-recovery";
@@ -321,19 +321,25 @@ impl Drop for Store {
     }
 }
 
-pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<String>> {
+pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
     let mut places = Vec::new();
     // The user's root store also shows the machine's, so ask the machine first.
     let machine = Store::open_root(Scope::Machine, true)?;
     if let Some(found) = machine.find(der)? {
         unsafe { CertFreeCertificateContext(found) };
-        places.push("Windows: this machine".to_owned());
+        places.push(Place {
+            name: "Windows: this machine".to_owned(),
+            browsers: true,
+        });
     }
     let user = Store::open_root(Scope::User, true)?;
     if let Some(found) = user.find(der)? {
         unsafe { CertFreeCertificateContext(found) };
         if places.is_empty() {
-            places.push("Windows: this user".to_owned());
+            places.push(Place {
+                name: "Windows: this user".to_owned(),
+                browsers: true,
+            });
         }
     }
     Ok(places)

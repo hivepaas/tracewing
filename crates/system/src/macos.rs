@@ -8,7 +8,7 @@
 use anyhow::{Context, Result, bail};
 use std::{fs, net::SocketAddr, path::Path, path::PathBuf, process::Command};
 
-use super::{Saved, Scope};
+use super::{Place, Saved, Scope};
 
 const AGENT_LABEL: &str = "com.hivepaas.tracewing.proxy-recovery";
 const SYSTEM_KEYCHAIN: &str = "/Library/Keychains/System.keychain";
@@ -252,13 +252,19 @@ fn holds(keychain: &str, cert_pem: &Path) -> Result<bool> {
     Ok(found.contains(wanted.trim()))
 }
 
-pub fn ca_locations(cert_pem: &Path, _der: &[u8]) -> Result<Vec<String>> {
+pub fn ca_locations(cert_pem: &Path, _der: &[u8]) -> Result<Vec<Place>> {
     let mut places = Vec::new();
     if holds(SYSTEM_KEYCHAIN, cert_pem)? {
-        places.push("System keychain".to_owned());
+        places.push(Place {
+            name: "System keychain".to_owned(),
+            browsers: true,
+        });
     }
     if holds(&login_keychain()?, cert_pem)? {
-        places.push("login keychain".to_owned());
+        places.push(Place {
+            name: "login keychain".to_owned(),
+            browsers: true,
+        });
     }
     Ok(places)
 }

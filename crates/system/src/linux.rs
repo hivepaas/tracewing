@@ -16,7 +16,7 @@ use std::{
     process::Command,
 };
 
-use super::{Saved, Scope};
+use super::{Place, Saved, Scope};
 
 const NICKNAME: &str = "tracewing CA";
 const ANCHOR_NAME: &str = "tracewing-ca";
@@ -377,17 +377,24 @@ fn nss_holds(db: &Path) -> bool {
     .is_ok()
 }
 
-pub fn ca_locations(_cert_pem: &Path, _der: &[u8]) -> Result<Vec<String>> {
+pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
     let mut places = Vec::new();
+    // The file there may hold an older CA, from before this one was made.
     if let Ok((dir, _)) = system_store()
-        && anchor_path(dir).exists()
+        && crate::ca_der(&anchor_path(dir)).is_ok_and(|anchor| anchor.as_ref() == der)
     {
-        places.push(format!("system store ({dir})"));
+        places.push(Place {
+            name: format!("system store ({dir})"),
+            browsers: false,
+        });
     }
     if on_path("certutil") {
         for db in nss_databases(false)? {
             if nss_holds(&db) {
-                places.push(format!("NSS: {}", db.display()));
+                places.push(Place {
+                    name: format!("NSS: {}", db.display()),
+                    browsers: true,
+                });
             }
         }
     }
