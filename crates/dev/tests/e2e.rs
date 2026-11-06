@@ -16,6 +16,7 @@ use tracewing_dev::benchkit;
 use tracewing_proxy::{
     ProxyOptions, ProxySummary,
     capture::{CHECK_HOST, Check},
+    pause::{Paused, Pauses, Stage, Verdict},
     rules::HostRules,
     run_proxy,
     traffic_rules::{Action, TrafficRule, TrafficRules},
@@ -32,6 +33,7 @@ struct Harness {
     rules: Arc<RwLock<HostRules>>,
     traffic_rules: Arc<RwLock<TrafficRules>>,
     check: Arc<Check>,
+    pauses: Arc<Pauses>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -88,6 +90,7 @@ impl Harness {
         }));
         let traffic_rules = Arc::new(RwLock::new(TrafficRules::default()));
         let check = Arc::new(Check::default());
+        let pauses = Arc::new(Pauses::default());
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -104,6 +107,7 @@ impl Harness {
                 traffic_rules: Arc::clone(&traffic_rules),
                 check: Arc::clone(&check),
                 leaf_spki: Default::default(),
+                pauses: Arc::clone(&pauses),
                 leave_index: false,
                 stop_limit: Duration::from_secs(1),
             },
@@ -121,6 +125,7 @@ impl Harness {
             rules,
             traffic_rules,
             check,
+            pauses,
             dir,
             proxy_url,
             origin: format!("https://localhost:{origin_port}"),
@@ -180,6 +185,12 @@ const FLOW_COLUMNS: &str =
 fn clean_up(conn: Connection, dir: PathBuf) {
     drop(conn);
     std::fs::remove_dir_all(dir).unwrap();
+}
+
+/// What a viewer gets for the request of a flow.
+fn request_of(conn: &Connection, dir: &std::path::Path, id: i64) -> Option<Vec<u8>> {
+    let body = stored_body(conn, id, "req").unwrap();
+    BodyReader::new(&dir.join("session")).unpacked(&body, usize::MAX)
 }
 
 /// What a viewer gets for the response of a flow.
@@ -1313,6 +1324,124 @@ async fn rules_change_traffic_and_say_so() {
         response_of(&conn, &dir, ids[1]).unwrap(),
         br#"{"name":"mocked"}"#,
         "what the rule answered is recorded too"
+    );
+    clean_up(conn, dir);
+}
+
+/// The first message held, once there is one.
+async fn first_held(pauses: &Pauses) -> Paused {
+    for _ in 0..500 {
+        if let Some(held) = pauses.held().into_iter().next() {
+            return held;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("nothing was held");
+}
+
+/// Breakpoints through the real proxy: a request changed on its way, a response
+/// changed on its way back, and one dropped.
+#[tokio::test(flavor = "multi_thread")]
+async fn breakpoints_hold_until_let_go() {
+    let h = Harness::start("breakpoints").await;
+    h.traffic_rules.write().unwrap().rules.extend([
+        rule("*/json?size=5*", Action::PauseRequest),
+        rule("*/json?size=6*", Action::PauseResponse),
+        rule("*/json?size=7*", Action::PauseRequest),
+    ]);
+    let client = h.client(false);
+
+    // The request: sent to another size, with another body.
+    let sent = tokio::spawn({
+        let client = client.clone();
+        let url = format!("{}/json?size=50", h.origin);
+        async move {
+            client
+                .post(url)
+                .body("as sent")
+                .send()
+                .await
+                .unwrap()
+                .bytes()
+                .await
+                .unwrap()
+        }
+    });
+    let held = first_held(&h.pauses).await;
+    assert_eq!(held.stage, Stage::Request);
+    assert_eq!(held.rule, "rule for */json?size=5*");
+    assert_eq!(held.message.method, "POST");
+    assert_eq!(held.message.body, b"as sent");
+    let mut edited = held.message.clone();
+    edited.url = edited.url.replace("size=50", "size=90");
+    edited.body = b"as edited".to_vec();
+    assert!(h.pauses.decide(held.id, Verdict::Send(edited)));
+    assert_eq!(
+        sent.await.unwrap().len(),
+        90,
+        "the edited URL was asked for"
+    );
+
+    // The response: another status and body.
+    let got = tokio::spawn({
+        let client = client.clone();
+        let url = format!("{}/json?size=60", h.origin);
+        async move {
+            let res = client.get(url).send().await.unwrap();
+            (res.status().as_u16(), res.text().await.unwrap())
+        }
+    });
+    let held = first_held(&h.pauses).await;
+    assert_eq!(held.stage, Stage::Response);
+    assert_eq!(held.message.status, 200);
+    assert_eq!(held.message.body.len(), 60);
+    let mut edited = held.message.clone();
+    edited.status = 201;
+    edited.body = b"changed".to_vec();
+    assert!(h.pauses.decide(held.id, Verdict::Send(edited)));
+    assert_eq!(got.await.unwrap(), (201, "changed".to_owned()));
+
+    // Dropped: the server never hears of it.
+    let dropped = tokio::spawn({
+        let client = client.clone();
+        let url = format!("{}/json?size=70", h.origin);
+        async move {
+            let res = client.get(url).send().await.unwrap();
+            (res.status().as_u16(), res.text().await.unwrap())
+        }
+    });
+    let held = first_held(&h.pauses).await;
+    assert!(h.pauses.decide(held.id, Verdict::Drop));
+    let (status, text) = dropped.await.unwrap();
+    assert_eq!(status, 502);
+    assert!(text.contains("dropped at a breakpoint"), "{text}");
+
+    let (_, conn, dir) = h.finish(3).await;
+    let rows: Vec<(String, Option<i64>, Option<String>)> = conn
+        .prepare("SELECT path, status, server_version FROM flows ORDER BY started_us, id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(rows[0].0, "/json?size=90", "what was sent is on record");
+    assert_eq!(rows[1].1, Some(201), "what the client got is on record");
+    assert_eq!(
+        (rows[2].1, rows[2].2.as_deref()),
+        (Some(502), None),
+        "no server was asked"
+    );
+    let edited: i64 = conn
+        .query_row(
+            "SELECT id FROM flows WHERE path = '/json?size=90'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        request_of(&conn, &dir, edited).unwrap(),
+        b"as edited",
+        "the edited body is on record"
     );
     clean_up(conn, dir);
 }

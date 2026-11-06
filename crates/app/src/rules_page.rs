@@ -14,15 +14,19 @@ pub enum RuleKind {
     MapRemote,
     RequestHeader,
     ResponseHeader,
+    PauseRequest,
+    PauseResponse,
 }
 
 impl RuleKind {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 7] = [
         Self::Block,
         Self::MapLocal,
         Self::MapRemote,
         Self::RequestHeader,
         Self::ResponseHeader,
+        Self::PauseRequest,
+        Self::PauseResponse,
     ];
 
     pub fn label(self) -> &'static str {
@@ -32,16 +36,21 @@ impl RuleKind {
             Self::MapRemote => "Send to another host",
             Self::RequestHeader => "Set a request header",
             Self::ResponseHeader => "Set a response header",
+            Self::PauseRequest => "Pause the request",
+            Self::PauseResponse => "Pause the response",
         }
     }
 
-    /// What the form's fields ask for: the first, and a second if it needs one.
-    fn fields(self) -> (&'static str, Option<&'static str>) {
+    /// What the form's fields ask for, as many as it needs.
+    fn fields(self) -> (Option<&'static str>, Option<&'static str>) {
         match self {
-            Self::Block => ("Status to answer with, like 403", None),
-            Self::MapLocal => ("Full path of a file or folder", None),
-            Self::MapRemote => ("Where to, like http://localhost:3000", None),
-            Self::RequestHeader | Self::ResponseHeader => ("Header's name", Some("Its value")),
+            Self::Block => (Some("Status to answer with, like 403"), None),
+            Self::MapLocal => (Some("Full path of a file or folder"), None),
+            Self::MapRemote => (Some("Where to, like http://localhost:3000"), None),
+            Self::RequestHeader | Self::ResponseHeader => {
+                (Some("Header's name"), Some("Its value"))
+            }
+            Self::PauseRequest | Self::PauseResponse => (None, None),
         }
     }
 
@@ -67,6 +76,8 @@ impl RuleKind {
                 header: first.to_owned(),
                 value: second.to_owned(),
             },
+            Self::PauseRequest => Action::PauseRequest,
+            Self::PauseResponse => Action::PauseResponse,
         })
     }
 }
@@ -79,6 +90,8 @@ fn action_text(action: &Action) -> String {
         Action::MapRemote { to } => format!("Send to {to}"),
         Action::SetRequestHeader { header, value } => format!("Request: {header}: {value}"),
         Action::SetResponseHeader { header, value } => format!("Response: {header}: {value}"),
+        Action::PauseRequest => "Pause the request".to_owned(),
+        Action::PauseResponse => "Pause the response".to_owned(),
     }
 }
 
@@ -98,6 +111,8 @@ fn fields_of(action: &Action) -> (RuleKind, String, String) {
         Action::SetResponseHeader { header, value } => {
             (RuleKind::ResponseHeader, header.clone(), value.clone())
         }
+        Action::PauseRequest => (RuleKind::PauseRequest, String::new(), String::new()),
+        Action::PauseResponse => (RuleKind::PauseResponse, String::new(), String::new()),
     }
 }
 
@@ -490,21 +505,31 @@ impl Traffic {
                     .child(field(&page.url, true))
                     .child(div().w(px(220.)).flex().child(field(&page.method, true))),
             )
-            .child(
-                div()
-                    .text_size(px(12.))
-                    .text_color(rgb(c.muted))
-                    .child(first_hint),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_row()
-                    .flex_wrap()
-                    .gap(px(8.))
-                    .child(field(&page.first, true))
-                    .when_some(second_hint, |d, _| d.child(field(&page.second, true))),
-            )
+            .when_some(first_hint, |d, first_hint| {
+                d.child(
+                    div()
+                        .text_size(px(12.))
+                        .text_color(rgb(c.muted))
+                        .child(first_hint),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_row()
+                        .flex_wrap()
+                        .gap(px(8.))
+                        .child(field(&page.first, true))
+                        .when_some(second_hint, |d, _| d.child(field(&page.second, true))),
+                )
+            })
+            .when(first_hint.is_none(), |d| {
+                d.child(
+                    div()
+                        .text_size(px(12.))
+                        .text_color(rgb(c.muted))
+                        .child("It waits under Paused until you send it on, changed or not."),
+                )
+            })
             .children(
                 page.problem
                     .clone()
@@ -606,6 +631,8 @@ mod tests {
             (RuleKind::MapRemote, "http://localhost:3000", ""),
             (RuleKind::RequestHeader, "x-a", "1"),
             (RuleKind::ResponseHeader, "x-b", "2"),
+            (RuleKind::PauseRequest, "", ""),
+            (RuleKind::PauseResponse, "", ""),
         ] {
             let action = kind.action(first, second).unwrap();
             assert_eq!(

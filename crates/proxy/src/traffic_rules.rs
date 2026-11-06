@@ -31,6 +31,10 @@ pub enum Action {
         header: String,
         value: String,
     },
+    /// Holds the request until the window lets it go, edited or not.
+    PauseRequest,
+    /// The same for the response, before the client gets it.
+    PauseResponse,
 }
 
 fn yes() -> bool {
@@ -67,6 +71,9 @@ pub struct Plan {
     pub response_headers: Vec<(HeaderName, HeaderValue)>,
     /// Which rules touched it, to show on the flow.
     pub names: Vec<String>,
+    /// The rule that holds the request, if one does.
+    pub pause_request: Option<String>,
+    pub pause_response: Option<String>,
 }
 
 #[derive(Debug)]
@@ -214,6 +221,7 @@ impl TrafficRule {
             | Action::SetResponseHeader { header, value } => {
                 header_pair(header, value)?;
             }
+            Action::PauseRequest | Action::PauseResponse => {}
         }
         Ok(())
     }
@@ -278,6 +286,14 @@ impl TrafficRules {
                 Action::SetResponseHeader { header, value } => header_pair(header, value)
                     .map(|pair| plan.response_headers.push(pair))
                     .is_ok(),
+                Action::PauseRequest => {
+                    plan.pause_request.get_or_insert_with(|| rule.name.clone());
+                    true
+                }
+                Action::PauseResponse => {
+                    plan.pause_response.get_or_insert_with(|| rule.name.clone());
+                    true
+                }
                 _ => false,
             };
             if touched {
@@ -311,6 +327,32 @@ mod tests {
             rules: vec![block(url)],
         };
         rules.plan("GET", target).end.is_some()
+    }
+
+    #[test]
+    fn pauses_are_planned_and_saved() {
+        let rules = TrafficRules {
+            rules: vec![
+                rule("api.dev/v1/*", Action::PauseRequest),
+                rule("api.dev/*", Action::PauseResponse),
+                rule("api.dev/*", Action::PauseRequest),
+            ],
+        };
+        let plan = rules.plan("POST", "api.dev/v1/items");
+        assert_eq!(
+            plan.pause_request.as_deref(),
+            Some("rule api.dev/v1/*"),
+            "the first"
+        );
+        assert_eq!(plan.pause_response.as_deref(), Some("rule api.dev/*"));
+        assert!(plan.end.is_none());
+        let plan = rules.plan("GET", "api.dev/other");
+        assert_eq!(plan.pause_request.as_deref(), Some("rule api.dev/*"));
+        assert!(rules.plan("GET", "else.dev/").pause_response.is_none());
+
+        let text = toml::to_string(&rules).unwrap();
+        assert!(text.contains(r#"action = "pause_request""#), "{text}");
+        assert_eq!(toml::from_str::<TrafficRules>(&text).unwrap(), rules);
     }
 
     #[test]

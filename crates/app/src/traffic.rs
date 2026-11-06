@@ -19,6 +19,7 @@ use crate::{
     widgets::{eyebrow, icon, status_colors},
 };
 use crate::{
+    paused_page::PausedPage,
     rules_page::RulesPage,
     sessions_page::{SessionsPage, when_text},
 };
@@ -149,6 +150,7 @@ pub enum Screen {
     Setup,
     Traffic,
     Rules,
+    Paused,
     Sessions,
     Settings,
 }
@@ -170,6 +172,7 @@ pub struct Traffic {
     viewing_started: String,
     pub sessions_page: SessionsPage,
     pub(crate) rules_page: Option<RulesPage>,
+    pub paused_page: Option<PausedPage>,
     /// The system's own appearance is dark.
     system_dark: bool,
     pub(crate) data_dir: PathBuf,
@@ -288,6 +291,7 @@ impl Traffic {
             viewing_started: String::new(),
             sessions_page: SessionsPage::default(),
             rules_page: None,
+            paused_page: None,
             system_dark,
             data_dir: data_dir.to_owned(),
             screen: Screen::Traffic,
@@ -611,6 +615,7 @@ impl Traffic {
             changed = true;
         }
         changed |= self.look_at_stream(cx);
+        changed |= self.look_at_pauses(cx);
         let visit = self.engine.check.last();
         if visit != self.check_visit {
             self.check_visit = visit;
@@ -1472,6 +1477,7 @@ impl Traffic {
     fn render_rail(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let current = self.screen;
+        let waiting = self.paused_count();
         let item = |id: &'static str, label: &'static str, name: &'static str, screen: Screen| {
             let on = current == screen;
             let ink = if on { c.on_tonal } else { c.muted };
@@ -1522,6 +1528,31 @@ impl Traffic {
             .child(item("rail-setup", "Set up", "setup", Screen::Setup))
             .child(item("rail-traffic", "Traffic", "traffic", Screen::Traffic))
             .child(item("rail-rules", "Rules", "rules", Screen::Rules))
+            .child(
+                div()
+                    .relative()
+                    .child(item("rail-paused", "Paused", "pause", Screen::Paused))
+                    .when(waiting > 0, |d| {
+                        d.child(
+                            div()
+                                .absolute()
+                                .top(px(-4.))
+                                .right(px(2.))
+                                .min_w(px(18.))
+                                .h(px(18.))
+                                .px(px(5.))
+                                .rounded(px(9.))
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .text_size(px(10.5))
+                                .font_weight(FontWeight::BOLD)
+                                .bg(rgb(c.warn))
+                                .text_color(rgb(c.on_accent))
+                                .child(waiting.to_string()),
+                        )
+                    }),
+            )
             .child(item(
                 "rail-sessions",
                 "Sessions",
@@ -1646,6 +1677,8 @@ impl Render for Traffic {
             .map(IntoElement::into_any_element);
         let rules =
             (self.screen == Screen::Rules).then(|| self.render_rules(cx).into_any_element());
+        let paused =
+            (self.screen == Screen::Paused).then(|| self.render_paused(cx).into_any_element());
         let settings = (self.screen == Screen::Settings)
             .then(|| self.render_settings(window, cx).into_any_element());
         let content_bounds = Rc::clone(&self.content);
@@ -1724,6 +1757,7 @@ impl Render for Traffic {
                     .pl(px(4.))
                     .when_some(setup, |d, setup| d.child(setup))
                     .when_some(rules, |d, rules| d.child(rules))
+                    .when_some(paused, |d, paused| d.child(paused))
                     .when_some(sessions, |d, sessions| d.child(sessions))
                     .when_some(settings, |d, settings| d.child(settings))
                     .when(self.screen == Screen::Traffic, |d| {

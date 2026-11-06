@@ -9,6 +9,7 @@
 //! open and their messages as they come: see [`StreamHandle`].
 
 use crate::ca::CRL_PATH;
+use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
 use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of};
 use bytes::Bytes;
@@ -90,8 +91,11 @@ pub struct FlowHandler {
     rules: Arc<RwLock<HostRules>>,
     traffic_rules: Arc<RwLock<TrafficRules>>,
     check: Arc<Check>,
+    pauses: Arc<Pauses>,
     /// Headers rules set on the response of the request this clone is handling.
     response_headers: Vec<(HeaderName, HeaderValue)>,
+    /// The rule that holds its response, with the request's method and URL.
+    pause_response: Option<(String, String, String)>,
     /// WebSockets from their upgrade until they end. hudsucker tells the handler of
     /// messages only by client and URL, and this is what ties those to a flow.
     websockets: Arc<Mutex<HashMap<WsKey, Arc<Flow>>>>,
@@ -106,6 +110,7 @@ pub struct Controls {
     pub rules: Arc<RwLock<HostRules>>,
     pub traffic_rules: Arc<RwLock<TrafficRules>>,
     pub check: Arc<Check>,
+    pub pauses: Arc<Pauses>,
 }
 
 impl FlowHandler {
@@ -125,7 +130,9 @@ impl FlowHandler {
             rules: controls.rules,
             traffic_rules: controls.traffic_rules,
             check: controls.check,
+            pauses: controls.pauses,
             response_headers: Vec::new(),
+            pause_response: None,
             websockets: Arc::default(),
             flow: None,
         }
@@ -145,6 +152,59 @@ impl FlowHandler {
         let host = without_default_port(request_host(req).unwrap_or_default(), scheme);
         let path = uri.path_and_query().map_or("/", |p| p.as_str());
         rules.plan(req.method().as_str(), &format!("{host}{path}"))
+    }
+
+    /// Holds a request for the window. What goes on is what it says, and true
+    /// if it says to send nothing.
+    async fn hold_request(
+        &self,
+        req: Request<Body>,
+        rule: String,
+        url: String,
+    ) -> (Request<Body>, bool) {
+        let held = match pause::request_message(req, url).await {
+            Read::Held(held) => held,
+            Read::Passed(req) => return (req, false),
+        };
+        match self
+            .pauses
+            .hold(Stage::Request, rule, held.message.clone())
+            .await
+        {
+            Verdict::Send(message) if message == held.message => (held.unchanged(), false),
+            Verdict::Send(message) => match pause::request_from(message) {
+                Ok(req) => (req, false),
+                // The window checks before it lets go, so this is a bug.
+                Err(problem) => {
+                    tracing::warn!("a held request cannot go on as edited: {problem}");
+                    (held.unchanged(), false)
+                }
+            },
+            Verdict::Drop => (held.unchanged(), true),
+        }
+    }
+
+    async fn hold_response(
+        &self,
+        res: Response<Body>,
+        (rule, method, url): (String, String, String),
+    ) -> Response<Body> {
+        let held = match pause::response_message(res, &method, &url).await {
+            Read::Held(held) => held,
+            Read::Passed(res) => return res,
+        };
+        match self
+            .pauses
+            .hold(Stage::Response, rule, held.message.clone())
+            .await
+        {
+            Verdict::Send(message) if message == held.message => held.unchanged(),
+            Verdict::Send(message) => pause::response_from(message).unwrap_or_else(|problem| {
+                tracing::warn!("a held response cannot go on as edited: {problem}");
+                held.unchanged()
+            }),
+            Verdict::Drop => pause::dropped(),
+        }
     }
 
     /// A rule's answer: no server was asked, so none is on record.
@@ -262,6 +322,22 @@ impl HttpHandler for FlowHandler {
         }
         let mut req = req;
         let plan = self.plan_for(&req);
+        let url = full_url(&req);
+        // A stream's body never ends, so it could not be held whole.
+        let streams = is_websocket(&req);
+        self.pause_response = plan
+            .pause_response
+            .clone()
+            .filter(|_| !streams)
+            .map(|rule| (rule, req.method().to_string(), url.clone()));
+        let mut dropped = false;
+        if let Some(rule) = plan
+            .pause_request
+            .clone()
+            .filter(|_| !streams && plan.end.is_none())
+        {
+            (req, dropped) = self.hold_request(req, rule, url).await;
+        }
         // Paused: traffic goes through as if nothing were watching, rules and all.
         let recording = self.recording.load(Ordering::Relaxed);
         let flow =
@@ -270,6 +346,9 @@ impl HttpHandler for FlowHandler {
             && !plan.names.is_empty()
         {
             flow.lock().rule = Some(plan.names.join(", "));
+        }
+        if dropped {
+            return self.answer_as_rule(flow, pause::dropped()).into();
         }
         self.response_headers = plan.response_headers;
         for (name, value) in plan.request_headers {
@@ -343,6 +422,15 @@ impl HttpHandler for FlowHandler {
 
     async fn handle_response(&mut self, _ctx: &HttpContext, res: Response<Body>) -> Response<Body> {
         let flow = self.flow.take();
+        let res = match self.pause_response.take() {
+            // Events and upgrades go on for as long as they last.
+            Some(held)
+                if !is_event_stream(&res) && res.status() != StatusCode::SWITCHING_PROTOCOLS =>
+            {
+                self.hold_response(res, held).await
+            }
+            _ => res,
+        };
         self.answer(flow, res)
     }
 
@@ -498,6 +586,18 @@ fn event_end(data: &[u8]) -> Option<(usize, usize)> {
         (Some(a), Some(b)) => Some(if a.0 < b.0 { a } else { b }),
         (a, b) => a.or(b),
     }
+}
+
+/// The request's URL whole, with the host from `Host` where the request line
+/// has none.
+fn full_url<T>(req: &Request<T>) -> String {
+    let uri = req.uri();
+    if uri.authority().is_some() {
+        return uri.to_string();
+    }
+    let scheme = uri.scheme_str().unwrap_or("http");
+    let path = uri.path_and_query().map_or("/", |p| p.as_str());
+    format!("{scheme}://{}{path}", request_host(req).unwrap_or_default())
 }
 
 fn request_host<T>(req: &Request<T>) -> Option<&str> {
