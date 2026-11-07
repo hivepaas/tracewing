@@ -13,6 +13,7 @@ pub mod input;
 pub mod inspector;
 pub mod layout;
 pub mod messages;
+pub mod paused_page;
 pub mod placement;
 pub mod rules_page;
 pub mod sessions_page;

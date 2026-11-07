@@ -3,6 +3,7 @@
 
 pub mod ca;
 pub mod capture;
+pub mod pause;
 pub mod rules;
 pub mod traffic_rules;
 
@@ -73,6 +74,8 @@ pub struct ProxyOptions {
     pub traffic_rules: Arc<RwLock<TrafficRules>>,
     /// Who has reached the test page.
     pub check: Arc<Check>,
+    /// What breakpoints hold, for the window to let go.
+    pub pauses: Arc<pause::Pauses>,
     /// Set once the CA is loaded: see `LocalCa::leaf_spki_sha256`.
     pub leaf_spki: Arc<OnceLock<String>>,
     /// Stop without waiting for the search index to catch up.
@@ -178,9 +181,11 @@ pub async fn run_proxy(
             rules: opts.rules,
             traffic_rules: opts.traffic_rules,
             check: opts.check,
+            pauses: Arc::clone(&opts.pauses),
         },
     );
     let stop_limit = opts.stop_limit;
+    let pauses = opts.pauses;
     let (stopping_tx, stopping) = tokio::sync::oneshot::channel();
     let proxy = Proxy::builder()
         .with_listener(listener)
@@ -191,6 +196,8 @@ pub async fn run_proxy(
         .with_websocket_connector(Connector::Rustls(Arc::new(upstream_tls)))
         .with_graceful_shutdown(async move {
             shutdown.await;
+            // Held, they would keep their connections, and the stop, waiting.
+            pauses.release_all();
             let _ = stopping_tx.send(());
         })
         .build()?;

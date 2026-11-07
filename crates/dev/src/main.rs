@@ -237,6 +237,7 @@ async fn main() -> Result<()> {
                     traffic_rules: Default::default(),
                     check: Default::default(),
                     leaf_spki,
+                    pauses: Default::default(),
                     leave_index: false,
                     stop_limit: Duration::from_secs(5),
                 },

@@ -12,7 +12,8 @@ use std::{
 };
 use tokio::sync::oneshot;
 use tracewing_proxy::{
-    ProxyOptions, capture::Check, rules::HostRules, run_proxy, traffic_rules::TrafficRules,
+    ProxyOptions, capture::Check, pause::Pauses, rules::HostRules, run_proxy,
+    traffic_rules::TrafficRules,
 };
 use tracewing_store::{
     session::{self, Shared},
@@ -43,6 +44,8 @@ pub struct Engine {
     pub check: Arc<Check>,
     /// What a browser opened from here needs when it does not trust the CA.
     pub leaf_spki: Arc<OnceLock<String>>,
+    /// What breakpoints hold.
+    pub pauses: Arc<Pauses>,
     /// Why the proxy stopped, if it did by itself.
     pub failure: Arc<Mutex<Option<String>>>,
     stop: Option<oneshot::Sender<()>>,
@@ -61,6 +64,7 @@ impl Engine {
         let failure = Arc::new(Mutex::new(None));
         let check = Arc::new(Check::default());
         let leaf_spki = Arc::new(OnceLock::new());
+        let pauses = Arc::new(Pauses::default());
         let rules = Arc::new(RwLock::new(opts.rules));
         let traffic_rules = Arc::new(RwLock::new(opts.traffic_rules));
         let (stop, stopped) = oneshot::channel::<()>();
@@ -79,6 +83,7 @@ impl Engine {
             traffic_rules: Arc::clone(&traffic_rules),
             check: Arc::clone(&check),
             leaf_spki: Arc::clone(&leaf_spki),
+            pauses: Arc::clone(&pauses),
             leave_index: true,
             stop_limit: std::time::Duration::from_secs(2),
         };
@@ -112,6 +117,7 @@ impl Engine {
             traffic_rules,
             check,
             leaf_spki,
+            pauses,
             failure,
             stop: Some(stop),
             thread: Some(thread),
