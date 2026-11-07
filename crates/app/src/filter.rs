@@ -1,8 +1,9 @@
 //! What the filter box means, and finding the flows that fit.
 //!
-//! `host:myapp method:post status:4xx type:json` narrow by column; anything else
-//! is text to find in URLs and in bodies. The chips and the host chosen in the
-//! sidebar narrow further.
+//! `host:myapp method:post status:4xx type:json graphql:GetUser` narrow by column;
+//! anything else
+//! is text to find in URLs and in bodies. The chips and the host chosen in
+//! the sidebar narrow further.
 
 use anyhow::Result;
 use rusqlite::{Connection, ToSql, params_from_iter};
@@ -15,15 +16,17 @@ pub enum Kind {
     #[default]
     All,
     Json,
+    GraphQl,
     Errors,
     WebSocket,
     Media,
 }
 
 impl Kind {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::All,
         Self::Json,
+        Self::GraphQl,
         Self::Errors,
         Self::WebSocket,
         Self::Media,
@@ -33,6 +36,7 @@ impl Kind {
         match self {
             Self::All => "All",
             Self::Json => "JSON",
+            Self::GraphQl => "GraphQL",
             Self::Errors => "Errors",
             Self::WebSocket => "WebSocket",
             Self::Media => "Media",
@@ -43,6 +47,7 @@ impl Kind {
         match self {
             Self::All => None,
             Self::Json => Some("content_type LIKE '%json%'"),
+            Self::GraphQl => Some("graphql IS NOT NULL"),
             Self::Errors => Some("(status >= 400 OR status IS NULL)"),
             Self::WebSocket => Some("kind = 'websocket'"),
             Self::Media => Some(
@@ -63,6 +68,8 @@ pub struct Filter {
     /// From, up to and not including.
     pub status: Option<(u16, u16)>,
     pub content_type: Option<String>,
+    /// A part of the GraphQL operation, as `GetUser` or `mutation`.
+    pub graphql: Option<String>,
     pub text: Option<String>,
     pub kind: Kind,
     /// Flows before this one were cleared from view.
@@ -84,6 +91,9 @@ impl Filter {
                 Some(("type", value)) if !value.is_empty() => {
                     filter.content_type = Some(value.to_owned());
                 }
+                Some(("graphql" | "gql", value)) if !value.is_empty() => {
+                    filter.graphql = Some(value.to_owned());
+                }
                 Some(("status", value)) if status_range(value).is_some() => {
                     filter.status = status_range(value);
                 }
@@ -103,6 +113,7 @@ impl Filter {
             && self.method.is_none()
             && self.status.is_none()
             && self.content_type.is_none()
+            && self.graphql.is_none()
             && self.text.is_none()
             && self.kind == Kind::All
     }
@@ -159,6 +170,10 @@ impl Filter {
         if let Some(content_type) = &self.content_type {
             clauses.push("content_type LIKE ? ESCAPE '\\'".to_owned());
             values.push(Box::new(format!("%{}%", escape_like(content_type))));
+        }
+        if let Some(graphql) = &self.graphql {
+            clauses.push("graphql LIKE ? ESCAPE '\\'".to_owned());
+            values.push(Box::new(format!("%{}%", escape_like(graphql))));
         }
         if let Some(clause) = self.kind.clause() {
             clauses.push(clause.to_owned());
@@ -243,11 +258,13 @@ mod tests {
 
     #[test]
     fn the_box_is_read_word_by_word() {
-        let filter = Filter::parse("host:myapp method:post status:4xx type:json đặt hàng");
+        let filter =
+            Filter::parse("host:myapp method:post status:4xx type:json gql:GetUser đặt hàng");
         assert_eq!(filter.host.as_deref(), Some("myapp"));
         assert_eq!(filter.method.as_deref(), Some("POST"));
         assert_eq!(filter.status, Some((400, 500)));
         assert_eq!(filter.content_type.as_deref(), Some("json"));
+        assert_eq!(filter.graphql.as_deref(), Some("GetUser"));
         assert_eq!(filter.text.as_deref(), Some("đặt hàng"));
     }
 

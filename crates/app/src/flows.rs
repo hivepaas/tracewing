@@ -18,6 +18,8 @@ pub struct Row {
     pub status: Option<u16>,
     pub host: SharedString,
     pub path: SharedString,
+    /// The GraphQL operation, as `query GetUser`.
+    pub graphql: Option<SharedString>,
     /// What went wrong, or that it is a WebSocket.
     pub note: Option<SharedString>,
     pub size: SharedString,
@@ -105,7 +107,7 @@ impl Flows {
                 end += 1;
             }
             let mut stmt = self.conn.prepare_cached(
-                "SELECT id, method, status, host, path, resp_bytes, duration_us, error, kind, open, rule
+                "SELECT id, method, status, host, path, resp_bytes, duration_us, error, kind, open, rule, graphql
                  FROM flows WHERE id >= ?1 AND id <= ?2",
             )?;
             let rows = stmt.query_map(params![ids[at], ids[end - 1]], |r| {
@@ -123,6 +125,9 @@ impl Flows {
                     status: r.get(2)?,
                     host: r.get::<_, String>(3)?.into(),
                     path: r.get::<_, String>(4)?.into(),
+                    graphql: r
+                        .get::<_, Option<String>>(11)?
+                        .map(|operation| short_operation(&operation).into()),
                     note: error
                         .map(SharedString::from)
                         .or_else(|| rule.map(|rule| format!("Rule: {rule}").into()))
@@ -154,6 +159,15 @@ impl Flows {
             at = end;
         }
         Ok(())
+    }
+}
+
+/// `GetUser` of `query GetUser`: the list is narrow, and the name says most.
+/// One without a name keeps its kind.
+pub fn short_operation(operation: &str) -> String {
+    match operation.split_once(' ') {
+        Some(("query" | "mutation" | "subscription", name)) => name.to_owned(),
+        _ => operation.to_owned(),
     }
 }
 
@@ -206,5 +220,13 @@ mod tests {
         assert_eq!(time_text(142_000), "142 ms");
         assert_eq!(time_text(2_400_000), "2.4 s");
         assert_eq!(time_text(800), "800 µs");
+    }
+
+    #[test]
+    fn operations_go_by_their_names() {
+        assert_eq!(short_operation("query GetUser"), "GetUser");
+        assert_eq!(short_operation("mutation A +2"), "A +2");
+        assert_eq!(short_operation("query"), "query");
+        assert_eq!(short_operation("Feed"), "Feed");
     }
 }

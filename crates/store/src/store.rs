@@ -72,6 +72,8 @@ pub struct FlowRecord {
     pub open: bool,
     /// The rules that changed it.
     pub rule: Option<String>,
+    /// The GraphQL operation it asked for, as `query GetUser`.
+    pub graphql: Option<String>,
     pub ttfb_us: Option<i64>,
     pub duration_us: Option<i64>,
     pub request: BodyRecord,
@@ -381,7 +383,7 @@ fn open(path: &Path) -> Result<Connection> {
         "PRAGMA journal_mode = WAL;
          PRAGMA synchronous = NORMAL;
          PRAGMA journal_size_limit = 67108864;
-         PRAGMA user_version = 3;
+         PRAGMA user_version = 4;
          CREATE TABLE IF NOT EXISTS flows (
              id INTEGER PRIMARY KEY,
              started_us INTEGER NOT NULL,
@@ -425,7 +427,8 @@ fn open(path: &Path) -> Result<Connection> {
              head_offset INTEGER,
              head_len INTEGER,
              open INTEGER NOT NULL,
-             rule TEXT
+             rule TEXT,
+             graphql TEXT
          );
          CREATE TABLE IF NOT EXISTS messages (
              id INTEGER PRIMARY KEY,
@@ -940,10 +943,10 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                  req_segment, req_offset, req_len, req_zstd, req_spool, req_spool_lost, req_shed,
                  resp_bytes, resp_truncated, resp_complete, resp_encoding,
                  resp_segment, resp_offset, resp_len, resp_zstd, resp_spool, resp_spool_lost, resp_shed,
-                 head_segment, head_offset, head_len, open, rule
+                 head_segment, head_offset, head_len, open, rule, graphql
              ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
                        ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27,
-                       ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42, ?43)",
+                       ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42, ?43, ?44)",
         )?;
         for (i, r) in batch.iter().enumerate() {
             let (req, resp) = (r.request.place, r.response.place);
@@ -991,6 +994,7 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                 r.head.map(|p| p.len),
                 r.open,
                 r.rule,
+                r.graphql,
             ])?;
         }
     }

@@ -4,6 +4,7 @@
 pub mod ca;
 pub mod ca_key;
 pub mod capture;
+pub mod graphql;
 pub mod pause;
 pub mod rules;
 pub mod traffic_rules;
