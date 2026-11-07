@@ -6699,6 +6699,7 @@ name = "tracewing"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "chrono",
  "gpui-pre",
  "gpui-pre-platform",
@@ -6711,6 +6712,7 @@ dependencies = [
  "reqwest",
  "rusqlite",
  "serde",
+ "serde_json",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
  "tracewing-dev",
@@ -6762,6 +6764,7 @@ dependencies = [
  "hyper-util",
  "keyring",
  "serde",
+ "serde_json",
  "sha2 0.10.9",
  "socket2",
  "time",

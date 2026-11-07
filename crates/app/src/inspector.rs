@@ -5,9 +5,10 @@ use crate::{
     body::Body,
     bodyview::{BodyView, summary},
     colors::colors,
-    curl,
+    cookies, curl,
     detail::{Detail, Side, body_file},
     flows::{size_text, time_text},
+    jwt::{self, Jwt},
     messages::MessagesState,
     traffic::Traffic,
     widgets::{chip, eyebrow, icon, status_colors},
@@ -16,7 +17,7 @@ use gpui::{
     ClipboardItem, Context, Div, Entity, FontWeight, MouseButton, MouseDownEvent, SharedString,
     div, prelude::*, px, relative, rgb,
 };
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracewing_store::session::BodyReader;
 
 /// As much of a request's body as can go on a command line, and one byte more to
@@ -29,6 +30,7 @@ pub enum Part {
     #[default]
     Body,
     Headers,
+    Cookies,
     /// A WebSocket's or server-sent events' messages.
     Messages,
 }
@@ -64,9 +66,11 @@ impl Traffic {
             Ok(detail) => {
                 let stream = matches!(detail.kind.as_str(), "websocket" | "sse");
                 self.inspector.messages = stream.then(|| MessagesState::new(id));
+                let no_cookies = cookie_counts(&detail) == (0, 0);
                 self.inspector.part = match (stream, self.inspector.part) {
                     (true, _) => Part::Messages,
                     (false, Part::Messages) => Part::Body,
+                    (false, Part::Cookies) if no_cookies => Part::Body,
                     (false, part) => part,
                 };
                 self.inspector.detail = Some(detail);
@@ -381,7 +385,13 @@ impl Traffic {
     fn render_parts(&self, detail: &Detail, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let part = self.inspector.part;
-        let headers = detail.headers(self.inspector.side).map_or(0, <[_]>::len);
+        let side = self.inspector.side;
+        let headers = detail.headers(side).map_or(0, <[_]>::len);
+        let (sent, set) = cookie_counts(detail);
+        let cookies = match side {
+            Side::Request => sent,
+            Side::Response => set,
+        };
         let summary_text: Option<String> = match (&self.inspector.body, part) {
             (BodyState::Shown(view), Part::Body) => Some(summary(view.read(cx).body())),
             _ => None,
@@ -425,6 +435,13 @@ impl Traffic {
                 format!("Headers {headers}"),
                 Part::Headers,
             ))
+            .when(sent + set > 0, |d| {
+                d.child(tab(
+                    "part-cookies",
+                    format!("Cookies {cookies}"),
+                    Part::Cookies,
+                ))
+            })
             .child(div().flex_1())
             .children(summary_text.map(|text| {
                 div()
@@ -500,6 +517,10 @@ impl Traffic {
         match self.inspector.part {
             Part::Messages => well.child(self.render_messages(cx)),
             Part::Headers => well.child(render_headers(detail.headers(self.inspector.side))),
+            Part::Cookies => well.child(render_cookies(
+                detail.headers(self.inspector.side),
+                self.inspector.side,
+            )),
             Part::Body => match &self.inspector.body {
                 BodyState::Shown(view) => well.py(px(8.)).child(view.clone()),
                 BodyState::Loading => well.child(note("Opening…")),
@@ -598,6 +619,12 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
                 .rule
                 .clone()
                 .map(|rule| chip(format!("Rule: {rule}"), c.tonal, c.on_tonal)),
+        )
+        .children(
+            detail
+                .graphql
+                .clone()
+                .map(|operation| chip(format!("GraphQL: {operation}"), c.tonal, c.on_tonal)),
         )
         .child(plain(detail.protocols()))
         .children(if detail.open {
@@ -702,9 +729,130 @@ fn render_headers(headers: Option<&[(String, String)]>) -> impl IntoElement {
                         .text_color(rgb(c.json_key))
                         .child(name.clone()),
                 )
-                .child(div().flex_1().min_w_0().child(value.clone()))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .flex()
+                        .flex_col()
+                        .child(value.clone())
+                        .children(Jwt::find(value).map(render_jwt)),
+                )
         }))
         .into_any_element()
+}
+
+fn cookie_counts(detail: &Detail) -> (usize, usize) {
+    match &detail.headers {
+        Some((request, response)) => cookies::counts(request, response),
+        None => (0, 0),
+    }
+}
+
+fn render_cookies(headers: Option<&[(String, String)]>, side: Side) -> impl IntoElement {
+    let c = colors();
+    let Some(headers) = headers else {
+        return note("These headers were not kept.").into_any_element();
+    };
+    let found = cookies::of(headers, side);
+    if found.is_empty() {
+        return note(match side {
+            Side::Request => "No cookies were sent.",
+            Side::Response => "No cookies were set.",
+        })
+        .into_any_element();
+    }
+    div()
+        .id("cookies")
+        .size_full()
+        .overflow_y_scroll()
+        .p(px(12.))
+        .flex()
+        .flex_col()
+        .gap(px(8.))
+        .font_family(crate::MONO_FONT)
+        .text_size(px(12.))
+        .children(found.into_iter().map(|cookie| {
+            let jwt = Jwt::find(&cookie.value);
+            div()
+                .flex()
+                .flex_row()
+                .gap(px(10.))
+                .child(
+                    div()
+                        .w(relative(0.34))
+                        .flex_shrink_0()
+                        .text_color(rgb(c.json_key))
+                        .child(cookie.name),
+                )
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .flex()
+                        .flex_col()
+                        .gap(px(2.))
+                        .child(cookie.value)
+                        .when(!cookie.attributes.is_empty(), |d| {
+                            d.child(
+                                div()
+                                    .text_size(px(11.5))
+                                    .text_color(rgb(c.muted))
+                                    .child(cookie.attributes.join(" · ")),
+                            )
+                        })
+                        .children(jwt.map(render_jwt)),
+                )
+        }))
+        .into_any_element()
+}
+
+/// What a token claims, under the header or cookie that carries it.
+fn render_jwt(jwt: Jwt) -> Div {
+    let c = colors();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs() as i64);
+    let title = match jwt.algorithm() {
+        Some(algorithm) => format!("JWT · {algorithm} · signature not checked"),
+        None => "JWT · signature not checked".to_owned(),
+    };
+    let label = |text: &'static str| {
+        div()
+            .mt(px(4.))
+            .text_size(px(11.))
+            .text_color(rgb(c.muted))
+            .child(text)
+    };
+    div()
+        .mt(px(6.))
+        .p(px(10.))
+        .rounded(px(10.))
+        .bg(rgb(c.surface))
+        .flex()
+        .flex_col()
+        .gap(px(2.))
+        .child(
+            div()
+                .font_family(crate::FONT)
+                .font_weight(FontWeight::BOLD)
+                .text_color(rgb(c.text))
+                .child(title),
+        )
+        .children(jwt.times().into_iter().map(|(label, at)| {
+            let late = label == "Expires" && at <= now;
+            div()
+                .text_color(rgb(if late { c.error } else { c.text }))
+                .child(format!(
+                    "{label} {} · {}",
+                    jwt::local_time(at),
+                    jwt::relative(at, now)
+                ))
+        }))
+        .child(label("Header"))
+        .child(jwt.header_text())
+        .child(label("Payload"))
+        .child(jwt.payload_text())
 }
 
 #[cfg(test)]

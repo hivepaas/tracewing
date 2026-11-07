@@ -44,6 +44,8 @@ pub struct Detail {
     pub open: bool,
     /// The rules that changed it.
     pub rule: Option<String>,
+    /// The GraphQL operation, as `query GetUser`.
+    pub graphql: Option<String>,
     pub status: Option<u16>,
     pub client_version: String,
     pub server_version: Option<String>,
@@ -64,7 +66,7 @@ impl Detail {
             "rule, open, kind, scheme, host, path, method, status, client_version, server_version, client,
              content_type, ttfb_us, duration_us, error,
              req_bytes, req_truncated, req_shed, req_spool_lost, {},
-             resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}",
+             resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}, graphql",
             StoredBody::columns("req"),
             StoredBody::columns("resp")
         );
@@ -103,6 +105,8 @@ impl Detail {
                     error: r.get(14)?,
                     request: facts(15)?,
                     response: facts(25)?,
+                    // After the response's four facts and six body columns.
+                    graphql: r.get(35)?,
                     headers: None,
                 })
             },
@@ -183,6 +187,7 @@ mod tests {
             kind: "http".into(),
             open: false,
             rule: None,
+            graphql: None,
             status: Some(200),
             client_version: client.into(),
             server_version: server.map(str::to_owned),

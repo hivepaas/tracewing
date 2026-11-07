@@ -1920,6 +1920,19 @@ fn render_row(row: Row, selected: bool) -> Stateful<Div> {
                         .flex_row()
                         .font_family(crate::MONO_FONT)
                         .text_size(px(12.))
+                        .children(row.graphql.map(|operation| {
+                            div()
+                                // The operation says more than `/graphql` does.
+                                .flex_shrink_0()
+                                .max_w(gpui::relative(0.8))
+                                .mr(px(8.))
+                                .px(px(6.))
+                                .rounded(px(6.))
+                                .truncate()
+                                .bg(rgb(c.tonal))
+                                .text_color(rgb(c.on_tonal))
+                                .child(operation)
+                        }))
                         .child(div().min_w_0().truncate().child(row.path))
                         .children(row.note.map(|note| {
                             div()

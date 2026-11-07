@@ -9,6 +9,7 @@
 //! open and their messages as they come: see [`StreamHandle`].
 
 use crate::ca::CRL_PATH;
+use crate::graphql;
 use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
 use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of};
@@ -649,7 +650,7 @@ impl Flow {
             .and_then(|v| v.to_str().ok())
             .is_some_and(|v| v.eq_ignore_ascii_case("websocket"));
 
-        let record = FlowRecord {
+        let mut record = FlowRecord {
             started_us: unix_micros(),
             client: client.to_string(),
             kind: if is_websocket { "websocket" } else { "http" },
@@ -667,6 +668,9 @@ impl Flow {
             req_headers: header_lines(req.headers()),
             ..FlowRecord::default()
         };
+        if req.method() == http::Method::GET {
+            record.graphql = graphql::operation("GET", &record.path, None, b"");
+        }
 
         Self {
             recorder,
@@ -819,7 +823,21 @@ impl TapBody {
         }
         let body = std::mem::take(&mut self.body);
         match self.side {
-            Side::Request => record.request = body,
+            Side::Request => {
+                let plain = record
+                    .req_encoding
+                    .as_deref()
+                    .is_none_or(|e| e.eq_ignore_ascii_case("identity"));
+                if record.graphql.is_none() && plain && !body.truncated {
+                    record.graphql = graphql::operation(
+                        &record.method,
+                        &record.path,
+                        record.req_content_type.as_deref(),
+                        &body.captured,
+                    );
+                }
+                record.request = body;
+            }
             Side::Response => {
                 record.response = body;
                 record.duration_us = Some(elapsed);
