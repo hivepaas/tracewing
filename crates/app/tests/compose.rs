@@ -93,6 +93,7 @@ fn requests_composed_in_the_window_go_through() {
         traffic_rules: Default::default(),
         ports: 19_890..19_900,
         extra_roots: vec![origin_ca],
+        key_store: Default::default(),
     })
     .unwrap();
     while !dir.join("ca.pem").exists() {
