@@ -67,5 +67,10 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets --release -- -D warnings
 
+      # The UI tests need a GPU to run, but they should always build.
+      - name: Clippy (UI tests)
+        if: runner.os == 'Linux'
+        run: cargo clippy -p tracewing --all-targets --release --features headless -- -D warnings
+
       - name: Test
         run: cargo test --workspace --release
