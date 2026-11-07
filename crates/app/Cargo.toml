@@ -27,6 +27,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 http.workspace = true
 memchr = "2"
 memmap2 = "0.9"
+reqwest.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 tokio.workspace = true
