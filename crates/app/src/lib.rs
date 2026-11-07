@@ -6,6 +6,7 @@ pub mod chrome;
 pub mod colors;
 pub mod compose;
 pub mod compose_page;
+pub mod connection;
 pub mod cookies;
 pub mod curl;
 pub mod detail;
