@@ -5,8 +5,9 @@ use crate::{
     body::Body,
     bodyview::{BodyView, summary},
     colors::colors,
+    connection::Certificate,
     cookies, curl,
-    detail::{Detail, Side, body_file},
+    detail::{Detail, Phase, Side, body_file},
     flows::{size_text, time_text},
     jwt::{self, Jwt},
     messages::MessagesState,
@@ -14,8 +15,8 @@ use crate::{
     widgets::{chip, eyebrow, icon, status_colors},
 };
 use gpui::{
-    ClipboardItem, Context, Div, Entity, FontWeight, MouseButton, MouseDownEvent, SharedString,
-    div, prelude::*, px, relative, rgb,
+    AnyElement, ClipboardItem, Context, Div, Entity, FontWeight, MouseButton, MouseDownEvent,
+    SharedString, div, prelude::*, px, relative, rgb,
 };
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracewing_store::session::BodyReader;
@@ -31,6 +32,8 @@ pub enum Part {
     Body,
     Headers,
     Cookies,
+    /// The server's address, TLS and certificates.
+    Connection,
     /// A WebSocket's or server-sent events' messages.
     Messages,
 }
@@ -71,6 +74,7 @@ impl Traffic {
                     (true, _) => Part::Messages,
                     (false, Part::Messages) => Part::Body,
                     (false, Part::Cookies) if no_cookies => Part::Body,
+                    (false, Part::Connection) if detail.conn_id.is_none() => Part::Body,
                     (false, part) => part,
                 };
                 self.inspector.detail = Some(detail);
@@ -442,6 +446,13 @@ impl Traffic {
                     Part::Cookies,
                 ))
             })
+            .when(detail.conn_id.is_some(), |d| {
+                d.child(tab(
+                    "part-connection",
+                    "Connection".to_owned(),
+                    Part::Connection,
+                ))
+            })
             .child(div().flex_1())
             .children(summary_text.map(|text| {
                 div()
@@ -517,6 +528,7 @@ impl Traffic {
         match self.inspector.part {
             Part::Messages => well.child(self.render_messages(cx)),
             Part::Headers => well.child(render_headers(detail.headers(self.inspector.side))),
+            Part::Connection => well.child(render_connection(detail)),
             Part::Cookies => well.child(render_cookies(
                 detail.headers(self.inspector.side),
                 self.inspector.side,
@@ -641,21 +653,28 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
         )
 }
 
-/// What can be told of the time: DNS, connecting and TLS are not measured yet, so
-/// they are not shown.
+/// Each step of the time, on one scale. Over a connection made before there is
+/// nothing to connect, and it says so.
 fn render_timing(detail: &Detail) -> Option<impl IntoElement> {
     let c = colors();
-    let total = detail.duration_us?.max(1);
-    let waiting = detail.ttfb_us?.clamp(0, total);
-    let download = total - waiting;
-    let bar = |label: &'static str, left: i64, width: i64, value: i64, color: u32| {
+    let phases = detail.phases();
+    let total = phases.iter().map(|p| p.start + p.len).max()?.max(1);
+    let color = |label: &str| match label {
+        "Queued" => c.faint,
+        "DNS" => c.dns,
+        "Connect" => c.connect,
+        "TLS" => c.tls,
+        "Waiting" => c.wait,
+        _ => c.download,
+    };
+    let bar = |phase: Phase| {
         div()
             .flex()
             .flex_row()
             .items_center()
             .gap(px(10.))
             .text_size(px(12.))
-            .child(div().w(px(64.)).text_color(rgb(c.muted)).child(label))
+            .child(div().w(px(64.)).text_color(rgb(c.muted)).child(phase.label))
             .child(
                 div()
                     .flex_1()
@@ -669,10 +688,11 @@ fn render_timing(detail: &Detail) -> Option<impl IntoElement> {
                             .absolute()
                             .top_0()
                             .bottom_0()
-                            .left(relative(left as f32 / total as f32))
-                            .w(relative(width as f32 / total as f32))
+                            .left(relative(phase.start as f32 / total as f32))
+                            .w(relative(phase.len as f32 / total as f32))
+                            .min_w(px(3.))
                             .rounded(px(4.))
-                            .bg(rgb(color)),
+                            .bg(rgb(color(phase.label))),
                     ),
             )
             .child(
@@ -681,8 +701,14 @@ fn render_timing(detail: &Detail) -> Option<impl IntoElement> {
                     .flex()
                     .justify_end()
                     .font_weight(FontWeight::BOLD)
-                    .child(time_text(value)),
+                    .child(time_text(phase.len)),
             )
+    };
+    let reused = match (detail.conn_id, detail.connect_us) {
+        (Some(id), None) => Some(format!(
+            "Over connection {id}, made before: no time went on connecting."
+        )),
+        _ => None,
     };
     Some(
         div()
@@ -694,9 +720,153 @@ fn render_timing(detail: &Detail) -> Option<impl IntoElement> {
             .py(px(10.))
             .rounded(px(16.))
             .bg(rgb(c.code))
-            .child(bar("Waiting", 0, waiting, waiting, c.wait))
-            .child(bar("Download", waiting, download, download, c.download)),
+            .children(phases.into_iter().map(bar))
+            .children(reused.map(|text| {
+                div()
+                    .pt(px(2.))
+                    .text_size(px(11.5))
+                    .text_color(rgb(c.muted))
+                    .child(text)
+            })),
     )
+}
+
+fn now_secs() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs() as i64)
+}
+
+/// The server's address, TLS, and the certificates it showed.
+fn render_connection(detail: &Detail) -> AnyElement {
+    let c = colors();
+    let Some(connection) = detail.connection.clone() else {
+        return note("What this connection was is no longer kept: it went with older flows.")
+            .into_any_element();
+    };
+    let row = |label: &'static str, value: String| {
+        div()
+            .flex()
+            .flex_row()
+            .gap(px(10.))
+            .child(
+                div()
+                    .w(relative(0.26))
+                    .flex_shrink_0()
+                    .text_color(rgb(c.json_key))
+                    .child(label),
+            )
+            .child(div().flex_1().min_w_0().child(value))
+    };
+    let made = match (detail.conn_id, detail.connect_us) {
+        (Some(id), Some(_)) => format!("{id}, made for this flow"),
+        (Some(id), None) => format!("{id}, made before and used again"),
+        _ => "–".to_owned(),
+    };
+    let list = div()
+        .id("connection")
+        .size_full()
+        .overflow_y_scroll()
+        .p(px(12.))
+        .flex()
+        .flex_col()
+        .gap(px(6.))
+        .font_family(crate::MONO_FONT)
+        .text_size(px(12.))
+        .child(row("Server", connection.remote.clone()))
+        .child(row("Connection", made));
+    let Some(tls) = connection.tls else {
+        return list
+            .child(row("TLS", "None: plain HTTP".to_owned()))
+            .into_any_element();
+    };
+    let now = now_secs();
+    list.child(row("TLS", tls.version))
+        .child(row("Cipher", tls.cipher))
+        .child(row("ALPN", tls.alpn.unwrap_or_else(|| "none".to_owned())))
+        .child(
+            div()
+                .pt(px(6.))
+                .font_family(crate::FONT)
+                .text_size(px(11.))
+                .font_weight(FontWeight::BOLD)
+                .text_color(rgb(c.muted))
+                .child(match tls.chain.len() {
+                    0 => "NO CERTIFICATES".to_owned(),
+                    1 => "CERTIFICATE".to_owned(),
+                    n => format!("{n} CERTIFICATES, THE SERVER'S FIRST"),
+                }),
+        )
+        .children(
+            tls.chain
+                .into_iter()
+                .map(|cert| render_certificate(cert, now)),
+        )
+        .into_any_element()
+}
+
+/// How many of a certificate's names are listed before the rest are counted.
+const NAMES_SHOWN: usize = 12;
+
+fn render_certificate(cert: Certificate, now: i64) -> impl IntoElement {
+    let c = colors();
+    let late = cert.out_of_date(now);
+    let when = if now < cert.not_before {
+        format!("not valid until {}", jwt::relative(cert.not_before, now))
+    } else if late {
+        format!("expired {}", jwt::relative(cert.not_after, now))
+    } else {
+        format!("expires {}", jwt::relative(cert.not_after, now))
+    };
+    let names = match cert.names.len() {
+        0 => None,
+        n if n > NAMES_SHOWN => Some(format!(
+            "{}, and {} more",
+            cert.names[..NAMES_SHOWN].join(", "),
+            n - NAMES_SHOWN
+        )),
+        _ => Some(cert.names.join(", ")),
+    };
+    let line = |text: String| div().child(text);
+    div()
+        .p(px(10.))
+        .rounded(px(10.))
+        .bg(rgb(c.surface))
+        .flex()
+        .flex_col()
+        .gap(px(3.))
+        .child(
+            div()
+                .font_family(crate::FONT)
+                .font_weight(FontWeight::BOLD)
+                .text_color(rgb(c.text))
+                .child(if cert.is_ca {
+                    format!("{} · CA", cert.subject)
+                } else {
+                    cert.subject.clone()
+                }),
+        )
+        .child(line(format!("Issued by {}", cert.issuer)))
+        .child(
+            div()
+                .text_color(rgb(if late { c.error } else { c.text }))
+                .child(format!(
+                    "Valid {} to {} · {when}",
+                    jwt::local_time(cert.not_before),
+                    jwt::local_time(cert.not_after)
+                )),
+        )
+        .children(names.map(|names| line(format!("Names {names}"))))
+        .child(
+            div()
+                .text_color(rgb(c.muted))
+                .child(format!("SHA-256 {}", cert.sha256)),
+        )
+        .child(
+            div()
+                .text_color(rgb(c.muted))
+                .child(format!("Serial {}", cert.serial)),
+        )
 }
 
 fn render_headers(headers: Option<&[(String, String)]>) -> impl IntoElement {
@@ -810,9 +980,7 @@ fn render_cookies(headers: Option<&[(String, String)]>, side: Side) -> impl Into
 /// What a token claims, under the header or cookie that carries it.
 fn render_jwt(jwt: Jwt) -> Div {
     let c = colors();
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs() as i64);
+    let now = now_secs();
     let title = match jwt.algorithm() {
         Some(algorithm) => format!("JWT · {algorithm} · signature not checked"),
         None => "JWT · signature not checked".to_owned(),

@@ -256,5 +256,48 @@ fn graphql_cookies_and_tokens_are_read() {
         })
         .unwrap();
 
+    // The first flow made the connection to the origin, and paid for each step.
+    window
+        .update(&mut cx, |view, _, cx| {
+            let detail = view.inspector.detail.as_ref().unwrap();
+            let labels: Vec<_> = detail.phases().iter().map(|p| p.label).collect();
+            assert!(
+                labels.ends_with(&["DNS", "Connect", "TLS", "Waiting", "Download"]),
+                "{labels:?}"
+            );
+            let connection = detail.connection.as_ref().expect("its facts are kept");
+            assert!(connection.remote.contains(&origin_port.to_string()));
+            let tls = connection.tls.as_ref().expect("over TLS");
+            assert_eq!(tls.alpn.as_deref(), Some("h2"));
+            assert!(tls.version.starts_with("TLS 1."), "{}", tls.version);
+            assert!(!tls.chain.is_empty());
+            assert!(tls.chain[0].names.iter().any(|n| n == "localhost"));
+            view.set_part(Part::Connection, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "44-connection");
+
+    // The next went over the same connection: nothing to connect, the same facts.
+    let first_conn = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector.detail.as_ref().unwrap().conn_id
+        })
+        .unwrap();
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(1, cx);
+            let detail = view.inspector.detail.as_ref().unwrap();
+            assert_eq!(detail.conn_id, first_conn);
+            assert_eq!(detail.connect_us, None);
+            let labels: Vec<_> = detail.phases().iter().map(|p| p.label).collect();
+            assert_eq!(labels, ["Waiting", "Download"]);
+            assert!(detail.connection.is_some(), "found with the first flow");
+            assert_eq!(view.inspector.part, Part::Connection);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "45-connection-reused");
+
     std::fs::remove_dir_all(&dir).ok();
 }

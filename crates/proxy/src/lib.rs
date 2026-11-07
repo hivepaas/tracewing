@@ -8,6 +8,7 @@ pub mod graphql;
 pub mod pause;
 pub mod rules;
 pub mod traffic_rules;
+pub mod upstream;
 
 use anyhow::{Context, Result};
 use ca::LocalCa;
@@ -21,7 +22,6 @@ use hudsucker::{
     },
     tokio_tungstenite::Connector,
 };
-use hyper_util::client::legacy::connect::HttpConnector;
 use rules::HostRules;
 use std::{
     path::PathBuf,
@@ -163,17 +163,8 @@ pub async fn run_proxy(
     // Without TCP_NODELAY, small writes wait for delayed ACKs and the tail
     // latency jumps to ~40 ms. Linux copies the flag to accepted sockets.
     socket2::SockRef::from(&listener).set_tcp_nodelay(true)?;
-    let mut http = HttpConnector::new();
-    http.enforce_http(false);
-    http.set_nodelay(true);
-
     let upstream_tls = upstream_tls(&opts.extra_roots)?;
-    let connector = hyper_rustls::HttpsConnectorBuilder::new()
-        .with_tls_config(upstream_tls.clone())
-        .https_or_http()
-        .enable_http1()
-        .enable_http2()
-        .wrap_connector(http);
+    let connector = upstream::TimedConnector::new(upstream_tls.clone());
 
     let handler = FlowHandler::new(
         recorder,

@@ -1,9 +1,10 @@
 //! One flow, in full, for the inspector.
 
+use crate::connection;
 use anyhow::Result;
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 use std::path::Path;
-use tracewing_store::session::{self, BodyReader, Headers, StoredBody};
+use tracewing_store::session::{self, BodyReader, Headers, LogPlace, StoredBody};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Side {
@@ -53,6 +54,15 @@ pub struct Detail {
     pub content_type: Option<String>,
     pub ttfb_us: Option<i64>,
     pub duration_us: Option<i64>,
+    /// The connection to the server, counted in its run.
+    pub conn_id: Option<i64>,
+    /// Set when it waited for the connection to be made.
+    pub blocked_us: Option<i64>,
+    pub dns_us: Option<i64>,
+    pub connect_us: Option<i64>,
+    pub tls_us: Option<i64>,
+    /// What the connection was, if that is still kept.
+    pub connection: Option<connection::Connection>,
     pub error: Option<String>,
     pub request: BodyFacts,
     pub response: BodyFacts,
@@ -66,7 +76,8 @@ impl Detail {
             "rule, open, kind, scheme, host, path, method, status, client_version, server_version, client,
              content_type, ttfb_us, duration_us, error,
              req_bytes, req_truncated, req_shed, req_spool_lost, {},
-             resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}, graphql",
+             resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}, graphql,
+             conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len",
             StoredBody::columns("req"),
             StoredBody::columns("resp")
         );
@@ -107,13 +118,63 @@ impl Detail {
                     response: facts(25)?,
                     // After the response's four facts and six body columns.
                     graphql: r.get(35)?,
+                    conn_id: r.get(36)?,
+                    blocked_us: r.get(37)?,
+                    dns_us: r.get(38)?,
+                    connect_us: r.get(39)?,
+                    tls_us: r.get(40)?,
+                    connection: None,
                     headers: None,
                 })
             },
         )?;
         let mut reader = BodyReader::new(session_dir);
         detail.headers = session::stored_headers(flows, &mut reader, id)?;
+        detail.connection = detail
+            .conn_id
+            .and_then(|conn| connection_place(flows, id, conn).ok().flatten())
+            .and_then(|place| reader.read_place(place).ok())
+            .and_then(|json| connection::Connection::parse(&json));
         Ok(detail)
+    }
+
+    /// Each step of the time, from the flow's start, in microseconds.
+    pub fn phases(&self) -> Vec<Phase> {
+        let (Some(total), Some(ttfb)) = (self.duration_us, self.ttfb_us) else {
+            return Vec::new();
+        };
+        let ttfb = ttfb.clamp(0, total.max(0));
+        let mut steps: Vec<(&'static str, i64)> = Vec::new();
+        if let Some(connect) = self.connect_us {
+            let blocked = self.blocked_us.unwrap_or(0);
+            if blocked > 0 {
+                steps.push(("Queued", blocked));
+            }
+            if let Some(dns) = self.dns_us {
+                steps.push(("DNS", dns));
+            }
+            steps.push(("Connect", connect));
+            if let Some(tls) = self.tls_us {
+                steps.push(("TLS", tls));
+            }
+        }
+        let setup: i64 = steps.iter().map(|(_, len)| len.max(&0)).sum();
+        steps.push(("Waiting", ttfb - setup));
+        steps.push(("Download", total - ttfb));
+        let mut at = 0;
+        steps
+            .into_iter()
+            .map(|(label, len)| {
+                let len = len.max(0);
+                let phase = Phase {
+                    label,
+                    start: at,
+                    len,
+                };
+                at += len;
+                phase
+            })
+            .collect()
     }
 
     pub fn body(&self, side: Side) -> &BodyFacts {
@@ -145,6 +206,39 @@ impl Detail {
             None => short(&self.client_version),
         }
     }
+}
+
+/// One step of a flow's time.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Phase {
+    pub label: &'static str,
+    pub start: i64,
+    pub len: i64,
+}
+
+/// How far back to look for the flow that has a connection's facts. A
+/// connection kept open for longer than this many flows shows none.
+const CONNECTION_LOOKBACK: i64 = 50_000;
+
+/// Where a connection's facts are: with this flow, or with the first flow over
+/// it, which came earlier.
+fn connection_place(flows: &Connection, id: i64, conn: i64) -> Result<Option<LogPlace>> {
+    let place = flows
+        .query_row(
+            "SELECT conn_segment, conn_offset, conn_len FROM flows
+             WHERE id <= ?1 AND id > ?1 - ?2 AND conn_id = ?3 AND conn_segment IS NOT NULL
+             ORDER BY id DESC LIMIT 1",
+            params![id, CONNECTION_LOOKBACK, conn],
+            |r| {
+                Ok(LogPlace {
+                    segment: r.get::<_, i64>(0)? as u32,
+                    offset: r.get::<_, i64>(1)? as u64,
+                    len: r.get::<_, i64>(2)? as u32,
+                })
+            },
+        )
+        .optional()?;
+    Ok(place)
 }
 
 /// A WebSocket's URL as the client wrote it: what comes through the proxy says https.
@@ -195,11 +289,59 @@ mod tests {
             content_type: None,
             ttfb_us: None,
             duration_us: None,
+            conn_id: None,
+            blocked_us: None,
+            dns_us: None,
+            connect_us: None,
+            tls_us: None,
+            connection: None,
             error: None,
             request: BodyFacts::default(),
             response: BodyFacts::default(),
             headers: None,
         }
+    }
+
+    #[test]
+    fn time_is_split_into_steps() {
+        let mut flow = detail("HTTP/2.0", Some("HTTP/2.0"));
+        flow.ttfb_us = Some(100);
+        flow.duration_us = Some(130);
+        let plain = |phases: Vec<Phase>| -> Vec<(&str, i64, i64)> {
+            phases.iter().map(|p| (p.label, p.start, p.len)).collect()
+        };
+        // Over a connection made before: all it did was wait.
+        assert_eq!(
+            plain(flow.phases()),
+            [("Waiting", 0, 100), ("Download", 100, 30)]
+        );
+        flow.blocked_us = Some(5);
+        flow.dns_us = Some(10);
+        flow.connect_us = Some(15);
+        flow.tls_us = Some(20);
+        assert_eq!(
+            plain(flow.phases()),
+            [
+                ("Queued", 0, 5),
+                ("DNS", 5, 10),
+                ("Connect", 15, 15),
+                ("TLS", 30, 20),
+                ("Waiting", 50, 50),
+                ("Download", 100, 30)
+            ]
+        );
+        // An address needs no lookup, and plain HTTP no TLS.
+        flow.blocked_us = Some(0);
+        flow.dns_us = None;
+        flow.tls_us = None;
+        assert_eq!(
+            plain(flow.phases()),
+            [
+                ("Connect", 0, 15),
+                ("Waiting", 15, 85),
+                ("Download", 100, 30)
+            ]
+        );
     }
 
     #[test]
