@@ -74,6 +74,17 @@ pub struct FlowRecord {
     pub rule: Option<String>,
     /// The GraphQL operation it asked for, as `query GetUser`.
     pub graphql: Option<String>,
+    /// The connection to the server it went over, counted in each run.
+    pub conn_id: Option<i64>,
+    /// When it waited for that connection to be made: from its start to the
+    /// connection's, then each step of it. `None` over one made before.
+    pub blocked_us: Option<i64>,
+    pub dns_us: Option<i64>,
+    pub connect_us: Option<i64>,
+    pub tls_us: Option<i64>,
+    /// What the connection was, as JSON, on the first flow over it only.
+    pub connection: Option<Vec<u8>>,
+    pub conn_place: Option<LogPlace>,
     pub ttfb_us: Option<i64>,
     pub duration_us: Option<i64>,
     pub request: BodyRecord,
@@ -383,7 +394,7 @@ fn open(path: &Path) -> Result<Connection> {
         "PRAGMA journal_mode = WAL;
          PRAGMA synchronous = NORMAL;
          PRAGMA journal_size_limit = 67108864;
-         PRAGMA user_version = 4;
+         PRAGMA user_version = 5;
          CREATE TABLE IF NOT EXISTS flows (
              id INTEGER PRIMARY KEY,
              started_us INTEGER NOT NULL,
@@ -428,7 +439,15 @@ fn open(path: &Path) -> Result<Connection> {
              head_len INTEGER,
              open INTEGER NOT NULL,
              rule TEXT,
-             graphql TEXT
+             graphql TEXT,
+             conn_id INTEGER,
+             blocked_us INTEGER,
+             dns_us INTEGER,
+             connect_us INTEGER,
+             tls_us INTEGER,
+             conn_segment INTEGER,
+             conn_offset INTEGER,
+             conn_len INTEGER
          );
          CREATE TABLE IF NOT EXISTS messages (
              id INTEGER PRIMARY KEY,
@@ -711,6 +730,7 @@ impl Writer {
                 response_type.as_deref(),
             );
             self.keep_headers(record);
+            self.keep_connection(record);
             let in_files = file_bytes(record, self.settings.body_max());
             let segment = self.segments.back_mut().expect("never empty");
             segment.bytes += in_files;
@@ -749,6 +769,15 @@ impl Writer {
         }
         let both = session::join_headers(&record.req_headers, &record.resp_headers);
         record.head = Some(self.log.append(both.as_bytes()));
+    }
+
+    fn keep_connection(&mut self, record: &mut FlowRecord) {
+        let Some(connection) = record.connection.take() else {
+            return;
+        };
+        if !self.shared.low_disk.load(Ordering::Relaxed) {
+            record.conn_place = Some(self.log.append(&connection));
+        }
     }
 
     fn keep_body(
@@ -943,10 +972,12 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                  req_segment, req_offset, req_len, req_zstd, req_spool, req_spool_lost, req_shed,
                  resp_bytes, resp_truncated, resp_complete, resp_encoding,
                  resp_segment, resp_offset, resp_len, resp_zstd, resp_spool, resp_spool_lost, resp_shed,
-                 head_segment, head_offset, head_len, open, rule, graphql
+                 head_segment, head_offset, head_len, open, rule, graphql,
+                 conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len
              ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
                        ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27,
-                       ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42, ?43, ?44)",
+                       ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42, ?43, ?44,
+                       ?45, ?46, ?47, ?48, ?49, ?50, ?51, ?52)",
         )?;
         for (i, r) in batch.iter().enumerate() {
             let (req, resp) = (r.request.place, r.response.place);
@@ -995,6 +1026,14 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                 r.open,
                 r.rule,
                 r.graphql,
+                r.conn_id,
+                r.blocked_us,
+                r.dns_us,
+                r.connect_us,
+                r.tls_us,
+                r.conn_place.map(|p| p.segment),
+                r.conn_place.map(|p| p.offset as i64),
+                r.conn_place.map(|p| p.len),
             ])?;
         }
     }

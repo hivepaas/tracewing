@@ -6713,6 +6713,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
  "tracewing-dev",
@@ -6720,6 +6721,7 @@ dependencies = [
  "tracewing-store",
  "tracewing-system",
  "unicode-segmentation",
+ "x509-parser",
 ]
 
 [[package]]
@@ -6760,7 +6762,7 @@ dependencies = [
  "http-body",
  "http-body-util",
  "hudsucker",
- "hyper-rustls",
+ "hyper",
  "hyper-util",
  "keyring",
  "serde",
@@ -6769,7 +6771,9 @@ dependencies = [
  "socket2",
  "time",
  "tokio",
+ "tokio-rustls",
  "toml 0.9.12+spec-1.1.0",
+ "tower-service",
  "tracewing-store",
  "tracing",
  "webpki-roots 1.0.11",

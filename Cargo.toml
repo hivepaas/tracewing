@@ -24,7 +24,6 @@ http-body-util = "0.1"
 hudsucker = { version = "0.25.0", features = ["rcgen-ca", "rustls-client", "http2", "decoder"] }
 keyring = "4"
 hyper = { version = "1", features = ["server", "http1", "http2"] }
-hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "http2", "tls12", "logging"] }
 hyper-util = { version = "0.1", features = ["client-legacy", "http1", "http2", "server-auto", "tokio"] }
 rustls-platform-verifier = "0.7"
 flate2 = "1"

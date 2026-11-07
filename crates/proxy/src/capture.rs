@@ -13,6 +13,7 @@ use crate::graphql;
 use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
 use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of};
+use crate::upstream::Upstream;
 use bytes::Bytes;
 use http::{HeaderName, HeaderValue, Method, Request, Response, StatusCode, header};
 use http_body::{Frame, SizeHint};
@@ -423,6 +424,10 @@ impl HttpHandler for FlowHandler {
 
     async fn handle_response(&mut self, _ctx: &HttpContext, res: Response<Body>) -> Response<Body> {
         let flow = self.flow.take();
+        // Before a breakpoint, which makes the response again.
+        if let (Some(flow), Some(upstream)) = (&flow, res.extensions().get::<Arc<Upstream>>()) {
+            flow.went_over(upstream);
+        }
         let res = match self.pause_response.take() {
             // Events and upgrades go on for as long as they last.
             Some(held)
@@ -688,6 +693,19 @@ impl Flow {
         record.resp_encoding = header_text(res.headers(), header::CONTENT_ENCODING);
         record.resp_headers = header_lines(res.headers());
         record.ttfb_us = Some(self.elapsed_us());
+    }
+
+    fn went_over(&self, upstream: &Upstream) {
+        let mut record = self.lock();
+        record.conn_id = Some(upstream.id);
+        // Made for this flow, or for others at the same time: it waited for it.
+        if upstream.ready_us > record.started_us {
+            record.blocked_us = Some((upstream.started_us - record.started_us).max(0));
+            record.dns_us = upstream.dns_us;
+            record.connect_us = Some(upstream.connect_us);
+            record.tls_us = upstream.tls_us;
+        }
+        record.connection = upstream.tell_once();
     }
 
     /// Writes the row now, for a stream that may go on for hours.
