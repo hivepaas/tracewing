@@ -11,7 +11,10 @@ use crate::{
     widgets::icon,
 };
 use gpui::{Context, Div, FontWeight, SharedString, Stateful, div, prelude::*, px, rgb};
-use tracewing_proxy::capture::{CHECK_HOST, CheckVisit};
+use tracewing_proxy::{
+    ca_key::KeyPlace,
+    capture::{CHECK_HOST, CheckVisit},
+};
 use tracewing_system::Scope;
 
 /// The browser in a `User-Agent`, in the order that tells them apart: Chrome's says
@@ -29,6 +32,20 @@ pub fn browser_name(user_agent: &str) -> &'static str {
         }
     }
     "Your browser"
+}
+
+/// Where the CA's key is, in words.
+fn key_text(place: &KeyPlace) -> String {
+    match place {
+        KeyPlace::Keychain => "Its private key is in the system keychain.".to_owned(),
+        KeyPlace::File { why: None } => {
+            "Its private key is in ca.key, which only you can read.".to_owned()
+        }
+        KeyPlace::File { why: Some(why) } => format!(
+            "Its private key is in ca.key, which only you can read, as the system keychain \
+             cannot take it: {why}."
+        ),
+    }
 }
 
 /// What the check has found, in words, and whether all is well.
@@ -181,6 +198,10 @@ impl Traffic {
             CaState::NotTrusted => {
                 "tracewing reads HTTPS with a certificate made for this computer alone. Until it is trusted, HTTPS through tracewing fails.".to_owned()
             }
+        };
+        let ca_text = match &self.system.ca_key {
+            Some(place) => format!("{ca_text} {}", key_text(place)),
+            None => ca_text,
         };
         let busy = matches!(ca, CaState::Checking | CaState::Installing);
         let ca_step = step("1", installed, "Trust the certificate", ca_text)

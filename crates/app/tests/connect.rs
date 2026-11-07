@@ -111,6 +111,7 @@ fn the_system_proxy_and_the_settings_from_the_window() {
     std::fs::create_dir_all(&data_dir).unwrap();
     let engine = Engine::start(EngineOptions {
         data_dir: data_dir.clone(),
+        key_store: Default::default(),
         settings: StorageSettings {
             disk_reserve_mib: 1,
             ..StorageSettings::default()

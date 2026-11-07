@@ -226,6 +226,7 @@ async fn main() -> Result<()> {
                     listener: Some(listener),
                     std_listener: None,
                     data_dir,
+                    key_store: Default::default(),
                     session,
                     settings,
                     extra_roots: extra_root,
@@ -261,7 +262,7 @@ async fn main() -> Result<()> {
         }
         Command::Ca { action, data_dir } => {
             let data_dir = data_dir.unwrap_or_else(default_data_dir);
-            let ca = LocalCa::load_or_create(&data_dir, crypto_provider())?;
+            let ca = LocalCa::load_or_create(&data_dir, crypto_provider(), Default::default())?;
             match action {
                 CaAction::Status => {}
                 CaAction::Install { scope } => system::ca_install(ca.cert_path(), scope)?,

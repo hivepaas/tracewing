@@ -127,6 +127,7 @@ fn the_window_shows_real_traffic() {
 
     let engine = Engine::start(EngineOptions {
         data_dir: dir.clone(),
+        key_store: Default::default(),
         settings: StorageSettings {
             disk_reserve_mib: 1,
             ..StorageSettings::default()
@@ -403,6 +404,7 @@ fn a_million_flows_while_traffic_keeps_coming() {
     }
     let engine = Engine::start(EngineOptions {
         data_dir: dir.clone(),
+        key_store: Default::default(),
         settings: StorageSettings::default(),
         rules: Default::default(),
         traffic_rules: Default::default(),
