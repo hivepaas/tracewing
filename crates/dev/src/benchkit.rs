@@ -69,6 +69,9 @@ pub async fn serve_origin(listener: TcpListener, ca_out: &Path) -> Result<()> {
     }
 }
 
+/// What `/json?cookies=1` sets as its session: HS256, for user 42, expiring in 2100.
+pub const SESSION_JWT: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MiIsIm5hbWUiOiJBbmEiLCJpYXQiOjE3NjcyMjU2MDAsImV4cCI6NDEwMjQ0NDgwMH0.c2lnbmF0dXJl";
+
 async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallible> {
     let query = parse_query(req.uri().query().unwrap_or(""));
     let number = |key: &str, default: u64| {
@@ -88,6 +91,14 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
                 None => json_body(size),
             };
             let mut response = Response::builder().header(header::CONTENT_TYPE, "application/json");
+            if query.contains_key("cookies") {
+                response = response
+                    .header(
+                        header::SET_COOKIE,
+                        format!("session={SESSION_JWT}; Path=/; HttpOnly; SameSite=Lax"),
+                    )
+                    .header(header::SET_COOKIE, "theme=dark; Max-Age=3600");
+            }
             if let Some((enc, _)) = packed.filter(|(enc, _)| *enc != "identity") {
                 response = response.header(header::CONTENT_ENCODING, enc);
             }
