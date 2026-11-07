@@ -65,6 +65,7 @@ fn an_earlier_session_opens_again() {
 
     let engine = Engine::start(EngineOptions {
         data_dir: dir.clone(),
+        key_store: Default::default(),
         settings: StorageSettings {
             disk_reserve_mib: 1,
             ..StorageSettings::default()

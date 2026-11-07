@@ -9,7 +9,12 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
-use tracewing_proxy::{ca::LocalCa, capture::CHECK_HOST, crypto_provider};
+use tracewing_proxy::{
+    ca::LocalCa,
+    ca_key::{KeyPlace, KeyStore},
+    capture::CHECK_HOST,
+    crypto_provider,
+};
 use tracewing_system::{self as system, Place, Scope, TakenOver, launch::Browser};
 
 #[derive(Default)]
@@ -43,15 +48,17 @@ pub struct SystemState {
     pub no_watchdog: bool,
     /// The browser "Open" starts, if there is one.
     pub browser: Option<Browser>,
+    /// Where the CA's key is, once looked at.
+    pub ca_key: Option<KeyPlace>,
 }
 
 /// The proxy makes the CA as it starts; making one here too would give two.
-fn load_ca(data_dir: &Path) -> anyhow::Result<LocalCa> {
+fn load_ca(data_dir: &Path, store: KeyStore) -> anyhow::Result<LocalCa> {
     let deadline = Instant::now() + Duration::from_secs(10);
     while !data_dir.join("ca.pem").exists() && Instant::now() < deadline {
         std::thread::sleep(Duration::from_millis(20));
     }
-    LocalCa::load_or_create(data_dir, crypto_provider())
+    LocalCa::load_or_create(data_dir, crypto_provider(), store)
 }
 
 struct CaFound {
@@ -59,6 +66,7 @@ struct CaFound {
     places: Vec<Place>,
     /// What went wrong installing, when some of it may still have gone in.
     problem: Option<String>,
+    key: KeyPlace,
 }
 
 impl CaFound {
@@ -76,15 +84,16 @@ fn look_for_ca(ca: &LocalCa) -> anyhow::Result<CaFound> {
         verified: system::verify_ca(ca, crypto_provider()).is_ok(),
         places: system::ca_locations(ca.cert_path())?,
         problem: None,
+        key: ca.key_place().clone(),
     })
 }
 
-fn check_ca(data_dir: &Path) -> anyhow::Result<CaFound> {
-    look_for_ca(&load_ca(data_dir)?)
+fn check_ca(data_dir: &Path, store: KeyStore) -> anyhow::Result<CaFound> {
+    look_for_ca(&load_ca(data_dir, store)?)
 }
 
-fn install_ca(data_dir: &Path, scope: Scope) -> anyhow::Result<CaFound> {
-    let ca = load_ca(data_dir)?;
+fn install_ca(data_dir: &Path, scope: Scope, store: KeyStore) -> anyhow::Result<CaFound> {
+    let ca = load_ca(data_dir, store)?;
     let installed = system::ca_install(ca.cert_path(), scope);
     // Some stores may have taken it although another failed: look either way.
     let mut found = look_for_ca(&ca)?;
@@ -95,8 +104,8 @@ fn install_ca(data_dir: &Path, scope: Scope) -> anyhow::Result<CaFound> {
 impl Traffic {
     pub(crate) fn start_ca_check(&mut self, cx: &mut Context<Self>) {
         self.system.browser = system::launch::find_browser(&self.data_dir);
-        let data_dir = self.data_dir.clone();
-        self.run_ca_job(move || check_ca(&data_dir), cx);
+        let (data_dir, store) = (self.data_dir.clone(), self.engine.key_store);
+        self.run_ca_job(move || check_ca(&data_dir, store), cx);
     }
 
     pub fn install_certificate(&mut self, scope: Scope, cx: &mut Context<Self>) {
@@ -105,8 +114,8 @@ impl Traffic {
         }
         self.system.ca = CaState::Installing;
         self.system.problem = None;
-        let data_dir = self.data_dir.clone();
-        self.run_ca_job(move || install_ca(&data_dir, scope), cx);
+        let (data_dir, store) = (self.data_dir.clone(), self.engine.key_store);
+        self.run_ca_job(move || install_ca(&data_dir, scope, store), cx);
         cx.notify();
     }
 
@@ -126,6 +135,7 @@ impl Traffic {
                             CaState::NotTrusted
                         };
                         this.system.ca_verified = found.verified;
+                        this.system.ca_key = Some(found.key);
                         this.system.ca_places = found.places;
                         if found.problem.is_some() {
                             this.system.problem = found.problem;
@@ -145,10 +155,11 @@ impl Traffic {
     /// A terminal that goes through the proxy, the system proxy left alone.
     pub fn open_terminal(&mut self, cx: &mut Context<Self>) {
         let (addr, data_dir) = (self.engine.addr, self.data_dir.clone());
+        let store = self.engine.key_store;
         self.run_launch(
             "The terminal",
             move || {
-                let ca = load_ca(&data_dir)?;
+                let ca = load_ca(&data_dir, store)?;
                 system::launch::open_terminal(addr, ca.cert_path(), &data_dir)
             },
             cx,
@@ -272,6 +283,7 @@ mod tests {
                 })
                 .collect(),
             problem: None,
+            key: KeyPlace::Keychain,
         }
     }
 

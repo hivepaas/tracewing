@@ -96,6 +96,7 @@ impl Harness {
                 listener: Some(listener),
                 std_listener: None,
                 data_dir: dir.join("ca"),
+                key_store: Default::default(),
                 session: dir.join("session"),
                 settings,
                 extra_roots: vec![origin_ca, ws_ca],

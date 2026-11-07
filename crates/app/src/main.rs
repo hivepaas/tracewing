@@ -66,6 +66,7 @@ fn main() -> Result<()> {
     let settings_problem = settings_problem.or(rules_problem).or(traffic_problem);
     let engine = Engine::start(EngineOptions {
         data_dir: data_dir.clone(),
+        key_store: tracewing_proxy::ca_key::KeyStore::System,
         settings,
         rules,
         traffic_rules,

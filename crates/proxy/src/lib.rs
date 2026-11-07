@@ -2,6 +2,7 @@
 //! captured without buffering and handed to the store.
 
 pub mod ca;
+pub mod ca_key;
 pub mod capture;
 pub mod pause;
 pub mod rules;
@@ -56,6 +57,8 @@ pub struct ProxyOptions {
     pub std_listener: Option<std::net::TcpListener>,
     /// Where the root CA lives.
     pub data_dir: PathBuf,
+    /// Where its key lives: the app's in the keychain, tests' and tools' in a file.
+    pub key_store: ca_key::KeyStore,
     /// The session's directory, which must not hold one yet.
     pub session: PathBuf,
     pub settings: StorageSettings,
@@ -126,7 +129,7 @@ pub async fn run_proxy(
         (None, Some(listener)) => TcpListener::from_std(listener)?,
         (None, None) => anyhow::bail!("nothing to listen on"),
     };
-    let mut ca = LocalCa::load_or_create(&opts.data_dir, crypto_provider())?;
+    let mut ca = LocalCa::load_or_create(&opts.data_dir, crypto_provider(), opts.key_store)?;
     let listen_addr = listener.local_addr()?;
     ca.serve_crl_at(listen_addr);
     let _ = opts.leaf_spki.set(ca.leaf_spki_sha256());

@@ -13,7 +13,8 @@
 //!   refuses a certificate whose revocation it has no way to check, with
 //!   `CRYPT_E_NO_REVOCATION_CHECK`.
 
-use anyhow::{Context, Result};
+use crate::ca_key::{self, KeyPlace, KeyStore, OsKeychain, Secrets};
+use anyhow::{Context, Result, bail};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use http::uri::Authority;
 use hudsucker::{
@@ -26,14 +27,13 @@ use hudsucker::{
     rustls::{
         ServerConfig,
         crypto::CryptoProvider,
-        pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer},
+        pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, pem::PemObject},
     },
 };
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
     fs,
-    io::Write,
     net::IpAddr,
     path::{Path, PathBuf},
     sync::{
@@ -66,22 +66,48 @@ pub struct LocalCa {
     crl_url: Option<String>,
     provider: Arc<CryptoProvider>,
     cache: Mutex<HashMap<String, (Instant, Arc<ServerConfig>)>>,
+    key_place: KeyPlace,
 }
 
 impl LocalCa {
-    /// Loads the root CA from `dir`, creating it on first use.
-    pub fn load_or_create(dir: &Path, provider: CryptoProvider) -> Result<Self> {
+    /// Loads the root CA from `dir`, creating it on first use, its key kept as
+    /// `store` says.
+    pub fn load_or_create(dir: &Path, provider: CryptoProvider, store: KeyStore) -> Result<Self> {
+        Self::load_with(dir, provider, store, &OsKeychain)
+    }
+
+    /// The same, with the keychain given: tests give one in memory.
+    pub fn load_with(
+        dir: &Path,
+        provider: CryptoProvider,
+        store: KeyStore,
+        secrets: &dyn Secrets,
+    ) -> Result<Self> {
         let cert_path = dir.join(CA_CERT_FILE);
         let key_path = dir.join(CA_KEY_FILE);
 
-        let issuer = if cert_path.exists() && key_path.exists() {
-            let key = KeyPair::from_pem(&fs::read_to_string(&key_path)?)
-                .with_context(|| format!("parse {}", key_path.display()))?;
-            Issuer::from_ca_cert_pem(&fs::read_to_string(&cert_path)?, key)
-                .with_context(|| format!("parse {}", cert_path.display()))?
+        let (issuer, key_place) = if cert_path.exists() {
+            let cert_pem = fs::read_to_string(&cert_path)
+                .with_context(|| format!("read {}", cert_path.display()))?;
+            let cert_der = CertificateDer::from_pem_slice(cert_pem.as_bytes())
+                .with_context(|| format!("parse {}", cert_path.display()))?;
+            // A certificate without its key is never replaced unasked: it may be
+            // trusted on this machine and on phones.
+            let Some((key_pem, place)) = ca_key::load(&cert_der, &key_path, store, secrets)? else {
+                bail!(
+                    "the key of {} is in neither the keychain nor {}. Move ca.pem away to make a \
+                     new certificate, then trust that one instead",
+                    cert_path.display(),
+                    key_path.display()
+                );
+            };
+            let key = KeyPair::from_pem(&key_pem).context("parse the CA's key")?;
+            let issuer = Issuer::from_ca_cert_pem(&cert_pem, key)
+                .with_context(|| format!("parse {}", cert_path.display()))?;
+            (issuer, place)
         } else {
             fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
-            create_root(&cert_path, &key_path)?
+            create_root(&cert_path, &key_path, store, secrets)?
         };
 
         let leaf_key = KeyPair::generate().context("generate leaf key")?;
@@ -95,7 +121,13 @@ impl LocalCa {
             crl_url: None,
             provider: Arc::new(provider),
             cache: Mutex::new(HashMap::new()),
+            key_place,
         })
+    }
+
+    /// Where the CA's key is kept.
+    pub fn key_place(&self) -> &KeyPlace {
+        &self.key_place
     }
 
     /// The SHA-256 of the leaves' public key, in base64: what Chromium's
@@ -196,7 +228,12 @@ impl CertificateAuthority for LocalCa {
     }
 }
 
-fn create_root(cert_path: &Path, key_path: &Path) -> Result<Issuer<'static, KeyPair>> {
+fn create_root(
+    cert_path: &Path,
+    key_path: &Path,
+    store: KeyStore,
+    secrets: &dyn Secrets,
+) -> Result<(Issuer<'static, KeyPair>, KeyPlace)> {
     let now = OffsetDateTime::now_utc();
     let mut params = CertificateParams::default();
     params.serial_number = Some(next_serial());
@@ -217,23 +254,11 @@ fn create_root(cert_path: &Path, key_path: &Path) -> Result<Issuer<'static, KeyP
     let key = KeyPair::generate().context("generate CA key")?;
     let cert = params.self_signed(&key).context("self-sign CA")?;
 
-    write_private(key_path, key.serialize_pem().as_bytes())?;
+    // The key first: whoever sees the certificate can then find it.
+    let place = ca_key::save(cert.der(), &key.serialize_pem(), key_path, store, secrets)?;
     fs::write(cert_path, cert.pem()).with_context(|| format!("write {}", cert_path.display()))?;
 
-    Ok(Issuer::new(params, key))
-}
-
-/// Writes a file only the current user can read.
-fn write_private(path: &Path, contents: &[u8]) -> Result<()> {
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
-    let mut file = options
-        .open(path)
-        .with_context(|| format!("create {}", path.display()))?;
-    file.write_all(contents)?;
-    Ok(())
+    Ok((Issuer::new(params, key), place))
 }
 
 /// A positive serial that is unique per process and across restarts.
@@ -266,18 +291,72 @@ mod tests {
     #[test]
     fn the_spki_hash_is_that_of_the_leaves() {
         let dir = std::env::temp_dir().join(format!("tracewing-ca-spki-{}", std::process::id()));
-        let ca = LocalCa::load_or_create(&dir, crate::crypto_provider()).unwrap();
+        let ca = LocalCa::load_or_create(&dir, crate::crypto_provider(), KeyStore::File).unwrap();
         for host in ["example.com", "10.0.0.1"] {
             let leaf = ca.issue_leaf(host).unwrap();
             let (_, cert) = x509_parser::parse_x509_certificate(&leaf).unwrap();
             let spki = cert.tbs_certificate.subject_pki.raw;
             assert_eq!(ca.leaf_spki_sha256(), BASE64.encode(Sha256::digest(spki)));
         }
-        let again = LocalCa::load_or_create(&dir, crate::crypto_provider()).unwrap();
+        let again =
+            LocalCa::load_or_create(&dir, crate::crypto_provider(), KeyStore::File).unwrap();
         assert_ne!(
             again.leaf_spki_sha256(),
             ca.leaf_spki_sha256(),
             "a new start, a new leaf key"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn the_key_lives_in_the_keychain_and_the_ca_comes_back_whole() {
+        let dir = std::env::temp_dir().join(format!("tracewing-ca-chain-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let chain = crate::ca_key::MemoryKeychain::default();
+        let made =
+            LocalCa::load_with(&dir, crate::crypto_provider(), KeyStore::System, &chain).unwrap();
+        assert_eq!(made.key_place(), &KeyPlace::Keychain);
+        assert!(!dir.join(CA_KEY_FILE).exists(), "no key on disk");
+        let cert = fs::read(dir.join(CA_CERT_FILE)).unwrap();
+
+        let again =
+            LocalCa::load_with(&dir, crate::crypto_provider(), KeyStore::System, &chain).unwrap();
+        assert_eq!(
+            fs::read(dir.join(CA_CERT_FILE)).unwrap(),
+            cert,
+            "the same CA"
+        );
+        let leaf = again.issue_leaf("example.com").unwrap();
+        let (_, parsed) = x509_parser::parse_x509_certificate(&leaf).unwrap();
+        let (_, root) = x509_parser::pem::parse_x509_pem(&cert).unwrap();
+        let root = root.parse_x509().unwrap();
+        assert!(
+            parsed.verify_signature(Some(root.public_key())).is_ok(),
+            "signed by the key the keychain gave back"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_certificate_whose_key_is_gone_is_not_replaced() {
+        let dir = std::env::temp_dir().join(format!("tracewing-ca-lost-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let chain = crate::ca_key::MemoryKeychain::default();
+        LocalCa::load_with(&dir, crate::crypto_provider(), KeyStore::System, &chain).unwrap();
+        let cert = fs::read(dir.join(CA_CERT_FILE)).unwrap();
+
+        let empty = crate::ca_key::MemoryKeychain::default();
+        let error = LocalCa::load_with(&dir, crate::crypto_provider(), KeyStore::System, &empty)
+            .err()
+            .expect("no key, no CA");
+        assert!(
+            format!("{error:#}").contains("neither the keychain nor"),
+            "{error:#}"
+        );
+        assert_eq!(
+            fs::read(dir.join(CA_CERT_FILE)).unwrap(),
+            cert,
+            "left as it was"
         );
         fs::remove_dir_all(&dir).unwrap();
     }

@@ -18,6 +18,7 @@ http-body-util.workspace = true
 hudsucker.workspace = true
 hyper-rustls.workspace = true
 hyper-util.workspace = true
+keyring.workspace = true
 serde.workspace = true
 sha2.workspace = true
 socket2.workspace = true

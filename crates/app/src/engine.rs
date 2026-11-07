@@ -12,7 +12,7 @@ use std::{
 };
 use tokio::sync::oneshot;
 use tracewing_proxy::{
-    ProxyOptions, capture::Check, pause::Pauses, rules::HostRules, run_proxy,
+    ProxyOptions, ca_key::KeyStore, capture::Check, pause::Pauses, rules::HostRules, run_proxy,
     traffic_rules::TrafficRules,
 };
 use tracewing_store::{
@@ -25,6 +25,8 @@ pub const PORTS: std::ops::Range<u16> = 9090..9100;
 
 pub struct EngineOptions {
     pub data_dir: PathBuf,
+    /// Where the CA's key is kept: the app's in the keychain, tests' in a file.
+    pub key_store: KeyStore,
     pub settings: StorageSettings,
     pub rules: HostRules,
     pub traffic_rules: TrafficRules,
@@ -35,6 +37,7 @@ pub struct EngineOptions {
 
 pub struct Engine {
     pub addr: SocketAddr,
+    pub key_store: KeyStore,
     pub session: PathBuf,
     pub settings: StorageSettings,
     pub shared: Arc<Shared>,
@@ -72,6 +75,7 @@ impl Engine {
             listener: None,
             std_listener: Some(listener),
             data_dir: opts.data_dir,
+            key_store: opts.key_store,
             session: session.clone(),
             settings: opts.settings.clone(),
             extra_roots: opts.extra_roots,
@@ -109,6 +113,7 @@ impl Engine {
         };
         Ok(Self {
             addr,
+            key_store: opts.key_store,
             session,
             settings: opts.settings,
             shared,
