@@ -13,6 +13,7 @@ pub mod detail;
 pub mod engine;
 pub mod filter;
 pub mod flows;
+pub mod har_files;
 pub mod input;
 pub mod inspector;
 pub mod jwt;
