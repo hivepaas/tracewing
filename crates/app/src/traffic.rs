@@ -742,6 +742,16 @@ impl Traffic {
         self.filtering
     }
 
+    /// The ids of the flows the list shows, oldest first.
+    pub(crate) fn shown_ids(&self) -> Vec<i64> {
+        match &self.ids {
+            Some(ids) => ids.to_vec(),
+            None => self.bounds.map_or_else(Vec::new, |(first, last)| {
+                (first.max(self.cleared_to)..=last).collect()
+            }),
+        }
+    }
+
     fn clear(&mut self, cx: &mut Context<Self>) {
         self.cleared_to = self.bounds.map_or(0, |(_, last)| last + 1);
         self.hosts.clear();
@@ -1631,6 +1641,9 @@ impl Traffic {
                 c.warn,
             ));
         }
+        if let Some((note, failed)) = &self.sessions_page.har.note {
+            notes.push((note.clone(), if *failed { c.error } else { c.muted }));
+        }
         if trimmed > 0 {
             notes.push((
                 format!(
@@ -1654,6 +1667,16 @@ impl Traffic {
             .child(match self.total() {
                 1 => "1 flow".to_owned(),
                 total => format!("{} flows", group_digits(total as u64)),
+            })
+            .when(self.total() > 0, |d| {
+                d.child(
+                    div()
+                        .id("export-har")
+                        .cursor_pointer()
+                        .text_color(rgb(c.link))
+                        .child("Export as HAR")
+                        .on_click(cx.listener(|this, _, _, cx| this.ask_export_shown(cx))),
+                )
             })
             .child(self.render_ca(cx))
             .children(

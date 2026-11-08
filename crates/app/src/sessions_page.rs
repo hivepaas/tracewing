@@ -5,6 +5,7 @@
 use crate::{
     colors::colors,
     flows::{group_digits, size_text},
+    har_files::HarState,
     input::{Changed, TextInput},
     traffic::{Screen, Traffic},
 };
@@ -34,6 +35,7 @@ pub struct SessionsPage {
     pub deleting: Option<PathBuf>,
     pub problem: Option<String>,
     loading: bool,
+    pub har: HarState,
 }
 
 impl Traffic {
@@ -142,7 +144,8 @@ impl Traffic {
                         )
                         .into()
                     };
-                    let (open_dir, delete_dir) = (dir.clone(), dir.clone());
+                    let (open_dir, delete_dir, export_dir) =
+                        (dir.clone(), dir.clone(), dir.clone());
                     let button = |id: (&'static str, u64), label: &'static str, loud: bool| {
                         div()
                             .id(id)
@@ -218,6 +221,15 @@ impl Traffic {
                                 }),
                             ))
                         })
+                        .when(about.readable && about.flows > 0, |d| {
+                            d.child(
+                                button(("session-export", key), "Export HAR", false).on_click(
+                                    cx.listener(move |this, _, _, cx| {
+                                        this.ask_export_session(export_dir.clone(), cx);
+                                    }),
+                                ),
+                            )
+                        })
                         .when(!in_use, |d| {
                             d.child(
                                 button(
@@ -257,12 +269,77 @@ impl Traffic {
                         "A session with a name is kept until you delete it. Of the others, the newest {kept} stay."
                     ))),
             )
+            .child(self.render_har_bar(cx))
             .children(
                 page.problem
                     .clone()
                     .map(|problem| div().text_color(rgb(c.error)).child(problem)),
             )
             .children(rows)
+    }
+}
+
+impl Traffic {
+    /// Bringing a HAR in, and how one goes out.
+    fn render_har_bar(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = colors();
+        let har = &self.sessions_page.har;
+        let without = har.without_secrets;
+        div()
+            .flex()
+            .flex_row()
+            .flex_wrap()
+            .items_center()
+            .gap(px(12.))
+            .pb(px(4.))
+            .child(
+                div()
+                    .id("import-har")
+                    .flex_shrink_0()
+                    .h(px(32.))
+                    .px(px(14.))
+                    .rounded(px(16.))
+                    .flex()
+                    .items_center()
+                    .cursor_pointer()
+                    .font_weight(FontWeight::BOLD)
+                    .text_size(px(12.5))
+                    .bg(rgb(c.accent))
+                    .text_color(rgb(c.on_accent))
+                    .child(if har.busy {
+                        "Working…"
+                    } else {
+                        "Open a HAR file"
+                    })
+                    .on_click(cx.listener(|this, _, _, cx| this.ask_import_har(cx))),
+            )
+            .child(
+                div()
+                    .id("har-secrets")
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap(px(8.))
+                    .cursor_pointer()
+                    .child(
+                        div()
+                            .size(px(16.))
+                            .rounded(px(4.))
+                            .border_2()
+                            .border_color(rgb(if without { c.accent } else { c.muted }))
+                            .when(without, |d| d.bg(rgb(c.accent))),
+                    )
+                    .child("Exported HAR files leave out tokens and cookies")
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.set_har_without_secrets(!without, cx)
+                    })),
+            )
+            .children(har.note.clone().map(|(note, failed)| {
+                div()
+                    .text_size(px(12.))
+                    .text_color(rgb(if failed { c.error } else { c.muted }))
+                    .child(note)
+            }))
     }
 }
 

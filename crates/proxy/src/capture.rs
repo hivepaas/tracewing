@@ -9,7 +9,6 @@
 //! open and their messages as they come: see [`StreamHandle`].
 
 use crate::ca::CRL_PATH;
-use crate::graphql;
 use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
 use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of};
@@ -36,6 +35,7 @@ use std::{
     task::{Context, Poll},
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
+use tracewing_store::graphql;
 use tracewing_store::spool::{Spool, SpoolFile};
 use tracewing_store::store::{BodyRecord, FlowRecord, Recorder, StreamHandle};
 

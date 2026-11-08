@@ -180,7 +180,7 @@ fn bind(ports: std::ops::Range<u16>) -> Result<(std::net::TcpListener, SocketAdd
 }
 
 /// Seconds since 1970, and a suffix if two starts fall in one second.
-fn next_session_name(sessions: &Path) -> String {
+pub(crate) fn next_session_name(sessions: &Path) -> String {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()

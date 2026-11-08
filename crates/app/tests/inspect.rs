@@ -299,5 +299,69 @@ fn graphql_cookies_and_tokens_are_read() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "45-connection-reused");
 
+    // The list goes out as a HAR, without secrets when asked...
+    let har_path = dir.join("out.har");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_har_without_secrets(true, cx);
+            let live = view.session_dir().to_owned();
+            view.export_har(live, None, har_path.clone(), cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the HAR written", |view| {
+        !view.is_har_busy()
+    });
+    let har: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&har_path).unwrap()).unwrap();
+    let entries = har["log"]["entries"].as_array().unwrap();
+    assert_eq!(entries.len(), 3);
+    let posted = &entries[1];
+    assert_eq!(posted["request"]["method"], "POST");
+    assert!(
+        posted["request"]["postData"]["text"]
+            .as_str()
+            .unwrap()
+            .contains("GetUser")
+    );
+    assert_eq!(posted["response"]["cookies"], serde_json::json!([]));
+    let text = har.to_string();
+    assert!(!text.contains(EXPIRED_JWT), "the bearer token went out");
+    assert!(!text.contains("sid=abc123"), "a cookie went out");
+    // The first flow made the connection: its steps, and the server's address.
+    assert!(entries[0]["timings"]["ssl"].as_f64().unwrap() > 0.0);
+    assert_eq!(entries[0]["serverIPAddress"], "127.0.0.1");
+    assert_eq!(entries[1]["timings"]["connect"], -1.0);
+
+    // ...and comes back in as a session of its own, named after the file.
+    window
+        .update(&mut cx, |view, _, cx| view.import_har(har_path.clone(), cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the HAR read", |view| {
+        !view.is_har_busy() && view.is_viewing() && view.count() == 3
+    });
+    window
+        .update(&mut cx, |view, _, cx| {
+            assert_ne!(view.session_dir(), view.engine.session);
+            assert_eq!(
+                tracewing_store::session::name_of(view.session_dir()).as_deref(),
+                Some("out")
+            );
+            view.select_place(1, cx);
+            let detail = view.inspector.detail.as_ref().unwrap();
+            assert_eq!(detail.graphql.as_deref(), Some("query GetUser"));
+            assert_eq!(detail.status, Some(200));
+            view.set_part(Part::Body, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "46-har-imported");
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Sessions, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the sessions", |view| {
+        view.sessions_page.sessions.len() == 2
+    });
+    shot(&mut cx, window.into(), "47-sessions-har");
+
     std::fs::remove_dir_all(&dir).ok();
 }
