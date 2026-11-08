@@ -1,6 +1,9 @@
 //! One flow, in full, for the inspector.
 
-use crate::connection;
+use crate::{
+    connection,
+    fields::{self, Field},
+};
 use anyhow::Result;
 use rusqlite::{Connection, OptionalExtension, params};
 use std::path::Path;
@@ -63,6 +66,9 @@ pub struct Detail {
     pub tls_us: Option<i64>,
     /// What the connection was, if that is still kept.
     pub connection: Option<connection::Connection>,
+    pub req_content_type: Option<String>,
+    /// The fields of a form the request sent, read when the flow is chosen.
+    pub form: Option<Vec<Field>>,
     pub error: Option<String>,
     pub request: BodyFacts,
     pub response: BodyFacts,
@@ -77,7 +83,8 @@ impl Detail {
              content_type, ttfb_us, duration_us, error,
              req_bytes, req_truncated, req_shed, req_spool_lost, {},
              resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}, graphql,
-             conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len",
+             conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len,
+             req_content_type",
             StoredBody::columns("req"),
             StoredBody::columns("resp")
         );
@@ -124,6 +131,9 @@ impl Detail {
                     connect_us: r.get(39)?,
                     tls_us: r.get(40)?,
                     connection: None,
+                    // After the connection's place in the log.
+                    req_content_type: r.get(44)?,
+                    form: None,
                     headers: None,
                 })
             },
@@ -135,6 +145,15 @@ impl Detail {
             .and_then(|conn| connection_place(flows, id, conn).ok().flatten())
             .and_then(|place| reader.read_place(place).ok())
             .and_then(|json| connection::Connection::parse(&json));
+        let is_form = fields::form(detail.req_content_type.as_deref(), b"").is_some();
+        if is_form
+            && detail.request.stored.exists()
+            && detail.request.bytes as usize <= fields::FORM_MAX
+        {
+            detail.form = reader
+                .unpacked(&detail.request.stored, fields::FORM_MAX)
+                .and_then(|body| fields::form(detail.req_content_type.as_deref(), &body));
+        }
         Ok(detail)
     }
 
@@ -295,6 +314,8 @@ mod tests {
             connect_us: None,
             tls_us: None,
             connection: None,
+            req_content_type: None,
+            form: None,
             error: None,
             request: BodyFacts::default(),
             response: BodyFacts::default(),

@@ -1641,7 +1641,7 @@ impl Traffic {
                 c.warn,
             ));
         }
-        if let Some((note, failed)) = &self.sessions_page.har.note {
+        if let Some((note, failed)) = &self.sessions_page.files.note {
             notes.push((note.clone(), if *failed { c.error } else { c.muted }));
         }
         if trimmed > 0 {
