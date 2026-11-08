@@ -20,6 +20,7 @@ serde_json.workspace = true
 time = { workspace = true, features = ["formatting", "parsing"] }
 toml.workspace = true
 tracing.workspace = true
+zip.workspace = true
 zstd.workspace = true
 
 [target.'cfg(unix)'.dependencies]

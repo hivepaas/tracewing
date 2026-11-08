@@ -8,12 +8,12 @@
 
 use crate::{
     decode, graphql,
-    search::Indexer,
-    session::{self, BodyReader, Headers, LogPlace, Shared, StoredBody},
+    import::{self, Connections, host_of, unix_micros, version_of},
+    session::{self, BodyReader, Headers, LogPlace, StoredBody},
     settings::StorageSettings,
-    store::{BodyRecord, FlowRecord, Recorder},
+    store::FlowRecord,
 };
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
 use serde::Deserialize;
@@ -22,7 +22,6 @@ use std::{
     collections::HashMap,
     io::{Read, Write},
     path::Path,
-    sync::Arc,
 };
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 
@@ -577,13 +576,7 @@ fn absent() -> f64 {
     -1.0
 }
 
-/// What an import made.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Imported {
-    pub flows: u64,
-    /// Entries that could not be read as a flow, such as one with no URL.
-    pub skipped: u64,
-}
+pub use crate::import::Imported;
 
 /// Reads a HAR into `session`, a directory that must not hold one yet, and
 /// names the session `name`. Bodies are kept as the HAR has them, unpacked.
@@ -596,52 +589,17 @@ pub fn import(
     let har: Har =
         serde_json::from_reader(std::io::BufReader::new(har)).context("this is not a HAR file")?;
     let mut entries = har.log.entries;
+    // Connections are counted in the order they were made.
     entries.sort_by_cached_key(|e| unix_micros(&e.started_date_time).unwrap_or(0));
-
-    session::create(session)?;
-    let shared = Arc::new(Shared::default());
-    let (recorder, writer) = Recorder::spawn(session, settings, shared, None, 1024)?;
-    let mut connections: HashMap<String, (i64, bool)> = HashMap::new();
-    let mut skipped = 0;
-    let mut flows = 0;
-    for entry in entries {
-        match record_of(entry, &mut connections) {
-            Some(record) => {
-                recorder.submit_wait(record);
-                flows += 1;
-            }
-            None => skipped += 1,
-        }
-    }
-    drop(recorder);
-    writer.close()?;
-    session::set_name(session, name)?;
-    if settings.index_urls || settings.index_bodies {
-        Indexer::catch_up(session, settings)?.finish()?;
-    }
-    if flows == 0 && skipped > 0 {
-        bail!("none of its {skipped} entries could be read");
-    }
-    Ok(Imported { flows, skipped })
+    let mut connections = Connections::default();
+    let records = entries
+        .into_iter()
+        .map(|entry| record_of(entry, &mut connections))
+        .collect();
+    import::write(records, session, name, settings)
 }
 
-fn unix_micros(date: &str) -> Option<i64> {
-    let at = OffsetDateTime::parse(date, &Rfc3339).ok()?;
-    Some((at.unix_timestamp_nanos() / 1000) as i64)
-}
-
-/// `HTTP/2.0` as capture writes it, from `h2`, `http/2.0` or `HTTP/2`.
-fn version_of(text: &str) -> String {
-    match text.trim().to_ascii_lowercase().as_str() {
-        "h2" | "http/2" | "http/2.0" => "HTTP/2.0".to_owned(),
-        "h3" | "http/3" | "http/3.0" => "HTTP/3.0".to_owned(),
-        "http/1.0" => "HTTP/1.0".to_owned(),
-        "" | "http/1.1" => "HTTP/1.1".to_owned(),
-        _ => text.trim().to_owned(),
-    }
-}
-
-fn record_of(entry: Entry, connections: &mut HashMap<String, (i64, bool)>) -> Option<FlowRecord> {
+fn record_of(entry: Entry, connections: &mut Connections) -> Option<FlowRecord> {
     let uri: http::Uri = entry.request.url.parse().ok()?;
     let scheme = uri.scheme_str()?.to_ascii_lowercase();
     let authority = uri.authority()?.as_str().to_owned();
@@ -651,11 +609,7 @@ fn record_of(entry: Entry, connections: &mut HashMap<String, (i64, bool)>) -> Op
         "http" | "https" => (scheme, entry.response.status == 101),
         _ => return None,
     };
-    let default_port = if scheme == "https" { ":443" } else { ":80" };
-    let host = authority
-        .strip_suffix(default_port)
-        .unwrap_or(&authority)
-        .to_owned();
+    let host = host_of(&authority, &scheme);
     let path = uri.path_and_query().map_or("/", |p| p.as_str()).to_owned();
     let lines = |pairs: &[Pair]| -> String {
         pairs
@@ -732,12 +686,7 @@ fn record_of(entry: Entry, connections: &mut HashMap<String, (i64, bool)>) -> Op
         .clone()
         .filter(|c| !c.is_empty())
         .or_else(|| entry.server_ip_address.clone());
-    let conn = key.map(|key| {
-        let next = connections.len() as i64 + 1;
-        let (id, told) = connections.entry(key).or_insert((next, false));
-        let first = !std::mem::replace(told, true);
-        (*id, first)
-    });
+    let conn = connections.over(key);
     let connection = match (&conn, &entry.server_ip_address) {
         (Some((_, true)), Some(ip)) => {
             Some(serde_json::to_vec(&json!({ "remote": ip })).unwrap_or_default())
@@ -745,15 +694,6 @@ fn record_of(entry: Entry, connections: &mut HashMap<String, (i64, bool)>) -> Op
         _ => None,
     };
 
-    let body_record = |bytes: Option<Vec<u8>>| {
-        let bytes = bytes.unwrap_or_default();
-        BodyRecord {
-            bytes: bytes.len() as u64,
-            captured: bytes,
-            complete: true,
-            ..BodyRecord::default()
-        }
-    };
     let method = entry.request.method.to_ascii_uppercase();
     let graphql = graphql::operation(
         &method,
@@ -788,8 +728,8 @@ fn record_of(entry: Entry, connections: &mut HashMap<String, (i64, bool)>) -> Op
         connection,
         ttfb_us: status.map(|_| us(before_wait)),
         duration_us: Some(duration),
-        request: body_record(request_body),
-        response: body_record(response_body),
+        request: import::body(request_body.unwrap_or_default()),
+        response: import::body(response_body.unwrap_or_default()),
         error: entry.error,
         ..FlowRecord::default()
     })

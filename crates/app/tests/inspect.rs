@@ -335,7 +335,9 @@ fn graphql_cookies_and_tokens_are_read() {
 
     // ...and comes back in as a session of its own, named after the file.
     window
-        .update(&mut cx, |view, _, cx| view.import_har(har_path.clone(), cx))
+        .update(&mut cx, |view, _, cx| {
+            view.import_file(har_path.clone(), cx)
+        })
         .unwrap();
     wait_for(&mut cx, window, "the HAR read", |view| {
         !view.is_busy_with_files() && view.is_viewing() && view.count() == 3
