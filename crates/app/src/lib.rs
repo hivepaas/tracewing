@@ -17,6 +17,7 @@ pub mod fields;
 pub mod files;
 pub mod filter;
 pub mod flows;
+pub mod hosts;
 pub mod input;
 pub mod inspector;
 pub mod jwt;
@@ -74,6 +75,9 @@ const ICONS: &[(&str, &[u8])] = icons![
     "down",
     "up",
     "columns",
+    "pin",
+    "eye",
+    "eye-off",
     "check",
     "grip",
     "record",

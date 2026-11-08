@@ -12,6 +12,7 @@ use crate::{
     engine::Engine,
     filter::{Filter, Kind},
     flows::{Flows, Row, group_digits},
+    hosts::{HostLine, HostMarks},
     input::{Changed, TextInput},
     inspector::InspectorState,
     layout::{Appearance, INSPECTOR_MIN, LIST_MIN, Layout, Place, SIDEBAR_MAX, SIDEBAR_MIN},
@@ -344,6 +345,10 @@ impl Traffic {
         .detach();
         let system_dark = looks_dark(window);
         let layout = Layout::load(&layout_path);
+        let filter = Filter {
+            hidden_hosts: layout.hosts.hidden.clone(),
+            ..Filter::default()
+        };
         colors::set_dark(match layout.appearance {
             Appearance::Light => false,
             Appearance::Dark => true,
@@ -370,7 +375,7 @@ impl Traffic {
             jobs: job_tx,
             done: done_rx,
             filter_input,
-            filter: Filter::default(),
+            filter,
             columns_menu: false,
             ids: None,
             generation: 0,
@@ -785,6 +790,7 @@ impl Traffic {
         filter.exact_app = self.filter.exact_app.clone();
         filter.exact_device = self.filter.exact_device.clone();
         filter.sort = self.filter.sort;
+        filter.hidden_hosts = self.filter.hidden_hosts.clone();
         if filter != self.filter {
             self.filter = filter;
             self.refilter(cx);
@@ -808,6 +814,43 @@ impl Traffic {
 
     pub fn set_app(&mut self, app: Option<String>, cx: &mut Context<Self>) {
         self.filter.exact_app = app;
+        self.refilter(cx);
+    }
+
+    /// Every host with flows, busiest first, with how many each has.
+    pub fn host_counts(&self) -> &[(SharedString, u64)] {
+        &self.hosts
+    }
+
+    /// The hosts pinned and hidden.
+    pub fn host_marks(&self) -> &HostMarks {
+        &self.layout.hosts
+    }
+
+    /// Pins a host to the top of the sidebar, or unpins it.
+    pub fn toggle_pin(&mut self, host: &str, cx: &mut Context<Self>) {
+        let was_hidden = self.layout.hosts.is_hidden(host);
+        self.layout.hosts.toggle_pin(host);
+        self.save_layout();
+        if was_hidden {
+            self.hidden_hosts_changed(cx);
+        }
+        cx.notify();
+    }
+
+    /// Leaves a host's flows out of the list, or brings them back.
+    pub fn toggle_hidden(&mut self, host: &str, cx: &mut Context<Self>) {
+        self.layout.hosts.toggle_hidden(host);
+        self.save_layout();
+        // What is hidden cannot be the one chosen.
+        if self.layout.hosts.is_hidden(host) && self.filter.exact_host.as_deref() == Some(host) {
+            self.filter.exact_host = None;
+        }
+        self.hidden_hosts_changed(cx);
+    }
+
+    fn hidden_hosts_changed(&mut self, cx: &mut Context<Self>) {
+        self.filter.hidden_hosts = self.layout.hosts.hidden.clone();
         self.refilter(cx);
     }
 
@@ -1436,6 +1479,7 @@ impl Traffic {
         let chosen_app = self.filter.exact_app.clone();
         let chosen_device = self.filter.exact_device.clone();
         let total = self.total() as u64;
+        let (shown, hidden) = self.layout.hosts.arrange(&self.hosts);
         let line = |id: SharedString, text: SharedString, count: u64, on: bool| {
             div()
                 .id(id)
@@ -1513,17 +1557,101 @@ impl Traffic {
                 )
                 .on_click(cx.listener(|this, _, _, cx| this.set_host(None, cx))),
             )
-            .children(self.hosts.iter().map(|(host, count)| {
-                let on = chosen.as_deref() == Some(host.as_ref());
-                let name = host.to_string();
-                line(format!("host-{host}").into(), host.clone(), *count, on).on_click(cx.listener(
-                    move |this, _, _, cx| {
+            .children(shown.into_iter().map(|host| {
+                let on = chosen.as_deref() == Some(host.host.as_ref());
+                let name = host.host.to_string();
+                self.host_line(host, on, false, cx)
+                    .on_click(cx.listener(move |this, _, _, cx| {
                         let next = (this.filter.exact_host.as_deref() != Some(name.as_str()))
                             .then(|| name.clone());
                         this.set_host(next, cx);
-                    },
-                ))
+                    }))
             }))
+            .when(!hidden.is_empty(), |d| {
+                d.child(div().h(px(8.)).flex_shrink_0())
+                    .child(eyebrow("Hidden").px(px(10.)).py(px(4.)))
+                    .children(
+                        hidden
+                            .into_iter()
+                            .map(|host| self.host_line(host, false, true, cx)),
+                    )
+            })
+    }
+
+    /// A host in the sidebar. On hover it can be pinned, or hidden; a hidden one
+    /// can be shown again.
+    fn host_line(
+        &self,
+        line: HostLine,
+        on: bool,
+        hidden: bool,
+        cx: &mut Context<Self>,
+    ) -> Stateful<Div> {
+        let c = colors();
+        let group: SharedString = format!("host-{}", line.host).into();
+        let ink = if on { c.on_tonal } else { c.muted };
+        let action = |id: String, icon_name: &'static str, always: bool| {
+            div()
+                .id(SharedString::from(id))
+                .size(px(22.))
+                .flex_shrink_0()
+                .rounded(px(6.))
+                .flex()
+                .items_center()
+                .justify_center()
+                .cursor_pointer()
+                .hover(|d| d.bg(rgb(c.page)))
+                .when(!always, |d| {
+                    d.invisible().group_hover(group.clone(), |s| s.visible())
+                })
+                .child(icon(icon_name, 13., ink))
+        };
+        let pin_host = line.host.to_string();
+        let hide_host = line.host.to_string();
+        let pin = (!hidden).then(|| {
+            action(format!("pin-{}", line.host), "pin", line.pinned).on_click(cx.listener(
+                move |this, _, _, cx| {
+                    cx.stop_propagation();
+                    this.toggle_pin(&pin_host, cx);
+                },
+            ))
+        });
+        let eye = action(
+            format!("{}-{}", if hidden { "show" } else { "hide" }, line.host),
+            if hidden { "eye" } else { "eye-off" },
+            hidden,
+        )
+        .on_click(cx.listener(move |this, _, _, cx| {
+            cx.stop_propagation();
+            this.toggle_hidden(&hide_host, cx);
+        }));
+        div()
+            .id(group.clone())
+            .group(group)
+            .flex_shrink_0()
+            .h(px(32.))
+            .px(px(10.))
+            .rounded(px(12.))
+            .flex()
+            .items_center()
+            .gap(px(2.))
+            .when(!hidden, |d| d.cursor_pointer())
+            .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
+            .when(!on, |d| {
+                d.text_color(rgb(if hidden { c.muted } else { c.text }))
+            })
+            .child(div().flex_1().min_w_0().truncate().child(line.host))
+            .children(pin)
+            .child(eye)
+            // Last, so that counts line up with every other line's.
+            .child(
+                div()
+                    .flex_shrink_0()
+                    .pl(px(6.))
+                    .text_size(px(12.))
+                    .text_color(rgb(ink))
+                    .child(group_digits(line.count)),
+            )
     }
 
     fn render_list(&self, cx: &mut Context<Self>) -> impl IntoElement {
