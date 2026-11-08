@@ -9,7 +9,7 @@ use crate::{
     cookies, curl,
     detail::{Detail, Phase, Side, body_file},
     fields::{self, Field, Value as FieldValue},
-    flows::{size_text, time_text},
+    flows::{self, size_text, time_text},
     jwt::{self, Jwt},
     messages::MessagesState,
     traffic::Traffic,
@@ -88,7 +88,6 @@ impl Traffic {
                     (true, _) => Part::Messages,
                     (false, Part::Messages) => Part::Body,
                     (false, Part::Cookies) if no_cookies => Part::Body,
-                    (false, Part::Connection) if detail.conn_id.is_none() => Part::Body,
                     (false, Part::Query | Part::Form) if !has_part(&detail, part_now, side_now) => {
                         Part::Body
                     }
@@ -494,13 +493,11 @@ impl Traffic {
                     d.child(tab("part-form", format!("Form {form}"), Part::Form))
                 })
             })
-            .when(detail.conn_id.is_some(), |d| {
-                d.child(tab(
-                    "part-connection",
-                    "Connection".to_owned(),
-                    Part::Connection,
-                ))
-            })
+            .child(tab(
+                "part-connection",
+                "Connection".to_owned(),
+                Part::Connection,
+            ))
             .child(div().flex_1())
             .children(summary_text.map(|text| {
                 div()
@@ -833,12 +830,9 @@ fn now_secs() -> i64 {
 }
 
 /// The server's address, TLS, and the certificates it showed.
+/// Who sent it, then where it went.
 fn render_connection(detail: &Detail) -> AnyElement {
     let c = colors();
-    let Some(connection) = detail.connection.clone() else {
-        return note("What this connection was is no longer kept: it went with older flows.")
-            .into_any_element();
-    };
     let row = |label: &'static str, value: String| {
         div()
             .flex()
@@ -853,15 +847,22 @@ fn render_connection(detail: &Detail) -> AnyElement {
             )
             .child(div().flex_1().min_w_0().child(value))
     };
-    let refused = connection
-        .tls
-        .as_ref()
-        .is_some_and(|tls| tls.error.is_some());
-    let made = match (detail.conn_id, detail.connect_us) {
-        (Some(id), _) if refused => format!("{id}, given up during TLS"),
-        (Some(id), Some(_)) => format!("{id}, made for this flow"),
-        (Some(id), None) => format!("{id}, made before and used again"),
-        _ => "–".to_owned(),
+    let heading = |text: String| {
+        div()
+            .pt(px(6.))
+            .font_family(crate::FONT)
+            .text_size(px(11.))
+            .font_weight(FontWeight::BOLD)
+            .text_color(rgb(c.muted))
+            .child(text)
+    };
+    let app = match (&detail.app, detail.app_pid) {
+        (Some(app), Some(pid)) => format!("{app}, pid {pid}"),
+        (Some(app), None) => app.clone(),
+        _ if flows::who_sent(None, &detail.client).is_empty() => {
+            "Not found: it may have ended, or belong to another user".to_owned()
+        }
+        _ => "On another device".to_owned(),
     };
     let list = div()
         .id("connection")
@@ -873,6 +874,38 @@ fn render_connection(detail: &Detail) -> AnyElement {
         .gap(px(6.))
         .font_family(crate::MONO_FONT)
         .text_size(px(12.))
+        .child(heading("CLIENT".to_owned()))
+        .child(row("App", app))
+        .children(detail.app_path.clone().map(|path| row("Program", path)))
+        .child(row("Address", detail.client.clone()))
+        .child(heading("SERVER".to_owned()));
+    let Some(connection) = detail.connection.clone() else {
+        let why = match (detail.conn_id, detail.kind.as_str()) {
+            (Some(_), _) => "What this connection was is no longer kept: it went with older flows.",
+            (None, "tunnel") => "Not decrypted: tracewing passed it on without looking.",
+            (None, _) if detail.error.is_some() => "No connection was made.",
+            (None, _) => "None: it was answered without one.",
+        };
+        return list
+            .child(
+                div()
+                    .font_family(crate::FONT)
+                    .text_color(rgb(c.muted))
+                    .child(why),
+            )
+            .into_any_element();
+    };
+    let refused = connection
+        .tls
+        .as_ref()
+        .is_some_and(|tls| tls.error.is_some());
+    let made = match (detail.conn_id, detail.connect_us) {
+        (Some(id), _) if refused => format!("{id}, given up during TLS"),
+        (Some(id), Some(_)) => format!("{id}, made for this flow"),
+        (Some(id), None) => format!("{id}, made before and used again"),
+        _ => "–".to_owned(),
+    };
+    let list = list
         .child(row("Server", connection.remote.clone()))
         .child(row("Connection", made));
     let Some(tls) = connection.tls else {
@@ -882,7 +915,7 @@ fn render_connection(detail: &Detail) -> AnyElement {
     };
     let now = now_secs();
     let refused = tls.error.is_some();
-    let heading = match (refused, tls.chain.len()) {
+    let chain_heading = match (refused, tls.chain.len()) {
         (true, 0) => "THE SERVER SHOWED NO CERTIFICATES".to_owned(),
         (true, _) => "WHAT THE SERVER SHOWED, ITS OWN FIRST".to_owned(),
         (false, 0) => "NO CERTIFICATES".to_owned(),
@@ -908,15 +941,7 @@ fn render_connection(detail: &Detail) -> AnyElement {
     .when(!refused, |d| {
         d.child(row("ALPN", tls.alpn.unwrap_or_else(|| "none".to_owned())))
     })
-    .child(
-        div()
-            .pt(px(6.))
-            .font_family(crate::FONT)
-            .text_size(px(11.))
-            .font_weight(FontWeight::BOLD)
-            .text_color(rgb(c.muted))
-            .child(heading),
-    )
+    .child(heading(chain_heading))
     .children(
         tls.chain
             .into_iter()

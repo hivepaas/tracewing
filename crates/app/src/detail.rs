@@ -54,6 +54,10 @@ pub struct Detail {
     pub client_version: String,
     pub server_version: Option<String>,
     pub client: String,
+    /// The program on this machine that sent it, if it was found.
+    pub app: Option<String>,
+    pub app_pid: Option<u32>,
+    pub app_path: Option<String>,
     pub content_type: Option<String>,
     pub ttfb_us: Option<i64>,
     pub duration_us: Option<i64>,
@@ -84,7 +88,7 @@ impl Detail {
              req_bytes, req_truncated, req_shed, req_spool_lost, {},
              resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}, graphql,
              conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len,
-             req_content_type",
+             req_content_type, app, app_pid, app_path",
             StoredBody::columns("req"),
             StoredBody::columns("resp")
         );
@@ -133,6 +137,9 @@ impl Detail {
                     connection: None,
                     // After the connection's place in the log.
                     req_content_type: r.get(44)?,
+                    app: r.get(45)?,
+                    app_pid: r.get(46)?,
+                    app_path: r.get(47)?,
                     form: None,
                     headers: None,
                 })
@@ -305,6 +312,9 @@ mod tests {
             client_version: client.into(),
             server_version: server.map(str::to_owned),
             client: "127.0.0.1:1".into(),
+            app: None,
+            app_pid: None,
+            app_path: None,
             content_type: None,
             ttfb_us: None,
             duration_us: None,
