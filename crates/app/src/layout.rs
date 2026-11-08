@@ -1,6 +1,7 @@
 //! Where the panels are, and how large. Kept in a file, so the window comes back
 //! the way it was left.
 
+use crate::columns::Columns;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -83,6 +84,8 @@ pub struct Layout {
     pub inspector_h: f32,
     /// `None` until the window has been seen once.
     pub window: Option<WindowState>,
+    /// The list's columns: which are hidden, and how wide.
+    pub columns: Columns,
 }
 
 impl Default for Layout {
@@ -97,6 +100,7 @@ impl Default for Layout {
             inspector_w: 460.,
             inspector_h: 380.,
             window: None,
+            columns: Columns::default(),
         }
     }
 }

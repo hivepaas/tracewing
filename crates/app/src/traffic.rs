@@ -7,6 +7,7 @@
 use crate::{
     chrome,
     colors::{self, colors, with_alpha},
+    columns::{Column, Columns, Sort},
     devices::{CLIENT_IP, Devices, NOT_LOOPBACK, device_of},
     engine::Engine,
     filter::{Filter, Kind},
@@ -26,10 +27,11 @@ use crate::{
     sessions_page::{SessionsPage, when_text},
 };
 use gpui::{
-    Bounds, ClickEvent, Context, Div, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent,
-    MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, Render,
+    Anchor, Bounds, ClickEvent, Context, Div, Entity, FocusHandle, Focusable, FontWeight,
+    KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, Render,
     ScrollStrategy, ScrollWheelEvent, SharedString, Stateful, UniformListScrollHandle, Window,
-    WindowAppearance, canvas, div, point, prelude::*, px, rgb, rgba, uniform_list,
+    WindowAppearance, anchored, canvas, deferred, div, point, prelude::*, px, rgb, rgba,
+    uniform_list,
 };
 use rusqlite::{Connection, OpenFlags};
 use std::{
@@ -172,8 +174,14 @@ fn device_counts(conn: &Connection, from_id: i64) -> rusqlite::Result<Vec<(Share
 }
 
 /// What the mouse is holding.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Drag {
+    /// A column's edge, from where the mouse went down and how wide it was then.
+    Column {
+        column: Column,
+        from_x: f32,
+        from_w: f32,
+    },
     Sidebar,
     /// The divider beside or above the inspector.
     InspectorSize,
@@ -266,6 +274,8 @@ pub struct Traffic {
     bounds_change: u64,
     /// Who last reached the test page, as the window has seen it.
     pub check_visit: Option<CheckVisit>,
+    /// The menu of columns to show is open.
+    columns_menu: bool,
 }
 
 impl Traffic {
@@ -361,6 +371,7 @@ impl Traffic {
             done: done_rx,
             filter_input,
             filter: Filter::default(),
+            columns_menu: false,
             ids: None,
             generation: 0,
             filter_due: now,
@@ -627,6 +638,8 @@ impl Traffic {
 
     fn place_of(&self, id: i64) -> Option<usize> {
         match &self.ids {
+            // Sorted by a column, they are not in the order of their ids.
+            Some(ids) if self.filter.sort.is_some() => ids.iter().position(|i| *i == id),
             Some(ids) => ids.binary_search(&id).ok(),
             None => {
                 let first = self.first_id()?;
@@ -750,10 +763,12 @@ impl Traffic {
             self.ask_filter();
         }
         // Live, the newest is what matters; nothing new comes to an earlier session,
-        // so its answer starts at the top.
-        self.follow = self.viewing.is_none();
+        // so its answer starts at the top. Sorted, the newest can be anywhere, and
+        // the top is where the order starts.
+        let sorted = self.filter.sort.is_some();
+        self.follow = self.viewing.is_none() && !sorted;
         self.last_count = usize::MAX;
-        if self.viewing.is_some() {
+        if self.viewing.is_some() || sorted {
             self.scroll
                 .0
                 .borrow()
@@ -769,6 +784,7 @@ impl Traffic {
         filter.exact_host = self.filter.exact_host.clone();
         filter.exact_app = self.filter.exact_app.clone();
         filter.exact_device = self.filter.exact_device.clone();
+        filter.sort = self.filter.sort;
         if filter != self.filter {
             self.filter = filter;
             self.refilter(cx);
@@ -793,6 +809,54 @@ impl Traffic {
     pub fn set_app(&mut self, app: Option<String>, cx: &mut Context<Self>) {
         self.filter.exact_app = app;
         self.refilter(cx);
+    }
+
+    /// What the list is sorted by, if not by when flows came.
+    pub fn sort(&self) -> Option<Sort> {
+        self.filter.sort
+    }
+
+    pub fn set_sort(&mut self, sort: Option<Sort>, cx: &mut Context<Self>) {
+        self.filter.sort = sort;
+        self.refilter(cx);
+    }
+
+    /// A click on a column's header.
+    pub fn sort_by(&mut self, column: Column, cx: &mut Context<Self>) {
+        self.set_sort(Sort::after_click(self.filter.sort, column), cx);
+    }
+
+    pub fn columns(&self) -> &Columns {
+        &self.layout.columns
+    }
+
+    pub fn toggle_column(&mut self, column: Column, cx: &mut Context<Self>) {
+        self.layout.columns.toggle(column);
+        // A sort by a column no longer there would be hard to see, or undo.
+        if self.filter.sort.is_some_and(|sort| sort.column == column)
+            && !self.layout.columns.is_shown(column)
+        {
+            self.set_sort(None, cx);
+        }
+        self.save_layout();
+        cx.notify();
+    }
+
+    pub fn set_column_width(&mut self, column: Column, width: f32, cx: &mut Context<Self>) {
+        self.layout.columns.set_width(column, width);
+        self.save_layout();
+        cx.notify();
+    }
+
+    pub fn reset_columns(&mut self, cx: &mut Context<Self>) {
+        self.layout.columns = Columns::default();
+        self.save_layout();
+        cx.notify();
+    }
+
+    pub fn set_columns_menu(&mut self, open: bool, cx: &mut Context<Self>) {
+        self.columns_menu = open;
+        cx.notify();
     }
 
     /// Other devices in the sidebar, by address, with how many flows each sent.
@@ -1038,6 +1102,19 @@ impl Traffic {
                 self.drag = Some(Drag::Inspector(self.place_under(event.position)));
             }
             Drag::ListBar => self.drag_list_bar(event.position.y),
+            Drag::Column {
+                column,
+                from_x,
+                from_w,
+            } => {
+                let moved = f32::from(event.position.x) - from_x;
+                let width = if column.on_the_right() {
+                    from_w - moved
+                } else {
+                    from_w + moved
+                };
+                self.layout.columns.set_width(column, width);
+            }
         }
         cx.notify();
     }
@@ -1123,6 +1200,16 @@ impl Traffic {
             .is_focused(window)
     }
 
+    /// The columns shown, with how wide each is.
+    fn shown_columns(&self) -> Vec<(Column, f32)> {
+        let columns = &self.layout.columns;
+        columns
+            .shown()
+            .into_iter()
+            .map(|column| (column, columns.width(column)))
+            .collect()
+    }
+
     /// The program that sent a row, or the device it came from by its name.
     fn sender(&self, row: &Row) -> SharedString {
         match (&row.app, &row.device) {
@@ -1143,6 +1230,7 @@ impl Traffic {
         self.places_asked = range.len();
         let ids = self.ids_at(range.clone());
         let selected = self.selected;
+        let columns = self.shown_columns();
         let mut rows = self
             .flows
             .as_mut()
@@ -1157,7 +1245,7 @@ impl Traffic {
                     gaps |= row.going;
                     let id = row.id;
                     let sender = self.sender(&row);
-                    render_row(row, sender, selected == Some(id)).on_click(cx.listener(
+                    render_row(row, sender, &columns, selected == Some(id)).on_click(cx.listener(
                         move |this, _: &ClickEvent, _, cx| {
                             this.select(id, cx);
                         },
@@ -1464,7 +1552,7 @@ impl Traffic {
             .flex()
             .flex_col()
             .bg(rgb(c.surface))
-            .child(render_header())
+            .child(self.render_header(cx))
             .child(
                 div()
                     .id("flow-list")
@@ -2020,77 +2108,302 @@ impl Render for Traffic {
     }
 }
 
-const NUMBER_W: f32 = 76.;
-const METHOD_W: f32 = 66.;
-const STATUS_W: f32 = 60.;
-const APP_W: f32 = 104.;
-const HOST_W: f32 = 170.;
-/// In a narrow list the program and the host give way, down to these, before
-/// the path does.
-const APP_MIN: f32 = 56.;
-const HOST_MIN: f32 = 96.;
+/// The path is never squeezed below this.
 const PATH_MIN: f32 = 96.;
-const SIZE_W: f32 = 74.;
-const TIME_W: f32 = 70.;
+/// Room at the end of the header for the menu of columns, kept in each row too.
+const MENU_W: f32 = 26.;
+/// How far either side of a column's edge it can be taken hold of.
+const EDGE_GRIP: f32 = 4.;
 
-fn render_header() -> impl IntoElement {
-    let c = colors();
-    div()
-        .h(px(36.))
-        .flex_shrink_0()
-        .flex()
-        .flex_row()
-        .items_center()
-        .px(px(12.))
-        .border_b_1()
-        .border_color(rgb(c.line))
-        .text_size(px(11.5))
-        .font_weight(FontWeight::BOLD)
-        .text_color(rgb(c.muted))
-        .child(div().w(px(NUMBER_W)).flex_shrink_0().child("#"))
-        .child(div().w(px(METHOD_W)).flex_shrink_0().child("Method"))
-        .child(div().w(px(STATUS_W)).flex_shrink_0().child("Status"))
-        .child(
-            div()
-                .w(px(APP_W))
-                .min_w(px(APP_MIN))
-                .truncate()
-                .child("App"),
-        )
-        .child(
-            div()
-                .w(px(HOST_W))
-                .min_w(px(HOST_MIN))
-                .truncate()
-                .child("Host"),
-        )
-        .child(div().flex_1().min_w(px(PATH_MIN)).child("Path"))
-        .child(
-            div()
-                .w(px(SIZE_W))
-                .flex_shrink_0()
-                .flex()
-                .justify_end()
-                .child("Size"),
-        )
-        .child(
-            div()
-                .w(px(TIME_W))
-                .flex_shrink_0()
-                .flex()
-                .justify_end()
-                .child("Time"),
-        )
+/// A column's cell, in the header or a row: as wide as it is set to, or taking
+/// what is left.
+fn cell(column: Column, width: f32) -> Div {
+    let d = div();
+    let d = if column.fills() {
+        d.flex_1().min_w(px(PATH_MIN))
+    } else if let Some(min) = column.gives_way_to() {
+        d.w(px(width)).min_w(px(min.min(width)))
+    } else {
+        d.w(px(width)).flex_shrink_0()
+    };
+    if column.on_the_right() {
+        d.flex().justify_end()
+    } else {
+        d
+    }
 }
 
-fn render_row(row: Row, sender: SharedString, selected: bool) -> Stateful<Div> {
+impl Traffic {
+    fn render_header(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = colors();
+        let sort = self.filter.sort;
+        let cells = self.shown_columns().into_iter().map(|(column, width)| {
+            let sorted = sort.filter(|sort| sort.column == column);
+            let label = div()
+                .id(SharedString::from(format!("column-{}", column.key())))
+                .h_full()
+                .w_full()
+                .min_w_0()
+                .flex()
+                .flex_row()
+                .items_center()
+                .gap(px(4.))
+                .when(column.on_the_right(), |d| d.justify_end())
+                // Text on the left keeps clear of the next column; numbers end at the edge.
+                .when(!column.fills() && !column.on_the_right(), |d| d.pr(px(8.)))
+                .cursor_pointer()
+                .when(sorted.is_some(), |d| d.text_color(rgb(c.text)))
+                .child(div().min_w_0().truncate().child(column.label()))
+                .children(
+                    sorted
+                        .map(|sort| icon(if sort.descending { "down" } else { "up" }, 12., c.text)),
+                )
+                .on_click(cx.listener(move |this, _, _, cx| this.sort_by(column, cx)));
+            let edge = (!column.fills()).then(|| {
+                div()
+                    .id(SharedString::from(format!("edge-{}", column.key())))
+                    .absolute()
+                    .top_0()
+                    .bottom_0()
+                    .w(px(EDGE_GRIP * 2.))
+                    .when(column.on_the_right(), |d| d.left(px(-EDGE_GRIP)))
+                    .when(!column.on_the_right(), |d| d.right(px(-EDGE_GRIP)))
+                    .cursor_col_resize()
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(move |this, event: &MouseDownEvent, _, cx| {
+                            cx.stop_propagation();
+                            this.drag = Some(Drag::Column {
+                                column,
+                                from_x: f32::from(event.position.x),
+                                from_w: this.layout.columns.width(column),
+                            });
+                            cx.notify();
+                        }),
+                    )
+            });
+            cell(column, width)
+                .h_full()
+                .relative()
+                .child(label)
+                .children(edge)
+        });
+        div()
+            .h(px(36.))
+            .flex_shrink_0()
+            .flex()
+            .flex_row()
+            .items_center()
+            .px(px(12.))
+            .border_b_1()
+            .border_color(rgb(c.line))
+            .text_size(px(11.5))
+            .font_weight(FontWeight::BOLD)
+            .text_color(rgb(c.muted))
+            .children(cells)
+            .child(self.render_columns_button(cx))
+    }
+
+    /// The button at the end of the header, and the menu it opens.
+    fn render_columns_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = colors();
+        let open = self.columns_menu;
+        div()
+            .w(px(MENU_W))
+            .h_full()
+            .flex_shrink_0()
+            .relative()
+            .flex()
+            .items_center()
+            .justify_end()
+            .child(
+                div()
+                    .id("columns-menu")
+                    .size(px(22.))
+                    .rounded(px(6.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .cursor_pointer()
+                    .when(open, |d| d.bg(rgb(c.tonal)))
+                    .hover(|d| d.bg(rgb(c.tonal)))
+                    .child(icon(
+                        "columns",
+                        14.,
+                        if open { c.on_tonal } else { c.muted },
+                    ))
+                    .on_click(cx.listener(move |this, _, _, cx| this.set_columns_menu(!open, cx))),
+            )
+            .when(open, |d| {
+                d.child(
+                    div().absolute().top(px(30.)).right_0().child(deferred(
+                        anchored()
+                            .anchor(Anchor::TopRight)
+                            .snap_to_window_with_margin(px(8.))
+                            .child(self.render_columns_menu(cx)),
+                    )),
+                )
+            })
+    }
+
+    fn render_columns_menu(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = colors();
+        let columns = &self.layout.columns;
+        let item = |id: SharedString, on: Option<bool>, text: &'static str| {
+            div()
+                .id(id)
+                .h(px(30.))
+                .px(px(10.))
+                .rounded(px(8.))
+                .flex()
+                .flex_row()
+                .items_center()
+                .gap(px(8.))
+                .cursor_pointer()
+                .hover(|d| d.bg(rgb(c.tonal)))
+                .child(
+                    div()
+                        .w(px(14.))
+                        .flex_shrink_0()
+                        .children(on.filter(|on| *on).map(|_| icon("check", 14., c.text))),
+                )
+                .child(text)
+        };
+        div()
+            .id("columns-list")
+            .occlude()
+            .w(px(200.))
+            .p(px(6.))
+            .rounded(px(14.))
+            .border_1()
+            .border_color(rgb(c.line))
+            .bg(rgb(c.surface))
+            .shadow_lg()
+            .flex()
+            .flex_col()
+            .text_size(px(13.))
+            .font_weight(FontWeight::NORMAL)
+            .text_color(rgb(c.text))
+            .child(eyebrow("Columns").px(px(10.)).py(px(4.)))
+            .children(
+                Column::ALL
+                    .into_iter()
+                    .filter(|c| !c.fills())
+                    .map(|column| {
+                        item(
+                            format!("show-{}", column.key()).into(),
+                            Some(columns.is_shown(column)),
+                            column.name(),
+                        )
+                        .on_click(cx.listener(move |this, _, _, cx| this.toggle_column(column, cx)))
+                    }),
+            )
+            .child(div().h(px(1.)).my(px(4.)).bg(rgb(c.line)))
+            .child(
+                item("reset-columns".into(), None, "Back to defaults")
+                    .when(columns.is_default(), |d| d.text_color(rgb(c.muted)))
+                    .on_click(cx.listener(|this, _, _, cx| this.reset_columns(cx))),
+            )
+            .on_mouse_down_out(cx.listener(|this, _, _, cx| this.set_columns_menu(false, cx)))
+    }
+}
+
+fn render_row(
+    row: Row,
+    sender: SharedString,
+    columns: &[(Column, f32)],
+    selected: bool,
+) -> Stateful<Div> {
     let c = colors();
     let (ground, ink) = status_colors(row.status);
-    let status: SharedString = row
-        .status
-        .map_or("ERR".into(), |status| status.to_string().into());
+    let Row {
+        id,
+        number,
+        method,
+        status,
+        host,
+        path,
+        graphql,
+        note,
+        size,
+        time,
+        slow,
+        ..
+    } = row;
+    let status: SharedString = status.map_or("ERR".into(), |status| status.to_string().into());
+    let cells = columns.iter().map(|&(column, width)| {
+        let d = cell(column, width);
+        match column {
+            Column::Number => d
+                .font_family(crate::MONO_FONT)
+                .text_size(px(11.5))
+                .text_color(rgb(c.muted))
+                .truncate()
+                .child(number.clone()),
+            Column::Method => d
+                .text_size(px(12.))
+                .font_weight(FontWeight::BOLD)
+                .truncate()
+                .child(method.clone()),
+            Column::Status => d.child(
+                div()
+                    .flex()
+                    .w_auto()
+                    .max_w(px(44.))
+                    .justify_center()
+                    .px(px(6.))
+                    .py(px(1.))
+                    .rounded(px(8.))
+                    .bg(rgb(ground))
+                    .text_color(rgb(ink))
+                    .text_size(px(11.5))
+                    .font_weight(FontWeight::BOLD)
+                    .child(status.clone()),
+            ),
+            Column::App => d
+                .pr(px(8.))
+                .truncate()
+                .text_size(px(12.))
+                .text_color(rgb(c.muted))
+                .child(sender.clone()),
+            Column::Host => d.pr(px(8.)).truncate().child(host.clone()),
+            Column::Path => d
+                .flex()
+                .flex_row()
+                .font_family(crate::MONO_FONT)
+                .text_size(px(12.))
+                .children(graphql.clone().map(|operation| {
+                    div()
+                        // The operation says more than `/graphql` does.
+                        .flex_shrink_0()
+                        .max_w(gpui::relative(0.8))
+                        .mr(px(8.))
+                        .px(px(6.))
+                        .rounded(px(6.))
+                        .truncate()
+                        .bg(rgb(c.tonal))
+                        .text_color(rgb(c.on_tonal))
+                        .child(operation)
+                }))
+                .child(div().min_w_0().truncate().child(path.clone()))
+                .children(note.clone().map(|note| {
+                    div()
+                        .min_w_0()
+                        .max_w(gpui::relative(0.6))
+                        .truncate()
+                        .pl(px(10.))
+                        .text_color(rgb(c.muted))
+                        .child(note)
+                })),
+            Column::Size => d.text_color(rgb(c.muted)).child(size.clone()),
+            Column::Time => d
+                .text_color(rgb(if slow { c.slow } else { c.muted }))
+                .when(slow, |d| d.font_weight(FontWeight::BOLD))
+                .child(time.clone()),
+        }
+    });
     div()
-        .id(("flow", row.id as u64))
+        .id(("flow", id as u64))
         .h(px(ROW_HEIGHT))
         .w_full()
         .px(px(6.))
@@ -2104,109 +2417,8 @@ fn render_row(row: Row, sender: SharedString, selected: bool) -> Stateful<Div> {
                 .flex_row()
                 .items_center()
                 .when(selected, |d| d.bg(rgb(c.selected_row)))
-                .child(
-                    div()
-                        .w(px(NUMBER_W))
-                        .flex_shrink_0()
-                        .font_family(crate::MONO_FONT)
-                        .text_size(px(11.5))
-                        .text_color(rgb(c.muted))
-                        .child(row.number),
-                )
-                .child(
-                    div()
-                        .w(px(METHOD_W))
-                        .flex_shrink_0()
-                        .text_size(px(12.))
-                        .font_weight(FontWeight::BOLD)
-                        .child(row.method),
-                )
-                .child(
-                    div().w(px(STATUS_W)).flex_shrink_0().child(
-                        div()
-                            .flex()
-                            .w_auto()
-                            .max_w(px(44.))
-                            .justify_center()
-                            .px(px(6.))
-                            .py(px(1.))
-                            .rounded(px(8.))
-                            .bg(rgb(ground))
-                            .text_color(rgb(ink))
-                            .text_size(px(11.5))
-                            .font_weight(FontWeight::BOLD)
-                            .child(status),
-                    ),
-                )
-                .child(
-                    div()
-                        .w(px(APP_W))
-                        .min_w(px(APP_MIN))
-                        .pr(px(8.))
-                        .truncate()
-                        .text_size(px(12.))
-                        .text_color(rgb(c.muted))
-                        .child(sender),
-                )
-                .child(
-                    div()
-                        .w(px(HOST_W))
-                        .min_w(px(HOST_MIN))
-                        .pr(px(8.))
-                        .truncate()
-                        .child(row.host),
-                )
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w(px(PATH_MIN))
-                        .flex()
-                        .flex_row()
-                        .font_family(crate::MONO_FONT)
-                        .text_size(px(12.))
-                        .children(row.graphql.map(|operation| {
-                            div()
-                                // The operation says more than `/graphql` does.
-                                .flex_shrink_0()
-                                .max_w(gpui::relative(0.8))
-                                .mr(px(8.))
-                                .px(px(6.))
-                                .rounded(px(6.))
-                                .truncate()
-                                .bg(rgb(c.tonal))
-                                .text_color(rgb(c.on_tonal))
-                                .child(operation)
-                        }))
-                        .child(div().min_w_0().truncate().child(row.path))
-                        .children(row.note.map(|note| {
-                            div()
-                                .min_w_0()
-                                .max_w(gpui::relative(0.6))
-                                .truncate()
-                                .pl(px(10.))
-                                .text_color(rgb(c.muted))
-                                .child(note)
-                        })),
-                )
-                .child(
-                    div()
-                        .w(px(SIZE_W))
-                        .flex_shrink_0()
-                        .flex()
-                        .justify_end()
-                        .text_color(rgb(c.muted))
-                        .child(row.size),
-                )
-                .child(
-                    div()
-                        .w(px(TIME_W))
-                        .flex_shrink_0()
-                        .flex()
-                        .justify_end()
-                        .text_color(rgb(if row.slow { c.slow } else { c.muted }))
-                        .when(row.slow, |d| d.font_weight(FontWeight::BOLD))
-                        .child(row.time),
-                ),
+                .children(cells)
+                .child(div().w(px(MENU_W)).flex_shrink_0()),
         )
 }
 
