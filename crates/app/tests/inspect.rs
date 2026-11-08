@@ -309,7 +309,7 @@ fn graphql_cookies_and_tokens_are_read() {
         })
         .unwrap();
     wait_for(&mut cx, window, "the HAR written", |view| {
-        !view.is_har_busy()
+        !view.is_busy_with_files()
     });
     let har: serde_json::Value =
         serde_json::from_slice(&std::fs::read(&har_path).unwrap()).unwrap();
@@ -337,7 +337,7 @@ fn graphql_cookies_and_tokens_are_read() {
         .update(&mut cx, |view, _, cx| view.import_har(har_path.clone(), cx))
         .unwrap();
     wait_for(&mut cx, window, "the HAR read", |view| {
-        !view.is_har_busy() && view.is_viewing() && view.count() == 3
+        !view.is_busy_with_files() && view.is_viewing() && view.count() == 3
     });
     window
         .update(&mut cx, |view, _, cx| {
