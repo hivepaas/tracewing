@@ -40,6 +40,9 @@ pub struct StorageSettings {
     pub spool_budget_mib: u64,
     /// How many earlier sessions to leave on the disk when a new one starts.
     pub sessions_kept: u64,
+    /// Listen on every network, not only on this machine, so that phones and
+    /// other computers can send their traffic here. Read when the app starts.
+    pub other_devices: bool,
 }
 
 impl Default for StorageSettings {
@@ -58,6 +61,7 @@ impl Default for StorageSettings {
             queue_budget_mib: 256,
             spool_budget_mib: 256,
             sessions_kept: 5,
+            other_devices: false,
         }
     }
 }

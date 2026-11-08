@@ -136,6 +136,7 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
         ports: 20_090..20_100,
         extra_roots: vec![trusted_ca],
         key_store: Default::default(),
+        find_apps: true,
     })
     .unwrap();
     while !dir.join("ca.pem").exists() {

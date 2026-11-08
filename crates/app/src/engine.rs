@@ -2,7 +2,7 @@
 
 use anyhow::{Context as _, Result};
 use std::{
-    net::SocketAddr,
+    net::{Ipv4Addr, SocketAddr},
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex, OnceLock, RwLock,
@@ -33,6 +33,9 @@ pub struct EngineOptions {
     pub ports: std::ops::Range<u16>,
     /// Extra roots to trust upstream. Only tests have any.
     pub extra_roots: Vec<PathBuf>,
+    /// Look for the program on this machine behind each connection. Off, every
+    /// flow is as if it came from another device, which is how tests get one.
+    pub find_apps: bool,
 }
 
 pub struct Engine {
@@ -60,7 +63,7 @@ impl Engine {
         let sessions = opts.data_dir.join("sessions");
         session::forget_old(&sessions, opts.settings.sessions_kept);
         let session = sessions.join(next_session_name(&sessions));
-        let (listener, addr) = bind(opts.ports)?;
+        let (listener, addr) = bind(opts.ports, opts.settings.other_devices)?;
 
         let shared = Arc::new(Shared::default());
         let recording = Arc::new(AtomicBool::new(true));
@@ -89,7 +92,7 @@ impl Engine {
             leaf_spki: Arc::clone(&leaf_spki),
             pauses: Arc::clone(&pauses),
             leave_index: true,
-            find_apps: true,
+            find_apps: opts.find_apps,
             stop_limit: std::time::Duration::from_secs(2),
         };
         let thread = {
@@ -162,14 +165,25 @@ impl Drop for Engine {
     }
 }
 
-fn bind(ports: std::ops::Range<u16>) -> Result<(std::net::TcpListener, SocketAddr)> {
+/// Listens on this machine only, or with `everywhere` on every network too. The
+/// address given back is this machine's own either way, which is what the app
+/// and the system proxy use.
+fn bind(
+    ports: std::ops::Range<u16>,
+    everywhere: bool,
+) -> Result<(std::net::TcpListener, SocketAddr)> {
+    let ip = if everywhere {
+        Ipv4Addr::UNSPECIFIED
+    } else {
+        Ipv4Addr::LOCALHOST
+    };
     let mut last = None;
     for port in ports {
-        match std::net::TcpListener::bind(("127.0.0.1", port)) {
+        match std::net::TcpListener::bind((ip, port)) {
             Ok(listener) => {
                 listener.set_nonblocking(true)?;
-                let addr = listener.local_addr()?;
-                return Ok((listener, addr));
+                let port = listener.local_addr()?.port();
+                return Ok((listener, SocketAddr::from((Ipv4Addr::LOCALHOST, port))));
             }
             Err(e) => last = Some(e),
         }
@@ -201,9 +215,17 @@ mod tests {
 
     #[test]
     fn a_taken_port_means_the_next_one() {
-        let (held, first) = bind(49_321..49_331).unwrap();
-        let (_, second) = bind(first.port()..first.port() + 10).unwrap();
+        let (held, first) = bind(49_321..49_331, false).unwrap();
+        let (_, second) = bind(first.port()..first.port() + 10, false).unwrap();
         assert_ne!(first.port(), second.port());
         drop(held);
+    }
+
+    #[test]
+    fn listening_everywhere_is_still_reached_here() {
+        let (listener, addr) = bind(49_331..49_341, true).unwrap();
+        assert!(listener.local_addr().unwrap().ip().is_unspecified());
+        assert!(addr.ip().is_loopback());
+        assert_eq!(addr.port(), listener.local_addr().unwrap().port());
     }
 }

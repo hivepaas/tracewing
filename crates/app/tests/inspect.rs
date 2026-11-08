@@ -134,6 +134,7 @@ fn graphql_cookies_and_tokens_are_read() {
         ports: 19_990..20_000,
         extra_roots: vec![origin_ca],
         key_store: Default::default(),
+        find_apps: true,
     })
     .unwrap();
     while !dir.join("ca.pem").exists() {

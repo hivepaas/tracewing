@@ -10,6 +10,7 @@ pub mod connection;
 pub mod cookies;
 pub mod curl;
 pub mod detail;
+pub mod devices;
 pub mod engine;
 pub mod fields;
 pub mod files;

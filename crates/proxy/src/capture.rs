@@ -46,7 +46,12 @@ use tracewing_store::store::{BodyRecord, FlowRecord, Recorder, StreamHandle};
 pub struct Crl {
     pub host: String,
     pub der: Bytes,
+    /// The CA's certificate, which the check page gives to a device to trust.
+    pub ca_der: Bytes,
 }
+
+/// Where on the check host the CA's certificate is.
+pub const CA_PATH: &str = "/ca.crt";
 
 /// A host that exists only here: the proxy answers for it. A browser that gets the
 /// page over HTTPS went through the proxy and trusts its certificate, which no other
@@ -61,7 +66,9 @@ body { font: 16px system-ui, sans-serif; margin: 15vh auto; max-width: 30em; pad
 @media (prefers-color-scheme: dark) { body { color: #e4e5e8; background: #141517; } }
 </style></head>
 <body><h1>It works</h1>
-<p>This browser's traffic goes through tracewing. You can close this page.</p></body></html>
+<p>This browser's traffic goes through tracewing.</p>
+<p>On a phone or another computer, <a href="/ca.crt">get the certificate</a> and trust it, then
+open this page again over HTTPS.</p></body></html>
 "#;
 
 /// The last browser to reach the test page.
@@ -326,6 +333,19 @@ impl HttpHandler for FlowHandler {
 
         let scheme = req.uri().scheme_str().unwrap_or("http");
         if request_host(&req).map(|host| without_default_port(host, scheme)) == Some(CHECK_HOST) {
+            if req.uri().path() == CA_PATH {
+                return Response::builder()
+                    .header(header::CONTENT_TYPE, "application/x-x509-ca-cert")
+                    .header(
+                        header::CONTENT_DISPOSITION,
+                        "attachment; filename=\"tracewing.crt\"",
+                    )
+                    .body(Body::from(http_body_util::Full::new(
+                        self.crl.ca_der.clone(),
+                    )))
+                    .expect("valid response")
+                    .into();
+            }
             self.check.saw(CheckVisit {
                 user_agent: header_text(req.headers(), header::USER_AGENT).unwrap_or_default(),
                 secure: scheme == "https",

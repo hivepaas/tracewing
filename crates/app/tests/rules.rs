@@ -63,6 +63,7 @@ fn rules_made_in_the_window_change_traffic() {
     let engine = Engine::start(EngineOptions {
         data_dir: dir.clone(),
         key_store: Default::default(),
+        find_apps: true,
         settings: StorageSettings {
             disk_reserve_mib: 1,
             ..StorageSettings::default()

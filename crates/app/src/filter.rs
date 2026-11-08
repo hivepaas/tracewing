@@ -1,10 +1,12 @@
 //! What the filter box means, and finding the flows that fit.
 //!
-//! `host:myapp method:post status:4xx type:json graphql:GetUser` narrow by column;
+//! `host:myapp method:post status:4xx type:json graphql:GetUser app:curl
+//! device:iphone` narrow by column;
 //! anything else
 //! is text to find in URLs and in bodies. The chips and the host chosen in
 //! the sidebar narrow further.
 
+use crate::devices::{CLIENT_IP, Devices};
 use anyhow::Result;
 use rusqlite::{Connection, ToSql, params_from_iter};
 use std::path::Path;
@@ -74,6 +76,13 @@ pub struct Filter {
     pub app: Option<String>,
     /// The whole name, from the sidebar.
     pub exact_app: Option<String>,
+    /// A part of another device's address or name, from the box.
+    pub device: Option<String>,
+    /// The devices whose names have `device` in them, when it was typed.
+    pub named: Vec<String>,
+    /// The device's whole address, from the sidebar: what it sent, as no program
+    /// here sent it.
+    pub exact_device: Option<String>,
     pub text: Option<String>,
     pub kind: Kind,
     /// Flows before this one were cleared from view.
@@ -101,6 +110,9 @@ impl Filter {
                 Some(("app", value)) if !value.is_empty() => {
                     filter.app = Some(value.to_owned());
                 }
+                Some(("device", value)) if !value.is_empty() => {
+                    filter.device = Some(value.to_owned());
+                }
                 Some(("status", value)) if status_range(value).is_some() => {
                     filter.status = status_range(value);
                 }
@@ -113,6 +125,22 @@ impl Filter {
         filter
     }
 
+    /// As `parse`, with the names given to devices.
+    pub fn parse_with(input: &str, devices: &Devices) -> Self {
+        let mut filter = Self::parse(input);
+        filter.name_devices(devices);
+        filter
+    }
+
+    /// Finds again which devices `device:` means, as names change.
+    pub fn name_devices(&mut self, devices: &Devices) {
+        self.named = self
+            .device
+            .as_deref()
+            .map(|part| devices.named_like(part))
+            .unwrap_or_default();
+    }
+
     /// Whether every flow fits, so that no list of ids is needed.
     pub fn is_empty(&self) -> bool {
         self.host.is_none()
@@ -123,6 +151,8 @@ impl Filter {
             && self.graphql.is_none()
             && self.app.is_none()
             && self.exact_app.is_none()
+            && self.device.is_none()
+            && self.exact_device.is_none()
             && self.text.is_none()
             && self.kind == Kind::All
     }
@@ -191,6 +221,23 @@ impl Filter {
         if let Some(app) = &self.exact_app {
             clauses.push("app = ?".to_owned());
             values.push(Box::new(app.clone()));
+        }
+        if let Some(device) = &self.device {
+            let mut clause = format!("({CLIENT_IP} LIKE ? ESCAPE '\\'");
+            values.push(Box::new(format!("%{}%", escape_like(device))));
+            if !self.named.is_empty() {
+                let marks = vec!["?"; self.named.len()].join(", ");
+                clause.push_str(&format!(" OR {CLIENT_IP} IN ({marks})"));
+                for ip in &self.named {
+                    values.push(Box::new(ip.clone()));
+                }
+            }
+            clause.push(')');
+            clauses.push(clause);
+        }
+        if let Some(ip) = &self.exact_device {
+            clauses.push(format!("app IS NULL AND {CLIENT_IP} = ?"));
+            values.push(Box::new(ip.clone()));
         }
         if let Some(clause) = self.kind.clause() {
             clauses.push(clause.to_owned());
@@ -276,7 +323,7 @@ mod tests {
     #[test]
     fn the_box_is_read_word_by_word() {
         let filter = Filter::parse(
-            "host:myapp method:post status:4xx type:json gql:GetUser app:curl đặt hàng",
+            "host:myapp method:post status:4xx type:json gql:GetUser app:curl device:ipho đặt hàng",
         );
         assert_eq!(filter.host.as_deref(), Some("myapp"));
         assert_eq!(filter.method.as_deref(), Some("POST"));
@@ -284,6 +331,7 @@ mod tests {
         assert_eq!(filter.content_type.as_deref(), Some("json"));
         assert_eq!(filter.graphql.as_deref(), Some("GetUser"));
         assert_eq!(filter.app.as_deref(), Some("curl"));
+        assert_eq!(filter.device.as_deref(), Some("ipho"));
         assert_eq!(filter.text.as_deref(), Some("đặt hàng"));
     }
 
@@ -310,6 +358,38 @@ mod tests {
     fn nothing_typed_is_empty() {
         assert!(Filter::parse("  ").is_empty());
         assert!(!Filter::parse("x").is_empty());
+    }
+
+    #[test]
+    fn devices_are_found_by_address_or_name() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE flows (id INTEGER PRIMARY KEY, host TEXT, app TEXT, client TEXT);
+             INSERT INTO flows (id, app, client) VALUES
+               (1, 'curl', '127.0.0.1:5000'),
+               (2, NULL, '192.168.1.20:5001'),
+               (3, NULL, '[::ffff:192.168.1.21]:5002'),
+               (4, 'curl', '192.168.1.20:5003'),
+               (5, NULL, '[fd00::7]:5004');",
+        )
+        .unwrap();
+        let dir = std::env::temp_dir().join(format!("filter-devices-{}", std::process::id()));
+        let mut devices = Devices::load(&dir.join("devices.toml"));
+        devices.set("192.168.1.21", "iPhone test").unwrap();
+        let ids = |filter: &Filter| filter.by_columns(&conn, 1).unwrap().unwrap();
+        assert_eq!(
+            ids(&Filter::parse_with("device:192.168", &devices)),
+            [2, 3, 4]
+        );
+        assert_eq!(ids(&Filter::parse_with("device:iphone", &devices)), [3]);
+        assert_eq!(ids(&Filter::parse_with("device:fd00", &devices)), [5]);
+        // From the sidebar: what no program here sent.
+        let filter = Filter {
+            exact_device: Some("192.168.1.20".into()),
+            ..Filter::default()
+        };
+        assert_eq!(ids(&filter), [2]);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

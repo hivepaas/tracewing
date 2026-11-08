@@ -8,8 +8,10 @@ use crate::{
     connection::Certificate,
     cookies, curl,
     detail::{Detail, Phase, Side, body_file},
+    devices::device_of,
     fields::{self, Field, Value as FieldValue},
-    flows::{self, size_text, time_text},
+    flows::{size_text, time_text},
+    input::TextInput,
     jwt::{self, Jwt},
     messages::MessagesState,
     traffic::Traffic,
@@ -95,6 +97,7 @@ impl Traffic {
                 };
                 self.inspector.detail = Some(detail);
                 self.inspector.copied = false;
+                self.show_device_name(cx);
                 self.take_new_messages();
                 self.load_body(cx);
             }
@@ -594,7 +597,11 @@ impl Traffic {
         match self.inspector.part {
             Part::Messages => well.child(self.render_messages(cx)),
             Part::Headers => well.child(render_headers(detail.headers(self.inspector.side))),
-            Part::Connection => well.child(render_connection(detail)),
+            Part::Connection => {
+                let naming = (detail.app.is_none() && device_of(&detail.client).is_some())
+                    .then(|| self.device_name_input().clone());
+                well.child(render_connection(detail, naming))
+            }
             Part::Query => well.child(render_fields(fields::query(&detail.url))),
             Part::Form => well.child(render_fields(detail.form.clone().unwrap_or_default())),
             Part::Cookies => well.child(render_cookies(
@@ -831,7 +838,8 @@ fn now_secs() -> i64 {
 
 /// The server's address, TLS, and the certificates it showed.
 /// Who sent it, then where it went.
-fn render_connection(detail: &Detail) -> AnyElement {
+/// `naming` is the box for the name of the device it came from, if another sent it.
+fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyElement {
     let c = colors();
     let row = |label: &'static str, value: String| {
         div()
@@ -859,7 +867,7 @@ fn render_connection(detail: &Detail) -> AnyElement {
     let app = match (&detail.app, detail.app_pid) {
         (Some(app), Some(pid)) => format!("{app}, pid {pid}"),
         (Some(app), None) => app.clone(),
-        _ if flows::who_sent(None, &detail.client).is_empty() => {
+        _ if device_of(&detail.client).is_none() => {
             "Not found: it may have ended, or belong to another user".to_owned()
         }
         _ => "On another device".to_owned(),
@@ -876,6 +884,35 @@ fn render_connection(detail: &Detail) -> AnyElement {
         .text_size(px(12.))
         .child(heading("CLIENT".to_owned()))
         .child(row("App", app))
+        .children(naming.map(|input| {
+            div()
+                .flex()
+                .flex_row()
+                .items_center()
+                .gap(px(10.))
+                .child(
+                    div()
+                        .w(relative(0.26))
+                        .flex_shrink_0()
+                        .text_color(rgb(c.json_key))
+                        .child("Device"),
+                )
+                .child(
+                    div()
+                        .id("device-name")
+                        .flex_1()
+                        .min_w_0()
+                        .max_w(px(320.))
+                        .h(px(28.))
+                        .px(px(10.))
+                        .rounded(px(10.))
+                        .flex()
+                        .items_center()
+                        .bg(rgb(c.input))
+                        .font_family(crate::FONT)
+                        .child(input),
+                )
+        }))
         .children(detail.app_path.clone().map(|path| row("Program", path)))
         .child(row("Address", detail.client.clone()))
         .child(heading("SERVER".to_owned()));

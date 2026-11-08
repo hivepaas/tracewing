@@ -67,6 +67,7 @@ fn main() -> Result<()> {
     let engine = Engine::start(EngineOptions {
         data_dir: data_dir.clone(),
         key_store: tracewing_proxy::ca_key::KeyStore::System,
+        find_apps: true,
         settings,
         rules,
         traffic_rules,

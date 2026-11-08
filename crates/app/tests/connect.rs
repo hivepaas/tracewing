@@ -112,6 +112,7 @@ fn the_system_proxy_and_the_settings_from_the_window() {
     let engine = Engine::start(EngineOptions {
         data_dir: data_dir.clone(),
         key_store: Default::default(),
+        find_apps: true,
         settings: StorageSettings {
             disk_reserve_mib: 1,
             ..StorageSettings::default()
