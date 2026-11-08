@@ -918,6 +918,8 @@ mod tests {
             .query_row("SELECT graphql FROM flows WHERE id = 2", [], |r| r.get(0))
             .unwrap();
         assert_eq!(operation.as_deref(), Some("query Me"));
+        // Windows will not delete a database that is still open.
+        drop(flows);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
