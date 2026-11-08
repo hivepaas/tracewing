@@ -4,6 +4,7 @@ pub mod body;
 pub mod bodyview;
 pub mod chrome;
 pub mod colors;
+pub mod columns;
 pub mod compose;
 pub mod compose_page;
 pub mod connection;
@@ -71,6 +72,8 @@ const ICONS: &[(&str, &[u8])] = icons![
     "below",
     "sidebar",
     "down",
+    "up",
+    "columns",
     "check",
     "grip",
     "record",

@@ -6,7 +6,10 @@
 //! is text to find in URLs and in bodies. The chips and the host chosen in
 //! the sidebar narrow further.
 
-use crate::devices::{CLIENT_IP, Devices};
+use crate::{
+    columns::Sort,
+    devices::{CLIENT_IP, Devices},
+};
 use anyhow::Result;
 use rusqlite::{Connection, ToSql, params_from_iter};
 use std::path::Path;
@@ -85,6 +88,8 @@ pub struct Filter {
     pub exact_device: Option<String>,
     pub text: Option<String>,
     pub kind: Kind,
+    /// By a column, not in the order the flows came.
+    pub sort: Option<Sort>,
     /// Flows before this one were cleared from view.
     pub from_id: i64,
 }
@@ -155,10 +160,19 @@ impl Filter {
             && self.exact_device.is_none()
             && self.text.is_none()
             && self.kind == Kind::All
+            && self.sort.is_none()
     }
 
-    /// The ids of the flows that fit, oldest first.
+    /// The ids of the flows that fit: oldest first, or as `sort` says.
     pub fn find(&self, flows: &Connection, session: &Path) -> Result<Vec<i64>> {
+        let ids = self.find_by_id(flows, session)?;
+        match self.sort {
+            Some(sort) => sorted(flows, &ids, sort),
+            None => Ok(ids),
+        }
+    }
+
+    fn find_by_id(&self, flows: &Connection, session: &Path) -> Result<Vec<i64>> {
         let first_live: i64 =
             flows.query_row("SELECT coalesce(min(id), 1) FROM flows", [], |r| r.get(0))?;
         let first = first_live.max(self.from_id);
@@ -254,6 +268,26 @@ impl Filter {
         let ids = stmt.query_map(params_from_iter(values.iter().map(|v| &**v)), |r| r.get(0))?;
         Ok(Some(ids.collect::<rusqlite::Result<_>>()?))
     }
+}
+
+/// `ids`, oldest first, in the order `sort` says.
+fn sorted(flows: &Connection, ids: &[i64], sort: Sort) -> Result<Vec<i64>> {
+    let Some(&first) = ids.first() else {
+        return Ok(Vec::new());
+    };
+    let mut stmt = flows.prepare(&format!(
+        "SELECT id FROM flows WHERE id >= ?1 ORDER BY {}",
+        sort.sql()
+    ))?;
+    let mut out = Vec::with_capacity(ids.len());
+    for id in stmt.query_map([first], |r| r.get::<_, i64>(0))? {
+        let id = id?;
+        // Flows that came after the ids were found wait for the next look.
+        if ids.binary_search(&id).is_ok() {
+            out.push(id);
+        }
+    }
+    Ok(out)
 }
 
 /// `4xx`, or a status as it is.
@@ -390,6 +424,35 @@ mod tests {
         };
         assert_eq!(ids(&filter), [2]);
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn flows_are_sorted_by_a_column_after_they_are_found() {
+        use crate::columns::Column;
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE flows (id INTEGER PRIMARY KEY, host TEXT, resp_bytes INTEGER);
+             INSERT INTO flows VALUES
+               (1, 'a', 30), (2, 'b', 10), (3, 'a', 20), (4, 'a', 10), (5, 'b', 50);",
+        )
+        .unwrap();
+        let find = |filter: Filter| filter.find(&conn, Path::new("/no/session")).unwrap();
+        let by_size = |descending| {
+            Some(Sort {
+                column: Column::Size,
+                descending,
+            })
+        };
+        let all = Filter {
+            sort: by_size(false),
+            ..Filter::default()
+        };
+        assert!(!all.is_empty(), "a sort needs a list of its own");
+        // Ties stay in the order they came.
+        assert_eq!(find(all), [2, 4, 3, 1, 5]);
+        let mut some = Filter::parse("host:a");
+        some.sort = by_size(true);
+        assert_eq!(find(some), [1, 3, 4]);
     }
 
     #[test]
