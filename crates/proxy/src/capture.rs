@@ -12,7 +12,7 @@ use crate::ca::CRL_PATH;
 use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
 use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of};
-use crate::upstream::Upstream;
+use crate::upstream::{TlsFailure, Upstream};
 use bytes::Bytes;
 use http::{HeaderName, HeaderValue, Method, Request, Response, StatusCode, header};
 use http_body::{Frame, SizeHint};
@@ -448,6 +448,14 @@ impl HttpHandler for FlowHandler {
         let message = error_chain(&err);
         if let Some(flow) = self.flow.take() {
             flow.fail(message.clone());
+            let mut source: Option<&(dyn std::error::Error + 'static)> = Some(&err);
+            while let Some(error) = source {
+                if let Some(failure) = error.downcast_ref::<TlsFailure>() {
+                    flow.refused_by(failure);
+                    break;
+                }
+                source = error.source();
+            }
         }
         Response::builder()
             .status(StatusCode::BAD_GATEWAY)
@@ -693,6 +701,13 @@ impl Flow {
         record.resp_encoding = header_text(res.headers(), header::CONTENT_ENCODING);
         record.resp_headers = header_lines(res.headers());
         record.ttfb_us = Some(self.elapsed_us());
+    }
+
+    /// What the server showed when TLS with it failed, for the inspector.
+    fn refused_by(&self, failure: &TlsFailure) {
+        let mut record = self.lock();
+        record.conn_id = Some(failure.id);
+        record.connection = Some(failure.describe());
     }
 
     fn went_over(&self, upstream: &Upstream) {

@@ -1,10 +1,15 @@
 //! Connections to servers, made step by step so that each step is timed: the
 //! name looked up, TCP, then TLS. What the server showed of itself, its address,
 //! TLS version and certificates, goes with every response over the connection.
+//! When TLS fails, the certificates the server showed go with the error.
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use http::Uri;
-use hudsucker::rustls::{ClientConfig, pki_types::ServerName};
+use hudsucker::rustls::{
+    self, ClientConfig, DigitallySignedStruct, SignatureScheme,
+    client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
+    pki_types::{CertificateDer, ServerName, UnixTime},
+};
 use hyper::rt::{Read, ReadBufCursor, Write};
 use hyper_util::{
     client::legacy::connect::{Connected, Connection, HttpConnector, dns::Name},
@@ -16,7 +21,7 @@ use std::{
     net::{IpAddr, SocketAddr},
     pin::Pin,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, AtomicI64, Ordering},
     },
     task::{Context, Poll},
@@ -79,18 +84,112 @@ impl Upstream {
     }
 }
 
+/// A TLS handshake that failed, with what the server showed before it did.
+#[derive(Debug)]
+pub struct TlsFailure {
+    pub id: i64,
+    pub host: String,
+    pub remote: SocketAddr,
+    pub message: String,
+    /// In DER, the server's own first. Empty if it showed none.
+    pub certificates: Vec<Vec<u8>>,
+}
+
+impl std::fmt::Display for TlsFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TLS with {}: {}", self.host, self.message)
+    }
+}
+
+impl std::error::Error for TlsFailure {}
+
+impl TlsFailure {
+    /// As JSON, the way [`Upstream::describe`] writes a connection.
+    pub fn describe(&self) -> Vec<u8> {
+        let out = serde_json::json!({
+            "remote": self.remote.to_string(),
+            "tls": {
+                "error": self.message,
+                "certificates": self
+                    .certificates
+                    .iter()
+                    .map(|der| STANDARD.encode(der))
+                    .collect::<Vec<_>>(),
+            },
+        });
+        serde_json::to_vec(&out).unwrap_or_default()
+    }
+}
+
+/// Checks a server's certificates as `inner` does, and keeps them, so that
+/// ones refused can still be shown.
+#[derive(Debug)]
+struct Witness {
+    inner: Arc<dyn ServerCertVerifier>,
+    seen: Mutex<Vec<Vec<u8>>>,
+}
+
+impl Witness {
+    fn take(&self) -> Vec<Vec<u8>> {
+        std::mem::take(&mut self.seen.lock().unwrap_or_else(|e| e.into_inner()))
+    }
+}
+
+impl ServerCertVerifier for Witness {
+    fn verify_server_cert(
+        &self,
+        end_entity: &CertificateDer<'_>,
+        intermediates: &[CertificateDer<'_>],
+        server_name: &ServerName<'_>,
+        ocsp_response: &[u8],
+        now: UnixTime,
+    ) -> Result<ServerCertVerified, rustls::Error> {
+        *self.seen.lock().unwrap_or_else(|e| e.into_inner()) = std::iter::once(end_entity)
+            .chain(intermediates)
+            .map(|der| der.to_vec())
+            .collect();
+        self.inner
+            .verify_server_cert(end_entity, intermediates, server_name, ocsp_response, now)
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        self.inner.verify_tls12_signature(message, cert, dss)
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        self.inner.verify_tls13_signature(message, cert, dss)
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        self.inner.supported_verify_schemes()
+    }
+}
+
 /// Makes the connections the proxy sends requests over.
 #[derive(Clone)]
 pub struct TimedConnector {
-    tls: TlsConnector,
+    config: Arc<ClientConfig>,
+    verifier: Arc<dyn ServerCertVerifier>,
     next_id: Arc<AtomicI64>,
 }
 
 impl TimedConnector {
-    pub fn new(mut config: ClientConfig) -> Self {
+    /// `verifier` must be the one `config` checks certificates with.
+    pub fn new(mut config: ClientConfig, verifier: Arc<dyn ServerCertVerifier>) -> Self {
         config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
         Self {
-            tls: TlsConnector::from(Arc::new(config)),
+            config: Arc::new(config),
+            verifier,
             next_id: Arc::new(AtomicI64::new(1)),
         }
     }
@@ -108,13 +207,18 @@ impl tower_service::Service<Uri> for TimedConnector {
     }
 
     fn call(&mut self, uri: Uri) -> Self::Future {
-        let tls = self.tls.clone();
+        let (config, verifier) = (Arc::clone(&self.config), Arc::clone(&self.verifier));
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        Box::pin(async move { connect(uri, tls, id).await })
+        Box::pin(async move { connect(uri, config, verifier, id).await })
     }
 }
 
-async fn connect(uri: Uri, tls: TlsConnector, id: i64) -> Result<Stream, BoxError> {
+async fn connect(
+    uri: Uri,
+    config: Arc<ClientConfig>,
+    verifier: Arc<dyn ServerCertVerifier>,
+    id: i64,
+) -> Result<Stream, BoxError> {
     let secure = match uri.scheme_str() {
         Some("https") => true,
         Some("http") | None => false,
@@ -158,10 +262,26 @@ async fn connect(uri: Uri, tls: TlsConnector, id: i64) -> Result<Stream, BoxErro
         let shaking = Instant::now();
         let name = ServerName::try_from(host.to_owned())
             .map_err(|_| format!("\"{host}\" is not a name TLS can check"))?;
-        let stream = tls
+        // A config of its own, to keep what this server shows. It shares the
+        // rest, sessions to resume among them.
+        let witness = Arc::new(Witness {
+            inner: verifier,
+            seen: Mutex::new(Vec::new()),
+        });
+        let mut config = (*config).clone();
+        config
+            .dangerous()
+            .set_certificate_verifier(Arc::clone(&witness) as Arc<dyn ServerCertVerifier>);
+        let stream = TlsConnector::from(Arc::new(config))
             .connect(name, tcp)
             .await
-            .map_err(|e| format!("TLS with {host}: {e}"))?;
+            .map_err(|e| TlsFailure {
+                id,
+                host: host.to_owned(),
+                remote,
+                message: e.to_string(),
+                certificates: witness.take(),
+            })?;
         let tls_us = micros(shaking);
         let (_, session) = stream.get_ref();
         let facts = TlsFacts {
