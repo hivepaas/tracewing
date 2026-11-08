@@ -115,6 +115,7 @@ fn each_flow_says_which_program_sent_it() {
         ports: 20_190..20_200,
         extra_roots: vec![origin_ca],
         key_store: Default::default(),
+        find_apps: true,
     })
     .unwrap();
     while !dir.join("ca.pem").exists() {

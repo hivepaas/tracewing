@@ -1,6 +1,6 @@
 //! The settings screen: every storage limit, with the app's default until the user
 //! says otherwise. Writes `settings.toml`, the same file a person could edit by
-//! hand; what is in it applies from the next session on.
+//! hand; what is in it applies from the next start on.
 
 use crate::{colors::colors, input::TextInput, traffic::Traffic, widgets::eyebrow};
 use gpui::{Context, Entity, FontWeight, Window, div, prelude::*, px, rgb};
@@ -31,6 +31,17 @@ const fn row(
 }
 
 const GROUPS: &[(&str, &[Row])] = &[
+    (
+        "Other devices",
+        &[row(
+            "other_devices",
+            "Let other devices use the proxy",
+            "Phones and other computers on your network can then send their traffic here. \
+             So can anyone else on it: leave this off on a network you do not trust. \
+             Takes effect when tracewing starts again.",
+            "",
+        )],
+    ),
     (
         "Sessions",
         &[

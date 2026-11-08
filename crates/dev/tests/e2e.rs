@@ -12,6 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::{net::TcpListener, sync::oneshot, task::JoinHandle};
+use tokio_rustls::rustls::pki_types::{CertificateDer, pem::PemObject};
 use tracewing_dev::benchkit;
 use tracewing_proxy::{
     ProxyOptions, ProxySummary,
@@ -960,6 +961,24 @@ async fn the_test_page_says_who_reached_it() {
         .unwrap();
     assert_eq!(plain.status(), 200);
     assert!(!h.check.last().expect("seen").secure);
+
+    // A phone gets the certificate there, before it trusts it: over plain HTTP.
+    let ca = h
+        .client(true)
+        .get(format!("http://{CHECK_HOST}/ca.crt"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(ca.status(), 200);
+    assert_eq!(
+        ca.headers()["content-type"],
+        "application/x-x509-ca-cert",
+        "phones install it by its type"
+    );
+    let der = ca.bytes().await.unwrap();
+    let pem = std::fs::read(h.dir.join("ca/ca.pem")).unwrap();
+    let expected = CertificateDer::from_pem_slice(&pem).unwrap();
+    assert_eq!(&der[..], expected.as_ref());
 
     let (summary, conn, dir) = h.finish(0).await;
     assert_eq!(summary.written, 0, "the test is not traffic");

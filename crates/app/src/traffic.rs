@@ -7,6 +7,7 @@
 use crate::{
     chrome,
     colors::{self, colors, with_alpha},
+    devices::{CLIENT_IP, Devices, NOT_LOOPBACK, device_of},
     engine::Engine,
     filter::{Filter, Kind},
     flows::{Flows, Row, group_digits},
@@ -78,6 +79,7 @@ enum Done {
     Hosts {
         hosts: Vec<(SharedString, u64)>,
         apps: Vec<(SharedString, u64)>,
+        devices: Vec<(SharedString, u64)>,
         took: Duration,
     },
 }
@@ -121,8 +123,14 @@ fn work(session_dir: PathBuf, jobs: Receiver<Job>, done: Sender<Done>) {
             let started = Instant::now();
             let hosts = counts(conn, "host", from_id).unwrap_or_default();
             let apps = counts(conn, "app", from_id).unwrap_or_default();
+            let devices = device_counts(conn, from_id).unwrap_or_default();
             let took = started.elapsed();
-            let _ = done.send(Done::Hosts { hosts, apps, took });
+            let _ = done.send(Done::Hosts {
+                hosts,
+                apps,
+                devices,
+                took,
+            });
         }
     }
 }
@@ -136,6 +144,23 @@ fn counts(
     let mut stmt = conn.prepare_cached(&format!(
         "SELECT {column}, count(*) AS n FROM flows WHERE id >= ?1 AND {column} IS NOT NULL
          GROUP BY {column} ORDER BY n DESC LIMIT ?2"
+    ))?;
+    let rows = stmt.query_map(rusqlite::params![from_id, HOSTS_SHOWN], |r| {
+        Ok((
+            SharedString::from(r.get::<_, String>(0)?),
+            r.get::<_, i64>(1)? as u64,
+        ))
+    })?;
+    rows.collect()
+}
+
+/// How many flows each other device sent: those no program here sent, from an
+/// address that is not this machine's loopback.
+fn device_counts(conn: &Connection, from_id: i64) -> rusqlite::Result<Vec<(SharedString, u64)>> {
+    let mut stmt = conn.prepare_cached(&format!(
+        "SELECT ip, count(*) AS n FROM
+           (SELECT {CLIENT_IP} AS ip FROM flows WHERE id >= ?1 AND app IS NULL)
+         WHERE {NOT_LOOPBACK} GROUP BY ip ORDER BY n DESC LIMIT ?2"
     ))?;
     let rows = stmt.query_map(rusqlite::params![from_id, HOSTS_SHOWN], |r| {
         Ok((
@@ -214,6 +239,12 @@ pub struct Traffic {
     hosts: Vec<(SharedString, u64)>,
     /// The programs that sent flows, with how many each.
     apps: Vec<(SharedString, u64)>,
+    /// Other devices that sent flows, by address, with how many each.
+    device_counts: Vec<(SharedString, u64)>,
+    /// The names given to devices.
+    devices: Devices,
+    /// The name of the device the chosen flow came from.
+    device_name: Entity<TextInput>,
     hosts_due: Instant,
     hosts_seen: i64,
     hosts_asked: bool,
@@ -253,6 +284,12 @@ impl Traffic {
             .expect("a thread can start");
 
         let filter_input = cx.new(|cx| TextInput::new("host:, status:4xx, or text in bodies", cx));
+        let device_name = cx.new(|cx| TextInput::new("A name, as iPhone test", cx));
+        cx.subscribe(&device_name, |this, input, _: &Changed, cx| {
+            let name = input.read(cx).text().to_owned();
+            this.name_chosen_device(&name, cx);
+        })
+        .detach();
         cx.subscribe(&filter_input, |this, input, _: &Changed, cx| {
             let text = input.read(cx).text().to_owned();
             this.set_filter_text(&text, cx);
@@ -332,6 +369,9 @@ impl Traffic {
             bounds: None,
             hosts: Vec::new(),
             apps: Vec::new(),
+            device_counts: Vec::new(),
+            devices: Devices::load(&data_dir.join("devices.toml")),
+            device_name,
             hosts_due: now,
             hosts_seen: 0,
             hosts_asked: false,
@@ -621,9 +661,15 @@ impl Traffic {
                         self.filter_due = Instant::now() + WORK_EVERY.max(took * WORK_SHARE);
                     }
                 }
-                Done::Hosts { hosts, apps, took } => {
+                Done::Hosts {
+                    hosts,
+                    apps,
+                    devices,
+                    took,
+                } => {
                     self.hosts = hosts;
                     self.apps = apps;
+                    self.device_counts = devices;
                     self.hosts_asked = false;
                     self.hosts_due = Instant::now() + WORK_EVERY.max(took * WORK_SHARE);
                 }
@@ -718,10 +764,11 @@ impl Traffic {
     }
 
     pub fn set_filter_text(&mut self, text: &str, cx: &mut Context<Self>) {
-        let mut filter = Filter::parse(text);
+        let mut filter = Filter::parse_with(text, &self.devices);
         filter.kind = self.filter.kind;
         filter.exact_host = self.filter.exact_host.clone();
         filter.exact_app = self.filter.exact_app.clone();
+        filter.exact_device = self.filter.exact_device.clone();
         if filter != self.filter {
             self.filter = filter;
             self.refilter(cx);
@@ -746,6 +793,73 @@ impl Traffic {
     pub fn set_app(&mut self, app: Option<String>, cx: &mut Context<Self>) {
         self.filter.exact_app = app;
         self.refilter(cx);
+    }
+
+    /// Other devices in the sidebar, by address, with how many flows each sent.
+    pub fn device_counts(&self) -> &[(SharedString, u64)] {
+        &self.device_counts
+    }
+
+    pub fn set_device(&mut self, ip: Option<String>, cx: &mut Context<Self>) {
+        self.filter.exact_device = ip;
+        self.refilter(cx);
+    }
+
+    pub fn devices(&self) -> &Devices {
+        &self.devices
+    }
+
+    /// The box for the name of the device the chosen flow came from.
+    pub fn device_name_input(&self) -> &Entity<TextInput> {
+        &self.device_name
+    }
+
+    /// Names the device at `ip`, or with an empty name forgets it, and keeps that.
+    pub fn name_device(&mut self, ip: &str, name: &str, cx: &mut Context<Self>) {
+        if self.devices.name(ip).unwrap_or("") == name.trim() {
+            return;
+        }
+        if let Err(e) = self.devices.set(ip, name) {
+            self.system.problem = Some(format!("{e:#}"));
+        }
+        // Rows show names as they are drawn; `device:` finds them by name.
+        if self.filter.device.is_some() {
+            self.filter.name_devices(&self.devices);
+            self.refilter(cx);
+        }
+        cx.notify();
+    }
+
+    fn name_chosen_device(&mut self, name: &str, cx: &mut Context<Self>) {
+        let device = self
+            .inspector
+            .detail
+            .as_ref()
+            .filter(|detail| detail.app.is_none())
+            .and_then(|detail| device_of(&detail.client));
+        if let Some(ip) = device {
+            self.name_device(&ip, name, cx);
+        }
+    }
+
+    /// Puts the chosen flow's device's name in the box for it.
+    pub(crate) fn show_device_name(&mut self, cx: &mut Context<Self>) {
+        let device = self
+            .inspector
+            .detail
+            .as_ref()
+            .filter(|detail| detail.app.is_none())
+            .and_then(|detail| device_of(&detail.client));
+        let name = device
+            .as_deref()
+            .and_then(|ip| self.devices.name(ip))
+            .unwrap_or("")
+            .to_owned();
+        self.device_name.update(cx, |input, cx| {
+            if input.text() != name {
+                input.set_text(&name, name.len()..name.len(), cx);
+            }
+        });
     }
 
     /// How many rows the list last asked for: a screenful, whatever happens.
@@ -784,6 +898,7 @@ impl Traffic {
         self.cleared_to = self.bounds.map_or(0, |(_, last)| last + 1);
         self.hosts.clear();
         self.apps.clear();
+        self.device_counts.clear();
         self.hosts_seen = 0;
         self.selected = None;
         self.inspector = InspectorState::default();
@@ -1008,6 +1123,18 @@ impl Traffic {
             .is_focused(window)
     }
 
+    /// The program that sent a row, or the device it came from by its name.
+    fn sender(&self, row: &Row) -> SharedString {
+        match (&row.app, &row.device) {
+            (Some(app), _) => app.clone(),
+            (None, Some(ip)) => match self.devices.name(ip) {
+                Some(name) => name.to_owned().into(),
+                None => ip.clone(),
+            },
+            (None, None) => SharedString::default(),
+        }
+    }
+
     /// Exactly one element per place asked for, always. `uniform_list` measures the
     /// first to learn the height of them all: given none it takes the height for
     /// zero, thinks every row is in view and asks for all of them, which at a million
@@ -1029,7 +1156,8 @@ impl Traffic {
                 Some(row) => {
                     gaps |= row.going;
                     let id = row.id;
-                    render_row(row, selected == Some(id)).on_click(cx.listener(
+                    let sender = self.sender(&row);
+                    render_row(row, sender, selected == Some(id)).on_click(cx.listener(
                         move |this, _: &ClickEvent, _, cx| {
                             this.select(id, cx);
                         },
@@ -1218,6 +1346,7 @@ impl Traffic {
         let c = colors();
         let chosen = self.filter.exact_host.clone();
         let chosen_app = self.filter.exact_app.clone();
+        let chosen_device = self.filter.exact_device.clone();
         let total = self.total() as u64;
         let line = |id: SharedString, text: SharedString, count: u64, on: bool| {
             div()
@@ -1264,6 +1393,23 @@ impl Traffic {
                                     != Some(name.as_str()))
                                 .then(|| name.clone());
                                 this.set_app(next, cx);
+                            }),
+                        )
+                    }))
+                    .child(div().h(px(8.)).flex_shrink_0())
+            })
+            .when(!self.device_counts.is_empty(), |d| {
+                d.child(eyebrow("Devices").px(px(10.)).py(px(4.)))
+                    .children(self.device_counts.iter().map(|(ip, count)| {
+                        let on = chosen_device.as_deref() == Some(ip.as_ref());
+                        let shown: SharedString = self.devices.shown(ip).to_owned().into();
+                        let ip = ip.to_string();
+                        line(format!("device-{ip}").into(), shown, *count, on).on_click(
+                            cx.listener(move |this, _, _, cx| {
+                                let next = (this.filter.exact_device.as_deref()
+                                    != Some(ip.as_str()))
+                                .then(|| ip.clone());
+                                this.set_device(next, cx);
                             }),
                         )
                     }))
@@ -1937,7 +2083,7 @@ fn render_header() -> impl IntoElement {
         )
 }
 
-fn render_row(row: Row, selected: bool) -> Stateful<Div> {
+fn render_row(row: Row, sender: SharedString, selected: bool) -> Stateful<Div> {
     let c = colors();
     let (ground, ink) = status_colors(row.status);
     let status: SharedString = row
@@ -2000,7 +2146,7 @@ fn render_row(row: Row, selected: bool) -> Stateful<Div> {
                         .truncate()
                         .text_size(px(12.))
                         .text_color(rgb(c.muted))
-                        .child(row.app),
+                        .child(sender),
                 )
                 .child(
                     div()

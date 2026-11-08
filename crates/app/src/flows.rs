@@ -1,6 +1,7 @@
 //! Rows for the list, read from the session as they are needed. Ids have no gaps,
 //! so a place in the list is an id; with a filter on, a list of ids says which.
 
+use crate::devices::device_of;
 use anyhow::{Context as _, Result};
 use gpui::SharedString;
 use rusqlite::{Connection, OpenFlags, params};
@@ -18,8 +19,10 @@ pub struct Row {
     pub status: Option<u16>,
     pub host: SharedString,
     pub path: SharedString,
-    /// The program that sent it, or the device it came from.
-    pub app: SharedString,
+    /// The program on this machine that sent it, when it was found.
+    pub app: Option<SharedString>,
+    /// Else the address of the other device it came from.
+    pub device: Option<SharedString>,
     /// The GraphQL operation, as `query GetUser`.
     pub graphql: Option<SharedString>,
     /// What went wrong, or that it is a WebSocket.
@@ -127,7 +130,8 @@ impl Flows {
                     status: r.get(2)?,
                     host: r.get::<_, String>(3)?.into(),
                     path: r.get::<_, String>(4)?.into(),
-                    app: who_sent(r.get(12)?, &r.get::<_, String>(13)?).into(),
+                    app: r.get::<_, Option<String>>(12)?.map(SharedString::from),
+                    device: device_of(&r.get::<_, String>(13)?).map(SharedString::from),
                     graphql: r
                         .get::<_, Option<String>>(11)?
                         .map(|operation| short_operation(&operation).into()),
@@ -162,18 +166,6 @@ impl Flows {
             at = end;
         }
         Ok(())
-    }
-}
-
-/// The program, if it was found; else another device's address. Nothing for this
-/// machine's own: what sent it could not be looked at.
-pub fn who_sent(app: Option<String>, client: &str) -> String {
-    if let Some(app) = app {
-        return app;
-    }
-    match client.parse::<std::net::SocketAddr>() {
-        Ok(addr) if !addr.ip().to_canonical().is_loopback() => addr.ip().to_canonical().to_string(),
-        _ => String::new(),
     }
 }
 
@@ -235,15 +227,6 @@ mod tests {
         assert_eq!(time_text(142_000), "142 ms");
         assert_eq!(time_text(2_400_000), "2.4 s");
         assert_eq!(time_text(800), "800 µs");
-    }
-
-    #[test]
-    fn a_flow_is_from_its_program_or_its_device() {
-        assert_eq!(who_sent(Some("curl".into()), "127.0.0.1:5000"), "curl");
-        assert_eq!(who_sent(None, "192.168.1.20:5000"), "192.168.1.20");
-        assert_eq!(who_sent(None, "[::ffff:10.0.0.2]:5000"), "10.0.0.2");
-        assert_eq!(who_sent(None, "127.0.0.1:5000"), "");
-        assert_eq!(who_sent(None, "[::1]:5000"), "");
     }
 
     #[test]

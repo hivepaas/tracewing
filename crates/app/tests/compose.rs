@@ -94,6 +94,7 @@ fn requests_composed_in_the_window_go_through() {
         ports: 19_890..19_900,
         extra_roots: vec![origin_ca],
         key_store: Default::default(),
+        find_apps: true,
     })
     .unwrap();
     while !dir.join("ca.pem").exists() {

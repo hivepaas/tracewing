@@ -6,11 +6,13 @@
 
 use crate::{
     colors::colors,
+    devices::on_the_network,
     system::{CaState, ProxySwitch},
     traffic::{Screen, Traffic},
     widgets::icon,
 };
 use gpui::{Context, Div, FontWeight, SharedString, Stateful, div, prelude::*, px, rgb};
+use std::net::{IpAddr, SocketAddr};
 use tracewing_proxy::{
     ca_key::KeyPlace,
     capture::{CHECK_HOST, CheckVisit},
@@ -139,8 +141,27 @@ fn step(number: &'static str, done: bool, title: &'static str, text: String) -> 
         )
 }
 
+/// What another device is told to do, and whether it can yet.
+fn other_devices_text(on: bool, port: u16, here: Option<IpAddr>) -> String {
+    if !on {
+        return "A phone or another computer can send its traffic here too. Turn on \
+                \u{201c}Let other devices use the proxy\u{201d} in Settings, then start \
+                tracewing again."
+            .to_owned();
+    }
+    let addr = match here {
+        Some(ip) => format!("{}", SocketAddr::new(ip, port)),
+        None => format!("this computer's address, port {port}"),
+    };
+    format!(
+        "On the device, set the Wi-Fi proxy to {addr}. Then open http://{CHECK_HOST} there, get \
+         the certificate and trust it. Its flows show its address, and can be filtered with \
+         device:. Name it from one of them, in Connection."
+    )
+}
+
 /// Another way, beside the steps: what it is, and what can be done.
-fn aside(title: &'static str, text: &'static str) -> Div {
+fn aside(title: &'static str, text: impl Into<SharedString>) -> Div {
     let c = colors();
     div()
         .flex()
@@ -165,7 +186,11 @@ fn aside(title: &'static str, text: &'static str) -> Div {
                         .font_weight(FontWeight::BOLD)
                         .child(title),
                 )
-                .child(div().text_color(rgb(c.muted)).child(text)),
+                .child(
+                    div()
+                        .text_color(rgb(c.muted))
+                        .child(text.into() as SharedString),
+                ),
         )
 }
 
@@ -312,6 +337,7 @@ impl Traffic {
             .child(proxy_step)
             .child(check_step)
             .child(self.render_one_app(cx))
+            .child(self.render_other_devices(cx))
     }
 }
 
@@ -338,9 +364,37 @@ impl Traffic {
     }
 }
 
+impl Traffic {
+    /// A phone or another computer, through the proxy here.
+    fn render_other_devices(&mut self, cx: &mut Context<Self>) -> Div {
+        let on = self.engine.settings.other_devices;
+        let text = other_devices_text(
+            on,
+            self.engine.addr.port(),
+            on.then(on_the_network).flatten(),
+        );
+        aside("Other devices", text).when(!on, |d| {
+            d.child(
+                button("setup-devices", "Open settings", false)
+                    .on_click(cx.listener(|this, _, _, cx| this.set_screen(Screen::Settings, cx))),
+            )
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn other_devices_are_told_where_to_go() {
+        let ip = "192.168.1.5".parse().unwrap();
+        let text = other_devices_text(true, 9090, Some(ip));
+        assert!(text.contains("192.168.1.5:9090"), "{text}");
+        assert!(text.contains("http://tracewing.test"), "{text}");
+        assert!(other_devices_text(false, 9090, Some(ip)).contains("Settings"));
+        assert!(other_devices_text(true, 9090, None).contains("port 9090"));
+    }
 
     #[test]
     fn browsers_are_told_apart() {

@@ -28,6 +28,7 @@ use hudsucker::{
 };
 use rules::HostRules;
 use std::{
+    net::{Ipv4Addr, SocketAddr},
     path::PathBuf,
     sync::{
         Arc, OnceLock, RwLock,
@@ -138,11 +139,18 @@ pub async fn run_proxy(
     };
     let mut ca = LocalCa::load_or_create(&opts.data_dir, crypto_provider(), opts.key_store)?;
     let listen_addr = listener.local_addr()?;
-    ca.serve_crl_at(listen_addr);
+    // Listening everywhere, this machine still reaches it on its own address.
+    let own_addr = if listen_addr.ip().is_unspecified() {
+        SocketAddr::new(Ipv4Addr::LOCALHOST.into(), listen_addr.port())
+    } else {
+        listen_addr
+    };
+    ca.serve_crl_at(own_addr);
     let _ = opts.leaf_spki.set(ca.leaf_spki_sha256());
     let crl = Crl {
-        host: listen_addr.to_string(),
+        host: own_addr.to_string(),
         der: ca.crl_der()?.into(),
+        ca_der: ca.cert_der()?.into(),
     };
     opts.settings.check()?;
     session::create(&opts.session)?;

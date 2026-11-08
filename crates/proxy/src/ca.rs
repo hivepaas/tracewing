@@ -137,6 +137,15 @@ impl LocalCa {
         BASE64.encode(Sha256::digest(self.leaf_key.subject_public_key_info()))
     }
 
+    /// The CA's own certificate, for a device to download and trust.
+    pub fn cert_der(&self) -> Result<Vec<u8>> {
+        let pem = fs::read_to_string(&self.cert_path)
+            .with_context(|| format!("read {}", self.cert_path.display()))?;
+        let der = CertificateDer::from_pem_slice(pem.as_bytes())
+            .with_context(|| format!("parse {}", self.cert_path.display()))?;
+        Ok(der.to_vec())
+    }
+
     /// Names the proxy's own CRL in every leaf from now on.
     pub fn serve_crl_at(&mut self, addr: std::net::SocketAddr) {
         self.crl_url = Some(format!("http://{addr}{CRL_PATH}"));
