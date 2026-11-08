@@ -69,6 +69,8 @@ pub struct Filter {
     pub host: Option<String>,
     /// The whole host, from the sidebar.
     pub exact_host: Option<String>,
+    /// Hosts whose flows are left out, as the sidebar was told.
+    pub hidden_hosts: Vec<String>,
     pub method: Option<String>,
     /// From, up to and not including.
     pub status: Option<(u16, u16)>,
@@ -150,6 +152,7 @@ impl Filter {
     pub fn is_empty(&self) -> bool {
         self.host.is_none()
             && self.exact_host.is_none()
+            && self.hidden_hosts.is_empty()
             && self.method.is_none()
             && self.status.is_none()
             && self.content_type.is_none()
@@ -210,6 +213,13 @@ impl Filter {
         if let Some(host) = &self.exact_host {
             clauses.push("host = ?".to_owned());
             values.push(Box::new(host.clone()));
+        }
+        if !self.hidden_hosts.is_empty() {
+            let marks = vec!["?"; self.hidden_hosts.len()].join(", ");
+            clauses.push(format!("host NOT IN ({marks})"));
+            for host in &self.hidden_hosts {
+                values.push(Box::new(host.clone()));
+            }
         }
         if let Some(method) = &self.method {
             clauses.push("method = ?".to_owned());
@@ -453,6 +463,25 @@ mod tests {
         let mut some = Filter::parse("host:a");
         some.sort = by_size(true);
         assert_eq!(find(some), [1, 3, 4]);
+    }
+
+    #[test]
+    fn hidden_hosts_are_left_out() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE flows (id INTEGER PRIMARY KEY, host TEXT);
+             INSERT INTO flows VALUES (1, 'a'), (2, 'ads'), (3, 'b'), (4, 'tracker');",
+        )
+        .unwrap();
+        let filter = Filter {
+            hidden_hosts: vec!["ads".into(), "tracker".into()],
+            ..Filter::default()
+        };
+        assert!(!filter.is_empty());
+        assert_eq!(
+            filter.find(&conn, Path::new("/no/session")).unwrap(),
+            [1, 3]
+        );
     }
 
     #[test]
