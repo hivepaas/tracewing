@@ -129,7 +129,7 @@ keyboard.
 | Feature | Milestone | Plan |
 |---|---|---|
 | HAR import and export, bodies whole, tokens and cookies removed on request | Beta | Free |
-| Import Fiddler (`.saz`) and Charles sessions | Beta | Free |
+| Import Fiddler (`.saz`) and Charles JSON (`.chlsj`) sessions | Beta | Free |
 | Encrypted share links that expire | 2.0 | Team |
 | Turn captured traffic into an OpenAPI description or mocks | 2.0 | Pro |
 

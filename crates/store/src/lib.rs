@@ -2,9 +2,12 @@
 //! `docs/measurements.md` for why it is this one.
 
 pub mod app;
+pub mod charles;
 pub mod decode;
 pub mod graphql;
 pub mod har;
+pub mod import;
+pub mod saz;
 pub mod search;
 pub mod session;
 pub mod settings;

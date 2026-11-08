@@ -280,7 +280,7 @@ impl Traffic {
 }
 
 impl Traffic {
-    /// Bringing a HAR in, and how one goes out.
+    /// Bringing a file from another tool in, and how a HAR goes out.
     fn render_har_bar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let har = &self.sessions_page.files;
@@ -294,7 +294,7 @@ impl Traffic {
             .pb(px(4.))
             .child(
                 div()
-                    .id("import-har")
+                    .id("import")
                     .flex_shrink_0()
                     .h(px(32.))
                     .px(px(14.))
@@ -309,9 +309,15 @@ impl Traffic {
                     .child(if har.busy {
                         "Working…"
                     } else {
-                        "Open a HAR file"
+                        "Open a session file"
                     })
-                    .on_click(cx.listener(|this, _, _, cx| this.ask_import_har(cx))),
+                    .on_click(cx.listener(|this, _, _, cx| this.ask_import(cx))),
+            )
+            .child(
+                div()
+                    .text_size(px(12.))
+                    .text_color(rgb(c.muted))
+                    .child("HAR, Fiddler .saz, or Charles .chlsj"),
             )
             .child(
                 div()

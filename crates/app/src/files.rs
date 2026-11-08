@@ -1,6 +1,6 @@
 //! Files in and out. HAR: the flows in the list, or a whole session, written
-//! for other tools, and a HAR from elsewhere opened as a session of its own.
-//! And a flow's body, saved as it is, unpacked.
+//! for other tools. A HAR, a Fiddler `.saz` or a Charles `.chlsj` from elsewhere,
+//! opened as a session of its own. And a flow's body, saved as it is, unpacked.
 
 use crate::{
     detail::Side,
@@ -10,6 +10,7 @@ use gpui::{AppContext as _, Context, PathPromptOptions};
 use std::path::{Path, PathBuf};
 use tracewing_store::{
     har::{self, ExportOptions},
+    import,
     session::BodyReader,
 };
 
@@ -121,8 +122,8 @@ impl Traffic {
         .detach();
     }
 
-    /// Asks for a HAR, then opens it as a session.
-    pub fn ask_import_har(&mut self, cx: &mut Context<Self>) {
+    /// Asks for a file from another tool, then opens it as a session.
+    pub fn ask_import(&mut self, cx: &mut Context<Self>) {
         if self.files().busy {
             return;
         }
@@ -144,18 +145,20 @@ impl Traffic {
                 }
                 _ => return,
             };
-            let _ = this.update(cx, |this, cx| this.import_har(path, cx));
+            let _ = this.update(cx, |this, cx| this.import_file(path, cx));
         })
         .detach();
     }
 
-    /// Reads the HAR at `path` into a new session named after it, and opens it.
-    pub fn import_har(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+    /// Reads the HAR, `.saz` or `.chlsj` at `path` into a new session named after
+    /// it, and opens it.
+    pub fn import_file(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         let sessions = self.sessions_dir();
         let session = sessions.join(crate::engine::next_session_name(&sessions));
-        let name = path
-            .file_stem()
-            .map_or_else(|| "HAR".to_owned(), |s| s.to_string_lossy().into_owned());
+        let name = path.file_stem().map_or_else(
+            || "Imported".to_owned(),
+            |s| s.to_string_lossy().into_owned(),
+        );
         let settings = self.engine.settings.clone();
         self.files().busy = true;
         self.files().note = Some((format!("Reading {}…", path.display()), false));
@@ -164,8 +167,7 @@ impl Traffic {
             let target = session.clone();
             let result = cx
                 .background_spawn(async move {
-                    let file = std::fs::File::open(&path)?;
-                    let imported = har::import(file, &target, &name, &settings);
+                    let imported = import::import_file(&path, &target, &name, &settings);
                     if imported.is_err() {
                         // Half a session is no use to anyone.
                         let _ = std::fs::remove_dir_all(&target);
@@ -176,19 +178,25 @@ impl Traffic {
             let _ = this.update(cx, |this, cx| {
                 this.files().busy = false;
                 match result {
-                    Ok(imported) => {
+                    Ok((format, imported)) => {
                         let skipped = match imported.skipped {
                             0 => String::new(),
                             n => format!(", {n} entries left out"),
                         };
-                        this.files().note =
-                            Some((format!("{} flows read{skipped}", imported.flows), false));
+                        this.files().note = Some((
+                            format!(
+                                "{} flows read from a {}{skipped}",
+                                imported.flows,
+                                format.name()
+                            ),
+                            false,
+                        ));
                         this.open_session(&session, cx);
                         this.set_screen(Screen::Traffic, cx);
                         this.refresh_sessions(cx);
                     }
                     Err(e) => {
-                        this.files().note = Some((format!("The HAR was not read: {e:#}"), true));
+                        this.files().note = Some((format!("The file was not read: {e:#}"), true));
                     }
                 }
                 cx.notify();
