@@ -4,11 +4,13 @@
 pub mod ca;
 pub mod ca_key;
 pub mod capture;
-pub mod graphql;
 pub mod pause;
 pub mod rules;
 pub mod traffic_rules;
 pub mod upstream;
+
+/// Moved to the store, which needs it to read HAR files too.
+pub use tracewing_store::graphql;
 
 use anyhow::{Context, Result};
 use ca::LocalCa;

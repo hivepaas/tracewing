@@ -6786,12 +6786,16 @@ name = "tracewing-store"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "brotli",
  "bytes",
  "flate2",
+ "http",
  "libc",
  "rusqlite",
  "serde",
+ "serde_json",
+ "time",
  "toml 0.9.12+spec-1.1.0",
  "tracing",
  "windows-sys 0.61.2",
