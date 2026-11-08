@@ -114,6 +114,41 @@ pub fn is_text(content_type: Option<&str>) -> bool {
 }
 
 /// Text from bytes that may stop inside a character or not be text at all.
+/// `%41` as `A` and `+` as a space, as in a query or a form. Bytes that are not
+/// UTF-8 come out as replacement characters.
+pub fn percent_decode(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let hex = |b: u8| (b as char).to_digit(16);
+        match bytes[i] {
+            b'+' => out.push(b' '),
+            b'%' if i + 2 < bytes.len() => match (hex(bytes[i + 1]), hex(bytes[i + 2])) {
+                (Some(high), Some(low)) => {
+                    out.push((high * 16 + low) as u8);
+                    i += 2;
+                }
+                _ => out.push(b'%'),
+            },
+            b => out.push(b),
+        }
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// The `name=value` pairs of a query or a form, decoded.
+pub fn form_pairs(text: &str) -> Vec<(String, String)> {
+    text.split('&')
+        .filter(|pair| !pair.is_empty())
+        .map(|pair| {
+            let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
+            (percent_decode(name), percent_decode(value))
+        })
+        .collect()
+}
+
 pub fn lossy_text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
