@@ -4,8 +4,8 @@
 
 use crate::{
     colors::colors,
+    files::FileState,
     flows::{group_digits, size_text},
-    har_files::HarState,
     input::{Changed, TextInput},
     traffic::{Screen, Traffic},
 };
@@ -35,7 +35,7 @@ pub struct SessionsPage {
     pub deleting: Option<PathBuf>,
     pub problem: Option<String>,
     loading: bool,
-    pub har: HarState,
+    pub files: FileState,
 }
 
 impl Traffic {
@@ -283,7 +283,7 @@ impl Traffic {
     /// Bringing a HAR in, and how one goes out.
     fn render_har_bar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
-        let har = &self.sessions_page.har;
+        let har = &self.sessions_page.files;
         let without = har.without_secrets;
         div()
             .flex()

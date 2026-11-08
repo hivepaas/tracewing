@@ -19,6 +19,8 @@ pub struct Tls {
     pub alpn: Option<String>,
     /// The server's own first.
     pub chain: Vec<Certificate>,
+    /// Why the proxy would not go on with this server, when it would not.
+    pub error: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -45,6 +47,7 @@ impl Connection {
                 version: text("version").unwrap_or_default(),
                 cipher: text("cipher").unwrap_or_default(),
                 alpn: text("alpn"),
+                error: text("error"),
                 chain: tls
                     .get("certificates")
                     .and_then(Value::as_array)
@@ -163,6 +166,27 @@ mod tests {
         assert!(!cert.out_of_date(1_780_000_000));
         assert!(cert.out_of_date(1_800_000_000));
         assert_eq!(cert.sha256.len(), 32 * 3 - 1);
+    }
+
+    #[test]
+    fn a_refusal_keeps_what_was_shown() {
+        let json = serde_json::json!({
+            "remote": "127.0.0.1:443",
+            "tls": {
+                "error": "invalid peer certificate: UnknownIssuer",
+                "certificates": [STANDARD.encode(certificate())],
+            }
+        });
+        let tls = Connection::parse(json.to_string().as_bytes())
+            .unwrap()
+            .tls
+            .unwrap();
+        assert_eq!(
+            tls.error.as_deref(),
+            Some("invalid peer certificate: UnknownIssuer")
+        );
+        assert_eq!(tls.chain.len(), 1);
+        assert_eq!(tls.version, "");
     }
 
     #[test]

@@ -8,6 +8,7 @@ use crate::{
     connection::Certificate,
     cookies, curl,
     detail::{Detail, Phase, Side, body_file},
+    fields::{self, Field, Value as FieldValue},
     flows::{size_text, time_text},
     jwt::{self, Jwt},
     messages::MessagesState,
@@ -16,7 +17,7 @@ use crate::{
 };
 use gpui::{
     AnyElement, ClipboardItem, Context, Div, Entity, FontWeight, MouseButton, MouseDownEvent,
-    SharedString, div, prelude::*, px, relative, rgb,
+    ObjectFit, SharedString, StyledImage, div, img, prelude::*, px, relative, rgb,
 };
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracewing_store::session::BodyReader;
@@ -25,6 +26,12 @@ use tracewing_store::session::BodyReader;
 /// see that it did not fit.
 const CURL_BODY_MAX: usize = 256 * 1024 + 1;
 const COPIED_FOR: Duration = Duration::from_millis(1500);
+/// Pictures larger than this show as bytes.
+const PICTURE_MAX: u64 = 32 << 20;
+
+fn is_picture(content_type: Option<&str>) -> bool {
+    content_type.is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("image/"))
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Part {
@@ -34,6 +41,10 @@ pub enum Part {
     Cookies,
     /// The server's address, TLS and certificates.
     Connection,
+    /// The request's URL fields.
+    Query,
+    /// The fields of a form the request sent.
+    Form,
     /// A WebSocket's or server-sent events' messages.
     Messages,
 }
@@ -43,6 +54,8 @@ pub enum BodyState {
     #[default]
     Loading,
     Shown(Entity<BodyView>),
+    /// A picture, drawn from its file, and its size.
+    Image(std::path::PathBuf, u64),
     /// Nothing to show, and why.
     Note(SharedString),
 }
@@ -70,11 +83,15 @@ impl Traffic {
                 let stream = matches!(detail.kind.as_str(), "websocket" | "sse");
                 self.inspector.messages = stream.then(|| MessagesState::new(id));
                 let no_cookies = cookie_counts(&detail) == (0, 0);
+                let (part_now, side_now) = (self.inspector.part, self.inspector.side);
                 self.inspector.part = match (stream, self.inspector.part) {
                     (true, _) => Part::Messages,
                     (false, Part::Messages) => Part::Body,
                     (false, Part::Cookies) if no_cookies => Part::Body,
                     (false, Part::Connection) if detail.conn_id.is_none() => Part::Body,
+                    (false, Part::Query | Part::Form) if !has_part(&detail, part_now, side_now) => {
+                        Part::Body
+                    }
                     (false, part) => part,
                 };
                 self.inspector.detail = Some(detail);
@@ -115,6 +132,11 @@ impl Traffic {
             cx.notify();
             return;
         }
+        let content_type = match side {
+            Side::Request => detail.req_content_type.as_deref(),
+            Side::Response => detail.content_type.as_deref(),
+        };
+        let picture = is_picture(content_type);
         self.inspector.body = BodyState::Loading;
         let session = self.session_dir().to_owned();
         let max = self.engine.settings.view_max();
@@ -132,6 +154,9 @@ impl Traffic {
                             .into(),
                     ),
                     Some((_, 0)) => BodyState::Note("No body.".into()),
+                    Some((path, size)) if picture && size <= PICTURE_MAX => {
+                        BodyState::Image(path, size)
+                    }
                     Some((path, _)) => match Body::open(&path) {
                         Ok(body) => BodyState::Shown(cx.new(|cx| BodyView::new(body, cx))),
                         Err(e) => BodyState::Note(format!("Cannot open this body: {e:#}").into()),
@@ -171,6 +196,16 @@ impl Traffic {
     pub fn set_side(&mut self, side: Side, cx: &mut Context<Self>) {
         if self.inspector.side != side {
             self.inspector.side = side;
+            let part = self.inspector.part;
+            let gone = matches!(part, Part::Query | Part::Form)
+                && self
+                    .inspector
+                    .detail
+                    .as_ref()
+                    .is_none_or(|detail| !has_part(detail, part, side));
+            if gone {
+                self.inspector.part = Part::Body;
+            }
             self.load_body(cx);
             cx.notify();
         }
@@ -398,6 +433,9 @@ impl Traffic {
         };
         let summary_text: Option<String> = match (&self.inspector.body, part) {
             (BodyState::Shown(view), Part::Body) => Some(summary(view.read(cx).body())),
+            (BodyState::Image(_, size), Part::Body) => {
+                Some(format!("Picture · {}", size_text(*size)))
+            }
             _ => None,
         };
         let tab = |id: &'static str, label: String, this: Part| {
@@ -446,6 +484,16 @@ impl Traffic {
                     Part::Cookies,
                 ))
             })
+            .when(side == Side::Request, |d| {
+                let query = fields::query(&detail.url).len();
+                let form = detail.form.as_ref().map_or(0, Vec::len);
+                d.when(query > 0, |d| {
+                    d.child(tab("part-query", format!("Query {query}"), Part::Query))
+                })
+                .when(form > 0, |d| {
+                    d.child(tab("part-form", format!("Form {form}"), Part::Form))
+                })
+            })
             .when(detail.conn_id.is_some(), |d| {
                 d.child(tab(
                     "part-connection",
@@ -460,6 +508,27 @@ impl Traffic {
                     .text_color(rgb(c.muted))
                     .child(text)
             }))
+            .when(
+                part == Part::Body && detail.body(side).stored.exists(),
+                |d| {
+                    d.child(
+                        div()
+                            .id("save-body")
+                            .h(px(28.))
+                            .px(px(10.))
+                            .rounded(px(14.))
+                            .flex()
+                            .items_center()
+                            .cursor_pointer()
+                            .bg(rgb(c.chip))
+                            .text_color(rgb(c.on_chip))
+                            .text_size(px(12.))
+                            .font_weight(FontWeight::BOLD)
+                            .child("Save body")
+                            .on_click(cx.listener(|view, _, _, cx| view.ask_save_body(cx))),
+                    )
+                },
+            )
             .when(
                 !matches!(detail.kind.as_str(), "tunnel" | "websocket"),
                 |d| {
@@ -529,12 +598,32 @@ impl Traffic {
             Part::Messages => well.child(self.render_messages(cx)),
             Part::Headers => well.child(render_headers(detail.headers(self.inspector.side))),
             Part::Connection => well.child(render_connection(detail)),
+            Part::Query => well.child(render_fields(fields::query(&detail.url))),
+            Part::Form => well.child(render_fields(detail.form.clone().unwrap_or_default())),
             Part::Cookies => well.child(render_cookies(
                 detail.headers(self.inspector.side),
                 self.inspector.side,
             )),
             Part::Body => match &self.inspector.body {
                 BodyState::Shown(view) => well.py(px(8.)).child(view.clone()),
+                BodyState::Image(path, _) => well.child(
+                    div()
+                        .size_full()
+                        .p(px(12.))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .child(
+                            img(path.clone())
+                                .max_w_full()
+                                .max_h_full()
+                                .object_fit(ObjectFit::Contain)
+                                .with_fallback(|| {
+                                    note("This picture cannot be drawn. Save the body to look at it.")
+                                        .into_any_element()
+                                }),
+                        ),
+                ),
                 BodyState::Loading => well.child(note("Opening…")),
                 BodyState::Note(text) => well.child(note(text.clone())),
             },
@@ -649,7 +738,13 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
             detail
                 .error
                 .clone()
-                .map(|error| chip(error, c.error_ground, c.error)),
+                // A long error wraps in a box of its own, where a chip would
+                // run out of the panel.
+                .map(|error| {
+                    chip(error, c.error_ground, c.error)
+                        .max_w_full()
+                        .rounded(px(12.))
+                }),
         )
 }
 
@@ -758,7 +853,12 @@ fn render_connection(detail: &Detail) -> AnyElement {
             )
             .child(div().flex_1().min_w_0().child(value))
     };
+    let refused = connection
+        .tls
+        .as_ref()
+        .is_some_and(|tls| tls.error.is_some());
     let made = match (detail.conn_id, detail.connect_us) {
+        (Some(id), _) if refused => format!("{id}, given up during TLS"),
         (Some(id), Some(_)) => format!("{id}, made for this flow"),
         (Some(id), None) => format!("{id}, made before and used again"),
         _ => "–".to_owned(),
@@ -781,28 +881,48 @@ fn render_connection(detail: &Detail) -> AnyElement {
             .into_any_element();
     };
     let now = now_secs();
-    list.child(row("TLS", tls.version))
-        .child(row("Cipher", tls.cipher))
-        .child(row("ALPN", tls.alpn.unwrap_or_else(|| "none".to_owned())))
-        .child(
-            div()
-                .pt(px(6.))
-                .font_family(crate::FONT)
-                .text_size(px(11.))
-                .font_weight(FontWeight::BOLD)
-                .text_color(rgb(c.muted))
-                .child(match tls.chain.len() {
-                    0 => "NO CERTIFICATES".to_owned(),
-                    1 => "CERTIFICATE".to_owned(),
-                    n => format!("{n} CERTIFICATES, THE SERVER'S FIRST"),
-                }),
-        )
-        .children(
-            tls.chain
-                .into_iter()
-                .map(|cert| render_certificate(cert, now)),
-        )
-        .into_any_element()
+    let refused = tls.error.is_some();
+    let heading = match (refused, tls.chain.len()) {
+        (true, 0) => "THE SERVER SHOWED NO CERTIFICATES".to_owned(),
+        (true, _) => "WHAT THE SERVER SHOWED, ITS OWN FIRST".to_owned(),
+        (false, 0) => "NO CERTIFICATES".to_owned(),
+        (false, 1) => "CERTIFICATE".to_owned(),
+        (false, n) => format!("{n} CERTIFICATES, THE SERVER'S FIRST"),
+    };
+    let known = |text: String| (!text.is_empty()).then_some(text);
+    list.children(tls.error.map(|error| {
+        div()
+            .p(px(10.))
+            .rounded(px(10.))
+            .bg(rgb(c.error_ground))
+            .text_color(rgb(c.error))
+            .font_family(crate::FONT)
+            .child(format!(
+                "tracewing would not go on with this server: {error}. If the app trusts \
+                 it some other way, such as through a company CA, choose \u{201c}Do not \
+                 decrypt this host\u{201d} and the app will check the server itself."
+            ))
+    }))
+    .children(known(tls.version).map(|v| row("TLS", v)))
+    .children(known(tls.cipher).map(|v| row("Cipher", v)))
+    .when(!refused, |d| {
+        d.child(row("ALPN", tls.alpn.unwrap_or_else(|| "none".to_owned())))
+    })
+    .child(
+        div()
+            .pt(px(6.))
+            .font_family(crate::FONT)
+            .text_size(px(11.))
+            .font_weight(FontWeight::BOLD)
+            .text_color(rgb(c.muted))
+            .child(heading),
+    )
+    .children(
+        tls.chain
+            .into_iter()
+            .map(|cert| render_certificate(cert, now)),
+    )
+    .into_any_element()
 }
 
 /// How many of a certificate's names are listed before the rest are counted.
@@ -910,6 +1030,55 @@ fn render_headers(headers: Option<&[(String, String)]>) -> impl IntoElement {
                 )
         }))
         .into_any_element()
+}
+
+/// Whether `part` has anything to show for this flow on `side`.
+fn has_part(detail: &Detail, part: Part, side: Side) -> bool {
+    match part {
+        Part::Query => side == Side::Request && !fields::query(&detail.url).is_empty(),
+        Part::Form => side == Side::Request && detail.form.as_ref().is_some_and(|f| !f.is_empty()),
+        _ => true,
+    }
+}
+
+fn render_fields(found: Vec<Field>) -> impl IntoElement {
+    let c = colors();
+    div()
+        .id("fields")
+        .size_full()
+        .overflow_y_scroll()
+        .p(px(12.))
+        .flex()
+        .flex_col()
+        .gap(px(4.))
+        .font_family(crate::MONO_FONT)
+        .text_size(px(12.))
+        .children(found.into_iter().map(|field| {
+            let value = match field.value {
+                FieldValue::Text(text) => div().child(text),
+                FieldValue::File {
+                    filename,
+                    content_type,
+                    bytes,
+                } => div().text_color(rgb(c.muted)).child(format!(
+                    "File {filename} · {} · {}",
+                    content_type.unwrap_or_else(|| "no type".to_owned()),
+                    size_text(bytes as u64)
+                )),
+            };
+            div()
+                .flex()
+                .flex_row()
+                .gap(px(10.))
+                .child(
+                    div()
+                        .w(relative(0.34))
+                        .flex_shrink_0()
+                        .text_color(rgb(c.json_key))
+                        .child(field.name),
+                )
+                .child(div().flex_1().min_w_0().child(value))
+        }))
 }
 
 fn cookie_counts(detail: &Detail) -> (usize, usize) {

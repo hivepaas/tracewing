@@ -6741,6 +6741,7 @@ dependencies = [
  "libc",
  "reqwest",
  "rusqlite",
+ "serde_json",
  "time",
  "tokio",
  "tokio-rustls",

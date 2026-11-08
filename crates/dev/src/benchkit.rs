@@ -69,6 +69,9 @@ pub async fn serve_origin(listener: TcpListener, ca_out: &Path) -> Result<()> {
     }
 }
 
+/// What `/picture.png` answers with: a 96 by 96 PNG.
+pub const PICTURE: &[u8] = include_bytes!("picture.png");
+
 /// What `/json?cookies=1` sets as its session: HS256, for user 42, expiring in 2100.
 pub const SESSION_JWT: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MiIsIm5hbWUiOiJBbmEiLCJpYXQiOjE3NjcyMjU2MDAsImV4cCI6NDEwMjQ0NDgwMH0.c2lnbmF0dXJl";
 
@@ -104,6 +107,9 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
             }
             response.body(Full::new(body).boxed())
         }
+        "/picture.png" => Response::builder()
+            .header(header::CONTENT_TYPE, "image/png")
+            .body(Full::new(Bytes::from_static(PICTURE)).boxed()),
         "/stream" => {
             let events = number("events", 5);
             let gap = Duration::from_millis(number("gap_ms", 200));

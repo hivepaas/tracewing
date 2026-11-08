@@ -19,6 +19,7 @@ use hudsucker::{
     Proxy,
     rustls::{
         ClientConfig, RootCertStore,
+        client::{WebPkiServerVerifier, danger::ServerCertVerifier},
         crypto::{CryptoProvider, aws_lc_rs},
         pki_types::{CertificateDer, pem::PemObject},
     },
@@ -165,8 +166,8 @@ pub async fn run_proxy(
     // Without TCP_NODELAY, small writes wait for delayed ACKs and the tail
     // latency jumps to ~40 ms. Linux copies the flag to accepted sockets.
     socket2::SockRef::from(&listener).set_tcp_nodelay(true)?;
-    let upstream_tls = upstream_tls(&opts.extra_roots)?;
-    let connector = upstream::TimedConnector::new(upstream_tls.clone());
+    let (upstream_tls, verifier) = upstream_tls(&opts.extra_roots)?;
+    let connector = upstream::TimedConnector::new(upstream_tls.clone(), verifier);
 
     let handler = FlowHandler::new(
         recorder,
@@ -268,7 +269,9 @@ pub async fn run_proxy(
     })
 }
 
-fn upstream_tls(extra_roots: &[PathBuf]) -> Result<ClientConfig> {
+/// How the proxy checks servers, and the checker on its own, which the
+/// connector wraps to keep the certificates it is shown.
+fn upstream_tls(extra_roots: &[PathBuf]) -> Result<(ClientConfig, Arc<dyn ServerCertVerifier>)> {
     let mut roots = RootCertStore::empty();
     roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
     for path in extra_roots {
@@ -278,12 +281,16 @@ fn upstream_tls(extra_roots: &[PathBuf]) -> Result<ClientConfig> {
             roots.add(cert.with_context(|| format!("parse {}", path.display()))?)?;
         }
     }
-    Ok(
-        ClientConfig::builder_with_provider(Arc::new(crypto_provider()))
-            .with_safe_default_protocol_versions()?
-            .with_root_certificates(roots)
-            .with_no_client_auth(),
-    )
+    let provider = Arc::new(crypto_provider());
+    let verifier: Arc<dyn ServerCertVerifier> =
+        WebPkiServerVerifier::builder_with_provider(Arc::new(roots), Arc::clone(&provider))
+            .build()?;
+    let config = ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()?
+        .dangerous()
+        .with_custom_certificate_verifier(Arc::clone(&verifier))
+        .with_no_client_auth();
+    Ok((config, verifier))
 }
 
 async fn report(stats: Arc<Stats>, every: Duration) {

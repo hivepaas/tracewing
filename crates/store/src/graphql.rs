@@ -1,6 +1,7 @@
 //! Which GraphQL operation a request asks for, to name it in the list: every
 //! request goes to the same `/graphql`, so its path says nothing.
 
+use crate::decode;
 use serde_json::Value;
 
 /// `query GetUser`, `mutation`, `GetUser` for a persisted query, `GetA +2` for a
@@ -17,8 +18,8 @@ pub fn operation(
         let mut name = None;
         for pair in query.split('&') {
             match pair.split_once('=') {
-                Some(("query", value)) => text = Some(percent_decode(value)),
-                Some(("operationName", value)) => name = Some(percent_decode(value)),
+                Some(("query", value)) => text = Some(decode::percent_decode(value)),
+                Some(("operationName", value)) => name = Some(decode::percent_decode(value)),
                 _ => {}
             }
         }
@@ -196,30 +197,6 @@ fn name_at(bytes: &[u8], at: usize) -> &str {
         .position(|b| !(b.is_ascii_alphanumeric() || *b == b'_'))
         .map_or(bytes.len(), |n| at + n);
     std::str::from_utf8(&bytes[at..end]).unwrap_or_default()
-}
-
-fn percent_decode(text: &str) -> String {
-    let bytes = text.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        match bytes[i] {
-            b'+' => out.push(b' '),
-            b'%' if i + 2 < bytes.len() => {
-                let hex = |b: u8| (b as char).to_digit(16);
-                match (hex(bytes[i + 1]), hex(bytes[i + 2])) {
-                    (Some(high), Some(low)) => {
-                        out.push((high * 16 + low) as u8);
-                        i += 2;
-                    }
-                    _ => out.push(b'%'),
-                }
-            }
-            b => out.push(b),
-        }
-        i += 1;
-    }
-    String::from_utf8_lossy(&out).into_owned()
 }
 
 #[cfg(test)]

@@ -307,6 +307,59 @@ async fn reports_upstream_errors() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_refused_certificate_is_kept_with_the_error() {
+    let h = Harness::start("refused").await;
+    // An origin with a CA of its own, which the proxy does not trust.
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let other_ca = h.dir.join("other-ca.pem");
+    let ca_out = other_ca.clone();
+    tokio::spawn(async move { benchkit::serve_origin(listener, &ca_out).await });
+    while !other_ca.exists() {
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    let res = h
+        .client(false)
+        .get(format!("https://localhost:{port}/json"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 502);
+
+    let (_, conn, dir) = h.finish(1).await;
+    let (error, conn_id, segment, offset, len): (String, Option<i64>, i64, i64, i64) = conn
+        .query_row(
+            "SELECT error, conn_id, conn_segment, conn_offset, conn_len FROM flows",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+        )
+        .unwrap();
+    assert!(error.contains("TLS with localhost"), "{error}");
+    assert!(conn_id.is_some());
+    let facts = BodyReader::new(&dir.join("session"))
+        .read_place(session::LogPlace {
+            segment: segment as u32,
+            offset: offset as u64,
+            len: len as u32,
+        })
+        .unwrap();
+    let facts: serde_json::Value = serde_json::from_slice(&facts).unwrap();
+    let tls = &facts["tls"];
+    assert!(
+        tls["error"].as_str().unwrap().contains("certificate"),
+        "{tls}"
+    );
+    assert!(!tls["certificates"].as_array().unwrap().is_empty());
+    assert!(
+        facts["remote"]
+            .as_str()
+            .unwrap()
+            .ends_with(&port.to_string())
+    );
+    clean_up(conn, dir);
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn spools_whole_bodies_past_the_cap() {
     let h = Harness::start("spool").await;
     const SIZE: usize = 5 * 1024 * 1024;

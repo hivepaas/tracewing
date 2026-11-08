@@ -453,36 +453,10 @@ fn query_string(path: &str) -> Vec<Value> {
     let Some((_, query)) = path.split_once('?') else {
         return Vec::new();
     };
-    query
-        .split('&')
-        .filter(|pair| !pair.is_empty())
-        .map(|pair| {
-            let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
-            json!({ "name": percent_decode(name), "value": percent_decode(value) })
-        })
+    decode::form_pairs(query)
+        .into_iter()
+        .map(|(name, value)| json!({ "name": name, "value": value }))
         .collect()
-}
-
-fn percent_decode(text: &str) -> String {
-    let bytes = text.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        let hex = |b: u8| (b as char).to_digit(16);
-        match bytes[i] {
-            b'+' => out.push(b' '),
-            b'%' if i + 2 < bytes.len() => match (hex(bytes[i + 1]), hex(bytes[i + 2])) {
-                (Some(high), Some(low)) => {
-                    out.push((high * 16 + low) as u8);
-                    i += 2;
-                }
-                _ => out.push(b'%'),
-            },
-            b => out.push(b),
-        }
-        i += 1;
-    }
-    String::from_utf8_lossy(&out).into_owned()
 }
 
 fn date_text(unix_us: i64) -> String {
