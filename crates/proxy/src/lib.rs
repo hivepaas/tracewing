@@ -1,6 +1,7 @@
 //! The intercepting proxy: TLS through a local certificate authority, and flows
 //! captured without buffering and handed to the store.
 
+pub mod apps;
 pub mod ca;
 pub mod ca_key;
 pub mod capture;
@@ -87,6 +88,8 @@ pub struct ProxyOptions {
     pub leaf_spki: Arc<OnceLock<String>>,
     /// Stop without waiting for the search index to catch up.
     pub leave_index: bool,
+    /// Whether to look for the program on this machine behind each connection.
+    pub find_apps: bool,
     /// How long a stop waits for connections to end. A stream or a WebSocket that
     /// is still open would otherwise hold it up for as long as it stays open.
     pub stop_limit: Duration,
@@ -180,6 +183,10 @@ pub async fn run_proxy(
             traffic_rules: opts.traffic_rules,
             check: opts.check,
             pauses: Arc::clone(&opts.pauses),
+            apps: opts
+                .find_apps
+                .then(|| apps::Apps::spawn(listen_addr.port()))
+                .transpose()?,
         },
     );
     let stop_limit = opts.stop_limit;

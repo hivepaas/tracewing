@@ -17,6 +17,7 @@
 //! and the writer carries on, because traffic must not notice.
 
 use crate::{
+    app::AppAnswer,
     decode::{self, Encoding},
     session::{self, BodyLog, LogPlace, Shared},
     settings::StorageSettings,
@@ -43,6 +44,8 @@ const LOG_CHUNK: usize = 4 * 1024 * 1024;
 const TRIM_ROWS: i64 = 5_000;
 const LOOK_EVERY: Duration = Duration::from_millis(500);
 const WARN_EVERY: Duration = Duration::from_secs(5);
+/// The longest a batch waits for the programs that sent its flows.
+const APP_WAIT: Duration = Duration::from_millis(500);
 
 /// One finished exchange, as stored.
 #[derive(Clone, Debug, Default)]
@@ -85,6 +88,9 @@ pub struct FlowRecord {
     /// What the connection was, as JSON, on the first flow over it only.
     pub connection: Option<Vec<u8>>,
     pub conn_place: Option<LogPlace>,
+    /// The program on this machine that sent it, which the proxy may still be
+    /// looking for when the flow ends. The writer waits for it a moment.
+    pub app: Option<Arc<AppAnswer>>,
     pub ttfb_us: Option<i64>,
     pub duration_us: Option<i64>,
     pub request: BodyRecord,
@@ -394,7 +400,7 @@ fn open(path: &Path) -> Result<Connection> {
         "PRAGMA journal_mode = WAL;
          PRAGMA synchronous = NORMAL;
          PRAGMA journal_size_limit = 67108864;
-         PRAGMA user_version = 5;
+         PRAGMA user_version = 6;
          CREATE TABLE IF NOT EXISTS flows (
              id INTEGER PRIMARY KEY,
              started_us INTEGER NOT NULL,
@@ -447,7 +453,10 @@ fn open(path: &Path) -> Result<Connection> {
              tls_us INTEGER,
              conn_segment INTEGER,
              conn_offset INTEGER,
-             conn_len INTEGER
+             conn_len INTEGER,
+             app TEXT,
+             app_pid INTEGER,
+             app_path TEXT
          );
          CREATE TABLE IF NOT EXISTS messages (
              id INTEGER PRIMARY KEY,
@@ -692,6 +701,7 @@ impl Writer {
     fn write_batch(&mut self, batch: &mut [FlowRecord]) {
         let queued: u64 = batch.iter().map(body_bytes).sum();
         let first_id = self.next_id;
+        wait_for_apps(batch);
         self.keep_bodies(batch, first_id);
         if let Err(e) = insert(&mut self.conn, first_id, batch) {
             // The rows are gone, and their bodies with them when their segment
@@ -960,6 +970,17 @@ fn delete_rows(conn: &mut Connection, spool: Option<&Spool>, from: i64, to: i64)
     Ok(result? as u64)
 }
 
+/// Usually found long before a flow ends; a flow that ends at once may beat it.
+/// One wait for the whole batch, as its flows are looked for together.
+fn wait_for_apps(batch: &[FlowRecord]) {
+    let deadline = Instant::now() + APP_WAIT;
+    for record in batch {
+        if let Some(answer) = &record.app {
+            answer.wait_until(deadline);
+        }
+    }
+}
+
 fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<()> {
     let tx = conn.transaction()?;
     {
@@ -973,14 +994,17 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                  resp_bytes, resp_truncated, resp_complete, resp_encoding,
                  resp_segment, resp_offset, resp_len, resp_zstd, resp_spool, resp_spool_lost, resp_shed,
                  head_segment, head_offset, head_len, open, rule, graphql,
-                 conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len
+                 conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len,
+                 app, app_pid, app_path
              ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
                        ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27,
                        ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42, ?43, ?44,
-                       ?45, ?46, ?47, ?48, ?49, ?50, ?51, ?52)",
+                       ?45, ?46, ?47, ?48, ?49, ?50, ?51, ?52, ?53, ?54, ?55)",
         )?;
         for (i, r) in batch.iter().enumerate() {
             let (req, resp) = (r.request.place, r.response.place);
+            // Waited for before the batch: what is not there now never came.
+            let app = r.app.as_ref().and_then(|answer| answer.now()).flatten();
             stmt.execute(params![
                 first_id + i as i64,
                 r.started_us,
@@ -1034,6 +1058,9 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                 r.conn_place.map(|p| p.segment),
                 r.conn_place.map(|p| p.offset as i64),
                 r.conn_place.map(|p| p.len),
+                app.as_ref().map(|a| &a.name),
+                app.as_ref().map(|a| a.pid),
+                app.as_ref().and_then(|a| a.path.as_ref()),
             ])?;
         }
     }

@@ -46,6 +46,9 @@ enum Command {
         /// With --system-proxy: no watchdog, to test the recovery at login.
         #[arg(long)]
         no_watchdog: bool,
+        /// Do not look for the program behind each connection.
+        #[arg(long)]
+        no_apps: bool,
         /// Stop cleanly after this many seconds.
         #[arg(long)]
         exit_after: Option<u64>,
@@ -185,6 +188,7 @@ async fn main() -> Result<()> {
             queue,
             system_proxy,
             no_watchdog,
+            no_apps,
             exit_after,
         } => {
             let data_dir = data_dir.unwrap_or_else(default_data_dir);
@@ -240,6 +244,7 @@ async fn main() -> Result<()> {
                     leaf_spki,
                     pauses: Default::default(),
                     leave_index: false,
+                    find_apps: !no_apps,
                     stop_limit: Duration::from_secs(5),
                 },
                 async move {

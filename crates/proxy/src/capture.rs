@@ -8,6 +8,7 @@
 //! A WebSocket or server-sent events can last for hours, so those get a row as they
 //! open and their messages as they come: see [`StreamHandle`].
 
+use crate::apps::Apps;
 use crate::ca::CRL_PATH;
 use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
@@ -35,6 +36,7 @@ use std::{
     task::{Context, Poll},
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
+use tracewing_store::app::AppAnswer;
 use tracewing_store::graphql;
 use tracewing_store::spool::{Spool, SpoolFile};
 use tracewing_store::store::{BodyRecord, FlowRecord, Recorder, StreamHandle};
@@ -94,6 +96,8 @@ pub struct FlowHandler {
     traffic_rules: Arc<RwLock<TrafficRules>>,
     check: Arc<Check>,
     pauses: Arc<Pauses>,
+    /// Which program each connection is from, when that is looked for.
+    apps: Option<Apps>,
     /// Headers rules set on the response of the request this clone is handling.
     response_headers: Vec<(HeaderName, HeaderValue)>,
     /// The rule that holds its response, with the request's method and URL.
@@ -113,6 +117,7 @@ pub struct Controls {
     pub traffic_rules: Arc<RwLock<TrafficRules>>,
     pub check: Arc<Check>,
     pub pauses: Arc<Pauses>,
+    pub apps: Option<Apps>,
 }
 
 impl FlowHandler {
@@ -133,6 +138,7 @@ impl FlowHandler {
             traffic_rules: controls.traffic_rules,
             check: controls.check,
             pauses: controls.pauses,
+            apps: controls.apps,
             response_headers: Vec::new(),
             pause_response: None,
             websockets: Arc::default(),
@@ -207,6 +213,10 @@ impl FlowHandler {
             }),
             Verdict::Drop => pause::dropped(),
         }
+    }
+
+    fn app_of(&self, client: SocketAddr) -> Option<Arc<AppAnswer>> {
+        self.apps.as_ref()?.of(client, false)
     }
 
     /// A rule's answer: no server was asked, so none is on record.
@@ -296,6 +306,12 @@ impl HttpHandler for FlowHandler {
     async fn handle_request(&mut self, ctx: &HttpContext, req: Request<Body>) -> RequestOrResponse {
         // The tunnel itself is not a flow; the requests inside it are.
         if req.method() == Method::CONNECT {
+            // A new connection, and the first the proxy hears of it.
+            if let Some(apps) = &self.apps
+                && self.recording.load(Ordering::Relaxed)
+            {
+                apps.of(ctx.client_addr, true);
+            }
             return req.into();
         }
         // Revocation checks ask for this while the handshake waits, directly or
@@ -344,10 +360,12 @@ impl HttpHandler for FlowHandler {
         let recording = self.recording.load(Ordering::Relaxed);
         let flow =
             recording.then(|| Arc::new(Flow::start(self.recorder.clone(), ctx.client_addr, &req)));
-        if let Some(flow) = &flow
-            && !plan.names.is_empty()
-        {
-            flow.lock().rule = Some(plan.names.join(", "));
+        if let Some(flow) = &flow {
+            let mut record = flow.lock();
+            record.app = self.app_of(ctx.client_addr);
+            if !plan.names.is_empty() {
+                record.rule = Some(plan.names.join(", "));
+            }
         }
         if dropped {
             return self.answer_as_rule(flow, pause::dropped()).into();
@@ -407,6 +425,7 @@ impl HttpHandler for FlowHandler {
                 scheme: "https".to_owned(),
                 host: without_default_port(host, "https").to_owned(),
                 client_version: format!("{:?}", req.version()),
+                app: self.app_of(ctx.client_addr),
                 status: Some(200),
                 request: BodyRecord {
                     complete: true,

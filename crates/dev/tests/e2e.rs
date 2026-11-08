@@ -110,6 +110,7 @@ impl Harness {
                 leaf_spki: Default::default(),
                 pauses: Arc::clone(&pauses),
                 leave_index: false,
+                find_apps: true,
                 stop_limit: Duration::from_secs(1),
             },
             async {
@@ -236,6 +237,50 @@ async fn intercepts_http1_and_http2() {
         assert!(body.starts_with(br#"{"data":"#));
         assert_eq!(*truncated, 0);
     }
+    clean_up(conn, dir);
+}
+
+/// The test sends its requests itself, so the program behind them is this one.
+#[tokio::test(flavor = "multi_thread")]
+async fn each_flow_knows_the_program_that_sent_it() {
+    let h = Harness::start("apps").await;
+    for http1_only in [true, false] {
+        let res = h
+            .client(http1_only)
+            .get(format!("{}/json?size=10", h.origin))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 200);
+    }
+    h.rules.write().unwrap().leave_alone("localhost");
+    let origin_ca = h.dir.join("origin-ca.pem");
+    let trusts_origin = benchkit::client_through_proxy(&h.proxy_url, &origin_ca, false).unwrap();
+    let res = trusts_origin
+        .get(format!("{}/json?size=10", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+
+    let (_, conn, dir) = h.finish(3).await;
+    type AppRow = (String, Option<String>, Option<i64>, Option<String>);
+    let apps: Vec<AppRow> = conn
+        .prepare("SELECT kind, app, app_pid, app_path FROM flows ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(apps.len(), 3, "{apps:?}");
+    let exe = std::env::current_exe().unwrap();
+    let name = exe.file_stem().unwrap().to_str().unwrap();
+    for (kind, app, pid, path) in &apps {
+        assert_eq!(*pid, Some(i64::from(std::process::id())), "{kind}");
+        assert_eq!(app.as_deref(), Some(name), "{kind}");
+        assert!(path.is_some(), "{kind}");
+    }
+    assert!(apps.iter().any(|(kind, ..)| kind == "tunnel"));
     clean_up(conn, dir);
 }
 

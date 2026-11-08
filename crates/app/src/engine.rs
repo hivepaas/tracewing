@@ -89,6 +89,7 @@ impl Engine {
             leaf_spki: Arc::clone(&leaf_spki),
             pauses: Arc::clone(&pauses),
             leave_index: true,
+            find_apps: true,
             stop_limit: std::time::Duration::from_secs(2),
         };
         let thread = {
