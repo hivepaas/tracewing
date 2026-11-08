@@ -60,8 +60,13 @@ const THUMB_MIN: f32 = 28.;
 
 /// What the worker thread does: anything that may read a large part of a session.
 enum Job {
-    Filter { generation: u64, filter: Filter },
-    Hosts { from_id: i64 },
+    Filter {
+        generation: u64,
+        filter: Box<Filter>,
+    },
+    Hosts {
+        from_id: i64,
+    },
 }
 
 enum Done {
@@ -72,6 +77,7 @@ enum Done {
     },
     Hosts {
         hosts: Vec<(SharedString, u64)>,
+        apps: Vec<(SharedString, u64)>,
         took: Duration,
     },
 }
@@ -113,17 +119,24 @@ fn work(session_dir: PathBuf, jobs: Receiver<Job>, done: Sender<Done>) {
         }
         if let Some(from_id) = hosts_job {
             let started = Instant::now();
-            let hosts = host_counts(conn, from_id).unwrap_or_default();
+            let hosts = counts(conn, "host", from_id).unwrap_or_default();
+            let apps = counts(conn, "app", from_id).unwrap_or_default();
             let took = started.elapsed();
-            let _ = done.send(Done::Hosts { hosts, took });
+            let _ = done.send(Done::Hosts { hosts, apps, took });
         }
     }
 }
 
-fn host_counts(conn: &Connection, from_id: i64) -> rusqlite::Result<Vec<(SharedString, u64)>> {
-    let mut stmt = conn.prepare_cached(
-        "SELECT host, count(*) AS n FROM flows WHERE id >= ?1 GROUP BY host ORDER BY n DESC LIMIT ?2",
-    )?;
+/// How many flows each host, or each program, has: `column` is one of the two.
+fn counts(
+    conn: &Connection,
+    column: &str,
+    from_id: i64,
+) -> rusqlite::Result<Vec<(SharedString, u64)>> {
+    let mut stmt = conn.prepare_cached(&format!(
+        "SELECT {column}, count(*) AS n FROM flows WHERE id >= ?1 AND {column} IS NOT NULL
+         GROUP BY {column} ORDER BY n DESC LIMIT ?2"
+    ))?;
     let rows = stmt.query_map(rusqlite::params![from_id, HOSTS_SHOWN], |r| {
         Ok((
             SharedString::from(r.get::<_, String>(0)?),
@@ -199,6 +212,8 @@ pub struct Traffic {
     filtering: bool,
     bounds: Option<(i64, i64)>,
     hosts: Vec<(SharedString, u64)>,
+    /// The programs that sent flows, with how many each.
+    apps: Vec<(SharedString, u64)>,
     hosts_due: Instant,
     hosts_seen: i64,
     hosts_asked: bool,
@@ -316,6 +331,7 @@ impl Traffic {
             filtering: false,
             bounds: None,
             hosts: Vec::new(),
+            apps: Vec::new(),
             hosts_due: now,
             hosts_seen: 0,
             hosts_asked: false,
@@ -605,8 +621,9 @@ impl Traffic {
                         self.filter_due = Instant::now() + WORK_EVERY.max(took * WORK_SHARE);
                     }
                 }
-                Done::Hosts { hosts, took } => {
+                Done::Hosts { hosts, apps, took } => {
                     self.hosts = hosts;
+                    self.apps = apps;
                     self.hosts_asked = false;
                     self.hosts_due = Instant::now() + WORK_EVERY.max(took * WORK_SHARE);
                 }
@@ -673,7 +690,7 @@ impl Traffic {
         filter.from_id = self.cleared_to;
         let _ = self.jobs.send(Job::Filter {
             generation: self.generation,
-            filter,
+            filter: Box::new(filter),
         });
     }
 
@@ -704,6 +721,7 @@ impl Traffic {
         let mut filter = Filter::parse(text);
         filter.kind = self.filter.kind;
         filter.exact_host = self.filter.exact_host.clone();
+        filter.exact_app = self.filter.exact_app.clone();
         if filter != self.filter {
             self.filter = filter;
             self.refilter(cx);
@@ -717,6 +735,16 @@ impl Traffic {
 
     pub fn set_host(&mut self, host: Option<String>, cx: &mut Context<Self>) {
         self.filter.exact_host = host;
+        self.refilter(cx);
+    }
+
+    /// The programs in the sidebar, with how many flows each sent.
+    pub fn app_counts(&self) -> &[(SharedString, u64)] {
+        &self.apps
+    }
+
+    pub fn set_app(&mut self, app: Option<String>, cx: &mut Context<Self>) {
+        self.filter.exact_app = app;
         self.refilter(cx);
     }
 
@@ -755,6 +783,7 @@ impl Traffic {
     fn clear(&mut self, cx: &mut Context<Self>) {
         self.cleared_to = self.bounds.map_or(0, |(_, last)| last + 1);
         self.hosts.clear();
+        self.apps.clear();
         self.hosts_seen = 0;
         self.selected = None;
         self.inspector = InspectorState::default();
@@ -1188,6 +1217,7 @@ impl Traffic {
     fn render_sidebar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let chosen = self.filter.exact_host.clone();
+        let chosen_app = self.filter.exact_app.clone();
         let total = self.total() as u64;
         let line = |id: SharedString, text: SharedString, count: u64, on: bool| {
             div()
@@ -1223,6 +1253,22 @@ impl Traffic {
             .gap(px(2.))
             .overflow_y_scroll()
             .bg(rgb(c.surface))
+            .when(!self.apps.is_empty(), |d| {
+                d.child(eyebrow("Apps").px(px(10.)).py(px(4.)))
+                    .children(self.apps.iter().map(|(app, count)| {
+                        let on = chosen_app.as_deref() == Some(app.as_ref());
+                        let name = app.to_string();
+                        line(format!("app-{app}").into(), app.clone(), *count, on).on_click(
+                            cx.listener(move |this, _, _, cx| {
+                                let next = (this.filter.exact_app.as_deref()
+                                    != Some(name.as_str()))
+                                .then(|| name.clone());
+                                this.set_app(next, cx);
+                            }),
+                        )
+                    }))
+                    .child(div().h(px(8.)).flex_shrink_0())
+            })
             .child(eyebrow("Hosts").px(px(10.)).py(px(4.)))
             .child(
                 line(
@@ -1831,7 +1877,13 @@ impl Render for Traffic {
 const NUMBER_W: f32 = 76.;
 const METHOD_W: f32 = 66.;
 const STATUS_W: f32 = 60.;
+const APP_W: f32 = 104.;
 const HOST_W: f32 = 170.;
+/// In a narrow list the program and the host give way, down to these, before
+/// the path does.
+const APP_MIN: f32 = 56.;
+const HOST_MIN: f32 = 96.;
+const PATH_MIN: f32 = 96.;
 const SIZE_W: f32 = 74.;
 const TIME_W: f32 = 70.;
 
@@ -1852,8 +1904,21 @@ fn render_header() -> impl IntoElement {
         .child(div().w(px(NUMBER_W)).flex_shrink_0().child("#"))
         .child(div().w(px(METHOD_W)).flex_shrink_0().child("Method"))
         .child(div().w(px(STATUS_W)).flex_shrink_0().child("Status"))
-        .child(div().w(px(HOST_W)).flex_shrink_0().child("Host"))
-        .child(div().flex_1().min_w_0().child("Path"))
+        .child(
+            div()
+                .w(px(APP_W))
+                .min_w(px(APP_MIN))
+                .truncate()
+                .child("App"),
+        )
+        .child(
+            div()
+                .w(px(HOST_W))
+                .min_w(px(HOST_MIN))
+                .truncate()
+                .child("Host"),
+        )
+        .child(div().flex_1().min_w(px(PATH_MIN)).child("Path"))
         .child(
             div()
                 .w(px(SIZE_W))
@@ -1929,8 +1994,18 @@ fn render_row(row: Row, selected: bool) -> Stateful<Div> {
                 )
                 .child(
                     div()
+                        .w(px(APP_W))
+                        .min_w(px(APP_MIN))
+                        .pr(px(8.))
+                        .truncate()
+                        .text_size(px(12.))
+                        .text_color(rgb(c.muted))
+                        .child(row.app),
+                )
+                .child(
+                    div()
                         .w(px(HOST_W))
-                        .flex_shrink_0()
+                        .min_w(px(HOST_MIN))
                         .pr(px(8.))
                         .truncate()
                         .child(row.host),
@@ -1938,7 +2013,7 @@ fn render_row(row: Row, selected: bool) -> Stateful<Div> {
                 .child(
                     div()
                         .flex_1()
-                        .min_w_0()
+                        .min_w(px(PATH_MIN))
                         .flex()
                         .flex_row()
                         .font_family(crate::MONO_FONT)

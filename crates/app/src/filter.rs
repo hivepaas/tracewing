@@ -70,6 +70,10 @@ pub struct Filter {
     pub content_type: Option<String>,
     /// A part of the GraphQL operation, as `GetUser` or `mutation`.
     pub graphql: Option<String>,
+    /// A part of the program's name, from the box.
+    pub app: Option<String>,
+    /// The whole name, from the sidebar.
+    pub exact_app: Option<String>,
     pub text: Option<String>,
     pub kind: Kind,
     /// Flows before this one were cleared from view.
@@ -94,6 +98,9 @@ impl Filter {
                 Some(("graphql" | "gql", value)) if !value.is_empty() => {
                     filter.graphql = Some(value.to_owned());
                 }
+                Some(("app", value)) if !value.is_empty() => {
+                    filter.app = Some(value.to_owned());
+                }
                 Some(("status", value)) if status_range(value).is_some() => {
                     filter.status = status_range(value);
                 }
@@ -114,6 +121,8 @@ impl Filter {
             && self.status.is_none()
             && self.content_type.is_none()
             && self.graphql.is_none()
+            && self.app.is_none()
+            && self.exact_app.is_none()
             && self.text.is_none()
             && self.kind == Kind::All
     }
@@ -174,6 +183,14 @@ impl Filter {
         if let Some(graphql) = &self.graphql {
             clauses.push("graphql LIKE ? ESCAPE '\\'".to_owned());
             values.push(Box::new(format!("%{}%", escape_like(graphql))));
+        }
+        if let Some(app) = &self.app {
+            clauses.push("app LIKE ? ESCAPE '\\'".to_owned());
+            values.push(Box::new(format!("%{}%", escape_like(app))));
+        }
+        if let Some(app) = &self.exact_app {
+            clauses.push("app = ?".to_owned());
+            values.push(Box::new(app.clone()));
         }
         if let Some(clause) = self.kind.clause() {
             clauses.push(clause.to_owned());
@@ -258,13 +275,15 @@ mod tests {
 
     #[test]
     fn the_box_is_read_word_by_word() {
-        let filter =
-            Filter::parse("host:myapp method:post status:4xx type:json gql:GetUser đặt hàng");
+        let filter = Filter::parse(
+            "host:myapp method:post status:4xx type:json gql:GetUser app:curl đặt hàng",
+        );
         assert_eq!(filter.host.as_deref(), Some("myapp"));
         assert_eq!(filter.method.as_deref(), Some("POST"));
         assert_eq!(filter.status, Some((400, 500)));
         assert_eq!(filter.content_type.as_deref(), Some("json"));
         assert_eq!(filter.graphql.as_deref(), Some("GetUser"));
+        assert_eq!(filter.app.as_deref(), Some("curl"));
         assert_eq!(filter.text.as_deref(), Some("đặt hàng"));
     }
 
