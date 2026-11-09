@@ -22,6 +22,16 @@ mod os;
 #[path = "windows.rs"]
 mod os;
 
+#[cfg(target_os = "linux")]
+#[path = "quic_linux.rs"]
+mod quic;
+#[cfg(target_os = "macos")]
+#[path = "quic_macos.rs"]
+mod quic;
+#[cfg(windows)]
+#[path = "quic_windows.rs"]
+mod quic;
+
 pub mod launch;
 
 use anyhow::{Context, Result, bail};
@@ -119,6 +129,36 @@ pub fn verify_ca(ca: &LocalCa, provider: hudsucker::rustls::crypto::CryptoProvid
 
 pub fn proxy_status() -> Result<Saved> {
     os::read_proxy()
+}
+
+/// Outgoing UDP to port 443 is refused on this machine while this lives, so apps
+/// that would speak HTTP/3 fall back to TCP, and to the proxy. Putting it in
+/// asks for an administrator. The OS takes it away by itself as soon as what
+/// holds it ends, so a crash leaves nothing behind and taking it away needs no
+/// rights: no journal and no watchdog.
+pub struct QuicBlock(quic::QuicBlock);
+
+pub fn block_quic(data_dir: &Path) -> Result<QuicBlock> {
+    fs::create_dir_all(data_dir)?;
+    quic::block_quic(data_dir).map(QuicBlock)
+}
+
+impl QuicBlock {
+    pub fn release(self) -> Result<()> {
+        self.0.release()
+    }
+}
+
+/// Windows' elevated half of [`block_quic`]:
+/// `block-quic --parent PID --name NAME --data-dir DIR`.
+#[cfg(windows)]
+pub fn quic_helper(parent: u32, name: &str, data_dir: &Path) -> Result<()> {
+    quic::quic_helper(parent, name, data_dir)
+}
+
+#[cfg(not(windows))]
+pub fn quic_helper(_parent: u32, _name: &str, _data_dir: &Path) -> Result<()> {
+    bail!("only Windows blocks QUIC through a helper")
 }
 
 /// The system proxy is ours until this is released or dropped with the process.

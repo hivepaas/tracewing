@@ -17,7 +17,8 @@ use tracewing_store::settings::StorageSettings;
 use tracewing_system as system;
 
 /// What the system crate runs this program for: `watchdog --data-dir D` when the
-/// app has gone, and `sysproxy recover --data-dir D` at the next login.
+/// app has gone, `sysproxy recover --data-dir D` at the next login, and on
+/// Windows `block-quic --parent P --name N --data-dir D`, as administrator.
 fn helper_command(args: &[String]) -> Option<Result<()>> {
     let data_dir =
         |flag: &String, value: &String| (flag == "--data-dir").then(|| PathBuf::from(value));
@@ -27,6 +28,12 @@ fn helper_command(args: &[String]) -> Option<Result<()>> {
         }
         [_, sysproxy, recover, flag, value] if sysproxy == "sysproxy" && recover == "recover" => {
             Some(system::recover(&data_dir(flag, value)?).map(|_| ()))
+        }
+        [_, block, parent_flag, parent, name_flag, name, flag, value]
+            if block == "block-quic" && parent_flag == "--parent" && name_flag == "--name" =>
+        {
+            let parent = parent.parse().ok()?;
+            Some(system::quic_helper(parent, name, &data_dir(flag, value)?))
         }
         _ => None,
     }
