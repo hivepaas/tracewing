@@ -221,7 +221,7 @@ impl Traffic {
         cx.notify();
     }
 
-    fn copy_as_curl(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn copy_as_curl(&mut self, cx: &mut Context<Self>) {
         let Some(detail) = &self.inspector.detail else {
             return;
         };
@@ -676,6 +676,7 @@ fn render_title(detail: &Detail) -> impl IntoElement {
                 .max_h(px(58.))
                 .overflow_hidden()
                 .font_family(crate::MONO_FONT)
+                .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(px(12.5))
                 .line_height(relative(1.5))
                 .child(detail.url.clone()),
@@ -884,6 +885,7 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
         .flex_col()
         .gap(px(6.))
         .font_family(crate::MONO_FONT)
+        .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(px(12.))
         .child(heading("CLIENT".to_owned()))
         .child(row("App", app))
@@ -1071,6 +1073,7 @@ fn render_headers(headers: Option<&[(String, String)]>) -> impl IntoElement {
         .flex_col()
         .gap(px(4.))
         .font_family(crate::MONO_FONT)
+        .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(px(12.))
         .children(headers.iter().map(|(name, value)| {
             div()
@@ -1117,6 +1120,7 @@ fn render_fields(found: Vec<Field>) -> impl IntoElement {
         .flex_col()
         .gap(px(4.))
         .font_family(crate::MONO_FONT)
+        .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(px(12.))
         .children(found.into_iter().map(|field| {
             let value = match field.value {
@@ -1175,6 +1179,7 @@ fn render_cookies(headers: Option<&[(String, String)]>, side: Side) -> impl Into
         .flex_col()
         .gap(px(8.))
         .font_family(crate::MONO_FONT)
+        .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(px(12.))
         .children(found.into_iter().map(|cookie| {
             let jwt = Jwt::find(&cookie.value);

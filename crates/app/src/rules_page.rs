@@ -417,6 +417,7 @@ impl Traffic {
                                 .text_size(px(12.))
                                 .text_color(rgb(c.muted))
                                 .font_family(crate::MONO_FONT)
+                                .font_features(gpui::FontFeatures::disable_ligatures())
                                 .child(format!(
                                     "{}{}",
                                     if rule.method.is_empty() {
@@ -453,7 +454,10 @@ impl Traffic {
                 .flex()
                 .items_center()
                 .bg(rgb(c.input))
-                .when(mono, |d| d.font_family(crate::MONO_FONT))
+                .when(mono, |d| {
+                    d.font_family(crate::MONO_FONT)
+                        .font_features(gpui::FontFeatures::disable_ligatures())
+                })
                 .child(input.clone())
         };
         let (first_hint, second_hint) = page.kind.fields();

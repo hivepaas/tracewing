@@ -191,6 +191,7 @@ impl Traffic {
                 .rounded(px(12.))
                 .bg(rgb(c.input))
                 .font_family(crate::MONO_FONT)
+                .font_features(gpui::FontFeatures::disable_ligatures())
                 .child(input.clone())
         };
         let chip = |id: &'static str, label: &'static str, loud: bool| {
@@ -216,6 +217,7 @@ impl Traffic {
                 .rounded(px(12.))
                 .bg(rgb(c.input))
                 .font_family(crate::MONO_FONT)
+                .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(px(12.))
                 .child(text)
         };
