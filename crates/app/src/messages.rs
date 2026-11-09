@@ -124,7 +124,7 @@ impl Traffic {
                     return;
                 }
                 if let Some(body) = file.and_then(|path| Body::open(&path).ok()) {
-                    state.view = Some(cx.new(|cx| BodyView::new(body, cx)));
+                    state.view = Some(cx.new(|cx| BodyView::new(body, None, cx)));
                 }
                 cx.notify();
             });

@@ -253,5 +253,35 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "53-refused");
 
+    // HTML, JavaScript and CSS, each in its colors.
+    for path in ["page.html", "app.js", "style.css"] {
+        let status = send(
+            &mut cx,
+            window,
+            "GET",
+            &format!("https://localhost:{trusted}/{path}"),
+            "",
+            "",
+        );
+        assert_eq!(status, 200);
+    }
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "six flows", |view| view.count() == 6);
+    for (place, name) in [(3, "63-html"), (4, "64-script"), (5, "65-style")] {
+        window
+            .update(&mut cx, |view, _, cx| {
+                view.select_place(place, cx);
+                view.set_side(Side::Response, cx);
+                view.set_part(Part::Body, cx);
+            })
+            .unwrap();
+        wait_for(&mut cx, window, name, |view| {
+            matches!(view.inspector.body, BodyState::Shown(..))
+        });
+        shot(&mut cx, window.into(), name);
+    }
+
     std::fs::remove_dir_all(&dir).ok();
 }

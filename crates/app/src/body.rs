@@ -299,6 +299,11 @@ impl Body {
         self.kind
     }
 
+    /// The first bytes, as `kind` was told from.
+    pub fn head(&self) -> &[u8] {
+        &self.map[..self.map.len().min(SNIFF_BYTES)]
+    }
+
     pub fn size(&self) -> u64 {
         self.map.len() as u64
     }
@@ -468,6 +473,11 @@ pub enum Token {
     Number,
     Literal,
     Punct,
+    Comment,
+    Keyword,
+    /// A markup tag's name, or a style's selector.
+    Tag,
+    Attr,
 }
 
 /// The colored runs of a JSON line. It sees only what is shown, so a cut string

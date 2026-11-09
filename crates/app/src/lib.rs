@@ -31,6 +31,7 @@ pub mod rules_page;
 pub mod sessions_page;
 pub mod settings_page;
 pub mod setup_page;
+pub mod syntax;
 pub mod system;
 pub mod traffic;
 pub mod widgets;

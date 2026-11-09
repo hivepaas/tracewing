@@ -69,6 +69,52 @@ pub async fn serve_origin(listener: TcpListener, ca_out: &Path) -> Result<()> {
     }
 }
 
+/// What `/page.html`, `/app.js` and `/style.css` answer with.
+pub const PAGE_HTML: &str = r#"<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fish &amp; chips</title>
+  <link rel="stylesheet" href="/style.css">
+  <!-- Loaded last, so the page shows first. -->
+  <script src="/app.js" defer></script>
+</head>
+<body class="menu" data-theme='dark'>
+  <h1>Today&#39;s menu</h1>
+  <ul id="dishes"></ul>
+  <img src=/picture.png alt="A plate" width=96>
+</body>
+</html>
+"#;
+pub const APP_JS: &str = r#"/**
+ * Lists today's dishes.
+ * @param {string} url where they are
+ */
+export async function listDishes(url = "/json?size=3") {
+  const response = await fetch(url, { headers: { accept: "application/json" } });
+  if (!response.ok) {
+    throw new Error(`fetch failed: ${response.status}`);
+  }
+  const dishes = await response.json(); // [{ name, price }]
+  for (const dish of dishes ?? []) {
+    console.log(dish.name, dish.price * 1.1, 0x1f, true, null);
+  }
+  return dishes.length;
+}
+"#;
+pub const STYLE_CSS: &str = r#"@import url("fonts.css");
+/* The menu, on every screen. */
+body.menu, .menu > ul li:hover {
+  font-family: "Inter", sans-serif;
+  color: #1f2937;
+  margin: 0 auto !important;
+  max-width: 42rem;
+}
+@media (max-width: 600px) {
+  h1 { font-size: 1.5em; padding: 4px 8px; }
+}
+"#;
+
 /// What `/picture.png` answers with: a 96 by 96 PNG.
 pub const PICTURE: &[u8] = include_bytes!("picture.png");
 
@@ -118,6 +164,15 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
                 },
             )
             .body(Full::new(Bytes::from_static(b"ok")).boxed()),
+        "/page.html" => Response::builder()
+            .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+            .body(Full::new(Bytes::from_static(PAGE_HTML.as_bytes())).boxed()),
+        "/app.js" => Response::builder()
+            .header(header::CONTENT_TYPE, "text/javascript")
+            .body(Full::new(Bytes::from_static(APP_JS.as_bytes())).boxed()),
+        "/style.css" => Response::builder()
+            .header(header::CONTENT_TYPE, "text/css")
+            .body(Full::new(Bytes::from_static(STYLE_CSS.as_bytes())).boxed()),
         "/picture.png" => Response::builder()
             .header(header::CONTENT_TYPE, "image/png")
             .body(Full::new(Bytes::from_static(PICTURE)).boxed()),
