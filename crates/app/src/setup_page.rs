@@ -347,6 +347,7 @@ impl Traffic {
             .child(self.render_other_devices(cx))
             .child(self.render_android(cx))
             .child(self.render_http3(cx))
+            .child(self.render_ai_tools())
     }
 }
 
@@ -799,9 +800,66 @@ impl Traffic {
     }
 }
 
+/// How an AI tool starts tracewing's MCP server: Claude Code's command, and the
+/// JSON most other tools read.
+pub fn mcp_setup(exe: &str) -> (String, String) {
+    let quoted = if exe.contains(' ') {
+        format!("\"{exe}\"")
+    } else {
+        exe.to_owned()
+    };
+    let claude = format!("claude mcp add tracewing -- {quoted} mcp");
+    let config = serde_json::to_string_pretty(&serde_json::json!({
+        "mcpServers": { "tracewing": { "command": exe, "args": ["mcp"] } }
+    }))
+    .unwrap_or_default();
+    (claude, config)
+}
+
+impl Traffic {
+    /// AI tools, reading what tracewing records through its MCP server.
+    fn render_ai_tools(&self) -> Div {
+        let exe = std::env::current_exe()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|_| "tracewing".to_owned());
+        let (claude, config) = mcp_setup(&exe);
+        aside(
+            "AI tools",
+            "Claude Code, Cursor, VS Code and other AI tools can list and read the flows \
+             tracewing records, through its MCP server. Tokens and cookies stay out unless \
+             Settings let them in. In Claude Code:",
+        )
+        .child(
+            div()
+                .w_full()
+                .flex()
+                .flex_col()
+                .gap(px(8.))
+                .child(code_block("mcp-claude", claude))
+                .child(div().child("Elsewhere, in the tool's MCP settings:"))
+                .child(code_block("mcp-config", config)),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ai_tools_are_told_how_to_start_the_server() {
+        let (claude, config) = mcp_setup("/Applications/My Apps/tracewing");
+        assert_eq!(
+            claude,
+            "claude mcp add tracewing -- \"/Applications/My Apps/tracewing\" mcp"
+        );
+        let config: serde_json::Value = serde_json::from_str(&config).unwrap();
+        assert_eq!(config["mcpServers"]["tracewing"]["args"][0], "mcp");
+        assert_eq!(
+            mcp_setup("/usr/bin/tracewing").0,
+            "claude mcp add tracewing -- /usr/bin/tracewing mcp"
+        );
+    }
 
     #[test]
     fn a_device_says_where_it_stands() {

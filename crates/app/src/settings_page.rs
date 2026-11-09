@@ -54,6 +54,16 @@ const GROUPS: &[(&str, &[Row])] = &[
         )],
     ),
     (
+        "AI tools",
+        &[row(
+            "ai_secrets",
+            "Let AI tools see tokens and cookies",
+            "AI tools read recorded traffic through tracewing's MCP server. Off, the values of \
+             Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.",
+            "",
+        )],
+    ),
+    (
         "HTTP/3",
         &[row(
             "hide_http3",
