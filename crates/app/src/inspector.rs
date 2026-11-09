@@ -139,6 +139,7 @@ impl Traffic {
             Side::Response => detail.content_type.as_deref(),
         };
         let picture = is_picture(content_type);
+        let content_type = content_type.map(str::to_owned);
         self.inspector.body = BodyState::Loading;
         let session = self.session_dir().to_owned();
         let max = self.engine.settings.view_max();
@@ -160,7 +161,9 @@ impl Traffic {
                         BodyState::Image(path, size)
                     }
                     Some((path, _)) => match Body::open(&path) {
-                        Ok(body) => BodyState::Shown(cx.new(|cx| BodyView::new(body, cx))),
+                        Ok(body) => BodyState::Shown(
+                            cx.new(|cx| BodyView::new(body, content_type.as_deref(), cx)),
+                        ),
                         Err(e) => BodyState::Note(format!("Cannot open this body: {e:#}").into()),
                     },
                 };

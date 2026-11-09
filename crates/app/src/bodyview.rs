@@ -4,9 +4,10 @@
 //! 6 million lines of 20 px.
 
 use crate::{
-    body::{Body, Kind, Line, Token, tokens},
+    body::{Body, Line, Token},
     colors::colors,
     flows::size_text,
+    syntax::Syntax,
 };
 use gpui::{
     Bounds, Context, HighlightStyle, Hsla, Pixels, Render, ScrollWheelEvent, SharedString,
@@ -26,6 +27,7 @@ const SCAN_POLL: Duration = Duration::from_millis(50);
 
 pub struct BodyView {
     body: Arc<Body>,
+    syntax: Syntax,
     /// The line at the top of the view, and how far it has scrolled out of it.
     top: u64,
     sub: f32,
@@ -36,7 +38,9 @@ pub struct BodyView {
 }
 
 impl BodyView {
-    pub fn new(body: Arc<Body>, cx: &mut Context<Self>) -> Self {
+    /// `content_type` is the body's, which says how to color it.
+    pub fn new(body: Arc<Body>, content_type: Option<&str>, cx: &mut Context<Self>) -> Self {
+        let syntax = Syntax::of(body.kind(), content_type, body.head());
         // A frame only when there is something new to show, and none after.
         let poll = Arc::clone(&body);
         cx.spawn(async move |this, cx| {
@@ -52,6 +56,7 @@ impl BodyView {
         .detach();
         Self {
             body,
+            syntax,
             top: 0,
             sub: 0.,
             dragging: false,
@@ -103,21 +108,18 @@ impl BodyView {
     }
 
     fn render_line(&self, line: u64, shown: Line) -> impl IntoElement {
-        let json = self.body.kind() == Kind::Json;
         let indent = if shown.depth > INDENT_MAX {
             INDENT_MAX as f32 * INDENT_W
         } else {
             shown.depth as f32 * INDENT_W
         };
         let number = (line + 1).to_string();
-        let highlights: Vec<_> = if json {
-            tokens(&shown.text)
-                .into_iter()
-                .map(|(range, token)| (range, highlight(token)))
-                .collect()
-        } else {
-            Vec::new()
-        };
+        let highlights: Vec<_> = self
+            .syntax
+            .runs(&shown.text)
+            .into_iter()
+            .map(|(range, token)| (range, highlight(token)))
+            .collect();
         let text: SharedString = shown.text.into();
         let mut row = div()
             .h(px(LINE_HEIGHT))
@@ -265,11 +267,13 @@ fn thumb_size(list_height: f32, lines: u64) -> f32 {
 fn highlight(token: Token) -> HighlightStyle {
     let c = colors();
     let color = match token {
-        Token::Key => c.json_key,
+        Token::Key | Token::Tag => c.json_key,
         Token::Str => c.json_string,
         Token::Number => c.json_number,
-        Token::Literal => c.json_literal,
+        Token::Literal | Token::Attr => c.json_literal,
         Token::Punct => c.json_punct,
+        Token::Comment => c.code_comment,
+        Token::Keyword => c.code_keyword,
     };
     HighlightStyle {
         color: Some(Hsla::from(rgb(color))),
