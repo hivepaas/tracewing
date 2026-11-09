@@ -115,6 +115,33 @@ body.menu, .menu > ul li:hover {
 }
 "#;
 
+/// What `/v1/messages` streams: an Anthropic answer that thinks, says
+/// something, and calls a tool.
+pub const ANTHROPIC_STREAM: &str = concat!(
+    "event: message_start\n",
+    "data: {\"type\":\"message_start\",\"message\":{\"model\":\"claude-sonnet-4-5\",\"usage\":{\"input_tokens\":412,\"output_tokens\":1}}}\n\n",
+    "event: content_block_start\n",
+    "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"thinking\",\"thinking\":\"\"}}\n\n",
+    "event: content_block_delta\n",
+    "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"The user wants a table for two tonight.\"}}\n\n",
+    "event: content_block_start\n",
+    "data: {\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n",
+    "event: content_block_delta\n",
+    "data: {\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"I will look for a table \"}}\n\n",
+    "event: content_block_delta\n",
+    "data: {\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"near the Old Quarter.\"}}\n\n",
+    "event: content_block_start\n",
+    "data: {\"type\":\"content_block_start\",\"index\":2,\"content_block\":{\"type\":\"tool_use\",\"id\":\"toolu_01\",\"name\":\"find_table\",\"input\":{}}}\n\n",
+    "event: content_block_delta\n",
+    "data: {\"type\":\"content_block_delta\",\"index\":2,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"{\\\"area\\\":\\\"Hoan Kiem\\\",\"}}\n\n",
+    "event: content_block_delta\n",
+    "data: {\"type\":\"content_block_delta\",\"index\":2,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"\\\"people\\\":2}\"}}\n\n",
+    "event: message_delta\n",
+    "data: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"},\"usage\":{\"output_tokens\":58}}\n\n",
+    "event: message_stop\n",
+    "data: {\"type\":\"message_stop\"}\n\n",
+);
+
 /// What `/picture.png` answers with: a 96 by 96 PNG.
 pub const PICTURE: &[u8] = include_bytes!("picture.png");
 
@@ -164,6 +191,17 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
                 },
             )
             .body(Full::new(Bytes::from_static(b"ok")).boxed()),
+        "/v1/messages" => Response::builder()
+            .header(header::CONTENT_TYPE, "text/event-stream")
+            .body(Full::new(Bytes::from_static(ANTHROPIC_STREAM.as_bytes())).boxed()),
+        "/v1/chat/completions" => Response::builder()
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(
+                Full::new(Bytes::from_static(
+                    br#"{"model":"gpt-4.1-mini","choices":[{"message":{"role":"assistant","content":"Two tables are free at 7pm."},"finish_reason":"stop"}],"usage":{"prompt_tokens":96,"completion_tokens":9}}"#,
+                ))
+                .boxed(),
+            ),
         "/page.html" => Response::builder()
             .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
             .body(Full::new(Bytes::from_static(PAGE_HTML.as_bytes())).boxed()),

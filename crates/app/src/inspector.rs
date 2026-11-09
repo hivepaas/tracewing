@@ -52,6 +52,8 @@ pub enum Part {
     Form,
     /// A WebSocket's or server-sent events' messages.
     Messages,
+    /// A call to an LLM's API, put back together.
+    Llm,
 }
 
 #[derive(Default)]
@@ -78,6 +80,8 @@ pub struct InspectorState {
     copied: bool,
     /// The menu of languages to copy the request as is open.
     pub copy_menu: bool,
+    /// The chosen flow as a call to a model, once its bodies are read.
+    pub llm: Option<(crate::llm::Provider, crate::llm::Exchange)>,
 }
 
 impl Traffic {
@@ -90,10 +94,12 @@ impl Traffic {
                 let stream = matches!(detail.kind.as_str(), "websocket" | "sse");
                 self.inspector.messages = stream.then(|| MessagesState::new(id));
                 let no_cookies = cookie_counts(&detail) == (0, 0);
+                let a_call = crate::llm::provider_of(&detail.method, &detail.url).is_some();
                 let (part_now, side_now) = (self.inspector.part, self.inspector.side);
                 self.inspector.part = match (stream, self.inspector.part) {
                     (true, _) => Part::Messages,
-                    (false, Part::Messages) => Part::Body,
+                    (_, Part::Llm) if a_call => Part::Llm,
+                    (false, Part::Messages | Part::Llm) => Part::Body,
                     (false, Part::Cookies) if no_cookies => Part::Body,
                     (false, Part::Query | Part::Form) if !has_part(&detail, part_now, side_now) => {
                         Part::Body
@@ -102,6 +108,8 @@ impl Traffic {
                 };
                 self.inspector.detail = Some(detail);
                 self.inspector.copied = false;
+                self.inspector.llm = None;
+                self.load_llm(cx);
                 self.show_device_name(cx);
                 self.take_new_messages();
                 self.load_body(cx);
@@ -200,6 +208,7 @@ impl Traffic {
         self.inspector.detail = Some(now);
         self.forget_row(id);
         self.load_body(cx);
+        self.load_llm(cx);
         true
     }
 
@@ -484,6 +493,15 @@ impl Traffic {
             .gap_x(px(14.))
             .gap_y(px(8.))
             .text_size(px(12.5))
+            .when(
+                self.inspector.llm.is_some()
+                    || self
+                        .inspector
+                        .detail
+                        .as_ref()
+                        .is_some_and(|d| crate::llm::provider_of(&d.method, &d.url).is_some()),
+                |d| d.child(tab("part-llm", "LLM".to_owned(), Part::Llm)),
+            )
             .children(self.inspector.messages.as_ref().map(|state| {
                 tab(
                     "part-messages",
@@ -675,6 +693,7 @@ impl Traffic {
             .bg(rgb(c.code));
         match self.inspector.part {
             Part::Messages => well.child(self.render_messages(cx)),
+            Part::Llm => well.child(self.render_llm(cx)),
             Part::Headers => well.child(render_headers(detail.headers(self.inspector.side))),
             Part::Connection => {
                 let naming = (detail.app.is_none() && device_of(&detail.client).is_some())
