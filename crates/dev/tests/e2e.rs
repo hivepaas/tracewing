@@ -1175,6 +1175,42 @@ async fn wait_for_row(
     }
 }
 
+/// A stream opened by a request with a body, as a streamed call to an LLM is,
+/// leaves the bodies of the flows after it alone.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_posted_stream_keeps_the_bodies_after_it() {
+    let h = Harness::start("posted-stream").await;
+    let client = h.client(false);
+    let mut stream = client
+        .post(format!("{}/stream?events=2&gap_ms=10", h.origin))
+        .header("content-type", "application/json")
+        .body(r#"{"model":"m","stream":true,"messages":[{"role":"user","content":"hi"}]}"#)
+        .send()
+        .await
+        .unwrap();
+    while stream.chunk().await.unwrap().is_some() {}
+    client
+        .get(format!("{}/json?size=40", h.origin))
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    let (summary, conn, dir) = h.finish(2).await;
+    let after = response_of(&conn, &dir, 2).expect("the body after the stream was kept");
+    assert_eq!(after.len(), 40);
+    let shed: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM flows WHERE req_shed OR resp_shed",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(shed, 0, "{summary:?}");
+    clean_up(conn, dir);
+}
+
 /// Server-sent events show as they come, not when the stream ends.
 #[tokio::test(flavor = "multi_thread")]
 async fn events_show_while_the_stream_lasts() {
