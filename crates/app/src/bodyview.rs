@@ -194,6 +194,7 @@ impl Render for BodyView {
             .bg(rgb(c.code))
             .text_color(rgb(c.text))
             .font_family(crate::MONO_FONT)
+            .font_features(gpui::FontFeatures::disable_ligatures())
             .text_size(px(12.))
             .on_scroll_wheel(cx.listener(Self::on_wheel))
             .on_mouse_move(cx.listener(|this, event: &gpui::MouseMoveEvent, _, cx| {

@@ -8,6 +8,7 @@ use crate::{
     chrome,
     colors::{self, colors, with_alpha},
     columns::{Column, Columns, Sort},
+    detail::Side,
     devices::{CLIENT_IP, Devices, NOT_LOOPBACK, device_of},
     engine::Engine,
     filter::{Filter, Kind},
@@ -18,6 +19,7 @@ use crate::{
     layout::{Appearance, INSPECTOR_MIN, LIST_MIN, Layout, Place, SIDEBAR_MAX, SIDEBAR_MIN},
     placement,
     settings_page::SettingsPage,
+    shortcuts::{self, Action, PAGE, action_of},
     system::{CaState, ProxySwitch, SystemState},
     widgets::{eyebrow, icon, status_colors},
 };
@@ -277,6 +279,8 @@ pub struct Traffic {
     pub check_visit: Option<CheckVisit>,
     /// The menu of columns to show is open.
     columns_menu: bool,
+    /// The list of keyboard shortcuts is open over the window.
+    shortcuts_open: bool,
 }
 
 impl Traffic {
@@ -380,6 +384,7 @@ impl Traffic {
             filter_input,
             filter,
             columns_menu: false,
+            shortcuts_open: false,
             ids: None,
             generation: 0,
             filter_due: now,
@@ -1212,38 +1217,82 @@ impl Traffic {
         }
     }
 
+    pub fn toggle_recording(&mut self, cx: &mut Context<Self>) {
+        let on = !self.engine.is_recording();
+        self.engine.set_recording(on);
+        cx.notify();
+    }
+
+    pub fn shortcuts_open(&self) -> bool {
+        self.shortcuts_open
+    }
+
+    pub fn set_shortcuts(&mut self, open: bool, cx: &mut Context<Self>) {
+        self.shortcuts_open = open;
+        cx.notify();
+    }
+
     fn on_key(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         let keys = &event.keystroke;
-        let secondary = keys.modifiers.secondary();
-        match keys.key.as_str() {
-            "escape" if self.drag.is_some() => {
+        // A text field has the keyboard when the window itself does not.
+        let typing = !self.focus.is_focused(window);
+        let Some(action) = action_of(
+            &keys.key,
+            keys.modifiers.secondary(),
+            keys.modifiers.shift,
+            typing,
+        ) else {
+            return;
+        };
+        if self.do_key(action, window, cx) {
+            cx.stop_propagation();
+        }
+    }
+
+    /// Does what a key says. False if it says nothing here, which leaves the
+    /// key to whoever else wants it.
+    pub fn do_key(&mut self, action: Action, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        let in_list = self.screen == Screen::Traffic;
+        let chosen = self.inspector.detail.is_some();
+        match action {
+            Action::Close if self.drag.is_some() => {
                 self.drag = None;
                 cx.notify();
             }
-            "f" if secondary => {
+            Action::Close if self.shortcuts_open => self.set_shortcuts(false, cx),
+            Action::Close => return false,
+            Action::Shortcuts => self.set_shortcuts(!self.shortcuts_open, cx),
+            Action::Filter => {
+                self.set_screen(Screen::Traffic, cx);
                 let handle = self.filter_input.read(cx).focus_handle(cx);
                 window.focus(&handle, cx);
             }
-            "\\" if secondary => {
+            Action::Place => {
                 let place = match self.layout.place {
                     Place::Beside => Place::Below,
                     Place::Below => Place::Beside,
                 };
                 self.set_place(place, cx);
             }
-            "b" if secondary => self.toggle_sidebar(cx),
-            "i" if secondary => self.toggle_inspector(cx),
-            "up" if !self.filter_has_focus(window, cx) => self.move_selection(-1, cx),
-            "down" if !self.filter_has_focus(window, cx) => self.move_selection(1, cx),
-            _ => {}
+            Action::Sidebar => self.toggle_sidebar(cx),
+            Action::Inspector => self.toggle_inspector(cx),
+            Action::Up if in_list => self.move_selection(-1, cx),
+            Action::Down if in_list => self.move_selection(1, cx),
+            Action::PageUp if in_list => self.move_selection(-PAGE, cx),
+            Action::PageDown if in_list => self.move_selection(PAGE, cx),
+            Action::First if in_list => self.move_selection(i64::MIN / 2, cx),
+            Action::Last if in_list => self.move_selection(i64::MAX / 2, cx),
+            Action::Request if chosen => self.set_side(Side::Request, cx),
+            Action::Response if chosen => self.set_side(Side::Response, cx),
+            Action::SendAgain if chosen => self.send_flow_again(cx),
+            Action::EditAndSend if chosen => self.edit_flow(cx),
+            Action::CopyCurl if chosen => self.copy_as_curl(cx),
+            Action::Record => self.toggle_recording(cx),
+            Action::Clear if in_list => self.clear(cx),
+            Action::Go(screen) => self.set_screen(screen, cx),
+            _ => return false,
         }
-    }
-
-    fn filter_has_focus(&self, window: &Window, cx: &Context<Self>) -> bool {
-        self.filter_input
-            .read(cx)
-            .focus_handle(cx)
-            .is_focused(window)
+        true
     }
 
     /// The columns shown, with how wide each is.
@@ -1340,11 +1389,7 @@ impl Traffic {
                         icon("pause", 14., c.muted)
                     })
                     .child(if recording { "Recording" } else { "Paused" })
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        let on = !this.engine.is_recording();
-                        this.engine.set_recording(on);
-                        cx.notify();
-                    })),
+                    .on_click(cx.listener(|this, _, _, cx| this.toggle_recording(cx))),
             )
             .child(
                 pill_button("clear")
@@ -1372,6 +1417,7 @@ impl Traffic {
                             .flex_1()
                             .min_w_0()
                             .font_family(crate::MONO_FONT)
+                            .font_features(gpui::FontFeatures::disable_ligatures())
                             .text_size(px(12.5))
                             .child(self.filter_input.clone()),
                     )
@@ -2090,6 +2136,14 @@ impl Traffic {
                 )
             })
             .child(self.render_ca(cx))
+            .child(
+                div()
+                    .id("shortcuts-link")
+                    .cursor_pointer()
+                    .text_color(rgb(c.link))
+                    .child(format!("Shortcuts {}", shortcuts::label("mod+/")))
+                    .on_click(cx.listener(|this, _, _, cx| this.set_shortcuts(true, cx))),
+            )
             .children(
                 notes
                     .into_iter()
@@ -2169,6 +2223,7 @@ impl Render for Traffic {
         };
 
         let body = div()
+            .relative()
             .track_focus(&self.focus)
             .key_context("Traffic")
             .on_key_down(cx.listener(Self::on_key))
@@ -2228,7 +2283,10 @@ impl Render for Traffic {
                         )
                     })
                     .child(self.render_footer(cx)),
-            );
+            )
+            .when(self.shortcuts_open, |d| {
+                d.child(deferred(self.render_shortcuts(cx)).with_priority(2))
+            });
         let switch = chrome::appearance_switch(self.layout.appearance).on_click(cx.listener(
             |this, _, window, cx| {
                 let next = this.layout.appearance.next();
@@ -2467,6 +2525,7 @@ fn render_row(
         match column {
             Column::Number => d
                 .font_family(crate::MONO_FONT)
+                .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(px(11.5))
                 .text_color(rgb(c.muted))
                 .truncate()
@@ -2502,6 +2561,7 @@ fn render_row(
                 .flex()
                 .flex_row()
                 .font_family(crate::MONO_FONT)
+                .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(px(12.))
                 .children(graphql.clone().map(|operation| {
                     div()

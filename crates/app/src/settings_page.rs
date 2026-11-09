@@ -403,6 +403,7 @@ impl Traffic {
                                     .items_center()
                                     .bg(rgb(c.input))
                                     .font_family(crate::MONO_FONT)
+                                    .font_features(gpui::FontFeatures::disable_ligatures())
                                     .child(input.clone()),
                             )
                             .child(
@@ -514,6 +515,7 @@ impl Traffic {
                             .rounded(px(12.))
                             .bg(rgb(c.input))
                             .font_family(crate::MONO_FONT)
+.font_features(gpui::FontFeatures::disable_ligatures())
                             .child(page.no_decrypt.clone()),
                     ),
             )

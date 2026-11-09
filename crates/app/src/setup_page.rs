@@ -559,6 +559,7 @@ fn code_block(id: impl Into<ElementId>, code: String) -> Div {
         .rounded(px(12.))
         .bg(rgb(c.input))
         .font_family(crate::MONO_FONT)
+        .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(px(12.))
         .child(code)
         .child(

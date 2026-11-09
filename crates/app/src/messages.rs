@@ -189,6 +189,7 @@ impl Traffic {
                     .cursor_pointer()
                     .when(chosen, |d| d.bg(rgb(c.selected_row)))
                     .font_family(crate::MONO_FONT)
+                    .font_features(gpui::FontFeatures::disable_ligatures())
                     .text_size(px(12.))
                     .child(
                         div()
