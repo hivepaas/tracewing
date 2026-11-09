@@ -195,6 +195,7 @@ pub async fn run_proxy(
                 .find_apps
                 .then(|| apps::Apps::spawn(listen_addr.port()))
                 .transpose()?,
+            hide_http3: opts.settings.hide_http3,
         },
     );
     let stop_limit = opts.stop_limit;

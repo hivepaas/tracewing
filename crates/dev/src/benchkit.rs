@@ -107,6 +107,17 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
             }
             response.body(Full::new(body).boxed())
         }
+        // What a server that also speaks HTTP/3 says, or with `only=h3`, all it says.
+        "/alt-svc" => Response::builder()
+            .header(
+                header::ALT_SVC,
+                if query.get("only") == Some(&"h3") {
+                    r#"h3=":443"; ma=86400, h3-29=":443""#
+                } else {
+                    r#"h3=":443"; ma=86400, h2="alt.example:443"; ma=60"#
+                },
+            )
+            .body(Full::new(Bytes::from_static(b"ok")).boxed()),
         "/picture.png" => Response::builder()
             .header(header::CONTENT_TYPE, "image/png")
             .body(Full::new(Bytes::from_static(PICTURE)).boxed()),

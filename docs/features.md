@@ -29,6 +29,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Open a terminal or a browser that goes through tracewing, without touching the system proxy (environment variables, a separate browser profile) | Beta | Free |
 | Pause and resume capture | Beta | Free |
 | Choose which hosts to decrypt; tunnel the rest untouched | Beta | Free |
+| Take offers of HTTP/3 (`Alt-Svc`) out of responses, so apps stay on HTTP/2 | Beta | Free |
 | Block UDP 443 so that clients fall back from HTTP/3 to HTTP/2 | Beta | Free |
 | Go through another proxy: HTTP and SOCKS5 | 1.x | Free |
 | Go through a company proxy with NTLM or Kerberos | 1.x | Pro |

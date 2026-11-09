@@ -43,6 +43,10 @@ pub struct StorageSettings {
     /// Listen on every network, not only on this machine, so that phones and
     /// other computers can send their traffic here. Read when the app starts.
     pub other_devices: bool,
+    /// Take servers' offers of HTTP/3 out of `Alt-Svc` on the way to the client.
+    /// HTTP/3 goes over UDP, which a proxy does not carry, so a client that takes
+    /// the offer goes around tracewing. The flow keeps the header as it came.
+    pub hide_http3: bool,
 }
 
 impl Default for StorageSettings {
@@ -62,6 +66,7 @@ impl Default for StorageSettings {
             spool_budget_mib: 256,
             sessions_kept: 5,
             other_devices: false,
+            hide_http3: true,
         }
     }
 }
