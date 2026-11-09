@@ -193,6 +193,8 @@ enum AndroidAction {
         #[arg(long, default_value_t = 9090)]
         port: u16,
     },
+    /// Put back the devices the journal says were left pointed at the proxy.
+    Recover,
 }
 
 #[derive(Subcommand)]
@@ -351,6 +353,10 @@ async fn main() -> Result<()> {
                 AndroidAction::Undo { serial, port } => {
                     system::android::undo(&adb, &serial, port, &data_dir)?;
                     println!("put back");
+                }
+                AndroidAction::Recover => {
+                    let put_back = system::android::recover(&adb, &data_dir)?;
+                    println!("{put_back} put back");
                 }
             }
         }

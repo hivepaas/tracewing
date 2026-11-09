@@ -283,16 +283,22 @@ pub fn undo(adb: &Path, serial: &str, port: u16, data_dir: &Path) -> Result<()> 
         .into_iter()
         .find(|e| e.serial == serial);
     let port = entry.as_ref().map_or(port, |e| e.port);
-    // `:0` is what Settings itself writes for none; deleting the key alone
-    // takes a restart to be noticed.
-    let previous = entry
-        .and_then(|e| e.previous)
-        .unwrap_or_else(|| ":0".to_owned());
-    shell(
-        adb,
-        serial,
-        &format!("settings put global http_proxy {previous}"),
-    )?;
+    match entry.and_then(|e| e.previous) {
+        Some(previous) => {
+            shell(
+                adb,
+                serial,
+                &format!("settings put global http_proxy {previous}"),
+            )?;
+        }
+        None => {
+            // `:0` is what Settings itself writes for none, and is noticed at
+            // once; deleting the key alone takes a restart to be. Then the key
+            // goes too, as it was.
+            shell(adb, serial, "settings put global http_proxy :0")?;
+            shell(adb, serial, "settings delete global http_proxy")?;
+        }
+    }
     let _ = on(
         adb,
         serial,
