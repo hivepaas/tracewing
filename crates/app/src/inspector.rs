@@ -6,7 +6,7 @@ use crate::{
     bodyview::{BodyView, summary},
     colors::colors,
     connection::Certificate,
-    cookies, curl,
+    cookies,
     detail::{Detail, Phase, Side, body_file},
     devices::device_of,
     fields::{self, Field, Value as FieldValue},
@@ -14,19 +14,22 @@ use crate::{
     input::TextInput,
     jwt::{self, Jwt},
     messages::MessagesState,
+    snippets::{self, Language},
     traffic::Traffic,
     widgets::{chip, eyebrow, icon, status_colors},
 };
 use gpui::{
-    AnyElement, ClipboardItem, Context, Div, Entity, FontWeight, MouseButton, MouseDownEvent,
-    ObjectFit, SharedString, StyledImage, div, img, prelude::*, px, relative, rgb,
+    Anchor, AnyElement, ClipboardItem, Context, Div, ElementId, Entity, FontWeight, MouseButton,
+    MouseDownEvent, ObjectFit, SharedString, StyledImage, anchored, deferred, div, img, prelude::*,
+    px, relative, rgb,
 };
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracewing_store::session::BodyReader;
 
 /// As much of a request's body as can go on a command line, and one byte more to
 /// see that it did not fit.
-const CURL_BODY_MAX: usize = 256 * 1024 + 1;
+/// One byte past what a snippet takes, so that it can tell it was cut.
+const SNIPPET_BODY_MAX: usize = 256 * 1024 + 1;
 const COPIED_FOR: Duration = Duration::from_millis(1500);
 /// Pictures larger than this show as bytes.
 const PICTURE_MAX: u64 = 32 << 20;
@@ -73,6 +76,8 @@ pub struct InspectorState {
     /// Which load the body is waiting for, so that a late one is ignored.
     load: u64,
     copied: bool,
+    /// The menu of languages to copy the request as is open.
+    pub copy_menu: bool,
 }
 
 impl Traffic {
@@ -222,6 +227,17 @@ impl Traffic {
     }
 
     pub(crate) fn copy_as_curl(&mut self, cx: &mut Context<Self>) {
+        self.copy_as(Language::Curl, cx);
+    }
+
+    pub fn set_copy_menu(&mut self, open: bool, cx: &mut Context<Self>) {
+        self.inspector.copy_menu = open;
+        cx.notify();
+    }
+
+    /// Copies the chosen flow's request as code in `language`.
+    pub fn copy_as(&mut self, language: Language, cx: &mut Context<Self>) {
+        self.inspector.copy_menu = false;
         let Some(detail) = &self.inspector.detail else {
             return;
         };
@@ -230,10 +246,12 @@ impl Traffic {
             .stored
             .exists()
             .then(|| {
-                BodyReader::new(self.session_dir()).unpacked(&detail.request.stored, CURL_BODY_MAX)
+                BodyReader::new(self.session_dir())
+                    .unpacked(&detail.request.stored, SNIPPET_BODY_MAX)
             })
             .flatten();
-        let command = curl::command(
+        let command = snippets::snippet(
+            language,
             &detail.method,
             &detail.url,
             detail.headers(Side::Request).unwrap_or_default(),
@@ -565,28 +583,86 @@ impl Traffic {
                                     .on_click(cx.listener(|view, _, _, cx| view.edit_flow(cx))),
                             )
                             .child(
-                                div()
-                                    .id("copy-curl")
-                                    .h(px(28.))
-                                    .px(px(10.))
-                                    .rounded(px(14.))
-                                    .flex()
-                                    .items_center()
-                                    .cursor_pointer()
-                                    .bg(rgb(c.chip))
-                                    .text_color(rgb(c.on_chip))
-                                    .text_size(px(12.))
-                                    .font_weight(FontWeight::BOLD)
-                                    .child(if self.inspector.copied {
+                                small(
+                                    "copy-curl",
+                                    if self.inspector.copied {
                                         "Copied"
                                     } else {
                                         "Copy as cURL"
-                                    })
-                                    .on_click(cx.listener(|view, _, _, cx| view.copy_as_curl(cx))),
-                            ),
+                                    },
+                                )
+                                .on_click(cx.listener(|view, _, _, cx| view.copy_as_curl(cx))),
+                            )
+                            .child(self.render_copy_as(cx)),
                     )
                 },
             )
+    }
+
+    /// "Copy as…" and, open, the languages it offers.
+    fn render_copy_as(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = colors();
+        let open = self.inspector.copy_menu;
+        let item = |language: Language| {
+            div()
+                .id(ElementId::Name(format!("copy-as-{language:?}").into()))
+                .h(px(30.))
+                .px(px(10.))
+                .rounded(px(8.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .hover(|d| d.bg(rgb(c.tonal)))
+                .child(language.name())
+                .on_click(cx.listener(move |view, _, _, cx| view.copy_as(language, cx)))
+        };
+        div()
+            .relative()
+            .child(
+                div()
+                    .id("copy-as")
+                    .h(px(28.))
+                    .px(px(10.))
+                    .rounded(px(14.))
+                    .flex()
+                    .items_center()
+                    .cursor_pointer()
+                    .bg(rgb(if open { c.tonal } else { c.chip }))
+                    .text_color(rgb(if open { c.on_tonal } else { c.on_chip }))
+                    .text_size(px(12.))
+                    .font_weight(FontWeight::BOLD)
+                    .child("Copy as…")
+                    .on_click(cx.listener(move |view, _, _, cx| view.set_copy_menu(!open, cx))),
+            )
+            .when(open, |d| {
+                d.child(
+                    div().absolute().top(px(32.)).left_0().child(deferred(
+                        anchored()
+                            .anchor(Anchor::TopLeft)
+                            .snap_to_window_with_margin(px(8.))
+                            .child(
+                                div()
+                                    .id("copy-as-list")
+                                    .occlude()
+                                    .w(px(190.))
+                                    .p(px(6.))
+                                    .rounded(px(14.))
+                                    .border_1()
+                                    .border_color(rgb(c.line))
+                                    .bg(rgb(c.surface))
+                                    .shadow_lg()
+                                    .flex()
+                                    .flex_col()
+                                    .text_size(px(13.))
+                                    .text_color(rgb(c.text))
+                                    .children(Language::ALL.into_iter().map(item))
+                                    .on_mouse_down_out(
+                                        cx.listener(|view, _, _, cx| view.set_copy_menu(false, cx)),
+                                    ),
+                            ),
+                    )),
+                )
+            })
     }
 
     fn render_part(&mut self, detail: &Detail, cx: &mut Context<Self>) -> impl IntoElement {

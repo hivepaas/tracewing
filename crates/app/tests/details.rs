@@ -17,6 +17,7 @@ use tracewing::{
     engine::{Engine, EngineOptions},
     input::TextInput,
     inspector::{BodyState, Part},
+    snippets::Language,
     traffic::{Screen, Traffic},
 };
 use tracewing_dev::benchkit;
@@ -282,6 +283,29 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
         });
         shot(&mut cx, window.into(), name);
     }
+
+    // The form's POST, as code to paste.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(0, cx);
+            view.set_copy_menu(true, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "67-copy-as");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.copy_as(Language::Python, cx);
+            assert!(!view.inspector.copy_menu, "closed once chosen");
+        })
+        .unwrap();
+    let copied = cx
+        .update(|cx| cx.read_from_clipboard())
+        .and_then(|item| item.text())
+        .expect("copied");
+    assert!(copied.starts_with("import requests\n"), "{copied}");
+    assert!(copied.contains("requests.post("), "{copied}");
+    assert!(copied.contains("city=H%C3%A0+N%E1%BB%99i"), "{copied}");
 
     std::fs::remove_dir_all(&dir).ok();
 }
