@@ -319,6 +319,11 @@ async fn streams_without_buffering() {
     );
     assert!(total >= Duration::from_millis(900), "total {total:?}");
 
+    // The row is written as the stream opens, and its body when it ends, which
+    // can be a moment after the client has read the last of it.
+    let open = Connection::open(h.dir.join("session/flows.db")).unwrap();
+    wait_for_row(&open, "sse", |row| !row.0).await;
+    drop(open);
     let (_, conn, dir) = h.finish(2).await;
     let body = String::from_utf8(response_of(&conn, &dir, 2).unwrap()).unwrap();
     assert_eq!(body.matches("data: event").count(), 4);
