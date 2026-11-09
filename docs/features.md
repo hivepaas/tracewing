@@ -46,6 +46,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Short-lived host certificates (30 days), a key separate from the CA's, IP addresses as well as names | Gate 0 | Free |
 | Install and trust the CA, step by step, with a check that it worked: macOS, Windows, Linux, Firefox's own store | Beta | Free |
 | The server's real certificate chain and TLS details for every flow; a warning when it is invalid | Beta | Free |
+| Trust servers whose certificates come from an authority this computer trusts, such as a company's own | Beta | Free |
 | Client certificates for servers that ask for one (mTLS) | 1.x | Pro |
 | Use a CA signed by the company's own PKI (a CSR), for machines where IT forbids new roots | 1.x | Pro |
 | Export TLS keys (`SSLKEYLOGFILE`) for Wireshark | 1.x | Pro |

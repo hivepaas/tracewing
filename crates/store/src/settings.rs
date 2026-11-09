@@ -47,6 +47,9 @@ pub struct StorageSettings {
     /// HTTP/3 goes over UDP, which a proxy does not carry, so a client that takes
     /// the offer goes around tracewing. The flow keeps the header as it came.
     pub hide_http3: bool,
+    /// Trust servers whose certificates come from an authority this computer
+    /// trusts, not only from the public ones. Read when the app starts.
+    pub os_roots: bool,
 }
 
 impl Default for StorageSettings {
@@ -67,6 +70,7 @@ impl Default for StorageSettings {
             sessions_kept: 5,
             other_devices: false,
             hide_http3: true,
+            os_roots: true,
         }
     }
 }
