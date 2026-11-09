@@ -7,11 +7,15 @@
 use crate::{
     colors::colors,
     devices::on_the_network,
+    qr::qr_code,
     system::{CaState, ProxySwitch, QuicSwitch},
     traffic::{Screen, Traffic},
     widgets::icon,
 };
-use gpui::{Context, Div, FontWeight, SharedString, Stateful, div, prelude::*, px, rgb};
+use gpui::{
+    ClipboardItem, Context, Div, ElementId, FontWeight, SharedString, Stateful, div, prelude::*,
+    px, rgb,
+};
 use std::net::{IpAddr, SocketAddr};
 use tracewing_proxy::{
     ca_key::KeyPlace,
@@ -399,27 +403,308 @@ impl Traffic {
     }
 }
 
+/// Which device's guide the Set up page shows.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Guide {
+    #[default]
+    Apple,
+    Android,
+    Flutter,
+}
+
+impl Guide {
+    pub const ALL: [Self; 3] = [Self::Apple, Self::Android, Self::Flutter];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Apple => "iPhone and iPad",
+            Self::Android => "Android",
+            Self::Flutter => "Flutter apps",
+        }
+    }
+}
+
+/// A guide is said in text, with code to copy where code is needed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Part {
+    Text(String),
+    Code(String),
+}
+
+/// Trusts certificates the user added, in debug builds only.
+const ANDROID_CONFIG: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="user" />
+            <certificates src="system" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>"#;
+
+const ANDROID_MANIFEST: &str = r#"<application
+    android:networkSecurityConfig="@xml/network_security_config"
+    ...>"#;
+
+fn flutter_overrides(proxy: SocketAddr) -> String {
+    format!(
+        r#"import 'dart:io';
+import 'package:flutter/foundation.dart';
+
+class TracewingProxy extends HttpOverrides {{
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {{
+    return super.createHttpClient(context)
+      ..findProxy = (uri) => 'PROXY {proxy}'
+      ..badCertificateCallback = (cert, host, port) => kDebugMode;
+  }}
+}}
+
+void main() {{
+  if (kDebugMode) HttpOverrides.global = TracewingProxy();
+  runApp(const MyApp());
+}}"#
+    )
+}
+
+/// How to get a device through tracewing and trusting it, once the proxy is
+/// set on it. `page` is the proxy's own address as a URL, where the
+/// certificate is.
+pub fn guide(guide: Guide, proxy: SocketAddr, page: &str) -> Vec<Part> {
+    let text = |t: String| Part::Text(t);
+    match guide {
+        Guide::Apple => vec![
+            text(format!(
+                "1. In Settings, Wi-Fi, choose the network, then Configure Proxy, Manual: server {}, port {}.",
+                proxy.ip(),
+                proxy.port()
+            )),
+            text(format!(
+                "2. Scan the code with the camera, or open {page} in Safari, and get the \
+                 certificate. Allow the download."
+            )),
+            text(
+                "3. In Settings, General, VPN & Device Management, choose the tracewing CA \
+                 profile and install it."
+                    .to_owned(),
+            ),
+            text(
+                "4. In Settings, General, About, Certificate Trust Settings, turn on full trust \
+                 for tracewing CA."
+                    .to_owned(),
+            ),
+            text(format!(
+                "5. Open https://{CHECK_HOST} in Safari. If it says it works, apps that use the \
+                 system's settings go through tracewing."
+            )),
+        ],
+        Guide::Android => vec![
+            text(format!(
+                "1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to \
+                 Manual: host {}, port {}.",
+                proxy.ip(),
+                proxy.port()
+            )),
+            text(format!(
+                "2. Scan the code, or open {page} in the browser, and get the certificate."
+            )),
+            text(
+                "3. In Settings, Security, Encryption & credentials (the names vary by maker), \
+                 choose Install a certificate, then CA certificate, and pick tracewing.crt."
+                    .to_owned(),
+            ),
+            text(
+                "4. Since Android 7, apps trust certificates the user added only if they say \
+                 so. For a debug build of your own app, add res/xml/network_security_config.xml:"
+                    .to_owned(),
+            ),
+            Part::Code(ANDROID_CONFIG.to_owned()),
+            text("and point to it from AndroidManifest.xml:".to_owned()),
+            Part::Code(ANDROID_MANIFEST.to_owned()),
+            text(
+                "Other apps keep refusing the certificate: their traffic shows as failed flows."
+                    .to_owned(),
+            ),
+        ],
+        Guide::Flutter => vec![
+            text(
+                "Dart's HttpClient, which Flutter's http and Dio use, does not follow the \
+                 phone's proxy setting, and on Android does not trust certificates the user \
+                 added. In a debug build, send it here:"
+                    .to_owned(),
+            ),
+            Part::Code(flutter_overrides(proxy)),
+            text(
+                "badCertificateCallback lets any certificate through, which is why it is for \
+                 debug builds only."
+                    .to_owned(),
+            ),
+        ],
+    }
+}
+
+/// Code in a box, with a button that copies it.
+fn code_block(id: impl Into<ElementId>, code: String) -> Div {
+    let c = colors();
+    let copied = code.clone();
+    div()
+        .relative()
+        .w_full()
+        .px(px(14.))
+        .py(px(10.))
+        .rounded(px(12.))
+        .bg(rgb(c.input))
+        .font_family(crate::MONO_FONT)
+        .text_size(px(12.))
+        .child(code)
+        .child(
+            div()
+                .id(id.into())
+                .absolute()
+                .top(px(8.))
+                .right(px(8.))
+                .px(px(10.))
+                .py(px(3.))
+                .rounded(px(10.))
+                .cursor_pointer()
+                .font_family(crate::FONT)
+                .bg(rgb(c.chip))
+                .text_color(rgb(c.on_chip))
+                .child("Copy")
+                .on_click(move |_, _, cx| {
+                    cx.write_to_clipboard(ClipboardItem::new_string(copied.clone()))
+                }),
+        )
+}
+
 impl Traffic {
-    /// A phone or another computer, through the proxy here.
+    pub fn set_guide(&mut self, guide: Guide, cx: &mut Context<Self>) {
+        self.system.guide = guide;
+        cx.notify();
+    }
+
+    /// A phone or another computer, through the proxy here: a code to scan
+    /// for the certificate, and how to trust it on each kind of device.
     fn render_other_devices(&mut self, cx: &mut Context<Self>) -> Div {
         let on = self.engine.settings.other_devices;
-        let text = other_devices_text(
-            on,
-            self.engine.addr.port(),
-            on.then(on_the_network).flatten(),
-        );
-        aside("Other devices", text).when(!on, |d| {
-            d.child(
-                button("setup-devices", "Open settings", false)
-                    .on_click(cx.listener(|this, _, _, cx| this.set_screen(Screen::Settings, cx))),
+        let port = self.engine.addr.port();
+        let here = on.then(on_the_network).flatten();
+        let Some(ip) = here else {
+            let text = other_devices_text(on, port, None);
+            return aside("Other devices", text).when(!on, |d| {
+                d.child(
+                    button("setup-devices", "Open settings", false).on_click(
+                        cx.listener(|this, _, _, cx| this.set_screen(Screen::Settings, cx)),
+                    ),
+                )
+            });
+        };
+        let c = colors();
+        let proxy = SocketAddr::new(ip, port);
+        let page = format!("http://{proxy}/");
+        let chosen = self.system.guide;
+        let tabs = Guide::ALL.into_iter().map(|guide| {
+            let on = guide == chosen;
+            div()
+                .id(ElementId::Name(format!("guide-{guide:?}").into()))
+                .px(px(14.))
+                .py(px(6.))
+                .rounded(px(16.))
+                .cursor_pointer()
+                .font_weight(FontWeight::BOLD)
+                .when(on, |d| d.bg(rgb(c.tab_on)))
+                .when(!on, |d| d.text_color(rgb(c.muted)))
+                .child(guide.label())
+                .on_click(cx.listener(move |this, _, _, cx| this.set_guide(guide, cx)))
+        });
+        let parts =
+            guide(chosen, proxy, &page)
+                .into_iter()
+                .enumerate()
+                .map(|(at, part)| match part {
+                    Part::Text(text) => div().child(text),
+                    Part::Code(code) => code_block(("copy-guide", at), code),
+                });
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(14.))
+            .p(px(18.))
+            .rounded(px(22.))
+            .border_1()
+            .border_color(rgb(c.surface))
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .items_center()
+                    .gap(px(18.))
+                    .children(qr_code(&page, 168.))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(280.))
+                            .flex()
+                            .flex_col()
+                            .gap(px(4.))
+                            .child(
+                                div()
+                                    .text_size(px(15.))
+                                    .font_weight(FontWeight::BOLD)
+                                    .child("Phones and other devices"),
+                            )
+                            .child(div().text_color(rgb(c.muted)).child(format!(
+                                "A phone, a tablet or another computer on this network can go \
+                                 through tracewing at {proxy}. The code opens the page with its \
+                                 certificate. Its flows show its address, can be filtered with \
+                                 device:, and can be named from one of them, in Connection."
+                            ))),
+                    ),
             )
-        })
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .gap(px(4.))
+                    .children(tabs),
+            )
+            .child(div().flex().flex_col().gap(px(8.)).children(parts))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn each_guide_says_where_to_go() {
+        let proxy: SocketAddr = "192.168.1.5:9090".parse().unwrap();
+        let page = "http://192.168.1.5:9090/";
+        let said = |guide| {
+            super::guide(guide, proxy, page)
+                .into_iter()
+                .map(|part| match part {
+                    Part::Text(t) | Part::Code(t) => t,
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+        let apple = said(Guide::Apple);
+        assert!(apple.contains("server 192.168.1.5, port 9090"), "{apple}");
+        assert!(apple.contains(page));
+        assert!(apple.contains("Certificate Trust Settings"));
+        let android = said(Guide::Android);
+        assert!(android.contains(r#"<certificates src="user" />"#));
+        assert!(
+            android.contains("debug-overrides"),
+            "user certificates in debug builds only"
+        );
+        let flutter = said(Guide::Flutter);
+        assert!(flutter.contains("'PROXY 192.168.1.5:9090'"), "{flutter}");
+        assert!(flutter.contains("kDebugMode"));
+    }
 
     #[test]
     fn other_devices_are_told_where_to_go() {

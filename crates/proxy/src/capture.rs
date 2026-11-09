@@ -58,18 +58,78 @@ pub const CA_PATH: &str = "/ca.crt";
 /// check can tell, as browsers keep trust stores of their own.
 pub const CHECK_HOST: &str = "tracewing.test";
 
-const CHECK_PAGE: &str = r#"<!doctype html>
-<html><head><meta charset="utf-8"><title>tracewing</title>
+const PAGE_HEAD: &str = r#"<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tracewing</title>
 <style>
-body { font: 16px system-ui, sans-serif; margin: 15vh auto; max-width: 30em; padding: 0 1em;
+body { font: 16px/1.5 system-ui, sans-serif; margin: 10vh auto; max-width: 32em; padding: 0 1em;
        color: #161b26; background: #f4f6fb; }
-@media (prefers-color-scheme: dark) { body { color: #e4e5e8; background: #141517; } }
+a { color: #2f55d4; }
+li { margin: 0 0 .8em; }
+details { margin: .4em 0; }
+summary { cursor: pointer; font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  body { color: #e4e5e8; background: #141517; }
+  a { color: #8fa8ff; }
+}
 </style></head>
-<body><h1>It works</h1>
-<p>This browser's traffic goes through tracewing.</p>
-<p>On a phone or another computer, <a href="/ca.crt">get the certificate</a> and trust it, then
-open this page again over HTTPS.</p></body></html>
+<body>
 "#;
+
+/// How to trust the certificate once it is on the device.
+const TRUST_STEPS: &str = r#"<details><summary>iPhone and iPad</summary>
+<p>Allow the download. Then in Settings, General, VPN &amp; Device Management, choose the
+tracewing CA profile and install it. Last, in Settings, General, About, Certificate Trust
+Settings, turn on full trust for tracewing CA.</p></details>
+<details><summary>Android</summary>
+<p>In Settings, Security, Encryption &amp; credentials (the names vary by maker), choose Install a
+certificate, then CA certificate, and pick tracewing.crt. Apps trust it only if they allow
+certificates the user added: tracewing's Set up page shows how, for an app of your own.</p></details>
+"#;
+
+/// The page a browser gets from the proxy itself. `proxy` is the address it
+/// was opened at, when it was opened directly rather than through the proxy:
+/// a device that has not been set up yet.
+fn check_page(proxy: Option<&str>, trusted: bool) -> String {
+    let body = match proxy {
+        Some(proxy) => {
+            let (host, port) = match proxy.rsplit_once(':') {
+                Some((host, port)) if !host.is_empty() => (host, port),
+                _ => (proxy, "80"),
+            };
+            format!(
+                r#"<h1>Set up this device</h1>
+<ol>
+<li>In this Wi-Fi network's settings, set the proxy to Manual: server <b>{host}</b>, port <b>{port}</b>.</li>
+<li><a href="{CA_PATH}">Get the certificate</a>, and trust it:
+{TRUST_STEPS}</li>
+<li>Open <a href="https://{CHECK_HOST}/">https://{CHECK_HOST}</a>. If it says it works, this device is set up.</li>
+</ol>
+"#,
+                host = escape_html(host),
+                port = escape_html(port),
+            )
+        }
+        None if trusted => "<h1>It works</h1>\n<p>This browser's traffic goes through tracewing, \
+                            and it trusts tracewing's certificate.</p>\n"
+            .to_owned(),
+        None => format!(
+            r#"<h1>It works</h1>
+<p>This browser's traffic goes through tracewing. <a href="{CA_PATH}">Get the certificate</a> and
+trust it, then open this page again over <a href="https://{CHECK_HOST}/">HTTPS</a>.</p>
+{TRUST_STEPS}"#
+        ),
+    };
+    format!("{PAGE_HEAD}{body}</body></html>\n")
+}
+
+fn escape_html(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
+}
 
 /// The last browser to reach the test page.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -410,7 +470,12 @@ impl HttpHandler for FlowHandler {
         }
 
         let scheme = req.uri().scheme_str().unwrap_or("http");
-        if request_host(&req).map(|host| without_default_port(host, scheme)) == Some(CHECK_HOST) {
+        // Sent to the proxy as to a server, not through it: a device opening the
+        // proxy's own address, as the Set up page's code says to.
+        let here = req.uri().authority().is_none();
+        let check =
+            request_host(&req).map(|host| without_default_port(host, scheme)) == Some(CHECK_HOST);
+        if here || check {
             if req.uri().path() == CA_PATH {
                 return Response::builder()
                     .header(header::CONTENT_TYPE, "application/x-x509-ca-cert")
@@ -424,15 +489,19 @@ impl HttpHandler for FlowHandler {
                     .expect("valid response")
                     .into();
             }
-            self.check.saw(CheckVisit {
-                user_agent: header_text(req.headers(), header::USER_AGENT).unwrap_or_default(),
-                secure: scheme == "https",
-            });
+            let proxy = here
+                .then(|| header_text(req.headers(), header::HOST))
+                .flatten();
+            if !here {
+                self.check.saw(CheckVisit {
+                    user_agent: header_text(req.headers(), header::USER_AGENT).unwrap_or_default(),
+                    secure: scheme == "https",
+                });
+            }
+            let page = check_page(proxy.as_deref(), !here && scheme == "https");
             return Response::builder()
                 .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
-                .body(Body::from(http_body_util::Full::new(Bytes::from_static(
-                    CHECK_PAGE.as_bytes(),
-                ))))
+                .body(Body::from(http_body_util::Full::new(Bytes::from(page))))
                 .expect("valid response")
                 .into();
         }
@@ -1058,6 +1127,21 @@ fn unix_micros() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_device_opening_the_proxy_is_told_how_to_set_it_up() {
+        let page = check_page(Some("192.168.1.5:9090"), false);
+        assert!(
+            page.contains("server <b>192.168.1.5</b>, port <b>9090</b>"),
+            "{page}"
+        );
+        assert!(page.contains(r#"href="/ca.crt""#));
+        assert!(page.contains("Certificate Trust"));
+        let odd = check_page(Some("<script>:1"), false);
+        assert!(!odd.contains("<script>"), "{odd}");
+        assert!(check_page(None, true).contains("trusts tracewing"));
+        assert!(check_page(None, false).contains("over <a href=\"https://tracewing.test/\">HTTPS"));
+    }
 
     #[test]
     fn offers_of_http3_are_taken_out() {

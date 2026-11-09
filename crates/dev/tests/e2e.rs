@@ -319,6 +319,11 @@ async fn streams_without_buffering() {
     );
     assert!(total >= Duration::from_millis(900), "total {total:?}");
 
+    // The row is written as the stream opens, and its body when it ends, which
+    // can be a moment after the client has read the last of it.
+    let open = Connection::open(h.dir.join("session/flows.db")).unwrap();
+    wait_for_row(&open, "sse", |row| !row.0).await;
+    drop(open);
     let (_, conn, dir) = h.finish(2).await;
     let body = String::from_utf8(response_of(&conn, &dir, 2).unwrap()).unwrap();
     assert_eq!(body.matches("data: event").count(), 4);
@@ -1051,6 +1056,47 @@ async fn the_test_page_says_who_reached_it() {
 
     let (summary, conn, dir) = h.finish(0).await;
     assert_eq!(summary.written, 0, "the test is not traffic");
+    clean_up(conn, dir);
+}
+
+/// A phone that scanned the Set up page's code opens the proxy's own address,
+/// before its proxy is set: it is told how, and gets the certificate there.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_proxy_itself_tells_a_device_how_to_set_up() {
+    let h = Harness::start("direct").await;
+    let direct = reqwest::Client::builder().no_proxy().build().unwrap();
+    let addr = h.proxy_url.trim_start_matches("http://").to_owned();
+    let (host, port) = addr.rsplit_once(':').unwrap();
+    let page = direct
+        .get(format!("{}/", h.proxy_url))
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert!(page.contains("Set up this device"), "{page}");
+    assert!(
+        page.contains(&format!("server <b>{host}</b>, port <b>{port}</b>")),
+        "{page}"
+    );
+    let ca = direct
+        .get(format!("{}/ca.crt", h.proxy_url))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(ca.headers()["content-type"], "application/x-x509-ca-cert");
+    let der = ca.bytes().await.unwrap();
+    let pem = std::fs::read(h.dir.join("ca/ca.pem")).unwrap();
+    assert_eq!(
+        &der[..],
+        CertificateDer::from_pem_slice(&pem).unwrap().as_ref()
+    );
+    // Not through the proxy: the check is still to come.
+    assert_eq!(h.check.last(), None);
+
+    let (summary, conn, dir) = h.finish(0).await;
+    assert_eq!(summary.written, 0);
     clean_up(conn, dir);
 }
 
