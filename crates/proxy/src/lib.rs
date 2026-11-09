@@ -177,7 +177,7 @@ pub async fn run_proxy(
     // Without TCP_NODELAY, small writes wait for delayed ACKs and the tail
     // latency jumps to ~40 ms. Linux copies the flag to accepted sockets.
     socket2::SockRef::from(&listener).set_tcp_nodelay(true)?;
-    let (upstream_tls, verifier) = upstream_tls(&opts.extra_roots)?;
+    let (upstream_tls, verifier) = upstream_tls(&opts.extra_roots, opts.settings.os_roots)?;
     let connector = upstream::TimedConnector::new(upstream_tls.clone(), verifier);
 
     let handler = FlowHandler::new(
@@ -287,9 +287,21 @@ pub async fn run_proxy(
 
 /// How the proxy checks servers, and the checker on its own, which the
 /// connector wraps to keep the certificates it is shown.
-fn upstream_tls(extra_roots: &[PathBuf]) -> Result<(ClientConfig, Arc<dyn ServerCertVerifier>)> {
+/// The authorities whose servers the proxy trusts: the public ones; with
+/// `os_roots`, those this computer trusts too, as a company's own or that of a
+/// proxy in front of this one; and those in `extra_roots`.
+pub fn upstream_roots(extra_roots: &[PathBuf], os_roots: bool) -> Result<RootCertStore> {
     let mut roots = RootCertStore::empty();
     roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    if os_roots {
+        // One unreadable store or certificate leaves the rest.
+        let found = rustls_native_certs::load_native_certs();
+        for error in &found.errors {
+            tracing::warn!("the system's certificates: {error}");
+        }
+        let (added, ignored) = roots.add_parsable_certificates(found.certs);
+        tracing::debug!(added, ignored, "the system's certificates");
+    }
     for path in extra_roots {
         for cert in CertificateDer::pem_file_iter(path)
             .with_context(|| format!("read {}", path.display()))?
@@ -297,6 +309,14 @@ fn upstream_tls(extra_roots: &[PathBuf]) -> Result<(ClientConfig, Arc<dyn Server
             roots.add(cert.with_context(|| format!("parse {}", path.display()))?)?;
         }
     }
+    Ok(roots)
+}
+
+fn upstream_tls(
+    extra_roots: &[PathBuf],
+    os_roots: bool,
+) -> Result<(ClientConfig, Arc<dyn ServerCertVerifier>)> {
+    let roots = upstream_roots(extra_roots, os_roots)?;
     let provider = Arc::new(crypto_provider());
     let verifier: Arc<dyn ServerCertVerifier> =
         WebPkiServerVerifier::builder_with_provider(Arc::new(roots), Arc::clone(&provider))

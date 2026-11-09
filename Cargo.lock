@@ -6788,6 +6788,7 @@ dependencies = [
  "hyper-util",
  "keyring",
  "libc",
+ "rustls-native-certs",
  "serde",
  "serde_json",
  "sha2 0.10.9",

@@ -43,6 +43,17 @@ const GROUPS: &[(&str, &[Row])] = &[
         )],
     ),
     (
+        "Servers",
+        &[row(
+            "os_roots",
+            "Trust what this computer trusts",
+            "Servers with a certificate from an authority installed on this computer, such as \
+             a company's own, are reached as this computer's browsers reach them. Off, only \
+             the public authorities are trusted. Takes effect when tracewing starts again.",
+            "",
+        )],
+    ),
+    (
         "HTTP/3",
         &[row(
             "hide_http3",
