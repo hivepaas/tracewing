@@ -22,6 +22,7 @@ pub mod input;
 pub mod inspector;
 pub mod jwt;
 pub mod layout;
+pub mod mcp;
 pub mod messages;
 pub mod paused_page;
 pub mod placement;

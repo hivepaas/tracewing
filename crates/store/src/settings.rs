@@ -50,6 +50,9 @@ pub struct StorageSettings {
     /// Trust servers whose certificates come from an authority this computer
     /// trusts, not only from the public ones. Read when the app starts.
     pub os_roots: bool,
+    /// Let AI tools, through `tracewing mcp`, see the values of credential
+    /// headers and cookies. Read at each call.
+    pub ai_secrets: bool,
 }
 
 impl Default for StorageSettings {
@@ -71,6 +74,7 @@ impl Default for StorageSettings {
             other_devices: false,
             hide_http3: true,
             os_roots: true,
+            ai_secrets: false,
         }
     }
 }

@@ -16,7 +16,8 @@ use tracewing_proxy::{
 use tracewing_store::settings::StorageSettings;
 use tracewing_system as system;
 
-/// What the system crate runs this program for: `watchdog --data-dir D` when the
+/// `tracewing mcp`, which an AI tool starts to read the recorded traffic. And
+/// what the system crate runs this program for: `watchdog --data-dir D` when the
 /// app has gone, `sysproxy recover --data-dir D` at the next login, and on
 /// Windows `block-quic --parent P --name N --data-dir D`, as administrator.
 fn helper_command(args: &[String]) -> Option<Result<()>> {
@@ -28,6 +29,10 @@ fn helper_command(args: &[String]) -> Option<Result<()>> {
         }
         [_, sysproxy, recover, flag, value] if sysproxy == "sysproxy" && recover == "recover" => {
             Some(system::recover(&data_dir(flag, value)?).map(|_| ()))
+        }
+        [_, mcp] if mcp == "mcp" => Some(tracewing::mcp::serve(&default_data_dir())),
+        [_, mcp, flag, value] if mcp == "mcp" => {
+            Some(tracewing::mcp::serve(&data_dir(flag, value)?))
         }
         [_, block, parent_flag, parent, name_flag, name, flag, value]
             if block == "block-quic" && parent_flag == "--parent" && name_flag == "--name" =>
