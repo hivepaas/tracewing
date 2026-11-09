@@ -2,9 +2,12 @@
 //! request, and a flow says which rules touched it.
 
 use crate::{colors::colors, input::TextInput, traffic::Traffic, widgets::eyebrow};
-use gpui::{AppContext as _, Context, Div, Entity, FontWeight, Stateful, div, prelude::*, px, rgb};
-use std::path::PathBuf;
-use tracewing_proxy::traffic_rules::{Action, TrafficRule, TrafficRules};
+use gpui::{
+    AppContext as _, Context, Div, Entity, FontWeight, PathPromptOptions, Stateful, div,
+    prelude::*, px, rgb,
+};
+use std::path::{Path, PathBuf};
+use tracewing_proxy::traffic_rules::{Action, Imported, TrafficRule, TrafficRules, export_set};
 
 /// What a rule does, as the form asks it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -126,6 +129,8 @@ pub struct RulesPage {
     /// The rule the form is changing, or none for a new one.
     pub editing: Option<usize>,
     pub problem: Option<String>,
+    /// What the last import or export did, and whether it failed.
+    pub note: Option<(String, bool)>,
 }
 
 impl RulesPage {
@@ -141,6 +146,7 @@ impl RulesPage {
             second: field("", cx),
             editing: None,
             problem: None,
+            note: None,
         }
     }
 }
@@ -189,6 +195,83 @@ impl Traffic {
             self.rules_form(cx).problem = Some(format!("{e:#}"));
         }
         cx.notify();
+    }
+
+    fn rules_note(&mut self, note: String, failed: bool, cx: &mut Context<Self>) {
+        self.rules_form(cx).note = Some((note, failed));
+        cx.notify();
+    }
+
+    /// Asks where, then writes every rule there, for someone else to import.
+    pub fn ask_export_rules(&mut self, cx: &mut Context<Self>) {
+        let chosen =
+            cx.prompt_for_new_path(&crate::files::save_dir(), Some("tracewing-rules.toml"));
+        cx.spawn(async move |this, cx| {
+            let _ = match chosen.await {
+                Ok(Ok(Some(path))) => this.update(cx, |this, cx| this.export_rules_to(&path, cx)),
+                Ok(Err(e)) => this.update(cx, |this, cx| {
+                    this.rules_note(format!("No file picker: {e:#}"), true, cx)
+                }),
+                _ => return,
+            };
+        })
+        .detach();
+    }
+
+    pub fn export_rules_to(&mut self, path: &Path, cx: &mut Context<Self>) {
+        let rules = self.traffic_rules().rules;
+        let written = export_set(&rules)
+            .and_then(|text| std::fs::write(path, text).map_err(anyhow::Error::from));
+        match written {
+            Ok(()) => self.rules_note(
+                format!("{} written to {}", rule_count(rules.len()), path.display()),
+                false,
+                cx,
+            ),
+            Err(e) => self.rules_note(format!("The rules were not written: {e:#}"), true, cx),
+        }
+    }
+
+    /// Asks for a rules file, then adds its rules after those here.
+    pub fn ask_import_rules(&mut self, cx: &mut Context<Self>) {
+        let chosen = cx.prompt_for_paths(PathPromptOptions {
+            files: true,
+            directories: false,
+            multiple: false,
+            prompt: Some("Import".into()),
+        });
+        cx.spawn(async move |this, cx| {
+            let _ = match chosen.await {
+                Ok(Ok(Some(mut paths))) if !paths.is_empty() => {
+                    let path = paths.swap_remove(0);
+                    this.update(cx, |this, cx| this.import_rules_from(&path, cx))
+                }
+                Ok(Err(e)) => this.update(cx, |this, cx| {
+                    this.rules_note(format!("No file picker: {e:#}"), true, cx)
+                }),
+                _ => return,
+            };
+        })
+        .detach();
+    }
+
+    pub fn import_rules_from(&mut self, path: &Path, cx: &mut Context<Self>) {
+        let text = match std::fs::read_to_string(path) {
+            Ok(text) => text,
+            Err(e) => {
+                let note = format!("{} could not be read: {e}", path.display());
+                return self.rules_note(note, true, cx);
+            }
+        };
+        let mut result = None;
+        self.change_traffic_rules(|rules| result = Some(rules.import_set(&text)), cx);
+        match result.expect("the change ran") {
+            Ok(imported) => {
+                let failed = imported.added == 0 && !imported.refused.is_empty();
+                self.rules_note(import_note(&imported), failed, cx);
+            }
+            Err(e) => self.rules_note(format!("Nothing was imported: {e:#}"), true, cx),
+        }
     }
 
     /// Fills in the form to make a rule for a URL seen in the list.
@@ -358,6 +441,7 @@ impl Traffic {
         self.rules_form(cx);
         let rules = self.traffic_rules();
         let page = self.rules_page.as_ref().expect("just made");
+        let note = page.note.clone();
         let small = |id: (&'static str, u64), label: &'static str| -> Stateful<Div> {
             div()
                 .id(id)
@@ -604,14 +688,82 @@ impl Traffic {
                         "They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.",
                     )),
             )
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .items_center()
+                    .gap(px(8.))
+                    .child(
+                        small(("import-rules", 0), "Import rules…")
+                            .on_click(cx.listener(|this, _, _, cx| this.ask_import_rules(cx))),
+                    )
+                    .when(!rules.rules.is_empty(), |d| {
+                        d.child(
+                            small(("export-rules", 0), "Export rules…")
+                                .on_click(cx.listener(|this, _, _, cx| this.ask_export_rules(cx))),
+                        )
+                    })
+                    .children(note.map(|(note, failed)| {
+                        div()
+                            .text_size(px(12.))
+                            .text_color(rgb(if failed { c.error } else { c.muted }))
+                            .child(note)
+                    })),
+            )
             .child(form)
             .children(list)
     }
 }
 
+fn rule_count(n: usize) -> String {
+    match n {
+        1 => "1 rule".to_owned(),
+        n => format!("{n} rules"),
+    }
+}
+
+/// What an import did, in a line.
+fn import_note(imported: &Imported) -> String {
+    let mut parts = vec![format!("{} added", rule_count(imported.added))];
+    if imported.already > 0 {
+        parts.push(format!("{} here already", imported.already));
+    }
+    if !imported.refused.is_empty() {
+        let why: Vec<String> = imported
+            .refused
+            .iter()
+            .map(|(name, why)| format!("{name} ({why})"))
+            .collect();
+        parts.push(format!("left out: {}", why.join("; ")));
+    }
+    parts.join(", ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_import_says_what_it_did() {
+        let imported = Imported {
+            added: 2,
+            already: 1,
+            refused: vec![("Mocks".to_owned(), "needs a full path".to_owned())],
+        };
+        assert_eq!(
+            import_note(&imported),
+            "2 rules added, 1 here already, left out: Mocks (needs a full path)"
+        );
+        assert_eq!(
+            import_note(&Imported {
+                added: 1,
+                ..Imported::default()
+            }),
+            "1 rule added"
+        );
+    }
 
     #[test]
     fn the_form_says_what_is_wrong_with_a_status() {

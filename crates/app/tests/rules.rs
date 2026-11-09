@@ -188,6 +188,33 @@ fn rules_made_in_the_window_change_traffic() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "25-rule-from-a-flow");
 
+    // Out to a file and back: one is here already, the one deleted comes back.
+    let set = dir.join("shared-rules.toml");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.clear_rule_form(cx);
+            view.set_rule_kind(RuleKind::Block, cx);
+            view.fill_rule("Hide ads", "ads.test", "451", "", cx);
+            view.save_rule(cx);
+            assert_eq!(view.traffic_rules().rules.len(), 2);
+            view.export_rules_to(&set, cx);
+            view.delete_rule(1, cx);
+            assert_eq!(view.traffic_rules().rules.len(), 1);
+            view.import_rules_from(&set, cx);
+            let rules = view.traffic_rules();
+            assert_eq!(rules.rules.len(), 2);
+            assert_eq!(rules.rules[1].name, "Hide ads");
+        })
+        .unwrap();
+    assert!(
+        std::fs::read_to_string(&set)
+            .unwrap()
+            .contains("format = \"tracewing-rules\"")
+    );
+    assert_eq!(TrafficRules::load(&file).unwrap().rules.len(), 2, "kept");
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "68-rules-imported");
+
     drop(cx);
     runtime.shutdown_background();
     std::fs::remove_dir_all(&dir).unwrap();

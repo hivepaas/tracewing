@@ -24,7 +24,7 @@ pub struct FileState {
 }
 
 /// Where a file is first offered to go: Downloads, if there is one.
-fn save_dir() -> PathBuf {
+pub(crate) fn save_dir() -> PathBuf {
     let home = std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)

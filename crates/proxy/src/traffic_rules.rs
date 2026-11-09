@@ -233,7 +233,86 @@ impl TrafficRule {
     }
 }
 
+/// What a rule set says it is, so that some other TOML is not taken for one.
+pub const SET_FORMAT: &str = "tracewing-rules";
+const SET_VERSION: u32 = 1;
+
+#[derive(Serialize)]
+struct RuleSet<'a> {
+    format: &'static str,
+    version: u32,
+    rules: &'a [TrafficRule],
+}
+
+/// Rules as a file to give to someone else, who imports them.
+pub fn export_set(rules: &[TrafficRule]) -> Result<String> {
+    let set = toml::to_string(&RuleSet {
+        format: SET_FORMAT,
+        version: SET_VERSION,
+        rules,
+    })?;
+    Ok(format!(
+        "# Rules from tracewing. To use them, choose Import in tracewing's Rules.\n\n{set}"
+    ))
+}
+
+/// What an import did.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Imported {
+    pub added: usize,
+    /// The same as one there already, so left out.
+    pub already: usize,
+    /// Each rule that cannot work here, by its name, and why.
+    pub refused: Vec<(String, String)>,
+}
+
 impl TrafficRules {
+    /// Adds the rules of a set, after those there are. A rule that cannot be
+    /// read, or cannot work here, is left out and said so, and the rest come
+    /// in. A set's own rules file, without the set's header, will do too.
+    pub fn import_set(&mut self, text: &str) -> Result<Imported> {
+        #[derive(Deserialize)]
+        struct Incoming {
+            format: Option<String>,
+            version: Option<u32>,
+            #[serde(default)]
+            rules: Vec<toml::Value>,
+        }
+        let incoming: Incoming = toml::from_str(text).context("this is not a rules file")?;
+        if incoming.format.as_deref().is_some_and(|f| f != SET_FORMAT) {
+            bail!("this is not a tracewing rules file");
+        }
+        if incoming.version.is_some_and(|v| v > SET_VERSION) {
+            bail!("these rules come from a newer tracewing");
+        }
+        if incoming.rules.is_empty() {
+            bail!("there are no rules in it");
+        }
+        let mut imported = Imported::default();
+        for (at, value) in incoming.rules.into_iter().enumerate() {
+            let name = value
+                .get("name")
+                .and_then(toml::Value::as_str)
+                .map_or_else(|| format!("rule {}", at + 1), str::to_owned);
+            let rule = match value.try_into::<TrafficRule>() {
+                Ok(rule) => rule,
+                Err(e) => {
+                    imported.refused.push((name, e.message().trim().to_owned()));
+                    continue;
+                }
+            };
+            if let Err(e) = rule.check() {
+                imported.refused.push((name, format!("{e:#}")));
+            } else if self.rules.contains(&rule) {
+                imported.already += 1;
+            } else {
+                self.rules.push(rule);
+                imported.added += 1;
+            }
+        }
+        Ok(imported)
+    }
+
     /// The file's rules; no file means none.
     pub fn load(path: &Path) -> Result<Self> {
         if !path.exists() {
@@ -307,6 +386,108 @@ impl TrafficRules {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn named(name: &str, url: &str, action: Action) -> TrafficRule {
+        TrafficRule {
+            name: name.to_owned(),
+            enabled: true,
+            url: url.to_owned(),
+            method: String::new(),
+            action,
+        }
+    }
+
+    #[test]
+    fn a_set_goes_out_and_comes_back_in() {
+        let mine = vec![
+            named(
+                "Block ads",
+                "ads.example.com",
+                Action::Block { status: 403 },
+            ),
+            named(
+                "Staging",
+                "api.example.com/*",
+                Action::MapRemote {
+                    to: "https://staging.example.com".to_owned(),
+                },
+            ),
+        ];
+        let text = export_set(&mine).unwrap();
+        assert!(text.starts_with("# Rules from tracewing."), "{text}");
+        assert!(text.contains("format = \"tracewing-rules\""), "{text}");
+
+        let mut theirs = TrafficRules {
+            rules: vec![mine[0].clone()],
+        };
+        let imported = theirs.import_set(&text).unwrap();
+        assert_eq!(
+            imported,
+            Imported {
+                added: 1,
+                already: 1,
+                refused: vec![],
+            }
+        );
+        assert_eq!(theirs.rules, mine);
+    }
+
+    #[test]
+    fn a_rule_that_cannot_work_here_is_left_out_and_the_rest_come_in() {
+        let text = r#"
+format = "tracewing-rules"
+version = 1
+
+[[rules]]
+name = "Fine"
+url = "a.dev"
+action = "block"
+status = 404
+
+[[rules]]
+name = "No such thing"
+url = "b.dev"
+action = "teleport"
+
+[[rules]]
+name = "Relative"
+url = "c.dev/*"
+action = "map_local"
+path = "mocks/c"
+"#;
+        let mut rules = TrafficRules::default();
+        let imported = rules.import_set(text).unwrap();
+        assert_eq!(imported.added, 1);
+        assert_eq!(rules.rules[0].name, "Fine");
+        let names: Vec<&str> = imported.refused.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(names, ["No such thing", "Relative"]);
+        assert!(
+            imported.refused[1].1.contains("full path"),
+            "{:?}",
+            imported.refused
+        );
+    }
+
+    #[test]
+    fn other_files_are_refused_whole() {
+        let mut rules = TrafficRules::default();
+        let not_ours = rules
+            .import_set("format = \"something-else\"\n")
+            .unwrap_err();
+        assert!(format!("{not_ours:#}").contains("not a tracewing rules file"));
+        let newer = rules
+            .import_set("format = \"tracewing-rules\"\nversion = 9\n[[rules]]\nname = \"x\"\n")
+            .unwrap_err();
+        assert!(format!("{newer:#}").contains("newer"));
+        assert!(rules.import_set("rules = []\n").is_err());
+        assert!(rules.import_set("not toml at all [").is_err());
+        // The app's own rules file, which has no header, will do.
+        let own = toml::to_string(&TrafficRules {
+            rules: vec![named("Own", "d.dev", Action::Block { status: 410 })],
+        })
+        .unwrap();
+        assert_eq!(rules.import_set(&own).unwrap().added, 1);
+    }
 
     fn rule(url: &str, action: Action) -> TrafficRule {
         TrafficRule {
