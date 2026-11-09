@@ -343,11 +343,17 @@ impl Recorder {
         record.open = true;
         let key = self.next_stream.fetch_add(1, Ordering::Relaxed);
         self.stats.submitted.fetch_add(1, Ordering::Relaxed);
+        // The writer takes the request's body off the queue as it writes the row,
+        // as it does for any flow, so it goes on first. Left off, the count
+        // wrapped below zero, and every body after was let go.
+        let size = body_bytes(&record);
+        self.queued.fetch_add(size, Ordering::Relaxed);
         if self
             .tx
             .try_send(Message::Open(key, Box::new(record)))
             .is_err()
         {
+            self.queued.fetch_sub(size, Ordering::Relaxed);
             self.stats.dropped.fetch_add(1, Ordering::Relaxed);
         }
         StreamHandle {
