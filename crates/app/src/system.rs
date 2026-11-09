@@ -15,7 +15,7 @@ use tracewing_proxy::{
     capture::CHECK_HOST,
     crypto_provider,
 };
-use tracewing_system::{self as system, Place, Scope, TakenOver, launch::Browser};
+use tracewing_system::{self as system, Place, QuicBlock, Scope, TakenOver, launch::Browser};
 
 #[derive(Default)]
 pub enum ProxySwitch {
@@ -23,6 +23,16 @@ pub enum ProxySwitch {
     Off,
     Working,
     On(TakenOver),
+}
+
+/// Outgoing UDP to port 443, blocked so that apps fall back from HTTP/3.
+#[derive(Default)]
+pub enum QuicSwitch {
+    #[default]
+    Off,
+    /// Waiting for the administrator's password, or for the block to go.
+    Working,
+    On(QuicBlock),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -37,6 +47,7 @@ pub enum CaState {
 #[derive(Default)]
 pub struct SystemState {
     pub proxy: ProxySwitch,
+    pub quic: QuicSwitch,
     pub ca: CaState,
     /// Where the certificate is installed.
     pub ca_places: Vec<Place>,
@@ -260,10 +271,58 @@ impl Traffic {
         .detach();
     }
 
-    /// Puts the system proxy back as the app closes. Waits, since nothing else will.
+    /// Blocks outgoing UDP to port 443, or lets it through again.
+    pub fn toggle_quic_block(&mut self, cx: &mut Context<Self>) {
+        match std::mem::take(&mut self.system.quic) {
+            QuicSwitch::Working => self.system.quic = QuicSwitch::Working,
+            QuicSwitch::Off => {
+                self.system.quic = QuicSwitch::Working;
+                self.system.problem = None;
+                let data_dir = self.data_dir.clone();
+                cx.spawn(async move |this, cx| {
+                    let result = cx
+                        .background_spawn(async move { system::block_quic(&data_dir) })
+                        .await;
+                    let _ = this.update(cx, |this, cx| {
+                        match result {
+                            Ok(block) => this.system.quic = QuicSwitch::On(block),
+                            Err(e) => {
+                                this.system.quic = QuicSwitch::Off;
+                                this.system.problem = Some(format!("Blocking HTTP/3: {e:#}"));
+                            }
+                        }
+                        cx.notify();
+                    });
+                })
+                .detach();
+            }
+            QuicSwitch::On(block) => {
+                self.system.quic = QuicSwitch::Working;
+                self.system.problem = None;
+                cx.spawn(async move |this, cx| {
+                    let result = cx.background_spawn(async move { block.release() }).await;
+                    let _ = this.update(cx, |this, cx| {
+                        this.system.quic = QuicSwitch::Off;
+                        if let Err(e) = result {
+                            this.system.problem = Some(format!("Blocking HTTP/3: {e:#}"));
+                        }
+                        cx.notify();
+                    });
+                })
+                .detach();
+            }
+        }
+        cx.notify();
+    }
+
+    /// Puts the system proxy back, and lets UDP through again, as the app closes.
+    /// Waits, since nothing else will.
     pub(crate) fn release_system_proxy(&mut self) {
         if let ProxySwitch::On(taken) = std::mem::take(&mut self.system.proxy) {
             let _ = taken.release();
+        }
+        if let QuicSwitch::On(block) = std::mem::take(&mut self.system.quic) {
+            let _ = block.release();
         }
     }
 }

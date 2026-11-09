@@ -73,6 +73,21 @@ enum Command {
         #[arg(long)]
         data_dir: PathBuf,
     },
+    /// Block outgoing UDP to port 443 until Enter is pressed, to try it by hand.
+    Quic {
+        #[arg(long)]
+        data_dir: Option<PathBuf>,
+    },
+    /// Windows' elevated half of blocking QUIC.
+    #[command(hide = true)]
+    BlockQuic {
+        #[arg(long)]
+        parent: u32,
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        data_dir: PathBuf,
+    },
     /// Print the storage settings: the app's defaults, or those of a file.
     Settings {
         #[arg(long)]
@@ -293,6 +308,19 @@ async fn main() -> Result<()> {
             println!("{:?}", system::proxy_status()?);
         }
         Command::Watchdog { data_dir } => system::watchdog(&data_dir)?,
+        Command::Quic { data_dir } => {
+            let data_dir = data_dir.unwrap_or_else(default_data_dir);
+            let block = system::block_quic(&data_dir)?;
+            println!("UDP port 443 is blocked. Press Enter to let it through again.");
+            let _ = std::io::stdin().read_line(&mut String::new());
+            block.release()?;
+            println!("Let through.");
+        }
+        Command::BlockQuic {
+            parent,
+            name,
+            data_dir,
+        } => system::quic_helper(parent, &name, &data_dir)?,
         Command::Settings { file } => {
             print!("{}", load_settings(file.as_deref())?.to_toml()?);
         }

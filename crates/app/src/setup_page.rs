@@ -7,7 +7,7 @@
 use crate::{
     colors::colors,
     devices::on_the_network,
-    system::{CaState, ProxySwitch},
+    system::{CaState, ProxySwitch, QuicSwitch},
     traffic::{Screen, Traffic},
     widgets::icon,
 };
@@ -338,6 +338,41 @@ impl Traffic {
             .child(check_step)
             .child(self.render_one_app(cx))
             .child(self.render_other_devices(cx))
+            .child(self.render_http3(cx))
+    }
+}
+
+/// What blocking UDP port 443 does, before and while it is on.
+fn http3_text(on: bool) -> &'static str {
+    if on {
+        "UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 \
+         and go through tracewing. It stops when tracewing closes, or if it crashes."
+    } else {
+        "Some apps speak HTTP/3, over UDP, and go around the proxy. Blocking UDP port 443 \
+         on this computer makes them fall back to HTTP/2 through tracewing. It takes an \
+         administrator's password, and stops when tracewing closes. A VPN that uses UDP \
+         port 443 stops working meanwhile."
+    }
+}
+
+impl Traffic {
+    /// Apps on this computer that would speak HTTP/3 around the proxy.
+    fn render_http3(&mut self, cx: &mut Context<Self>) -> Div {
+        let (on, working) = match self.system.quic {
+            QuicSwitch::On(_) => (true, false),
+            QuicSwitch::Working => (false, true),
+            QuicSwitch::Off => (false, false),
+        };
+        aside("Apps on HTTP/3", http3_text(on)).when(!working, |d| {
+            d.child(
+                button(
+                    "setup-quic",
+                    if on { "Stop blocking" } else { "Block HTTP/3" },
+                    false,
+                )
+                .on_click(cx.listener(|this, _, _, cx| this.toggle_quic_block(cx))),
+            )
+        })
     }
 }
 
