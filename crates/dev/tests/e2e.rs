@@ -813,6 +813,75 @@ async fn headers_are_kept() {
     clean_up(conn, dir);
 }
 
+/// Apps are not told of HTTP/3, which would take them around the proxy; the
+/// flow still shows what the server offered.
+#[tokio::test(flavor = "multi_thread")]
+async fn offers_of_http3_do_not_reach_the_client() {
+    let h = Harness::start("http3").await;
+    let client = h.client(false);
+    let mut seen = Vec::new();
+    for path in ["/alt-svc", "/alt-svc?only=h3"] {
+        let res = client
+            .get(format!("{}{path}", h.origin))
+            .send()
+            .await
+            .unwrap();
+        let values: Vec<String> = res
+            .headers()
+            .get_all("alt-svc")
+            .iter()
+            .map(|v| v.to_str().unwrap().to_owned())
+            .collect();
+        seen.push(values);
+        res.bytes().await.unwrap();
+    }
+    assert_eq!(
+        seen,
+        [
+            vec![r#"h2="alt.example:443"; ma=60"#.to_owned()],
+            vec!["clear".to_owned()],
+        ]
+    );
+    let (_, conn, dir) = h.finish(2).await;
+    let mut reader = BodyReader::new(&dir.join("session"));
+    let (_, response) = session::stored_headers(&conn, &mut reader, 1)
+        .unwrap()
+        .expect("kept");
+    drop(reader);
+    assert!(
+        response
+            .iter()
+            .any(|(n, v)| n == "alt-svc" && v.starts_with(r#"h3=":443""#)),
+        "{response:?}"
+    );
+    clean_up(conn, dir);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn offers_of_http3_can_be_let_through() {
+    let h = Harness::start_with(
+        "http3-kept",
+        StorageSettings {
+            hide_http3: false,
+            ..StorageSettings::default()
+        },
+    )
+    .await;
+    let res = h
+        .client(false)
+        .get(format!("{}/alt-svc?only=h3", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(
+        res.headers()["alt-svc"],
+        r#"h3=":443"; ma=86400, h3-29=":443""#
+    );
+    res.bytes().await.unwrap();
+    let (_, conn, dir) = h.finish(1).await;
+    clean_up(conn, dir);
+}
+
 /// Paused, traffic goes through and nothing is written down.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_pause_records_nothing_and_lets_traffic_through() {

@@ -43,6 +43,18 @@ const GROUPS: &[(&str, &[Row])] = &[
         )],
     ),
     (
+        "HTTP/3",
+        &[row(
+            "hide_http3",
+            "Keep apps off HTTP/3",
+            "HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around \
+             tracewing. This takes servers' offers of it out of their responses, and apps stay \
+             on HTTP/2. Flows still show the offers as servers sent them. \
+             Takes effect when tracewing starts again.",
+            "",
+        )],
+    ),
+    (
         "Sessions",
         &[
             row(

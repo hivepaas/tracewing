@@ -105,6 +105,8 @@ pub struct FlowHandler {
     pauses: Arc<Pauses>,
     /// Which program each connection is from, when that is looked for.
     apps: Option<Apps>,
+    /// See `StorageSettings::hide_http3`.
+    hide_http3: bool,
     /// Headers rules set on the response of the request this clone is handling.
     response_headers: Vec<(HeaderName, HeaderValue)>,
     /// The rule that holds its response, with the request's method and URL.
@@ -125,6 +127,8 @@ pub struct Controls {
     pub check: Arc<Check>,
     pub pauses: Arc<Pauses>,
     pub apps: Option<Apps>,
+    /// Read when the proxy starts.
+    pub hide_http3: bool,
 }
 
 impl FlowHandler {
@@ -146,6 +150,7 @@ impl FlowHandler {
             check: controls.check,
             pauses: controls.pauses,
             apps: controls.apps,
+            hide_http3: controls.hide_http3,
             response_headers: Vec::new(),
             pause_response: None,
             websockets: Arc::default(),
@@ -238,13 +243,22 @@ impl FlowHandler {
 
     /// A response on its way to the client, from the server or from a rule.
     fn answer(&mut self, flow: Option<Arc<Flow>>, mut res: Response<Body>) -> Response<Body> {
-        for (name, value) in std::mem::take(&mut self.response_headers) {
+        let set = std::mem::take(&mut self.response_headers);
+        // A rule that says what `Alt-Svc` is means it.
+        let hide_http3 = self.hide_http3 && !set.iter().any(|(name, _)| name == header::ALT_SVC);
+        for (name, value) in set {
             res.headers_mut().insert(name, value);
+        }
+        // Written down as the server sent it.
+        if let Some(flow) = &flow {
+            flow.on_response(&res);
+        }
+        if hide_http3 {
+            hide_http3_offers(res.headers_mut());
         }
         let Some(flow) = flow else {
             return res;
         };
-        flow.on_response(&res);
         // Text only: events that come compressed cannot be told apart as they come.
         let events = is_event_stream(&res) && !res.headers().contains_key(header::CONTENT_ENCODING);
         if events {
@@ -254,6 +268,70 @@ impl FlowHandler {
         let (cap, spool) = (self.log_max, self.spool.clone());
         res.map(move |body| TapBody::wrap(body, flow, Side::Response, cap, spool, stream))
     }
+}
+
+/// Takes the offers of HTTP/3 out of a response's `Alt-Svc`. With none left, it
+/// says `clear`, which also makes the client forget those it was given before.
+fn hide_http3_offers(headers: &mut http::HeaderMap) {
+    if !headers.contains_key(header::ALT_SVC) {
+        return;
+    }
+    let values: Vec<&str> = headers
+        .get_all(header::ALT_SVC)
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .collect();
+    let Some(kept) = without_http3(&values) else {
+        return;
+    };
+    match HeaderValue::from_str(&kept) {
+        Ok(value) => {
+            headers.insert(header::ALT_SVC, value);
+        }
+        Err(_) => {
+            headers.remove(header::ALT_SVC);
+        }
+    }
+}
+
+/// `Alt-Svc` without its HTTP/3 offers, or `None` if it makes none.
+fn without_http3(values: &[&str]) -> Option<String> {
+    let entries: Vec<&str> = values.iter().flat_map(|v| alternatives(v)).collect();
+    let offers_http3 = |entry: &&str| {
+        let protocol = entry.split('=').next().unwrap_or_default().trim();
+        let protocol = protocol.to_ascii_lowercase();
+        // `h3`, the drafts' `h3-29`, and Google's own before them.
+        protocol.starts_with("h3") || protocol == "quic"
+    };
+    if !entries.iter().any(offers_http3) {
+        return None;
+    }
+    let kept: Vec<&str> = entries.into_iter().filter(|e| !offers_http3(e)).collect();
+    Some(if kept.is_empty() {
+        "clear".to_owned()
+    } else {
+        kept.join(", ")
+    })
+}
+
+/// The alternatives in one `Alt-Svc` value. A comma inside quotes is not one.
+fn alternatives(value: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    let mut quoted = false;
+    for (at, c) in value.char_indices() {
+        match c {
+            '"' => quoted = !quoted,
+            ',' if !quoted => {
+                out.push(value[start..at].trim());
+                start = at + 1;
+            }
+            _ => {}
+        }
+    }
+    out.push(value[start..].trim());
+    out.retain(|e| !e.is_empty());
+    out
 }
 
 const LOCAL_FILE_MAX: u64 = 1 << 30;
@@ -980,6 +1058,39 @@ fn unix_micros() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn offers_of_http3_are_taken_out() {
+        assert_eq!(
+            without_http3(&[r#"h3=":443"; ma=86400, h2="alt.example:443"; ma=60"#]).as_deref(),
+            Some(r#"h2="alt.example:443"; ma=60"#)
+        );
+        // The drafts' and Google's own, and over two headers.
+        assert_eq!(
+            without_http3(&[r#"h3-29=":443""#, r#"quic=":443"; v="46,43""#]).as_deref(),
+            Some("clear")
+        );
+        // A comma in quotes is not between two.
+        assert_eq!(
+            without_http3(&[r#"h2="a,b:443", H3=":443""#]).as_deref(),
+            Some(r#"h2="a,b:443""#)
+        );
+        assert_eq!(without_http3(&[r#"h2=":8443""#]), None);
+        assert_eq!(without_http3(&["clear"]), None);
+    }
+
+    #[test]
+    fn a_response_with_no_offers_is_left_alone() {
+        let mut headers = http::HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("text/plain"));
+        hide_http3_offers(&mut headers);
+        assert_eq!(headers.len(), 1);
+        headers.append(header::ALT_SVC, HeaderValue::from_static(r#"h3=":443""#));
+        headers.append(header::ALT_SVC, HeaderValue::from_static(r#"h2=":443""#));
+        hide_http3_offers(&mut headers);
+        let values: Vec<_> = headers.get_all(header::ALT_SVC).iter().collect();
+        assert_eq!(values, [r#"h2=":443""#]);
+    }
 
     fn events_of(frames: &[&[u8]]) -> Vec<Vec<u8>> {
         let mut splitter = EventSplitter::default();
