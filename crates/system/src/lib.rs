@@ -32,6 +32,7 @@ mod quic;
 #[path = "quic_windows.rs"]
 mod quic;
 
+pub mod android;
 pub mod launch;
 
 use anyhow::{Context, Result, bail};
