@@ -1054,6 +1054,47 @@ async fn the_test_page_says_who_reached_it() {
     clean_up(conn, dir);
 }
 
+/// A phone that scanned the Set up page's code opens the proxy's own address,
+/// before its proxy is set: it is told how, and gets the certificate there.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_proxy_itself_tells_a_device_how_to_set_up() {
+    let h = Harness::start("direct").await;
+    let direct = reqwest::Client::builder().no_proxy().build().unwrap();
+    let addr = h.proxy_url.trim_start_matches("http://").to_owned();
+    let (host, port) = addr.rsplit_once(':').unwrap();
+    let page = direct
+        .get(format!("{}/", h.proxy_url))
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert!(page.contains("Set up this device"), "{page}");
+    assert!(
+        page.contains(&format!("server <b>{host}</b>, port <b>{port}</b>")),
+        "{page}"
+    );
+    let ca = direct
+        .get(format!("{}/ca.crt", h.proxy_url))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(ca.headers()["content-type"], "application/x-x509-ca-cert");
+    let der = ca.bytes().await.unwrap();
+    let pem = std::fs::read(h.dir.join("ca/ca.pem")).unwrap();
+    assert_eq!(
+        &der[..],
+        CertificateDer::from_pem_slice(&pem).unwrap().as_ref()
+    );
+    // Not through the proxy: the check is still to come.
+    assert_eq!(h.check.last(), None);
+
+    let (summary, conn, dir) = h.finish(0).await;
+    assert_eq!(summary.written, 0);
+    clean_up(conn, dir);
+}
+
 /// A session cut off by a crash can still be read, and its index finished.
 #[test]
 fn a_session_survives_being_killed() {

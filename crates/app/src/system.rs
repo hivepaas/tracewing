@@ -61,6 +61,8 @@ pub struct SystemState {
     pub browser: Option<Browser>,
     /// Where the CA's key is, once looked at.
     pub ca_key: Option<KeyPlace>,
+    /// Which device's guide the Set up page shows.
+    pub guide: crate::setup_page::Guide,
 }
 
 /// The proxy makes the CA as it starts; making one here too would give two.

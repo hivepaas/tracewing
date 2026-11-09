@@ -19,6 +19,7 @@ use tracewing::{
     devices::{Devices, on_the_network},
     engine::{Engine, EngineOptions},
     inspector::Part,
+    setup_page::Guide,
     traffic::{Screen, Traffic},
 };
 use tracewing_dev::benchkit;
@@ -226,6 +227,19 @@ fn other_devices_are_counted_found_and_named() {
             assert!(detail.client.starts_with("127.0.0.1:"), "{}", detail.client);
         })
         .unwrap();
+
+    // The Set up page has a code for a phone to scan, and how to trust the
+    // certificate on each kind.
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Setup, cx))
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "61-setup-phones");
+    window
+        .update(&mut cx, |view, _, cx| view.set_guide(Guide::Android, cx))
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "62-setup-android");
 
     std::fs::remove_dir_all(&dir).ok();
 }
