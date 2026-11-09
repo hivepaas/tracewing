@@ -334,7 +334,10 @@ impl Traffic {
         window.focus(&focus, cx);
         let layout_path = data_dir.join("layout.toml");
         let now = Instant::now();
-        cx.defer_in(window, |this, _, cx| this.start_ca_check(cx));
+        cx.defer_in(window, |this, _, cx| {
+            this.start_ca_check(cx);
+            this.recover_android(cx);
+        });
         // The desktop may move the window's buttons to the other end.
         cx.observe_button_layout_changed(window, |_, _, cx| cx.notify())
             .detach();

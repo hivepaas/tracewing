@@ -63,6 +63,7 @@ pub struct SystemState {
     pub ca_key: Option<KeyPlace>,
     /// Which device's guide the Set up page shows.
     pub guide: crate::setup_page::Guide,
+    pub android: crate::android::AndroidState,
 }
 
 /// The proxy makes the CA as it starts; making one here too would give two.
@@ -317,7 +318,8 @@ impl Traffic {
         cx.notify();
     }
 
-    /// Puts the system proxy back, and lets UDP through again, as the app closes.
+    /// Puts the system proxy back, lets UDP through again, and takes the proxy
+    /// off Android devices, as the app closes.
     /// Waits, since nothing else will.
     pub(crate) fn release_system_proxy(&mut self) {
         if let ProxySwitch::On(taken) = std::mem::take(&mut self.system.proxy) {
@@ -326,6 +328,7 @@ impl Traffic {
         if let QuicSwitch::On(block) = std::mem::take(&mut self.system.quic) {
             let _ = block.release();
         }
+        self.release_android();
     }
 }
 

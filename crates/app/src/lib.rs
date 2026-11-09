@@ -1,5 +1,6 @@
 //! The window: traffic as it happens, on top of the proxy core.
 
+pub mod android;
 pub mod body;
 pub mod bodyview;
 pub mod chrome;

@@ -16,6 +16,8 @@ hudsucker.workspace = true
 rustls-platform-verifier.workspace = true
 rustls-native-certs.workspace = true
 libc.workspace = true
+md-5.workspace = true
+x509-parser = "0.18"
 tracing.workspace = true
 
 [target.'cfg(windows)'.dependencies]

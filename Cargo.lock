@@ -6844,11 +6844,13 @@ dependencies = [
  "clap",
  "hudsucker",
  "libc",
+ "md-5",
  "rustls-native-certs",
  "rustls-platform-verifier",
  "tracewing-proxy",
  "tracing",
  "windows-sys 0.61.2",
+ "x509-parser",
 ]
 
 [[package]]

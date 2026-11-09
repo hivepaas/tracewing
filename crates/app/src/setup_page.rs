@@ -21,7 +21,10 @@ use tracewing_proxy::{
     ca_key::KeyPlace,
     capture::{CHECK_HOST, CheckVisit},
 };
-use tracewing_system::Scope;
+use tracewing_system::{
+    Scope,
+    android::{Device, SetUp, Trust},
+};
 
 /// The browser in a `User-Agent`, in the order that tells them apart: Chrome's says
 /// Safari, and Edge's says both.
@@ -83,7 +86,7 @@ fn check_result(visit: Option<&CheckVisit>) -> (String, bool) {
     }
 }
 
-fn button(id: &'static str, label: impl Into<SharedString>, loud: bool) -> Stateful<Div> {
+fn button(id: impl Into<ElementId>, label: impl Into<SharedString>, loud: bool) -> Stateful<Div> {
     let c = colors();
     div()
         .id(id)
@@ -342,6 +345,7 @@ impl Traffic {
             .child(check_step)
             .child(self.render_one_app(cx))
             .child(self.render_other_devices(cx))
+            .child(self.render_android(cx))
             .child(self.render_http3(cx))
     }
 }
@@ -674,9 +678,154 @@ impl Traffic {
     }
 }
 
+/// Where a device stands, under its name.
+fn android_note(device: &Device, set: Option<&SetUp>) -> String {
+    match (device.state.as_str(), set) {
+        (
+            _,
+            Some(SetUp {
+                trust: Trust::System,
+                ..
+            }),
+        ) => "Set up. The certificate is among the system's until the device restarts.".to_owned(),
+        (_, Some(SetUp { sdk, .. })) => {
+            let mut note = "Set up. The certificate is in Downloads: in the Settings just opened, \
+                            choose Encryption & credentials, Install a certificate, CA \
+                            certificate, and pick tracewing.crt."
+                .to_owned();
+            if *sdk >= 34 {
+                note.push_str(
+                    " Apps that trust only the system's certificates will still refuse it.",
+                );
+            }
+            note
+        }
+        ("device", None) => if device.emulator {
+            "An emulator."
+        } else {
+            "On USB."
+        }
+        .to_owned(),
+        ("unauthorized", None) => {
+            "Accept the USB debugging prompt on the device, then look again.".to_owned()
+        }
+        ("offline", None) => "Still starting. Look again in a moment.".to_owned(),
+        (state, None) => format!("adb says it is {state}."),
+    }
+}
+
+impl Traffic {
+    /// Emulators and phones on USB, set up over ADB in one go.
+    fn render_android(&mut self, cx: &mut Context<Self>) -> Div {
+        let c = colors();
+        let state = &self.system.android;
+        let text = match &state.adb {
+            None => "Sets the proxy on an Android emulator, or a phone plugged in with USB \
+                     debugging on, and installs the certificate. The traffic comes over ADB, so \
+                     neither has to be on this network."
+                .to_owned(),
+            Some(None) => "adb was not found. Install Android Studio, or Android's platform \
+                           tools, then look again."
+                .to_owned(),
+            Some(Some(_)) if state.devices.is_empty() => {
+                "No device is connected. Start an emulator, or plug in a phone with USB \
+                 debugging on, then look again."
+                    .to_owned()
+            }
+            Some(Some(_)) => "Set up a device to send its traffic here. Undo, or closing \
+                              tracewing, takes the proxy off it again."
+                .to_owned(),
+        };
+        let looking = state.looking;
+        let looked = state.adb.is_some();
+        let rows =
+            state.devices.iter().enumerate().map(|(at, device)| {
+                let set = state.set.get(&device.serial);
+                let working = state.working.as_deref() == Some(device.serial.as_str());
+                let busy = state.working.is_some();
+                let serial = device.serial.clone();
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .items_center()
+                    .gap(px(12.))
+                    .py(px(6.))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(260.))
+                            .flex()
+                            .flex_col()
+                            .child(
+                                div()
+                                    .font_weight(FontWeight::BOLD)
+                                    .child(format!("{} · {}", device.model, device.serial)),
+                            )
+                            .child(div().text_color(rgb(c.muted)).child(if working {
+                                "Working…".to_owned()
+                            } else {
+                                android_note(device, set)
+                            })),
+                    )
+                    .when(device.ready() && !busy, |d| {
+                        let label = if set.is_some() { "Undo" } else { "Set up" };
+                        d.child(button(("android", at), label, set.is_none()).on_click(
+                            cx.listener(move |this, _, _, cx| {
+                                if this.system.android.set.contains_key(&serial) {
+                                    this.undo_android(serial.clone(), cx);
+                                } else {
+                                    this.set_up_android(serial.clone(), cx);
+                                }
+                            }),
+                        ))
+                    })
+            });
+        let problem = state.problem.clone();
+        aside("Android emulators and USB devices", text)
+            .when(!looking, |d| {
+                d.child(
+                    button(
+                        "setup-android",
+                        if looked { "Look again" } else { "Find devices" },
+                        false,
+                    )
+                    .on_click(cx.listener(|this, _, _, cx| this.find_android_devices(cx))),
+                )
+            })
+            .child(div().w_full().flex().flex_col().children(rows))
+            .children(problem.map(|problem| div().w_full().text_color(rgb(c.error)).child(problem)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_device_says_where_it_stands() {
+        let device = |serial: &str, state: &str| Device {
+            serial: serial.to_owned(),
+            state: state.to_owned(),
+            model: "Pixel".to_owned(),
+            emulator: serial.starts_with("emulator-"),
+        };
+        let emulator = device("emulator-5554", "device");
+        assert_eq!(android_note(&emulator, None), "An emulator.");
+        assert!(android_note(&device("X", "unauthorized"), None).contains("prompt"));
+        let system = SetUp {
+            sdk: 33,
+            trust: Trust::System,
+        };
+        assert!(android_note(&emulator, Some(&system)).contains("system's"));
+        let downloads = |sdk| SetUp {
+            sdk,
+            trust: Trust::Downloads,
+        };
+        let old = android_note(&emulator, Some(&downloads(33)));
+        assert!(old.contains("Downloads") && !old.contains("still refuse"));
+        assert!(android_note(&emulator, Some(&downloads(34))).contains("still refuse"));
+    }
 
     #[test]
     fn each_guide_says_where_to_go() {

@@ -73,6 +73,13 @@ enum Command {
         #[arg(long)]
         data_dir: PathBuf,
     },
+    /// Android over ADB: list devices, point one at a proxy, or put it back.
+    Android {
+        #[command(subcommand)]
+        action: AndroidAction,
+        #[arg(long, global = true)]
+        data_dir: Option<PathBuf>,
+    },
     /// Block outgoing UDP to port 443 until Enter is pressed, to try it by hand.
     Quic {
         #[arg(long)]
@@ -167,6 +174,24 @@ enum CaAction {
     Uninstall {
         #[arg(long, value_enum, default_value = "user")]
         scope: Scope,
+    },
+}
+
+#[derive(Subcommand)]
+enum AndroidAction {
+    /// The devices adb sees.
+    List,
+    /// Point a device at the proxy on `port` here, and install the CA.
+    Setup {
+        serial: String,
+        #[arg(long, default_value_t = 9090)]
+        port: u16,
+    },
+    /// Take the proxy off a device.
+    Undo {
+        serial: String,
+        #[arg(long, default_value_t = 9090)]
+        port: u16,
     },
 }
 
@@ -308,6 +333,27 @@ async fn main() -> Result<()> {
             println!("{:?}", system::proxy_status()?);
         }
         Command::Watchdog { data_dir } => system::watchdog(&data_dir)?,
+        Command::Android { action, data_dir } => {
+            let data_dir = data_dir.unwrap_or_else(default_data_dir);
+            let adb = system::android::find_adb().context("adb was not found")?;
+            match action {
+                AndroidAction::List => {
+                    for device in system::android::devices(&adb)? {
+                        println!("{device:?}");
+                    }
+                }
+                AndroidAction::Setup { serial, port } => {
+                    let pem = data_dir.join("ca.pem");
+                    let der = system::ca_der(&pem)?;
+                    let done = system::android::set_up(&adb, &serial, port, &pem, &der, &data_dir)?;
+                    println!("{done:?}");
+                }
+                AndroidAction::Undo { serial, port } => {
+                    system::android::undo(&adb, &serial, port, &data_dir)?;
+                    println!("put back");
+                }
+            }
+        }
         Command::Quic { data_dir } => {
             let data_dir = data_dir.unwrap_or_else(default_data_dir);
             let block = system::block_quic(&data_dir)?;
