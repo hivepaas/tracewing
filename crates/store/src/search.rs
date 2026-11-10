@@ -124,7 +124,8 @@ fn open_piece(path: &Path, settings: &StorageSettings) -> Result<Connection> {
          CREATE TABLE IF NOT EXISTS progress (
              only INTEGER PRIMARY KEY CHECK (only = 1),
              last_id INTEGER NOT NULL
-         );",
+         );
+         CREATE TABLE IF NOT EXISTS waiting (id INTEGER PRIMARY KEY);",
     )?;
     if settings.index_urls {
         conn.execute_batch(
@@ -233,7 +234,17 @@ impl Pieces {
         newest.last_id = last_id;
         if piece_bytes(&newest.path) >= self.target {
             let path = self.dir.join(format!("{:08}.db", self.next));
-            self.current = open_piece(&path, &self.settings)?;
+            let next = open_piece(&path, &self.settings)?;
+            // Streams still going are waited for in the newest piece only, so that
+            // none is indexed twice.
+            let waiting = waiting_in(&self.current)?;
+            let tx = next.unchecked_transaction()?;
+            for id in &waiting {
+                tx.execute("INSERT OR IGNORE INTO waiting (id) VALUES (?1)", [id])?;
+            }
+            tx.commit()?;
+            self.current.execute("DELETE FROM waiting", [])?;
+            self.current = next;
             self.next += 1;
             self.list.push_back(Piece { path, last_id });
         }
@@ -245,6 +256,13 @@ impl Pieces {
         }
         Ok(self.list.iter().map(|piece| piece_bytes(&piece.path)).sum())
     }
+}
+
+/// The streams a piece waits on.
+fn waiting_in(conn: &Connection) -> Result<Vec<i64>> {
+    let mut stmt = conn.prepare("SELECT id FROM waiting ORDER BY id")?;
+    let ids = stmt.query_map([], |r| r.get(0))?;
+    Ok(ids.collect::<rusqlite::Result<_>>()?)
 }
 
 /// Text of one body for the index, if it has any.
@@ -261,14 +279,33 @@ fn body_text(
     Some(decode::lossy_text(&text))
 }
 
+/// A stream gets its row as it opens and its bodies when it ends, written over
+/// the same row. Its URL is indexed at once; its bodies wait, by id, in the
+/// piece's `waiting` table, until the row says it is over.
+/// What the index reads of a flow: its id, URL, content types, bodies, and
+/// whether it is still going (at [`OPEN`]).
+fn row_columns() -> String {
+    format!(
+        "id, host || path, req_content_type, content_type, {}, {}, open",
+        StoredBody::columns("req"),
+        StoredBody::columns("resp"),
+    )
+}
+
+const OPEN: usize = 16;
+
 struct Indexing<'a> {
     reader: BodyReader,
     settings: &'a StorageSettings,
+    /// The rows after an id.
     query: String,
+    /// One row, by id.
+    one: String,
 }
 
 impl Indexing<'_> {
-    /// One batch after `last`. Returns how many and the last id; on an error the
+    /// One batch after `last`, then the streams that were waited on and have
+    /// ended. Returns how many new rows and the last id; on an error the
     /// transaction is undone, so nothing has moved.
     fn batch(
         &mut self,
@@ -276,8 +313,8 @@ impl Indexing<'_> {
         write: &mut Connection,
         last: i64,
     ) -> Result<(u64, i64)> {
-        let (index_urls, index_bodies) = (self.settings.index_urls, self.settings.index_bodies);
-        let max = self.settings.index_per_body();
+        let index_urls = self.settings.index_urls;
+        let index_bodies = self.settings.index_bodies;
         let tx = write.transaction()?;
         let mut newest = last;
         let mut seen = 0;
@@ -295,19 +332,26 @@ impl Indexing<'_> {
                 if !index_bodies {
                     continue;
                 }
-                let request: Option<String> = row.get(2)?;
-                let response: Option<String> = row.get(3)?;
-                let req = StoredBody::from_row(row, 4)?;
-                let resp = StoredBody::from_row(row, 10)?;
-                let request = body_text(&mut self.reader, &req, request.as_deref(), max);
-                let response = body_text(&mut self.reader, &resp, response.as_deref(), max);
-                let text = match (request, response) {
-                    (Some(request), Some(response)) => format!("{request}\n{response}"),
-                    (Some(text), None) | (None, Some(text)) => text,
-                    (None, None) => continue,
-                };
-                tx.prepare_cached("INSERT INTO bodies (rowid, body) VALUES (?1, ?2)")?
-                    .execute(params![newest, normalize(&text)])?;
+                if row.get::<_, bool>(OPEN)? {
+                    tx.prepare_cached("INSERT OR IGNORE INTO waiting (id) VALUES (?1)")?
+                        .execute([newest])?;
+                    continue;
+                }
+                self.index_bodies(&tx, newest, row)?;
+            }
+        }
+        if index_bodies {
+            for id in waiting_in(&tx)? {
+                let mut select = read.prepare_cached(&self.one)?;
+                let mut rows = select.query([id])?;
+                match rows.next()? {
+                    Some(row) if row.get::<_, bool>(OPEN)? => continue,
+                    Some(row) => self.index_bodies(&tx, id, row)?,
+                    // Gone with the oldest flows: nothing to index.
+                    None => {}
+                }
+                tx.prepare_cached("DELETE FROM waiting WHERE id = ?1")?
+                    .execute([id])?;
             }
         }
         if seen > 0 {
@@ -318,6 +362,25 @@ impl Indexing<'_> {
         }
         tx.commit()?;
         Ok((seen, newest))
+    }
+
+    /// Indexes the bodies of the row in hand, which is over.
+    fn index_bodies(&mut self, tx: &Connection, id: i64, row: &rusqlite::Row) -> Result<()> {
+        let max = self.settings.index_per_body();
+        let request: Option<String> = row.get(2)?;
+        let response: Option<String> = row.get(3)?;
+        let req = StoredBody::from_row(row, 4)?;
+        let resp = StoredBody::from_row(row, 10)?;
+        let request = body_text(&mut self.reader, &req, request.as_deref(), max);
+        let response = body_text(&mut self.reader, &resp, response.as_deref(), max);
+        let text = match (request, response) {
+            (Some(request), Some(response)) => format!("{request}\n{response}"),
+            (Some(text), None) | (None, Some(text)) => text,
+            (None, None) => return Ok(()),
+        };
+        tx.prepare_cached("INSERT INTO bodies (rowid, body) VALUES (?1, ?2)")?
+            .execute(params![id, normalize(&text)])?;
+        Ok(())
     }
 }
 
@@ -337,11 +400,10 @@ fn follow(
         reader: BodyReader::new(session),
         settings,
         query: format!(
-            "SELECT id, host || path, req_content_type, content_type, {}, {} FROM flows
-             WHERE id > ?1 ORDER BY id LIMIT ?2",
-            StoredBody::columns("req"),
-            StoredBody::columns("resp"),
+            "SELECT {} FROM flows WHERE id > ?1 ORDER BY id LIMIT ?2",
+            row_columns()
         ),
+        one: format!("SELECT {} FROM flows WHERE id = ?1", row_columns()),
     };
     let mut last = pieces.indexed_to();
     loop {
@@ -522,6 +584,91 @@ mod tests {
             0,
             "done"
         );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    fn stream(path: &str, said: &str) -> crate::store::FlowRecord {
+        crate::store::FlowRecord {
+            kind: "sse",
+            host: "a.dev".to_owned(),
+            path: path.to_owned(),
+            content_type: Some("text/event-stream".to_owned()),
+            response: crate::store::BodyRecord {
+                bytes: said.len() as u64,
+                captured: said.as_bytes().to_vec(),
+                complete: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn a_stream_is_indexed_whole_once_over() {
+        let dir = temp("stream");
+        let settings = StorageSettings::default();
+        let shared = Arc::new(Shared::default());
+        let (recorder, writer) =
+            crate::store::Recorder::spawn(&dir, &settings, Arc::clone(&shared), None, 100_000)
+                .unwrap();
+        let handle = recorder.open_stream(stream("/events", ""));
+        let indexer = Indexer::spawn(&dir, &settings, shared).unwrap();
+        let stats = indexer.stats();
+        while stats.indexed.load(Ordering::Relaxed) == 0 {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(
+            find(&dir, "urls", "events", 1).unwrap(),
+            [1],
+            "found while it goes"
+        );
+        let search = session::search_dir(&dir);
+        let piece = || open_piece(&search.join("00000001.db"), &settings).unwrap();
+        assert_eq!(waiting_in(&piece()).unwrap(), [1]);
+
+        handle.finish(stream("/events", "data: kết thúc"));
+        drop(recorder);
+        writer.close().unwrap();
+        indexer.finish().unwrap();
+        assert_eq!(find(&dir, "bodies", "ket thuc", 1).unwrap(), [1]);
+        assert_eq!(waiting_in(&piece()).unwrap(), Vec::<i64>::new());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_stream_gone_with_the_oldest_flows_is_not_waited_for() {
+        let dir = temp("stream-gone");
+        recorded(&dir, 0..3);
+        let settings = StorageSettings::default();
+        let first = session::search_dir(&dir).join("00000001.db");
+        open_piece(&first, &settings)
+            .unwrap()
+            .execute("INSERT INTO waiting (id) VALUES (99)", [])
+            .unwrap();
+        settle(Indexer::catch_up(&dir, &settings).unwrap());
+        let piece = open_piece(&first, &settings).unwrap();
+        assert_eq!(waiting_in(&piece).unwrap(), Vec::<i64>::new());
+        // Windows will not delete a database that is still open.
+        drop(piece);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_new_piece_takes_the_streams_waited_for() {
+        let dir = temp("stream-pieces");
+        let search = session::search_dir(&dir);
+        let settings = StorageSettings::default();
+        let mut pieces = Pieces::start(&search, 1, &settings).unwrap();
+        pieces
+            .current
+            .execute("INSERT INTO waiting (id) VALUES (7)", [])
+            .unwrap();
+        let old = open_piece(&search.join("00000001.db"), &settings).unwrap();
+        pieces.tidy(10, 1).unwrap();
+        assert_eq!(waiting_in(&pieces.current).unwrap(), [7]);
+        assert_eq!(waiting_in(&old).unwrap(), Vec::<i64>::new(), "once only");
+        // Windows will not delete a database that is still open.
+        drop((pieces, old));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
