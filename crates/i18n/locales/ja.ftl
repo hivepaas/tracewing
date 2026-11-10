@@ -1069,8 +1069,8 @@ t7d4b60bb = tracewing 経由でテストページを開きましたが、HTTPS �
 # Browsers
 td580efd4 = ブラウザー
 
-# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
-t57bc4b30 = ブラウザーはそれぞれ、何を信頼し、通信をどこへ送るかを独自に決めます。「確認」でそのブラウザーにテストページを開きます。
+# Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
+tce72f1ec = ブラウザーはそれぞれ、何を信頼し、通信をどこへ送るかを独自に決めます。「確認」でそのブラウザーにテストページを開きます。「個別に開く」は tracewing を通る専用プロファイルで起動し、システムプロキシには触れません。
 
 # Look again
 t98416222 = 再検索
@@ -1080,6 +1080,9 @@ t0e46bb34 = このコンピューターにブラウザーが見つかりませ�
 
 # Check
 t592c8de7 = 確認
+
+# Open on its own
+t0da7783c = 個別に開く
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = このコンピュータで UDP ポート 443 をブロックしているため、アプリは HTTP/3 から HTTP/2 に切り替えて tracewing を経由します。ブロックは、tracewing を閉じたとき、またはクラッシュしたときに解除されます。
@@ -1099,14 +1102,11 @@ t88231e40 = HTTP/3 をブロック
 # Or one app at a time
 t91c63f1c = または、アプリごとに
 
-# A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-t259dbb0e = システムプロキシや他のアプリはそのままで、tracewing を経由するターミナル、または専用プロファイルのブラウザです。
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
+tc21013a9 = tracewing を通るターミナルです。システムプロキシや他のアプリはそのままです。ブラウザーなら、「ブラウザー」の「個別に開く」で専用プロファイルを使って同じことができます。
 
 # Open a terminal
 t4b629c72 = ターミナルを開く
-
-# Open {name}
-tbd869c4a = { $name } を開く
 
 # iPhone and iPad
 ta550cc97 = iPhone と iPad

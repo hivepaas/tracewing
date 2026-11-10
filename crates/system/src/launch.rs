@@ -2,7 +2,7 @@
 //! touched: a terminal whose environment points at it, and a browser with a
 //! profile of its own. The system proxy and the trust stores stay as they are.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use std::{
     fs,
@@ -130,20 +130,69 @@ pub fn open_url(browser: &Browser, url: &str) -> Result<()> {
     spawn(command).with_context(|| format!("open {}", browser.program.display()))
 }
 
-/// Opens `browser` at `url`, going through the proxy. `spki` is the leaves'
-/// key hash, for when the browser does not trust the CA: Chromium then takes
-/// them anyway, in this profile only.
+/// Opens `browser` at `url` in its profile for tracewing, going through the
+/// proxy. A Chromium gets `spki`, the leaves' key hash, for when it does not
+/// trust the CA: it then takes them anyway, in this profile only. A Firefox
+/// profile is told to trust `ca_pem`, as Firefox has no such flag.
 pub fn open_browser(
     browser: &Browser,
     addr: SocketAddr,
     spki: Option<&str>,
+    ca_pem: &Path,
     url: &str,
 ) -> Result<()> {
-    fs::create_dir_all(&browser.profile)
-        .with_context(|| format!("create {}", browser.profile.display()))?;
+    let profile = &browser.profile;
+    fs::create_dir_all(profile).with_context(|| format!("create {}", profile.display()))?;
     let mut command = Command::new(&browser.program);
-    command.args(browser_args(&browser.profile, addr, spki, url));
+    match browser.engine {
+        Engine::Chromium => {
+            command.args(browser_args(profile, addr, spki, url));
+        }
+        Engine::Firefox => {
+            let prefs = profile.join("user.js");
+            fs::write(&prefs, firefox_prefs(addr))
+                .with_context(|| format!("write {}", prefs.display()))?;
+            os::trust_in_profile(profile, ca_pem)?;
+            command.args(firefox_args(profile, url));
+        }
+        Engine::Safari => bail!("Safari has no profile of its own to open"),
+    }
     spawn(command).with_context(|| format!("open {}", browser.program.display()))
+}
+
+/// What a Firefox profile for tracewing holds: the proxy, the system's roots
+/// (where Firefox can read them, which is not Linux), and no first-run pages.
+pub fn firefox_prefs(addr: SocketAddr) -> String {
+    let (host, port) = (addr.ip(), addr.port());
+    let prefs: [(&str, String); 9] = [
+        ("network.proxy.type", "1".to_owned()),
+        ("network.proxy.http", format!("\"{host}\"")),
+        ("network.proxy.http_port", port.to_string()),
+        ("network.proxy.ssl", format!("\"{host}\"")),
+        ("network.proxy.ssl_port", port.to_string()),
+        ("security.enterprise_roots.enabled", "true".to_owned()),
+        ("browser.shell.checkDefaultBrowser", "false".to_owned()),
+        ("browser.aboutwelcome.enabled", "false".to_owned()),
+        (
+            "browser.startup.homepage_override.mstone",
+            "\"ignore\"".to_owned(),
+        ),
+    ];
+    prefs
+        .iter()
+        .map(|(name, value)| format!("user_pref(\"{name}\", {value});\n"))
+        .collect()
+}
+
+/// A Firefox of its own, beside the one the user may have open.
+pub fn firefox_args(profile: &Path, url: &str) -> Vec<String> {
+    vec![
+        "--profile".to_owned(),
+        profile.display().to_string(),
+        "--no-remote".to_owned(),
+        "--new-instance".to_owned(),
+        url.to_owned(),
+    ]
 }
 
 pub fn browser_args(
@@ -236,6 +285,24 @@ mod tests {
         assert_eq!(lines[0], "-----BEGIN CERTIFICATE-----");
         assert_eq!(lines[1].len(), 64);
         assert_eq!(*lines.last().unwrap(), "-----END CERTIFICATE-----");
+    }
+
+    #[test]
+    fn a_firefox_profile_goes_through_the_proxy() {
+        let prefs = firefox_prefs(addr());
+        assert!(prefs.contains("user_pref(\"network.proxy.type\", 1);\n"));
+        assert!(prefs.contains("user_pref(\"network.proxy.ssl\", \"127.0.0.1\");\n"));
+        assert!(prefs.contains("user_pref(\"network.proxy.ssl_port\", 9090);\n"));
+        assert_eq!(
+            firefox_args(Path::new("/p"), "https://tracewing.test/"),
+            [
+                "--profile",
+                "/p",
+                "--no-remote",
+                "--new-instance",
+                "https://tracewing.test/"
+            ]
+        );
     }
 
     #[test]

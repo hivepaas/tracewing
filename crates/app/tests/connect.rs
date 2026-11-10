@@ -37,8 +37,9 @@ case "$1" in
 esac
 "#;
 
-/// A browser that does nothing, for the Browsers card to find.
-const FAKE_BROWSER: &str = "#!/bin/sh\nexit 0\n";
+/// A browser that writes down how it was started, for the Browsers card to find.
+const FAKE_BROWSER: &str =
+    "#!/bin/sh\necho \"$@\" > \"$FAKE_GSETTINGS_DIR/$(basename \"$0\").args\"\n";
 
 fn browser_trust(view: &Traffic, name: &str) -> Option<BrowserTrust> {
     view.system
@@ -230,6 +231,57 @@ fn the_system_proxy_and_the_settings_from_the_window() {
     wait_for(&mut cx, window, "the profile to trust it", |view| {
         browser_trust(view, "Firefox") == Some(BrowserTrust::Own { holding: 2, of: 2 })
     });
+
+    // Each on its own: Chrome with the proxy as a flag, Firefox with a profile
+    // that holds the proxy and trusts the CA.
+    let firefox = window
+        .update(&mut cx, |view, _, cx| {
+            view.open_browser("Chrome", cx);
+            view.open_browser("Firefox", cx);
+            let (firefox, _) = view
+                .system
+                .browsers
+                .iter()
+                .find(|(b, _)| b.name == "Firefox")
+                .unwrap();
+            firefox.profile.clone()
+        })
+        .unwrap();
+    let args = |name: &str| std::fs::read_to_string(store.join(format!("{name}.args")));
+    wait_for(&mut cx, window, "the browsers to start", |view| {
+        view.system.problem.is_some() || args("google-chrome").is_ok() && args("firefox").is_ok()
+    });
+    window
+        .update(&mut cx, |view, _, _| assert_eq!(view.system.problem, None))
+        .unwrap();
+    let chrome_args = args("google-chrome").unwrap();
+    assert!(
+        chrome_args.contains(&format!("--proxy-server=http://{addr}")),
+        "{chrome_args}"
+    );
+    assert!(
+        !chrome_args.contains("spki"),
+        "Chrome trusts the CA: {chrome_args}"
+    );
+    assert_eq!(
+        args("firefox").unwrap().trim(),
+        format!(
+            "--profile {} --no-remote --new-instance https://tracewing.test/",
+            firefox.display()
+        )
+    );
+    let prefs = std::fs::read_to_string(firefox.join("user.js")).unwrap();
+    assert!(
+        prefs.contains(&format!("\"network.proxy.ssl_port\", {});", addr.port())),
+        "{prefs}"
+    );
+    assert!(
+        firefox.join("tracewing-ca").exists(),
+        "the profile trusts the CA"
+    );
+    window
+        .update(&mut cx, |view, _, _| assert_eq!(view.system.problem, None))
+        .unwrap();
 
     // On, and what was there before comes back when it goes off.
     window

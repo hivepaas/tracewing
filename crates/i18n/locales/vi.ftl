@@ -1069,8 +1069,8 @@ t7d4b60bb = Đã mở trang kiểm tra qua tracewing, nhưng không bằng HTTPS
 # Browsers
 td580efd4 = Trình duyệt
 
-# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
-t57bc4b30 = Mỗi trình duyệt có cách riêng để quyết định tin gì và gửi traffic đi đâu. Bấm Kiểm tra để mở trang kiểm tra trong trình duyệt đó.
+# Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
+tce72f1ec = Mỗi trình duyệt có cách riêng để quyết định tin gì và gửi traffic đi đâu. Kiểm tra mở trang kiểm tra trong trình duyệt đó. Mở riêng chạy nó với một profile riêng đi qua tracewing, không đụng tới system proxy.
 
 # Look again
 t98416222 = Tìm lại
@@ -1080,6 +1080,9 @@ t0e46bb34 = Không tìm thấy trình duyệt nào trên máy này.
 
 # Check
 t592c8de7 = Kiểm tra
+
+# Open on its own
+t0da7783c = Mở riêng
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = Cổng UDP 443 đang bị chặn trên máy này, nên app chuyển từ HTTP/3 về HTTP/2 và đi qua tracewing. Việc chặn dừng khi tracewing đóng, hoặc khi nó bị crash.
@@ -1099,14 +1102,11 @@ t88231e40 = Chặn HTTP/3
 # Or one app at a time
 t91c63f1c = Hoặc từng app một
 
-# A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-t259dbb0e = Một terminal, hoặc một trình duyệt với profile riêng, đi qua tracewing trong khi system proxy và mọi app khác giữ nguyên.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
+tc21013a9 = Một terminal đi qua tracewing, còn system proxy và mọi app khác vẫn giữ nguyên. Với trình duyệt, nút Mở riêng trong mục Trình duyệt làm điều tương tự với một profile riêng.
 
 # Open a terminal
 t4b629c72 = Mở terminal
-
-# Open {name}
-tbd869c4a = Mở { $name }
 
 # iPhone and iPad
 ta550cc97 = iPhone và iPad

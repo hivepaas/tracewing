@@ -1088,8 +1088,8 @@ t7d4b60bb = Abrió la página de prueba a través de tracewing, pero sin HTTPS.
 # Browsers
 td580efd4 = Navegadores
 
-# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
-t57bc4b30 = Cada uno decide por su cuenta en qué confiar y adónde enviar su tráfico. Comprobar abre la página de prueba en él.
+# Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
+tce72f1ec = Cada uno decide por su cuenta en qué confiar y adónde enviar su tráfico. Comprobar abre en él la página de prueba. Abrir aparte lo inicia con un perfil propio que pasa por tracewing, sin tocar el proxy del sistema.
 
 # Look again
 t98416222 = Volver a buscar
@@ -1099,6 +1099,9 @@ t0e46bb34 = No se encontró ningún navegador en este ordenador.
 
 # Check
 t592c8de7 = Comprobar
+
+# Open on its own
+t0da7783c = Abrir aparte
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = El puerto UDP 443 está bloqueado en este equipo, así que las apps pasan de HTTP/3 a HTTP/2 y van por tracewing. El bloqueo termina cuando se cierra tracewing, o si falla.
@@ -1118,14 +1121,11 @@ t88231e40 = Bloquear HTTP/3
 # Or one app at a time
 t91c63f1c = O una app cada vez
 
-# A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-t259dbb0e = Un terminal, o un navegador con su propio perfil, que pasa por tracewing mientras el proxy del sistema y todas las demás apps se quedan como están.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
+tc21013a9 = Una terminal que pasa por tracewing mientras el proxy del sistema y las demás apps quedan como están. Para un navegador, Abrir aparte en Navegadores hace lo mismo con un perfil propio.
 
 # Open a terminal
 t4b629c72 = Abrir un terminal
-
-# Open {name}
-tbd869c4a = Abrir { $name }
 
 # iPhone and iPad
 ta550cc97 = iPhone y iPad

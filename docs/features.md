@@ -26,7 +26,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Proxy listener: HTTP in absolute form, HTTPS through `CONNECT` | Gate 0 | Free |
 | Turn the system proxy on and off: macOS through a privileged helper, Windows per user, GNOME and KDE on Linux | Beta | Free |
 | Put the system proxy back when tracewing quits or crashes (a watchdog, and a check at the next start) | Beta | Free |
-| Open a terminal or a browser that goes through tracewing, without touching the system proxy (environment variables, a separate browser profile) | Beta | Free |
+| Open a terminal or a browser that goes through tracewing, without touching the system proxy (environment variables; a separate profile for any Chromium-based browser or Firefox) | Beta | Free |
 | Pause and resume capture | Beta | Free |
 | Choose which hosts to decrypt; tunnel the rest untouched | Beta | Free |
 | Take offers of HTTP/3 (`Alt-Svc`) out of responses, so apps stay on HTTP/2 | Beta | Free |

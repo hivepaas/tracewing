@@ -449,3 +449,9 @@ pub fn find_browsers(profiles: &Path) -> Vec<Browser> {
 pub fn browser_trust(_browser: &Browser) -> BrowserTrust {
     BrowserTrust::System
 }
+
+/// A Firefox profile reads the system's store, as tracewing's sets
+/// `security.enterprise_roots.enabled`.
+pub fn trust_in_profile(_profile: &Path, _cert_pem: &Path) -> Result<()> {
+    Ok(())
+}

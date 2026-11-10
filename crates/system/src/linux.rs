@@ -410,6 +410,24 @@ fn nss_databases(create: bool) -> Result<Vec<PathBuf>> {
     Ok(found)
 }
 
+/// Makes a Firefox profile of tracewing's trust the CA: NSS, as in every
+/// profile on Linux, made before Firefox first opens it.
+pub fn trust_in_profile(profile: &Path, cert_pem: &Path) -> Result<()> {
+    if !on_path("certutil") {
+        bail!("Firefox needs certutil (libnss3-tools or nss-tools) to trust the CA");
+    }
+    let db = format!("sql:{}", profile.display());
+    if !profile.join("cert9.db").exists() {
+        run("certutil", &["-N", "--empty-password", "-d", &db])?;
+    }
+    let pem = cert_pem.display().to_string();
+    run(
+        "certutil",
+        &["-A", "-d", &db, "-t", "C,,", "-n", NICKNAME, "-i", &pem],
+    )
+    .map(drop)
+}
+
 /// Does `job` to every database, then fails if any failed: one broken profile
 /// must not keep the others, Chrome's among them, from being done.
 fn each_database(dbs: Vec<PathBuf>, mut job: impl FnMut(&Path) -> Result<()>) -> Result<()> {

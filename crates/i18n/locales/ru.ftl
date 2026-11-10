@@ -1117,8 +1117,8 @@ t7d4b60bb = Открыл тестовую страницу через tracewing,
 # Browsers
 td580efd4 = Браузеры
 
-# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
-t57bc4b30 = Каждый браузер сам решает, чему доверять и куда отправлять трафик. «Проверить» открывает в нём тестовую страницу.
+# Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
+tce72f1ec = Каждый браузер сам решает, чему доверять и куда отправлять трафик. «Проверить» открывает в нём тестовую страницу. «Открыть отдельно» запускает его с собственным профилем, который идёт через tracewing, не трогая системный прокси.
 
 # Look again
 t98416222 = Поискать снова
@@ -1128,6 +1128,9 @@ t0e46bb34 = На этом компьютере браузеры не найде�
 
 # Check
 t592c8de7 = Проверить
+
+# Open on its own
+t0da7783c = Открыть отдельно
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = UDP-порт 443 на этом компьютере заблокирован, поэтому приложения откатываются с HTTP/3 на HTTP/2 и идут через tracewing. Блокировка снимается, когда tracewing закрывается или аварийно завершается.
@@ -1147,14 +1150,11 @@ t88231e40 = Блокировать HTTP/3
 # Or one app at a time
 t91c63f1c = Или по одному приложению
 
-# A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-t259dbb0e = Терминал или браузер с отдельным профилем, которые идут через tracewing, а системный прокси и все остальные приложения остаются как есть.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
+tc21013a9 = Терминал, который идёт через tracewing, а системный прокси и остальные приложения остаются как есть. Для браузера то же самое делает «Открыть отдельно» в разделе «Браузеры», с собственным профилем.
 
 # Open a terminal
 t4b629c72 = Открыть терминал
-
-# Open {name}
-tbd869c4a = Открыть { $name }
 
 # iPhone and iPad
 ta550cc97 = iPhone и iPad

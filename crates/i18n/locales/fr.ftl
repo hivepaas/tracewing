@@ -1088,8 +1088,8 @@ t7d4b60bb = A ouvert la page de test via tracewing, mais sans HTTPS.
 # Browsers
 td580efd4 = Navigateurs
 
-# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
-t57bc4b30 = Chacun décide à sa façon à quoi se fier et où envoyer son trafic. Vérifier y ouvre la page de test.
+# Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
+tce72f1ec = Chacun décide à sa façon à quoi se fier et où envoyer son trafic. Vérifier y ouvre la page de test. Ouvrir à part le lance avec un profil à lui qui passe par tracewing, sans toucher au proxy système.
 
 # Look again
 t98416222 = Rechercher à nouveau
@@ -1099,6 +1099,9 @@ t0e46bb34 = Aucun navigateur trouvé sur cet ordinateur.
 
 # Check
 t592c8de7 = Vérifier
+
+# Open on its own
+t0da7783c = Ouvrir à part
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = Le port UDP 443 est bloqué sur cet ordinateur, donc les apps repassent de HTTP/3 à HTTP/2 et passent par tracewing. Le blocage s'arrête quand tracewing se ferme, ou s'il plante.
@@ -1118,14 +1121,11 @@ t88231e40 = Bloquer HTTP/3
 # Or one app at a time
 t91c63f1c = Ou une app à la fois
 
-# A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-t259dbb0e = Un terminal, ou un navigateur avec son propre profil, qui passe par tracewing tandis que le proxy système et toutes les autres apps restent tels quels.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
+tc21013a9 = Un terminal qui passe par tracewing, le proxy système et les autres apps restant tels quels. Pour un navigateur, Ouvrir à part dans Navigateurs fait de même avec un profil à lui.
 
 # Open a terminal
 t4b629c72 = Ouvrir un terminal
-
-# Open {name}
-tbd869c4a = Ouvrir { $name }
 
 # iPhone and iPad
 ta550cc97 = iPhone et iPad
