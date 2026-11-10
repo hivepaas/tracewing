@@ -247,6 +247,9 @@ t3343999e = Цього потоку більше немає.
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Цей хост не розшифровується, тому не видно, що він надсилає.
 
+# Still coming: it shows once it ends.
+t42be95fb = Ще надходить: з’явиться, коли закінчиться.
+
 # No body.
 t31e4d044 = Тіла немає.
 

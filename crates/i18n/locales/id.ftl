@@ -229,6 +229,9 @@ t3343999e = Flow ini sudah tidak ada.
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Host ini tidak didekripsi, jadi isi kirimannya tidak bisa dilihat.
 
+# Still coming: it shows once it ends.
+t42be95fb = Masih datang: tampil setelah selesai.
+
 # No body.
 t31e4d044 = Tanpa body.
 

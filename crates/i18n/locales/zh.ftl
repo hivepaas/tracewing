@@ -229,6 +229,9 @@ t3343999e = 此流量记录已不存在。
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = 此主机未解密，因此无法查看其发送的内容。
 
+# Still coming: it shows once it ends.
+t42be95fb = 仍在接收：结束后显示。
+
 # No body.
 t31e4d044 = 无正文。
 

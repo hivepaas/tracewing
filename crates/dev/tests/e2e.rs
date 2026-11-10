@@ -1500,6 +1500,77 @@ async fn packed_streams_show_as_they_come() {
     clean_up(conn, dir);
 }
 
+/// Any other response still going after a while is listed then, and written
+/// whole again when it ends; one that ends soon is written once.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_slow_response_is_listed_while_it_lasts() {
+    let h = Harness::start("slow-response").await;
+    let session_dir = h.dir.join("session");
+    let client = h.client(false);
+    let quick = client
+        .get(format!(
+            "{}/stream?format=text&events=3&gap_ms=10",
+            h.origin
+        ))
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    assert_eq!(quick.as_ref(), b"line 0\nline 1\nline 2\n");
+    let mut res = client
+        .get(format!(
+            "{}/stream?format=text&events=20&gap_ms=200",
+            h.origin
+        ))
+        .send()
+        .await
+        .unwrap();
+    let conn = Connection::open(session_dir.join("flows.db")).unwrap();
+    let started = Instant::now();
+    let deadline = started + Duration::from_secs(10);
+    let listed = loop {
+        let row: Option<(bool, String)> = conn
+            .query_row("SELECT open, kind FROM flows WHERE id = 2", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .ok();
+        if let Some(row) = row {
+            break row;
+        }
+        assert!(Instant::now() < deadline, "the slow one was never listed");
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    };
+    assert!(listed.0, "listed while it lasts");
+    assert_eq!(listed.1, "http", "its kind as it was");
+    assert!(
+        started.elapsed() < Duration::from_secs(4),
+        "{:?}",
+        started.elapsed()
+    );
+    while res.chunk().await.unwrap().is_some() {}
+    drop(conn);
+
+    let (_, conn, dir) = h.finish(2).await;
+    let (open, bytes): (bool, i64) = conn
+        .query_row("SELECT open, resp_bytes FROM flows WHERE id = 2", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .unwrap();
+    assert!(!open);
+    assert_eq!(
+        bytes as usize,
+        (0..20).map(|i| format!("line {i}\n").len()).sum::<usize>()
+    );
+    assert_eq!(
+        response_of(&conn, &dir, 2).unwrap().len() as i64,
+        bytes,
+        "kept whole"
+    );
+    clean_up(conn, dir);
+}
+
 /// A stream's body is found by its words once it ends, though its row was
 /// indexed while it was still going, with no body yet.
 #[tokio::test(flavor = "multi_thread")]

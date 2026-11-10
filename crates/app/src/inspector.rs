@@ -192,6 +192,8 @@ impl Traffic {
             *self.inspector.slot(other) = BodyState::Note(
                 if detail.kind == "tunnel" {
                     tr!("This host is not decrypted, so what it sends cannot be seen.")
+                } else if detail.open {
+                    tr!("Still coming: it shows once it ends.")
                 } else if facts.bytes == 0 {
                     tr!("No body.")
                 } else if facts.shed {

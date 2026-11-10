@@ -238,6 +238,9 @@ t3343999e = Este fluxo não existe mais.
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Este host não é descriptografado, então o que ele envia não pode ser visto.
 
+# Still coming: it shows once it ends.
+t42be95fb = Ainda chegando: aparece quando terminar.
+
 # No body.
 t31e4d044 = Sem corpo.
 

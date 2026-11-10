@@ -251,6 +251,8 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
             // `format=ndjson`: a JSON object a line, each frame ending inside the
             // next line, as a server writing as it goes may cut them.
             let ndjson = query.get("format") == Some(&"ndjson");
+            // `format=text`: plain lines, as a log written as it goes is.
+            let text = query.get("format") == Some(&"text");
             // `enc=gzip`, `br` or `zstd`: packed, and flushed after each event,
             // as a server that packs a stream must for it to come as it goes.
             let enc = query.get("enc").map(|enc| (*enc).to_owned());
@@ -262,7 +264,9 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
                 if i > 0 {
                     tokio::time::sleep(gap).await;
                 }
-                let event = if !ndjson {
+                let event = if text {
+                    format!("line {i}\n")
+                } else if !ndjson {
                     format!("data: event {i}\n\n")
                 } else {
                     let head = if i == 0 { r#"{"n":"# } else { "" };
@@ -284,6 +288,8 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
                     header::CONTENT_TYPE,
                     if ndjson {
                         "application/x-ndjson"
+                    } else if text {
+                        "text/plain; charset=utf-8"
                     } else {
                         "text/event-stream"
                     },
