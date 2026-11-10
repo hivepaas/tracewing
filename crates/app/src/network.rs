@@ -9,6 +9,7 @@ use crate::{
     widgets::eyebrow,
 };
 use gpui::{AppContext as _, Context, Div, Entity, FontWeight, div, prelude::*, px, rgb};
+use tracewing_i18n::tr;
 use tracewing_proxy::throttle::{Conditions, PRESETS};
 
 /// The fields for conditions of one's own.
@@ -31,8 +32,13 @@ fn number(text: &str, what: &str) -> Result<u32, String> {
     if text.is_empty() {
         return Ok(0);
     }
-    text.parse()
-        .map_err(|_| format!("{what}: {text} is not a whole number"))
+    text.parse().map_err(|_| {
+        tr!(
+            "{what}: {text} is not a whole number",
+            what = what,
+            text = text
+        )
+    })
 }
 
 /// Conditions from the fields, as a person typed them.
@@ -46,10 +52,10 @@ pub fn conditions_from(
     let conditions = Conditions {
         on: true,
         name: "Custom".to_owned(),
-        latency_ms: number(latency, "Latency")?,
-        down_kbps: number(down, "Down")?,
-        up_kbps: number(up, "Up")?,
-        loss_percent: number(loss, "Loss")?,
+        latency_ms: number(latency, &tr!("Latency"))?,
+        down_kbps: number(down, &tr!("Down"))?,
+        up_kbps: number(up, &tr!("Up"))?,
+        loss_percent: number(loss, &tr!("Loss"))?,
         hosts: hosts
             .split([',', ' ', '\n'])
             .map(str::trim)
@@ -59,27 +65,35 @@ pub fn conditions_from(
     };
     conditions.check().map_err(|e| format!("{e:#}"))?;
     if !conditions.slows() {
-        return Err("Give a latency, a speed or a loss to slow it down by".to_owned());
+        return Err(tr!("Give a latency, a speed or a loss to slow it down by"));
     }
     Ok(conditions)
 }
 
 impl NetworkForm {
     fn new(conditions: &Conditions, cx: &mut Context<Traffic>) -> Self {
-        let field = |hint: &'static str, text: String, cx: &mut Context<Traffic>| {
+        let field = |hint: fn() -> String, text: String, cx: &mut Context<Traffic>| {
             cx.new(|cx| {
-                let mut input = TextInput::new(hint, cx);
+                let mut input = TextInput::said(hint, cx);
                 input.set_text(&text, text.len()..text.len(), cx);
                 input
             })
         };
         Self {
-            latency: field("Latency, ms", number_text(conditions.latency_ms), cx),
-            down: field("Down, kbit/s", number_text(conditions.down_kbps), cx),
-            up: field("Up, kbit/s", number_text(conditions.up_kbps), cx),
-            loss: field("Loss, %", number_text(conditions.loss_percent), cx),
+            latency: field(
+                || tr!("Latency, ms"),
+                number_text(conditions.latency_ms),
+                cx,
+            ),
+            down: field(
+                || tr!("Down, kbit/s"),
+                number_text(conditions.down_kbps),
+                cx,
+            ),
+            up: field(|| tr!("Up, kbit/s"), number_text(conditions.up_kbps), cx),
+            loss: field(|| tr!("Loss, %"), number_text(conditions.loss_percent), cx),
             hosts: field(
-                "Only these hosts, like *.example.com; all if empty",
+                || tr!("Only these hosts, like *.example.com; all if empty"),
                 conditions.hosts.join(", "),
                 cx,
             ),
@@ -122,7 +136,7 @@ impl Traffic {
         let form = self.network_form(cx);
         form.problem = saved
             .err()
-            .map(|e| format!("Not kept for next time: {e:#}"));
+            .map(|e| tr!("Not kept for next time: {e}", e = format!("{e:#}")));
         if let Some(form) = &self.network_form {
             form.fill(&conditions, cx);
         }
@@ -199,7 +213,7 @@ impl Traffic {
         );
         let problem = form.problem.clone();
         let on = conditions.on;
-        let chip = |id: &'static str, label: &'static str, chosen: bool| {
+        let chip = |id: &'static str, label: String, chosen: bool| {
             div()
                 .id(id)
                 .h(px(30.))
@@ -215,11 +229,11 @@ impl Traffic {
                 .child(label)
         };
         let presets = PRESETS.iter().map(|&(name, ..)| {
-            chip(name, name, on && conditions.name == name)
+            chip(name, name.to_owned(), on && conditions.name == name)
                 .on_click(cx.listener(move |this, _, _, cx| this.choose_network(name, cx)))
         });
         // Labelled above: a field that holds a number shows no hint.
-        let field = |label: &'static str, input: Entity<TextInput>, wide: bool| {
+        let field = |label: String, input: Entity<TextInput>, wide: bool| {
             div()
                 .flex()
                 .flex_col()
@@ -257,7 +271,7 @@ impl Traffic {
                     .flex_wrap()
                     .items_center()
                     .gap(px(10.))
-                    .child(eyebrow("Slow network"))
+                    .child(eyebrow(tr!("Slow network")))
                     .child(
                         div()
                             .id("network-on")
@@ -279,7 +293,7 @@ impl Traffic {
                     .child(div().text_color(rgb(c.muted)).child(if on {
                         conditions.summary()
                     } else {
-                        "Off: traffic goes as fast as it can".to_owned()
+                        tr!("Off: traffic goes as fast as it can")
                     })),
             )
             .child(
@@ -290,7 +304,7 @@ impl Traffic {
                     .gap(px(6.))
                     .children(presets)
                     .child(
-                        chip("Custom", "Custom", on && conditions.name == "Custom")
+                        chip("Custom", tr!("Custom"), on && conditions.name == "Custom")
                             .on_click(cx.listener(|this, _, _, cx| this.apply_network_form(cx))),
                     ),
             )
@@ -301,21 +315,21 @@ impl Traffic {
                     .flex_wrap()
                     .items_end()
                     .gap(px(8.))
-                    .child(field("Latency, ms", latency, false))
-                    .child(field("Down, kbit/s", down, false))
-                    .child(field("Up, kbit/s", up, false))
-                    .child(field("Loss, %", loss, false))
-                    .child(field("Only these hosts", hosts, true))
+                    .child(field(tr!("Latency, ms"), latency, false))
+                    .child(field(tr!("Down, kbit/s"), down, false))
+                    .child(field(tr!("Up, kbit/s"), up, false))
+                    .child(field(tr!("Loss, %"), loss, false))
+                    .child(field(tr!("Only these hosts"), hosts, true))
                     .child(
-                        chip("network-apply", "Apply", false)
+                        chip("network-apply", tr!("Apply"), false)
                             .on_click(cx.listener(|this, _, _, cx| this.apply_network_form(cx))),
                     ),
             )
-            .child(div().text_size(px(12.)).text_color(rgb(c.muted)).child(
+            .child(div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
                 "Applies from the next request. Latency is added to each round trip; the \
-                         speed is a link that every slowed flow shares; a lost piece waits to be \
-                         sent again, as TCP does. Hosts left alone are not slowed.",
-            ))
+                 speed is a link that every slowed flow shares; a lost piece waits to be \
+                 sent again, as TCP does. Hosts left alone are not slowed."
+            )))
             .children(problem.map(|p| div().text_color(rgb(c.error)).child(p)))
     }
 

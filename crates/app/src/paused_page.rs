@@ -9,6 +9,7 @@ use crate::{
     widgets::eyebrow,
 };
 use gpui::{AppContext as _, Context, Div, Entity, FontWeight, Stateful, div, prelude::*, px, rgb};
+use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::pause::{self, Message, Paused, Stage, Verdict};
 
 pub struct PausedPage {
@@ -44,9 +45,9 @@ pub fn parse_headers(text: &str) -> Result<Vec<(String, String)>, String> {
         .map(|(at, line)| {
             let (name, value) = line
                 .split_once(':')
-                .ok_or_else(|| format!("Header line {} has no \":\"", at + 1))?;
+                .ok_or_else(|| tr!("Header line {line} has no \":\"", line = at + 1))?;
             if name.trim().is_empty() {
-                return Err(format!("Header line {} has no name", at + 1));
+                return Err(tr!("Header line {line} has no name", line = at + 1));
             }
             Ok((name.trim().to_owned(), value.trim().to_owned()))
         })
@@ -59,17 +60,16 @@ fn set(input: &Entity<TextInput>, text: &str, cx: &mut Context<Traffic>) {
 
 impl PausedPage {
     fn new(cx: &mut Context<Traffic>) -> Self {
-        let line =
-            |hint: &'static str, cx: &mut Context<Traffic>| cx.new(|cx| TextInput::new(hint, cx));
         Self {
             held: Vec::new(),
             version: u64::MAX,
             chosen: None,
-            method: line("Method", cx),
-            url: line("URL", cx),
-            status: line("Status", cx),
-            headers: cx.new(|cx| TextInput::new("name: value, one a line", cx).multiline(4, 14)),
-            body: cx.new(|cx| TextInput::new("No body", cx).multiline(6, 24)),
+            method: cx.new(|cx| TextInput::said(|| tr!("Method"), cx)),
+            url: cx.new(|cx| TextInput::said(|| tr!("URL"), cx)),
+            status: cx.new(|cx| TextInput::said(|| tr!("Status"), cx)),
+            headers: cx
+                .new(|cx| TextInput::said(|| tr!("name: value, one a line"), cx).multiline(4, 14)),
+            body: cx.new(|cx| TextInput::said(|| tr!("No body"), cx).multiline(6, 24)),
             binary_body: false,
             problem: None,
         }
@@ -130,9 +130,10 @@ impl Traffic {
         page.binary_body = text.is_err();
         let body = match text {
             Ok(text) => text,
-            Err(_) => format!(
-                "{} bytes that are not text: they go on as they came.",
-                message.body.len()
+            Err(_) => tr_n!(
+                message.body.len(),
+                "{n} bytes that are not text: they go on as they came.",
+                "{n} bytes that are not text: they go on as they came."
             ),
         };
         let fields = [
@@ -150,8 +151,11 @@ impl Traffic {
 
     /// The editor's message, if it can be sent.
     fn edited_message(&self, cx: &Context<Self>) -> Result<(u64, Stage, Message), String> {
-        let page = self.paused_page.as_ref().ok_or("Nothing is paused")?;
-        let paused = page.current().ok_or("Nothing is paused")?;
+        let page = self
+            .paused_page
+            .as_ref()
+            .ok_or_else(|| tr!("Nothing is paused"))?;
+        let paused = page.current().ok_or_else(|| tr!("Nothing is paused"))?;
         let read = |input: &Entity<TextInput>| input.read(cx).text().to_owned();
         let mut message = paused.message.clone();
         message.headers = parse_headers(&read(&page.headers))?;
@@ -169,7 +173,7 @@ impl Traffic {
                 message.status = status
                     .trim()
                     .parse()
-                    .map_err(|_| format!("\"{}\" is not a status", status.trim()))?;
+                    .map_err(|_| tr!("\"{status}\" is not a status", status = status.trim()))?;
                 pause::response_from(message.clone())?;
             }
         }
@@ -215,7 +219,7 @@ impl Traffic {
         let c = colors();
         self.paused_page(cx);
         let page = self.paused_page.as_ref().expect("just made");
-        let chip = |id: &'static str, label: &'static str, loud: bool| -> Stateful<Div> {
+        let chip = |id: &'static str, label: String, loud: bool| -> Stateful<Div> {
             div()
                 .id(id)
                 .flex_shrink_0()
@@ -246,8 +250,8 @@ impl Traffic {
             let on = page.chosen == Some(paused.id);
             let id = paused.id;
             let stage = match paused.stage {
-                Stage::Request => "REQUEST",
-                Stage::Response => "RESPONSE",
+                Stage::Request => tr!("REQUEST"),
+                Stage::Response => tr!("RESPONSE"),
             };
             let at = chrono::DateTime::<chrono::Local>::from(paused.since).format("%H:%M:%S");
             div()
@@ -294,9 +298,9 @@ impl Traffic {
                 .items_center()
                 .justify_center()
                 .text_color(rgb(c.muted))
-                .child(
-                    "Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.",
-                )
+                .child(tr!(
+                    "Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here."
+                ))
                 .into_any_element(),
             Some(paused) => {
                 let first_line = match paused.stage {
@@ -323,9 +327,10 @@ impl Traffic {
                                 .overflow_hidden()
                                 .text_ellipsis()
                                 .whitespace_nowrap()
-                                .child(format!(
-                                    "for {} {}",
-                                    paused.message.method, paused.message.url
+                                .child(tr!(
+                                    "for {method} {url}",
+                                    method = &paused.message.method,
+                                    url = &paused.message.url
                                 )),
                         ),
                 };
@@ -342,13 +347,13 @@ impl Traffic {
                     .rounded(px(22.))
                     .bg(rgb(c.surface))
                     .child(eyebrow(match paused.stage {
-                        Stage::Request => "The request, before the server gets it",
-                        Stage::Response => "The response, before the app gets it",
+                        Stage::Request => tr!("The request, before the server gets it"),
+                        Stage::Response => tr!("The response, before the app gets it"),
                     }))
                     .child(first_line)
-                    .child(eyebrow("Headers"))
+                    .child(eyebrow(tr!("Headers")))
                     .child(field(&page.headers))
-                    .child(eyebrow("Body"))
+                    .child(eyebrow(tr!("Body")))
                     .child(field(&page.body))
                     .children(
                         page.problem
@@ -362,14 +367,16 @@ impl Traffic {
                             .flex_wrap()
                             .gap(px(8.))
                             .child(
-                                chip("paused-send", "Send", true)
+                                chip("paused-send", tr!("Send"), true)
                                     .on_click(cx.listener(|this, _, _, cx| this.send_paused(cx))),
                             )
-                            .child(chip("paused-unchanged", "Send as it came", false).on_click(
-                                cx.listener(|this, _, _, cx| this.send_paused_unchanged(cx)),
-                            ))
                             .child(
-                                chip("paused-drop", "Drop", false)
+                                chip("paused-unchanged", tr!("Send as it came"), false).on_click(
+                                    cx.listener(|this, _, _, cx| this.send_paused_unchanged(cx)),
+                                ),
+                            )
+                            .child(
+                                chip("paused-drop", tr!("Drop"), false)
                                     .on_click(cx.listener(|this, _, _, cx| this.drop_paused(cx))),
                             ),
                     )
@@ -401,17 +408,18 @@ impl Traffic {
                                 div()
                                     .text_size(px(20.))
                                     .font_weight(FontWeight::BOLD)
-                                    .child("Paused"),
+                                    .child(tr!("Paused")),
                             )
                             .child(div().text_color(rgb(c.muted)).child(match count {
-                                0 => "Nothing is waiting.".to_owned(),
-                                1 => "1 waits to be sent on.".to_owned(),
-                                n => format!("{n} wait to be sent on."),
+                                0 => tr!("Nothing is waiting."),
+                                n => {
+                                    tr_n!(n, "{n} waits to be sent on.", "{n} wait to be sent on.")
+                                }
                             })),
                     )
                     .when(count > 1, |d| {
                         d.child(
-                            chip("paused-all", "Send all as they came", false).on_click(
+                            chip("paused-all", tr!("Send all as they came"), false).on_click(
                                 cx.listener(|this, _, _, cx| this.release_all_paused(cx)),
                             ),
                         )

@@ -15,6 +15,7 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
 };
+use tracewing_i18n::{tr, tr_n};
 use tracewing_store::session::{self, SessionInfo};
 
 /// `1 Nov 2026, 14:05`, in the computer's time zone.
@@ -22,7 +23,7 @@ pub fn when_text(micros: Option<i64>) -> String {
     micros
         .and_then(|us| Local.timestamp_micros(us).single())
         .map_or_else(
-            || "No flows".to_owned(),
+            || tr!("No flows"),
             |at| at.format("%-d %b %Y, %H:%M").to_string(),
         )
 }
@@ -66,7 +67,7 @@ impl Traffic {
             }
             let text = about.name.clone().unwrap_or_default();
             let input = cx.new(|cx| {
-                let mut input = TextInput::new("Name it to keep it", cx);
+                let mut input = TextInput::said(|| tr!("Name it to keep it"), cx);
                 input.set_text(&text, text.len()..text.len(), cx);
                 input
             });
@@ -120,132 +121,137 @@ impl Traffic {
         let c = colors();
         let kept = self.engine.settings.sessions_kept;
         let page = &self.sessions_page;
-        let rows: Vec<_> =
-            page.sessions
-                .iter()
-                .map(|about| {
-                    let dir = about.dir.clone();
-                    let live = dir == self.engine.session;
-                    let viewing = self.viewing.as_deref() == Some(dir.as_path())
-                        || (live && self.viewing.is_none());
-                    let in_use = live || viewing;
-                    let asked = page.deleting.as_deref() == Some(dir.as_path());
-                    let facts: SharedString = if !about.readable {
-                        format!(
-                            "{} · written by another version, so it cannot be opened",
-                            size_text(about.bytes)
-                        )
-                        .into()
-                    } else {
-                        format!(
-                            "{} flows · {}",
-                            group_digits(about.flows),
-                            size_text(about.bytes)
-                        )
-                        .into()
-                    };
-                    let (open_dir, delete_dir, export_dir) =
-                        (dir.clone(), dir.clone(), dir.clone());
-                    let button = |id: (&'static str, u64), label: &'static str, loud: bool| {
+        let rows: Vec<_> = page
+            .sessions
+            .iter()
+            .map(|about| {
+                let dir = about.dir.clone();
+                let live = dir == self.engine.session;
+                let viewing = self.viewing.as_deref() == Some(dir.as_path())
+                    || (live && self.viewing.is_none());
+                let in_use = live || viewing;
+                let asked = page.deleting.as_deref() == Some(dir.as_path());
+                let facts: SharedString = if !about.readable {
+                    tr!(
+                        "{size} · written by another version, so it cannot be opened",
+                        size = size_text(about.bytes)
+                    )
+                    .into()
+                } else {
+                    tr_n!(
+                        about.flows,
+                        "{count} flow · {size}",
+                        "{count} flows · {size}",
+                        count = group_digits(about.flows),
+                        size = size_text(about.bytes)
+                    )
+                    .into()
+                };
+                let (open_dir, delete_dir, export_dir) = (dir.clone(), dir.clone(), dir.clone());
+                let button = |id: (&'static str, u64), label: String, loud: bool| {
+                    div()
+                        .id(id)
+                        .flex_shrink_0()
+                        .h(px(32.))
+                        .px(px(14.))
+                        .rounded(px(16.))
+                        .flex()
+                        .items_center()
+                        .cursor_pointer()
+                        .font_weight(FontWeight::BOLD)
+                        .text_size(px(12.5))
+                        .when(loud, |d| d.bg(rgb(c.error_ground)).text_color(rgb(c.error)))
+                        .when(!loud, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
+                        .child(label)
+                };
+                let key = fingerprint(&dir);
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .items_center()
+                    .gap(px(14.))
+                    .px(px(16.))
+                    .py(px(12.))
+                    .rounded(px(18.))
+                    .bg(rgb(c.surface))
+                    .child(
                         div()
-                            .id(id)
+                            .w(px(240.))
                             .flex_shrink_0()
+                            .flex()
+                            .flex_col()
+                            .child(
+                                div()
+                                    .font_weight(FontWeight::BOLD)
+                                    .child(when_text(about.first_us)),
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(12.))
+                                    .text_color(rgb(c.muted))
+                                    .child(facts),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(160.))
                             .h(px(32.))
-                            .px(px(14.))
-                            .rounded(px(16.))
+                            .px(px(10.))
+                            .rounded(px(12.))
                             .flex()
                             .items_center()
-                            .cursor_pointer()
-                            .font_weight(FontWeight::BOLD)
-                            .text_size(px(12.5))
-                            .when(loud, |d| d.bg(rgb(c.error_ground)).text_color(rgb(c.error)))
-                            .when(!loud, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
-                            .child(label)
-                    };
-                    let key = fingerprint(&dir);
-                    div()
-                        .flex()
-                        .flex_row()
-                        .flex_wrap()
-                        .items_center()
-                        .gap(px(14.))
-                        .px(px(16.))
-                        .py(px(12.))
-                        .rounded(px(18.))
-                        .bg(rgb(c.surface))
-                        .child(
+                            .bg(rgb(c.input))
+                            .children(page.names.get(&dir).cloned()),
+                    )
+                    .when(live, |d| {
+                        d.child(
                             div()
-                                .w(px(240.))
                                 .flex_shrink_0()
-                                .flex()
-                                .flex_col()
-                                .child(
-                                    div()
-                                        .font_weight(FontWeight::BOLD)
-                                        .child(when_text(about.first_us)),
-                                )
-                                .child(
-                                    div()
-                                        .text_size(px(12.))
-                                        .text_color(rgb(c.muted))
-                                        .child(facts),
-                                ),
+                                .text_size(px(12.))
+                                .font_weight(FontWeight::BOLD)
+                                .text_color(rgb(c.ok))
+                                .child(tr!("Recording now")),
                         )
-                        .child(
-                            div()
-                                .flex_1()
-                                .min_w(px(160.))
-                                .h(px(32.))
-                                .px(px(10.))
-                                .rounded(px(12.))
-                                .flex()
-                                .items_center()
-                                .bg(rgb(c.input))
-                                .children(page.names.get(&dir).cloned()),
-                        )
-                        .when(live, |d| {
-                            d.child(
-                                div()
-                                    .flex_shrink_0()
-                                    .text_size(px(12.))
-                                    .font_weight(FontWeight::BOLD)
-                                    .text_color(rgb(c.ok))
-                                    .child("Recording now"),
-                            )
-                        })
-                        .when(about.readable && !viewing, |d| {
-                            d.child(button(("session-open", key), "Open", false).on_click(
+                    })
+                    .when(about.readable && !viewing, |d| {
+                        d.child(button(("session-open", key), tr!("Open"), false).on_click(
+                            cx.listener(move |this, _, _, cx| {
+                                this.open_session(&open_dir, cx);
+                                this.set_screen(Screen::Traffic, cx);
+                            }),
+                        ))
+                    })
+                    .when(about.readable && about.flows > 0, |d| {
+                        d.child(
+                            button(("session-export", key), tr!("Export HAR"), false).on_click(
                                 cx.listener(move |this, _, _, cx| {
-                                    this.open_session(&open_dir, cx);
-                                    this.set_screen(Screen::Traffic, cx);
+                                    this.ask_export_session(export_dir.clone(), cx);
                                 }),
-                            ))
-                        })
-                        .when(about.readable && about.flows > 0, |d| {
-                            d.child(
-                                button(("session-export", key), "Export HAR", false).on_click(
-                                    cx.listener(move |this, _, _, cx| {
-                                        this.ask_export_session(export_dir.clone(), cx);
-                                    }),
-                                ),
+                            ),
+                        )
+                    })
+                    .when(!in_use, |d| {
+                        d.child(
+                            button(
+                                ("session-delete", key),
+                                if asked {
+                                    tr!("Delete for good?")
+                                } else {
+                                    tr!("Delete")
+                                },
+                                asked,
                             )
-                        })
-                        .when(!in_use, |d| {
-                            d.child(
-                                button(
-                                    ("session-delete", key),
-                                    if asked { "Delete for good?" } else { "Delete" },
-                                    asked,
-                                )
-                                .on_click(cx.listener(
-                                    move |this, _, _, cx| {
-                                        this.delete_session(&delete_dir, cx);
-                                    },
-                                )),
-                            )
-                        })
-                })
-                .collect();
+                            .on_click(cx.listener(
+                                move |this, _, _, cx| {
+                                    this.delete_session(&delete_dir, cx);
+                                },
+                            )),
+                        )
+                    })
+            })
+            .collect();
         div()
             .id("sessions")
             .flex_1()
@@ -263,10 +269,11 @@ impl Traffic {
                         div()
                             .text_size(px(20.))
                             .font_weight(FontWeight::BOLD)
-                            .child("Sessions"),
+                            .child(tr!("Sessions")),
                     )
-                    .child(div().text_color(rgb(c.muted)).child(format!(
-                        "A session with a name is kept until you delete it. Of the others, the newest {kept} stay."
+                    .child(div().text_color(rgb(c.muted)).child(tr!(
+                        "A session with a name is kept until you delete it. Of the others, the newest {kept} stay.",
+                        kept = kept
                     ))),
             )
             .child(self.render_har_bar(cx))
@@ -307,9 +314,9 @@ impl Traffic {
                     .bg(rgb(c.accent))
                     .text_color(rgb(c.on_accent))
                     .child(if har.busy {
-                        "Working…"
+                        tr!("Working…")
                     } else {
-                        "Open a session file"
+                        tr!("Open a session file")
                     })
                     .on_click(cx.listener(|this, _, _, cx| this.ask_import(cx))),
             )
@@ -317,7 +324,7 @@ impl Traffic {
                 div()
                     .text_size(px(12.))
                     .text_color(rgb(c.muted))
-                    .child("HAR, Fiddler .saz, or Charles .chlsj"),
+                    .child(tr!("HAR, Fiddler .saz, or Charles .chlsj")),
             )
             .child(
                 div()
@@ -335,7 +342,7 @@ impl Traffic {
                             .border_color(rgb(if without { c.accent } else { c.muted }))
                             .when(without, |d| d.bg(rgb(c.accent))),
                     )
-                    .child("Exported HAR files leave out tokens and cookies")
+                    .child(tr!("Exported HAR files leave out tokens and cookies"))
                     .on_click(cx.listener(move |this, _, _, cx| {
                         this.set_har_without_secrets(!without, cx)
                     })),

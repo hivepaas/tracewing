@@ -7,6 +7,7 @@ use crate::{
     widgets::eyebrow,
 };
 use gpui::{Context, FontWeight, IntoElement, div, prelude::*, px, rgb, rgba};
+use tracewing_i18n::tr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
@@ -122,44 +123,49 @@ pub fn label(keys: &str) -> String {
     parts.join(if mac { "" } else { "+" })
 }
 
-/// What the list of shortcuts shows, a group at a time.
-pub const LIST: &[(&str, &[(&str, &str)])] = &[
-    (
-        "Flows",
-        &[
-            ("up / down", "Choose the flow above or below"),
-            ("home / end", "The first or the last flow"),
-            ("pageup / pagedown", "A page up or down"),
-            ("mod+f", "Filter"),
-            ("mod+r", "Pause or resume recording"),
-            ("mod+k", "Clear the list"),
-        ],
-    ),
-    (
-        "The chosen flow",
-        &[
-            ("mod+[", "Its request"),
-            ("mod+]", "Its response"),
-            ("mod+enter", "Send it again"),
-            ("mod+e", "Edit it and send it"),
-            ("mod+shift+c", "Copy it as cURL"),
-        ],
-    ),
-    (
-        "The window",
-        &[
-            (
-                "mod+1 … mod+7",
-                "Set up, Traffic, Rules, Paused, Compose, Sessions, Settings",
-            ),
-            ("mod+b", "Show or hide the sidebar"),
-            ("mod+i", "Show or hide the inspector"),
-            ("mod+\\", "The inspector beside the list or below it"),
-            ("mod+/", "These shortcuts"),
-            ("escape", "Close them"),
-        ],
-    ),
-];
+/// A group of shortcuts: its title, and each row's keys and what they do.
+pub type Group = (String, Vec<(&'static str, String)>);
+
+/// What the list of shortcuts shows, a group at a time, in the language in use.
+pub fn list() -> Vec<Group> {
+    vec![
+        (
+            tr!("Flows"),
+            vec![
+                ("up / down", tr!("Choose the flow above or below")),
+                ("home / end", tr!("The first or the last flow")),
+                ("pageup / pagedown", tr!("A page up or down")),
+                ("mod+f", tr!("Filter")),
+                ("mod+r", tr!("Pause or resume recording")),
+                ("mod+k", tr!("Clear the list")),
+            ],
+        ),
+        (
+            tr!("The chosen flow"),
+            vec![
+                ("mod+[", tr!("Its request")),
+                ("mod+]", tr!("Its response")),
+                ("mod+enter", tr!("Send it again")),
+                ("mod+e", tr!("Edit it and send it")),
+                ("mod+shift+c", tr!("Copy it as cURL")),
+            ],
+        ),
+        (
+            tr!("The window"),
+            vec![
+                (
+                    "mod+1 … mod+7",
+                    tr!("Set up, Traffic, Rules, Paused, Compose, Sessions, Settings"),
+                ),
+                ("mod+b", tr!("Show or hide the sidebar")),
+                ("mod+i", tr!("Show or hide the inspector")),
+                ("mod+\\", tr!("The inspector beside the list or below it")),
+                ("mod+/", tr!("These shortcuts")),
+                ("escape", tr!("Close them")),
+            ],
+        ),
+    ]
+}
 
 /// A row's keys as this OS writes them, alternatives kept apart.
 pub fn row_label(keys: &str) -> String {
@@ -173,13 +179,13 @@ impl Traffic {
     /// The list of shortcuts, over the window. A click outside it or Esc closes it.
     pub(crate) fn render_shortcuts(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
-        let groups = LIST.iter().map(|(title, rows)| {
+        let groups = list().into_iter().map(|(title, rows)| {
             div()
                 .flex()
                 .flex_col()
                 .gap(px(6.))
                 .child(eyebrow(title))
-                .children(rows.iter().map(|(keys, what)| {
+                .children(rows.into_iter().map(|(keys, what)| {
                     div()
                         .flex()
                         .flex_row()
@@ -199,7 +205,7 @@ impl Traffic {
                                     .child(row_label(keys)),
                             ),
                         )
-                        .child(div().text_color(rgb(c.muted)).child(*what))
+                        .child(div().text_color(rgb(c.muted)).child(what))
                 }))
         });
         div()
@@ -234,7 +240,7 @@ impl Traffic {
                                     .flex_1()
                                     .text_size(px(18.))
                                     .font_weight(FontWeight::BOLD)
-                                    .child("Keyboard shortcuts"),
+                                    .child(tr!("Keyboard shortcuts")),
                             )
                             .child(
                                 div()
@@ -245,7 +251,7 @@ impl Traffic {
                                     .cursor_pointer()
                                     .bg(rgb(c.chip))
                                     .text_color(rgb(c.on_chip))
-                                    .child("Close")
+                                    .child(tr!("Close"))
                                     .on_click(
                                         cx.listener(|this, _, _, cx| this.set_shortcuts(false, cx)),
                                     ),
@@ -288,8 +294,8 @@ mod tests {
 
     #[test]
     fn every_listed_key_does_something() {
-        for (_, rows) in LIST {
-            for (keys, what) in *rows {
+        for (_, rows) in list() {
+            for (keys, what) in rows {
                 for alt in keys.split(" / ").flat_map(|k| k.split(" … ")) {
                     let parts: Vec<&str> = alt.split('+').collect();
                     let key = *parts.last().unwrap();

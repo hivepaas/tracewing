@@ -7,6 +7,7 @@ use gpui::{
     prelude::*, px, rgb,
 };
 use std::path::{Path, PathBuf};
+use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::traffic_rules::{Action, Imported, TrafficRule, TrafficRules, export_set};
 
 /// What a rule does, as the form asks it.
@@ -32,26 +33,26 @@ impl RuleKind {
         Self::PauseResponse,
     ];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            Self::Block => "Block",
-            Self::MapLocal => "Answer from a file",
-            Self::MapRemote => "Send to another host",
-            Self::RequestHeader => "Set a request header",
-            Self::ResponseHeader => "Set a response header",
-            Self::PauseRequest => "Pause the request",
-            Self::PauseResponse => "Pause the response",
+            Self::Block => tr!("Block"),
+            Self::MapLocal => tr!("Answer from a file"),
+            Self::MapRemote => tr!("Send to another host"),
+            Self::RequestHeader => tr!("Set a request header"),
+            Self::ResponseHeader => tr!("Set a response header"),
+            Self::PauseRequest => tr!("Pause the request"),
+            Self::PauseResponse => tr!("Pause the response"),
         }
     }
 
     /// What the form's fields ask for, as many as it needs.
-    fn fields(self) -> (Option<&'static str>, Option<&'static str>) {
+    fn fields(self) -> (Option<String>, Option<String>) {
         match self {
-            Self::Block => (Some("Status to answer with, like 403"), None),
-            Self::MapLocal => (Some("Full path of a file or folder"), None),
-            Self::MapRemote => (Some("Where to, like http://localhost:3000"), None),
+            Self::Block => (Some(tr!("Status to answer with, like 403")), None),
+            Self::MapLocal => (Some(tr!("Full path of a file or folder")), None),
+            Self::MapRemote => (Some(tr!("Where to, like http://localhost:3000")), None),
             Self::RequestHeader | Self::ResponseHeader => {
-                (Some("Header's name"), Some("Its value"))
+                (Some(tr!("Header's name")), Some(tr!("Its value")))
             }
             Self::PauseRequest | Self::PauseResponse => (None, None),
         }
@@ -63,7 +64,7 @@ impl RuleKind {
             Self::Block => Action::Block {
                 status: first
                     .parse()
-                    .map_err(|_| format!("\"{first}\" is not a status"))?,
+                    .map_err(|_| tr!("\"{first}\" is not a status", first = first))?,
             },
             Self::MapLocal => Action::MapLocal {
                 path: PathBuf::from(first),
@@ -88,13 +89,23 @@ impl RuleKind {
 /// What a rule does, in words, for the list.
 fn action_text(action: &Action) -> String {
     match action {
-        Action::Block { status } => format!("Block with {status}"),
-        Action::MapLocal { path } => format!("Answer from {}", path.display()),
-        Action::MapRemote { to } => format!("Send to {to}"),
-        Action::SetRequestHeader { header, value } => format!("Request: {header}: {value}"),
-        Action::SetResponseHeader { header, value } => format!("Response: {header}: {value}"),
-        Action::PauseRequest => "Pause the request".to_owned(),
-        Action::PauseResponse => "Pause the response".to_owned(),
+        Action::Block { status } => tr!("Block with {status}", status = *status),
+        Action::MapLocal { path } => {
+            tr!("Answer from {path}", path = path.display().to_string())
+        }
+        Action::MapRemote { to } => tr!("Send to {to}", to = to),
+        Action::SetRequestHeader { header, value } => {
+            tr!("Request: {header}: {value}", header = header, value = value)
+        }
+        Action::SetResponseHeader { header, value } => {
+            tr!(
+                "Response: {header}: {value}",
+                header = header,
+                value = value
+            )
+        }
+        Action::PauseRequest => tr!("Pause the request"),
+        Action::PauseResponse => tr!("Pause the response"),
     }
 }
 
@@ -135,15 +146,16 @@ pub struct RulesPage {
 
 impl RulesPage {
     fn new(cx: &mut Context<Traffic>) -> Self {
-        let field =
-            |hint: &'static str, cx: &mut Context<Traffic>| cx.new(|cx| TextInput::new(hint, cx));
+        let field = |hint: fn() -> String, cx: &mut Context<Traffic>| {
+            cx.new(|cx| TextInput::said(hint, cx))
+        };
         Self {
             kind: RuleKind::Block,
-            name: field("Name", cx),
-            url: field("URL, like api.myapp.dev/v1/*", cx),
-            method: field("Method, or empty for all", cx),
-            first: field("", cx),
-            second: field("", cx),
+            name: field(|| tr!("Name"), cx),
+            url: field(|| tr!("URL, like api.myapp.dev/v1/*"), cx),
+            method: field(|| tr!("Method, or empty for all"), cx),
+            first: field(String::new, cx),
+            second: field(String::new, cx),
             editing: None,
             problem: None,
             note: None,
@@ -210,7 +222,7 @@ impl Traffic {
             let _ = match chosen.await {
                 Ok(Ok(Some(path))) => this.update(cx, |this, cx| this.export_rules_to(&path, cx)),
                 Ok(Err(e)) => this.update(cx, |this, cx| {
-                    this.rules_note(format!("No file picker: {e:#}"), true, cx)
+                    this.rules_note(tr!("No file picker: {e}", e = format!("{e:#}")), true, cx)
                 }),
                 _ => return,
             };
@@ -224,11 +236,20 @@ impl Traffic {
             .and_then(|text| std::fs::write(path, text).map_err(anyhow::Error::from));
         match written {
             Ok(()) => self.rules_note(
-                format!("{} written to {}", rule_count(rules.len()), path.display()),
+                tr_n!(
+                    rules.len(),
+                    "{n} rule written to {path}",
+                    "{n} rules written to {path}",
+                    path = path.display().to_string()
+                ),
                 false,
                 cx,
             ),
-            Err(e) => self.rules_note(format!("The rules were not written: {e:#}"), true, cx),
+            Err(e) => self.rules_note(
+                tr!("The rules were not written: {e}", e = format!("{e:#}")),
+                true,
+                cx,
+            ),
         }
     }
 
@@ -238,7 +259,7 @@ impl Traffic {
             files: true,
             directories: false,
             multiple: false,
-            prompt: Some("Import".into()),
+            prompt: Some(tr!("Import").into()),
         });
         cx.spawn(async move |this, cx| {
             let _ = match chosen.await {
@@ -247,7 +268,7 @@ impl Traffic {
                     this.update(cx, |this, cx| this.import_rules_from(&path, cx))
                 }
                 Ok(Err(e)) => this.update(cx, |this, cx| {
-                    this.rules_note(format!("No file picker: {e:#}"), true, cx)
+                    this.rules_note(tr!("No file picker: {e}", e = format!("{e:#}")), true, cx)
                 }),
                 _ => return,
             };
@@ -259,7 +280,11 @@ impl Traffic {
         let text = match std::fs::read_to_string(path) {
             Ok(text) => text,
             Err(e) => {
-                let note = format!("{} could not be read: {e}", path.display());
+                let note = tr!(
+                    "{path} could not be read: {e}",
+                    path = path.display().to_string(),
+                    e = e.to_string()
+                );
                 return self.rules_note(note, true, cx);
             }
         };
@@ -270,7 +295,11 @@ impl Traffic {
                 let failed = imported.added == 0 && !imported.refused.is_empty();
                 self.rules_note(import_note(&imported), failed, cx);
             }
-            Err(e) => self.rules_note(format!("Nothing was imported: {e:#}"), true, cx),
+            Err(e) => self.rules_note(
+                tr!("Nothing was imported: {e}", e = format!("{e:#}")),
+                true,
+                cx,
+            ),
         }
     }
 
@@ -443,7 +472,7 @@ impl Traffic {
         let rules = self.traffic_rules();
         let page = self.rules_page.as_ref().expect("just made");
         let note = page.note.clone();
-        let small = |id: (&'static str, u64), label: &'static str| -> Stateful<Div> {
+        let small = |id: (&'static str, u64), label: String| -> Stateful<Div> {
             div()
                 .id(id)
                 .flex_shrink_0()
@@ -521,11 +550,11 @@ impl Traffic {
                         ),
                 )
                 .child(
-                    small(("rule-edit", key), "Edit")
+                    small(("rule-edit", key), tr!("Edit"))
                         .on_click(cx.listener(move |this, _, _, cx| this.edit_rule(at, cx))),
                 )
                 .child(
-                    small(("rule-delete", key), "Delete")
+                    small(("rule-delete", key), tr!("Delete"))
                         .on_click(cx.listener(move |this, _, _, cx| this.delete_rule(at, cx))),
                 )
         });
@@ -546,11 +575,12 @@ impl Traffic {
                 .child(input.clone())
         };
         let (first_hint, second_hint) = page.kind.fields();
+        let no_fields = first_hint.is_none();
         let current = page.kind;
         let kinds = RuleKind::ALL.into_iter().map(|kind| {
             let on = kind == current;
             div()
-                .id(kind.label())
+                .id(("rule-kind", kind as u64))
                 .h(px(30.))
                 .px(px(12.))
                 .rounded(px(15.))
@@ -572,9 +602,9 @@ impl Traffic {
             .rounded(px(22.))
             .bg(rgb(c.surface))
             .child(eyebrow(if page.editing.is_some() {
-                "Change this rule"
+                tr!("Change this rule")
             } else {
-                "A new rule"
+                tr!("A new rule")
             }))
             .child(
                 div()
@@ -611,13 +641,10 @@ impl Traffic {
                         .when_some(second_hint, |d, _| d.child(field(&page.second, true))),
                 )
             })
-            .when(first_hint.is_none(), |d| {
-                d.child(
-                    div()
-                        .text_size(px(12.))
-                        .text_color(rgb(c.muted))
-                        .child("It waits under Paused until you send it on, changed or not."),
-                )
+            .when(no_fields, |d| {
+                d.child(div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                    "It waits under Paused until you send it on, changed or not."
+                )))
             })
             .children(
                 page.problem
@@ -642,9 +669,9 @@ impl Traffic {
                             .bg(rgb(c.accent))
                             .text_color(rgb(c.on_accent))
                             .child(if page.editing.is_some() {
-                                "Save"
+                                tr!("Save")
                             } else {
-                                "Add"
+                                tr!("Add")
                             })
                             .on_click(cx.listener(|this, _, _, cx| this.save_rule(cx))),
                     )
@@ -661,7 +688,7 @@ impl Traffic {
                                 .font_weight(FontWeight::BOLD)
                                 .bg(rgb(c.chip))
                                 .text_color(rgb(c.on_chip))
-                                .child("Cancel")
+                                .child(tr!("Cancel"))
                                 .on_click(cx.listener(|this, _, _, cx| this.clear_rule_form(cx))),
                         )
                     }),
@@ -683,11 +710,11 @@ impl Traffic {
                         div()
                             .text_size(px(20.))
                             .font_weight(FontWeight::BOLD)
-                            .child("Rules"),
+                            .child(tr!("Rules")),
                     )
-                    .child(div().text_color(rgb(c.muted)).child(
-                        "They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.",
-                    )),
+                    .child(div().text_color(rgb(c.muted)).child(tr!(
+                        "They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies."
+                    ))),
             )
             .child(
                 div()
@@ -697,12 +724,12 @@ impl Traffic {
                     .items_center()
                     .gap(px(8.))
                     .child(
-                        small(("import-rules", 0), "Import rules…")
+                        small(("import-rules", 0), tr!("Import rules…"))
                             .on_click(cx.listener(|this, _, _, cx| this.ask_import_rules(cx))),
                     )
                     .when(!rules.rules.is_empty(), |d| {
                         d.child(
-                            small(("export-rules", 0), "Export rules…")
+                            small(("export-rules", 0), tr!("Export rules…"))
                                 .on_click(cx.listener(|this, _, _, cx| this.ask_export_rules(cx))),
                         )
                     })
@@ -719,18 +746,15 @@ impl Traffic {
     }
 }
 
-fn rule_count(n: usize) -> String {
-    match n {
-        1 => "1 rule".to_owned(),
-        n => format!("{n} rules"),
-    }
-}
-
 /// What an import did, in a line.
 fn import_note(imported: &Imported) -> String {
-    let mut parts = vec![format!("{} added", rule_count(imported.added))];
+    let mut parts = vec![tr_n!(imported.added, "{n} rule added", "{n} rules added")];
     if imported.already > 0 {
-        parts.push(format!("{} here already", imported.already));
+        parts.push(tr_n!(
+            imported.already,
+            "{n} here already",
+            "{n} here already"
+        ));
     }
     if !imported.refused.is_empty() {
         let why: Vec<String> = imported
@@ -738,7 +762,7 @@ fn import_note(imported: &Imported) -> String {
             .iter()
             .map(|(name, why)| format!("{name} ({why})"))
             .collect();
-        parts.push(format!("left out: {}", why.join("; ")));
+        parts.push(tr!("left out: {why}", why = why.join("; ")));
     }
     parts.join(", ")
 }

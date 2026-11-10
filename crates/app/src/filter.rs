@@ -13,6 +13,7 @@ use crate::{
 use anyhow::Result;
 use rusqlite::{Connection, ToSql, params_from_iter};
 use std::path::Path;
+use tracewing_i18n::tr;
 use tracewing_store::search;
 
 /// The chips in the toolbar.
@@ -37,14 +38,14 @@ impl Kind {
         Self::Media,
     ];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            Self::All => "All",
-            Self::Json => "JSON",
-            Self::GraphQl => "GraphQL",
-            Self::Errors => "Errors",
-            Self::WebSocket => "WebSocket",
-            Self::Media => "Media",
+            Self::All => tr!("All"),
+            Self::Json => "JSON".to_owned(),
+            Self::GraphQl => "GraphQL".to_owned(),
+            Self::Errors => tr!("Errors"),
+            Self::WebSocket => "WebSocket".to_owned(),
+            Self::Media => tr!("Media"),
         }
     }
 

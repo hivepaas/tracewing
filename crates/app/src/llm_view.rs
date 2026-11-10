@@ -12,6 +12,7 @@ use crate::{
 use gpui::{
     AppContext as _, ClipboardItem, Context, FontWeight, IntoElement, div, prelude::*, px, rgb,
 };
+use tracewing_i18n::{tr, tr_n};
 use tracewing_store::session::{BodyReader, StoredBody};
 
 /// The most of each body read to put a call back together.
@@ -38,18 +39,24 @@ pub fn summary(provider: Provider, call: &Exchange) -> Vec<String> {
     let mut facts = vec![provider.name().to_owned()];
     facts.extend(call.model.clone());
     if call.chunks > 0 {
-        facts.push(format!(
-            "streamed in {} chunks",
-            group_digits(call.chunks as u64)
+        facts.push(tr_n!(
+            call.chunks,
+            "streamed in {count} chunk",
+            "streamed in {count} chunks",
+            count = group_digits(call.chunks as u64)
         ));
     }
-    facts.extend(call.stop.as_ref().map(|stop| format!("stopped: {stop}")));
+    facts.extend(
+        call.stop
+            .as_ref()
+            .map(|stop| tr!("stopped: {stop}", stop = stop)),
+    );
     match (call.input_tokens, call.output_tokens) {
         (None, None) => {}
-        (input, output) => facts.push(format!(
-            "{} in · {} out tokens",
-            input.map_or("?".to_owned(), group_digits),
-            output.map_or("?".to_owned(), group_digits)
+        (input, output) => facts.push(tr!(
+            "{input} in · {output} out tokens",
+            input = input.map_or("?".to_owned(), group_digits),
+            output = output.map_or("?".to_owned(), group_digits)
         )),
     }
     facts
@@ -112,7 +119,7 @@ impl Traffic {
                 .id("llm")
                 .p(px(16.))
                 .text_color(rgb(c.muted))
-                .child("Reading the call…");
+                .child(tr!("Reading the call…"));
         };
         let block = |text: String, muted: bool| {
             div()
@@ -136,14 +143,21 @@ impl Traffic {
                 .text_size(px(12.))
                 .child(text)
         };
-        let section = |title: &'static str| eyebrow(title).pt(px(6.));
+        let section = |title: String| eyebrow(title).pt(px(6.));
 
-        let mut answer = div().flex().flex_col().gap(px(8.)).child(section("Answer"));
+        let mut answer = div()
+            .flex()
+            .flex_col()
+            .gap(px(8.))
+            .child(section(tr!("Answer")));
         if let Some(error) = &call.error {
             answer = answer.child(div().text_color(rgb(c.error)).child(error.clone()));
         }
         if !call.thinking.is_empty() {
-            answer = answer.child(block(format!("Thinking: {}", call.thinking), true));
+            answer = answer.child(block(
+                tr!("Thinking: {thinking}", thinking = &call.thinking),
+                true,
+            ));
         }
         if !call.text.is_empty() {
             answer = answer.child(block(call.text.clone(), false));
@@ -155,11 +169,11 @@ impl Traffic {
                 .map(|id| format!(" · {id}"))
                 .unwrap_or_default();
             answer = answer
-                .child(
-                    div()
-                        .font_weight(FontWeight::BOLD)
-                        .child(format!("Calls {}{id}", tool.name)),
-                )
+                .child(div().font_weight(FontWeight::BOLD).child(tr!(
+                    "Calls {name}{id}",
+                    name = &tool.name,
+                    id = id
+                )))
                 .when(!tool.arguments.is_empty(), |d| {
                     d.child(code(tool.arguments.clone()))
                 });
@@ -169,13 +183,19 @@ impl Traffic {
             && call.thinking.is_empty()
             && call.tool_calls.is_empty()
         {
-            answer = answer.child(block("Nothing yet.".to_owned(), true));
+            answer = answer.child(block(tr!("Nothing yet."), true));
         }
 
         let messages = call.messages.iter().map(|message| {
             let (text, more) = cut(&message.text, MESSAGE_MAX);
             let text = if more > 0 {
-                format!("{text}… and {} more characters", group_digits(more as u64))
+                tr_n!(
+                    more,
+                    "{text}… and {count} more character",
+                    "{text}… and {count} more characters",
+                    text = text,
+                    count = group_digits(more as u64)
+                )
             } else {
                 text.to_owned()
             };
@@ -230,7 +250,7 @@ impl Traffic {
                                 .text_size(px(12.))
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(rgb(c.link))
-                                .child("Copy the answer")
+                                .child(tr!("Copy the answer"))
                                 .on_click(move |_, _, cx| {
                                     cx.write_to_clipboard(ClipboardItem::new_string(
                                         answer_text.clone(),
@@ -240,13 +260,13 @@ impl Traffic {
                     }),
             )
             .child(answer)
-            .child(section("Asked"))
+            .child(section(tr!("Asked")))
             .children(messages)
             .when(!call.tools.is_empty(), |d| {
                 d.child(
                     div()
                         .text_color(rgb(c.muted))
-                        .child(format!("Tools offered: {}", call.tools.join(", "))),
+                        .child(tr!("Tools offered: {tools}", tools = call.tools.join(", "))),
                 )
             })
     }

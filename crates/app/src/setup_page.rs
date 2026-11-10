@@ -17,6 +17,7 @@ use gpui::{
     px, rgb,
 };
 use std::net::{IpAddr, SocketAddr};
+use tracewing_i18n::tr;
 use tracewing_proxy::{
     ca_key::KeyPlace,
     capture::{CHECK_HOST, CheckVisit},
@@ -28,7 +29,7 @@ use tracewing_system::{
 
 /// The browser in a `User-Agent`, in the order that tells them apart: Chrome's says
 /// Safari, and Edge's says both.
-pub fn browser_name(user_agent: &str) -> &'static str {
+pub fn browser_name(user_agent: &str) -> String {
     for (mark, name) in [
         ("Firefox/", "Firefox"),
         ("Edg/", "Edge"),
@@ -37,22 +38,23 @@ pub fn browser_name(user_agent: &str) -> &'static str {
         ("Safari/", "Safari"),
     ] {
         if user_agent.contains(mark) {
-            return name;
+            return name.to_owned();
         }
     }
-    "Your browser"
+    tr!("Your browser")
 }
 
 /// Where the CA's key is, in words.
 fn key_text(place: &KeyPlace) -> String {
     match place {
-        KeyPlace::Keychain => "Its private key is in the system keychain.".to_owned(),
+        KeyPlace::Keychain => tr!("Its private key is in the system keychain."),
         KeyPlace::File { why: None } => {
-            "Its private key is in ca.key, which only you can read.".to_owned()
+            tr!("Its private key is in ca.key, which only you can read.")
         }
-        KeyPlace::File { why: Some(why) } => format!(
+        KeyPlace::File { why: Some(why) } => tr!(
             "Its private key is in ca.key, which only you can read, as the system keychain \
-             cannot take it: {why}."
+             cannot take it: {why}.",
+            why = why.to_string()
         ),
     }
 }
@@ -61,23 +63,25 @@ fn key_text(place: &KeyPlace) -> String {
 fn check_result(visit: Option<&CheckVisit>) -> (String, bool) {
     match visit {
         None => (
-            "Open the page. If the browser warns about the certificate, or cannot find the \
-             page, one of the steps above is not done for that browser."
-                .to_owned(),
+            tr!(
+                "Open the page. If the browser warns about the certificate, or cannot find the \
+                 page, one of the steps above is not done for that browser."
+            ),
             false,
         ),
         Some(visit) => {
             let name = browser_name(&visit.user_agent);
             if visit.secure {
                 (
-                    format!("{name} goes through tracewing and trusts it."),
+                    tr!("{name} goes through tracewing and trusts it.", name = name),
                     true,
                 )
             } else {
                 (
-                    format!(
+                    tr!(
                         "{name} goes through tracewing, but opened the page without HTTPS. \
-                         Open it again over https://."
+                         Open it again over https://.",
+                        name = name
                     ),
                     false,
                 )
@@ -104,7 +108,7 @@ fn button(id: impl Into<ElementId>, label: impl Into<SharedString>, loud: bool) 
 }
 
 /// One step: its number or a tick, what it is, where it stands, and what can be done.
-fn step(number: &'static str, done: bool, title: &'static str, text: String) -> Div {
+fn step(number: &'static str, done: bool, title: String, text: String) -> Div {
     let c = colors();
     div()
         .flex()
@@ -151,24 +155,30 @@ fn step(number: &'static str, done: bool, title: &'static str, text: String) -> 
 /// What another device is told to do, and whether it can yet.
 fn other_devices_text(on: bool, port: u16, here: Option<IpAddr>) -> String {
     if !on {
-        return "A phone or another computer can send its traffic here too. Turn on \
-                \u{201c}Let other devices use the proxy\u{201d} in Settings, then start \
-                tracewing again."
-            .to_owned();
+        return tr!(
+            "A phone or another computer can send its traffic here too. Turn on \
+             \u{201c}Let other devices use the proxy\u{201d} in Settings, then start \
+             tracewing again."
+        );
     }
     let addr = match here {
         Some(ip) => format!("{}", SocketAddr::new(ip, port)),
-        None => format!("this computer's address, port {port}"),
+        None => tr!(
+            "this computer's address, port {port}",
+            port = port.to_string()
+        ),
     };
-    format!(
-        "On the device, set the Wi-Fi proxy to {addr}. Then open http://{CHECK_HOST} there, get \
+    tr!(
+        "On the device, set the Wi-Fi proxy to {addr}. Then open http://{host} there, get \
          the certificate and trust it. Its flows show its address, and can be filtered with \
-         device:. Name it from one of them, in Connection."
+         device:. Name it from one of them, in Connection.",
+        addr = addr,
+        host = CHECK_HOST
     )
 }
 
 /// Another way, beside the steps: what it is, and what can be done.
-fn aside(title: &'static str, text: impl Into<SharedString>) -> Div {
+fn aside(title: String, text: impl Into<SharedString>) -> Div {
     let c = colors();
     div()
         .flex()
@@ -207,16 +217,15 @@ impl Traffic {
         let ca = self.system.ca.clone();
         let installed = ca == CaState::Trusted;
         let ca_text = match &ca {
-            CaState::Checking => "Looking for it…".to_owned(),
-            CaState::Installing => {
-                "Installing. The system may ask you to confirm.".to_owned()
-            }
+            CaState::Checking => tr!("Looking for it…"),
+            CaState::Installing => tr!("Installing. The system may ask you to confirm."),
             CaState::Trusted if self.system.ca_places.is_empty() => {
-                "This computer trusts it.".to_owned()
+                tr!("This computer trusts it.")
             }
-            CaState::Trusted => format!(
-                "Installed in: {}.",
-                self.system
+            CaState::Trusted => tr!(
+                "Installed in: {places}.",
+                places = self
+                    .system
                     .ca_places
                     .iter()
                     .map(|place| place.name.as_str())
@@ -225,10 +234,14 @@ impl Traffic {
             ),
             // Linux: in the system's store, which browsers do not read.
             CaState::NotTrusted if !self.system.ca_places.is_empty() => {
-                "Command-line tools trust it, but browsers keep stores of their own. Until it is in them, HTTPS through tracewing fails in a browser.".to_owned()
+                tr!(
+                    "Command-line tools trust it, but browsers keep stores of their own. Until it is in them, HTTPS through tracewing fails in a browser."
+                )
             }
             CaState::NotTrusted => {
-                "tracewing reads HTTPS with a certificate made for this computer alone. Until it is trusted, HTTPS through tracewing fails.".to_owned()
+                tr!(
+                    "tracewing reads HTTPS with a certificate made for this computer alone. Until it is trusted, HTTPS through tracewing fails."
+                )
             }
         };
         let ca_text = match &self.system.ca_key {
@@ -236,10 +249,10 @@ impl Traffic {
             None => ca_text,
         };
         let busy = matches!(ca, CaState::Checking | CaState::Installing);
-        let ca_step = step("1", installed, "Trust the certificate", ca_text)
+        let ca_step = step("1", installed, tr!("Trust the certificate"), ca_text)
             .when(!installed && !busy, |d| {
                 d.child(
-                    button("setup-install", "Install", true).on_click(cx.listener(
+                    button("setup-install", tr!("Install"), true).on_click(cx.listener(
                         |this, _, _, cx| {
                             this.install_certificate(Scope::User, cx);
                         },
@@ -254,7 +267,7 @@ impl Traffic {
                     d.child(
                         button(
                             "setup-install-machine",
-                            "Also for command-line tools",
+                            tr!("Also for command-line tools"),
                             false,
                         )
                         .on_click(cx.listener(|this, _, _, cx| {
@@ -271,20 +284,26 @@ impl Traffic {
             ProxySwitch::Off => (false, false),
         };
         let proxy_text = if proxy_on {
-            format!(
-                "Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes."
+            tr!(
+                "Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.",
+                addr = addr.to_string()
             )
         } else {
-            format!(
-                "Sends this computer's traffic through tracewing, for apps that use the system's setting. Or point one app at {addr} yourself."
+            tr!(
+                "Sends this computer's traffic through tracewing, for apps that use the system's setting. Or point one app at {addr} yourself.",
+                addr = addr.to_string()
             )
         };
         let proxy_step =
-            step("2", proxy_on, "Turn on the system proxy", proxy_text).when(!working, |d| {
+            step("2", proxy_on, tr!("Turn on the system proxy"), proxy_text).when(!working, |d| {
                 d.child(
                     button(
                         "setup-proxy",
-                        if proxy_on { "Turn off" } else { "Turn on" },
+                        if proxy_on {
+                            tr!("Turn off")
+                        } else {
+                            tr!("Turn on")
+                        },
                         !proxy_on,
                     )
                     .on_click(cx.listener(|this, _, _, cx| this.toggle_system_proxy(cx))),
@@ -292,8 +311,8 @@ impl Traffic {
             });
 
         let (check_text, checked) = check_result(self.check_visit.as_ref());
-        let check_step = step("3", checked, "Check it in your browser", check_text).child(
-            button("setup-check", "Open the test page", !checked).on_click(
+        let check_step = step("3", checked, tr!("Check it in your browser"), check_text).child(
+            button("setup-check", tr!("Open the test page"), !checked).on_click(
                 cx.listener(|_, _, _, cx| cx.open_url(&format!("https://{CHECK_HOST}/"))),
             ),
         );
@@ -324,21 +343,17 @@ impl Traffic {
                                 div()
                                     .text_size(px(20.))
                                     .font_weight(FontWeight::BOLD)
-                                    .child("Set up"),
+                                    .child(tr!("Set up")),
                             )
-                            .child(
-                                div()
-                                    .text_color(rgb(c.muted))
-                                    .child("Three steps to see HTTPS traffic from this computer."),
-                            ),
+                            .child(div().text_color(rgb(c.muted)).child(tr!(
+                                "Three steps to see HTTPS traffic from this computer."
+                            ))),
                     )
-                    .child(
-                        button("setup-done", "See traffic", checked).on_click(cx.listener(
-                            |this, _, _, cx| {
-                                this.set_screen(Screen::Traffic, cx);
-                            },
-                        )),
-                    ),
+                    .child(button("setup-done", tr!("See traffic"), checked).on_click(
+                        cx.listener(|this, _, _, cx| {
+                            this.set_screen(Screen::Traffic, cx);
+                        }),
+                    )),
             )
             .child(ca_step)
             .child(proxy_step)
@@ -352,15 +367,19 @@ impl Traffic {
 }
 
 /// What blocking UDP port 443 does, before and while it is on.
-fn http3_text(on: bool) -> &'static str {
+fn http3_text(on: bool) -> String {
     if on {
-        "UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 \
-         and go through tracewing. It stops when tracewing closes, or if it crashes."
+        tr!(
+            "UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 \
+             and go through tracewing. It stops when tracewing closes, or if it crashes."
+        )
     } else {
-        "Some apps speak HTTP/3, over UDP, and go around the proxy. Blocking UDP port 443 \
-         on this computer makes them fall back to HTTP/2 through tracewing. It takes an \
-         administrator's password, and stops when tracewing closes. A VPN that uses UDP \
-         port 443 stops working meanwhile."
+        tr!(
+            "Some apps speak HTTP/3, over UDP, and go around the proxy. Blocking UDP port 443 \
+             on this computer makes them fall back to HTTP/2 through tracewing. It takes an \
+             administrator's password, and stops when tracewing closes. A VPN that uses UDP \
+             port 443 stops working meanwhile."
+        )
     }
 }
 
@@ -372,11 +391,15 @@ impl Traffic {
             QuicSwitch::Working => (false, true),
             QuicSwitch::Off => (false, false),
         };
-        aside("Apps on HTTP/3", http3_text(on)).when(!working, |d| {
+        aside(tr!("Apps on HTTP/3"), http3_text(on)).when(!working, |d| {
             d.child(
                 button(
                     "setup-quic",
-                    if on { "Stop blocking" } else { "Block HTTP/3" },
+                    if on {
+                        tr!("Stop blocking")
+                    } else {
+                        tr!("Block HTTP/3")
+                    },
                     false,
                 )
                 .on_click(cx.listener(|this, _, _, cx| this.toggle_quic_block(cx))),
@@ -391,17 +414,19 @@ impl Traffic {
     fn render_one_app(&mut self, cx: &mut Context<Self>) -> Div {
         let browser = self.system.browser.as_ref().map(|b| b.name);
         aside(
-            "Or one app at a time",
-            "A terminal, or a browser with a profile of its own, that goes through tracewing \
-             while the system proxy and every other app are left as they are.",
+            tr!("Or one app at a time"),
+            tr!(
+                "A terminal, or a browser with a profile of its own, that goes through tracewing \
+                 while the system proxy and every other app are left as they are."
+            ),
         )
         .child(
-            button("setup-terminal", "Open a terminal", false)
+            button("setup-terminal", tr!("Open a terminal"), false)
                 .on_click(cx.listener(|this, _, _, cx| this.open_terminal(cx))),
         )
         .when_some(browser, |d, name| {
             d.child(
-                button("setup-browser", format!("Open {name}"), false)
+                button("setup-browser", tr!("Open {name}", name = name), false)
                     .on_click(cx.listener(|this, _, _, cx| this.open_browser(cx))),
             )
         })
@@ -420,11 +445,11 @@ pub enum Guide {
 impl Guide {
     pub const ALL: [Self; 3] = [Self::Apple, Self::Android, Self::Flutter];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            Self::Apple => "iPhone and iPad",
-            Self::Android => "Android",
-            Self::Flutter => "Flutter apps",
+            Self::Apple => tr!("iPhone and iPad"),
+            Self::Android => "Android".to_owned(),
+            Self::Flutter => tr!("Flutter apps"),
         }
     }
 }
@@ -479,71 +504,67 @@ pub fn guide(guide: Guide, proxy: SocketAddr, page: &str) -> Vec<Part> {
     let text = |t: String| Part::Text(t);
     match guide {
         Guide::Apple => vec![
-            text(format!(
-                "1. In Settings, Wi-Fi, choose the network, then Configure Proxy, Manual: server {}, port {}.",
-                proxy.ip(),
-                proxy.port()
+            text(tr!(
+                "1. In Settings, Wi-Fi, choose the network, then Configure Proxy, Manual: server {server}, port {port}.",
+                server = proxy.ip().to_string(),
+                port = proxy.port().to_string()
             )),
-            text(format!(
+            text(tr!(
                 "2. Scan the code with the camera, or open {page} in Safari, and get the \
-                 certificate. Allow the download."
+                 certificate. Allow the download.",
+                page = page
             )),
-            text(
+            text(tr!(
                 "3. In Settings, General, VPN & Device Management, choose the tracewing CA \
                  profile and install it."
-                    .to_owned(),
-            ),
-            text(
+            )),
+            text(tr!(
                 "4. In Settings, General, About, Certificate Trust Settings, turn on full trust \
                  for tracewing CA."
-                    .to_owned(),
-            ),
-            text(format!(
-                "5. Open https://{CHECK_HOST} in Safari. If it says it works, apps that use the \
-                 system's settings go through tracewing."
+            )),
+            text(tr!(
+                "5. Open https://{host} in Safari. If it says it works, apps that use the \
+                 system's settings go through tracewing.",
+                host = CHECK_HOST
             )),
         ],
         Guide::Android => vec![
-            text(format!(
+            text(tr!(
                 "1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to \
-                 Manual: host {}, port {}.",
-                proxy.ip(),
-                proxy.port()
+                 Manual: host {host}, port {port}.",
+                host = proxy.ip().to_string(),
+                port = proxy.port().to_string()
             )),
-            text(format!(
-                "2. Scan the code, or open {page} in the browser, and get the certificate."
+            text(tr!(
+                "2. Scan the code, or open {page} in the browser, and get the certificate.",
+                page = page
             )),
-            text(
+            text(tr!(
                 "3. In Settings, Security, Encryption & credentials (the names vary by maker), \
                  choose Install a certificate, then CA certificate, and pick tracewing.crt."
-                    .to_owned(),
-            ),
-            text(
+            )),
+            text(tr!(
                 "4. Since Android 7, apps trust certificates the user added only if they say \
                  so. For a debug build of your own app, add res/xml/network_security_config.xml:"
-                    .to_owned(),
-            ),
+            )),
             Part::Code(ANDROID_CONFIG.to_owned()),
-            text("and point to it from AndroidManifest.xml:".to_owned()),
+            text(tr!("and point to it from AndroidManifest.xml:")),
             Part::Code(ANDROID_MANIFEST.to_owned()),
-            text(
+            text(tr!(
                 "Other apps keep refusing the certificate: their traffic shows as failed flows."
-                    .to_owned(),
-            ),
+            )),
         ],
         Guide::Flutter => vec![
-            text(
+            text(tr!(
                 "Dart's HttpClient, which Flutter's http and Dio use, does not follow the \
                  phone's proxy setting, and on Android does not trust certificates the user \
                  added. In a debug build, send it here:"
-                    .to_owned(),
-            ),
+            )),
             Part::Code(flutter_overrides(proxy)),
-            text(
+            text(tr!(
                 "badCertificateCallback lets any certificate through, which is why it is for \
                  debug builds only."
-                    .to_owned(),
-            ),
+            )),
         ],
     }
 }
@@ -576,7 +597,7 @@ fn code_block(id: impl Into<ElementId>, code: String) -> Div {
                 .font_family(crate::FONT)
                 .bg(rgb(c.chip))
                 .text_color(rgb(c.on_chip))
-                .child("Copy")
+                .child(tr!("Copy"))
                 .on_click(move |_, _, cx| {
                     cx.write_to_clipboard(ClipboardItem::new_string(copied.clone()))
                 }),
@@ -597,9 +618,9 @@ impl Traffic {
         let here = on.then(on_the_network).flatten();
         let Some(ip) = here else {
             let text = other_devices_text(on, port, None);
-            return aside("Other devices", text).when(!on, |d| {
+            return aside(tr!("Other devices"), text).when(!on, |d| {
                 d.child(
-                    button("setup-devices", "Open settings", false).on_click(
+                    button("setup-devices", tr!("Open settings"), false).on_click(
                         cx.listener(|this, _, _, cx| this.set_screen(Screen::Settings, cx)),
                     ),
                 )
@@ -658,13 +679,14 @@ impl Traffic {
                                 div()
                                     .text_size(px(15.))
                                     .font_weight(FontWeight::BOLD)
-                                    .child("Phones and other devices"),
+                                    .child(tr!("Phones and other devices")),
                             )
-                            .child(div().text_color(rgb(c.muted)).child(format!(
+                            .child(div().text_color(rgb(c.muted)).child(tr!(
                                 "A phone, a tablet or another computer on this network can go \
                                  through tracewing at {proxy}. The code opens the page with its \
                                  certificate. Its flows show its address, can be filtered with \
-                                 device:, and can be named from one of them, in Connection."
+                                 device:, and can be named from one of them, in Connection.",
+                                proxy = proxy.to_string()
                             ))),
                     ),
             )
@@ -689,30 +711,33 @@ fn android_note(device: &Device, set: Option<&SetUp>) -> String {
                 trust: Trust::System,
                 ..
             }),
-        ) => "Set up. The certificate is among the system's until the device restarts.".to_owned(),
+        ) => tr!("Set up. The certificate is among the system's until the device restarts."),
         (_, Some(SetUp { sdk, .. })) => {
-            let mut note = "Set up. The certificate is in Downloads: in the Settings just opened, \
-                            choose Encryption & credentials, Install a certificate, CA \
-                            certificate, and pick tracewing.crt."
-                .to_owned();
+            let mut note = tr!(
+                "Set up. The certificate is in Downloads: in the Settings just opened, \
+                 choose Encryption & credentials, Install a certificate, CA \
+                 certificate, and pick tracewing.crt."
+            );
             if *sdk >= 34 {
-                note.push_str(
-                    " Apps that trust only the system's certificates will still refuse it.",
-                );
+                note.push(' ');
+                note.push_str(&tr!(
+                    "Apps that trust only the system's certificates will still refuse it."
+                ));
             }
             note
         }
-        ("device", None) => if device.emulator {
-            "An emulator."
-        } else {
-            "On USB."
+        ("device", None) => {
+            if device.emulator {
+                tr!("An emulator.")
+            } else {
+                tr!("On USB.")
+            }
         }
-        .to_owned(),
         ("unauthorized", None) => {
-            "Accept the USB debugging prompt on the device, then look again.".to_owned()
+            tr!("Accept the USB debugging prompt on the device, then look again.")
         }
-        ("offline", None) => "Still starting. Look again in a moment.".to_owned(),
-        (state, None) => format!("adb says it is {state}."),
+        ("offline", None) => tr!("Still starting. Look again in a moment."),
+        (state, None) => tr!("adb says it is {state}.", state = state),
     }
 }
 
@@ -722,21 +747,23 @@ impl Traffic {
         let c = colors();
         let state = &self.system.android;
         let text = match &state.adb {
-            None => "Sets the proxy on an Android emulator, or a phone plugged in with USB \
-                     debugging on, and installs the certificate. The traffic comes over ADB, so \
-                     neither has to be on this network."
-                .to_owned(),
-            Some(None) => "adb was not found. Install Android Studio, or Android's platform \
-                           tools, then look again."
-                .to_owned(),
-            Some(Some(_)) if state.devices.is_empty() => {
+            None => tr!(
+                "Sets the proxy on an Android emulator, or a phone plugged in with USB \
+                 debugging on, and installs the certificate. The traffic comes over ADB, so \
+                 neither has to be on this network."
+            ),
+            Some(None) => tr!(
+                "adb was not found. Install Android Studio, or Android's platform \
+                 tools, then look again."
+            ),
+            Some(Some(_)) if state.devices.is_empty() => tr!(
                 "No device is connected. Start an emulator, or plug in a phone with USB \
                  debugging on, then look again."
-                    .to_owned()
-            }
-            Some(Some(_)) => "Set up a device to send its traffic here. Undo, or closing \
-                              tracewing, takes the proxy off it again."
-                .to_owned(),
+            ),
+            Some(Some(_)) => tr!(
+                "Set up a device to send its traffic here. Undo, or closing \
+                 tracewing, takes the proxy off it again."
+            ),
         };
         let looking = state.looking;
         let looked = state.adb.is_some();
@@ -765,13 +792,17 @@ impl Traffic {
                                     .child(format!("{} · {}", device.model, device.serial)),
                             )
                             .child(div().text_color(rgb(c.muted)).child(if working {
-                                "Working…".to_owned()
+                                tr!("Working…")
                             } else {
                                 android_note(device, set)
                             })),
                     )
                     .when(device.ready() && !busy, |d| {
-                        let label = if set.is_some() { "Undo" } else { "Set up" };
+                        let label = if set.is_some() {
+                            tr!("Undo")
+                        } else {
+                            tr!("Set up")
+                        };
                         d.child(button(("android", at), label, set.is_none()).on_click(
                             cx.listener(move |this, _, _, cx| {
                                 if this.system.android.set.contains_key(&serial) {
@@ -784,12 +815,16 @@ impl Traffic {
                     })
             });
         let problem = state.problem.clone();
-        aside("Android emulators and USB devices", text)
+        aside(tr!("Android emulators and USB devices"), text)
             .when(!looking, |d| {
                 d.child(
                     button(
                         "setup-android",
-                        if looked { "Look again" } else { "Find devices" },
+                        if looked {
+                            tr!("Look again")
+                        } else {
+                            tr!("Find devices")
+                        },
                         false,
                     )
                     .on_click(cx.listener(|this, _, _, cx| this.find_android_devices(cx))),
@@ -824,10 +859,12 @@ impl Traffic {
             .unwrap_or_else(|_| "tracewing".to_owned());
         let (claude, config) = mcp_setup(&exe);
         aside(
-            "AI tools",
-            "Claude Code, Cursor, VS Code and other AI tools can list and read the flows \
-             tracewing records, through its MCP server. Tokens and cookies stay out unless \
-             Settings let them in. In Claude Code:",
+            tr!("AI tools"),
+            tr!(
+                "Claude Code, Cursor, VS Code and other AI tools can list and read the flows \
+                 tracewing records, through its MCP server. Tokens and cookies stay out unless \
+                 Settings let them in. In Claude Code:"
+            ),
         )
         .child(
             div()
@@ -836,7 +873,7 @@ impl Traffic {
                 .flex_col()
                 .gap(px(8.))
                 .child(code_block("mcp-claude", claude))
-                .child(div().child("Elsewhere, in the tool's MCP settings:"))
+                .child(div().child(tr!("Elsewhere, in the tool's MCP settings:")))
                 .child(code_block("mcp-config", config)),
         )
     }

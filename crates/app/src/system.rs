@@ -9,6 +9,7 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
+use tracewing_i18n::tr;
 use tracewing_proxy::{
     ca::LocalCa,
     ca_key::{KeyPlace, KeyStore},
@@ -111,7 +112,9 @@ fn install_ca(data_dir: &Path, scope: Scope, store: KeyStore) -> anyhow::Result<
     let installed = system::ca_install(ca.cert_path(), scope);
     // Some stores may have taken it although another failed: look either way.
     let mut found = look_for_ca(&ca)?;
-    found.problem = installed.err().map(|e| format!("The certificate: {e:#}"));
+    found.problem = installed
+        .err()
+        .map(|e| tr!("The certificate: {e}", e = format!("{e:#}")));
     Ok(found)
 }
 
@@ -157,7 +160,8 @@ impl Traffic {
                     }
                     Err(e) => {
                         this.system.ca = CaState::NotTrusted;
-                        this.system.problem = Some(format!("The certificate: {e:#}"));
+                        this.system.problem =
+                            Some(tr!("The certificate: {e}", e = format!("{e:#}")));
                     }
                 }
                 cx.notify();
@@ -171,7 +175,7 @@ impl Traffic {
         let (addr, data_dir) = (self.engine.addr, self.data_dir.clone());
         let store = self.engine.key_store;
         self.run_launch(
-            "The terminal",
+            tr!("The terminal"),
             move || {
                 let ca = load_ca(&data_dir, store)?;
                 system::launch::open_terminal(addr, ca.cert_path(), &data_dir)
@@ -193,7 +197,7 @@ impl Traffic {
             .then(|| self.engine.leaf_spki.get().cloned())
             .flatten();
         self.run_launch(
-            browser.name,
+            browser.name.to_owned(),
             move || {
                 let url = format!("https://{CHECK_HOST}/");
                 system::launch::open_browser(&browser, addr, spki.as_deref(), &url)
@@ -204,7 +208,7 @@ impl Traffic {
 
     fn run_launch(
         &mut self,
-        what: &'static str,
+        what: String,
         job: impl FnOnce() -> anyhow::Result<()> + Send + 'static,
         cx: &mut Context<Self>,
     ) {
@@ -238,7 +242,8 @@ impl Traffic {
                     let _ = this.update(cx, |this, cx| {
                         this.system.proxy = ProxySwitch::Off;
                         if let Err(e) = result {
-                            this.system.problem = Some(format!("The system proxy: {e:#}"));
+                            this.system.problem =
+                                Some(tr!("The system proxy: {e}", e = format!("{e:#}")));
                         }
                         cx.notify();
                     });
@@ -265,7 +270,8 @@ impl Traffic {
                     Ok(taken) => this.system.proxy = ProxySwitch::On(taken),
                     Err(e) => {
                         this.system.proxy = ProxySwitch::Off;
-                        this.system.problem = Some(format!("The system proxy: {e:#}"));
+                        this.system.problem =
+                            Some(tr!("The system proxy: {e}", e = format!("{e:#}")));
                     }
                 }
                 cx.notify();
@@ -291,7 +297,8 @@ impl Traffic {
                             Ok(block) => this.system.quic = QuicSwitch::On(block),
                             Err(e) => {
                                 this.system.quic = QuicSwitch::Off;
-                                this.system.problem = Some(format!("Blocking HTTP/3: {e:#}"));
+                                this.system.problem =
+                                    Some(tr!("Blocking HTTP/3: {e}", e = format!("{e:#}")));
                             }
                         }
                         cx.notify();
@@ -307,7 +314,8 @@ impl Traffic {
                     let _ = this.update(cx, |this, cx| {
                         this.system.quic = QuicSwitch::Off;
                         if let Err(e) = result {
-                            this.system.problem = Some(format!("Blocking HTTP/3: {e:#}"));
+                            this.system.problem =
+                                Some(tr!("Blocking HTTP/3: {e}", e = format!("{e:#}")));
                         }
                         cx.notify();
                     });

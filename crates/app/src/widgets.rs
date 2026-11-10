@@ -15,12 +15,12 @@ pub fn icon(name: &'static str, size: f32, color: u32) -> impl IntoElement {
 }
 
 /// A section's name in small capitals.
-pub fn eyebrow(text: &'static str) -> Div {
+pub fn eyebrow(text: impl AsRef<str>) -> Div {
     div()
         .text_size(px(11.))
         .font_weight(FontWeight::BOLD)
         .text_color(rgb(colors().muted))
-        .child(text.to_uppercase())
+        .child(text.as_ref().to_uppercase())
 }
 
 /// The status of a flow in a pill: its ground and its letters.

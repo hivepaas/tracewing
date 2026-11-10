@@ -14,6 +14,7 @@ use gpui::{
     UniformListScrollHandle, div, prelude::*, px, rgb, uniform_list,
 };
 use std::{collections::HashMap, ops::Range};
+use tracewing_i18n::tr;
 use tracewing_store::session::{self, BodyReader, StoredMessage};
 
 const ROW_HEIGHT: f32 = 26.;
@@ -164,7 +165,7 @@ impl Traffic {
                     .entry(message.id)
                     .or_insert_with(|| {
                         if message.shed {
-                            return "Not kept".into();
+                            return tr!("Not kept").into();
                         }
                         message
                             .place
@@ -236,11 +237,11 @@ impl Traffic {
         let note: Option<SharedString> = chosen.and_then(|m| {
             if m.shed {
                 Some(
-                    "This message was not kept: too much was waiting, or the disk was nearly full."
+                    tr!("This message was not kept: too much was waiting, or the disk was nearly full.")
                         .into(),
                 )
             } else if m.place.is_none() {
-                Some("This message is empty.".into())
+                Some(tr!("This message is empty.").into())
             } else {
                 None
             }
@@ -253,7 +254,7 @@ impl Traffic {
                 .items_center()
                 .justify_center()
                 .text_color(rgb(c.muted))
-                .child("No messages yet")
+                .child(tr!("No messages yet"))
                 .into_any_element()
         } else {
             uniform_list(
@@ -272,7 +273,11 @@ impl Traffic {
             let status = view.as_ref().map(|view| {
                 let said = summary(view.read(cx).body());
                 match cut {
-                    Some(bytes) => format!("{said} kept, of {}", size_text(bytes)),
+                    Some(bytes) => tr!(
+                        "{said} kept, of {size}",
+                        said = said,
+                        size = size_text(bytes)
+                    ),
                     None => said,
                 }
             });

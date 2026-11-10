@@ -14,6 +14,7 @@ use gpui::{
     StyledText, Window, canvas, div, prelude::*, px, rgb,
 };
 use std::{cell::Cell, rc::Rc, sync::Arc, time::Duration};
+use tracewing_i18n::{tr, tr_n};
 
 pub const LINE_HEIGHT: f32 = 20.;
 const GUTTER_W: f32 = 52.;
@@ -153,7 +154,7 @@ impl BodyView {
                     .flex_shrink_0()
                     .pl_2()
                     .text_color(rgb(colors().faint))
-                    .child(format!("… {} more", size_text(shown.cut))),
+                    .child(tr!("… {size} more", size = size_text(shown.cut))),
             );
         }
         row
@@ -285,16 +286,21 @@ fn highlight(token: Token) -> HighlightStyle {
 /// `2.1 MB · 40,000 lines`, or how far the reading has got.
 pub fn summary(body: &Body) -> String {
     if body.is_scanned() {
-        format!(
-            "{} · {} lines",
-            size_text(body.size()),
-            crate::flows::group_digits(body.lines())
+        tr_n!(
+            body.lines(),
+            "{size} · {count} line",
+            "{size} · {count} lines",
+            size = size_text(body.size()),
+            count = crate::flows::group_digits(body.lines())
         )
     } else {
-        format!(
-            "{} · reading {:.0}%",
-            size_text(body.size()),
-            body.scanned() as f64 * 100. / body.size().max(1) as f64
+        tr!(
+            "{size} · reading {percent}%",
+            size = size_text(body.size()),
+            percent = format!(
+                "{:.0}",
+                body.scanned() as f64 * 100. / body.size().max(1) as f64
+            )
         )
     }
 }

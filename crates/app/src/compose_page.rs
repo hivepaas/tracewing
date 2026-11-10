@@ -12,6 +12,7 @@ use crate::{
     widgets::eyebrow,
 };
 use gpui::{AppContext as _, Context, Entity, FontWeight, div, prelude::*, px, rgb};
+use tracewing_i18n::tr;
 use tracewing_proxy::pause::{self, Message};
 use tracewing_store::session::BodyReader;
 
@@ -35,10 +36,11 @@ fn set(input: &Entity<TextInput>, text: &str, cx: &mut Context<Traffic>) {
 impl ComposePage {
     fn new(cx: &mut Context<Traffic>) -> Self {
         let page = Self {
-            method: cx.new(|cx| TextInput::new("Method", cx)),
+            method: cx.new(|cx| TextInput::said(|| tr!("Method"), cx)),
             url: cx.new(|cx| TextInput::new("https://api.example.com/v1/items", cx)),
-            headers: cx.new(|cx| TextInput::new("name: value, one a line", cx).multiline(3, 14)),
-            body: cx.new(|cx| TextInput::new("No body", cx).multiline(5, 24)),
+            headers: cx
+                .new(|cx| TextInput::said(|| tr!("name: value, one a line"), cx).multiline(3, 14)),
+            body: cx.new(|cx| TextInput::said(|| tr!("No body"), cx).multiline(5, 24)),
             sending: false,
             answer: None,
             problem: None,
@@ -79,7 +81,11 @@ impl Traffic {
 
     /// The flow in the inspector as a message, if it can be sent again.
     fn chosen_flow_message(&mut self) -> Result<Message, String> {
-        let detail = self.inspector.detail.as_ref().ok_or("No flow is chosen")?;
+        let detail = self
+            .inspector
+            .detail
+            .as_ref()
+            .ok_or_else(|| tr!("No flow is chosen"))?;
         let facts = &detail.request;
         let body = facts
             .stored
@@ -97,7 +103,7 @@ impl Traffic {
             body,
             whole,
         )
-        .map_err(|e| format!("This flow: {e:#}"))
+        .map_err(|e| tr!("This flow: {e}", e = format!("{e:#}")))
     }
 
     /// Sends the chosen flow's request again, as it was.
@@ -194,7 +200,7 @@ impl Traffic {
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .child(input.clone())
         };
-        let chip = |id: &'static str, label: &'static str, loud: bool| {
+        let chip = |id: &'static str, label: String, loud: bool| {
             div()
                 .id(id)
                 .flex_shrink_0()
@@ -229,7 +235,7 @@ impl Traffic {
             .p(px(14.))
             .rounded(px(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow("Request"))
+            .child(eyebrow(tr!("Request")))
             .child(
                 div()
                     .flex()
@@ -238,9 +244,9 @@ impl Traffic {
                     .child(div().w(px(110.)).flex_shrink_0().child(field(&page.method)))
                     .child(div().flex_1().min_w_0().child(field(&page.url))),
             )
-            .child(eyebrow("Headers"))
+            .child(eyebrow(tr!("Headers")))
             .child(field(&page.headers))
-            .child(eyebrow("Body"))
+            .child(eyebrow(tr!("Body")))
             .child(field(&page.body))
             .children(
                 page.problem
@@ -253,13 +259,13 @@ impl Traffic {
                     .flex_row()
                     .gap(px(8.))
                     .child(if page.sending {
-                        chip("compose-send", "Sending…", false)
+                        chip("compose-send", tr!("Sending…"), false)
                     } else {
-                        chip("compose-send", "Send", true)
+                        chip("compose-send", tr!("Send"), true)
                             .on_click(cx.listener(|this, _, _, cx| this.send_composed(cx)))
                     })
                     .child(
-                        chip("compose-new", "New", false)
+                        chip("compose-new", tr!("New"), false)
                             .on_click(cx.listener(|this, _, _, cx| this.new_compose(cx))),
                     ),
             );
@@ -269,9 +275,10 @@ impl Traffic {
             let shown = &answer.body[..answer.body.len().min(SHOWN_MAX)];
             let mut body = String::from_utf8_lossy(shown).into_owned();
             if answer.body.len() > SHOWN_MAX {
-                body.push_str(&format!(
-                    "\n… {} more bytes: the flow in Traffic has them all.",
-                    answer.body.len() - SHOWN_MAX
+                body.push('\n');
+                body.push_str(&tr!(
+                    "… {count} more bytes: the flow in Traffic has them all.",
+                    count = answer.body.len() - SHOWN_MAX
                 ));
             }
             div()
@@ -281,18 +288,18 @@ impl Traffic {
                 .p(px(14.))
                 .rounded(px(22.))
                 .bg(rgb(c.surface))
-                .child(eyebrow("Response"))
+                .child(eyebrow(tr!("Response")))
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_color(rgb(fg))
                         .child(compose::summary(answer)),
                 )
-                .child(eyebrow("Headers"))
+                .child(eyebrow(tr!("Headers")))
                 .child(mono_block(headers_text(&answer.headers)))
-                .child(eyebrow("Body"))
+                .child(eyebrow(tr!("Body")))
                 .child(mono_block(if body.is_empty() {
-                    "No body".to_owned()
+                    tr!("No body")
                 } else {
                     body
                 }))
@@ -314,12 +321,12 @@ impl Traffic {
                         div()
                             .text_size(px(20.))
                             .font_weight(FontWeight::BOLD)
-                            .child("Compose"),
+                            .child(tr!("Compose")),
                     )
-                    .child(div().text_color(rgb(c.muted)).child(
+                    .child(div().text_color(rgb(c.muted)).child(tr!(
                         "A request of your own, or one sent again. It goes through tracewing, \
-                         so rules apply and it shows in Traffic too.",
-                    )),
+                         so rules apply and it shows in Traffic too."
+                    ))),
             )
             .child(editor)
             .children(answer)

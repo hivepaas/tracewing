@@ -7,6 +7,7 @@ use crate::{
 use anyhow::Result;
 use rusqlite::{Connection, OptionalExtension, params};
 use std::path::Path;
+use tracewing_i18n::tr;
 use tracewing_store::session::{self, BodyReader, Headers, LogPlace, StoredBody};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -222,12 +223,12 @@ impl Detail {
         let short = |version: &str| version.replace(".0", "");
         match &self.server_version {
             Some(server) if *server == self.client_version => {
-                format!("{} both sides", short(server))
+                tr!("{version} both sides", version = short(server))
             }
-            Some(server) => format!(
-                "{} to the proxy, {} to the server",
-                short(&self.client_version),
-                short(server)
+            Some(server) => tr!(
+                "{client} to the proxy, {server} to the server",
+                client = short(&self.client_version),
+                server = short(server)
             ),
             None => short(&self.client_version),
         }
@@ -240,6 +241,19 @@ pub struct Phase {
     pub label: &'static str,
     pub start: i64,
     pub len: i64,
+}
+
+impl Phase {
+    /// What the inspector calls it; `label` is its key.
+    pub fn name(&self) -> String {
+        match self.label {
+            "Queued" => tr!("Queued"),
+            "Connect" => tr!("Connect"),
+            "Waiting" => tr!("Waiting"),
+            "Download" => tr!("Download"),
+            other => other.to_owned(),
+        }
+    }
 }
 
 /// How far back to look for the flow that has a connection's facts. A

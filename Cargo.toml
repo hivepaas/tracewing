@@ -14,6 +14,7 @@ publish = false
 tracewing-store = { path = "crates/store" }
 tracewing-proxy = { path = "crates/proxy" }
 tracewing-system = { path = "crates/system" }
+tracewing-i18n = { path = "crates/i18n" }
 anyhow = "1.0.104"
 base64 = "0.22"
 bytes = "1.12.1"

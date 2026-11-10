@@ -6,6 +6,7 @@ use anyhow::{Context as _, Result};
 use gpui::SharedString;
 use rusqlite::{Connection, OpenFlags, params};
 use std::{collections::HashMap, path::Path};
+use tracewing_i18n::tr;
 use tracewing_store::session;
 
 /// More rows than this and the cache starts again. A screen is a few dozen.
@@ -102,6 +103,11 @@ impl Flows {
         self.cache.remove(&id);
     }
 
+    /// Every row is read again: their notes are in another language now.
+    pub fn forget_all(&mut self) {
+        self.cache.clear();
+    }
+
     fn fetch(&mut self, ids: &[i64]) -> Result<()> {
         let live = self.live;
         // Scrolling asks for runs of ids, which one query reads far faster.
@@ -137,11 +143,11 @@ impl Flows {
                         .map(|operation| short_operation(&operation).into()),
                     note: error
                         .map(SharedString::from)
-                        .or_else(|| rule.map(|rule| format!("Rule: {rule}").into()))
+                        .or_else(|| rule.map(|rule| tr!("Rule: {rule}", rule = rule).into()))
                         .or_else(|| match kind.as_str() {
                             "websocket" => Some("WebSocket".into()),
-                            "sse" => Some("Events".into()),
-                            "tunnel" => Some("Not decrypted".into()),
+                            "sse" => Some(tr!("Events").into()),
+                            "tunnel" => Some(tr!("Not decrypted").into()),
                             _ => None,
                         }),
                     // What goes through a tunnel is not looked at, nor counted.
@@ -151,7 +157,7 @@ impl Flows {
                         size_text(r.get::<_, i64>(5)? as u64).into()
                     },
                     time: if going {
-                        "open".into()
+                        tr!("open").into()
                     } else {
                         duration.map(time_text).unwrap_or_default().into()
                     },
