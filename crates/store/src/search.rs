@@ -648,6 +648,8 @@ mod tests {
         settle(Indexer::catch_up(&dir, &settings).unwrap());
         let piece = open_piece(&first, &settings).unwrap();
         assert_eq!(waiting_in(&piece).unwrap(), Vec::<i64>::new());
+        // Windows will not delete a database that is still open.
+        drop(piece);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -665,6 +667,8 @@ mod tests {
         pieces.tidy(10, 1).unwrap();
         assert_eq!(waiting_in(&pieces.current).unwrap(), [7]);
         assert_eq!(waiting_in(&old).unwrap(), Vec::<i64>::new(), "once only");
+        // Windows will not delete a database that is still open.
+        drop((pieces, old));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
