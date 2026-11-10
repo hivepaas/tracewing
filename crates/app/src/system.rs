@@ -17,8 +17,7 @@ use tracewing_proxy::{
     crypto_provider,
 };
 use tracewing_system::{
-    self as system, BrowserTrust, Place, QuicBlock, Scope, TakenOver,
-    launch::{Browser, Engine},
+    self as system, BrowserTrust, Place, QuicBlock, Scope, TakenOver, launch::Browser,
 };
 
 #[derive(Default)]
@@ -206,15 +205,6 @@ impl Traffic {
         );
     }
 
-    /// The browser "Open" starts: the first of Chromium's family.
-    pub fn browser_to_open(&self) -> Option<&Browser> {
-        self.system
-            .browsers
-            .iter()
-            .map(|(browser, _)| browser)
-            .find(|browser| browser.engine == Engine::Chromium)
-    }
-
     /// The test page in `name`, in the user's own profile, to see whether that
     /// browser goes through tracewing and trusts it.
     pub fn check_in_browser(&mut self, name: &str, cx: &mut Context<Self>) {
@@ -229,23 +219,34 @@ impl Traffic {
         );
     }
 
-    /// A browser with a profile of its own that goes through the proxy, at the
-    /// test page.
-    pub fn open_browser(&mut self, cx: &mut Context<Self>) {
-        let Some(browser) = self.browser_to_open().cloned() else {
+    /// `name` with a profile of its own that goes through the proxy, at the
+    /// test page, the user's own profile and the system proxy left alone.
+    pub fn open_browser(&mut self, name: &str, cx: &mut Context<Self>) {
+        let Some((browser, trust)) = self.system.browsers.iter().find(|(b, _)| b.name == name)
+        else {
             return;
         };
-        let addr = self.engine.addr;
+        let browser = browser.clone();
         // Trusted, the CA is in the browser's store, and the flag would only
         // add a warning bar.
-        let spki = (self.system.ca != CaState::Trusted)
+        let trusted = match *trust {
+            BrowserTrust::System => self.system.ca == CaState::Trusted,
+            BrowserTrust::Own { holding, of } => of > 0 && holding >= of,
+        };
+        let spki = (!trusted)
             .then(|| self.engine.leaf_spki.get().cloned())
             .flatten();
+        let (addr, data_dir, store) = (
+            self.engine.addr,
+            self.data_dir.clone(),
+            self.engine.key_store,
+        );
         self.run_launch(
             browser.name.to_owned(),
             move || {
+                let ca = load_ca(&data_dir, store)?;
                 let url = format!("https://{CHECK_HOST}/");
-                system::launch::open_browser(&browser, addr, spki.as_deref(), &url)
+                system::launch::open_browser(&browser, addr, spki.as_deref(), ca.cert_path(), &url)
             },
             cx,
         );

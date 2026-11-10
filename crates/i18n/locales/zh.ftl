@@ -1069,8 +1069,8 @@ t7d4b60bb = 已通过 tracewing 打开测试页，但未使用 HTTPS。
 # Browsers
 td580efd4 = 浏览器
 
-# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
-t57bc4b30 = 每个浏览器各自决定信任什么、把流量发往何处。点“检查”会在该浏览器中打开测试页。
+# Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
+tce72f1ec = 每个浏览器各自决定信任什么、把流量发往何处。“检查”会在该浏览器中打开测试页。“单独打开”会用一个经过 tracewing 的独立配置文件启动它，不改动系统代理。
 
 # Look again
 t98416222 = 重新查找
@@ -1080,6 +1080,9 @@ t0e46bb34 = 在这台电脑上没有找到浏览器。
 
 # Check
 t592c8de7 = 检查
+
+# Open on its own
+t0da7783c = 单独打开
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = 本机已阻止 UDP 443 端口，因此应用会从 HTTP/3 回退到 HTTP/2 并经过 tracewing。tracewing 关闭或崩溃时，阻止将自动解除。
@@ -1099,14 +1102,11 @@ t88231e40 = 阻止 HTTP/3
 # Or one app at a time
 t91c63f1c = 或者逐个应用设置
 
-# A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-t259dbb0e = 打开一个经过 tracewing 的终端，或使用独立配置文件的浏览器，系统代理和其他应用均保持不变。
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
+tc21013a9 = 一个经过 tracewing 的终端，系统代理和其他应用都保持原样。浏览器可用“浏览器”中的“单独打开”，以独立配置文件做到同样的事。
 
 # Open a terminal
 t4b629c72 = 打开终端
-
-# Open {name}
-tbd869c4a = 打开 { $name }
 
 # iPhone and iPad
 ta550cc97 = iPhone 和 iPad

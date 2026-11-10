@@ -1087,8 +1087,8 @@ t7d4b60bb = Hat die Testseite über tracewing geöffnet, aber ohne HTTPS.
 # Browsers
 td580efd4 = Browser
 
-# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
-t57bc4b30 = Jeder entscheidet selbst, wem er vertraut und wohin er seinen Verkehr schickt. Mit Prüfen öffnet sich die Testseite darin.
+# Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
+tce72f1ec = Jeder entscheidet selbst, wem er vertraut und wohin er seinen Verkehr schickt. Prüfen öffnet darin die Testseite. Separat öffnen startet ihn mit einem eigenen Profil, das über tracewing geht, ohne den Systemproxy anzurühren.
 
 # Look again
 t98416222 = Erneut suchen
@@ -1098,6 +1098,9 @@ t0e46bb34 = Kein Browser auf diesem Computer gefunden.
 
 # Check
 t592c8de7 = Prüfen
+
+# Open on its own
+t0da7783c = Separat öffnen
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = UDP-Port 443 ist auf diesem Computer blockiert, daher weichen Apps von HTTP/3 auf HTTP/2 aus und laufen über tracewing. Das endet, wenn tracewing beendet wird oder abstürzt.
@@ -1117,14 +1120,11 @@ t88231e40 = HTTP/3 blockieren
 # Or one app at a time
 t91c63f1c = Oder eine App nach der anderen
 
-# A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-t259dbb0e = Ein Terminal oder ein Browser mit eigenem Profil, der über tracewing läuft, während der System-Proxy und alle anderen Apps unverändert bleiben.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
+tc21013a9 = Ein Terminal, das über tracewing geht, während der Systemproxy und alle anderen Apps bleiben, wie sie sind. Für einen Browser tut Separat öffnen unter Browser dasselbe, mit einem eigenen Profil.
 
 # Open a terminal
 t4b629c72 = Terminal öffnen
-
-# Open {name}
-tbd869c4a = { $name } öffnen
 
 # iPhone and iPad
 ta550cc97 = iPhone und iPad

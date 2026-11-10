@@ -1069,8 +1069,8 @@ t7d4b60bb = 已透過 tracewing 開啟測試頁，但未使用 HTTPS。
 # Browsers
 td580efd4 = 瀏覽器
 
-# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
-t57bc4b30 = 每個瀏覽器各自決定信任什麼、把流量送往何處。按「檢查」會在該瀏覽器中開啟測試頁。
+# Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
+tce72f1ec = 每個瀏覽器各自決定信任什麼、把流量送往何處。「檢查」會在該瀏覽器中開啟測試頁。「單獨開啟」會用一個經過 tracewing 的獨立設定檔啟動它，不更動系統代理。
 
 # Look again
 t98416222 = 重新尋找
@@ -1080,6 +1080,9 @@ t0e46bb34 = 在這台電腦上找不到瀏覽器。
 
 # Check
 t592c8de7 = 檢查
+
+# Open on its own
+t0da7783c = 單獨開啟
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = 這台電腦已封鎖 UDP 連接埠 443，因此 App 會從 HTTP/3 退回 HTTP/2 並經過 tracewing。tracewing 關閉或當機時，封鎖會自動解除。
@@ -1099,14 +1102,11 @@ t88231e40 = 封鎖 HTTP/3
 # Or one app at a time
 t91c63f1c = 或逐一設定個別 App
 
-# A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-t259dbb0e = 開啟經過 tracewing 的終端機，或使用獨立設定檔的瀏覽器，系統代理伺服器和其他 App 皆維持不變。
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
+tc21013a9 = 一個經過 tracewing 的終端機，系統代理和其他 App 都保持原樣。瀏覽器可用「瀏覽器」中的「單獨開啟」，以獨立設定檔做到同樣的事。
 
 # Open a terminal
 t4b629c72 = 開啟終端機
-
-# Open {name}
-tbd869c4a = 開啟 { $name }
 
 # iPhone and iPad
 ta550cc97 = iPhone 和 iPad

@@ -1069,8 +1069,8 @@ t7d4b60bb = tracewing을 거쳐 테스트 페이지를 열었지만 HTTPS가 아
 # Browsers
 td580efd4 = 브라우저
 
-# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
-t57bc4b30 = 브라우저마다 무엇을 신뢰하고 트래픽을 어디로 보낼지 따로 정합니다. 확인을 누르면 그 브라우저에서 테스트 페이지가 열립니다.
+# Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
+tce72f1ec = 브라우저마다 무엇을 신뢰하고 트래픽을 어디로 보낼지 따로 정합니다. 확인을 누르면 그 브라우저에서 테스트 페이지가 열립니다. 따로 열기는 tracewing을 거치는 전용 프로필로 실행하며, 시스템 프록시는 건드리지 않습니다.
 
 # Look again
 t98416222 = 다시 찾기
@@ -1080,6 +1080,9 @@ t0e46bb34 = 이 컴퓨터에서 브라우저를 찾지 못했습니다.
 
 # Check
 t592c8de7 = 확인
+
+# Open on its own
+t0da7783c = 따로 열기
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = 이 컴퓨터에서 UDP 포트 443이 차단되어 있어, 앱이 HTTP/3 대신 HTTP/2로 전환하고 tracewing을 거칩니다. tracewing을 닫거나 비정상 종료되면 차단이 해제됩니다.
@@ -1099,14 +1102,11 @@ t88231e40 = HTTP/3 차단
 # Or one app at a time
 t91c63f1c = 또는 앱 하나씩
 
-# A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-t259dbb0e = 시스템 프록시와 다른 앱은 그대로 두고, tracewing을 거치는 터미널 또는 별도 프로필의 브라우저입니다.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
+tc21013a9 = tracewing을 거치는 터미널입니다. 시스템 프록시와 다른 앱은 그대로 둡니다. 브라우저라면 브라우저 항목의 따로 열기가 전용 프로필로 같은 일을 합니다.
 
 # Open a terminal
 t4b629c72 = 터미널 열기
-
-# Open {name}
-tbd869c4a = { $name } 열기
 
 # iPhone and iPad
 ta550cc97 = iPhone 및 iPad

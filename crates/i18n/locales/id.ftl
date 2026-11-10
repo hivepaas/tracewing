@@ -1069,8 +1069,8 @@ t7d4b60bb = Membuka halaman uji melalui tracewing, tetapi tanpa HTTPS.
 # Browsers
 td580efd4 = Browser
 
-# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
-t57bc4b30 = Masing-masing punya aturan sendiri tentang apa yang dipercaya dan ke mana lalu lintasnya dikirim. Periksa membuka halaman uji di browser itu.
+# Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
+tce72f1ec = Masing-masing punya aturan sendiri tentang apa yang dipercaya dan ke mana lalu lintasnya dikirim. Periksa membuka halaman uji di browser itu. Buka terpisah menjalankannya dengan profil sendiri yang lewat tracewing, tanpa menyentuh proxy sistem.
 
 # Look again
 t98416222 = Cari lagi
@@ -1080,6 +1080,9 @@ t0e46bb34 = Tidak ada browser yang ditemukan di komputer ini.
 
 # Check
 t592c8de7 = Periksa
+
+# Open on its own
+t0da7783c = Buka terpisah
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = Port UDP 443 diblokir di komputer ini, jadi aplikasi turun dari HTTP/3 ke HTTP/2 dan lewat tracewing. Pemblokiran berhenti saat tracewing ditutup, atau jika crash.
@@ -1099,14 +1102,11 @@ t88231e40 = Blokir HTTP/3
 # Or one app at a time
 t91c63f1c = Atau satu aplikasi saja
 
-# A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-t259dbb0e = Terminal, atau browser dengan profil sendiri, yang lewat tracewing sementara proxy sistem dan semua aplikasi lain dibiarkan apa adanya.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
+tc21013a9 = Terminal yang lewat tracewing, sementara proxy sistem dan semua app lain dibiarkan apa adanya. Untuk browser, Buka terpisah di Browser melakukan hal yang sama dengan profil sendiri.
 
 # Open a terminal
 t4b629c72 = Buka terminal
-
-# Open {name}
-tbd869c4a = Buka { $name }
 
 # iPhone and iPad
 ta550cc97 = iPhone dan iPad

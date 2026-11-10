@@ -26,6 +26,7 @@ use tracewing_proxy::{
 use tracewing_system::{
     BrowserTrust, Scope,
     android::{Device, SetUp, Trust},
+    launch::Engine,
 };
 
 /// The browser that sent a `User-Agent` and a `Sec-CH-UA`. Chromium's family
@@ -478,7 +479,8 @@ impl Traffic {
             tr!("Browsers"),
             tr!(
                 "Each keeps its own idea of what to trust and where to send its traffic. \
-                 Check one to open the test page in it."
+                 Check opens the test page in it. Open on its own starts it with a profile of \
+                 its own that goes through tracewing, the system proxy left alone."
             ),
         )
         .child(
@@ -542,7 +544,16 @@ impl Traffic {
                         button(("setup-browser-check", i), tr!("Check"), false).on_click(
                             cx.listener(move |this, _, _, cx| this.check_in_browser(name, cx)),
                         ),
-                    ),
+                    )
+                    // Safari has one profile, the user's.
+                    .when(browser.engine != Engine::Safari, |d| {
+                        d.child(
+                            button(("setup-browser-open", i), tr!("Open on its own"), false)
+                                .on_click(
+                                    cx.listener(move |this, _, _, cx| this.open_browser(name, cx)),
+                                ),
+                        )
+                    }),
             );
         }
         card
@@ -595,24 +606,18 @@ impl Traffic {
     /// A terminal or a browser through tracewing, for when the system proxy
     /// would take more than the one app being debugged.
     fn render_one_app(&mut self, cx: &mut Context<Self>) -> Div {
-        let browser = self.browser_to_open().map(|b| b.name);
         aside(
             tr!("Or one app at a time"),
             tr!(
-                "A terminal, or a browser with a profile of its own, that goes through tracewing \
-                 while the system proxy and every other app are left as they are."
+                "A terminal that goes through tracewing while the system proxy and every other \
+                 app are left as they are. For a browser, Open on its own in Browsers does the \
+                 same with a profile of its own."
             ),
         )
         .child(
             button("setup-terminal", tr!("Open a terminal"), false)
                 .on_click(cx.listener(|this, _, _, cx| this.open_terminal(cx))),
         )
-        .when_some(browser, |d, name| {
-            d.child(
-                button("setup-browser", tr!("Open {name}", name = name), false)
-                    .on_click(cx.listener(|this, _, _, cx| this.open_browser(cx))),
-            )
-        })
     }
 }
 
