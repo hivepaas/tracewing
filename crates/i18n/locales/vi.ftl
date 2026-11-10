@@ -2,1312 +2,1366 @@
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
 # … {size} more
-# ta8dc6eab =
+ta8dc6eab = … còn { $size }
 
 # {size} · {count} line | {size} · {count} lines
-# t51332550 =
+t51332550 =
+    { $n ->
+       *[other] { $size } · { $count } dòng
+    }
 
 # {size} · reading {percent}%
-# t49fe2cb3 =
+t49fe2cb3 = { $size } · đang đọc { $percent }%
 
 # Appearance: {now}. Click for {next}.
-# t332cfa6d =
+t332cfa6d = Giao diện: { $now }. Bấm để chuyển sang { $next }.
 
 # Method
-# t98a2c750 =
+t98a2c750 = Method
 
 # Status
-# t005ef20f =
+t005ef20f = Status
 
 # App
-# t81f51acc =
+t81f51acc = App
 
 # Host
-# t302af18f =
+t302af18f = Host
 
 # Path
-# teb66e456 =
+teb66e456 = Đường dẫn
 
 # Size
-# ta6478e7c =
+ta6478e7c = Kích thước
 
 # Time
-# tdfe4e404 =
+tdfe4e404 = Thời gian
 
 # Number
-# t61e9eac0 =
+t61e9eac0 = Số thứ tự
 
 # "{method}" is not a method
-# tacdcf5cb =
+tacdcf5cb = "{ $method }" không phải là một method
 
 # its request body was not kept whole, so it cannot be sent again
-# t1f9e5368 =
+t1f9e5368 = body của request không được giữ đầy đủ, nên không gửi lại được
 
 # name: value, one a line
-# t4df37bea =
+t4df37bea = tên: giá trị, mỗi dòng một header
 
 # No body
-# tfa4c2902 =
+tfa4c2902 = Không có body
 
 # No flow is chosen
-# t550b0a98 =
+t550b0a98 = Chưa chọn flow nào
 
 # This flow: {e}
-# t296762f8 =
+t296762f8 = Flow này: { $e }
 
 # Request
-# t82454152 =
+t82454152 = Yêu cầu
 
 # Headers
-# t334f5989 =
+t334f5989 = Header
 
 # Body
-# t428a1095 =
+t428a1095 = Body
 
 # Sending…
-# te946e7bf =
+te946e7bf = Đang gửi…
 
 # Send
-# tf28e14cf =
+tf28e14cf = Gửi
 
 # New
-# t8b242db1 =
+t8b242db1 = Mới
 
 # … {count} more bytes: the flow in Traffic has them all.
-# tf43ea06c =
+tf43ea06c = … còn { $count } byte nữa: flow trong Traffic có đầy đủ.
 
 # Response
-# t55a982fe =
+t55a982fe = Phản hồi
 
 # Compose
-# t18049f93 =
+t18049f93 = Soạn request
 
 # A request of your own, or one sent again. It goes through tracewing, so rules apply and it shows in Traffic too.
-# t7a9cf113 =
+t7a9cf113 = Một request do bạn soạn, hoặc gửi lại. Nó đi qua tracewing, nên các quy tắc vẫn áp dụng và nó cũng hiện trong Traffic.
 
 # {version} both sides
-# t961a5ea0 =
+t961a5ea0 = { $version } cả hai phía
 
 # {client} to the proxy, {server} to the server
-# t3d237646 =
+t3d237646 = { $client } tới proxy, { $server } tới server
 
 # Queued
-# t9e437c74 =
+t9e437c74 = Chờ trong hàng
 
 # Connect
-# tdb89a899 =
+tdb89a899 = Kết nối
 
 # Waiting
-# tc9450e48 =
+tc9450e48 = Chờ phản hồi
 
 # Download
-# t6964bb19 =
+t6964bb19 = Tải về
 
 # No file picker: {e}
-# t6935fbd3 =
+t6935fbd3 = Không mở được hộp chọn file: { $e }
 
 # Writing the HAR…
-# t725a0e89 =
+t725a0e89 = Đang ghi file HAR…
 
 # {n} flow written to {path} | {n} flows written to {path}
-# t643f96ee =
+t643f96ee =
+    { $n ->
+       *[other] Đã ghi { $n } flow vào { $path }
+    }
 
 # The HAR was not written: {e}
-# tef8ec569 =
+tef8ec569 = Chưa ghi được file HAR: { $e }
 
 # Open
-# t538b10e9 =
+t538b10e9 = Mở
 
 # Reading {path}…
-# tc0e7c8f4 =
+tc0e7c8f4 = Đang đọc { $path }…
 
 # , {n} entry left out | , {n} entries left out
-# td848c31b =
+td848c31b =
+    { $n ->
+       *[other] , bỏ qua { $n } mục
+    }
 
 # {n} flow read from a {format} | {n} flows read from a {format}
-# t610d7810 =
+t610d7810 =
+    { $n ->
+       *[other] Đã đọc { $n } flow từ { $format }
+    }
 
 # The file was not read: {e}
-# t7f49510f =
+t7f49510f = Chưa đọc được file: { $e }
 
 # it is no longer kept
-# ta7b4c380 =
+ta7b4c380 = nó không còn được giữ
 
 # {size} saved to {path}
-# tc6932467 =
+tc6932467 = Đã lưu { $size } vào { $path }
 
 # The body was not saved: {e}
-# t189900b4 =
+t189900b4 = Chưa lưu được body: { $e }
 
 # Fiddler session
-# t9f5c89a3 =
+t9f5c89a3 = phiên Fiddler
 
 # Charles session
-# tb4f56f2b =
+tb4f56f2b = phiên Charles
 
 # All
-# t75afe364 =
+t75afe364 = Tất cả
 
 # Errors
-# te9ed60a6 =
+te9ed60a6 = Lỗi
 
 # Media
-# td10fcaa3 =
+td10fcaa3 = Đa phương tiện
 
 # Rule: {rule}
-# teca2074f =
+teca2074f = Quy tắc: { $rule }
 
 # Events
-# t003420a4 =
+t003420a4 = Sự kiện
 
 # Not decrypted
-# t8090a1ba =
+t8090a1ba = Không giải mã
 
 # open
-# td35ec4c9 =
+td35ec4c9 = đang mở
 
 # This flow is gone.
-# t3343999e =
+t3343999e = Flow này không còn nữa.
 
 # This host is not decrypted, so what it sends cannot be seen.
-# tf85fe84f =
+tf85fe84f = Host này không được giải mã, nên không xem được những gì nó gửi.
 
 # No body.
-# t31e4d044 =
+t31e4d044 = Không có body.
 
 # This body was not kept: the disk was nearly full, or too much was waiting for it.
-# t884aad28 =
+t884aad28 = Body này không được giữ: đĩa gần đầy, hoặc có quá nhiều dữ liệu đang chờ ghi.
 
 # This body was not kept.
-# te46616b5 =
+te46616b5 = Body này không được giữ.
 
 # This body is gone: it was dropped with the oldest flows, or cannot be read.
-# tf9a7ab60 =
+tf9a7ab60 = Body này không còn: nó đã bị xoá cùng các flow cũ nhất, hoặc không đọc được.
 
 # Cannot open this body: {e}
-# t620a039b =
+t620a039b = Không mở được body này: { $e }
 
 # Inspector
-# t4def410e =
+t4def410e = Chi tiết
 
 # Choose a flow to see it here
-# tc7be91e8 =
+tc7be91e8 = Chọn một flow để xem ở đây
 
 # Not decrypted. New connections to this host go through unread.
-# ta05ec37a =
+ta05ec37a = Không giải mã. Các kết nối mới tới host này đi qua mà không bị đọc.
 
 # If an app fails with this host, it may pin its certificates.
-# t3cbba118 =
+t3cbba118 = Nếu một app lỗi với host này, có thể app đó ghim chứng chỉ.
 
 # Make a rule
-# t0ac0e062 =
+t0ac0e062 = Tạo quy tắc
 
 # Decrypt this host
-# tb7367e2c =
+tb7367e2c = Giải mã host này
 
 # Do not decrypt this host
-# t5fa113f6 =
+t5fa113f6 = Không giải mã host này
 
 # Picture · {size}
-# te97ed633 =
+te97ed633 = Hình ảnh · { $size }
 
 # Messages {count}
-# te61b841a =
+te61b841a = Tin nhắn { $count }
 
 # Headers {headers}
-# t04b0146d =
+t04b0146d = Header { $headers }
 
 # Cookies {cookies}
-# td58eb84b =
+td58eb84b = Cookie { $cookies }
 
 # Query {query}
-# t4756f9f5 =
+t4756f9f5 = Query { $query }
 
 # Form {form}
-# tfa6e7203 =
+tfa6e7203 = Form { $form }
 
 # Connection
-# t09ea4ff9 =
+t09ea4ff9 = Kết nối
 
 # Save body
-# te2c44424 =
+te2c44424 = Lưu body
 
 # Send again
-# tf5910557 =
+tf5910557 = Gửi lại
 
 # Edit and send
-# tf837e542 =
+tf837e542 = Sửa rồi gửi
 
 # Copied
-# t8dc21305 =
+t8dc21305 = Đã sao chép
 
 # Copy as cURL
-# t866d1e3e =
+t866d1e3e = Sao chép dạng cURL
 
 # Copy as…
-# t9c1ad448 =
+t9c1ad448 = Sao chép dạng…
 
 # This picture cannot be drawn. Save the body to look at it.
-# t1e92fb27 =
+t1e92fb27 = Không vẽ được hình này. Hãy lưu body để xem.
 
 # Opening…
-# tc40f2321 =
+tc40f2321 = Đang mở…
 
 # No response
-# t8c2c37b1 =
+t8c2c37b1 = Không có phản hồi
 
 # Tunnel, not decrypted
-# tce693254 =
+tce693254 = Tunnel, không giải mã
 
 # GraphQL: {operation}
-# t2d65757d =
+t2d65757d = GraphQL: { $operation }
 
 # Over connection {id}, made before: no time went on connecting.
-# t84144a81 =
+t84144a81 = Đi qua kết nối { $id } đã có từ trước: không mất thời gian kết nối.
 
 # {app}, pid {pid}
-# t627147b4 =
+t627147b4 = { $app }, pid { $pid }
 
 # Not found: it may have ended, or belong to another user
-# t0efce58b =
+t0efce58b = Không tìm thấy: có thể nó đã tắt, hoặc thuộc về người dùng khác
 
 # On another device
-# t2b964a37 =
+t2b964a37 = Trên thiết bị khác
 
 # CLIENT
-# t6d3cd99e =
+t6d3cd99e = CLIENT
 
 # Device
-# tbdcbb413 =
+tbdcbb413 = Thiết bị
 
 # Program
-# tc4253b6b =
+tc4253b6b = Chương trình
 
 # Address
-# t700560f3 =
+t700560f3 = Địa chỉ
 
 # SERVER
-# te3b27612 =
+te3b27612 = SERVER
 
 # What this connection was is no longer kept: it went with older flows.
-# t1ef5a00a =
+t1ef5a00a = Thông tin về kết nối này không còn được giữ: nó đã bị xoá cùng các flow cũ hơn.
 
 # Not decrypted: tracewing passed it on without looking.
-# t0427c9b1 =
+t0427c9b1 = Không giải mã: tracewing chuyển tiếp mà không đọc.
 
 # No connection was made.
-# tf348eb92 =
+tf348eb92 = Không có kết nối nào được tạo.
 
 # None: it was answered without one.
-# tac71808e =
+tac71808e = Không có: nó được trả lời mà không cần kết nối.
 
 # {id}, given up during TLS
-# t0ec66a8c =
+t0ec66a8c = { $id }, bỏ dở trong lúc TLS
 
 # {id}, made for this flow
-# t7fe32cfc =
+t7fe32cfc = { $id }, tạo cho flow này
 
 # {id}, made before and used again
-# ta904c078 =
+ta904c078 = { $id }, đã có từ trước và được dùng lại
 
 # Server
-# t6d7302f2 =
+t6d7302f2 = Server
 
 # None: plain HTTP
-# t05606349 =
+t05606349 = Không có: HTTP thường
 
 # THE SERVER SHOWED NO CERTIFICATES
-# te476fbb8 =
+te476fbb8 = SERVER KHÔNG ĐƯA RA CHỨNG CHỈ NÀO
 
 # WHAT THE SERVER SHOWED, ITS OWN FIRST
-# ta51f3107 =
+ta51f3107 = NHỮNG GÌ SERVER ĐƯA RA, CỦA CHÍNH NÓ TRƯỚC
 
 # NO CERTIFICATES
-# te6f31dce =
+te6f31dce = KHÔNG CÓ CHỨNG CHỈ
 
 # CERTIFICATE
-# t1c902790 =
+t1c902790 = CHỨNG CHỈ
 
 # {n} CERTIFICATE, THE SERVER'S FIRST | {n} CERTIFICATES, THE SERVER'S FIRST
-# td5295f62 =
+td5295f62 =
+    { $n ->
+       *[other] { $n } CHỨNG CHỈ, CỦA SERVER TRƯỚC
+    }
 
 # tracewing would not go on with this server: {error}. If the app trusts it some other way, such as through a company CA, choose “Do not decrypt this host” and the app will check the server itself.
-# t13ced472 =
+t13ced472 = tracewing không tiếp tục với server này: { $error }. Nếu app tin server theo cách khác, chẳng hạn qua CA của công ty, hãy chọn “Không giải mã host này” và app sẽ tự kiểm tra server.
 
 # Cipher
-# t5b3bed6a =
+t5b3bed6a = Bộ mã hoá
 
 # none
-# tada7afdb =
+tada7afdb = không có
 
 # not valid until {when}
-# t0a14b2d8 =
+t0a14b2d8 = chưa có hiệu lực tới { $when }
 
 # expired {when}
-# t932538c2 =
+t932538c2 = đã hết hạn { $when }
 
 # expires {when}
-# t679bcb51 =
+t679bcb51 = hết hạn { $when }
 
 # {names}, and {n} more | {names}, and {n} more
-# t4cd375ad =
+t4cd375ad =
+    { $n ->
+       *[other] { $names }, và { $n } tên khác
+    }
 
 # Issued by {issuer}
-# t15a1ce5a =
+t15a1ce5a = Cấp bởi { $issuer }
 
 # Valid {from} to {to} · {when}
-# t0e47d4f2 =
+t0e47d4f2 = Hiệu lực từ { $from } tới { $to } · { $when }
 
 # Names {names}
-# tda75e459 =
+tda75e459 = Tên { $names }
 
 # Serial {serial}
-# td1f0d98b =
+td1f0d98b = Số sê-ri { $serial }
 
 # These headers were not kept.
-# tb8739fec =
+tb8739fec = Các header này không được giữ.
 
 # No headers.
-# tf3dacb5e =
+tf3dacb5e = Không có header.
 
 # File {filename} · {kind} · {size}
-# t6dbd239f =
+t6dbd239f = File { $filename } · { $kind } · { $size }
 
 # no type
-# t902a6ece =
+t902a6ece = không rõ kiểu
 
 # No cookies were sent.
-# t58e85ab2 =
+t58e85ab2 = Không có cookie nào được gửi.
 
 # No cookies were set.
-# tf57dbabc =
+tf57dbabc = Không có cookie nào được đặt.
 
 # JWT · {algorithm} · signature not checked
-# t2db33271 =
+t2db33271 = JWT · { $algorithm } · chưa kiểm tra chữ ký
 
 # JWT · signature not checked
-# t05f8b533 =
+t05f8b533 = JWT · chưa kiểm tra chữ ký
 
 # Header
-# t114f9980 =
+t114f9980 = Header
 
 # Payload
-# ta0639745 =
+ta0639745 = Payload
 
 # Expires
-# tc7aa0523 =
+tc7aa0523 = Hết hạn
 
 # Issued
-# tb1835ecc =
+tb1835ecc = Cấp lúc
 
 # Not before
-# td10dacd9 =
+td10dacd9 = Không trước
 
 # in {amount}
-# tfda57c3e =
+tfda57c3e = sau { $amount }
 
 # {amount} ago
-# t5f968014 =
+t5f968014 = { $amount } trước
 
 # Light
-# t8ad2f8cf =
+t8ad2f8cf = Sáng
 
 # Dark
-# t45570065 =
+t45570065 = Tối
 
 # System
-# t8f3184bc =
+t8f3184bc = Theo hệ thống
 
 # streamed in {count} chunk | streamed in {count} chunks
-# t76711a1a =
+t76711a1a =
+    { $n ->
+       *[other] stream thành { $count } phần
+    }
 
 # stopped: {stop}
-# tfa48fb30 =
+tfa48fb30 = dừng: { $stop }
 
 # {input} in · {output} out tokens
-# tc8bbc724 =
+tc8bbc724 = { $input } vào · { $output } ra token
 
 # Reading the call…
-# t33b52a3c =
+t33b52a3c = Đang đọc lời gọi…
 
 # Answer
-# tf94ea0ff =
+tf94ea0ff = Trả lời
 
 # Thinking: {thinking}
-# t737ece33 =
+t737ece33 = Suy nghĩ: { $thinking }
 
 # Calls {name}{id}
-# t017882e4 =
+t017882e4 = Gọi { $name }{ $id }
 
 # Nothing yet.
-# td9b71d16 =
+td9b71d16 = Chưa có gì.
 
 # {text}… and {count} more character | {text}… and {count} more characters
-# t6a16c074 =
+t6a16c074 =
+    { $n ->
+       *[other] { $text }… và { $count } ký tự nữa
+    }
 
 # Copy the answer
-# t69975ed7 =
+t69975ed7 = Sao chép câu trả lời
 
 # Asked
-# t4e3af9c3 =
+t4e3af9c3 = Đã hỏi
 
 # Tools offered: {tools}
-# tb871bcf4 =
+tb871bcf4 = Tool được cung cấp: { $tools }
 
 # Not kept
-# tba30b5fa =
+tba30b5fa = Không được giữ
 
 # This message was not kept: too much was waiting, or the disk was nearly full.
-# tb888a3c3 =
+tb888a3c3 = Tin nhắn này không được giữ: quá nhiều dữ liệu đang chờ, hoặc đĩa gần đầy.
 
 # This message is empty.
-# tdb0ec01f =
+tdb0ec01f = Tin nhắn này trống.
 
 # No messages yet
-# t51e7624c =
+t51e7624c = Chưa có tin nhắn
 
 # {said} kept, of {size}
-# t3558745a =
+t3558745a = Giữ { $said } trong { $size }
 
 # {what}: {text} is not a whole number
-# t2a8515ce =
+t2a8515ce = { $what }: { $text } không phải là số nguyên
 
 # Latency
-# t23a45ef9 =
+t23a45ef9 = Độ trễ
 
 # Down
-# ta4995035 =
+ta4995035 = Tải xuống
 
 # Up
-# t42f35940 =
+t42f35940 = Tải lên
 
 # Loss
-# t69db303a =
+t69db303a = Mất gói
 
 # Give a latency, a speed or a loss to slow it down by
-# t7cfd6404 =
+t7cfd6404 = Hãy nhập độ trễ, tốc độ hoặc tỉ lệ mất gói để làm chậm
 
 # Latency, ms
-# tefe18ab9 =
+tefe18ab9 = Độ trễ, ms
 
 # Down, kbit/s
-# t08c4ae33 =
+t08c4ae33 = Tải xuống, kbit/s
 
 # Up, kbit/s
-# td55cfe9a =
+td55cfe9a = Tải lên, kbit/s
 
 # Loss, %
-# tea4af439 =
+tea4af439 = Mất gói, %
 
 # Only these hosts, like *.example.com; all if empty
-# t77a1f991 =
+t77a1f991 = Chỉ các host này, như *.example.com; để trống là tất cả
 
 # Not kept for next time: {e}
-# tdce4d67c =
+tdce4d67c = Chưa lưu được cho lần sau: { $e }
 
 # Slow network
-# td51ddfce =
+td51ddfce = Mạng chậm
 
 # Off: traffic goes as fast as it can
-# tf0f34db0 =
+tf0f34db0 = Tắt: traffic đi nhanh hết mức có thể
 
 # Custom
-# t9525b78e =
+t9525b78e = Tuỳ chỉnh
 
 # Only these hosts
-# tfe16992b =
+tfe16992b = Chỉ các host này
 
 # Apply
-# tca77bbdb =
+tca77bbdb = Áp dụng
 
 # Applies from the next request. Latency is added to each round trip; the speed is a link that every slowed flow shares; a lost piece waits to be sent again, as TCP does. Hosts left alone are not slowed.
-# t5ee4034d =
+t5ee4034d = Áp dụng từ request kế tiếp. Độ trễ được cộng vào mỗi lượt đi về; tốc độ là một đường truyền mà mọi flow bị làm chậm dùng chung; phần bị mất sẽ chờ để gửi lại, như TCP vẫn làm. Các host được để nguyên không bị làm chậm.
 
 # Header line {line} has no ":"
-# t891b076d =
+t891b076d = Dòng header { $line } không có ":"
 
 # Header line {line} has no name
-# te3247b96 =
+te3247b96 = Dòng header { $line } không có tên
 
 # URL
-# t7569633e =
+t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
-# td6aec821 =
+td6aec821 =
+    { $n ->
+       *[other] { $n } byte không phải chữ: chúng được gửi đi nguyên như khi đến.
+    }
 
 # Nothing is paused
-# t8cf68b4c =
+t8cf68b4c = Không có gì đang tạm dừng
 
 # "{status}" is not a status
-# t40a529af =
+t40a529af = "{ $status }" không phải là một status
 
 # REQUEST
-# t1f3f6dd2 =
+t1f3f6dd2 = REQUEST
 
 # RESPONSE
-# tc85f77de =
+tc85f77de = RESPONSE
 
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
-# tf9ab4327 =
+tf9ab4327 = Không có gì đang tạm dừng. Hãy thêm quy tắc Tạm dừng ở trang Quy tắc để dừng traffic ở đây.
 
 # for {method} {url}
-# t093a86f6 =
+t093a86f6 = cho { $method } { $url }
 
 # The request, before the server gets it
-# tc840fed6 =
+tc840fed6 = Request, trước khi server nhận
 
 # The response, before the app gets it
-# t6683d72a =
+t6683d72a = Response, trước khi app nhận
 
 # Send as it came
-# tb593e730 =
+tb593e730 = Gửi nguyên như khi đến
 
 # Drop
-# t108524ac =
+t108524ac = Bỏ
 
 # Paused
-# tde281feb =
+tde281feb = Tạm dừng
 
 # Nothing is waiting.
-# tea613769 =
+tea613769 = Không có gì đang chờ.
 
 # {n} waits to be sent on. | {n} wait to be sent on.
-# t745634c6 =
+t745634c6 =
+    { $n ->
+       *[other] { $n } đang chờ được gửi tiếp.
+    }
 
 # Send all as they came
-# tdce25640 =
+tdce25640 = Gửi tất cả nguyên như khi đến
 
 # Block
-# tbd074002 =
+tbd074002 = Chặn
 
 # Answer from a file
-# td8edab50 =
+td8edab50 = Trả lời bằng một file
 
 # Send to another host
-# te3cd85d7 =
+te3cd85d7 = Gửi tới host khác
 
 # Set a request header
-# tfad4aaaa =
+tfad4aaaa = Đặt header cho request
 
 # Set a response header
-# tcbbc20d0 =
+tcbbc20d0 = Đặt header cho response
 
 # Pause the request
-# t40ecc39b =
+t40ecc39b = Tạm dừng request
 
 # Pause the response
-# t18a34799 =
+t18a34799 = Tạm dừng response
 
 # Status to answer with, like 403
-# t8f3ebb6c =
+t8f3ebb6c = Status trả về, như 403
 
 # Full path of a file or folder
-# t9fb9ae4c =
+t9fb9ae4c = Đường dẫn đầy đủ của một file hoặc thư mục
 
 # Where to, like http://localhost:3000
-# tdfedd004 =
+tdfedd004 = Gửi tới đâu, như http://localhost:3000
 
 # Header's name
-# t80793085 =
+t80793085 = Tên header
 
 # Its value
-# t43968778 =
+t43968778 = Giá trị của nó
 
 # "{first}" is not a status
-# td43128d3 =
+td43128d3 = "{ $first }" không phải là một status
 
 # Block with {status}
-# t1727e984 =
+t1727e984 = Chặn với { $status }
 
 # Answer from {path}
-# taefc08fa =
+taefc08fa = Trả lời bằng { $path }
 
 # Send to {to}
-# t5e256873 =
+t5e256873 = Gửi tới { $to }
 
 # Request: {header}: {value}
-# taa230766 =
+taa230766 = Request: { $header }: { $value }
 
 # Response: {header}: {value}
-# t30f9e2c2 =
+t30f9e2c2 = Response: { $header }: { $value }
 
 # Name
-# t0fe07306 =
+t0fe07306 = Tên
 
 # URL, like api.myapp.dev/v1/*
-# t4dd91658 =
+t4dd91658 = URL, như api.myapp.dev/v1/*
 
 # Method, or empty for all
-# tb2b869ac =
+tb2b869ac = Method, hoặc để trống cho tất cả
 
 # {n} rule written to {path} | {n} rules written to {path}
-# t4a2e843a =
+t4a2e843a =
+    { $n ->
+       *[other] Đã ghi { $n } quy tắc vào { $path }
+    }
 
 # The rules were not written: {e}
-# te7ac257f =
+te7ac257f = Chưa ghi được các quy tắc: { $e }
 
 # Import
-# t573e0af4 =
+t573e0af4 = Nhập
 
 # {path} could not be read: {e}
-# t32a3ce94 =
+t32a3ce94 = Không đọc được { $path }: { $e }
 
 # Nothing was imported: {e}
-# tb9f7257a =
+tb9f7257a = Không nhập được gì: { $e }
 
 # Edit
-# tc2c76cb1 =
+tc2c76cb1 = Sửa
 
 # Delete
-# t5797ea6a =
+t5797ea6a = Xoá
 
 # Change this rule
-# t9160f393 =
+t9160f393 = Sửa quy tắc này
 
 # A new rule
-# t55a722a0 =
+t55a722a0 = Quy tắc mới
 
 # It waits under Paused until you send it on, changed or not.
-# tca566a57 =
+tca566a57 = Nó chờ ở trang Tạm dừng cho tới khi bạn gửi tiếp, có sửa hay không.
 
 # Save
-# t4d2d5d68 =
+t4d2d5d68 = Lưu
 
 # Add
-# t9dc3aa14 =
+t9dc3aa14 = Thêm
 
 # Cancel
-# t35afca3b =
+t35afca3b = Huỷ
 
 # Rules
-# t428b2d80 =
+t428b2d80 = Quy tắc
 
 # They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-# tb44c7227 =
+tb44c7227 = Áp dụng từ request kế tiếp, kể cả khi đang tạm dừng ghi. Từ trên xuống dưới: quy tắc chặn, trả file hoặc đổi host khớp đầu tiên được dùng, và mọi quy tắc header khớp đều áp dụng.
 
 # Import rules…
-# t5edc205d =
+t5edc205d = Nhập quy tắc…
 
 # Export rules…
-# t6e09ca20 =
+t6e09ca20 = Xuất quy tắc…
 
 # {n} rule added | {n} rules added
-# tbc5e0866 =
+tbc5e0866 =
+    { $n ->
+       *[other] Đã thêm { $n } quy tắc
+    }
 
 # {n} here already | {n} here already
-# t65dc1281 =
+t65dc1281 =
+    { $n ->
+       *[other] { $n } quy tắc đã có sẵn
+    }
 
 # left out: {why}
-# ta81e95e2 =
+ta81e95e2 = bỏ qua: { $why }
 
 # No flows
-# t6dc463eb =
+t6dc463eb = Không có flow
 
 # Name it to keep it
-# t52c1a402 =
+t52c1a402 = Đặt tên để giữ lại
 
 # {size} · written by another version, so it cannot be opened
-# t878e5c80 =
+t878e5c80 = { $size } · do phiên bản khác ghi, nên không mở được
 
 # {count} flow · {size} | {count} flows · {size}
-# t3f3c0eb4 =
+t3f3c0eb4 =
+    { $n ->
+       *[other] { $count } flow · { $size }
+    }
 
 # Recording now
-# t3cb3e6fc =
+t3cb3e6fc = Đang ghi
 
 # Export HAR
-# t4d6458cc =
+t4d6458cc = Xuất HAR
 
 # Delete for good?
-# ta7737f13 =
+ta7737f13 = Xoá vĩnh viễn?
 
 # Sessions
-# tb69a8aec =
+tb69a8aec = Phiên
 
 # A session with a name is kept until you delete it. Of the others, the newest {kept} stay.
-# t6391f080 =
+t6391f080 = Phiên có tên được giữ cho tới khi bạn xoá. Trong các phiên còn lại, { $kept } phiên mới nhất được giữ.
 
 # Working…
-# td5507854 =
+td5507854 = Đang xử lý…
 
 # Open a session file
-# tae8622fc =
+tae8622fc = Mở file phiên
 
 # HAR, Fiddler .saz, or Charles .chlsj
-# td8955e6d =
+td8955e6d = HAR, .saz của Fiddler, hoặc .chlsj của Charles
 
 # Exported HAR files leave out tokens and cookies
-# td4a2f543 =
+td4a2f543 = File HAR xuất ra không kèm token và cookie
 
 # Other devices
-# t9e7d8362 =
+t9e7d8362 = Thiết bị khác
 
 # Let other devices use the proxy
-# t13e626b3 =
+t13e626b3 = Cho thiết bị khác dùng proxy
 
 # Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-# t2e14229d =
+t2e14229d = Điện thoại và máy tính khác trong mạng của bạn có thể gửi traffic qua đây. Bất kỳ ai khác trong mạng cũng vậy: hãy tắt khi ở mạng không tin cậy. Có hiệu lực khi tracewing khởi động lại.
 
 # Servers
-# tcd0cf113 =
+tcd0cf113 = Server
 
 # Trust what this computer trusts
-# tfea2d91b =
+tfea2d91b = Tin những gì máy này tin
 
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
-# t1705bfb4 =
+t1705bfb4 = Server có chứng chỉ từ một tổ chức cấp chứng chỉ được cài trên máy này, chẳng hạn CA của công ty, sẽ được kết nối như trình duyệt trên máy này vẫn làm. Khi tắt, chỉ các tổ chức công khai được tin. Có hiệu lực khi tracewing khởi động lại.
 
 # AI tools
-# t294d7ea4 =
+t294d7ea4 = Công cụ AI
 
 # Let AI tools see tokens and cookies
-# te1d26d3c =
+te1d26d3c = Cho công cụ AI thấy token và cookie
 
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
-# tb496980f =
+tb496980f = Công cụ AI đọc traffic đã ghi qua MCP server của tracewing. Khi tắt, giá trị của Authorization, Cookie và Set-Cookie không được đưa cho chúng. Áp dụng ngay.
 
 # HTTP/3
-# tfec0f477 =
+tfec0f477 = HTTP/3
 
 # Keep apps off HTTP/3
-# te42733a9 =
+te42733a9 = Giữ app không dùng HTTP/3
 
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-# t2aa7be0d =
+t2aa7be0d = HTTP/3 chạy trên UDP, thứ không proxy nào chuyển được, nên app dùng nó sẽ đi vòng qua tracewing. Tuỳ chọn này bỏ lời mời dùng HTTP/3 khỏi response của server, để app ở lại HTTP/2. Flow vẫn hiện lời mời đúng như server gửi. Có hiệu lực khi tracewing khởi động lại.
 
 # Size of a session
-# ta20fa102 =
+ta20fa102 = Kích thước một phiên
 
 # Past this, the oldest flows are dropped.
-# td2914f46 =
+td2914f46 = Vượt quá mức này, các flow cũ nhất bị xoá.
 
 # Room to leave on the disk
-# t8674a3b3 =
+t8674a3b3 = Dung lượng chừa lại trên đĩa
 
 # With less than this free, flows are still listed but bodies are not kept.
-# t5b3a31a3 =
+t5b3a31a3 = Khi còn trống ít hơn mức này, flow vẫn được liệt kê nhưng body không được giữ.
 
 # Earlier sessions to keep
-# td356194a =
+td356194a = Số phiên cũ được giữ
 
 # Older ones are deleted when a new session starts.
-# t66556513 =
+t66556513 = Phiên cũ hơn bị xoá khi một phiên mới bắt đầu.
 
 # Bodies
-# tdb4d0409 =
+tdb4d0409 = Body
 
 # Most kept of one body
-# t777508dd =
+t777508dd = Phần lớn nhất được giữ của một body
 
 # It still reaches the client whole.
-# t386fee28 =
+t386fee28 = Client vẫn nhận đủ toàn bộ.
 
 # Most unpacked for viewing
-# tc3fe2efd =
+tc3fe2efd = Phần lớn nhất được giải nén để xem
 
 # Stops a small download that unpacks to many GB.
-# tf9c49515 =
+tf9c49515 = Chặn một file tải nhỏ mà giải nén ra hàng GB.
 
 # Small body size
-# ta8996af1 =
+ta8996af1 = Ngưỡng body nhỏ
 
 # Smaller bodies wait in memory and share a file. Larger ones get a file of their own as they arrive.
-# t20c108b4 =
+t20c108b4 = Body nhỏ hơn chờ trong bộ nhớ và ghi chung một file. Body lớn hơn có file riêng ngay khi tới.
 
 # Compress plain text on disk
-# tee503c2e =
+tee503c2e = Nén văn bản thường trên đĩa
 
 # Takes about half the room, and is skipped when traffic is too fast for it.
-# t6d70f53f =
+t6d70f53f = Tiết kiệm khoảng một nửa dung lượng, và được bỏ qua khi traffic quá nhanh.
 
 # Compression level
-# td386c9ef =
+td386c9ef = Mức nén
 
 # 1 to 19. Higher is smaller and slower.
-# td42a987d =
+td42a987d = Từ 1 tới 19. Càng cao càng nhỏ và càng chậm.
 
 # Search
-# tc646a2c9 =
+tc646a2c9 = Tìm kiếm
 
 # Search URLs
-# t0c3e0b3d =
+t0c3e0b3d = Tìm trong URL
 
 # Finds any part of a URL as you type. Costs little.
-# t3f22d666 =
+t3f22d666 = Tìm bất kỳ phần nào của URL khi bạn gõ. Tốn rất ít.
 
 # Search bodies
-# t8eec0293 =
+t8eec0293 = Tìm trong body
 
 # Finds words in bodies. Can take as much disk as the bodies do.
-# tcac3872a =
+tcac3872a = Tìm chữ trong body. Có thể tốn dung lượng đĩa ngang với chính các body.
 
 # Searched part of each body
-# tab293b21 =
+tab293b21 = Phần được tìm của mỗi body
 
 # Words past this are not found. More takes more disk.
-# t0bf65f4a =
+t0bf65f4a = Chữ nằm sau mức này sẽ không tìm thấy. Càng lớn càng tốn đĩa.
 
 # Under heavy traffic
-# ta99888cb =
+ta99888cb = Khi traffic nhiều
 
 # Memory for bodies waiting to be written
-# t7d6ff799 =
+t7d6ff799 = Bộ nhớ cho body đang chờ ghi
 
 # Past this, flows are listed without their bodies. Traffic is never held back.
-# t5b268fb2 =
+t5b268fb2 = Vượt quá mức này, flow được liệt kê mà không có body. Traffic không bao giờ bị giữ lại.
 
 # Memory for large bodies waiting to be written
-# t07b9de08 =
+t07b9de08 = Bộ nhớ cho body lớn đang chờ ghi
 
 # Past this, large bodies stop being kept.
-# tfe61a4f3 =
+tfe61a4f3 = Vượt quá mức này, body lớn không còn được giữ.
 
 # {key}: "{text}" is not a whole number
-# ta8606963 =
+ta8606963 = { $key }: "{ $text }" không phải là số nguyên
 
 # {key}: must not be negative
-# t9c4debaa =
+t9c4debaa = { $key }: không được là số âm
 
 # Saved. The limits apply the next time tracewing starts.
-# tc8bd2065 =
+tc8bd2065 = Đã lưu. Các giới hạn áp dụng từ lần khởi động tracewing kế tiếp.
 
 # Settings
-# t4b058728 =
+t4b058728 = Cài đặt
 
 # Back to defaults
-# ta3162a13 =
+ta3162a13 = Trở về mặc định
 
 # Hosts not to decrypt
-# tb457f0b3 =
+tb457f0b3 = Host không giải mã
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-# t7647c310 =
+t7647c310 = Mỗi dòng một mục: một host, hoặc *.example.com cho host đó và mọi host bên dưới. Traffic của chúng đi qua mà không bị đọc. Danh sách này áp dụng ngay khi được lưu.
 
 # Language
-# t9a73db9b =
+t9a73db9b = Ngôn ngữ
 
 # System ({system_name})
-# tb5c7a1d4 =
+tb5c7a1d4 = Theo hệ thống ({ $system_name })
 
 # Applies at once.
-# tefb7a0f9 =
+tefb7a0f9 = Áp dụng ngay.
 
 # Your browser
-# tb5a48dd2 =
+tb5a48dd2 = Trình duyệt của bạn
 
 # Its private key is in the system keychain.
-# t62a47808 =
+t62a47808 = Khoá riêng của nó nằm trong keychain của hệ thống.
 
 # Its private key is in ca.key, which only you can read.
-# td9c6165d =
+td9c6165d = Khoá riêng của nó nằm trong ca.key, chỉ bạn đọc được.
 
 # Its private key is in ca.key, which only you can read, as the system keychain cannot take it: {why}.
-# t453607d0 =
+t453607d0 = Khoá riêng của nó nằm trong ca.key, chỉ bạn đọc được, vì keychain của hệ thống không nhận: { $why }.
 
 # Open the page. If the browser warns about the certificate, or cannot find the page, one of the steps above is not done for that browser.
-# t2e93b53b =
+t2e93b53b = Mở trang này. Nếu trình duyệt cảnh báo về chứng chỉ, hoặc không tìm thấy trang, thì một trong các bước trên chưa xong với trình duyệt đó.
 
 # {name} goes through tracewing and trusts it.
-# t82bd2456 =
+t82bd2456 = { $name } đi qua tracewing và tin chứng chỉ của nó.
 
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
-# tfb6feb04 =
+tfb6feb04 = { $name } đi qua tracewing, nhưng đã mở trang không qua HTTPS. Hãy mở lại bằng https://.
 
 # A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-# t9f95b7b8 =
+t9f95b7b8 = Điện thoại hoặc máy tính khác cũng có thể gửi traffic qua đây. Hãy bật “Cho thiết bị khác dùng proxy” trong Cài đặt, rồi khởi động lại tracewing.
 
 # this computer's address, port {port}
-# t2188b3f4 =
+t2188b3f4 = địa chỉ của máy này, cổng { $port }
 
 # On the device, set the Wi-Fi proxy to {addr}. Then open http://{host} there, get the certificate and trust it. Its flows show its address, and can be filtered with device:. Name it from one of them, in Connection.
-# tc8ccf306 =
+tc8ccf306 = Trên thiết bị, đặt proxy Wi-Fi là { $addr }. Rồi mở http://{ $host } trên đó, tải chứng chỉ và tin nó. Flow của thiết bị hiện địa chỉ của nó, và lọc được bằng device:. Đặt tên cho thiết bị từ một flow của nó, ở tab Kết nối.
 
 # Looking for it…
-# t50ee7452 =
+t50ee7452 = Đang tìm…
 
 # Installing. The system may ask you to confirm.
-# ta41c38ec =
+ta41c38ec = Đang cài. Hệ thống có thể hỏi bạn xác nhận.
 
 # This computer trusts it.
-# t27d6bacc =
+t27d6bacc = Máy này tin chứng chỉ đó.
 
 # Installed in: {places}.
-# tb5bcc244 =
+tb5bcc244 = Đã cài vào: { $places }.
 
 # Command-line tools trust it, but browsers keep stores of their own. Until it is in them, HTTPS through tracewing fails in a browser.
-# t327bf8fc =
+t327bf8fc = Các công cụ dòng lệnh tin chứng chỉ, nhưng trình duyệt có kho riêng. Cho tới khi nó có trong đó, HTTPS qua tracewing sẽ lỗi trong trình duyệt.
 
 # tracewing reads HTTPS with a certificate made for this computer alone. Until it is trusted, HTTPS through tracewing fails.
-# tafd8dae2 =
+tafd8dae2 = tracewing đọc HTTPS bằng một chứng chỉ tạo riêng cho máy này. Cho tới khi chứng chỉ được tin, HTTPS qua tracewing sẽ lỗi.
 
 # Trust the certificate
-# t26618699 =
+t26618699 = Tin chứng chỉ
 
 # Install
-# tb50cbd40 =
+tb50cbd40 = Cài
 
 # Also for command-line tools
-# t0db8faea =
+t0db8faea = Cả cho công cụ dòng lệnh
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
-# t83387edf =
+t83387edf = Các app dùng thiết lập của hệ thống giờ đi qua { $addr }. Thiết lập trở lại như cũ khi tracewing đóng, hoặc khi nó bị crash.
 
 # Sends this computer's traffic through tracewing, for apps that use the system's setting. Or point one app at {addr} yourself.
-# tdcc53241 =
+tdcc53241 = Đưa traffic của máy này qua tracewing, với các app dùng thiết lập của hệ thống. Hoặc tự trỏ một app tới { $addr }.
 
 # Turn on the system proxy
-# t52b88441 =
+t52b88441 = Bật system proxy
 
 # Turn off
-# tcd03e04b =
+tcd03e04b = Tắt
 
 # Turn on
-# t65a0c5a7 =
+t65a0c5a7 = Bật
 
 # Check it in your browser
-# tbed6e83a =
+tbed6e83a = Kiểm tra trong trình duyệt
 
 # Open the test page
-# te4e36f65 =
+te4e36f65 = Mở trang kiểm tra
 
 # Set up
-# t43c06abc =
+t43c06abc = Thiết lập
 
 # Three steps to see HTTPS traffic from this computer.
-# tf3a7f60b =
+tf3a7f60b = Ba bước để xem traffic HTTPS của máy này.
 
 # See traffic
-# t980eee79 =
+t980eee79 = Xem traffic
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
-# t3c727cd5 =
+t3c727cd5 = Cổng UDP 443 đang bị chặn trên máy này, nên app chuyển từ HTTP/3 về HTTP/2 và đi qua tracewing. Việc chặn dừng khi tracewing đóng, hoặc khi nó bị crash.
 
 # Some apps speak HTTP/3, over UDP, and go around the proxy. Blocking UDP port 443 on this computer makes them fall back to HTTP/2 through tracewing. It takes an administrator's password, and stops when tracewing closes. A VPN that uses UDP port 443 stops working meanwhile.
-# t64ab600f =
+t64ab600f = Một số app dùng HTTP/3, chạy trên UDP, và đi vòng qua proxy. Chặn cổng UDP 443 trên máy này khiến chúng quay về HTTP/2 qua tracewing. Cần mật khẩu quản trị, và việc chặn dừng khi tracewing đóng. Trong lúc đó, VPN dùng cổng UDP 443 sẽ không hoạt động.
 
 # Apps on HTTP/3
-# t2cfe5270 =
+t2cfe5270 = App dùng HTTP/3
 
 # Stop blocking
-# t318358d8 =
+t318358d8 = Ngừng chặn
 
 # Block HTTP/3
-# t88231e40 =
+t88231e40 = Chặn HTTP/3
 
 # Or one app at a time
-# t91c63f1c =
+t91c63f1c = Hoặc từng app một
 
 # A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-# t259dbb0e =
+t259dbb0e = Một terminal, hoặc một trình duyệt với profile riêng, đi qua tracewing trong khi system proxy và mọi app khác giữ nguyên.
 
 # Open a terminal
-# t4b629c72 =
+t4b629c72 = Mở terminal
 
 # Open {name}
-# tbd869c4a =
+tbd869c4a = Mở { $name }
 
 # iPhone and iPad
-# ta550cc97 =
+ta550cc97 = iPhone và iPad
 
 # Flutter apps
-# ta04ee397 =
+ta04ee397 = App Flutter
 
 # 1. In Settings, Wi-Fi, choose the network, then Configure Proxy, Manual: server {server}, port {port}.
-# t996be047 =
+t996be047 = 1. Trong Cài đặt, Wi-Fi, chọn mạng, rồi Định cấu hình proxy, Thủ công: máy chủ { $server }, cổng { $port }.
 
 # 2. Scan the code with the camera, or open {page} in Safari, and get the certificate. Allow the download.
-# t4fa14138 =
+t4fa14138 = 2. Quét mã bằng camera, hoặc mở { $page } trong Safari, rồi tải chứng chỉ. Cho phép tải về.
 
 # 3. In Settings, General, VPN & Device Management, choose the tracewing CA profile and install it.
-# t7127295f =
+t7127295f = 3. Trong Cài đặt, Cài đặt chung, VPN & Quản lý thiết bị, chọn profile tracewing CA và cài đặt.
 
 # 4. In Settings, General, About, Certificate Trust Settings, turn on full trust for tracewing CA.
-# t1b22723c =
+t1b22723c = 4. Trong Cài đặt, Cài đặt chung, Giới thiệu, Cài đặt tin cậy chứng nhận, bật tin cậy hoàn toàn cho tracewing CA.
 
 # 5. Open https://{host} in Safari. If it says it works, apps that use the system's settings go through tracewing.
-# t4adfec01 =
+t4adfec01 = 5. Mở https://{ $host } trong Safari. Nếu trang báo đã chạy, các app dùng thiết lập của hệ thống sẽ đi qua tracewing.
 
 # 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host {host}, port {port}.
-# t4f837b10 =
+t4f837b10 = 1. Trong Cài đặt, Wi-Fi, sửa mạng, và ở phần Nâng cao đặt proxy là Thủ công: máy chủ { $host }, cổng { $port }.
 
 # 2. Scan the code, or open {page} in the browser, and get the certificate.
-# t654a829b =
+t654a829b = 2. Quét mã, hoặc mở { $page } trong trình duyệt, rồi tải chứng chỉ.
 
 # 3. In Settings, Security, Encryption & credentials (the names vary by maker), choose Install a certificate, then CA certificate, and pick tracewing.crt.
-# t8263ba6b =
+t8263ba6b = 3. Trong Cài đặt, Bảo mật, Mã hoá và thông tin xác thực (tên gọi khác nhau tuỳ hãng), chọn Cài đặt chứng chỉ, rồi Chứng chỉ CA, và chọn tracewing.crt.
 
 # 4. Since Android 7, apps trust certificates the user added only if they say so. For a debug build of your own app, add res/xml/network_security_config.xml:
-# tb7fa0462 =
+tb7fa0462 = 4. Từ Android 7, app chỉ tin chứng chỉ do người dùng thêm nếu app cho phép. Với bản debug của app của bạn, hãy thêm res/xml/network_security_config.xml:
 
 # and point to it from AndroidManifest.xml:
-# t02ad844b =
+t02ad844b = và trỏ tới nó trong AndroidManifest.xml:
 
 # Other apps keep refusing the certificate: their traffic shows as failed flows.
-# t02e57826 =
+t02e57826 = Các app khác vẫn từ chối chứng chỉ: traffic của chúng hiện thành flow lỗi.
 
 # Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
-# t4ffc0abf =
+t4ffc0abf = HttpClient của Dart, mà http và Dio của Flutter dùng, không theo thiết lập proxy của điện thoại, và trên Android không tin chứng chỉ do người dùng thêm. Trong bản debug, hãy gửi nó qua đây:
 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
-# t991340f1 =
+t991340f1 = badCertificateCallback cho mọi chứng chỉ đi qua, vì vậy chỉ dùng cho bản debug.
 
 # Copy
-# t658f3664 =
+t658f3664 = Sao chép
 
 # Open settings
-# t1336b4d6 =
+t1336b4d6 = Mở cài đặt
 
 # Phones and other devices
-# t2e3c591c =
+t2e3c591c = Điện thoại và thiết bị khác
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
-# td0629ca6 =
+td0629ca6 = Điện thoại, máy tính bảng hoặc máy tính khác trong mạng này có thể đi qua tracewing tại { $proxy }. Mã QR mở trang có chứng chỉ. Flow của thiết bị hiện địa chỉ của nó, lọc được bằng device:, và đặt tên được từ một flow của nó, ở tab Kết nối.
 
 # Set up. The certificate is among the system's until the device restarts.
-# t84db6961 =
+t84db6961 = Đã thiết lập. Chứng chỉ nằm trong kho của hệ thống cho tới khi thiết bị khởi động lại.
 
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
-# tbcad7fa7 =
+tbcad7fa7 = Đã thiết lập. Chứng chỉ nằm trong Downloads: trong Cài đặt vừa mở, chọn Mã hoá và thông tin xác thực, Cài đặt chứng chỉ, Chứng chỉ CA, rồi chọn tracewing.crt.
 
 # Apps that trust only the system's certificates will still refuse it.
-# t6fb5ba4b =
+t6fb5ba4b = Các app chỉ tin chứng chỉ của hệ thống vẫn sẽ từ chối nó.
 
 # An emulator.
-# t14b6b86d =
+t14b6b86d = Một emulator.
 
 # On USB.
-# t67dafc14 =
+t67dafc14 = Qua USB.
 
 # Accept the USB debugging prompt on the device, then look again.
-# tff6a046e =
+tff6a046e = Hãy chấp nhận lời hỏi gỡ lỗi USB trên thiết bị, rồi tìm lại.
 
 # Still starting. Look again in a moment.
-# t13f68b64 =
+t13f68b64 = Vẫn đang khởi động. Lát nữa hãy tìm lại.
 
 # adb says it is {state}.
-# t2b7d71da =
+t2b7d71da = adb báo thiết bị đang { $state }.
 
 # Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-# tc28e5d10 =
+tc28e5d10 = Đặt proxy trên một Android emulator, hoặc điện thoại cắm USB có bật gỡ lỗi USB, và cài chứng chỉ. Traffic đi qua ADB, nên không cần chung mạng.
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
-# t4af01006 =
+t4af01006 = Không tìm thấy adb. Hãy cài Android Studio, hoặc platform tools của Android, rồi tìm lại.
 
 # No device is connected. Start an emulator, or plug in a phone with USB debugging on, then look again.
-# tc65b7cf7 =
+tc65b7cf7 = Chưa có thiết bị nào kết nối. Hãy mở một emulator, hoặc cắm điện thoại có bật gỡ lỗi USB, rồi tìm lại.
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
-# t9144d1fc =
+t9144d1fc = Thiết lập một thiết bị để gửi traffic của nó qua đây. Hoàn tác, hoặc đóng tracewing, sẽ gỡ proxy khỏi thiết bị.
 
 # Undo
-# t71fd4acf =
+t71fd4acf = Hoàn tác
 
 # Android emulators and USB devices
-# t379e433c =
+t379e433c = Android emulator và thiết bị USB
 
 # Look again
-# t98416222 =
+t98416222 = Tìm lại
 
 # Find devices
-# t54d4af39 =
+t54d4af39 = Tìm thiết bị
 
 # Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
-# t2dc39047 =
+t2dc39047 = Claude Code, Cursor, VS Code và các công cụ AI khác có thể liệt kê và đọc các flow tracewing ghi, qua MCP server của nó. Token và cookie bị giữ lại trừ khi Cài đặt cho phép. Trong Claude Code:
 
 # Elsewhere, in the tool's MCP settings:
-# tec38833c =
+tec38833c = Ở các công cụ khác, trong phần cài đặt MCP:
 
 # Flows
-# t4db77db2 =
+t4db77db2 = Flow
 
 # Choose the flow above or below
-# tecb3adec =
+tecb3adec = Chọn flow ở trên hoặc ở dưới
 
 # The first or the last flow
-# t7e278a00 =
+t7e278a00 = Flow đầu tiên hoặc cuối cùng
 
 # A page up or down
-# t23b1814b =
+t23b1814b = Lên hoặc xuống một trang
 
 # Filter
-# tf4a9c097 =
+tf4a9c097 = Lọc
 
 # Pause or resume recording
-# t6e21519a =
+t6e21519a = Tạm dừng hoặc tiếp tục ghi
 
 # Clear the list
-# tf2a55d1f =
+tf2a55d1f = Xoá danh sách
 
 # The chosen flow
-# te0a729de =
+te0a729de = Flow đang chọn
 
 # Its request
-# tb3970784 =
+tb3970784 = Request của nó
 
 # Its response
-# t221fc168 =
+t221fc168 = Response của nó
 
 # Send it again
-# tef7d1944 =
+tef7d1944 = Gửi lại
 
 # Edit it and send it
-# t6bc99e5c =
+t6bc99e5c = Sửa rồi gửi
 
 # Copy it as cURL
-# tc99a11a3 =
+tc99a11a3 = Sao chép dạng cURL
 
 # The window
-# t2af18488 =
+t2af18488 = Cửa sổ
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
-# t9df89562 =
+t9df89562 = Thiết lập, Traffic, Quy tắc, Tạm dừng, Soạn request, Phiên, Cài đặt
 
 # Show or hide the sidebar
-# t67adca04 =
+t67adca04 = Hiện hoặc ẩn thanh bên
 
 # Show or hide the inspector
-# ta5a7b9e9 =
+ta5a7b9e9 = Hiện hoặc ẩn khung chi tiết
 
 # The inspector beside the list or below it
-# t51e214f7 =
+t51e214f7 = Khung chi tiết bên cạnh hay bên dưới danh sách
 
 # These shortcuts
-# tbdf3b62b =
+tbdf3b62b = Các phím tắt này
 
 # Close them
-# tf3a4b1ef =
+tf3a4b1ef = Đóng bảng này
 
 # Keyboard shortcuts
-# t31eaddb7 =
+t31eaddb7 = Phím tắt
 
 # Close
-# tcd86acc3 =
+tcd86acc3 = Đóng
 
 # The certificate: {e}
-# t0235648c =
+t0235648c = Chứng chỉ: { $e }
 
 # The terminal
-# tf542b2f4 =
+tf542b2f4 = Terminal
 
 # The system proxy: {e}
-# tc99726ce =
+tc99726ce = System proxy: { $e }
 
 # Blocking HTTP/3: {e}
-# t024ec871 =
+t024ec871 = Chặn HTTP/3: { $e }
 
 # host:, status:4xx, or text in bodies
-# t00d0cf30 =
+t00d0cf30 = host:, status:4xx, hoặc chữ trong body
 
 # A name, as iPhone test
-# t19f89214 =
+t19f89214 = Một cái tên, như iPhone test
 
 # The search index: {e}
-# te3c971c9 =
+te3c971c9 = Chỉ mục tìm kiếm: { $e }
 
 # An earlier session: {name}
-# t73446a1d =
+t73446a1d = Một phiên trước: { $name }
 
 # Read-only. Search covers more as its index is finished. Recording goes on.
-# td8659d5b =
+td8659d5b = Chỉ đọc. Tìm kiếm bao quát thêm khi chỉ mục được hoàn tất. Việc ghi vẫn tiếp tục.
 
 # Read-only. Recording goes on.
-# te2f35d9e =
+te2f35d9e = Chỉ đọc. Việc ghi vẫn tiếp tục.
 
 # Back to live
-# t317c0453 =
+t317c0453 = Về phiên đang ghi
 
 # {shown} of {total}
-# tf2cc0563 =
+tf2cc0563 = { $shown } trên { $total }
 
 # Recording
-# te75cf20c =
+te75cf20c = Đang ghi
 
 # System proxy off · {addr}
-# t7e813d25 =
+t7e813d25 = System proxy tắt · { $addr }
 
 # System proxy…
-# t29e7dcd0 =
+t29e7dcd0 = System proxy…
 
 # System proxy on · {addr}
-# t319ad6b9 =
+t319ad6b9 = System proxy bật · { $addr }
 
 # Apps
-# t53d91aad =
+t53d91aad = App
 
 # Devices
-# t27acf320 =
+t27acf320 = Thiết bị
 
 # Hosts
-# tcf9aefb4 =
+tcf9aefb4 = Host
 
 # All hosts
-# tfc7bfe37 =
+tfc7bfe37 = Tất cả host
 
 # Hidden
-# t3c2dfe59 =
+t3c2dfe59 = Đã ẩn
 
 # Newest
-# t324b6d0b =
+t324b6d0b = Mới nhất
 
 # No flow fits this filter
-# t7eb295f4 =
+t7eb295f4 = Không có flow nào khớp bộ lọc này
 
 # Nothing yet
-# tbd00747c =
+tbd00747c = Chưa có gì
 
 # Turn on the system proxy above, or point an app at {addr}. To try it: curl --proxy http://{addr} --cacert {ca} https://example.com/
-# t61730a16 =
+t61730a16 = Hãy bật system proxy ở trên, hoặc trỏ một app tới { $addr }. Để thử: curl --proxy http://{ $addr } --cacert { $ca } https://example.com/
 
 # Beside the list
-# t3b4853f8 =
+t3b4853f8 = Bên cạnh danh sách
 
 # Below the list
-# t23658daf =
+t23658daf = Bên dưới danh sách
 
 # Drop it on a place · Esc puts it back
-# t0fa632ba =
+t0fa632ba = Thả vào một vị trí · Esc để đặt lại chỗ cũ
 
 # Traffic
-# t4b589266 =
+t4b589266 = Traffic
 
 # Certificate trusted on this computer
-# t7b93f551 =
+t7b93f551 = Chứng chỉ được tin trên máy này
 
 # Checking the certificate…
-# tbf8942c3 =
+tbf8942c3 = Đang kiểm tra chứng chỉ…
 
 # Installing the certificate; the system may ask you to confirm…
-# t068dcaff =
+t068dcaff = Đang cài chứng chỉ; hệ thống có thể hỏi bạn xác nhận…
 
 # HTTPS will fail until the certificate is trusted: set up
-# t4b34beb2 =
+t4b34beb2 = HTTPS sẽ lỗi cho tới khi chứng chỉ được tin: thiết lập
 
 # settings.toml was not used: {problem}
-# tc3e1f9c8 =
+tc3e1f9c8 = settings.toml không được dùng: { $problem }
 
 # The proxy stopped: {failure}
-# t04dcff11 =
+t04dcff11 = Proxy đã dừng: { $failure }
 
 # The disk is nearly full: bodies are not being kept
-# te99f9959 =
+te99f9959 = Đĩa gần đầy: body không được giữ
 
 # {count} flow not recorded | {count} flows not recorded
-# tdbd64fe6 =
+tdbd64fe6 =
+    { $n ->
+       *[other] { $count } flow không được ghi
+    }
 
 # {count} flow without bodies | {count} flows without bodies
-# t249093b0 =
+t249093b0 =
+    { $n ->
+       *[other] { $count } flow không có body
+    }
 
 # {count} oldest flow dropped to stay under {size} | {count} oldest flows dropped to stay under {size}
-# te30201f0 =
+te30201f0 =
+    { $n ->
+       *[other] { $count } flow cũ nhất bị xoá để không vượt quá { $size }
+    }
 
 # {count} flow | {count} flows
-# t57bf5200 =
+t57bf5200 =
+    { $n ->
+       *[other] { $count } flow
+    }
 
 # Export as HAR
-# t95b6b766 =
+t95b6b766 = Xuất HAR
 
 # Shortcuts {keys}
-# t4ab0ecb4 =
+t4ab0ecb4 = Phím tắt { $keys }
 
 # Columns
-# tea156fdc =
+tea156fdc = Cột
