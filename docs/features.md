@@ -24,11 +24,12 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Feature | Milestone | Plan |
 |---|---|---|
 | Proxy listener: HTTP in absolute form, HTTPS through `CONNECT` | Gate 0 | Free |
-| Turn the system proxy on and off: macOS through a privileged helper, Windows per user, GNOME and KDE on Linux | Beta | Free |
+| Turn the system proxy on and off: macOS for an administrator, Windows per user, GNOME and KDE on Linux | Beta | Free |
+| macOS for a standard account, through a privileged helper (needs signed builds) | 1.0 | Free |
 | Put the system proxy back when tracewing quits or crashes (a watchdog, and a check at the next start) | Beta | Free |
 | Open a terminal or a browser that goes through tracewing, without touching the system proxy (environment variables; a separate profile for any Chromium-based browser or Firefox) | Beta | Free |
 | Pause and resume capture | Beta | Free |
-| Choose which hosts to decrypt; tunnel the rest untouched | Beta | Free |
+| Hosts not to decrypt, tunneled untouched (Apple and Windows Update to start with) | Beta | Free |
 | Take offers of HTTP/3 (`Alt-Svc`) out of responses, so apps stay on HTTP/2 | Beta | Free |
 | Block UDP 443 so that clients fall back from HTTP/3 to HTTP/2 | Beta | Free |
 | Go through another proxy: HTTP and SOCKS5 | 1.x | Free |
@@ -89,7 +90,7 @@ keyboard.
 | The inspector beside the list or below it: drag it by its handle, use the toolbar's layout buttons, or a shortcut | Beta | Free |
 | Resize panels by dragging the dividers; hide the sidebar or the inspector | Beta | Free |
 | Request and response as tabs, side by side, or one above the other | Beta | Free |
-| The layout is kept per window and restored at the next start | Beta | Free |
+| The layout is kept and restored at the next start | Beta | Free |
 | The inspector in a window of its own, for a second display | 1.x | Free |
 | Named layouts to switch between (for example "Phone" and "API") | 1.x | Free |
 
@@ -152,7 +153,7 @@ keyboard.
 
 | Feature | Milestone | Plan |
 |---|---|---|
-| Light and dark; keyboard first | Beta | Free |
+| Light and dark; keyboard first: Tab between fields, keys for the list, the inspector's sides and parts, saving a body, and what is held on Paused | Beta | Free |
 | 15 languages: English, German, Spanish, French, Indonesian, Italian, Brazilian Portuguese, Turkish, Vietnamese, Russian, Ukrainian, Japanese, Korean, simplified and traditional Chinese | 1.0 | Free |
 | Signed builds: Windows (Microsoft Store and an installer), macOS (notarized, with the helper), Linux (`.deb`, `.rpm`, AppImage) | 1.0 | — |
 | Signed automatic updates | 1.0 | — |

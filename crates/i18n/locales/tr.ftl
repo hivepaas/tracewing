@@ -1397,11 +1397,26 @@ t6bc99e5c = Düzenle ve gönder
 # Copy it as cURL
 tc99a11a3 = cURL olarak kopyala
 
+# The part before or after the one shown
+tdf4221d9 = Gösterilenden önceki veya sonraki bölüm
+
+# Save the body shown
+t20d9b7c0 = Gösterilen gövdeyi kaydet
+
 # Select all of the part shown
 tf9168168 = Gösterilen bölümün tümünü seç
 
 # Copy the selected text
 t00b090d3 = Seçili metni kopyala
+
+# Send it on, as edited
+t8c35fa5a = Düzenlendiği gibi gönder
+
+# Send it on as it was
+t16f7abb5 = Olduğu gibi gönder
+
+# Drop it
+t4e7f48b9 = At
 
 # The window
 t2af18488 = Pencere
@@ -1417,6 +1432,9 @@ ta5a7b9e9 = İnceleyiciyi göster ya da gizle
 
 # The inspector beside the list or below it
 t51e214f7 = İnceleyici listenin yanında ya da altında
+
+# The next or the previous field
+ta4b4bd5e = Sonraki veya önceki alan
 
 # These shortcuts
 tbdf3b62b = Bu kısayollar

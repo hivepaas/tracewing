@@ -6,7 +6,7 @@
 #![cfg(all(feature = "headless", target_os = "linux"))]
 
 use gpui::{
-    AppContext as _, Focusable as _, HeadlessAppContext, Keystroke, WindowHandle, px, size,
+    AppContext as _, Entity, Focusable as _, HeadlessAppContext, Keystroke, WindowHandle, px, size,
 };
 use std::{
     path::PathBuf,
@@ -17,6 +17,8 @@ use std::{
 use tracewing::{
     detail::Side,
     engine::{Engine, EngineOptions},
+    input::TextInput,
+    rules_page::RulesPage,
     traffic::{Screen, Traffic},
 };
 use tracewing_dev::benchkit;
@@ -168,6 +170,20 @@ fn shortcuts_do_what_they_say() {
         Side::Response
     );
 
+    // The chosen flow's parts, round the ends.
+    let part = |cx: &mut HeadlessAppContext| window.update(cx, |v, _, _| v.inspector.part).unwrap();
+    let first = part(&mut cx);
+    press(&mut cx, window, "]");
+    assert_ne!(part(&mut cx), first);
+    press(&mut cx, window, "[");
+    assert_eq!(part(&mut cx), first);
+    let offered = window.update(&mut cx, |v, _, _| v.parts_offered()).unwrap();
+    if offered[0] == first {
+        press(&mut cx, window, "[");
+        assert_eq!(part(&mut cx), *offered.last().unwrap(), "round to the last");
+        press(&mut cx, window, "]");
+    }
+
     // Recording, and the screens by number.
     press(&mut cx, window, "secondary-r");
     assert!(
@@ -186,6 +202,31 @@ fn shortcuts_do_what_they_say() {
         window.update(&mut cx, |v, _, _| v.screen).unwrap(),
         Screen::Rules
     );
+    // Tab goes from field to field, and Shift-Tab back.
+    let focused = |cx: &mut HeadlessAppContext, which: fn(&RulesPage) -> &Entity<TextInput>| {
+        window
+            .update(cx, |v, window, cx| {
+                let page = v.rules_page.as_ref().unwrap();
+                which(page).read(cx).focus_handle(cx).is_focused(window)
+            })
+            .unwrap()
+    };
+    window
+        .update(&mut cx, |v, window, cx| {
+            let page = v.rules_page.as_ref().unwrap();
+            let name = page.name.read(cx).focus_handle(cx);
+            window.focus(&name, cx);
+        })
+        .unwrap();
+    press(&mut cx, window, "tab");
+    assert!(focused(&mut cx, |page| &page.url), "the URL after the name");
+    press(&mut cx, window, "shift-tab");
+    assert!(focused(&mut cx, |page| &page.name), "and back");
+    window
+        .update(&mut cx, |view, window, cx| {
+            window.focus(&view.focus_handle(cx), cx);
+        })
+        .unwrap();
     press(&mut cx, window, "secondary-2");
     assert_eq!(
         window.update(&mut cx, |v, _, _| v.screen).unwrap(),

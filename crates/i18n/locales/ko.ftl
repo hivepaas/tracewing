@@ -1375,11 +1375,26 @@ t6bc99e5c = 편집 후 보내기
 # Copy it as cURL
 tc99a11a3 = cURL로 복사
 
+# The part before or after the one shown
+tdf4221d9 = 보이는 탭의 앞 또는 뒤 탭
+
+# Save the body shown
+t20d9b7c0 = 보이는 본문 저장
+
 # Select all of the part shown
 tf9168168 = 표시된 부분 모두 선택
 
 # Copy the selected text
 t00b090d3 = 선택한 텍스트 복사
+
+# Send it on, as edited
+t8c35fa5a = 편집한 대로 보내기
+
+# Send it on as it was
+t16f7abb5 = 원래대로 보내기
+
+# Drop it
+t4e7f48b9 = 버리기
 
 # The window
 t2af18488 = 창
@@ -1395,6 +1410,9 @@ ta5a7b9e9 = 인스펙터 표시 또는 숨기기
 
 # The inspector beside the list or below it
 t51e214f7 = 인스펙터를 목록 옆 또는 아래에 표시
+
+# The next or the previous field
+ta4b4bd5e = 다음 또는 이전 입력란
 
 # These shortcuts
 tbdf3b62b = 이 단축키 목록

@@ -223,7 +223,7 @@ pub struct Traffic {
     /// When it started, for a session with no name.
     viewing_started: String,
     pub sessions_page: SessionsPage,
-    pub(crate) rules_page: Option<RulesPage>,
+    pub rules_page: Option<RulesPage>,
     pub paused_page: Option<PausedPage>,
     pub compose_page: Option<ComposePage>,
     /// The system's own appearance is dark.
@@ -1315,7 +1315,15 @@ impl Traffic {
             Action::Last if in_list => self.move_selection(i64::MAX / 2, cx),
             Action::Request if chosen => self.set_side(Side::Request, cx),
             Action::Response if chosen => self.set_side(Side::Response, cx),
+            Action::SendAgain if self.screen == Screen::Paused => self.send_paused(cx),
+            Action::SendUnchanged if self.screen == Screen::Paused => {
+                self.send_paused_unchanged(cx)
+            }
+            Action::Drop if self.screen == Screen::Paused => self.drop_paused(cx),
             Action::SendAgain if chosen => self.send_flow_again(cx),
+            Action::PreviousPart if chosen && in_list => self.step_part(-1, cx),
+            Action::NextPart if chosen && in_list => self.step_part(1, cx),
+            Action::SaveBody if chosen && in_list => self.ask_save_body(cx),
             Action::EditAndSend if chosen => self.edit_flow(cx),
             Action::CopyCurl if chosen => self.copy_as_curl(cx),
             Action::Copy if self.screen == Screen::Compose => return self.copy_composed(cx),

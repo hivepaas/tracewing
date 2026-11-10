@@ -282,7 +282,7 @@ impl TextInput {
 
     fn with(placeholder: Placeholder, cx: &mut Context<Self>) -> Self {
         TextInput {
-            focus: cx.focus_handle(),
+            focus: cx.focus_handle().tab_stop(true),
             content: SharedString::default(),
             placeholder,
             selected: 0..0,
@@ -595,13 +595,24 @@ impl TextInput {
         cx.notify();
     }
 
-    fn on_key(&mut self, ev: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
+    fn on_key(&mut self, ev: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         let k = &ev.keystroke;
         if k.key == "escape" && self.menu.take().is_some() {
             cx.notify();
             return cx.stop_propagation();
         }
         let m = &k.modifiers;
+        // Tab goes to the next field, and Shift-Tab back; code keeps a plain
+        // Tab for itself, to indent.
+        if k.key == "tab" && !(m.control || m.alt || m.platform) && (self.code.is_none() || m.shift)
+        {
+            if m.shift {
+                window.focus_prev(cx);
+            } else {
+                window.focus_next(cx);
+            }
+            return cx.stop_propagation();
+        }
         // The platform's shortcut modifier: Cmd on macOS, Ctrl elsewhere.
         let cmd = if cfg!(target_os = "macos") {
             m.platform

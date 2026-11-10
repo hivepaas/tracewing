@@ -1375,11 +1375,26 @@ t6bc99e5c = 编辑后发送
 # Copy it as cURL
 tc99a11a3 = 复制为 cURL
 
+# The part before or after the one shown
+tdf4221d9 = 当前标签页的前一个或后一个
+
+# Save the body shown
+t20d9b7c0 = 保存当前显示的正文
+
 # Select all of the part shown
 tf9168168 = 全选当前显示的部分
 
 # Copy the selected text
 t00b090d3 = 复制所选文本
+
+# Send it on, as edited
+t8c35fa5a = 按修改后的内容发送
+
+# Send it on as it was
+t16f7abb5 = 按原样发送
+
+# Drop it
+t4e7f48b9 = 丢弃
 
 # The window
 t2af18488 = 窗口
@@ -1395,6 +1410,9 @@ ta5a7b9e9 = 显示或隐藏检查器
 
 # The inspector beside the list or below it
 t51e214f7 = 将检查器置于列表旁边或下方
+
+# The next or the previous field
+ta4b4bd5e = 下一个或上一个输入框
 
 # These shortcuts
 tbdf3b62b = 此快捷键列表

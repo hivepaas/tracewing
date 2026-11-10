@@ -5,7 +5,9 @@
 
 #![cfg(all(feature = "headless", target_os = "linux"))]
 
-use gpui::{AppContext as _, Entity, HeadlessAppContext, WindowHandle, px, size};
+use gpui::{
+    AppContext as _, Entity, Focusable as _, HeadlessAppContext, Keystroke, WindowHandle, px, size,
+};
 use std::{
     path::PathBuf,
     sync::Arc,
@@ -181,9 +183,18 @@ fn breakpoints_made_in_the_window_hold_traffic() {
     let request = send("/json?size=41");
     wait_for(&mut cx, window, "the held request", |view| held(view) == 1);
     shot(&mut cx, window.into(), "32-paused-request");
+    // Dropped from the keyboard, the window's keys being free.
     window
-        .update(&mut cx, |view, _, cx| view.drop_paused(cx))
+        .update(&mut cx, |view, window, cx| {
+            assert_eq!(view.screen, Screen::Paused);
+            window.focus(&view.focus_handle(cx), cx);
+        })
         .unwrap();
+    cx.update_window(window.into(), |_, window, cx| {
+        window.dispatch_keystroke(Keystroke::parse("secondary-backspace").unwrap(), cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
     let (status, text) = runtime.block_on(request).unwrap();
     assert_eq!(status, 502);
     assert!(text.contains("dropped at a breakpoint"), "{text}");

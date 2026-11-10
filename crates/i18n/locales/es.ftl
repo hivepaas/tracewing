@@ -1399,11 +1399,26 @@ t6bc99e5c = Editarlo y enviarlo
 # Copy it as cURL
 tc99a11a3 = Copiarlo como cURL
 
+# The part before or after the one shown
+tdf4221d9 = La parte anterior o siguiente a la mostrada
+
+# Save the body shown
+t20d9b7c0 = Guardar el cuerpo mostrado
+
 # Select all of the part shown
 tf9168168 = Seleccionar todo lo de la parte mostrada
 
 # Copy the selected text
 t00b090d3 = Copiar el texto seleccionado
+
+# Send it on, as edited
+t8c35fa5a = Enviarlo tal como se editó
+
+# Send it on as it was
+t16f7abb5 = Enviarlo tal como estaba
+
+# Drop it
+t4e7f48b9 = Descartarlo
 
 # The window
 t2af18488 = La ventana
@@ -1419,6 +1434,9 @@ ta5a7b9e9 = Mostrar u ocultar el inspector
 
 # The inspector beside the list or below it
 t51e214f7 = El inspector junto a la lista o debajo
+
+# The next or the previous field
+ta4b4bd5e = El campo siguiente o el anterior
 
 # These shortcuts
 tbdf3b62b = Estos atajos
