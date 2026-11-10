@@ -634,6 +634,27 @@ tfad4aaaa = 設定請求標頭
 # Set a response header
 tcbbc20d0 = 設定回應標頭
 
+# Remove a request header
+t5228dd84 = 移除請求標頭
+
+# Remove a response header
+teeb5735a = 移除回應標頭
+
+# Set a query parameter
+t73d9419b = 設定查詢參數
+
+# Remove a query parameter
+t12633da9 = 移除查詢參數
+
+# Change the request body
+t41101201 = 修改請求本文
+
+# Change the response body
+tdd259b73 = 修改回應本文
+
+# Change the status
+t4bbdfba8 = 修改狀態碼
+
 # Pause the request
 t40ecc39b = 暫停請求
 
@@ -653,7 +674,19 @@ tdfedd004 = 目標位址，例如 http://localhost:3000
 t80793085 = 標頭名稱
 
 # Its value
-t43968778 = 標頭值
+t43968778 = 值
+
+# Parameter's name
+t313c8e35 = 參數名稱
+
+# Text to find, or empty for the whole body
+t8255fc87 = 要尋找的文字，留空則取代整個本文
+
+# What to put in its place
+t03671fd5 = 取代成的內容
+
+# Status the client gets, like 500
+t5e4d3088 = 用戶端收到的狀態碼，例如 500
 
 # "{first}" is not a status
 td43128d3 = 「{ $first }」不是有效的狀態碼
@@ -672,6 +705,33 @@ taa230766 = 請求：{ $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = 回應：{ $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = 請求：去掉 { $header }
+
+# Response: no {header}
+t23960a2e = 回應：去掉 { $header }
+
+# Query: {name}={value}
+t0ee6c1c0 = 查詢：{ $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = 查詢：去掉 { $name }
+
+# Status {status}
+tad048e53 = 狀態碼 { $status }
+
+# Request body: {replace}
+te4856c36 = 請求本文：{ $replace }
+
+# Response body: {replace}
+t8600dc42 = 回應本文：{ $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = 請求本文：{ $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = 回應本文：{ $find } → { $replace }
 
 # Name
 t0fe07306 = 名稱
@@ -727,8 +787,8 @@ t35afca3b = 取消
 # Rules
 t428b2d80 = 規則
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = 規則從下一個請求開始生效，暫停錄製時同樣適用。依由上而下的順序：第一條符合的封鎖、檔案或主機規則生效，所有符合的標頭規則都會套用。
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = 規則從下一個請求起生效，暫停記錄時也一樣。由上而下：第一個符合的封鎖、檔案或主機規則生效，其他符合的規則依序全部生效。修改本文或狀態碼的規則，改的是伺服器送來的內容。
 
 # Import rules…
 t5edc205d = 匯入規則…

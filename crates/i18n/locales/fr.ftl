@@ -644,6 +644,27 @@ tfad4aaaa = Définir un en-tête de requête
 # Set a response header
 tcbbc20d0 = Définir un en-tête de réponse
 
+# Remove a request header
+t5228dd84 = Retirer un en-tête de requête
+
+# Remove a response header
+teeb5735a = Retirer un en-tête de réponse
+
+# Set a query parameter
+t73d9419b = Définir un paramètre de requête
+
+# Remove a query parameter
+t12633da9 = Retirer un paramètre de requête
+
+# Change the request body
+t41101201 = Changer le corps de la requête
+
+# Change the response body
+tdd259b73 = Changer le corps de la réponse
+
+# Change the status
+t4bbdfba8 = Changer le statut
+
 # Pause the request
 t40ecc39b = Mettre la requête en pause
 
@@ -665,6 +686,18 @@ t80793085 = Nom de l'en-tête
 # Its value
 t43968778 = Sa valeur
 
+# Parameter's name
+t313c8e35 = Nom du paramètre
+
+# Text to find, or empty for the whole body
+t8255fc87 = Texte à chercher, ou vide pour tout le corps
+
+# What to put in its place
+t03671fd5 = Ce qui prend sa place
+
+# Status the client gets, like 500
+t5e4d3088 = Statut que reçoit le client, comme 500
+
 # "{first}" is not a status
 td43128d3 = « { $first } » n'est pas un statut
 
@@ -682,6 +715,33 @@ taa230766 = Requête : { $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = Réponse : { $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = Requête : sans { $header }
+
+# Response: no {header}
+t23960a2e = Réponse : sans { $header }
+
+# Query: {name}={value}
+t0ee6c1c0 = Query : { $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = Query : sans { $name }
+
+# Status {status}
+tad048e53 = Statut { $status }
+
+# Request body: {replace}
+te4856c36 = Corps de la requête : { $replace }
+
+# Response body: {replace}
+t8600dc42 = Corps de la réponse : { $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = Corps de la requête : { $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = Corps de la réponse : { $find } → { $replace }
 
 # Name
 t0fe07306 = Nom
@@ -738,8 +798,8 @@ t35afca3b = Annuler
 # Rules
 t428b2d80 = Règles
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = Elles s'appliquent dès la prochaine requête, même quand la capture est en pause. De haut en bas : le premier blocage, fichier ou hôte l'emporte, et chaque règle d'en-tête correspondante s'applique.
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = Elles s’appliquent dès la requête suivante, même enregistrement en pause. De haut en bas : le premier blocage, fichier ou hôte l’emporte, et toute autre règle qui convient s’applique, dans l’ordre. Une règle qui change un corps ou un statut change ce que le serveur a envoyé.
 
 # Import rules…
 t5edc205d = Importer des règles…

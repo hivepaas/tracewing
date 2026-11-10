@@ -664,6 +664,27 @@ tfad4aaaa = Задати заголовок запиту
 # Set a response header
 tcbbc20d0 = Задати заголовок відповіді
 
+# Remove a request header
+t5228dd84 = Видалити заголовок запиту
+
+# Remove a response header
+teeb5735a = Видалити заголовок відповіді
+
+# Set a query parameter
+t73d9419b = Задати параметр запиту
+
+# Remove a query parameter
+t12633da9 = Видалити параметр запиту
+
+# Change the request body
+t41101201 = Змінити тіло запиту
+
+# Change the response body
+tdd259b73 = Змінити тіло відповіді
+
+# Change the status
+t4bbdfba8 = Змінити статус
+
 # Pause the request
 t40ecc39b = Призупинити запит
 
@@ -685,6 +706,18 @@ t80793085 = Назва заголовка
 # Its value
 t43968778 = Його значення
 
+# Parameter's name
+t313c8e35 = Назва параметра
+
+# Text to find, or empty for the whole body
+t8255fc87 = Текст для пошуку, або порожньо для всього тіла
+
+# What to put in its place
+t03671fd5 = Що поставити на його місце
+
+# Status the client gets, like 500
+t5e4d3088 = Статус, який отримає клієнт, наприклад 500
+
 # "{first}" is not a status
 td43128d3 = "{ $first }" не є статусом
 
@@ -702,6 +735,33 @@ taa230766 = Запит: { $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = Відповідь: { $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = Запит: без { $header }
+
+# Response: no {header}
+t23960a2e = Відповідь: без { $header }
+
+# Query: {name}={value}
+t0ee6c1c0 = Query: { $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = Query: без { $name }
+
+# Status {status}
+tad048e53 = Статус { $status }
+
+# Request body: {replace}
+te4856c36 = Тіло запиту: { $replace }
+
+# Response body: {replace}
+t8600dc42 = Тіло відповіді: { $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = Тіло запиту: { $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = Тіло відповіді: { $find } → { $replace }
 
 # Name
 t0fe07306 = Назва
@@ -760,8 +820,8 @@ t35afca3b = Скасувати
 # Rules
 t428b2d80 = Правила
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = Діють з наступного запиту, навіть коли запис призупинено. Згори донизу: перемагає перше правило блокування, файлу чи хоста, а всі відповідні правила заголовків застосовуються.
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = Правила діють з наступного запиту, і поки запис на паузі. Згори донизу: перемагає перше блокування, файл чи хост, а всі інші відповідні правила застосовуються по черзі. Правило, що змінює тіло чи статус, змінює те, що надіслав сервер.
 
 # Import rules…
 t5edc205d = Імпортувати правила…

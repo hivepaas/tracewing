@@ -644,6 +644,27 @@ tfad4aaaa = Establecer un encabezado de solicitud
 # Set a response header
 tcbbc20d0 = Establecer un encabezado de respuesta
 
+# Remove a request header
+t5228dd84 = Quitar un encabezado de solicitud
+
+# Remove a response header
+teeb5735a = Quitar un encabezado de respuesta
+
+# Set a query parameter
+t73d9419b = Establecer un parámetro de consulta
+
+# Remove a query parameter
+t12633da9 = Quitar un parámetro de consulta
+
+# Change the request body
+t41101201 = Cambiar el cuerpo de la solicitud
+
+# Change the response body
+tdd259b73 = Cambiar el cuerpo de la respuesta
+
+# Change the status
+t4bbdfba8 = Cambiar el estado
+
 # Pause the request
 t40ecc39b = Pausar la solicitud
 
@@ -665,6 +686,18 @@ t80793085 = Nombre del encabezado
 # Its value
 t43968778 = Su valor
 
+# Parameter's name
+t313c8e35 = Nombre del parámetro
+
+# Text to find, or empty for the whole body
+t8255fc87 = Texto a buscar, o vacío para todo el cuerpo
+
+# What to put in its place
+t03671fd5 = Lo que va en su lugar
+
+# Status the client gets, like 500
+t5e4d3088 = Estado que recibe el cliente, como 500
+
 # "{first}" is not a status
 td43128d3 = "{ $first }" no es un estado
 
@@ -682,6 +715,33 @@ taa230766 = Solicitud: { $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = Respuesta: { $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = Solicitud: sin { $header }
+
+# Response: no {header}
+t23960a2e = Respuesta: sin { $header }
+
+# Query: {name}={value}
+t0ee6c1c0 = Consulta: { $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = Consulta: sin { $name }
+
+# Status {status}
+tad048e53 = Estado { $status }
+
+# Request body: {replace}
+te4856c36 = Cuerpo de la solicitud: { $replace }
+
+# Response body: {replace}
+t8600dc42 = Cuerpo de la respuesta: { $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = Cuerpo de la solicitud: { $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = Cuerpo de la respuesta: { $find } → { $replace }
 
 # Name
 t0fe07306 = Nombre
@@ -738,8 +798,8 @@ t35afca3b = Cancelar
 # Rules
 t428b2d80 = Reglas
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = Se aplican desde la siguiente solicitud, también con la grabación en pausa. De arriba abajo: gana el primer bloqueo, archivo o host, y se aplica cada regla de encabezado que coincida.
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = Se aplican desde la siguiente solicitud, también con la grabación en pausa. De arriba abajo: el primer bloqueo, archivo o host gana, y toda otra regla que encaje se aplica, en orden. Una regla que cambia un cuerpo o un estado cambia lo que envió el servidor.
 
 # Import rules…
 t5edc205d = Importar reglas…

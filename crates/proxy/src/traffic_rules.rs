@@ -31,6 +31,37 @@ pub enum Action {
         header: String,
         value: String,
     },
+    RemoveRequestHeader {
+        header: String,
+    },
+    RemoveResponseHeader {
+        header: String,
+    },
+    /// The server's answer, with this status instead of its own.
+    SetStatus {
+        status: u16,
+    },
+    /// Gives the query this parameter, in place of one by the same name or
+    /// after the rest.
+    SetQuery {
+        name: String,
+        value: String,
+    },
+    RemoveQuery {
+        name: String,
+    },
+    /// Every `find` in the request's body becomes `replace`; with `find`
+    /// empty, the whole body does.
+    ReplaceRequestBody {
+        #[serde(default)]
+        find: String,
+        replace: String,
+    },
+    ReplaceResponseBody {
+        #[serde(default)]
+        find: String,
+        replace: String,
+    },
     /// Holds the request until the window lets it go, edited or not.
     PauseRequest,
     /// The same for the response, before the client gets it.
@@ -67,8 +98,16 @@ pub struct TrafficRules {
 pub struct Plan {
     /// Answered or sent elsewhere: the first such rule that matches, and only it.
     pub end: Option<End>,
-    pub request_headers: Vec<(HeaderName, HeaderValue)>,
-    pub response_headers: Vec<(HeaderName, HeaderValue)>,
+    /// Headers to set, or to take out where there is no value, in the rules' order.
+    pub request_headers: Vec<(HeaderName, Option<HeaderValue>)>,
+    pub response_headers: Vec<(HeaderName, Option<HeaderValue>)>,
+    /// Query parameters to set, or to take out where there is no value.
+    pub query: Vec<(String, Option<String>)>,
+    /// What to find in a body and what to put in its place, in the rules' order.
+    pub request_body: Vec<(String, String)>,
+    pub response_body: Vec<(String, String)>,
+    /// The status the client gets in place of the server's: the last rule's.
+    pub status: Option<u16>,
     /// Which rules touched it, to show on the flow.
     pub names: Vec<String>,
     /// The rule that holds the request, if one does.
@@ -183,6 +222,11 @@ fn header_pair(name: &str, value: &str) -> Result<(HeaderName, HeaderValue)> {
     ))
 }
 
+fn header_name(name: &str) -> Result<HeaderName> {
+    HeaderName::from_bytes(name.trim().as_bytes())
+        .with_context(|| format!("\"{name}\" cannot be a header's name"))
+}
+
 fn remote_uri(to: &str) -> Result<Uri> {
     let uri: Uri = to
         .trim()
@@ -221,7 +265,23 @@ impl TrafficRule {
             | Action::SetResponseHeader { header, value } => {
                 header_pair(header, value)?;
             }
-            Action::PauseRequest | Action::PauseResponse => {}
+            Action::RemoveRequestHeader { header } | Action::RemoveResponseHeader { header } => {
+                header_name(header)?;
+            }
+            Action::SetStatus { status } => {
+                if !(100..=999).contains(status) {
+                    bail!("{status} is not a status");
+                }
+            }
+            Action::SetQuery { name, .. } | Action::RemoveQuery { name } => {
+                if name.trim().is_empty() {
+                    bail!("a query parameter needs a name");
+                }
+            }
+            Action::ReplaceRequestBody { .. }
+            | Action::ReplaceResponseBody { .. }
+            | Action::PauseRequest
+            | Action::PauseResponse => {}
         }
         Ok(())
     }
@@ -360,11 +420,38 @@ impl TrafficRules {
                     Err(_) => false,
                 },
                 Action::SetRequestHeader { header, value } => header_pair(header, value)
-                    .map(|pair| plan.request_headers.push(pair))
+                    .map(|(name, value)| plan.request_headers.push((name, Some(value))))
                     .is_ok(),
                 Action::SetResponseHeader { header, value } => header_pair(header, value)
-                    .map(|pair| plan.response_headers.push(pair))
+                    .map(|(name, value)| plan.response_headers.push((name, Some(value))))
                     .is_ok(),
+                Action::RemoveRequestHeader { header } => header_name(header)
+                    .map(|name| plan.request_headers.push((name, None)))
+                    .is_ok(),
+                Action::RemoveResponseHeader { header } => header_name(header)
+                    .map(|name| plan.response_headers.push((name, None)))
+                    .is_ok(),
+                Action::SetStatus { status } => {
+                    plan.status = Some(*status);
+                    true
+                }
+                Action::SetQuery { name, value } => {
+                    plan.query
+                        .push((name.trim().to_owned(), Some(value.clone())));
+                    true
+                }
+                Action::RemoveQuery { name } => {
+                    plan.query.push((name.trim().to_owned(), None));
+                    true
+                }
+                Action::ReplaceRequestBody { find, replace } => {
+                    plan.request_body.push((find.clone(), replace.clone()));
+                    true
+                }
+                Action::ReplaceResponseBody { find, replace } => {
+                    plan.response_body.push((find.clone(), replace.clone()));
+                    true
+                }
                 Action::PauseRequest => {
                     plan.pause_request.get_or_insert_with(|| rule.name.clone());
                     true
@@ -383,6 +470,65 @@ impl TrafficRules {
     }
 }
 
+/// A query with parameters set and taken out, in order. A parameter set takes
+/// the place of the first by that name, and the others by that name go; one
+/// not there comes last. `None` when nothing is left.
+pub fn edit_query(query: Option<&str>, edits: &[(String, Option<String>)]) -> Option<String> {
+    let mut pairs: Vec<String> = query
+        .unwrap_or_default()
+        .split('&')
+        .filter(|pair| !pair.is_empty())
+        .map(str::to_owned)
+        .collect();
+    let name_of = |pair: &str| pair.split('=').next().unwrap_or_default().to_owned();
+    for (name, value) in edits {
+        let name = query_escape(name);
+        let first = pairs.iter().position(|pair| name_of(pair) == name);
+        pairs.retain(|pair| name_of(pair) != name);
+        if let Some(value) = value {
+            let pair = format!("{name}={}", query_escape(value));
+            pairs.insert(first.unwrap_or(pairs.len()).min(pairs.len()), pair);
+        }
+    }
+    (!pairs.is_empty()).then(|| pairs.join("&"))
+}
+
+/// Text for a query, escaped where a URL needs it.
+fn query_escape(text: &str) -> String {
+    let mut out = String::new();
+    for byte in text.bytes() {
+        if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
+            out.push(byte as char);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
+}
+
+/// A body with each `find` made its `replace`, in order. An empty `find` stands
+/// for the whole body.
+pub fn edit_body(body: Vec<u8>, edits: &[(String, String)]) -> Vec<u8> {
+    edits.iter().fold(body, |body, (find, replace)| {
+        if find.is_empty() {
+            return replace.as_bytes().to_vec();
+        }
+        let (find, replace) = (find.as_bytes(), replace.as_bytes());
+        let mut out = Vec::with_capacity(body.len());
+        let mut at = 0;
+        while at < body.len() {
+            if body[at..].starts_with(find) {
+                out.extend_from_slice(replace);
+                at += find.len();
+            } else {
+                out.push(body[at]);
+                at += 1;
+            }
+        }
+        out
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -395,6 +541,131 @@ mod tests {
             method: String::new(),
             action,
         }
+    }
+
+    #[test]
+    fn a_query_is_set_and_taken_from_in_order() {
+        let set = |name: &str, value: &str| (name.to_owned(), Some(value.to_owned()));
+        let drop = |name: &str| (name.to_owned(), None);
+        assert_eq!(
+            edit_query(Some("a=1&env=prod&b=2&env=old"), &[set("env", "dev")]).as_deref(),
+            Some("a=1&env=dev&b=2"),
+            "in place of the first, the others gone"
+        );
+        assert_eq!(
+            edit_query(Some("a=1"), &[set("q", "a b&c")]).as_deref(),
+            Some("a=1&q=a%20b%26c"),
+            "added last, escaped"
+        );
+        assert_eq!(edit_query(Some("debug=1"), &[drop("debug")]), None);
+        assert_eq!(
+            edit_query(None, &[set("x", "1"), drop("x"), set("y", "2")]).as_deref(),
+            Some("y=2")
+        );
+        assert_eq!(edit_query(Some("a=1&&b"), &[]).as_deref(), Some("a=1&b"));
+    }
+
+    #[test]
+    fn a_body_is_changed_wherever_it_says_so() {
+        let edit = |find: &str, replace: &str| (find.to_owned(), replace.to_owned());
+        assert_eq!(
+            edit_body(b"aXbXX".to_vec(), &[edit("X", "yy")]),
+            b"ayybyyyy"
+        );
+        assert_eq!(edit_body(b"anything".to_vec(), &[edit("", "{}")]), b"{}");
+        assert_eq!(
+            edit_body(b"one two".to_vec(), &[edit("one", "two"), edit("two", "2")]),
+            b"2 2",
+            "in order"
+        );
+        assert_eq!(edit_body(b"same".to_vec(), &[edit("none", "x")]), b"same");
+    }
+
+    #[test]
+    fn rewrites_are_planned_in_order_and_checked() {
+        let rules = TrafficRules {
+            rules: vec![
+                named(
+                    "keep",
+                    "a.dev",
+                    Action::SetRequestHeader {
+                        header: "x-a".to_owned(),
+                        value: "1".to_owned(),
+                    },
+                ),
+                named(
+                    "drop",
+                    "a.dev",
+                    Action::RemoveRequestHeader {
+                        header: "x-a".to_owned(),
+                    },
+                ),
+                named("teapot", "a.dev", Action::SetStatus { status: 418 }),
+                named("gone", "a.dev", Action::SetStatus { status: 410 }),
+                named(
+                    "query",
+                    "a.dev",
+                    Action::RemoveQuery {
+                        name: " debug ".to_owned(),
+                    },
+                ),
+                named(
+                    "body",
+                    "a.dev",
+                    Action::ReplaceResponseBody {
+                        find: "a".to_owned(),
+                        replace: "b".to_owned(),
+                    },
+                ),
+            ],
+        };
+        let plan = rules.plan("GET", "a.dev/x");
+        let headers: Vec<_> = plan
+            .request_headers
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.is_some()))
+            .collect();
+        assert_eq!(headers, [("x-a", true), ("x-a", false)]);
+        assert_eq!(plan.status, Some(410), "the last rule's");
+        assert_eq!(plan.query, [("debug".to_owned(), None)]);
+        assert_eq!(plan.response_body, [("a".to_owned(), "b".to_owned())]);
+        assert_eq!(plan.names.len(), 6);
+
+        assert!(
+            named("s", "a.dev", Action::SetStatus { status: 42 })
+                .check()
+                .is_err()
+        );
+        let nameless = Action::SetQuery {
+            name: " ".to_owned(),
+            value: "1".to_owned(),
+        };
+        assert!(named("q", "a.dev", nameless).check().is_err());
+        let bad = Action::RemoveResponseHeader {
+            header: "a b".to_owned(),
+        };
+        assert!(named("h", "a.dev", bad).check().is_err());
+    }
+
+    #[test]
+    fn a_body_rule_without_find_reads_from_a_file() {
+        let rules: TrafficRules = toml::from_str(
+            r#"
+            [[rules]]
+            name = "whole"
+            url = "a.dev"
+            action = "replace_response_body"
+            replace = "{}"
+            "#,
+        )
+        .unwrap();
+        assert_eq!(
+            rules.rules[0].action,
+            Action::ReplaceResponseBody {
+                find: String::new(),
+                replace: "{}".to_owned()
+            }
+        );
     }
 
     #[test]

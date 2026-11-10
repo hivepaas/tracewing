@@ -113,7 +113,7 @@ keyboard.
 |---|---|---|
 | Breakpoints on requests and responses: edit, then send on | Beta | Free |
 | Compose a request; replay one, edited or not | Beta | Free |
-| Rules: map to a local file or folder, map to another host, rewrite headers, body, status or query, block | Beta | Free: 3 on at once; Pro: no limit |
+| Rules: map to a local file or folder, map to another host, set or remove headers, change the body (find and replace, or all of it), the status or the query, block | Beta | Free: 3 on at once; Pro: no limit |
 | Slow network: bandwidth, latency, packet loss | 1.0 | Pro |
 | Scripts in JavaScript, run on requests and responses | 1.x | Pro |
 | Rule sets to import and export | 1.0 | Pro |

@@ -18,20 +18,39 @@ pub enum RuleKind {
     MapRemote,
     RequestHeader,
     ResponseHeader,
+    RemoveRequestHeader,
+    RemoveResponseHeader,
+    SetQuery,
+    RemoveQuery,
+    RequestBody,
+    ResponseBody,
+    Status,
     PauseRequest,
     PauseResponse,
 }
 
 impl RuleKind {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 14] = [
         Self::Block,
         Self::MapLocal,
         Self::MapRemote,
         Self::RequestHeader,
         Self::ResponseHeader,
+        Self::RemoveRequestHeader,
+        Self::RemoveResponseHeader,
+        Self::SetQuery,
+        Self::RemoveQuery,
+        Self::RequestBody,
+        Self::ResponseBody,
+        Self::Status,
         Self::PauseRequest,
         Self::PauseResponse,
     ];
+
+    /// Its second field is a body, written over several lines.
+    pub fn takes_a_body(self) -> bool {
+        matches!(self, Self::RequestBody | Self::ResponseBody)
+    }
 
     pub fn label(self) -> String {
         match self {
@@ -40,6 +59,13 @@ impl RuleKind {
             Self::MapRemote => tr!("Send to another host"),
             Self::RequestHeader => tr!("Set a request header"),
             Self::ResponseHeader => tr!("Set a response header"),
+            Self::RemoveRequestHeader => tr!("Remove a request header"),
+            Self::RemoveResponseHeader => tr!("Remove a response header"),
+            Self::SetQuery => tr!("Set a query parameter"),
+            Self::RemoveQuery => tr!("Remove a query parameter"),
+            Self::RequestBody => tr!("Change the request body"),
+            Self::ResponseBody => tr!("Change the response body"),
+            Self::Status => tr!("Change the status"),
             Self::PauseRequest => tr!("Pause the request"),
             Self::PauseResponse => tr!("Pause the response"),
         }
@@ -54,11 +80,22 @@ impl RuleKind {
             Self::RequestHeader | Self::ResponseHeader => {
                 (Some(tr!("Header's name")), Some(tr!("Its value")))
             }
+            Self::RemoveRequestHeader | Self::RemoveResponseHeader => {
+                (Some(tr!("Header's name")), None)
+            }
+            Self::SetQuery => (Some(tr!("Parameter's name")), Some(tr!("Its value"))),
+            Self::RemoveQuery => (Some(tr!("Parameter's name")), None),
+            Self::RequestBody | Self::ResponseBody => (
+                Some(tr!("Text to find, or empty for the whole body")),
+                Some(tr!("What to put in its place")),
+            ),
+            Self::Status => (Some(tr!("Status the client gets, like 500")), None),
             Self::PauseRequest | Self::PauseResponse => (None, None),
         }
     }
 
     fn action(self, first: &str, second: &str) -> Result<Action, String> {
+        let untrimmed = first;
         let first = first.trim();
         Ok(match self {
             Self::Block => Action::Block {
@@ -79,6 +116,33 @@ impl RuleKind {
             Self::ResponseHeader => Action::SetResponseHeader {
                 header: first.to_owned(),
                 value: second.to_owned(),
+            },
+            Self::RemoveRequestHeader => Action::RemoveRequestHeader {
+                header: first.to_owned(),
+            },
+            Self::RemoveResponseHeader => Action::RemoveResponseHeader {
+                header: first.to_owned(),
+            },
+            Self::SetQuery => Action::SetQuery {
+                name: first.to_owned(),
+                value: second.to_owned(),
+            },
+            Self::RemoveQuery => Action::RemoveQuery {
+                name: first.to_owned(),
+            },
+            // What to find is taken as typed: spaces may be what is looked for.
+            Self::RequestBody => Action::ReplaceRequestBody {
+                find: untrimmed.to_owned(),
+                replace: second.to_owned(),
+            },
+            Self::ResponseBody => Action::ReplaceResponseBody {
+                find: untrimmed.to_owned(),
+                replace: second.to_owned(),
+            },
+            Self::Status => Action::SetStatus {
+                status: first
+                    .parse()
+                    .map_err(|_| tr!("\"{first}\" is not a status", first = first))?,
             },
             Self::PauseRequest => Action::PauseRequest,
             Self::PauseResponse => Action::PauseResponse,
@@ -104,8 +168,46 @@ fn action_text(action: &Action) -> String {
                 value = value
             )
         }
+        Action::RemoveRequestHeader { header } => tr!("Request: no {header}", header = header),
+        Action::RemoveResponseHeader { header } => {
+            tr!("Response: no {header}", header = header)
+        }
+        Action::SetQuery { name, value } => {
+            tr!("Query: {name}={value}", name = name, value = value)
+        }
+        Action::RemoveQuery { name } => tr!("Query: no {name}", name = name),
+        Action::ReplaceRequestBody { find, replace } => body_text(true, find, replace),
+        Action::ReplaceResponseBody { find, replace } => body_text(false, find, replace),
+        Action::SetStatus { status } => tr!("Status {status}", status = *status),
         Action::PauseRequest => tr!("Pause the request"),
         Action::PauseResponse => tr!("Pause the response"),
+    }
+}
+
+/// A body rule in words, its texts cut to a line.
+fn body_text(request: bool, find: &str, replace: &str) -> String {
+    let short = |text: &str| {
+        let line = text.lines().next().unwrap_or_default();
+        let cut: String = line.chars().take(40).collect();
+        if cut.len() < text.len() {
+            format!("{cut}…")
+        } else {
+            cut
+        }
+    };
+    match (request, find.is_empty()) {
+        (true, true) => tr!("Request body: {replace}", replace = short(replace)),
+        (false, true) => tr!("Response body: {replace}", replace = short(replace)),
+        (true, false) => tr!(
+            "Request body: {find} → {replace}",
+            find = short(find),
+            replace = short(replace)
+        ),
+        (false, false) => tr!(
+            "Response body: {find} → {replace}",
+            find = short(find),
+            replace = short(replace)
+        ),
     }
 }
 
@@ -125,6 +227,23 @@ fn fields_of(action: &Action) -> (RuleKind, String, String) {
         Action::SetResponseHeader { header, value } => {
             (RuleKind::ResponseHeader, header.clone(), value.clone())
         }
+        Action::RemoveRequestHeader { header } => {
+            (RuleKind::RemoveRequestHeader, header.clone(), String::new())
+        }
+        Action::RemoveResponseHeader { header } => (
+            RuleKind::RemoveResponseHeader,
+            header.clone(),
+            String::new(),
+        ),
+        Action::SetQuery { name, value } => (RuleKind::SetQuery, name.clone(), value.clone()),
+        Action::RemoveQuery { name } => (RuleKind::RemoveQuery, name.clone(), String::new()),
+        Action::ReplaceRequestBody { find, replace } => {
+            (RuleKind::RequestBody, find.clone(), replace.clone())
+        }
+        Action::ReplaceResponseBody { find, replace } => {
+            (RuleKind::ResponseBody, find.clone(), replace.clone())
+        }
+        Action::SetStatus { status } => (RuleKind::Status, status.to_string(), String::new()),
         Action::PauseRequest => (RuleKind::PauseRequest, String::new(), String::new()),
         Action::PauseResponse => (RuleKind::PauseResponse, String::new(), String::new()),
     }
@@ -137,6 +256,10 @@ pub struct RulesPage {
     pub method: Entity<TextInput>,
     pub first: Entity<TextInput>,
     pub second: Entity<TextInput>,
+    /// The second field for a rule that changes a body, over several lines.
+    pub body: Entity<TextInput>,
+    /// The kind, for the fields' placeholders to say what they want.
+    shown: std::rc::Rc<std::cell::Cell<RuleKind>>,
     /// The rule the form is changing, or none for a new one.
     pub editing: Option<usize>,
     pub problem: Option<String>,
@@ -149,13 +272,36 @@ impl RulesPage {
         let field = |hint: fn() -> String, cx: &mut Context<Traffic>| {
             cx.new(|cx| TextInput::said(hint, cx))
         };
+        let shown = std::rc::Rc::new(std::cell::Cell::new(RuleKind::Block));
+        let hint = |second: bool, cx: &mut Context<Traffic>| {
+            let shown = std::rc::Rc::clone(&shown);
+            cx.new(move |cx| {
+                TextInput::said(
+                    move || {
+                        let (first, other) = shown.get().fields();
+                        if second { other } else { first }.unwrap_or_default()
+                    },
+                    cx,
+                )
+            })
+        };
+        let (first, second) = (hint(false, cx), hint(true, cx));
+        let body = {
+            let shown = std::rc::Rc::clone(&shown);
+            cx.new(move |cx| {
+                TextInput::said(move || shown.get().fields().1.unwrap_or_default(), cx)
+                    .multiline(3, 12)
+            })
+        };
         Self {
             kind: RuleKind::Block,
             name: field(|| tr!("Name"), cx),
             url: field(|| tr!("URL, like api.myapp.dev/v1/*"), cx),
             method: field(|| tr!("Method, or empty for all"), cx),
-            first: field(String::new, cx),
-            second: field(String::new, cx),
+            first,
+            second,
+            body,
+            shown,
             editing: None,
             problem: None,
             note: None,
@@ -327,7 +473,9 @@ impl Traffic {
     }
 
     pub fn set_rule_kind(&mut self, kind: RuleKind, cx: &mut Context<Self>) {
-        self.rules_form(cx).kind = kind;
+        let page = self.rules_form(cx);
+        page.kind = kind;
+        page.shown.set(kind);
         cx.notify();
     }
 
@@ -352,6 +500,7 @@ impl Traffic {
             (page.url.clone(), url),
             (page.first.clone(), first),
             (page.second.clone(), second),
+            (page.body.clone(), second),
         ];
         for (input, text) in inputs {
             set(&input, text, cx);
@@ -362,13 +511,17 @@ impl Traffic {
     pub fn save_rule(&mut self, cx: &mut Context<Self>) {
         let page = self.rules_form(cx);
         let read = |input: &Entity<TextInput>| input.read(cx).text().to_owned();
-        let (name, url, method, first, second) = (
+        let (name, url, method, first) = (
             read(&page.name),
             read(&page.url),
             read(&page.method),
             read(&page.first),
-            read(&page.second),
         );
+        let second = read(if page.kind.takes_a_body() {
+            &page.body
+        } else {
+            &page.second
+        });
         let (kind, editing) = (page.kind, page.editing);
         let made = kind.action(&first, &second).and_then(|action| {
             let rule = TrafficRule {
@@ -411,6 +564,7 @@ impl Traffic {
             page.method.clone(),
             page.first.clone(),
             page.second.clone(),
+            page.body.clone(),
         ];
         for input in fields {
             set(&input, "", cx);
@@ -425,14 +579,20 @@ impl Traffic {
         let (kind, first, second) = fields_of(&rule.action);
         let page = self.rules_form(cx);
         page.kind = kind;
+        page.shown.set(kind);
         page.editing = Some(at);
         page.problem = None;
+        let other = if kind.takes_a_body() {
+            page.body.clone()
+        } else {
+            page.second.clone()
+        };
         let inputs = [
             (page.name.clone(), rule.name),
             (page.url.clone(), rule.url),
             (page.method.clone(), rule.method),
             (page.first.clone(), first),
-            (page.second.clone(), second),
+            (other, second),
         ];
         for (input, text) in inputs {
             set(&input, &text, cx);
@@ -638,8 +798,23 @@ impl Traffic {
                         .flex_wrap()
                         .gap(px(8.))
                         .child(field(&page.first, true))
-                        .when_some(second_hint, |d, _| d.child(field(&page.second, true))),
+                        .when(second_hint.is_some() && !current.takes_a_body(), |d| {
+                            d.child(field(&page.second, true))
+                        }),
                 )
+                .when(current.takes_a_body(), |d| {
+                    d.child(
+                        div()
+                            .w_full()
+                            .px(px(12.))
+                            .py(px(8.))
+                            .rounded(px(12.))
+                            .bg(rgb(c.input))
+                            .font_family(crate::MONO_FONT)
+                            .font_features(gpui::FontFeatures::disable_ligatures())
+                            .child(page.body.clone()),
+                    )
+                })
             })
             .when(no_fields, |d| {
                 d.child(div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
@@ -713,7 +888,7 @@ impl Traffic {
                             .child(tr!("Rules")),
                     )
                     .child(div().text_color(rgb(c.muted)).child(tr!(
-                        "They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies."
+                        "They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent."
                     ))),
             )
             .child(

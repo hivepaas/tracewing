@@ -161,6 +161,25 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
             Full::new(Bytes::from(got.to_string())).boxed(),
         ));
     }
+    // What reached the server, to check what was changed on the way: the query,
+    // each header, and the body, a line each.
+    if req.uri().path() == "/echo" {
+        let mut text = format!("query={}\n", req.uri().query().unwrap_or(""));
+        for (name, value) in req.headers() {
+            text.push_str(&format!("{name}: {}\n", value.to_str().unwrap_or("?")));
+        }
+        let body = req
+            .into_body()
+            .collect()
+            .await
+            .map(|body| body.to_bytes())
+            .unwrap_or_default();
+        text.push_str(&format!("body={}", String::from_utf8_lossy(&body)));
+        return Ok(Response::builder()
+            .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
+            .body(Full::new(Bytes::from(text)).boxed())
+            .expect("valid response"));
+    }
     let query = parse_query(req.uri().query().unwrap_or(""));
     let number = |key: &str, default: u64| {
         query

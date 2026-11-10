@@ -1757,6 +1757,100 @@ async fn rules_change_traffic_and_say_so() {
     clean_up(conn, dir);
 }
 
+/// Rules that change what goes to the server and what comes back: a header
+/// taken out, the query, both bodies, and the status.
+#[tokio::test(flavor = "multi_thread")]
+async fn rules_rewrite_both_ways() {
+    let h = Harness::start("rewrite").await;
+    h.traffic_rules.write().unwrap().rules.extend([
+        rule(
+            "*/echo*",
+            Action::RemoveRequestHeader {
+                header: "x-secret".to_owned(),
+            },
+        ),
+        rule(
+            "*/echo*",
+            Action::SetQuery {
+                name: "env".to_owned(),
+                value: "staging two".to_owned(),
+            },
+        ),
+        rule(
+            "*/echo*",
+            Action::RemoveQuery {
+                name: "debug".to_owned(),
+            },
+        ),
+        rule(
+            "*/echo*",
+            Action::ReplaceRequestBody {
+                find: "alice".to_owned(),
+                replace: "bob".to_owned(),
+            },
+        ),
+        rule(
+            "*/echo*",
+            Action::ReplaceResponseBody {
+                find: "body=".to_owned(),
+                replace: "sent=".to_owned(),
+            },
+        ),
+        rule("*/echo*", Action::SetStatus { status: 418 }),
+        rule(
+            "*/json*",
+            Action::ReplaceResponseBody {
+                find: String::new(),
+                replace: "{\"whole\":true}".to_owned(),
+            },
+        ),
+    ]);
+    let client = h.client(false);
+
+    let res = client
+        .post(format!("{}/echo?debug=1&env=prod&page=2", h.origin))
+        .header("x-secret", "token")
+        .header("x-kept", "yes")
+        .body("hello alice, alice")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 418, "the server's status, changed");
+    let text = res.text().await.unwrap();
+    assert!(text.contains("query=env=staging%20two&page=2\n"), "{text}");
+    assert!(!text.contains("x-secret"), "{text}");
+    assert!(text.contains("x-kept: yes"), "{text}");
+    assert!(
+        text.ends_with("sent=hello bob, bob"),
+        "both bodies changed: {text}"
+    );
+
+    // Packed by the server: unpacked to be changed, and sent on unpacked.
+    let res = client
+        .get(format!("{}/json?size=500&enc=gzip", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    assert!(res.headers().get("content-encoding").is_none());
+    assert_eq!(res.text().await.unwrap(), r#"{"whole":true}"#);
+
+    let (_, conn, dir) = h.finish(2).await;
+    let (path, status): (String, i64) = conn
+        .query_row(
+            "SELECT path, status FROM flows WHERE path LIKE '/echo%'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        path, "/echo?env=staging%20two&page=2",
+        "what was sent is on record"
+    );
+    assert_eq!(status, 418, "and what the client got");
+    clean_up(conn, dir);
+}
+
 /// The first message held, once there is one. `client` is the request that
 /// should be held: if it ends first, it went through or failed, which is a
 /// bug, not a slow machine. The first request through a new proxy can take

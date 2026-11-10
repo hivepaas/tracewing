@@ -644,6 +644,27 @@ tfad4aaaa = İstek başlığı ayarla
 # Set a response header
 tcbbc20d0 = Yanıt başlığı ayarla
 
+# Remove a request header
+t5228dd84 = İstek başlığını kaldır
+
+# Remove a response header
+teeb5735a = Yanıt başlığını kaldır
+
+# Set a query parameter
+t73d9419b = Sorgu parametresi ayarla
+
+# Remove a query parameter
+t12633da9 = Sorgu parametresini kaldır
+
+# Change the request body
+t41101201 = İstek gövdesini değiştir
+
+# Change the response body
+tdd259b73 = Yanıt gövdesini değiştir
+
+# Change the status
+t4bbdfba8 = Durumu değiştir
+
 # Pause the request
 t40ecc39b = İsteği duraklat
 
@@ -665,6 +686,18 @@ t80793085 = Başlığın adı
 # Its value
 t43968778 = Değeri
 
+# Parameter's name
+t313c8e35 = Parametrenin adı
+
+# Text to find, or empty for the whole body
+t8255fc87 = Aranacak metin, ya da tüm gövde için boş
+
+# What to put in its place
+t03671fd5 = Yerine konacak
+
+# Status the client gets, like 500
+t5e4d3088 = İstemcinin alacağı durum, örneğin 500
+
 # "{first}" is not a status
 td43128d3 = "{ $first }" bir durum kodu değil
 
@@ -682,6 +715,33 @@ taa230766 = İstek: { $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = Yanıt: { $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = İstek: { $header } yok
+
+# Response: no {header}
+t23960a2e = Yanıt: { $header } yok
+
+# Query: {name}={value}
+t0ee6c1c0 = Sorgu: { $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = Sorgu: { $name } yok
+
+# Status {status}
+tad048e53 = Durum { $status }
+
+# Request body: {replace}
+te4856c36 = İstek gövdesi: { $replace }
+
+# Response body: {replace}
+t8600dc42 = Yanıt gövdesi: { $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = İstek gövdesi: { $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = Yanıt gövdesi: { $find } → { $replace }
 
 # Name
 t0fe07306 = Ad
@@ -738,8 +798,8 @@ t35afca3b = İptal
 # Rules
 t428b2d80 = Kurallar
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = Sonraki istekten itibaren, kayıt duraklatılmışken de geçerlidir. Yukarıdan aşağıya: ilk engelleme, dosya ya da host kazanır ve uyan her başlık kuralı uygulanır.
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = Kurallar sonraki istekten itibaren, kayıt duraklatılmışken de geçerlidir. Yukarıdan aşağıya: ilk engelleme, dosya ya da host kazanır, uyan diğer her kural sırayla uygulanır. Gövdeyi ya da durumu değiştiren bir kural, sunucunun gönderdiğini değiştirir.
 
 # Import rules…
 t5edc205d = Kuralları içe aktar…

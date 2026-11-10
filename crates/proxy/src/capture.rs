@@ -13,7 +13,7 @@ use crate::ca::CRL_PATH;
 use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
 use crate::throttle::{Conditions, Direction, Network};
-use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of};
+use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of, edit_body, edit_query};
 use crate::upstream::{TlsFailure, Upstream};
 use bytes::Bytes;
 use http::{HeaderName, HeaderValue, Method, Request, Response, StatusCode, header};
@@ -189,8 +189,13 @@ pub struct FlowHandler {
     network: Arc<Network>,
     /// What slowed the request this clone is handling, to slow its response too.
     slowed: Option<Conditions>,
-    /// Headers rules set on the response of the request this clone is handling.
-    response_headers: Vec<(HeaderName, HeaderValue)>,
+    /// Headers rules set, or take out, on the response of the request this
+    /// clone is handling.
+    response_headers: Vec<(HeaderName, Option<HeaderValue>)>,
+    /// The status rules give that response in place of the server's.
+    response_status: Option<u16>,
+    /// What rules change in that response's body.
+    response_body: Vec<(String, String)>,
     /// The rule that holds its response, with the request's method and URL.
     pause_response: Option<(String, String, String)>,
     /// WebSockets from their upgrade until they end. hudsucker tells the handler of
@@ -238,6 +243,8 @@ impl FlowHandler {
             network: controls.network,
             slowed: None,
             response_headers: Vec::new(),
+            response_status: None,
+            response_body: Vec::new(),
             pause_response: None,
             websockets: Arc::default(),
             flow: None,
@@ -333,7 +340,10 @@ impl FlowHandler {
         // A rule that says what `Alt-Svc` is means it.
         let hide_http3 = self.hide_http3 && !set.iter().any(|(name, _)| name == header::ALT_SVC);
         for (name, value) in set {
-            res.headers_mut().insert(name, value);
+            match value {
+                Some(value) => res.headers_mut().insert(name, value),
+                None => res.headers_mut().remove(name),
+            };
         }
         // Written down as the server sent it.
         if let Some(flow) = &flow {
@@ -357,6 +367,35 @@ impl FlowHandler {
 }
 
 impl FlowHandler {
+    /// The server's response with the status and body rules give it. A body
+    /// is changed whole, unpacked, and only up to `HOLD_MAX`, as at a
+    /// breakpoint; events and upgrades go on as they come.
+    async fn rewrite_response(&mut self, mut res: Response<Body>) -> Response<Body> {
+        if let Some(status) = self.response_status.take()
+            && let Ok(status) = StatusCode::from_u16(status)
+            && res.status() != StatusCode::SWITCHING_PROTOCOLS
+        {
+            *res.status_mut() = status;
+        }
+        let edits = std::mem::take(&mut self.response_body);
+        if edits.is_empty()
+            || is_event_stream(&res)
+            || res.status() == StatusCode::SWITCHING_PROTOCOLS
+        {
+            return res;
+        }
+        let held = match pause::response_message(res, "", "").await {
+            Read::Held(held) => held,
+            Read::Passed(res) => return res,
+        };
+        let mut message = held.message.clone();
+        message.body = edit_body(message.body, &edits);
+        pause::response_from(message).unwrap_or_else(|problem| {
+            tracing::warn!("a response cannot go on as a rule changed it: {problem}");
+            held.unchanged()
+        })
+    }
+
     /// The request's body, through the slow network going up, if there is one.
     fn slow_request(&self, req: Request<Body>) -> Request<Body> {
         match &self.slowed {
@@ -367,6 +406,49 @@ impl FlowHandler {
             None => req,
         }
     }
+}
+
+/// A request with its query and body as rules say. A body is changed whole,
+/// unpacked, and only up to `HOLD_MAX`, as at a breakpoint.
+async fn rewrite_request(
+    mut req: Request<Body>,
+    query: &[(String, Option<String>)],
+    body: &[(String, String)],
+    streams: bool,
+) -> Request<Body> {
+    if !query.is_empty() {
+        let uri = req.uri().clone();
+        let path = uri.path().to_owned();
+        let edited = edit_query(uri.query(), query);
+        let mut parts = uri.into_parts();
+        let path_and_query = match edited {
+            Some(query) => format!("{path}?{query}"),
+            None => path,
+        };
+        match path_and_query.parse() {
+            Ok(path_and_query) => {
+                parts.path_and_query = Some(path_and_query);
+                if let Ok(uri) = http::Uri::from_parts(parts) {
+                    *req.uri_mut() = uri;
+                }
+            }
+            Err(e) => tracing::warn!("a rule's query cannot be sent: {e}"),
+        }
+    }
+    if body.is_empty() || streams {
+        return req;
+    }
+    let url = full_url(&req);
+    let held = match pause::request_message(req, url).await {
+        Read::Held(held) => held,
+        Read::Passed(req) => return req,
+    };
+    let mut message = held.message.clone();
+    message.body = edit_body(message.body, body);
+    pause::request_from(message).unwrap_or_else(|problem| {
+        tracing::warn!("a request cannot go on as a rule changed it: {problem}");
+        held.unchanged()
+    })
 }
 
 /// Takes the offers of HTTP/3 out of a response's `Alt-Svc`. With none left, it
@@ -551,7 +633,11 @@ impl HttpHandler for FlowHandler {
                 .into();
         }
         let mut req = req;
-        let plan = self.plan_for(&req);
+        let mut plan = self.plan_for(&req);
+        // Set now, so that nothing is left over from the request before.
+        self.response_headers = std::mem::take(&mut plan.response_headers);
+        self.response_status = plan.status;
+        self.response_body = std::mem::take(&mut plan.response_body);
         let url = full_url(&req);
         // A stream's body never ends, so it could not be held whole.
         let streams = is_websocket(&req);
@@ -568,6 +654,11 @@ impl HttpHandler for FlowHandler {
         {
             (req, dropped) = self.hold_request(req, rule, url).await;
         }
+        // Before the flow starts, so that it shows what was sent, as an edit at a
+        // breakpoint does.
+        if !dropped && plan.end.is_none() {
+            req = rewrite_request(req, &plan.query, &plan.request_body, streams).await;
+        }
         // Paused: traffic goes through as if nothing were watching, rules and all.
         let recording = self.recording.load(Ordering::Relaxed);
         let flow =
@@ -582,9 +673,11 @@ impl HttpHandler for FlowHandler {
         if dropped {
             return self.answer_as_rule(flow, pause::dropped()).into();
         }
-        self.response_headers = plan.response_headers;
         for (name, value) in plan.request_headers {
-            req.headers_mut().insert(name, value);
+            match value {
+                Some(value) => req.headers_mut().insert(name, value),
+                None => req.headers_mut().remove(name),
+            };
         }
         match plan.end {
             Some(End::Block(status)) => {
@@ -683,6 +776,7 @@ impl HttpHandler for FlowHandler {
             }
             _ => res,
         };
+        let res = self.rewrite_response(res).await;
         let slowed = self.slowed.take();
         if let Some(conditions) = &slowed {
             Network::half_latency(conditions).await;
