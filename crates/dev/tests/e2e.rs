@@ -196,6 +196,18 @@ fn request_of(conn: &Connection, dir: &std::path::Path, id: i64) -> Option<Vec<u
     BodyReader::new(&dir.join("session")).unpacked(&body, usize::MAX)
 }
 
+/// The id of the one flow that fits `condition`. Flows sent one after another
+/// are not always written in that order: a flow is written when the proxy lets
+/// go of its last body, which on a slow machine can be after the next one's.
+fn id_of(conn: &Connection, condition: &str) -> i64 {
+    conn.query_row(
+        &format!("SELECT id FROM flows WHERE {condition}"),
+        [],
+        |r| r.get(0),
+    )
+    .unwrap_or_else(|e| panic!("no one flow where {condition}: {e}"))
+}
+
 /// What a viewer gets for the response of a flow.
 fn response_of(conn: &Connection, dir: &std::path::Path, id: i64) -> Option<Vec<u8>> {
     let body = stored_body(conn, id, "resp").unwrap();
@@ -227,13 +239,15 @@ async fn intercepts_http1_and_http2() {
     assert_eq!(summary.dropped, 0);
     let flows = rows(&conn, &format!("{FLOW_COLUMNS} ORDER BY id"));
     assert_eq!(flows.len(), 2, "{flows:?}");
-    assert_eq!(flows[0].0, "HTTP/1.1");
-    assert_eq!(flows[1].0, "HTTP/2.0");
-    for (i, (_, path, status, resp_bytes, truncated)) in flows.iter().enumerate() {
+    let mut versions: Vec<&str> = flows.iter().map(|f| f.0.as_str()).collect();
+    versions.sort_unstable();
+    assert_eq!(versions, ["HTTP/1.1", "HTTP/2.0"]);
+    for (version, path, status, resp_bytes, truncated) in &flows {
         assert_eq!(path, "/json?size=300");
         assert_eq!(*status, Some(200));
         assert_eq!(*resp_bytes, 300);
-        let body = response_of(&conn, &dir, i as i64 + 1).unwrap();
+        let id = id_of(&conn, &format!("client_version = '{version}'"));
+        let body = response_of(&conn, &dir, id).unwrap();
         assert_eq!(body.len(), 300);
         assert!(body.starts_with(br#"{"data":"#));
         assert_eq!(*truncated, 0);
@@ -325,7 +339,8 @@ async fn streams_without_buffering() {
     wait_for_row(&open, "sse", |row| !row.0).await;
     drop(open);
     let (_, conn, dir) = h.finish(2).await;
-    let body = String::from_utf8(response_of(&conn, &dir, 2).unwrap()).unwrap();
+    let stream = id_of(&conn, "kind = 'sse'");
+    let body = String::from_utf8(response_of(&conn, &dir, stream).unwrap()).unwrap();
     assert_eq!(body.matches("data: event").count(), 4);
     clean_up(conn, dir);
 }
@@ -450,11 +465,15 @@ async fn spools_whole_bodies_past_the_cap() {
     assert_eq!(lost, 0);
     let kept = std::fs::read(dir.join("session/files").join(name)).unwrap();
     assert!(kept == sent, "the file holds exactly what the client got");
+    let (large_id, small_id) = (
+        id_of(&conn, &format!("resp_bytes = {SIZE}")),
+        id_of(&conn, "resp_bytes = 300"),
+    );
     assert!(
-        response_of(&conn, &dir, 2).unwrap() == sent,
+        response_of(&conn, &dir, large_id).unwrap() == sent,
         "and a viewer finds it"
     );
-    assert_eq!(response_of(&conn, &dir, 1).unwrap(), small);
+    assert_eq!(response_of(&conn, &dir, small_id).unwrap(), small);
 
     let none: Option<String> = conn
         .query_row(
@@ -676,7 +695,7 @@ async fn the_settings_are_obeyed() {
     let (_, conn, dir) = h.finish(2).await;
     let (len, ours): (i64, bool) = conn
         .query_row(
-            "SELECT resp_len, resp_zstd FROM flows WHERE id = 1",
+            "SELECT resp_len, resp_zstd FROM flows WHERE resp_bytes = 500",
             [],
             |r| Ok((r.get(0)?, r.get(1)?)),
         )
@@ -685,19 +704,20 @@ async fn the_settings_are_obeyed() {
 
     let (lost, truncated): (bool, bool) = conn
         .query_row(
-            "SELECT resp_spool_lost, resp_truncated FROM flows WHERE id = 2",
+            "SELECT resp_spool_lost, resp_truncated FROM flows WHERE resp_bytes > 500",
             [],
             |r| Ok((r.get(0)?, r.get(1)?)),
         )
         .unwrap();
     assert!(lost && truncated, "body_max_mib");
-    let kept = response_of(&conn, &dir, 2).unwrap().len();
+    let large = id_of(&conn, "resp_bytes > 500");
+    let kept = response_of(&conn, &dir, large).unwrap().len();
     assert!(kept <= 1 << 20 && kept > 0, "body_max_mib, kept {kept}");
 
     let session_dir = dir.join("session");
     assert_eq!(
         search::find(&session_dir, "urls", "size=500", 1).unwrap(),
-        [1]
+        [id_of(&conn, "resp_bytes = 500")]
     );
     assert!(
         search::find(&session_dir, "bodies", "data", 1).is_err(),
@@ -849,7 +869,8 @@ async fn offers_of_http3_do_not_reach_the_client() {
     );
     let (_, conn, dir) = h.finish(2).await;
     let mut reader = BodyReader::new(&dir.join("session"));
-    let (_, response) = session::stored_headers(&conn, &mut reader, 1)
+    let offered = id_of(&conn, "path = '/alt-svc'");
+    let (_, response) = session::stored_headers(&conn, &mut reader, offered)
         .unwrap()
         .expect("kept");
     drop(reader);
@@ -914,7 +935,7 @@ async fn a_pause_records_nothing_and_lets_traffic_through() {
     let (summary, conn, dir) = h.finish(2).await;
     assert_eq!(summary.written, 2);
     let sizes: Vec<i64> = conn
-        .prepare("SELECT resp_bytes FROM flows ORDER BY id")
+        .prepare("SELECT resp_bytes FROM flows ORDER BY resp_bytes")
         .unwrap()
         .query_map([], |r| r.get(0))
         .unwrap()
@@ -1198,7 +1219,8 @@ async fn a_posted_stream_keeps_the_bodies_after_it() {
         .await
         .unwrap();
     let (summary, conn, dir) = h.finish(2).await;
-    let after = response_of(&conn, &dir, 2).expect("the body after the stream was kept");
+    let after = response_of(&conn, &dir, id_of(&conn, "path = '/json?size=40'"))
+        .expect("the body after the stream was kept");
     assert_eq!(after.len(), 40);
     let shed: i64 = conn
         .query_row(
