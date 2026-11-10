@@ -99,7 +99,7 @@ keyboard.
 
 | Feature | Milestone | Plan |
 |---|---|---|
-| Overview: timing (DNS, connect, TLS, waiting, download), sizes, protocol on each side, the client app | Beta | Free |
+| Overview: timing (DNS, connect, TLS, waiting, download), the size each way, protocol on each side, the client app | Beta | Free |
 | Headers, cookies, query and form fields | Beta | Free |
 | Bodies: JSON laid out and folded by object and array (bodies of any size), text, HTML, JavaScript and CSS highlighted, images, hex for any body; gzip, Brotli, zstd and deflate decoded for display | Beta | Free |
 | JWTs decoded | Beta | Free |

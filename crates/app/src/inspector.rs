@@ -7,7 +7,7 @@ use crate::{
     colors::colors,
     connection::Certificate,
     cookies,
-    detail::{Detail, Phase, Side, body_file},
+    detail::{BodyFacts, Detail, Phase, Side, body_file},
     devices::device_of,
     fields::{self, Field, Value as FieldValue},
     flows::{size_text, time_text},
@@ -1375,11 +1375,7 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
             .gap(px(6.))
             .child(plain(tr!("Tunnel, not decrypted")));
     }
-    let encoding = detail.response.stored.encoding.clone();
-    let size = match encoding {
-        Some(encoding) => format!("{} · {encoding}", size_text(detail.response.bytes)),
-        None => size_text(detail.response.bytes),
-    };
+    let size = size_chip_text(&detail.request, &detail.response);
     div()
         .flex()
         .flex_row()
@@ -1419,6 +1415,20 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
                         .rounded(px(12.))
                 }),
         )
+}
+
+/// How much went each way, and how it was packed: the response alone, or with
+/// what was sent before it when a body was, `↑ 2.1 KB · ↓ 1.3 KB · gzip`.
+fn size_chip_text(request: &BodyFacts, response: &BodyFacts) -> String {
+    let side = |facts: &BodyFacts| match &facts.stored.encoding {
+        Some(encoding) => format!("{} · {encoding}", size_text(facts.bytes)),
+        None => size_text(facts.bytes),
+    };
+    if request.bytes > 0 {
+        format!("↑ {} · ↓ {}", side(request), side(response))
+    } else {
+        side(response)
+    }
 }
 
 /// Each step of the time, on one scale. Over a connection made before there is
@@ -1985,6 +1995,25 @@ fn render_jwt(jwt: Jwt, sel: &Selection) -> Div {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_size_says_both_ways_when_a_body_was_sent() {
+        let mut request = BodyFacts::default();
+        let response = BodyFacts {
+            bytes: 1300,
+            stored: tracewing_store::session::StoredBody {
+                encoding: Some("gzip".to_owned()),
+                ..Default::default()
+            },
+            ..BodyFacts::default()
+        };
+        assert_eq!(size_chip_text(&request, &response), "1.3 KB · gzip");
+        request.bytes = 2100;
+        assert_eq!(
+            size_chip_text(&request, &response),
+            "↑ 2.1 KB · ↓ 1.3 KB · gzip"
+        );
+    }
 
     #[test]
     fn statuses_read_as_words() {
