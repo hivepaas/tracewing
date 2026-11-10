@@ -260,12 +260,17 @@ mod tests {
         let body = |text: &str, mime: &str| {
             String::from_utf8(super::body(text.as_bytes(), Some(mime))).unwrap()
         };
+        // Compared as JSON: the keys' order is serde_json's to keep or not,
+        // as the features the workspace asks of it say.
+        let json = |text: &str| serde_json::from_str::<Value>(text).unwrap();
         assert_eq!(
-            body(
+            json(&body(
                 r#"{"user":"ana","password":"p","tokens":{"access_token":"a","list":[1]},"items":[{"apiKey":"k"}]}"#,
                 "application/json"
-            ),
-            r#"{"items":[{"apiKey":"(removed)"}],"password":"(removed)","tokens":{"access_token":"(removed)","list":[1]},"user":"ana"}"#
+            )),
+            json(
+                r#"{"items":[{"apiKey":"(removed)"}],"password":"(removed)","tokens":{"access_token":"(removed)","list":[1]},"user":"ana"}"#
+            )
         );
         assert_eq!(
             body(
