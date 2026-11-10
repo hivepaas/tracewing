@@ -907,8 +907,8 @@ tae8622fc = Buka file sesi
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, .saz Fiddler, atau .chlsj Charles
 
-# Exported HAR files leave out tokens and cookies
-td4a2f543 = File HAR yang diekspor tidak menyertakan token dan cookie
+# Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
+t3435c213 = File HAR yang diekspor tidak menyertakan cookie, token, kunci, dan kata sandi, di header, URL, dan body
 
 # Other devices
 t9e7d8362 = Perangkat lain

@@ -30,20 +30,15 @@ use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 pub const BODY_MAX: usize = 64 << 20;
 /// The most messages of one WebSocket that go in a HAR.
 const MESSAGES_MAX: usize = 100_000;
-/// Headers whose values are left out when asked to, with the cookies.
-const SECRET_HEADERS: [&str; 4] = [
-    "authorization",
-    "proxy-authorization",
-    "cookie",
-    "set-cookie",
-];
-const REMOVED: &str = "(removed)";
+use crate::secrets;
 /// How far back to look for the flow that has a connection's facts.
 const CONNECTION_LOOKBACK: i64 = 50_000;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ExportOptions {
-    /// Leave out the values of headers that carry credentials, and the cookies.
+    /// Leave out what would let a reader act as the user: cookies, and the
+    /// values of headers, query and form fields and JSON keys whose names say
+    /// they are secret, and JWTs wherever they are. See [`secrets`].
     pub without_secrets: bool,
 }
 
@@ -206,10 +201,34 @@ impl Row {
             }
             Some(bytes)
         };
-        let request_body = body(&self.request, "request");
-        let response_body = body(&self.response, "response");
         let secret = options.without_secrets;
-        let url = self.url();
+        let clean = |bytes: Option<Vec<u8>>, mime: Option<&str>| {
+            bytes.map(|bytes| {
+                if secret {
+                    secrets::body(&bytes, mime)
+                } else {
+                    bytes
+                }
+            })
+        };
+        let request_body = clean(
+            body(&self.request, "request"),
+            self.req_content_type.as_deref(),
+        );
+        let response_body = clean(
+            body(&self.response, "response"),
+            self.content_type.as_deref(),
+        );
+        let url = if secret {
+            secrets::url(&self.url())
+        } else {
+            self.url()
+        };
+        let path = if secret {
+            secrets::url(&self.path)
+        } else {
+            self.path.clone()
+        };
 
         let mut request = json!({
             "method": self.method,
@@ -217,7 +236,7 @@ impl Row {
             "httpVersion": self.client_version,
             "cookies": if secret { Vec::new() } else { request_cookies(&request_headers) },
             "headers": header_list(&request_headers, secret),
-            "queryString": query_string(&self.path),
+            "queryString": query_string(&path),
             "headersSize": -1,
             "bodySize": self.req_bytes,
         });
@@ -251,7 +270,15 @@ impl Row {
             "cookies": if secret { Vec::new() } else { response_cookies(&response_headers) },
             "headers": header_list(&response_headers, secret),
             "content": content,
-            "redirectURL": header(&response_headers, "location").unwrap_or_default(),
+            "redirectURL": header(&response_headers, "location")
+                .map(|location| {
+                    if secret {
+                        secrets::url(location)
+                    } else {
+                        location.to_owned()
+                    }
+                })
+                .unwrap_or_default(),
             "headersSize": -1,
             "bodySize": self.resp_bytes,
         });
@@ -302,7 +329,7 @@ impl Row {
             ));
         }
         if self.kind == "websocket" {
-            entry["_webSocketMessages"] = json!(messages(flows, reader, self.id)?);
+            entry["_webSocketMessages"] = json!(messages(flows, reader, self.id, secret)?);
         }
         Ok(entry)
     }
@@ -321,7 +348,12 @@ fn put_text(object: &mut Value, bytes: &[u8], mime: Option<&str>) {
     }
 }
 
-fn messages(flows: &Connection, reader: &mut BodyReader, id: i64) -> Result<Vec<Value>> {
+fn messages(
+    flows: &Connection,
+    reader: &mut BodyReader,
+    id: i64,
+    without_secrets: bool,
+) -> Result<Vec<Value>> {
     let mut out = Vec::new();
     let mut after = 0;
     while out.len() < MESSAGES_MAX {
@@ -344,6 +376,10 @@ fn messages(flows: &Connection, reader: &mut BodyReader, id: i64) -> Result<Vec<
                 .and_then(|place| reader.read_place(place).ok())
                 .unwrap_or_default();
             let data = match (opcode, String::from_utf8(data)) {
+                (1, Ok(text)) if without_secrets => {
+                    String::from_utf8(secrets::body(text.as_bytes(), Some("application/json")))
+                        .unwrap_or(text)
+                }
                 (1, Ok(text)) => text,
                 (_, Ok(text)) if opcode != 2 => text,
                 (_, Ok(text)) => STANDARD.encode(text),
@@ -403,9 +439,12 @@ fn header_list(headers: &Headers, without_secrets: bool) -> Vec<Value> {
     headers
         .iter()
         .map(|(name, value)| {
-            let secret =
-                without_secrets && SECRET_HEADERS.contains(&name.to_ascii_lowercase().as_str());
-            json!({ "name": name, "value": if secret { REMOVED } else { value } })
+            let value = if without_secrets {
+                secrets::header_value(name, value)
+            } else {
+                value.clone()
+            };
+            json!({ "name": name, "value": value })
         })
         .collect()
 }
@@ -747,6 +786,7 @@ fn body_bytes(text: &str, encoding: Option<&str>) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::secrets::REMOVED;
 
     fn temp(name: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!("tracewing-har-{name}-{}", std::process::id()));
@@ -871,6 +911,51 @@ mod tests {
                 .iter()
                 .any(|h| h["name"] == "authorization" && h["value"] == REMOVED)
         );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn secrets_go_wherever_they_are() {
+        const JWT: &str = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0MiJ9.c2lnbmF0dXJl";
+        let har = format!(
+            r#"{{"log":{{"version":"1.2","creator":{{"name":"x","version":"1"}},"entries":[
+              {{"startedDateTime":"2026-11-07T10:00:00Z","time":5,
+               "request":{{"method":"POST","url":"https://api.test/login?page=2&api_key=SECRET-K1","httpVersion":"h2",
+                 "headers":[{{"name":"content-type","value":"application/json"}},{{"name":"X-Api-Key","value":"SECRET-K2"}}],
+                 "postData":{{"mimeType":"application/json","text":"{{\"user\":\"ana\",\"password\":\"SECRET-P1\"}}"}}}},
+               "response":{{"status":302,"httpVersion":"h2",
+                 "headers":[{{"name":"content-type","value":"application/json"}},{{"name":"location","value":"https://app.test/cb?code=SECRET-C1"}}],
+                 "content":{{"size":40,"mimeType":"application/json","text":"{{\"access_token\":\"SECRET-T1\",\"id\":\"{JWT}\"}}"}}}},
+               "timings":{{"send":0,"wait":4,"receive":1}}}}
+            ]}}}}"#
+        );
+        let dir = temp("secrets-everywhere");
+        let session = dir.join("imported");
+        import(har.as_bytes(), &session, "x", &StorageSettings::default()).unwrap();
+        let mut out = Vec::new();
+        export(
+            &session,
+            None,
+            ExportOptions {
+                without_secrets: true,
+            },
+            &mut out,
+        )
+        .unwrap();
+        let text = String::from_utf8(out).unwrap();
+        for secret in [
+            "SECRET-K1",
+            "SECRET-K2",
+            "SECRET-P1",
+            "SECRET-C1",
+            "SECRET-T1",
+            JWT,
+        ] {
+            assert!(!text.contains(secret), "{secret} in {text}");
+        }
+        for kept in ["page=2", "ana", "content-type"] {
+            assert!(text.contains(kept), "{kept} gone from {text}");
+        }
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

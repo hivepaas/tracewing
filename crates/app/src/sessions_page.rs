@@ -342,7 +342,10 @@ impl Traffic {
                             .border_color(rgb(if without { c.accent } else { c.muted }))
                             .when(without, |d| d.bg(rgb(c.accent))),
                     )
-                    .child(tr!("Exported HAR files leave out tokens and cookies"))
+                    .child(tr!(
+                        "Exported HAR files leave out cookies, tokens, keys and passwords, in \
+                         headers, URLs and bodies"
+                    ))
                     .on_click(cx.listener(move |this, _, _, cx| {
                         this.set_har_without_secrets(!without, cx)
                     })),

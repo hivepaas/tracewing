@@ -907,8 +907,8 @@ tae8622fc = 開啟工作階段檔案
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR、Fiddler .saz 或 Charles .chlsj
 
-# Exported HAR files leave out tokens and cookies
-td4a2f543 = 匯出的 HAR 檔案不含權杖和 Cookie
+# Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
+t3435c213 = 匯出的 HAR 檔案會去掉標頭、URL 和本文中的 Cookie、權杖、金鑰和密碼
 
 # Other devices
 t9e7d8362 = 其他裝置
