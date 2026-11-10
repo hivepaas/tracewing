@@ -238,6 +238,18 @@ tb7367e2c = このホストを復号する
 # Do not decrypt this host
 t5fa113f6 = このホストを復号しない
 
+# Request and response
+t04e060e6 = リクエストとレスポンス
+
+# Request and response one at a time
+t70397119 = リクエストとレスポンスを切り替えて表示
+
+# Request and response side by side
+t3d35ce69 = リクエストとレスポンスを横に並べる
+
+# Request above the response
+t83c63123 = リクエストをレスポンスの上に
+
 # Picture · {size}
 te97ed633 = 画像 · { $size }
 

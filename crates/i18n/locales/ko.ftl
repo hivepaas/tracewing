@@ -238,6 +238,18 @@ tb7367e2c = 이 호스트 복호화
 # Do not decrypt this host
 t5fa113f6 = 이 호스트 복호화 안 함
 
+# Request and response
+t04e060e6 = 요청과 응답
+
+# Request and response one at a time
+t70397119 = 요청과 응답을 하나씩
+
+# Request and response side by side
+t3d35ce69 = 요청과 응답을 나란히
+
+# Request above the response
+t83c63123 = 요청을 응답 위에
+
 # Picture · {size}
 te97ed633 = 이미지 · { $size }
 

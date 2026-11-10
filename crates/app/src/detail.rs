@@ -18,6 +18,13 @@ pub enum Side {
 }
 
 impl Side {
+    pub fn other(self) -> Self {
+        match self {
+            Self::Request => Self::Response,
+            Self::Response => Self::Request,
+        }
+    }
+
     pub fn column(self) -> &'static str {
         match self {
             Self::Request => "req",

@@ -246,6 +246,18 @@ tb7367e2c = Bu host'un şifresini çöz
 # Do not decrypt this host
 t5fa113f6 = Bu host'un şifresini çözme
 
+# Request and response
+t04e060e6 = İstek ve yanıt
+
+# Request and response one at a time
+t70397119 = İstek ve yanıt tek tek
+
+# Request and response side by side
+t3d35ce69 = İstek ve yanıt yan yana
+
+# Request above the response
+t83c63123 = İstek yanıtın üstünde
+
 # Picture · {size}
 te97ed633 = Resim · { $size }
 
