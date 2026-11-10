@@ -1,8 +1,18 @@
 # tracewing in Turkish. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# … {count} line {closer} | … {count} lines {closer}
+t2ba67348 =
+    { $n ->
+        [one] … { $count } satır { $closer }
+       *[other] … { $count } satır { $closer }
+    }
+
 # … {size} more
 ta8dc6eab = … { $size } daha
+
+# Unfold all
+t3849d44e = Tümünü aç
 
 # {size} · {count} line | {size} · {count} lines
 t51332550 =

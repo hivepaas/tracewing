@@ -1,7 +1,13 @@
 # tracewing's English, from the code (scripts/i18n.py update writes it:
 # do not edit). The source for translations.
 
+t2ba67348 =
+    { $n ->
+        [one] … { $count } line { $closer }
+       *[other] … { $count } lines { $closer }
+    }
 ta8dc6eab = … { $size } more
+t3849d44e = Unfold all
 t51332550 =
     { $n ->
         [one] { $size } · { $count } line

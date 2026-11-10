@@ -386,27 +386,37 @@ pub fn copy_menu(
     on_copy_all: impl Fn(&mut Window, &mut App) + 'static,
     on_close: impl Fn(&mut Window, &mut App) + 'static,
 ) -> AnyElement {
+    render_menu(
+        at,
+        copy_items(can_copy, all_fits, on_copy, on_copy_all),
+        on_close,
+    )
+}
+
+/// The copy menu's items, for a menu that has more.
+pub fn copy_items(
+    can_copy: bool,
+    all_fits: bool,
+    on_copy: impl Fn(&mut Window, &mut App) + 'static,
+    on_copy_all: impl Fn(&mut Window, &mut App) + 'static,
+) -> Vec<Item> {
     let all = if all_fits {
         tr!("Copy all")
     } else {
         tr!("Too large to copy all")
     };
-    render_menu(
-        at,
-        vec![
-            Item::new(
-                "copy-selection",
-                tr!("Copy"),
-                can_copy.then(|| Rc::new(on_copy) as Act),
-            ),
-            Item::new(
-                "copy-all",
-                all,
-                all_fits.then(|| Rc::new(on_copy_all) as Act),
-            ),
-        ],
-        on_close,
-    )
+    vec![
+        Item::new(
+            "copy-selection",
+            tr!("Copy"),
+            can_copy.then(|| Rc::new(on_copy) as Act),
+        ),
+        Item::new(
+            "copy-all",
+            all,
+            all_fits.then(|| Rc::new(on_copy_all) as Act),
+        ),
+    ]
 }
 
 /// A menu at `at`, over everything. A press outside it closes it.

@@ -224,6 +224,40 @@ fn the_window_shows_real_traffic() {
         .unwrap();
     save(&mut cx, window.into(), "4-response");
 
+    // JSON folds where an object or an array begins, and opens again.
+    let scanned = |view: &Traffic, cx: &gpui::App| match &view.inspector.body {
+        BodyState::Shown(body) => body.read(cx).body().is_scanned(),
+        _ => false,
+    };
+    wait_for(&mut cx, window, "the body read whole", scanned);
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                panic!()
+            };
+            body.update(cx, |body, cx| {
+                let lines = body.body().lines();
+                // `"items":[`, after the id, the count and the trace.
+                let end = body.body().closer(4).expect("the array ends");
+                body.toggle_fold(4, cx);
+                assert_eq!(body.folds().rows(lines), lines - (end - 4));
+                assert_eq!(body.folds().line_of(5), end + 1);
+            });
+        })
+        .unwrap();
+    save(&mut cx, window.into(), "87-json-folded");
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                panic!()
+            };
+            body.update(cx, |body, cx| {
+                body.toggle_fold(4, cx);
+                assert!(body.folds().is_empty());
+            });
+        })
+        .unwrap();
+
     window
         .update(&mut cx, |view, _, cx| view.set_part(Part::Headers, cx))
         .unwrap();
