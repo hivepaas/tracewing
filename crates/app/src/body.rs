@@ -22,7 +22,7 @@ use std::{
     path::Path,
     sync::{
         Arc, OnceLock,
-        atomic::{AtomicBool, AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU16, AtomicU64, Ordering},
     },
     time::{Duration, Instant},
 };
@@ -45,10 +45,27 @@ const SNIFF_BYTES: usize = 8 * 1024;
 const HEX_LINE: usize = 16;
 
 /// A `u64` per [`MARK_EVERY`] lines, `offset << 16 | depth`, and how many lines
-/// there are: one writer, any number of readers.
+/// there are: one writer, any number of readers. Beside each mark, the least
+/// depth of its lines, so that the end of a JSON object or array is found a
+/// mark at a time: lines all deeper than it cannot hold it.
 pub struct LineIndex {
-    chunks: Box<[OnceLock<Box<[AtomicU64]>>]>,
+    chunks: Box<[OnceLock<Box<Chunk>>]>,
     len: AtomicU64,
+}
+
+/// `CHUNK_LEN` marks, and the least depth of each one's lines.
+struct Chunk {
+    marks: Box<[AtomicU64]>,
+    shallowest: Box<[AtomicU16]>,
+}
+
+impl Chunk {
+    fn new() -> Box<Self> {
+        Box::new(Self {
+            marks: (0..CHUNK_LEN).map(|_| AtomicU64::new(0)).collect(),
+            shallowest: (0..CHUNK_LEN).map(|_| AtomicU16::new(0)).collect(),
+        })
+    }
 }
 
 impl LineIndex {
@@ -70,14 +87,19 @@ impl LineIndex {
     /// False when the marks are full, which takes over 4 billion lines.
     fn push(&self, offset: u64, depth: u32) -> bool {
         let line = self.len.load(Ordering::Relaxed);
+        let mark = line / MARK_EVERY;
+        let depth16 = depth.min(u16::MAX as u32) as u16;
+        let at = (mark & (CHUNK_LEN - 1)) as usize;
         if line.is_multiple_of(MARK_EVERY) {
-            let mark = line / MARK_EVERY;
             let Some(slot) = self.chunks.get((mark >> CHUNK_BITS) as usize) else {
                 return false;
             };
-            let chunk = slot.get_or_init(|| (0..CHUNK_LEN).map(|_| AtomicU64::new(0)).collect());
-            let entry = offset << DEPTH_BITS | u64::from(depth.min(u16::MAX as u32));
-            chunk[(mark & (CHUNK_LEN - 1)) as usize].store(entry, Ordering::Relaxed);
+            let chunk = slot.get_or_init(Chunk::new);
+            let entry = offset << DEPTH_BITS | u64::from(depth16);
+            chunk.marks[at].store(entry, Ordering::Relaxed);
+            chunk.shallowest[at].store(depth16, Ordering::Relaxed);
+        } else if let Some(chunk) = self.chunks[(mark >> CHUNK_BITS) as usize].get() {
+            chunk.shallowest[at].fetch_min(depth16, Ordering::Relaxed);
         }
         // Readers only look below `len`, so this publishes the mark above.
         self.len.store(line + 1, Ordering::Release);
@@ -90,18 +112,28 @@ impl LineIndex {
         let chunk = self.chunks[(mark >> CHUNK_BITS) as usize]
             .get()
             .expect("asked for a line that was not written");
-        let entry = chunk[(mark & (CHUNK_LEN - 1)) as usize].load(Ordering::Relaxed);
+        let entry = chunk.marks[(mark & (CHUNK_LEN - 1)) as usize].load(Ordering::Relaxed);
         (
             entry >> DEPTH_BITS,
             (entry & ((1 << DEPTH_BITS) - 1)) as u32,
         )
     }
 
+    /// The least depth of the lines from the mark at `mark * MARK_EVERY`, as far
+    /// as they are written.
+    fn shallowest(&self, mark: u64) -> u32 {
+        let chunk = self.chunks[(mark >> CHUNK_BITS) as usize]
+            .get()
+            .expect("asked for a mark that was not written");
+        u32::from(chunk.shallowest[(mark & (CHUNK_LEN - 1)) as usize].load(Ordering::Relaxed))
+    }
+
     /// The heap this index holds.
     pub fn heap_bytes(&self) -> u64 {
         let marks = self.len().div_ceil(MARK_EVERY);
         let chunks = marks.div_ceil(CHUNK_LEN);
-        chunks * CHUNK_LEN * 8 + (CHUNKS * size_of::<OnceLock<Box<[AtomicU64]>>>()) as u64
+        chunks * (CHUNK_LEN * (8 + 2) + size_of::<Chunk>() as u64)
+            + (CHUNKS * size_of::<OnceLock<Box<Chunk>>>()) as u64
     }
 }
 
@@ -362,6 +394,57 @@ impl Body {
             out.push(self.shown(start, end, depth));
         }
         out
+    }
+
+    /// The depths of the lines from `from`, in order, as far as they are ready.
+    fn depths_from(&self, from: u64) -> impl Iterator<Item = (u64, u32)> + '_ {
+        let (offset, depth) = self.index.mark_before(from);
+        let ready = self.lines();
+        Lines::resume(&self.map, self.kind, offset as usize, depth)
+            .skip((from % MARK_EVERY) as usize)
+            .zip(from..ready)
+            .map(|((_, depth), line)| (line, depth))
+    }
+
+    /// The line that ends the JSON object or array `line` opens, if it opens
+    /// one and its end has been read. Lines all deeper than `line` are skipped
+    /// a mark at a time, so a closer millions of lines on takes no longer to
+    /// find than a few thousand marks.
+    pub fn closer(&self, line: u64) -> Option<u64> {
+        if self.kind != Kind::Json || line + 1 >= self.lines() {
+            return None;
+        }
+        let mut lines = self.depths_from(line);
+        let (_, depth) = lines.next()?;
+        let (_, next) = lines.next()?;
+        if next != depth + 1 {
+            return None;
+        }
+        // The rest of this line's mark, a line at a time.
+        let ready = self.lines();
+        let mut mark = line / MARK_EVERY + 1;
+        let within = (mark * MARK_EVERY).min(ready);
+        for (at, d) in self
+            .depths_from(line + 2)
+            .take_while(|(at, _)| *at < within)
+        {
+            if d <= depth {
+                return Some(at);
+            }
+        }
+        // Then a mark at a time, into the first that comes back up.
+        while mark * MARK_EVERY < ready {
+            if self.index.shallowest(mark) <= depth {
+                let end = ((mark + 1) * MARK_EVERY).min(ready);
+                return self
+                    .depths_from(mark * MARK_EVERY)
+                    .take_while(|(at, _)| *at < end)
+                    .find(|(_, d)| *d <= depth)
+                    .map(|(at, _)| at);
+            }
+            mark += 1;
+        }
+        None
     }
 
     /// The text from `from` to `to`, each a line and a byte offset into what
@@ -673,6 +756,54 @@ mod tests {
             std::thread::yield_now();
         }
         (body, path)
+    }
+
+    #[test]
+    fn an_object_or_array_ends_at_its_closer() {
+        let (body, path) = opened(br#"{"a":1,"b":[true,{"c":"x"}],"d":{}}"#);
+        let closers: Vec<_> = (0..body.lines()).map(|line| body.closer(line)).collect();
+        // { / "a":1, / "b":[ / true, / { / "c":"x" / } / ], / "d":{} / }
+        assert_eq!(
+            closers,
+            [
+                Some(9),
+                None,
+                Some(7),
+                None,
+                Some(6),
+                None,
+                None,
+                None,
+                None,
+                None
+            ]
+        );
+        drop(body);
+        std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn a_closer_far_away_is_found_as_a_line_at_a_time_would() {
+        // Long arrays of small objects, and deep siblings after each closer, so
+        // that a mark's first line is often deeper than lines before it.
+        let mut json = String::from(r#"{"big":["#);
+        for n in 0..3000 {
+            json.push_str(&format!(r#"{{"i":{n},"v":[1,{{"w":[2]}}]}},"#));
+        }
+        json.push_str(r#"0],"after":{"x":[[1],[2,[3]]]},"more":[{"y":1}]}"#);
+        let (body, path) = opened(json.as_bytes());
+        let depths: Vec<u32> = body.read(0..body.lines()).iter().map(|l| l.depth).collect();
+        assert!(depths.len() as u64 > 4 * MARK_EVERY);
+        for line in 0..depths.len() {
+            let opens = depths.get(line + 1) == Some(&(depths[line] + 1));
+            let expected = opens
+                .then(|| (line + 1..depths.len()).find(|&at| depths[at] <= depths[line]))
+                .flatten()
+                .map(|at| at as u64);
+            assert_eq!(body.closer(line as u64), expected, "line {line}");
+        }
+        drop(body);
+        std::fs::remove_file(&path).unwrap();
     }
 
     #[test]

@@ -1,8 +1,19 @@
 # tracewing in Italian. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# … {count} line {closer} | … {count} lines {closer}
+t2ba67348 =
+    { $n ->
+        [one] … { $count } riga { $closer }
+        [many] … { $count } righe { $closer }
+       *[other] … { $count } righe { $closer }
+    }
+
 # … {size} more
 ta8dc6eab = … altri { $size }
+
+# Unfold all
+t3849d44e = Espandi tutto
 
 # {size} · {count} line | {size} · {count} lines
 t51332550 =

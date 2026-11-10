@@ -1,8 +1,20 @@
 # tracewing in Ukrainian. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# … {count} line {closer} | … {count} lines {closer}
+t2ba67348 =
+    { $n ->
+        [one] … { $count } рядок { $closer }
+        [few] … { $count } рядки { $closer }
+        [many] … { $count } рядків { $closer }
+       *[other] … { $count } рядка { $closer }
+    }
+
 # … {size} more
 ta8dc6eab = … ще { $size }
+
+# Unfold all
+t3849d44e = Розгорнути все
 
 # {size} · {count} line | {size} · {count} lines
 t51332550 =

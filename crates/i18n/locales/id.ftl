@@ -1,8 +1,14 @@
 # tracewing in Indonesian. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# … {count} line {closer} | … {count} lines {closer}
+t2ba67348 = … { $count } baris { $closer }
+
 # … {size} more
 ta8dc6eab = … { $size } lagi
+
+# Unfold all
+t3849d44e = Buka semua
 
 # {size} · {count} line | {size} · {count} lines
 t51332550 =
