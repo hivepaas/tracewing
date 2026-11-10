@@ -988,6 +988,9 @@ t50ee7452 = 찾는 중…
 # Installing. The system may ask you to confirm.
 ta41c38ec = 설치 중입니다. 시스템에서 확인을 요청할 수 있습니다.
 
+# Removing. The system may ask you to confirm.
+t62b22726 = 제거하는 중입니다. 시스템이 확인을 요청할 수 있습니다.
+
 # This computer trusts it.
 t27d6bacc = 이 컴퓨터가 인증서를 신뢰합니다.
 
@@ -1008,6 +1011,24 @@ tb50cbd40 = 설치
 
 # Also for command-line tools
 t0db8faea = 명령줄 도구에도 적용
+
+# Remove
+t21a5901d = 제거
+
+# Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
+t3c9fc304 = 이 컴퓨터의 모든 저장소에서 인증서를 제거할까요? 다시 설치할 때까지 tracewing을 거치는 HTTPS는 실패합니다. 인증서는 tracewing이 보관하므로 나중에 다시 설치할 수 있습니다.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Linux의 브라우저가 인증서를 신뢰하게 하려면 certutil이 필요합니다. 설치한 다음 여기서 설치를 누르세요:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Linux의 브라우저가 인증서를 신뢰하게 하려면 certutil이 필요합니다. 배포판의 NSS 도구를 설치한 다음 여기서 설치를 누르세요.
+
+# This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+tb13a87e6 = 이 데스크톱에는 tracewing이 바꿀 수 있는 시스템 프록시 설정이 없습니다. 아래 브라우저 항목에서 브라우저를 따로 열거나 터미널을 여세요.
+
+# {desktop} has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+t8d1ad87a = { $desktop }에는 tracewing이 바꿀 수 있는 시스템 프록시 설정이 없습니다. 아래 브라우저 항목에서 브라우저를 따로 열거나 터미널을 여세요.
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
 t83387edf = 시스템 설정을 사용하는 앱은 이제 { $addr } 주소를 거칩니다. tracewing을 닫거나 비정상 종료되면 원래 설정으로 돌아갑니다.
@@ -1380,6 +1401,9 @@ tbf8942c3 = 인증서 확인 중…
 
 # Installing the certificate; the system may ask you to confirm…
 t068dcaff = 인증서 설치 중입니다. 시스템에서 확인을 요청할 수 있습니다…
+
+# Removing the certificate; the system may ask you to confirm…
+t913da735 = 인증서를 제거하는 중입니다. 시스템이 확인을 요청할 수 있습니다…
 
 # HTTPS will fail until the certificate is trusted: set up
 t4b34beb2 = 인증서를 신뢰할 때까지 HTTPS가 실패합니다: 시작하기

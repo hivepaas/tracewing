@@ -1002,6 +1002,9 @@ t50ee7452 = Wird gesucht…
 # Installing. The system may ask you to confirm.
 ta41c38ec = Wird installiert. Das System fragt möglicherweise nach einer Bestätigung.
 
+# Removing. The system may ask you to confirm.
+t62b22726 = Wird entfernt. Das System fragt eventuell nach einer Bestätigung.
+
 # This computer trusts it.
 t27d6bacc = Dieser Computer vertraut ihm.
 
@@ -1022,6 +1025,24 @@ tb50cbd40 = Installieren
 
 # Also for command-line tools
 t0db8faea = Auch für Kommandozeilen-Tools
+
+# Remove
+t21a5901d = Entfernen
+
+# Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
+t3c9fc304 = Das Zertifikat aus allen Speichern dieses Computers entfernen? HTTPS über tracewing schlägt dann fehl, bis es wieder installiert ist. tracewing behält es, um es später wieder zu installieren.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Browser unter Linux brauchen certutil, damit man ihnen sagen kann, ihm zu vertrauen. Installieren Sie es, dann hier Installieren:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Browser unter Linux brauchen certutil, damit man ihnen sagen kann, ihm zu vertrauen. Installieren Sie die NSS-Tools Ihrer Distribution, dann hier Installieren.
+
+# This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+tb13a87e6 = Dieser Desktop hat keine Systemproxy-Einstellung, die tracewing ändern kann. Öffnen Sie unten einen Browser separat unter Browser, oder ein Terminal.
+
+# {desktop} has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+t8d1ad87a = { $desktop } hat keine Systemproxy-Einstellung, die tracewing ändern kann. Öffnen Sie unten einen Browser separat unter Browser, oder ein Terminal.
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
 t83387edf = Apps, die die Systemeinstellung verwenden, laufen jetzt über { $addr }. Sie wird zurückgesetzt, wenn tracewing beendet wird oder abstürzt.
@@ -1398,6 +1419,9 @@ tbf8942c3 = Zertifikat wird geprüft…
 
 # Installing the certificate; the system may ask you to confirm…
 t068dcaff = Zertifikat wird installiert; das System fragt möglicherweise nach einer Bestätigung…
+
+# Removing the certificate; the system may ask you to confirm…
+t913da735 = Das Zertifikat wird entfernt; das System fragt eventuell nach einer Bestätigung…
 
 # HTTPS will fail until the certificate is trusted: set up
 t4b34beb2 = HTTPS schlägt fehl, bis dem Zertifikat vertraut wird: einrichten

@@ -17,7 +17,7 @@ use std::{
 };
 
 use super::{
-    BrowserTrust, Place, Saved, Scope,
+    BrowserTrust, Environment, Place, Saved, Scope,
     launch::{self, Browser, Engine},
 };
 
@@ -459,6 +459,7 @@ pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
         places.push(Place {
             name: format!("system store ({dir})"),
             browsers: false,
+            scope: Scope::Machine,
         });
     }
     if on_path("certutil") {
@@ -467,6 +468,7 @@ pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
                 places.push(Place {
                     name: format!("NSS: {}", db.display()),
                     browsers: true,
+                    scope: Scope::User,
                 });
             }
         }
@@ -532,6 +534,45 @@ pub fn ca_uninstall(_cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
             })
         }
     }
+}
+
+pub fn environment() -> Environment {
+    Environment {
+        no_system_proxy: desktop()
+            .is_err()
+            .then(|| std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default()),
+        no_certutil: (!on_path("certutil"))
+            .then(|| certutil_package(&fs::read_to_string("/etc/os-release").unwrap_or_default())),
+    }
+}
+
+/// The command that installs `certutil` on the distribution `os-release`
+/// describes, by its id or the ids it is like.
+fn certutil_package(os_release: &str) -> Option<&'static str> {
+    let ids: Vec<&str> = os_release
+        .lines()
+        .filter_map(|line| {
+            line.strip_prefix("ID=")
+                .or_else(|| line.strip_prefix("ID_LIKE="))
+        })
+        .flat_map(|value| value.trim_matches(['"', '\'']).split_whitespace())
+        .collect();
+    const COMMANDS: &[(&[&str], &str)] = &[
+        (&["debian", "ubuntu"], "sudo apt install libnss3-tools"),
+        (&["fedora", "rhel", "centos"], "sudo dnf install nss-tools"),
+        (&["arch"], "sudo pacman -S nss"),
+        (
+            &["suse", "opensuse", "opensuse-leap", "opensuse-tumbleweed"],
+            "sudo zypper install mozilla-nss-tools",
+        ),
+        (&["alpine"], "sudo apk add nss-tools"),
+    ];
+    ids.iter().find_map(|id| {
+        COMMANDS
+            .iter()
+            .find(|(names, _)| names.contains(id))
+            .map(|(_, command)| *command)
+    })
 }
 
 /// Terminals, and what comes before the command each is to run.
@@ -836,6 +877,24 @@ mod tests {
             [dir.join("a.default"), dir.join("b.work")]
         );
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn certutil_comes_from_the_distributions_package() {
+        let ubuntu = "NAME=\"Ubuntu\"\nID=ubuntu\nID_LIKE=debian\n";
+        assert_eq!(
+            certutil_package(ubuntu),
+            Some("sudo apt install libnss3-tools")
+        );
+        let mint = "ID=linuxmint\nID_LIKE=\"ubuntu debian\"\n";
+        assert_eq!(
+            certutil_package(mint),
+            Some("sudo apt install libnss3-tools")
+        );
+        let rocky = "ID=\"rocky\"\nID_LIKE=\"rhel centos fedora\"\n";
+        assert_eq!(certutil_package(rocky), Some("sudo dnf install nss-tools"));
+        assert_eq!(certutil_package("ID=arch\n"), Some("sudo pacman -S nss"));
+        assert_eq!(certutil_package("ID=nixos\n"), None);
     }
 
     #[test]

@@ -35,7 +35,7 @@ use windows_sys::{
 };
 
 use super::{
-    BrowserTrust, Place, Saved, Scope,
+    BrowserTrust, Environment, Place, Saved, Scope,
     launch::{self, Browser, Engine},
 };
 
@@ -333,6 +333,7 @@ pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
         places.push(Place {
             name: "Windows: this machine".to_owned(),
             browsers: true,
+            scope: Scope::Machine,
         });
     }
     let user = Store::open_root(Scope::User, true)?;
@@ -342,6 +343,7 @@ pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
             places.push(Place {
                 name: "Windows: this user".to_owned(),
                 browsers: true,
+                scope: Scope::User,
             });
         }
     }
@@ -454,4 +456,9 @@ pub fn browser_trust(_browser: &Browser) -> BrowserTrust {
 /// `security.enterprise_roots.enabled`.
 pub fn trust_in_profile(_profile: &Path, _cert_pem: &Path) -> Result<()> {
     Ok(())
+}
+
+/// The system proxy is always there to set, and the stores need no tool.
+pub fn environment() -> Environment {
+    Environment::default()
 }

@@ -9,7 +9,7 @@ use anyhow::{Context, Result, bail};
 use std::{fs, net::SocketAddr, path::Path, path::PathBuf, process::Command};
 
 use super::{
-    BrowserTrust, Place, Saved, Scope,
+    BrowserTrust, Environment, Place, Saved, Scope,
     launch::{self, Browser, Engine},
 };
 
@@ -261,12 +261,14 @@ pub fn ca_locations(cert_pem: &Path, _der: &[u8]) -> Result<Vec<Place>> {
         places.push(Place {
             name: "System keychain".to_owned(),
             browsers: true,
+            scope: Scope::Machine,
         });
     }
     if holds(&login_keychain()?, cert_pem)? {
         places.push(Place {
             name: "login keychain".to_owned(),
             browsers: true,
+            scope: Scope::User,
         });
     }
     Ok(places)
@@ -397,4 +399,9 @@ pub fn browser_trust(_browser: &Browser) -> BrowserTrust {
 /// `security.enterprise_roots.enabled`.
 pub fn trust_in_profile(_profile: &Path, _cert_pem: &Path) -> Result<()> {
     Ok(())
+}
+
+/// The system proxy is always there to set, and the stores need no tool.
+pub fn environment() -> Environment {
+    Environment::default()
 }

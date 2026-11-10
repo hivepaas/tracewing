@@ -23,7 +23,7 @@ use tracewing::{
     traffic::{Screen, Traffic},
 };
 use tracewing_store::settings::StorageSettings;
-use tracewing_system::{BrowserTrust, Scope};
+use tracewing_system::{BrowserTrust, Environment, Scope};
 
 /// A `gsettings` that keeps its values in files in a folder.
 /// A `certutil` that keeps the certificate as a file in each database, and says
@@ -34,6 +34,7 @@ case "$1" in
 -N) db=$(echo "$4" | sed 's/^sql://'); touch "$db/cert9.db" ;;
 -A) db=$(echo "$3" | sed 's/^sql://'); touch "$db/tracewing-ca" "$store/certutil-added" ;;
 -L) db=$(echo "$3" | sed 's/^sql://'); test -e "$db/tracewing-ca" ;;
+-D) db=$(echo "$3" | sed 's/^sql://'); rm "$db/tracewing-ca" ;;
 esac
 "#;
 
@@ -279,6 +280,59 @@ fn the_system_proxy_and_the_settings_from_the_window() {
         firefox.join("tracewing-ca").exists(),
         "the profile trusts the CA"
     );
+
+    // Taken out of every store, after asking; tracewing's own Firefox profile
+    // is not one of the user's.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.ask_to_remove_certificate(true, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
+    save_shot(&mut cx, window.into(), "84-setup-remove");
+    window
+        .update(&mut cx, |view, _, cx| view.remove_certificate(cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the removal", |view| {
+        view.system.ca != CaState::Removing
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            assert_eq!(view.system.problem, None);
+            assert_eq!(view.system.ca, CaState::NotTrusted);
+            assert!(
+                view.system.ca_places.is_empty(),
+                "{:?}",
+                view.system.ca_places
+            );
+            assert!(!view.system.confirm_remove);
+            let none = Some(BrowserTrust::Own { holding: 0, of: 2 });
+            assert_eq!(browser_trust(view, "Firefox"), none);
+        })
+        .unwrap();
+    assert!(!home.join(".pki/nssdb/tracewing-ca").exists());
+
+    // What a machine lacks shows where it matters: certutil in step 1, a
+    // desktop with no system proxy in step 2.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.system.environment = Environment {
+                no_system_proxy: Some("sway".into()),
+                no_certutil: Some(Some("sudo apt install libnss3-tools")),
+            };
+            cx.notify();
+        })
+        .unwrap();
+    cx.run_until_parked();
+    save_shot(&mut cx, window.into(), "85-setup-lacking");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.install_certificate(Scope::User, cx)
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the install again", |view| {
+        view.system.ca == CaState::Trusted
+    });
     window
         .update(&mut cx, |view, _, _| assert_eq!(view.system.problem, None))
         .unwrap();

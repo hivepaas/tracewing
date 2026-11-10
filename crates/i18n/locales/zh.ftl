@@ -988,6 +988,9 @@ t50ee7452 = 正在查找…
 # Installing. The system may ask you to confirm.
 ta41c38ec = 正在安装。系统可能会要求你确认。
 
+# Removing. The system may ask you to confirm.
+t62b22726 = 正在移除。系统可能会请你确认。
+
 # This computer trusts it.
 t27d6bacc = 本机已信任该证书。
 
@@ -1008,6 +1011,24 @@ tb50cbd40 = 安装
 
 # Also for command-line tools
 t0db8faea = 同时用于命令行工具
+
+# Remove
+t21a5901d = 移除
+
+# Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
+t3c9fc304 = 要从这台电脑的所有证书库中移除该证书吗？重新安装之前，经过 tracewing 的 HTTPS 都会失败。tracewing 会保留它，以便以后重新安装。
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = 在 Linux 上，需要 certutil 才能让浏览器信任它。先安装 certutil，再在这里点“安装”：
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = 在 Linux 上，需要 certutil 才能让浏览器信任它。先安装发行版的 NSS 工具，再在这里点“安装”。
+
+# This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+tb13a87e6 = 这个桌面没有 tracewing 能更改的系统代理设置。请在下方“浏览器”中单独打开一个浏览器，或打开终端。
+
+# {desktop} has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+t8d1ad87a = { $desktop } 没有 tracewing 能更改的系统代理设置。请在下方“浏览器”中单独打开一个浏览器，或打开终端。
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
 t83387edf = 使用系统设置的应用现在会通过 { $addr }。tracewing 关闭或崩溃时，将恢复为原来的设置。
@@ -1380,6 +1401,9 @@ tbf8942c3 = 正在检查证书…
 
 # Installing the certificate; the system may ask you to confirm…
 t068dcaff = 正在安装证书，系统可能会要求你确认…
+
+# Removing the certificate; the system may ask you to confirm…
+t913da735 = 正在移除证书；系统可能会请你确认…
 
 # HTTPS will fail until the certificate is trusted: set up
 t4b34beb2 = 在证书受信任之前，HTTPS 将会失败：去配置

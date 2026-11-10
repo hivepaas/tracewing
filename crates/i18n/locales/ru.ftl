@@ -1030,6 +1030,9 @@ t50ee7452 = Поиск…
 # Installing. The system may ask you to confirm.
 ta41c38ec = Установка. Система может запросить подтверждение.
 
+# Removing. The system may ask you to confirm.
+t62b22726 = Удаление. Система может попросить подтверждение.
+
 # This computer trusts it.
 t27d6bacc = Этот компьютер ему доверяет.
 
@@ -1050,6 +1053,24 @@ tb50cbd40 = Установить
 
 # Also for command-line tools
 t0db8faea = Также для инструментов командной строки
+
+# Remove
+t21a5901d = Удалить
+
+# Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
+t3c9fc304 = Удалить сертификат из всех хранилищ этого компьютера? HTTPS через tracewing перестанет работать, пока его не установят снова. tracewing сохранит его, чтобы установить позже.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = В Linux браузерам нужен certutil, чтобы им можно было сказать доверять сертификату. Установите его, затем нажмите здесь «Установить»:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = В Linux браузерам нужен certutil, чтобы им можно было сказать доверять сертификату. Установите NSS-инструменты своего дистрибутива, затем нажмите здесь «Установить».
+
+# This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+tb13a87e6 = В этом окружении рабочего стола нет системного прокси, который tracewing может изменить. Откройте ниже браузер отдельно в разделе «Браузеры» или терминал.
+
+# {desktop} has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+t8d1ad87a = В { $desktop } нет системного прокси, который tracewing может изменить. Откройте ниже браузер отдельно в разделе «Браузеры» или терминал.
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
 t83387edf = Приложения, использующие системную настройку, теперь идут через { $addr }. Она вернётся к прежнему значению, когда tracewing закроется или аварийно завершится.
@@ -1428,6 +1449,9 @@ tbf8942c3 = Проверка сертификата…
 
 # Installing the certificate; the system may ask you to confirm…
 t068dcaff = Установка сертификата; система может запросить подтверждение…
+
+# Removing the certificate; the system may ask you to confirm…
+t913da735 = Удаление сертификата; система может попросить подтверждение…
 
 # HTTPS will fail until the certificate is trusted: set up
 t4b34beb2 = HTTPS не будет работать, пока сертификату не доверяют: настройка

@@ -17,7 +17,7 @@ use tracewing_proxy::{
     crypto_provider,
 };
 use tracewing_system::{
-    self as system, BrowserTrust, Place, QuicBlock, Scope, TakenOver, launch::Browser,
+    self as system, BrowserTrust, Environment, Place, QuicBlock, Scope, TakenOver, launch::Browser,
 };
 
 #[derive(Default)]
@@ -45,6 +45,7 @@ pub enum CaState {
     Trusted,
     NotTrusted,
     Installing,
+    Removing,
 }
 
 #[derive(Default)]
@@ -64,6 +65,10 @@ pub struct SystemState {
     pub browsers: Vec<(Browser, BrowserTrust)>,
     /// The certificate check last started: an older one's answer is stale.
     pub ca_job: u64,
+    /// What the machine lacks for the steps on Set up.
+    pub environment: Environment,
+    /// Set up asks before the certificate is taken out of every store.
+    pub confirm_remove: bool,
     /// Where the CA's key is, once looked at.
     pub ca_key: Option<KeyPlace>,
     /// Which device's guide the Set up page shows.
@@ -87,6 +92,7 @@ struct CaFound {
     problem: Option<String>,
     key: KeyPlace,
     browsers: Vec<(Browser, BrowserTrust)>,
+    environment: Environment,
 }
 
 impl CaFound {
@@ -112,6 +118,7 @@ fn look_for_ca(ca: &LocalCa, data_dir: &Path) -> anyhow::Result<CaFound> {
                 (browser, trust)
             })
             .collect(),
+        environment: system::environment(),
     })
 }
 
@@ -130,18 +137,49 @@ fn install_ca(data_dir: &Path, scope: Scope, store: KeyStore) -> anyhow::Result<
     Ok(found)
 }
 
+fn remove_ca(data_dir: &Path, store: KeyStore) -> anyhow::Result<CaFound> {
+    let ca = load_ca(data_dir, store)?;
+    let removed = system::ca_remove(ca.cert_path());
+    // Some stores may have let it go although another refused: look either way.
+    let mut found = look_for_ca(&ca, data_dir)?;
+    found.problem = removed
+        .err()
+        .map(|e| tr!("The certificate: {e}", e = format!("{e:#}")));
+    Ok(found)
+}
+
 impl Traffic {
     /// Looks again for the certificate in every store, and for the browsers.
     pub fn start_ca_check(&mut self, cx: &mut Context<Self>) {
-        if self.system.ca == CaState::Installing {
+        if matches!(self.system.ca, CaState::Installing | CaState::Removing) {
             return;
         }
         let (data_dir, store) = (self.data_dir.clone(), self.engine.key_store);
         self.run_ca_job(move || check_ca(&data_dir, store), cx);
     }
 
+    /// Asks, on Set up, whether to take the certificate out of every store.
+    pub fn ask_to_remove_certificate(&mut self, ask: bool, cx: &mut Context<Self>) {
+        self.system.confirm_remove = ask;
+        cx.notify();
+    }
+
+    /// Takes the certificate out of every store that holds it, the system
+    /// asking for rights where a store needs them.
+    pub fn remove_certificate(&mut self, cx: &mut Context<Self>) {
+        if matches!(self.system.ca, CaState::Installing | CaState::Removing) {
+            return;
+        }
+        self.system.confirm_remove = false;
+        self.system.ca = CaState::Removing;
+        self.system.problem = None;
+        let (data_dir, store) = (self.data_dir.clone(), self.engine.key_store);
+        self.run_ca_job(move || remove_ca(&data_dir, store), cx);
+        cx.notify();
+    }
+
     pub fn install_certificate(&mut self, scope: Scope, cx: &mut Context<Self>) {
-        if self.system.ca == CaState::Installing {
+        if matches!(self.system.ca, CaState::Installing | CaState::Removing) {
             return;
         }
         self.system.ca = CaState::Installing;
@@ -175,6 +213,7 @@ impl Traffic {
                         this.system.ca_key = Some(found.key);
                         this.system.ca_places = found.places;
                         this.system.browsers = found.browsers;
+                        this.system.environment = found.environment;
                         if found.problem.is_some() {
                             this.system.problem = found.problem;
                         }
@@ -398,11 +437,13 @@ mod tests {
                 .map(|&browsers| Place {
                     name: String::new(),
                     browsers,
+                    scope: Scope::User,
                 })
                 .collect(),
             problem: None,
             key: KeyPlace::Keychain,
             browsers: Vec::new(),
+            environment: Environment::default(),
         }
     }
 
