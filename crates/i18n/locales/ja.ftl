@@ -634,6 +634,27 @@ tfad4aaaa = リクエストヘッダーを設定
 # Set a response header
 tcbbc20d0 = レスポンスヘッダーを設定
 
+# Remove a request header
+t5228dd84 = リクエストヘッダーを削除
+
+# Remove a response header
+teeb5735a = レスポンスヘッダーを削除
+
+# Set a query parameter
+t73d9419b = クエリパラメーターを設定
+
+# Remove a query parameter
+t12633da9 = クエリパラメーターを削除
+
+# Change the request body
+t41101201 = リクエストボディを変更
+
+# Change the response body
+tdd259b73 = レスポンスボディを変更
+
+# Change the status
+t4bbdfba8 = ステータスを変更
+
 # Pause the request
 t40ecc39b = リクエストを一時停止
 
@@ -655,6 +676,18 @@ t80793085 = ヘッダー名
 # Its value
 t43968778 = 値
 
+# Parameter's name
+t313c8e35 = パラメーター名
+
+# Text to find, or empty for the whole body
+t8255fc87 = 探す文字列（空ならボディ全体）
+
+# What to put in its place
+t03671fd5 = 置き換える内容
+
+# Status the client gets, like 500
+t5e4d3088 = クライアントが受け取るステータス（例: 500）
+
 # "{first}" is not a status
 td43128d3 = "{ $first }" はステータスではありません
 
@@ -672,6 +705,33 @@ taa230766 = リクエスト: { $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = レスポンス: { $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = リクエスト: { $header } なし
+
+# Response: no {header}
+t23960a2e = レスポンス: { $header } なし
+
+# Query: {name}={value}
+t0ee6c1c0 = クエリ: { $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = クエリ: { $name } なし
+
+# Status {status}
+tad048e53 = ステータス { $status }
+
+# Request body: {replace}
+te4856c36 = リクエストボディ: { $replace }
+
+# Response body: {replace}
+t8600dc42 = レスポンスボディ: { $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = リクエストボディ: { $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = レスポンスボディ: { $find } → { $replace }
 
 # Name
 t0fe07306 = 名前
@@ -727,8 +787,8 @@ t35afca3b = キャンセル
 # Rules
 t428b2d80 = ルール
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = 次のリクエストから適用されます。記録を一時停止している間も同様です。上から順に評価され、最初に一致したブロック、ファイル、ホストのルールが優先されます。一致するヘッダールールはすべて適用されます。
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = ルールは次のリクエストから、記録の一時停止中も適用されます。上から順に、最初に一致したブロック・ファイル・ホストが優先され、他の一致するルールはすべて順番に適用されます。ボディやステータスを変えるルールは、サーバーが送った内容を変えます。
 
 # Import rules…
 t5edc205d = ルールをインポート…

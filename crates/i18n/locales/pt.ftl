@@ -644,6 +644,27 @@ tfad4aaaa = Definir um cabeçalho de requisição
 # Set a response header
 tcbbc20d0 = Definir um cabeçalho de resposta
 
+# Remove a request header
+t5228dd84 = Remover um cabeçalho de requisição
+
+# Remove a response header
+teeb5735a = Remover um cabeçalho de resposta
+
+# Set a query parameter
+t73d9419b = Definir um parâmetro de query
+
+# Remove a query parameter
+t12633da9 = Remover um parâmetro de query
+
+# Change the request body
+t41101201 = Mudar o corpo da requisição
+
+# Change the response body
+tdd259b73 = Mudar o corpo da resposta
+
+# Change the status
+t4bbdfba8 = Mudar o status
+
 # Pause the request
 t40ecc39b = Pausar a requisição
 
@@ -665,6 +686,18 @@ t80793085 = Nome do cabeçalho
 # Its value
 t43968778 = Valor
 
+# Parameter's name
+t313c8e35 = Nome do parâmetro
+
+# Text to find, or empty for the whole body
+t8255fc87 = Texto a procurar, ou vazio para o corpo inteiro
+
+# What to put in its place
+t03671fd5 = O que vai no lugar
+
+# Status the client gets, like 500
+t5e4d3088 = Status que o cliente recebe, como 500
+
 # "{first}" is not a status
 td43128d3 = "{ $first }" não é um status
 
@@ -682,6 +715,33 @@ taa230766 = Requisição: { $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = Resposta: { $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = Requisição: sem { $header }
+
+# Response: no {header}
+t23960a2e = Resposta: sem { $header }
+
+# Query: {name}={value}
+t0ee6c1c0 = Query: { $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = Query: sem { $name }
+
+# Status {status}
+tad048e53 = Status { $status }
+
+# Request body: {replace}
+te4856c36 = Corpo da requisição: { $replace }
+
+# Response body: {replace}
+t8600dc42 = Corpo da resposta: { $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = Corpo da requisição: { $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = Corpo da resposta: { $find } → { $replace }
 
 # Name
 t0fe07306 = Nome
@@ -738,8 +798,8 @@ t35afca3b = Cancelar
 # Rules
 t428b2d80 = Regras
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = Valem a partir da próxima requisição, mesmo com a gravação pausada. De cima para baixo: o primeiro bloqueio, arquivo ou host vence, e toda regra de cabeçalho que se encaixa é aplicada.
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = Valem a partir da próxima requisição, também com a gravação em pausa. De cima para baixo: o primeiro bloqueio, arquivo ou host vence, e toda outra regra que se encaixa se aplica, em ordem. Uma regra que muda um corpo ou um status muda o que o servidor enviou.
 
 # Import rules…
 t5edc205d = Importar regras…
