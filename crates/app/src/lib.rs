@@ -26,6 +26,7 @@ pub mod llm;
 pub mod llm_view;
 pub mod mcp;
 pub mod messages;
+pub mod network;
 pub mod paused_page;
 pub mod placement;
 pub mod qr;

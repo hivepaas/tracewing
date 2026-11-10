@@ -33,7 +33,7 @@ impl Default for HostRules {
 }
 
 /// `host:443` and `HOST` are the same host.
-fn plain_host(host: &str) -> String {
+pub(crate) fn plain_host(host: &str) -> String {
     let host = match host.rsplit_once(':') {
         Some((name, port)) if port.bytes().all(|b| b.is_ascii_digit()) => name,
         _ => host,
@@ -41,7 +41,7 @@ fn plain_host(host: &str) -> String {
     host.trim_end_matches('.').to_ascii_lowercase()
 }
 
-fn pattern_fits(pattern: &str, host: &str) -> bool {
+pub(crate) fn pattern_fits(pattern: &str, host: &str) -> bool {
     match pattern.strip_prefix("*.") {
         Some(domain) => {
             host == domain

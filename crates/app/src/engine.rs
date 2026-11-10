@@ -12,7 +12,13 @@ use std::{
 };
 use tokio::sync::oneshot;
 use tracewing_proxy::{
-    ProxyOptions, ca_key::KeyStore, capture::Check, pause::Pauses, rules::HostRules, run_proxy,
+    ProxyOptions,
+    ca_key::KeyStore,
+    capture::Check,
+    pause::Pauses,
+    rules::HostRules,
+    run_proxy,
+    throttle::{Conditions, Network},
     traffic_rules::TrafficRules,
 };
 use tracewing_store::{
@@ -38,6 +44,9 @@ pub struct EngineOptions {
     pub find_apps: bool,
 }
 
+/// Where the slow network's conditions are kept, in the data folder.
+pub const THROTTLE_FILE: &str = "throttle.toml";
+
 pub struct Engine {
     pub addr: SocketAddr,
     pub key_store: KeyStore,
@@ -47,6 +56,8 @@ pub struct Engine {
     pub recording: Arc<AtomicBool>,
     pub rules: Arc<RwLock<HostRules>>,
     pub traffic_rules: Arc<RwLock<TrafficRules>>,
+    /// A slow network on purpose, as `throttle.toml` keeps it.
+    pub network: Arc<Network>,
     pub check: Arc<Check>,
     /// What a browser opened from here needs when it does not trust the CA.
     pub leaf_spki: Arc<OnceLock<String>>,
@@ -73,6 +84,9 @@ impl Engine {
         let pauses = Arc::new(Pauses::default());
         let rules = Arc::new(RwLock::new(opts.rules));
         let traffic_rules = Arc::new(RwLock::new(opts.traffic_rules));
+        // A file that cannot be read leaves the network as it is.
+        let conditions = Conditions::load(&opts.data_dir.join(THROTTLE_FILE)).unwrap_or_default();
+        let network = Arc::new(Network::new(conditions));
         let (stop, stopped) = oneshot::channel::<()>();
         let proxy = ProxyOptions {
             listener: None,
@@ -88,6 +102,7 @@ impl Engine {
             recording: Arc::clone(&recording),
             rules: Arc::clone(&rules),
             traffic_rules: Arc::clone(&traffic_rules),
+            network: Arc::clone(&network),
             check: Arc::clone(&check),
             leaf_spki: Arc::clone(&leaf_spki),
             pauses: Arc::clone(&pauses),
@@ -124,6 +139,7 @@ impl Engine {
             recording,
             rules,
             traffic_rules,
+            network,
             check,
             leaf_spki,
             pauses,

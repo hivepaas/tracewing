@@ -149,6 +149,18 @@ pub const PICTURE: &[u8] = include_bytes!("picture.png");
 pub const SESSION_JWT: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MiIsIm5hbWUiOiJBbmEiLCJpYXQiOjE3NjcyMjU2MDAsImV4cCI6NDEwMjQ0NDgwMH0.c2lnbmF0dXJl";
 
 async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallible> {
+    // Reads the whole body before it answers, as a server taking an upload does,
+    // and says how much came.
+    if req.uri().path() == "/upload" {
+        let got = req
+            .into_body()
+            .collect()
+            .await
+            .map_or(0, |body| body.to_bytes().len());
+        return Ok(Response::new(
+            Full::new(Bytes::from(got.to_string())).boxed(),
+        ));
+    }
     let query = parse_query(req.uri().query().unwrap_or(""));
     let number = |key: &str, default: u64| {
         query

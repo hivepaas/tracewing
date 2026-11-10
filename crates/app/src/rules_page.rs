@@ -439,6 +439,7 @@ impl Traffic {
     pub(crate) fn render_rules(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         self.rules_form(cx);
+        let network = self.render_network(cx);
         let rules = self.traffic_rules();
         let page = self.rules_page.as_ref().expect("just made");
         let note = page.note.clone();
@@ -712,6 +713,7 @@ impl Traffic {
                             .child(note)
                     })),
             )
+            .child(network)
             .child(form)
             .children(list)
     }

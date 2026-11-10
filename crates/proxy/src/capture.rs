@@ -12,6 +12,7 @@ use crate::apps::Apps;
 use crate::ca::CRL_PATH;
 use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
+use crate::throttle::{Conditions, Direction, Network};
 use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of};
 use crate::upstream::{TlsFailure, Upstream};
 use bytes::Bytes;
@@ -167,6 +168,10 @@ pub struct FlowHandler {
     apps: Option<Apps>,
     /// See `StorageSettings::hide_http3`.
     hide_http3: bool,
+    /// The network traffic goes through, slow on purpose or not.
+    network: Arc<Network>,
+    /// What slowed the request this clone is handling, to slow its response too.
+    slowed: Option<Conditions>,
     /// Headers rules set on the response of the request this clone is handling.
     response_headers: Vec<(HeaderName, HeaderValue)>,
     /// The rule that holds its response, with the request's method and URL.
@@ -189,6 +194,8 @@ pub struct Controls {
     pub apps: Option<Apps>,
     /// Read when the proxy starts.
     pub hide_http3: bool,
+    /// Changes apply to the next request.
+    pub network: Arc<Network>,
 }
 
 impl FlowHandler {
@@ -211,6 +218,8 @@ impl FlowHandler {
             pauses: controls.pauses,
             apps: controls.apps,
             hide_http3: controls.hide_http3,
+            network: controls.network,
+            slowed: None,
             response_headers: Vec::new(),
             pause_response: None,
             websockets: Arc::default(),
@@ -327,6 +336,19 @@ impl FlowHandler {
         let stream = events.then(|| flow.stream()).flatten();
         let (cap, spool) = (self.log_max, self.spool.clone());
         res.map(move |body| TapBody::wrap(body, flow, Side::Response, cap, spool, stream))
+    }
+}
+
+impl FlowHandler {
+    /// The request's body, through the slow network going up, if there is one.
+    fn slow_request(&self, req: Request<Body>) -> Request<Body> {
+        match &self.slowed {
+            Some(conditions) => {
+                let (network, conditions) = (Arc::clone(&self.network), conditions.clone());
+                req.map(move |body| network.wrap(body, Direction::Up, conditions))
+            }
+            None => req,
+        }
     }
 }
 
@@ -557,8 +579,23 @@ impl HttpHandler for FlowHandler {
             Some(End::Remote(to)) if !is_websocket(&req) => send_elsewhere(&mut req, &to),
             _ => {}
         }
+        // A slow network, for what goes on to a server. Upgrades are left as they are.
+        self.slowed = (!is_websocket(&req))
+            .then(|| {
+                self.network
+                    .for_host(request_host(&req).unwrap_or_default())
+            })
+            .flatten();
+        if let Some(conditions) = &self.slowed {
+            Network::half_latency(conditions).await;
+            if let Some(flow) = &flow {
+                let mut record = flow.lock();
+                let names = record.rule.take().into_iter().chain([conditions.summary()]);
+                record.rule = Some(names.collect::<Vec<_>>().join(", "));
+            }
+        }
         let Some(flow) = flow else {
-            return req.into();
+            return self.slow_request(req).into();
         };
         if is_websocket(&req) {
             // hudsucker answers an upgrade itself, and handle_response never hears.
@@ -569,7 +606,7 @@ impl HttpHandler for FlowHandler {
         let (cap, tapped, spool) = (self.log_max, Arc::clone(&flow), self.spool.clone());
         let req = req.map(move |body| TapBody::wrap(body, tapped, Side::Request, cap, spool, None));
         self.flow = Some(flow);
-        req.into()
+        self.slow_request(req).into()
     }
 
     /// Left alone, a connection is a row and nothing more: all that can be known is
@@ -623,7 +660,18 @@ impl HttpHandler for FlowHandler {
             }
             _ => res,
         };
-        self.answer(flow, res)
+        let slowed = self.slowed.take();
+        if let Some(conditions) = &slowed {
+            Network::half_latency(conditions).await;
+        }
+        let res = self.answer(flow, res);
+        match slowed {
+            Some(conditions) => {
+                let network = Arc::clone(&self.network);
+                res.map(move |body| network.wrap(body, Direction::Down, conditions))
+            }
+            None => res,
+        }
     }
 
     async fn handle_error(
@@ -632,6 +680,7 @@ impl HttpHandler for FlowHandler {
         err: hyper_util::client::legacy::Error,
     ) -> Response<Body> {
         let message = error_chain(&err);
+        self.slowed = None;
         if let Some(flow) = self.flow.take() {
             flow.fail(message.clone());
             let mut source: Option<&(dyn std::error::Error + 'static)> = Some(&err);
