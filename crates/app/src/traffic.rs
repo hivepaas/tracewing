@@ -2116,6 +2116,11 @@ impl Traffic {
                     "Installing the certificate; the system may ask you to confirm…"
                 ))
                 .into_any_element(),
+            CaState::Removing => row
+                .child(tr!(
+                    "Removing the certificate; the system may ask you to confirm…"
+                ))
+                .into_any_element(),
             CaState::NotTrusted => row
                 .id("install-ca")
                 .cursor_pointer()

@@ -234,6 +234,7 @@ impl Traffic {
         let ca_text = match &ca {
             CaState::Checking => tr!("Looking for it…"),
             CaState::Installing => tr!("Installing. The system may ask you to confirm."),
+            CaState::Removing => tr!("Removing. The system may ask you to confirm."),
             CaState::Trusted if self.system.ca_places.is_empty() => {
                 tr!("This computer trusts it.")
             }
@@ -257,7 +258,13 @@ impl Traffic {
             Some(place) => format!("{ca_text} {}", key_text(place)),
             None => ca_text,
         };
-        let busy = matches!(ca, CaState::Checking | CaState::Installing);
+        let busy = matches!(
+            ca,
+            CaState::Checking | CaState::Installing | CaState::Removing
+        );
+        let confirm = self.system.confirm_remove && !busy;
+        let can_remove = !busy && !confirm && !self.system.ca_places.is_empty();
+        let no_certutil = self.system.environment.no_certutil.filter(|_| !installed);
         let ca_step = step("1", installed, tr!("Trust the certificate"), ca_text)
             .when(!installed && !busy, |d| {
                 d.child(
@@ -284,7 +291,62 @@ impl Traffic {
                         })),
                     )
                 },
-            );
+            )
+            .when(can_remove, |d| {
+                d.child(button("setup-remove", tr!("Remove"), false).on_click(
+                    cx.listener(|this, _, _, cx| this.ask_to_remove_certificate(true, cx)),
+                ))
+            })
+            .when(confirm, |d| {
+                d.child(
+                    div()
+                        .w_full()
+                        .flex()
+                        .flex_row()
+                        .flex_wrap()
+                        .items_center()
+                        .gap(px(10.))
+                        .pl(px(48.))
+                        .child(div().flex_1().min_w(px(240.)).child(tr!(
+                            "Take the certificate out of every store on this computer? \
+                             HTTPS through tracewing then fails until it is installed again. \
+                             tracewing keeps it, to install again later."
+                        )))
+                        .child(
+                            button("setup-remove-yes", tr!("Remove"), true).on_click(
+                                cx.listener(|this, _, _, cx| this.remove_certificate(cx)),
+                            ),
+                        )
+                        .child(button("setup-remove-no", tr!("Cancel"), false).on_click(
+                            cx.listener(|this, _, _, cx| this.ask_to_remove_certificate(false, cx)),
+                        )),
+                )
+            })
+            // Linux: browsers there are told what to trust with certutil.
+            .when_some(no_certutil, |d, command| {
+                let says = div().text_color(rgb(c.muted)).child(match command {
+                    Some(_) => tr!(
+                        "Browsers on Linux need certutil to be told to trust it. Install it, \
+                         then Install here:"
+                    ),
+                    None => tr!(
+                        "Browsers on Linux need certutil to be told to trust it. Install your \
+                         distribution's NSS tools, then Install here."
+                    ),
+                });
+                d.child(
+                    div()
+                        .w_full()
+                        .flex()
+                        .flex_col()
+                        .gap(px(8.))
+                        .pl(px(48.))
+                        .child(says)
+                        .when_some(command, |d, command| {
+                            d.child(code_block("setup-certutil", command.to_owned()))
+                        }),
+                )
+            });
 
         let addr = self.engine.addr;
         let (proxy_on, working) = match self.system.proxy {
@@ -292,7 +354,27 @@ impl Traffic {
             ProxySwitch::Working => (false, true),
             ProxySwitch::Off => (false, false),
         };
-        let proxy_text = if proxy_on {
+        // Some desktops, tiling ones mostly, have no setting to change.
+        let no_system_proxy = self
+            .system
+            .environment
+            .no_system_proxy
+            .clone()
+            .filter(|_| !proxy_on);
+        let proxy_text = if let Some(desktop) = &no_system_proxy {
+            if desktop.is_empty() {
+                tr!(
+                    "This desktop has no system proxy setting that tracewing can change. Open \
+                     a browser on its own from Browsers, or a terminal, below."
+                )
+            } else {
+                tr!(
+                    "{desktop} has no system proxy setting that tracewing can change. Open a \
+                     browser on its own from Browsers, or a terminal, below.",
+                    desktop = desktop.clone()
+                )
+            }
+        } else if proxy_on {
             tr!(
                 "Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.",
                 addr = addr.to_string()
@@ -303,8 +385,9 @@ impl Traffic {
                 addr = addr.to_string()
             )
         };
-        let proxy_step =
-            step("2", proxy_on, tr!("Turn on the system proxy"), proxy_text).when(!working, |d| {
+        let proxy_step = step("2", proxy_on, tr!("Turn on the system proxy"), proxy_text).when(
+            !working && no_system_proxy.is_none(),
+            |d| {
                 d.child(
                     button(
                         "setup-proxy",
@@ -317,7 +400,8 @@ impl Traffic {
                     )
                     .on_click(cx.listener(|this, _, _, cx| this.toggle_system_proxy(cx))),
                 )
-            });
+            },
+        );
 
         let (check_text, checked) = check_result(self.check_visit.as_ref());
         let check_step = step("3", checked, tr!("Check it in your browser"), check_text).child(
@@ -406,7 +490,9 @@ pub fn trust_text(trust: BrowserTrust, ca: &CaState) -> (String, Mark) {
         BrowserTrust::System => match ca {
             CaState::Trusted => yes(),
             CaState::NotTrusted => not_yet(),
-            CaState::Checking | CaState::Installing => (tr!("Looking…"), Mark::Unknown),
+            CaState::Checking | CaState::Installing | CaState::Removing => {
+                (tr!("Looking…"), Mark::Unknown)
+            }
         },
         BrowserTrust::Own { of: 0, .. } => (
             tr!("Has no profile yet. Open it once, then look again."),
@@ -474,7 +560,10 @@ impl Traffic {
     /// whether it has reached the test page through tracewing.
     fn render_browsers(&mut self, cx: &mut Context<Self>) -> Div {
         let c = colors();
-        let busy = matches!(self.system.ca, CaState::Checking | CaState::Installing);
+        let busy = matches!(
+            self.system.ca,
+            CaState::Checking | CaState::Installing | CaState::Removing
+        );
         let mut card = aside(
             tr!("Browsers"),
             tr!(
@@ -500,7 +589,9 @@ impl Traffic {
             let (trust_line, trust_mark) = trust_text(*trust, &self.system.ca);
             let (seen_line, seen_mark) = seen_text(name, &self.check_visits);
             // Its own stores can take the certificate now; the system's is step 1.
+            // Without certutil it would fail: step 1 says how to get it.
             let can_install = !busy
+                && self.system.environment.no_certutil.is_none()
                 && matches!(*trust, BrowserTrust::Own { holding, of } if of > 0 && holding < of);
             card = card.child(
                 div()

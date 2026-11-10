@@ -988,6 +988,9 @@ t50ee7452 = 探しています…
 # Installing. The system may ask you to confirm.
 ta41c38ec = インストールしています。システムが確認を求める場合があります。
 
+# Removing. The system may ask you to confirm.
+t62b22726 = 削除しています。システムが確認を求めることがあります。
+
 # This computer trusts it.
 t27d6bacc = このコンピュータはこの証明書を信頼しています。
 
@@ -1008,6 +1011,24 @@ tb50cbd40 = インストール
 
 # Also for command-line tools
 t0db8faea = コマンドラインツールにも
+
+# Remove
+t21a5901d = 削除
+
+# Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
+t3c9fc304 = このコンピューターのすべてのストアから証明書を削除しますか？ 再びインストールするまで、tracewing 経由の HTTPS は失敗します。証明書は tracewing が保持し、後で再びインストールできます。
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Linux のブラウザーに証明書を信頼させるには certutil が必要です。インストールしてから、ここで「インストール」を押してください：
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Linux のブラウザーに証明書を信頼させるには certutil が必要です。ディストリビューションの NSS ツールをインストールしてから、ここで「インストール」を押してください。
+
+# This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+tb13a87e6 = このデスクトップには、tracewing が変更できるシステムプロキシの設定がありません。下の「ブラウザー」からブラウザーを個別に開くか、ターミナルを開いてください。
+
+# {desktop} has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+t8d1ad87a = { $desktop } には、tracewing が変更できるシステムプロキシの設定がありません。下の「ブラウザー」からブラウザーを個別に開くか、ターミナルを開いてください。
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
 t83387edf = システムの設定を使うアプリは、現在 { $addr } を経由しています。tracewing を閉じたとき、またはクラッシュしたときに元の設定に戻ります。
@@ -1380,6 +1401,9 @@ tbf8942c3 = 証明書を確認しています…
 
 # Installing the certificate; the system may ask you to confirm…
 t068dcaff = 証明書をインストールしています。システムが確認を求める場合があります…
+
+# Removing the certificate; the system may ask you to confirm…
+t913da735 = 証明書を削除しています。システムが確認を求めることがあります…
 
 # HTTPS will fail until the certificate is trusted: set up
 t4b34beb2 = 証明書が信頼されるまで HTTPS は失敗します: セットアップ

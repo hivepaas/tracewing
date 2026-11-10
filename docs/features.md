@@ -45,6 +45,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | A root CA made for this machine alone, its key kept in the system keychain (Keychain, DPAPI, Secret Service) | Gate 0 / Beta | Free |
 | Short-lived host certificates (30 days), a key separate from the CA's, IP addresses as well as names | Gate 0 | Free |
 | Each browser on Set up, with whether it trusts the CA (each Firefox profile on Linux) and has reached the test page; install into the stores still missing it, and open the test page in that browser | Beta | Free |
+| Remove the CA from every store that holds it, after asking; Set up says what the machine lacks (certutil and the command that installs it on Linux, a desktop with no system proxy) | Beta | Free |
 | Install and trust the CA, step by step, with a check that it worked: macOS, Windows, Linux, Firefox's own store | Beta | Free |
 | The server's real certificate chain and TLS details for every flow; a warning when it is invalid | Beta | Free |
 | Trust servers whose certificates come from an authority this computer trusts, such as a company's own | Beta | Free |

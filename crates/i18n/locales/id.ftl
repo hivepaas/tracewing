@@ -988,6 +988,9 @@ t50ee7452 = Mencari…
 # Installing. The system may ask you to confirm.
 ta41c38ec = Memasang. Sistem mungkin meminta konfirmasi.
 
+# Removing. The system may ask you to confirm.
+t62b22726 = Menghapus. Sistem mungkin meminta konfirmasi.
+
 # This computer trusts it.
 t27d6bacc = Komputer ini memercayainya.
 
@@ -1008,6 +1011,24 @@ tb50cbd40 = Pasang
 
 # Also for command-line tools
 t0db8faea = Juga untuk alat baris perintah
+
+# Remove
+t21a5901d = Hapus
+
+# Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
+t3c9fc304 = Hapus sertifikat dari semua penyimpanan di komputer ini? HTTPS melalui tracewing akan gagal sampai dipasang lagi. tracewing tetap menyimpannya untuk dipasang lagi nanti.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Di Linux, browser butuh certutil agar bisa diminta memercayainya. Pasang certutil, lalu Pasang di sini:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Di Linux, browser butuh certutil agar bisa diminta memercayainya. Pasang NSS tools dari distribusi Anda, lalu Pasang di sini.
+
+# This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+tb13a87e6 = Desktop ini tidak punya pengaturan proxy sistem yang bisa diubah tracewing. Buka browser terpisah dari Browser, atau terminal, di bawah.
+
+# {desktop} has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+t8d1ad87a = { $desktop } tidak punya pengaturan proxy sistem yang bisa diubah tracewing. Buka browser terpisah dari Browser, atau terminal, di bawah.
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
 t83387edf = Aplikasi yang memakai setelan sistem kini lewat { $addr }. Setelan kembali seperti semula saat tracewing ditutup, atau jika crash.
@@ -1380,6 +1401,9 @@ tbf8942c3 = Memeriksa sertifikat…
 
 # Installing the certificate; the system may ask you to confirm…
 t068dcaff = Memasang sertifikat; sistem mungkin meminta konfirmasi…
+
+# Removing the certificate; the system may ask you to confirm…
+t913da735 = Menghapus sertifikat; sistem mungkin meminta konfirmasi…
 
 # HTTPS will fail until the certificate is trusted: set up
 t4b34beb2 = HTTPS akan gagal sampai sertifikat dipercaya: siapkan

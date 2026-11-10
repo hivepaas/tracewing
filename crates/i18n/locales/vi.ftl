@@ -988,6 +988,9 @@ t50ee7452 = Đang tìm…
 # Installing. The system may ask you to confirm.
 ta41c38ec = Đang cài. Hệ thống có thể hỏi bạn xác nhận.
 
+# Removing. The system may ask you to confirm.
+t62b22726 = Đang gỡ. Hệ thống có thể hỏi bạn xác nhận.
+
 # This computer trusts it.
 t27d6bacc = Máy này tin chứng chỉ đó.
 
@@ -1008,6 +1011,24 @@ tb50cbd40 = Cài
 
 # Also for command-line tools
 t0db8faea = Cả cho công cụ dòng lệnh
+
+# Remove
+t21a5901d = Gỡ
+
+# Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
+t3c9fc304 = Gỡ chứng chỉ khỏi mọi kho trên máy này? Sau đó HTTPS qua tracewing sẽ lỗi cho tới khi cài lại. tracewing vẫn giữ chứng chỉ để cài lại sau.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Trên Linux, phải có certutil thì mới bảo được trình duyệt tin chứng chỉ. Hãy cài nó, rồi bấm Cài ở đây:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Trên Linux, phải có certutil thì mới bảo được trình duyệt tin chứng chỉ. Hãy cài gói NSS tools của bản phân phối, rồi bấm Cài ở đây.
+
+# This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+tb13a87e6 = Desktop này không có thiết lập system proxy nào mà tracewing đổi được. Hãy mở riêng một trình duyệt trong mục Trình duyệt, hoặc mở terminal, ở bên dưới.
+
+# {desktop} has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+t8d1ad87a = { $desktop } không có thiết lập system proxy nào mà tracewing đổi được. Hãy mở riêng một trình duyệt trong mục Trình duyệt, hoặc mở terminal, ở bên dưới.
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
 t83387edf = Các app dùng thiết lập của hệ thống giờ đi qua { $addr }. Thiết lập trở lại như cũ khi tracewing đóng, hoặc khi nó bị crash.
@@ -1380,6 +1401,9 @@ tbf8942c3 = Đang kiểm tra chứng chỉ…
 
 # Installing the certificate; the system may ask you to confirm…
 t068dcaff = Đang cài chứng chỉ; hệ thống có thể hỏi bạn xác nhận…
+
+# Removing the certificate; the system may ask you to confirm…
+t913da735 = Đang gỡ chứng chỉ; hệ thống có thể hỏi bạn xác nhận…
 
 # HTTPS will fail until the certificate is trusted: set up
 t4b34beb2 = HTTPS sẽ lỗi cho tới khi chứng chỉ được tin: thiết lập

@@ -94,6 +94,8 @@ pub struct Place {
     /// Browsers read this store. On Linux the system's store is read by
     /// command-line tools only, and browsers keep NSS stores of their own.
     pub browsers: bool,
+    /// Who it serves, which is what taking the CA out of it needs.
+    pub scope: Scope,
 }
 
 /// Where the root CA is installed, as far as the OS's stores can say.
@@ -121,6 +123,41 @@ pub fn ca_install(cert_pem: &Path, scope: Scope) -> Result<()> {
 
 pub fn ca_uninstall(cert_pem: &Path, scope: Scope) -> Result<()> {
     os::ca_uninstall(cert_pem, &ca_der(cert_pem)?, scope)
+}
+
+/// Takes the CA out of every store that holds it: this user's first, which
+/// needs no rights, then the machine's. One failing does not keep the other.
+pub fn ca_remove(cert_pem: &Path) -> Result<()> {
+    let places = ca_locations(cert_pem)?;
+    let mut failed = Vec::new();
+    for scope in [Scope::User, Scope::Machine] {
+        if places.iter().any(|place| place.scope == scope)
+            && let Err(e) = ca_uninstall(cert_pem, scope)
+        {
+            failed.push(format!("{e:#}"));
+        }
+    }
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        bail!("{}", failed.join("; "))
+    }
+}
+
+/// What this machine lacks for the Set up page's steps to work, found by
+/// looking rather than by trying.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Environment {
+    /// No system proxy setting tracewing can change, on this desktop, by its
+    /// name (empty when it has none).
+    pub no_system_proxy: Option<String>,
+    /// `certutil` is missing, which browsers on Linux need to be told to
+    /// trust the CA: the command that installs it, where known.
+    pub no_certutil: Option<Option<&'static str>>,
+}
+
+pub fn environment() -> Environment {
+    os::environment()
 }
 
 /// Asks the OS's own verifier whether it would accept a certificate from this

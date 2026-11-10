@@ -1002,6 +1002,9 @@ t50ee7452 = Aranıyor…
 # Installing. The system may ask you to confirm.
 ta41c38ec = Yükleniyor. Sistem onaylamanızı isteyebilir.
 
+# Removing. The system may ask you to confirm.
+t62b22726 = Kaldırılıyor. Sistem onay isteyebilir.
+
 # This computer trusts it.
 t27d6bacc = Bu bilgisayar ona güveniyor.
 
@@ -1022,6 +1025,24 @@ tb50cbd40 = Yükle
 
 # Also for command-line tools
 t0db8faea = Komut satırı araçları için de
+
+# Remove
+t21a5901d = Kaldır
+
+# Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
+t3c9fc304 = Sertifika bu bilgisayardaki tüm depolardan kaldırılsın mı? Yeniden yüklenene kadar tracewing üzerinden HTTPS başarısız olur. tracewing sertifikayı daha sonra yeniden yüklemek için saklar.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Linux'ta tarayıcılara sertifikaya güvenmelerini söylemek için certutil gerekir. Onu yükleyin, sonra burada Yükle'ye basın:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Linux'ta tarayıcılara sertifikaya güvenmelerini söylemek için certutil gerekir. Dağıtımınızın NSS araçlarını yükleyin, sonra burada Yükle'ye basın.
+
+# This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+tb13a87e6 = Bu masaüstünde tracewing'in değiştirebileceği bir sistem proxy ayarı yok. Aşağıda Tarayıcılar'dan bir tarayıcıyı ayrı açın ya da bir terminal açın.
+
+# {desktop} has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
+t8d1ad87a = { $desktop } masaüstünde tracewing'in değiştirebileceği bir sistem proxy ayarı yok. Aşağıda Tarayıcılar'dan bir tarayıcıyı ayrı açın ya da bir terminal açın.
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
 t83387edf = Sistem ayarını kullanan uygulamalar artık { $addr } üzerinden geçiyor. tracewing kapandığında ya da çökerse eski hâline döner.
@@ -1398,6 +1419,9 @@ tbf8942c3 = Sertifika denetleniyor…
 
 # Installing the certificate; the system may ask you to confirm…
 t068dcaff = Sertifika yükleniyor; sistem onaylamanızı isteyebilir…
+
+# Removing the certificate; the system may ask you to confirm…
+t913da735 = Sertifika kaldırılıyor; sistem onay isteyebilir…
 
 # HTTPS will fail until the certificate is trusted: set up
 t4b34beb2 = Sertifikaya güvenilene kadar HTTPS başarısız olur: kurulum
