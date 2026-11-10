@@ -739,6 +739,15 @@ t65dc1281 =
 # left out: {why}
 ta81e95e2 = bỏ qua: { $why }
 
+# Copy
+t658f3664 = Sao chép
+
+# Copy all
+t6aef5c37 = Sao chép tất cả
+
+# Too large to copy all
+t2fe8ff9f = Quá lớn để sao chép tất cả
+
 # No flows
 t6dc463eb = Không có flow
 
@@ -1093,9 +1102,6 @@ t4ffc0abf = HttpClient của Dart, mà http và Dio của Flutter dùng, không 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback cho mọi chứng chỉ đi qua, vì vậy chỉ dùng cho bản debug.
 
-# Copy
-t658f3664 = Sao chép
-
 # Open settings
 t1336b4d6 = Mở cài đặt
 
@@ -1197,6 +1203,12 @@ t6bc99e5c = Sửa rồi gửi
 
 # Copy it as cURL
 tc99a11a3 = Sao chép dạng cURL
+
+# Select all of the part shown
+tf9168168 = Chọn tất cả trong phần đang xem
+
+# Copy the selected text
+t00b090d3 = Sao chép đoạn đã chọn
 
 # The window
 t2af18488 = Cửa sổ

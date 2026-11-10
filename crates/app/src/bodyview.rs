@@ -7,11 +7,13 @@ use crate::{
     body::{Body, Line, Token},
     colors::colors,
     flows::size_text,
+    select::{self, COPY_MAX, Copied, Selection, Spot},
     syntax::Syntax,
 };
 use gpui::{
-    Bounds, Context, HighlightStyle, Hsla, Pixels, Render, ScrollWheelEvent, SharedString,
-    StyledText, Window, canvas, div, prelude::*, px, rgb,
+    Bounds, ClipboardItem, Context, FocusHandle, HighlightStyle, Hsla, MouseButton, MouseDownEvent,
+    Pixels, Point, Render, ScrollWheelEvent, SharedString, Window, canvas, div, prelude::*, px,
+    rgb,
 };
 use std::{cell::Cell, rc::Rc, sync::Arc, time::Duration};
 use tracewing_i18n::{tr, tr_n};
@@ -36,11 +38,20 @@ pub struct BodyView {
     /// Where the view was last drawn: the height sets the scroll range, and a drag
     /// on the bar is measured from its top.
     bounds: Rc<Cell<Bounds<Pixels>>>,
+    /// What is selected, by line and offset into what the line shows.
+    select: Selection,
+    /// The window's, which a press in the body takes so that its keys work.
+    focus: FocusHandle,
 }
 
 impl BodyView {
     /// `content_type` is the body's, which says how to color it.
-    pub fn new(body: Arc<Body>, content_type: Option<&str>, cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        body: Arc<Body>,
+        content_type: Option<&str>,
+        focus: FocusHandle,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let syntax = Syntax::of(body.kind(), content_type, body.head());
         // A frame only when there is something new to show, and none after.
         let poll = Arc::clone(&body);
@@ -62,6 +73,87 @@ impl BodyView {
             sub: 0.,
             dragging: false,
             bounds: Rc::new(Cell::new(Bounds::default())),
+            select: Selection::default(),
+            focus,
+        }
+    }
+
+    pub fn selection(&self) -> &Selection {
+        &self.select
+    }
+
+    /// The selected text, as [`Body::text`] gives it.
+    pub fn selected_text(&self) -> Copied {
+        match self.select.bounds() {
+            Some((start, end)) => self.copy(start, end),
+            None => Copied::Nothing,
+        }
+    }
+
+    fn copy(&self, start: Spot, end: Spot) -> Copied {
+        match self
+            .body
+            .text((start.piece, start.at), (end.piece, end.at), COPY_MAX)
+        {
+            Some(text) if text.is_empty() => Copied::Nothing,
+            Some(text) => Copied::Text(text),
+            None => Copied::TooLarge,
+        }
+    }
+
+    /// The first and the last spot of the body.
+    fn ends(&self) -> Option<(Spot, Spot)> {
+        let last = self.body.lines().checked_sub(1)?;
+        Some((
+            Spot::default(),
+            Spot {
+                piece: last,
+                at: usize::MAX,
+            },
+        ))
+    }
+
+    pub fn select_all(&mut self, cx: &mut Context<Self>) {
+        if let Some((start, end)) = self.ends() {
+            self.select.select(start, end);
+            cx.notify();
+        }
+    }
+
+    fn copy_all(&mut self, cx: &mut Context<Self>) {
+        self.select.set_menu(None);
+        if let Some((start, end)) = self.ends()
+            && let Copied::Text(text) = self.copy(start, end)
+        {
+            cx.write_to_clipboard(ClipboardItem::new_string(text));
+        }
+        cx.notify();
+    }
+
+    fn copy_selected(&mut self, cx: &mut Context<Self>) {
+        self.select.set_menu(None);
+        if let Copied::Text(text) = self.selected_text() {
+            cx.write_to_clipboard(ClipboardItem::new_string(text));
+        }
+        cx.notify();
+    }
+
+    /// The end of a selection dragged to `at`. Past the top or the bottom of
+    /// the view, the view scrolls toward it as far as the mouse is past.
+    fn drag_selection(&mut self, at: Point<Pixels>, cx: &mut Context<Self>) {
+        let bounds = self.bounds.get();
+        let past = if at.y < bounds.top() {
+            at.y - bounds.top()
+        } else if at.y > bounds.bottom() {
+            at.y - bounds.bottom()
+        } else {
+            px(0.)
+        };
+        if past != px(0.) {
+            self.set_position(self.position() + f64::from(f32::from(past)));
+        }
+        if self.select.drag_to(at) || past != px(0.) {
+            cx.notify();
         }
     }
 
@@ -146,7 +238,7 @@ impl BodyView {
                     .flex_1()
                     .min_w_0()
                     .overflow_hidden()
-                    .child(StyledText::new(text).with_highlights(highlights)),
+                    .child(self.select.piece_at(line, text, highlights)),
             );
         if shown.cut > 0 {
             row = row.child(
@@ -186,6 +278,34 @@ impl Render for BodyView {
             0.
         };
         let bounds = Rc::clone(&self.bounds);
+        let me = cx.entity().downgrade();
+        let follow = select::follow_drag(&self.select, {
+            let me = me.clone();
+            move |at, _, cx| {
+                let _ = me.update(cx, |this, cx| this.drag_selection(at, cx));
+            }
+        });
+        let menu = self.select.menu().map(|at| {
+            let (copy, all, close) = (me.clone(), me.clone(), me.clone());
+            select::render_menu(
+                at,
+                !self.select.is_empty(),
+                self.body.size() <= COPY_MAX as u64,
+                move |_, cx| {
+                    let _ = copy.update(cx, |this, cx| this.copy_selected(cx));
+                },
+                move |_, cx| {
+                    let _ = all.update(cx, |this, cx| this.copy_all(cx));
+                },
+                move |_, cx| {
+                    let _ = close.update(cx, |this, cx| {
+                        this.select.set_menu(None);
+                        cx.notify();
+                    });
+                },
+            )
+        });
+        self.select.begin();
 
         div()
             .id("body-list")
@@ -197,7 +317,25 @@ impl Render for BodyView {
             .font_family(crate::MONO_FONT)
             .font_features(gpui::FontFeatures::disable_ligatures())
             .text_size(px(12.))
+            .cursor(gpui::CursorStyle::IBeam)
             .on_scroll_wheel(cx.listener(Self::on_wheel))
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, e: &MouseDownEvent, window, cx| {
+                    window.focus(&this.focus, cx);
+                    this.select
+                        .press(e.position, e.click_count, e.modifiers.shift);
+                    cx.notify();
+                }),
+            )
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(|this, e: &MouseDownEvent, window, cx| {
+                    window.focus(&this.focus, cx);
+                    this.select.set_menu(Some(e.position));
+                    cx.notify();
+                }),
+            )
             .on_mouse_move(cx.listener(|this, event: &gpui::MouseMoveEvent, _, cx| {
                 if this.dragging {
                     this.drag_to(event.position.y, cx);
@@ -228,6 +366,8 @@ impl Render for BodyView {
                     .right(px(BAR_W))
                     .children(rows),
             )
+            .children(follow)
+            .children(menu)
             .child(
                 div()
                     .id("body-bar")
@@ -236,9 +376,12 @@ impl Render for BodyView {
                     .bottom_0()
                     .right_0()
                     .w(px(BAR_W))
+                    .cursor(gpui::CursorStyle::Arrow)
                     .on_mouse_down(
                         gpui::MouseButton::Left,
                         cx.listener(|this, event: &gpui::MouseDownEvent, _, cx| {
+                            // The bar's, not the start of a selection.
+                            cx.stop_propagation();
                             this.dragging = true;
                             this.drag_to(event.position.y, cx);
                         }),

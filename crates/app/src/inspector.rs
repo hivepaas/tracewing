@@ -14,6 +14,7 @@ use crate::{
     input::TextInput,
     jwt::{self, Jwt},
     messages::MessagesState,
+    select::{self, Copied, Selection},
     snippets::{self, Language},
     traffic::Traffic,
     widgets::{chip, eyebrow, icon, status_colors},
@@ -83,6 +84,8 @@ pub struct InspectorState {
     pub copy_menu: bool,
     /// The chosen flow as a call to a model, once its bodies are read.
     pub llm: Option<(crate::llm::Provider, crate::llm::Exchange)>,
+    /// What is selected of the part shown, when it is not a body.
+    pub select: Selection,
 }
 
 impl Traffic {
@@ -97,6 +100,9 @@ impl Traffic {
                 let no_cookies = cookie_counts(&detail) == (0, 0);
                 let a_call = crate::llm::provider_of(&detail.method, &detail.url).is_some();
                 let (part_now, side_now) = (self.inspector.part, self.inspector.side);
+                if self.inspector.detail.as_ref().map(|d| d.id) != Some(id) {
+                    self.inspector.select.clear();
+                }
                 self.inspector.part = match (stream, self.inspector.part) {
                     (true, _) => Part::Messages,
                     (_, Part::Llm) if a_call => Part::Llm,
@@ -176,7 +182,12 @@ impl Traffic {
                     }
                     Some((path, _)) => match Body::open(&path) {
                         Ok(body) => BodyState::Shown(
-                            cx.new(|cx| BodyView::new(body, content_type.as_deref(), cx)),
+                            {
+                                let focus = this.focus.clone();
+                                cx.new(|cx| {
+                                    BodyView::new(body, content_type.as_deref(), focus, cx)
+                                })
+                            },
                         ),
                         Err(e) => BodyState::Note(
                             tr!("Cannot open this body: {e}", e = format!("{e:#}")).into(),
@@ -218,6 +229,7 @@ impl Traffic {
     pub fn set_side(&mut self, side: Side, cx: &mut Context<Self>) {
         if self.inspector.side != side {
             self.inspector.side = side;
+            self.inspector.select.clear();
             let part = self.inspector.part;
             let gone = matches!(part, Part::Query | Part::Form)
                 && self
@@ -234,6 +246,9 @@ impl Traffic {
     }
 
     pub fn set_part(&mut self, part: Part, cx: &mut Context<Self>) {
+        if self.inspector.part != part {
+            self.inspector.select.clear();
+        }
         self.inspector.part = part;
         cx.notify();
     }
@@ -698,20 +713,30 @@ impl Traffic {
             .rounded(px(16.))
             .overflow_hidden()
             .bg(rgb(c.code));
+        let sel = self.inspector.select.clone();
+        sel.begin();
         match self.inspector.part {
             Part::Messages => well.child(self.render_messages(cx)),
             Part::Llm => well.child(self.render_llm(cx)),
-            Part::Headers => well.child(render_headers(detail.headers(self.inspector.side))),
+            Part::Headers => self
+                .selectable(well, cx)
+                .child(render_headers(detail.headers(self.inspector.side), &sel)),
             Part::Connection => {
                 let naming = (detail.app.is_none() && device_of(&detail.client).is_some())
                     .then(|| self.device_name_input().clone());
-                well.child(render_connection(detail, naming))
+                self.selectable(well, cx)
+                    .child(render_connection(detail, naming, &sel))
             }
-            Part::Query => well.child(render_fields(fields::query(&detail.url))),
-            Part::Form => well.child(render_fields(detail.form.clone().unwrap_or_default())),
-            Part::Cookies => well.child(render_cookies(
+            Part::Query => self
+                .selectable(well, cx)
+                .child(render_fields(fields::query(&detail.url), &sel)),
+            Part::Form => self
+                .selectable(well, cx)
+                .child(render_fields(detail.form.clone().unwrap_or_default(), &sel)),
+            Part::Cookies => self.selectable(well, cx).child(render_cookies(
                 detail.headers(self.inspector.side),
                 self.inspector.side,
+                &sel,
             )),
             Part::Body => match &self.inspector.body {
                 BodyState::Shown(view) => well.py(px(8.)).child(view.clone()),
@@ -739,6 +764,158 @@ impl Traffic {
                 BodyState::Note(text) => well.child(note(text.clone())),
             },
         }
+    }
+}
+
+impl Traffic {
+    /// A part whose text can be selected: a press starts a selection, a drag
+    /// moves its end, and a right click opens the menu to copy it.
+    fn selectable(&mut self, well: Div, cx: &mut Context<Self>) -> Div {
+        let sel = self.inspector.select.clone();
+        let me = cx.entity().downgrade();
+        let follow = select::follow_drag(&sel, {
+            let sel = sel.clone();
+            let me = me.clone();
+            move |at, _, cx| {
+                if sel.drag_to(at) {
+                    let _ = me.update(cx, |_, cx| cx.notify());
+                }
+            }
+        });
+        let menu = sel.menu().map(|at| {
+            let copy = me.clone();
+            let all = me.clone();
+            let close = me.clone();
+            select::render_menu(
+                at,
+                !sel.is_empty(),
+                true,
+                move |_, cx| {
+                    let _ = copy.update(cx, |this, cx| this.copy_selection(cx));
+                },
+                move |_, cx| {
+                    let _ = all.update(cx, |this, cx| {
+                        let text = this.inspector.select.all_text();
+                        this.inspector.select.set_menu(None);
+                        write_copied(text, cx);
+                        cx.notify();
+                    });
+                },
+                move |_, cx| {
+                    let _ = close.update(cx, |this, cx| {
+                        this.inspector.select.set_menu(None);
+                        cx.notify();
+                    });
+                },
+            )
+        });
+        well.relative()
+            .cursor(gpui::CursorStyle::IBeam)
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, e: &MouseDownEvent, window, cx| {
+                    window.focus(&this.focus, cx);
+                    this.inspector
+                        .select
+                        .press(e.position, e.click_count, e.modifiers.shift);
+                    cx.notify();
+                }),
+            )
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(|this, e: &MouseDownEvent, window, cx| {
+                    window.focus(&this.focus, cx);
+                    this.inspector.select.set_menu(Some(e.position));
+                    cx.notify();
+                }),
+            )
+            .children(follow)
+            .children(menu)
+    }
+
+    /// Copies what is selected in the part shown, a body's or another's.
+    /// False when nothing is.
+    pub fn copy_selection(&mut self, cx: &mut Context<Self>) -> bool {
+        self.inspector.select.set_menu(None);
+        let copied = match (&self.inspector.part, &self.inspector.body) {
+            (Part::Body, BodyState::Shown(view)) => view.read(cx).selected_text(),
+            (Part::Messages, _) => match self
+                .inspector
+                .messages
+                .as_ref()
+                .and_then(|m| m.view.as_ref())
+            {
+                Some(view) => view.read(cx).selected_text(),
+                None => Copied::Nothing,
+            },
+            _ => self.inspector.select.selected_text(),
+        };
+        cx.notify();
+        write_copied(copied, cx)
+    }
+
+    /// Closes the menu to copy with, wherever it is open. False if it is not.
+    pub(crate) fn close_copy_menu(&mut self, cx: &mut Context<Self>) -> bool {
+        let mut views: Vec<Entity<BodyView>> = Vec::new();
+        if let BodyState::Shown(view) = &self.inspector.body {
+            views.push(view.clone());
+        }
+        if let Some(view) = self
+            .inspector
+            .messages
+            .as_ref()
+            .and_then(|m| m.view.clone())
+        {
+            views.push(view);
+        }
+        let mut closed = false;
+        for view in views {
+            let sel = view.read(cx).selection().clone();
+            if sel.menu().is_some() {
+                sel.set_menu(None);
+                view.update(cx, |_, cx| cx.notify());
+                closed = true;
+            }
+        }
+        if self.inspector.select.menu().is_some() {
+            self.inspector.select.set_menu(None);
+            cx.notify();
+            closed = true;
+        }
+        closed
+    }
+
+    /// Selects all of the part shown.
+    pub fn select_all(&mut self, cx: &mut Context<Self>) -> bool {
+        match (&self.inspector.part, &self.inspector.body) {
+            (Part::Body, BodyState::Shown(view)) => view.update(cx, |v, cx| v.select_all(cx)),
+            (Part::Messages, _) => match self
+                .inspector
+                .messages
+                .as_ref()
+                .and_then(|m| m.view.clone())
+            {
+                Some(view) => view.update(cx, |v, cx| v.select_all(cx)),
+                None => return false,
+            },
+            (Part::Headers | Part::Cookies | Part::Connection | Part::Query | Part::Form, _) => {
+                self.inspector.select.select_all();
+                cx.notify();
+            }
+            _ => return false,
+        }
+        true
+    }
+}
+
+/// Puts a copy on the clipboard. False when there was nothing to put.
+fn write_copied(copied: Copied, cx: &mut gpui::App) -> bool {
+    match copied {
+        Copied::Text(text) => {
+            cx.write_to_clipboard(ClipboardItem::new_string(text));
+            true
+        }
+        Copied::Nothing | Copied::TooLarge => false,
     }
 }
 
@@ -954,7 +1131,11 @@ fn now_secs() -> i64 {
 /// The server's address, TLS, and the certificates it showed.
 /// Who sent it, then where it went.
 /// `naming` is the box for the name of the device it came from, if another sent it.
-fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyElement {
+fn render_connection(
+    detail: &Detail,
+    naming: Option<Entity<TextInput>>,
+    sel: &Selection,
+) -> AnyElement {
     let c = colors();
     let row = |label: String, value: String| {
         div()
@@ -966,9 +1147,14 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
                     .w(relative(0.26))
                     .flex_shrink_0()
                     .text_color(rgb(c.json_key))
-                    .child(label),
+                    .child(sel.piece(label, "\n", Vec::new())),
             )
-            .child(div().flex_1().min_w_0().child(value))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .child(sel.piece(value, ": ", Vec::new())),
+            )
     };
     let heading = |text: String| {
         div()
@@ -977,7 +1163,7 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
             .text_size(px(11.))
             .font_weight(FontWeight::BOLD)
             .text_color(rgb(c.muted))
-            .child(text)
+            .child(sel.piece(text, "\n\n", Vec::new()))
     };
     let app = match (&detail.app, detail.app_pid) {
         (Some(app), Some(pid)) => tr!("{app}, pid {pid}", app = app, pid = pid.to_string()),
@@ -1051,7 +1237,7 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
                 div()
                     .font_family(crate::FONT)
                     .text_color(rgb(c.muted))
-                    .child(why),
+                    .child(sel.piece(why, "\n", Vec::new())),
             )
             .into_any_element();
     };
@@ -1094,9 +1280,13 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
             .bg(rgb(c.error_ground))
             .text_color(rgb(c.error))
             .font_family(crate::FONT)
-            .child(tr!(
-                "tracewing would not go on with this server: {error}. If the app trusts it some other way, such as through a company CA, choose “Do not decrypt this host” and the app will check the server itself.",
-                error = error
+            .child(sel.piece(
+                tr!(
+                    "tracewing would not go on with this server: {error}. If the app trusts it some other way, such as through a company CA, choose “Do not decrypt this host” and the app will check the server itself.",
+                    error = error
+                ),
+                "\n",
+                Vec::new(),
             ))
     }))
     .children(known(tls.version).map(|v| row("TLS".to_owned(), v)))
@@ -1108,7 +1298,7 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
     .children(
         tls.chain
             .into_iter()
-            .map(|cert| render_certificate(cert, now)),
+            .map(|cert| render_certificate(cert, now, sel)),
     )
     .into_any_element()
 }
@@ -1116,7 +1306,7 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
 /// How many of a certificate's names are listed before the rest are counted.
 const NAMES_SHOWN: usize = 12;
 
-fn render_certificate(cert: Certificate, now: i64) -> impl IntoElement {
+fn render_certificate(cert: Certificate, now: i64, sel: &Selection) -> impl IntoElement {
     let c = colors();
     let late = cert.out_of_date(now);
     let when = if now < cert.not_before {
@@ -1139,7 +1329,7 @@ fn render_certificate(cert: Certificate, now: i64) -> impl IntoElement {
         )),
         _ => Some(cert.names.join(", ")),
     };
-    let line = |text: String| div().child(text);
+    let line = |text: String| div().child(sel.piece(text, "\n", Vec::new()));
     div()
         .p(px(10.))
         .rounded(px(10.))
@@ -1152,37 +1342,41 @@ fn render_certificate(cert: Certificate, now: i64) -> impl IntoElement {
                 .font_family(crate::FONT)
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(c.text))
-                .child(if cert.is_ca {
-                    format!("{} · CA", cert.subject)
-                } else {
-                    cert.subject.clone()
-                }),
+                .child(sel.piece(
+                    if cert.is_ca {
+                        format!("{} · CA", cert.subject)
+                    } else {
+                        cert.subject.clone()
+                    },
+                    "\n\n",
+                    Vec::new(),
+                )),
         )
         .child(line(tr!("Issued by {issuer}", issuer = &cert.issuer)))
         .child(
             div()
                 .text_color(rgb(if late { c.error } else { c.text }))
-                .child(tr!(
+                .child(line(tr!(
                     "Valid {from} to {to} · {when}",
                     from = jwt::local_time(cert.not_before),
                     to = jwt::local_time(cert.not_after),
                     when = when
-                )),
+                ))),
         )
         .children(names.map(|names| line(tr!("Names {names}", names = names))))
         .child(
             div()
                 .text_color(rgb(c.muted))
-                .child(format!("SHA-256 {}", cert.sha256)),
+                .child(line(format!("SHA-256 {}", cert.sha256))),
         )
         .child(
             div()
                 .text_color(rgb(c.muted))
-                .child(tr!("Serial {serial}", serial = &cert.serial)),
+                .child(line(tr!("Serial {serial}", serial = &cert.serial))),
         )
 }
 
-fn render_headers(headers: Option<&[(String, String)]>) -> impl IntoElement {
+fn render_headers(headers: Option<&[(String, String)]>, sel: &Selection) -> impl IntoElement {
     let c = colors();
     let Some(headers) = headers else {
         return note(tr!("These headers were not kept.")).into_any_element();
@@ -1211,7 +1405,7 @@ fn render_headers(headers: Option<&[(String, String)]>) -> impl IntoElement {
                         .w(relative(0.34))
                         .flex_shrink_0()
                         .text_color(rgb(c.json_key))
-                        .child(name.clone()),
+                        .child(sel.piece(name.clone(), "\n", Vec::new())),
                 )
                 .child(
                     div()
@@ -1219,8 +1413,8 @@ fn render_headers(headers: Option<&[(String, String)]>) -> impl IntoElement {
                         .min_w_0()
                         .flex()
                         .flex_col()
-                        .child(value.clone())
-                        .children(Jwt::find(value).map(render_jwt)),
+                        .child(sel.piece(value.clone(), ": ", Vec::new()))
+                        .children(Jwt::find(value).map(|jwt| render_jwt(jwt, sel))),
                 )
         }))
         .into_any_element()
@@ -1235,7 +1429,7 @@ fn has_part(detail: &Detail, part: Part, side: Side) -> bool {
     }
 }
 
-fn render_fields(found: Vec<Field>) -> impl IntoElement {
+fn render_fields(found: Vec<Field>, sel: &Selection) -> impl IntoElement {
     let c = colors();
     div()
         .id("fields")
@@ -1249,17 +1443,22 @@ fn render_fields(found: Vec<Field>) -> impl IntoElement {
         .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(px(12.))
         .children(found.into_iter().map(|field| {
+            let name = sel.piece(field.name, "\n", Vec::new());
             let value = match field.value {
-                FieldValue::Text(text) => div().child(text),
+                FieldValue::Text(text) => div().child(sel.piece(text, ": ", Vec::new())),
                 FieldValue::File {
                     filename,
                     content_type,
                     bytes,
-                } => div().text_color(rgb(c.muted)).child(tr!(
-                    "File {filename} · {kind} · {size}",
-                    filename = filename,
-                    kind = content_type.unwrap_or_else(|| tr!("no type")),
-                    size = size_text(bytes as u64)
+                } => div().text_color(rgb(c.muted)).child(sel.piece(
+                    tr!(
+                        "File {filename} · {kind} · {size}",
+                        filename = filename,
+                        kind = content_type.unwrap_or_else(|| tr!("no type")),
+                        size = size_text(bytes as u64)
+                    ),
+                    ": ",
+                    Vec::new(),
                 )),
             };
             div()
@@ -1271,7 +1470,7 @@ fn render_fields(found: Vec<Field>) -> impl IntoElement {
                         .w(relative(0.34))
                         .flex_shrink_0()
                         .text_color(rgb(c.json_key))
-                        .child(field.name),
+                        .child(name),
                 )
                 .child(div().flex_1().min_w_0().child(value))
         }))
@@ -1284,7 +1483,11 @@ fn cookie_counts(detail: &Detail) -> (usize, usize) {
     }
 }
 
-fn render_cookies(headers: Option<&[(String, String)]>, side: Side) -> impl IntoElement {
+fn render_cookies(
+    headers: Option<&[(String, String)]>,
+    side: Side,
+    sel: &Selection,
+) -> impl IntoElement {
     let c = colors();
     let Some(headers) = headers else {
         return note(tr!("These headers were not kept.")).into_any_element();
@@ -1319,7 +1522,7 @@ fn render_cookies(headers: Option<&[(String, String)]>, side: Side) -> impl Into
                         .w(relative(0.34))
                         .flex_shrink_0()
                         .text_color(rgb(c.json_key))
-                        .child(cookie.name),
+                        .child(sel.piece(cookie.name, "\n", Vec::new())),
                 )
                 .child(
                     div()
@@ -1328,23 +1531,22 @@ fn render_cookies(headers: Option<&[(String, String)]>, side: Side) -> impl Into
                         .flex()
                         .flex_col()
                         .gap(px(2.))
-                        .child(cookie.value)
+                        .child(sel.piece(cookie.value, ": ", Vec::new()))
                         .when(!cookie.attributes.is_empty(), |d| {
                             d.child(
-                                div()
-                                    .text_size(px(11.5))
-                                    .text_color(rgb(c.muted))
-                                    .child(cookie.attributes.join(" · ")),
+                                div().text_size(px(11.5)).text_color(rgb(c.muted)).child(
+                                    sel.piece(cookie.attributes.join("; "), "; ", Vec::new()),
+                                ),
                             )
                         })
-                        .children(jwt.map(render_jwt)),
+                        .children(jwt.map(|jwt| render_jwt(jwt, sel))),
                 )
         }))
         .into_any_element()
 }
 
 /// What a token claims, under the header or cookie that carries it.
-fn render_jwt(jwt: Jwt) -> Div {
+fn render_jwt(jwt: Jwt, sel: &Selection) -> Div {
     let c = colors();
     let now = now_secs();
     let title = match jwt.algorithm() {
@@ -1359,7 +1561,7 @@ fn render_jwt(jwt: Jwt) -> Div {
             .mt(px(4.))
             .text_size(px(11.))
             .text_color(rgb(c.muted))
-            .child(text)
+            .child(sel.piece(text, "\n", Vec::new()))
     };
     div()
         .mt(px(6.))
@@ -1374,23 +1576,27 @@ fn render_jwt(jwt: Jwt) -> Div {
                 .font_family(crate::FONT)
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(c.text))
-                .child(title),
+                .child(sel.piece(title, "\n\n", Vec::new())),
         )
         .children(jwt.times().into_iter().map(|(label, at)| {
             let late = label == "Expires" && at <= now;
             div()
                 .text_color(rgb(if late { c.error } else { c.text }))
-                .child(format!(
-                    "{} {} · {}",
-                    jwt::time_label(label),
-                    jwt::local_time(at),
-                    jwt::relative(at, now)
+                .child(sel.piece(
+                    format!(
+                        "{} {} · {}",
+                        jwt::time_label(label),
+                        jwt::local_time(at),
+                        jwt::relative(at, now)
+                    ),
+                    "\n",
+                    Vec::new(),
                 ))
         }))
         .child(label(tr!("Header")))
-        .child(jwt.header_text())
+        .child(sel.piece(jwt.header_text(), "\n", Vec::new()))
         .child(label(tr!("Payload")))
-        .child(jwt.payload_text())
+        .child(sel.piece(jwt.payload_text(), "\n", Vec::new()))
 }
 
 #[cfg(test)]

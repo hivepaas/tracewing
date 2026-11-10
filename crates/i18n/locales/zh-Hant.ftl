@@ -739,6 +739,15 @@ t65dc1281 =
 # left out: {why}
 ta81e95e2 = 已略過：{ $why }
 
+# Copy
+t658f3664 = 複製
+
+# Copy all
+t6aef5c37 = 全部複製
+
+# Too large to copy all
+t2fe8ff9f = 太大，無法全部複製
+
 # No flows
 t6dc463eb = 無流量紀錄
 
@@ -1093,9 +1102,6 @@ t4ffc0abf = Dart 的 HttpClient（Flutter 的 http 和 Dio 都以它為基礎）
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback 會放行任何憑證，因此僅限用於偵錯版本。
 
-# Copy
-t658f3664 = 複製
-
 # Open settings
 t1336b4d6 = 開啟設定
 
@@ -1197,6 +1203,12 @@ t6bc99e5c = 編輯後傳送
 
 # Copy it as cURL
 tc99a11a3 = 複製為 cURL
+
+# Select all of the part shown
+tf9168168 = 全選目前顯示的部分
+
+# Copy the selected text
+t00b090d3 = 複製所選文字
 
 # The window
 t2af18488 = 視窗

@@ -26,6 +26,9 @@ pub enum Action {
     SendAgain,
     EditAndSend,
     CopyCurl,
+    /// Copies what is selected in the inspector.
+    Copy,
+    SelectAll,
     Record,
     Clear,
     Go(Screen),
@@ -69,6 +72,9 @@ pub fn action_of(key: &str, secondary: bool, shift: bool, typing: bool) -> Optio
             ("enter", false) => Some(SendAgain),
             ("e", false) => Some(EditAndSend),
             ("c", true) => Some(CopyCurl),
+            // In a text field these are the field's.
+            ("c", false) if !typing => Some(Copy),
+            ("a", false) if !typing => Some(SelectAll),
             ("r", false) => Some(Record),
             ("k", false) => Some(Clear),
             ("/", _) => Some(Shortcuts),
@@ -148,6 +154,8 @@ pub fn list() -> Vec<Group> {
                 ("mod+enter", tr!("Send it again")),
                 ("mod+e", tr!("Edit it and send it")),
                 ("mod+shift+c", tr!("Copy it as cURL")),
+                ("mod+a", tr!("Select all of the part shown")),
+                ("mod+c", tr!("Copy the selected text")),
             ],
         ),
         (
@@ -272,8 +280,11 @@ mod tests {
     fn keys_do_what_the_list_says() {
         assert_eq!(action_of("f", true, false, true), Some(Action::Filter));
         assert_eq!(action_of("c", true, true, false), Some(Action::CopyCurl));
-        // Plain mod+c stays the text field's copy.
-        assert_eq!(action_of("c", true, false, false), None);
+        // Plain mod+c and mod+a stay the text field's.
+        assert_eq!(action_of("c", true, false, true), None);
+        assert_eq!(action_of("a", true, false, true), None);
+        assert_eq!(action_of("c", true, false, false), Some(Action::Copy));
+        assert_eq!(action_of("a", true, false, false), Some(Action::SelectAll));
         assert_eq!(
             action_of("3", true, false, false),
             Some(Action::Go(Screen::Rules))

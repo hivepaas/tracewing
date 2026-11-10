@@ -778,6 +778,15 @@ t65dc1281 =
 # left out: {why}
 ta81e95e2 = пропущено: { $why }
 
+# Copy
+t658f3664 = Копировать
+
+# Copy all
+t6aef5c37 = Копировать всё
+
+# Too large to copy all
+t2fe8ff9f = Слишком много, чтобы копировать всё
+
 # No flows
 t6dc463eb = Нет потоков
 
@@ -1135,9 +1144,6 @@ t4ffc0abf = HttpClient из Dart, который используют http и Di
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback пропускает любой сертификат, поэтому он только для отладочных сборок.
 
-# Copy
-t658f3664 = Копировать
-
 # Open settings
 t1336b4d6 = Открыть настройки
 
@@ -1239,6 +1245,12 @@ t6bc99e5c = Изменить и отправить
 
 # Copy it as cURL
 tc99a11a3 = Копировать как cURL
+
+# Select all of the part shown
+tf9168168 = Выделить всё в показанной части
+
+# Copy the selected text
+t00b090d3 = Копировать выделенный текст
 
 # The window
 t2af18488 = Окно

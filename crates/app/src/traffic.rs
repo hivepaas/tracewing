@@ -271,7 +271,7 @@ pub struct Traffic {
     drag: Option<Drag>,
     content: Rc<Cell<Bounds<Pixels>>>,
     list: Rc<Cell<Bounds<Pixels>>>,
-    focus: FocusHandle,
+    pub(crate) focus: FocusHandle,
     last_count: usize,
     rows_missing: bool,
     places_asked: usize,
@@ -1282,6 +1282,7 @@ impl Traffic {
                 cx.notify();
             }
             Action::Close if self.shortcuts_open => self.set_shortcuts(false, cx),
+            Action::Close if self.close_copy_menu(cx) => {}
             Action::Close => return false,
             Action::Shortcuts => self.set_shortcuts(!self.shortcuts_open, cx),
             Action::Filter => {
@@ -1309,6 +1310,10 @@ impl Traffic {
             Action::SendAgain if chosen => self.send_flow_again(cx),
             Action::EditAndSend if chosen => self.edit_flow(cx),
             Action::CopyCurl if chosen => self.copy_as_curl(cx),
+            Action::Copy if chosen => return self.copy_selection(cx),
+            Action::SelectAll if chosen && self.screen == Screen::Traffic => {
+                return self.select_all(cx);
+            }
             Action::Record => self.toggle_recording(cx),
             Action::Clear if in_list => self.clear(cx),
             Action::Go(screen) => self.set_screen(screen, cx),

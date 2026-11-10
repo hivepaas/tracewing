@@ -286,6 +286,9 @@ t65dc1281 =
        *[other] { $n } here already
     }
 ta81e95e2 = left out: { $why }
+t658f3664 = Copy
+t6aef5c37 = Copy all
+t2fe8ff9f = Too large to copy all
 t6dc463eb = No flows
 t52c1a402 = Name it to keep it
 t878e5c80 = { $size } · written by another version, so it cannot be opened
@@ -407,7 +410,6 @@ t02ad844b = and point to it from AndroidManifest.xml:
 t02e57826 = Other apps keep refusing the certificate: their traffic shows as failed flows.
 t4ffc0abf = Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
 t991340f1 = badCertificateCallback lets any certificate through, which is why it is for debug builds only.
-t658f3664 = Copy
 t1336b4d6 = Open settings
 t2e3c591c = Phones and other devices
 td0629ca6 = A phone, a tablet or another computer on this network can go through tracewing at { $proxy }. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
@@ -442,6 +444,8 @@ t221fc168 = Its response
 tef7d1944 = Send it again
 t6bc99e5c = Edit it and send it
 tc99a11a3 = Copy it as cURL
+tf9168168 = Select all of the part shown
+t00b090d3 = Copy the selected text
 t2af18488 = The window
 t9df89562 = Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t67adca04 = Show or hide the sidebar

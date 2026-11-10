@@ -752,6 +752,15 @@ t65dc1281 =
 # left out: {why}
 ta81e95e2 = dışarıda bırakıldı: { $why }
 
+# Copy
+t658f3664 = Kopyala
+
+# Copy all
+t6aef5c37 = Tümünü kopyala
+
+# Too large to copy all
+t2fe8ff9f = Tümünü kopyalamak için çok büyük
+
 # No flows
 t6dc463eb = Akış yok
 
@@ -1107,9 +1116,6 @@ t4ffc0abf = Flutter'ın http ve Dio paketlerinin kullandığı Dart HttpClient, 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback her sertifikayı geçirir, bu yüzden yalnızca debug derlemeleri içindir.
 
-# Copy
-t658f3664 = Kopyala
-
 # Open settings
 t1336b4d6 = Ayarları aç
 
@@ -1211,6 +1217,12 @@ t6bc99e5c = Düzenle ve gönder
 
 # Copy it as cURL
 tc99a11a3 = cURL olarak kopyala
+
+# Select all of the part shown
+tf9168168 = Gösterilen bölümün tümünü seç
+
+# Copy the selected text
+t00b090d3 = Seçili metni kopyala
 
 # The window
 t2af18488 = Pencere

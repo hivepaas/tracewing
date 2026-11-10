@@ -31,6 +31,7 @@ pub mod paused_page;
 pub mod placement;
 pub mod qr;
 pub mod rules_page;
+pub mod select;
 pub mod sessions_page;
 pub mod settings_page;
 pub mod setup_page;
