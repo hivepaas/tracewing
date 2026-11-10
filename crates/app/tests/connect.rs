@@ -268,9 +268,19 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             .as_deref(),
         Some("vi")
     );
+    // In Vietnamese, the window says its words in it.
+    cx.run_until_parked();
+    save_shot(&mut cx, window.into(), "72-settings-vi");
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Setup, cx))
+        .unwrap();
+    cx.run_until_parked();
+    save_shot(&mut cx, window.into(), "73-setup-vi");
+    assert_eq!(tracewing_i18n::tr!("Settings"), "Cài đặt");
     window
         .update(&mut cx, |view, window, cx| {
-            view.set_language(Some("en"), window, cx)
+            view.set_language(Some("en"), window, cx);
+            view.set_screen(Screen::Settings, cx);
         })
         .unwrap();
     let saved = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();
