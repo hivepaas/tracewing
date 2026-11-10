@@ -264,14 +264,18 @@ async fn intercepts_http1_and_http2() {
 #[tokio::test(flavor = "multi_thread")]
 async fn each_flow_knows_the_program_that_sent_it() {
     let h = Harness::start("apps").await;
-    for http1_only in [true, false] {
-        let res = h
-            .client(http1_only)
+    // The clients live on, their connections open, as an app's do: a socket
+    // closed before it is looked for has no owner left to find, which a busy
+    // machine running the whole suite showed.
+    let clients = [h.client(true), h.client(false)];
+    for client in &clients {
+        let res = client
             .get(format!("{}/json?size=10", h.origin))
             .send()
             .await
             .unwrap();
         assert_eq!(res.status(), 200);
+        res.bytes().await.unwrap();
     }
     h.rules.write().unwrap().leave_alone("localhost");
     let origin_ca = h.dir.join("origin-ca.pem");
@@ -284,6 +288,7 @@ async fn each_flow_knows_the_program_that_sent_it() {
     assert_eq!(res.status(), 200);
 
     let (_, conn, dir) = h.finish(3).await;
+    drop((clients, trusts_origin));
     type AppRow = (String, Option<String>, Option<i64>, Option<String>);
     let apps: Vec<AppRow> = conn
         .prepare("SELECT kind, app, app_pid, app_path FROM flows ORDER BY id")
