@@ -4,6 +4,10 @@
 
 #![cfg(all(feature = "headless", target_os = "linux"))]
 
+mod common;
+
+use common::{clipboard, drag, key, right_click};
+
 use gpui::{AppContext as _, Entity, HeadlessAppContext, WindowHandle, px, size};
 use std::{
     path::PathBuf,
@@ -156,6 +160,44 @@ fn requests_composed_in_the_window_go_through() {
         .unwrap();
     cx.run_until_parked();
     shot(&mut cx, window.into(), "35-compose");
+
+    // The answer's text is selected and copied like the inspector's...
+    let (summary, line) = window
+        .update(&mut cx, |view, _, _| {
+            let page = view.compose_page.as_ref().unwrap();
+            (
+                tracewing::compose::summary(page.answer.as_ref().unwrap()),
+                page.select.drawn_at(0).unwrap(),
+            )
+        })
+        .unwrap();
+    drag(
+        &mut cx,
+        window,
+        gpui::point(line.left() + px(1.), line.center().y),
+        gpui::point(line.right() + px(40.), line.center().y),
+    );
+    key(&mut cx, window, "ctrl-c");
+    assert_eq!(clipboard(&mut cx), summary);
+    key(&mut cx, window, "ctrl-a");
+    key(&mut cx, window, "ctrl-c");
+    let all = clipboard(&mut cx);
+    assert!(all.starts_with(&format!("{summary}\n\n")), "{all}");
+    assert!(all.contains("content-type: application/json"), "{all}");
+    assert!(all.trim_end().ends_with('}'), "the body last: {all}");
+    shot(&mut cx, window.into(), "80-compose-selected");
+    // ...and a field has its own menu: cut, copy, paste, select all.
+    let url_field = window
+        .update(&mut cx, |view, _, _| {
+            view.compose_page.as_ref().unwrap().url.clone()
+        })
+        .unwrap();
+    let field = cx.read_entity(&url_field, |input, _| input.drawn_at().unwrap());
+    right_click(&mut cx, window, field.center());
+    assert!(cx.read_entity(&url_field, |input, _| input.menu_open()));
+    shot(&mut cx, window.into(), "81-field-menu");
+    key(&mut cx, window, "escape");
+    assert!(!cx.read_entity(&url_field, |input, _| input.menu_open()));
 
     // It went through the proxy, so it is in Traffic; sent again from there.
     window

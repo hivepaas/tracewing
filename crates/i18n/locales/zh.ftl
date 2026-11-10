@@ -178,6 +178,18 @@ t8090a1ba = 未解密
 # open
 td35ec4c9 = 进行中
 
+# Cut
+t58e25863 = 剪切
+
+# Copy
+t658f3664 = 复制
+
+# Paste
+tb34a0288 = 粘贴
+
+# Select all
+t6af21072 = 全选
+
 # This flow is gone.
 t3343999e = 此流量记录已不存在。
 
@@ -738,9 +750,6 @@ t65dc1281 =
 
 # left out: {why}
 ta81e95e2 = 已跳过：{ $why }
-
-# Copy
-t658f3664 = 复制
 
 # Copy all
 t6aef5c37 = 全部复制

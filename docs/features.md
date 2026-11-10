@@ -102,7 +102,8 @@ keyboard.
 | Bodies of 50 MB and more open without freezing the window | Beta | Free |
 | Copy as cURL; save a body to a file | Beta | Free |
 | Copy as HTTPie, `fetch`, Python `requests` and more | 1.0 | Pro |
-| Select text in a body, headers, cookies, query, form or connection, and copy it or all of the part from a right-click menu or the keyboard | 1.0 | Free |
+| Select text in a body, headers, cookies, query, form, connection or an LLM call, and in Compose's answer; copy it or all of it from a right-click menu or the keyboard | 1.0 | Free |
+| Text fields have a right-click menu: cut, copy, paste, select all | 1.0 | Free |
 
 ## Changing traffic
 

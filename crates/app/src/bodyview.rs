@@ -287,7 +287,7 @@ impl Render for BodyView {
         });
         let menu = self.select.menu().map(|at| {
             let (copy, all, close) = (me.clone(), me.clone(), me.clone());
-            select::render_menu(
+            select::copy_menu(
                 at,
                 !self.select.is_empty(),
                 self.body.size() <= COPY_MAX as u64,

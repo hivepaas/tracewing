@@ -72,6 +72,10 @@ teca2074f = Rule: { $rule }
 t003420a4 = Events
 t8090a1ba = Not decrypted
 td35ec4c9 = open
+t58e25863 = Cut
+t658f3664 = Copy
+tb34a0288 = Paste
+t6af21072 = Select all
 t3343999e = This flow is gone.
 tf85fe84f = This host is not decrypted, so what it sends cannot be seen.
 t31e4d044 = No body.
@@ -286,7 +290,6 @@ t65dc1281 =
        *[other] { $n } here already
     }
 ta81e95e2 = left out: { $why }
-t658f3664 = Copy
 t6aef5c37 = Copy all
 t2fe8ff9f = Too large to copy all
 t6dc463eb = No flows

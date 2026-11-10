@@ -182,6 +182,18 @@ t8090a1ba = Şifresi çözülmedi
 # open
 td35ec4c9 = açık
 
+# Cut
+t58e25863 = Kes
+
+# Copy
+t658f3664 = Kopyala
+
+# Paste
+tb34a0288 = Yapıştır
+
+# Select all
+t6af21072 = Tümünü seç
+
 # This flow is gone.
 t3343999e = Bu akış artık yok.
 
@@ -751,9 +763,6 @@ t65dc1281 =
 
 # left out: {why}
 ta81e95e2 = dışarıda bırakıldı: { $why }
-
-# Copy
-t658f3664 = Kopyala
 
 # Copy all
 t6aef5c37 = Tümünü kopyala

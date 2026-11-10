@@ -5,6 +5,10 @@
 
 #![cfg(all(feature = "headless", target_os = "linux"))]
 
+mod common;
+
+use common::{clipboard, drag, key};
+
 use gpui::{AppContext as _, HeadlessAppContext, WindowHandle, px, size};
 use std::{
     path::PathBuf,
@@ -162,6 +166,35 @@ fn calls_to_models_are_put_back_together() {
         })
         .unwrap();
     shot(&mut cx, window.into(), "69-llm-stream");
+
+    // The call reads as text when copied: the answer, the tool it calls, and
+    // what was asked.
+    let first = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector.select.drawn_at(0).unwrap()
+        })
+        .unwrap();
+    drag(
+        &mut cx,
+        window,
+        gpui::point(first.left() + px(1.), first.center().y),
+        gpui::point(first.right() + px(40.), first.center().y),
+    );
+    key(&mut cx, window, "ctrl-c");
+    assert_eq!(clipboard(&mut cx), "ANSWER");
+    key(&mut cx, window, "ctrl-a");
+    key(&mut cx, window, "ctrl-c");
+    let all = clipboard(&mut cx);
+    for said in [
+        "I will look for a table near the Old Quarter.",
+        "Calls find_table",
+        "\"area\": \"Hoan Kiem\"",
+        "ASKED",
+        "You book restaurants in Hanoi.",
+    ] {
+        assert!(all.contains(said), "{said} in {all}");
+    }
+    shot(&mut cx, window.into(), "82-llm-selected");
 
     // A whole answer, the next one along.
     window

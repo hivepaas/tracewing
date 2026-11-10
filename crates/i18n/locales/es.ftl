@@ -182,6 +182,18 @@ t8090a1ba = No descifrado
 # open
 td35ec4c9 = abierto
 
+# Cut
+t58e25863 = Cortar
+
+# Copy
+t658f3664 = Copiar
+
+# Paste
+tb34a0288 = Pegar
+
+# Select all
+t6af21072 = Seleccionar todo
+
 # This flow is gone.
 t3343999e = Este flow ya no existe.
 
@@ -751,9 +763,6 @@ t65dc1281 =
 
 # left out: {why}
 ta81e95e2 = omitida: { $why }
-
-# Copy
-t658f3664 = Copiar
 
 # Copy all
 t6aef5c37 = Copiar todo
