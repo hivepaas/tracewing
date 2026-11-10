@@ -181,6 +181,9 @@ teca2074f = Quy tắc: { $rule }
 # Events
 t003420a4 = Sự kiện
 
+# JSON lines
+te8ce2db0 = Dòng JSON
+
 # Not decrypted
 t8090a1ba = Không giải mã
 

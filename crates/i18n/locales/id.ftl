@@ -181,6 +181,9 @@ teca2074f = Aturan: { $rule }
 # Events
 t003420a4 = Peristiwa
 
+# JSON lines
+te8ce2db0 = Baris JSON
+
 # Not decrypted
 t8090a1ba = Tidak didekripsi
 

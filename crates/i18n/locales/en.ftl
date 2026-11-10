@@ -77,6 +77,7 @@ te9ed60a6 = Errors
 td10fcaa3 = Media
 teca2074f = Rule: { $rule }
 t003420a4 = Events
+te8ce2db0 = JSON lines
 t8090a1ba = Not decrypted
 td35ec4c9 = open
 t51c96267 = Reading the request…

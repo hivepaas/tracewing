@@ -355,12 +355,13 @@ impl FlowHandler {
         let Some(flow) = flow else {
             return res;
         };
-        // Text only: events that come compressed cannot be told apart as they come.
-        let events = is_event_stream(&res) && !res.headers().contains_key(header::CONTENT_ENCODING);
-        if events {
-            flow.opened_as("sse", None);
+        // Text only: what comes compressed cannot be cut apart as it comes.
+        let cut =
+            stream_cut(&res).filter(|_| !res.headers().contains_key(header::CONTENT_ENCODING));
+        if let Some(cut) = cut {
+            flow.opened_as(cut.kind(), None);
         }
-        let stream = events.then(|| flow.stream()).flatten();
+        let stream = cut.and_then(|cut| Some((flow.stream()?, cut)));
         let (cap, spool) = (self.log_max, self.spool.clone());
         res.map(move |body| TapBody::wrap(body, flow, Side::Response, cap, spool, stream))
     }
@@ -379,7 +380,7 @@ impl FlowHandler {
         }
         let edits = std::mem::take(&mut self.response_body);
         if edits.is_empty()
-            || is_event_stream(&res)
+            || stream_cut(&res).is_some()
             || res.status() == StatusCode::SWITCHING_PROTOCOLS
         {
             return res;
@@ -770,7 +771,8 @@ impl HttpHandler for FlowHandler {
         let res = match self.pause_response.take() {
             // Events and upgrades go on for as long as they last.
             Some(held)
-                if !is_event_stream(&res) && res.status() != StatusCode::SWITCHING_PROTOCOLS =>
+                if stream_cut(&res).is_none()
+                    && res.status() != StatusCode::SWITCHING_PROTOCOLS =>
             {
                 self.hold_response(res, held).await
             }
@@ -898,43 +900,119 @@ fn is_websocket<T>(req: &Request<T>) -> bool {
         .is_some_and(|v| v.eq_ignore_ascii_case("websocket"))
 }
 
-fn is_event_stream<T>(res: &Response<T>) -> bool {
-    res.headers()
-        .get(header::CONTENT_TYPE)
-        .and_then(|v| v.to_str().ok())
-        .is_some_and(|v| v.to_ascii_lowercase().starts_with("text/event-stream"))
+/// How a stream's body is cut into messages as it comes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Cut {
+    /// Server-sent events, which end in a blank line.
+    Events,
+    /// A JSON value a line: NDJSON, JSON Lines, JSON text sequences.
+    Lines,
 }
 
-/// The most of one event waited for before it is written as it stands.
+impl Cut {
+    /// The flow's kind, for its row.
+    fn kind(self) -> &'static str {
+        match self {
+            Self::Events => "sse",
+            Self::Lines => "ndjson",
+        }
+    }
+
+    /// Each message's kind.
+    fn message(self) -> &'static str {
+        match self {
+            Self::Events => "event",
+            Self::Lines => "line",
+        }
+    }
+}
+
+/// Whether a response is a stream that goes on for as long as it lasts, and
+/// how its body is cut, by its content type.
+fn stream_cut<T>(res: &Response<T>) -> Option<Cut> {
+    let content_type = res
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())?
+        .to_ascii_lowercase();
+    let essence = content_type.split(';').next().unwrap_or_default().trim();
+    match essence {
+        "text/event-stream" => Some(Cut::Events),
+        "application/x-ndjson"
+        | "application/ndjson"
+        | "application/jsonl"
+        | "application/x-jsonl"
+        | "application/jsonlines"
+        | "application/x-jsonlines"
+        | "application/json-seq"
+        | "application/stream+json"
+        | "application/x-json-stream" => Some(Cut::Lines),
+        _ => None,
+    }
+}
+
+/// The most of one message waited for before it is written as it stands.
 const EVENT_MAX: usize = 1024 * 1024;
 
-/// Cuts server-sent events apart: they end in a blank line, and frames need not
-/// fall on the ends of events.
-#[derive(Debug, Default)]
-struct EventSplitter {
+/// Cuts a stream's messages apart as they pass: frames need not fall on their
+/// ends.
+#[derive(Debug)]
+struct Splitter {
+    cut: Cut,
     buffer: Vec<u8>,
 }
 
-impl EventSplitter {
-    fn feed(&mut self, data: &[u8], mut event: impl FnMut(&[u8])) {
+impl Splitter {
+    fn new(cut: Cut) -> Self {
+        Self {
+            cut,
+            buffer: Vec::new(),
+        }
+    }
+
+    fn feed(&mut self, data: &[u8], mut message: impl FnMut(&[u8])) {
         self.buffer.extend_from_slice(data);
         let mut from = 0;
-        while let Some((end, next)) = event_end(&self.buffer[from..]) {
-            event(&self.buffer[from..from + end]);
+        while let Some((end, next)) = self.end(&self.buffer[from..]) {
+            self.send(&self.buffer[from..from + end], &mut message);
             from += next;
         }
         self.buffer.drain(..from);
         if self.buffer.len() > EVENT_MAX {
-            event(&self.buffer);
+            self.send(&self.buffer, &mut message);
             self.buffer.clear();
         }
     }
 
-    fn finish(&mut self, mut event: impl FnMut(&[u8])) {
+    fn finish(&mut self, mut message: impl FnMut(&[u8])) {
         if !self.buffer.is_empty() {
-            event(&self.buffer);
+            self.send(&self.buffer, &mut message);
             self.buffer.clear();
         }
+    }
+
+    fn end(&self, data: &[u8]) -> Option<(usize, usize)> {
+        match self.cut {
+            Cut::Events => event_end(data),
+            Cut::Lines => data.iter().position(|b| *b == b'\n').map(|at| (at, at + 1)),
+        }
+    }
+
+    /// A line without its `\r` or its JSON text sequence's record separator,
+    /// and none at all if nothing is left.
+    fn send(&self, data: &[u8], message: &mut impl FnMut(&[u8])) {
+        let data = match self.cut {
+            Cut::Events => data,
+            Cut::Lines => {
+                let data = data.strip_suffix(b"\r").unwrap_or(data);
+                let data = data.strip_prefix(b"\x1e").unwrap_or(data);
+                if data.trim_ascii().is_empty() {
+                    return;
+                }
+                data
+            }
+        };
+        message(data);
     }
 }
 
@@ -1133,8 +1211,8 @@ struct TapBody {
     done: bool,
     spool: Spool,
     file: Option<SpoolFile>,
-    /// Server-sent events, to cut apart as they pass.
-    events: Option<(StreamHandle, EventSplitter)>,
+    /// A stream's messages, to cut apart as they pass.
+    events: Option<(StreamHandle, Splitter)>,
 }
 
 impl TapBody {
@@ -1144,7 +1222,7 @@ impl TapBody {
         side: Side,
         cap: usize,
         spool: Spool,
-        events: Option<StreamHandle>,
+        events: Option<(StreamHandle, Cut)>,
     ) -> Body {
         Body::from(BoxBody::new(Self {
             inner,
@@ -1155,14 +1233,15 @@ impl TapBody {
             done: false,
             spool,
             file: None,
-            events: events.map(|stream| (stream, EventSplitter::default())),
+            events: events.map(|(stream, cut)| (stream, Splitter::new(cut))),
         }))
     }
 
     fn observe(&mut self, data: &Bytes) {
         self.body.bytes += data.len() as u64;
         if let Some((stream, splitter)) = &mut self.events {
-            splitter.feed(data, |event| stream.message(false, "event", event));
+            let kind = splitter.cut.message();
+            splitter.feed(data, |message| stream.message(false, kind, message));
         }
         let room = self.cap.saturating_sub(self.body.captured.len());
         if data.len() > room {
@@ -1189,7 +1268,8 @@ impl TapBody {
         }
         self.body.complete = complete;
         if let Some((stream, splitter)) = &mut self.events {
-            splitter.finish(|event| stream.message(false, "event", event));
+            let kind = splitter.cut.message();
+            splitter.finish(|message| stream.message(false, kind, message));
         }
         if let Some(file) = self.file.take() {
             self.body.spool_lost = file.is_lost();
@@ -1366,7 +1446,7 @@ mod tests {
     }
 
     fn events_of(frames: &[&[u8]]) -> Vec<Vec<u8>> {
-        let mut splitter = EventSplitter::default();
+        let mut splitter = Splitter::new(Cut::Events);
         let mut out = Vec::new();
         for frame in frames {
             splitter.feed(frame, |event| out.push(event.to_vec()));
@@ -1383,6 +1463,54 @@ mod tests {
         assert_eq!(events_of(&[b"data: a\r\n\r\ndata: b\r\n\r\n"]), want);
     }
 
+    fn lines_of(frames: &[&[u8]]) -> Vec<String> {
+        let mut splitter = Splitter::new(Cut::Lines);
+        let mut out = Vec::new();
+        for frame in frames {
+            splitter.feed(frame, |line| {
+                out.push(String::from_utf8_lossy(line).into_owned())
+            });
+        }
+        splitter.finish(|line| out.push(String::from_utf8_lossy(line).into_owned()));
+        out
+    }
+
+    #[test]
+    fn json_lines_are_cut_wherever_frames_fall() {
+        let want = [r#"{"n":0}"#, r#"{"n":1}"#];
+        assert_eq!(lines_of(&[b"{\"n\":0}\n{\"n\":1}\n"]), want);
+        assert_eq!(
+            lines_of(&[b"{\"n\":", b"0}\n{\"n", b"\":1}"]),
+            want,
+            "the last needs no break"
+        );
+        assert_eq!(
+            lines_of(&[b"{\"n\":0}\r\n\r\n\n{\"n\":1}\r\n"]),
+            want,
+            "\\r and blank lines"
+        );
+        assert_eq!(
+            lines_of(&[b"\x1e{\"n\":0}\n\x1e{\"n\":1}\n"]),
+            want,
+            "a JSON text sequence's separators"
+        );
+    }
+
+    #[test]
+    fn a_stream_is_told_by_its_content_type() {
+        let with = |content_type: &str| {
+            let res = Response::builder()
+                .header(header::CONTENT_TYPE, content_type)
+                .body(())
+                .unwrap();
+            stream_cut(&res)
+        };
+        assert_eq!(with("text/event-stream; charset=utf-8"), Some(Cut::Events));
+        assert_eq!(with("application/x-ndjson"), Some(Cut::Lines));
+        assert_eq!(with("Application/JSONL"), Some(Cut::Lines));
+        assert_eq!(with("application/json"), None);
+    }
+
     #[test]
     fn what_never_ended_still_counts() {
         assert_eq!(events_of(&[b"data: cut off"]), [b"data: cut off".to_vec()]);
@@ -1391,7 +1519,7 @@ mod tests {
 
     #[test]
     fn an_event_with_no_end_does_not_grow_forever() {
-        let mut splitter = EventSplitter::default();
+        let mut splitter = Splitter::new(Cut::Events);
         let mut out = 0;
         splitter.feed(&vec![b'x'; EVENT_MAX + 1], |event| out += event.len());
         assert_eq!(out, EVENT_MAX + 1);
