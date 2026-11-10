@@ -18,7 +18,7 @@ use crate::{
     select::{self, Copied, Selection},
     snippets::{self, Language},
     traffic::Traffic,
-    widgets::{chip, eyebrow, icon, status_colors, tip},
+    widgets::{Reachable, chip, eyebrow, icon, status_colors, tip},
 };
 use gpui::{
     Anchor, AnyElement, ClipboardItem, Context, Div, ElementId, Entity, FontWeight, MouseButton,
@@ -486,6 +486,7 @@ impl Traffic {
                     .flex()
                     .items_center()
                     .cursor_pointer()
+                    .reachable()
                     .bg(rgb(c.chip))
                     .text_color(rgb(c.on_chip))
                     .text_size(px(12.))
@@ -505,6 +506,7 @@ impl Traffic {
                     .flex()
                     .items_center()
                     .cursor_pointer()
+                    .reachable()
                     .bg(rgb(c.chip))
                     .text_color(rgb(c.on_chip))
                     .text_size(px(12.))
@@ -544,6 +546,7 @@ impl Traffic {
                 .items_center()
                 .justify_center()
                 .cursor_pointer()
+                .reachable()
                 .font_weight(FontWeight::BOLD)
                 .when(on, |d| d.bg(rgb(c.tab_on)).text_color(rgb(c.text)))
                 .when(!on, |d| d.text_color(rgb(c.muted)))
@@ -562,6 +565,7 @@ impl Traffic {
                 .items_center()
                 .justify_center()
                 .cursor_pointer()
+                .reachable()
                 .when(on, |d| d.bg(rgb(c.tab_on)))
                 .tooltip(tip(said))
                 .child(icon(name, 16., if on { c.text } else { c.muted }))
@@ -645,6 +649,7 @@ impl Traffic {
                 .flex()
                 .items_center()
                 .cursor_pointer()
+                .reachable()
                 .text_size(px(12.))
                 .font_weight(FontWeight::BOLD)
                 .when(on, |d| d.bg(rgb(c.tab_on)).text_color(rgb(c.text)))
@@ -751,6 +756,7 @@ impl Traffic {
             div()
                 .id(id)
                 .cursor_pointer()
+                .reachable()
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(if on { c.text } else { c.muted }))
                 .pb(px(3.))
@@ -843,6 +849,7 @@ impl Traffic {
                             .flex()
                             .items_center()
                             .cursor_pointer()
+                            .reachable()
                             .bg(rgb(c.chip))
                             .text_color(rgb(c.on_chip))
                             .text_size(px(12.))
@@ -864,6 +871,7 @@ impl Traffic {
                             .flex()
                             .items_center()
                             .cursor_pointer()
+                            .reachable()
                             .bg(rgb(c.chip))
                             .text_color(rgb(c.on_chip))
                             .text_size(px(12.))
@@ -914,6 +922,7 @@ impl Traffic {
                 .flex()
                 .items_center()
                 .cursor_pointer()
+                .reachable()
                 .hover(|d| d.bg(rgb(c.tonal)))
                 .child(language.name())
                 .on_click(cx.listener(move |view, _, _, cx| view.copy_as(language, cx)))
@@ -929,6 +938,7 @@ impl Traffic {
                     .flex()
                     .items_center()
                     .cursor_pointer()
+                    .reachable()
                     .bg(rgb(if open { c.tonal } else { c.chip }))
                     .text_color(rgb(if open { c.on_tonal } else { c.on_chip }))
                     .text_size(px(12.))

@@ -10,7 +10,7 @@ use crate::{
     paused_page::{headers_text, parse_headers},
     select::{Copied, Selection},
     traffic::{Screen, Traffic},
-    widgets::eyebrow,
+    widgets::{Reachable, eyebrow},
 };
 use gpui::{AppContext as _, Context, Entity, FontWeight, div, prelude::*, px, rgb};
 use tracewing_i18n::tr;
@@ -246,6 +246,7 @@ impl Traffic {
                 .flex()
                 .items_center()
                 .cursor_pointer()
+                .reachable()
                 .font_weight(FontWeight::BOLD)
                 .when(loud, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
                 .when(!loud, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))

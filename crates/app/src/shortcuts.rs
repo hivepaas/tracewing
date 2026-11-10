@@ -4,7 +4,7 @@
 use crate::{
     colors::{colors, with_alpha},
     traffic::{Screen, Traffic},
-    widgets::eyebrow,
+    widgets::{Reachable, eyebrow},
 };
 use gpui::{Context, FontWeight, IntoElement, div, prelude::*, px, rgb, rgba};
 use tracewing_i18n::tr;
@@ -284,6 +284,7 @@ impl Traffic {
                                     .py(px(4.))
                                     .rounded(px(14.))
                                     .cursor_pointer()
+                                    .reachable()
                                     .bg(rgb(c.chip))
                                     .text_color(rgb(c.on_chip))
                                     .child(tr!("Close"))

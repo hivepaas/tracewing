@@ -2,7 +2,12 @@
 //! says otherwise. Writes `settings.toml`, the same file a person could edit by
 //! hand; what is in it applies from the next start on.
 
-use crate::{colors::colors, input::TextInput, traffic::Traffic, widgets::eyebrow};
+use crate::{
+    colors::colors,
+    input::TextInput,
+    traffic::Traffic,
+    widgets::{Reachable, eyebrow},
+};
 use gpui::{Context, Entity, FontWeight, Window, div, prelude::*, px, rgb};
 use std::path::Path;
 use tracewing_i18n::tr;
@@ -396,6 +401,7 @@ impl Traffic {
                                 .rounded(px(12.))
                                 .flex()
                                 .cursor_pointer()
+                                .reachable()
                                 .when(on, |d| d.bg(rgb(c.accent)).justify_end())
                                 .when(!on, |d| d.bg(rgb(c.input)))
                                 .child(div().size(px(18.)).rounded(px(9.)).bg(rgb(if on {
@@ -478,6 +484,7 @@ impl Traffic {
                 .flex()
                 .items_center()
                 .cursor_pointer()
+                .reachable()
                 .font_weight(FontWeight::BOLD)
                 .when(loud, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
                 .when(!loud, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
@@ -569,6 +576,7 @@ impl Traffic {
                 .flex()
                 .items_center()
                 .cursor_pointer()
+                .reachable()
                 .text_size(px(12.5))
                 .font_weight(FontWeight::BOLD)
                 .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))

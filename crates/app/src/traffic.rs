@@ -21,7 +21,7 @@ use crate::{
     settings_page::SettingsPage,
     shortcuts::{self, Action, PAGE, action_of},
     system::{CaState, ProxySwitch, SystemState},
-    widgets::{eyebrow, icon, status_colors},
+    widgets::{Reachable, eyebrow, icon, status_colors},
 };
 use crate::{
     compose_page::ComposePage,
@@ -613,6 +613,7 @@ impl Traffic {
                         .flex()
                         .items_center()
                         .cursor_pointer()
+                        .reachable()
                         .bg(rgb(c.accent))
                         .text_color(rgb(c.on_accent))
                         .font_weight(FontWeight::BOLD)
@@ -1532,6 +1533,7 @@ impl Traffic {
                     .flex()
                     .items_center()
                     .cursor_pointer()
+                    .reachable()
                     .text_size(px(12.5))
                     .font_weight(FontWeight::BOLD)
                     .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
@@ -1553,6 +1555,7 @@ impl Traffic {
                 .items_center()
                 .justify_center()
                 .cursor_pointer()
+                .reachable()
                 .when(on, |d| d.bg(rgb(c.tonal)))
                 .child(icon(name, 18., if on { c.on_tonal } else { c.muted }))
         };
@@ -1862,6 +1865,7 @@ impl Traffic {
                                 .items_center()
                                 .gap(px(6.))
                                 .cursor_pointer()
+                                .reachable()
                                 .bg(rgb(c.accent))
                                 .text_color(rgb(c.on_accent))
                                 .font_weight(FontWeight::BOLD)
@@ -2018,6 +2022,7 @@ impl Traffic {
                 .items_center()
                 .gap(px(4.))
                 .cursor_pointer()
+                .reachable()
                 .text_size(px(11.))
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(ink))
@@ -2132,6 +2137,7 @@ impl Traffic {
             CaState::NotTrusted => row
                 .id("install-ca")
                 .cursor_pointer()
+                .reachable()
                 .text_color(rgb(c.warn))
                 .child(icon("shield-off", 14., c.warn))
                 .child(tr!(
@@ -2230,6 +2236,7 @@ impl Traffic {
                     div()
                         .id("export-har")
                         .cursor_pointer()
+                        .reachable()
                         .text_color(rgb(c.link))
                         .child(tr!("Export as HAR"))
                         .on_click(cx.listener(|this, _, _, cx| this.ask_export_shown(cx))),
@@ -2240,6 +2247,7 @@ impl Traffic {
                 div()
                     .id("shortcuts-link")
                     .cursor_pointer()
+                    .reachable()
                     .text_color(rgb(c.link))
                     .child(tr!("Shortcuts {keys}", keys = shortcuts::label("mod+/")))
                     .on_click(cx.listener(|this, _, _, cx| this.set_shortcuts(true, cx))),
@@ -2441,6 +2449,7 @@ impl Traffic {
                 // Text on the left keeps clear of the next column; numbers end at the edge.
                 .when(!column.fills() && !column.on_the_right(), |d| d.pr(px(8.)))
                 .cursor_pointer()
+                .reachable()
                 .when(sorted.is_some(), |d| d.text_color(rgb(c.text)))
                 .child(div().min_w_0().truncate().child(column.label()))
                 .children(
@@ -2514,6 +2523,7 @@ impl Traffic {
                     .items_center()
                     .justify_center()
                     .cursor_pointer()
+                    .reachable()
                     .when(open, |d| d.bg(rgb(c.tonal)))
                     .hover(|d| d.bg(rgb(c.tonal)))
                     .child(icon(
@@ -2549,6 +2559,7 @@ impl Traffic {
                 .items_center()
                 .gap(px(8.))
                 .cursor_pointer()
+                .reachable()
                 .hover(|d| d.bg(rgb(c.tonal)))
                 .child(
                     div()
