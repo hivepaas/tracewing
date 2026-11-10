@@ -640,6 +640,27 @@ tfad4aaaa = Set header permintaan
 # Set a response header
 tcbbc20d0 = Set header respons
 
+# Remove a request header
+t5228dd84 = Hapus header permintaan
+
+# Remove a response header
+teeb5735a = Hapus header respons
+
+# Set a query parameter
+t73d9419b = Set parameter query
+
+# Remove a query parameter
+t12633da9 = Hapus parameter query
+
+# Change the request body
+t41101201 = Ubah body permintaan
+
+# Change the response body
+tdd259b73 = Ubah body respons
+
+# Change the status
+t4bbdfba8 = Ubah status
+
 # Pause the request
 t40ecc39b = Jeda permintaan
 
@@ -661,6 +682,18 @@ t80793085 = Nama header
 # Its value
 t43968778 = Nilainya
 
+# Parameter's name
+t313c8e35 = Nama parameter
+
+# Text to find, or empty for the whole body
+t8255fc87 = Teks yang dicari, atau kosong untuk seluruh body
+
+# What to put in its place
+t03671fd5 = Penggantinya
+
+# Status the client gets, like 500
+t5e4d3088 = Status yang diterima klien, misalnya 500
+
 # "{first}" is not a status
 td43128d3 = "{ $first }" bukan status
 
@@ -678,6 +711,33 @@ taa230766 = Permintaan: { $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = Respons: { $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = Permintaan: tanpa { $header }
+
+# Response: no {header}
+t23960a2e = Respons: tanpa { $header }
+
+# Query: {name}={value}
+t0ee6c1c0 = Query: { $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = Query: tanpa { $name }
+
+# Status {status}
+tad048e53 = Status { $status }
+
+# Request body: {replace}
+te4856c36 = Body permintaan: { $replace }
+
+# Response body: {replace}
+t8600dc42 = Body respons: { $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = Body permintaan: { $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = Body respons: { $find } → { $replace }
 
 # Name
 t0fe07306 = Nama
@@ -733,8 +793,8 @@ t35afca3b = Batal
 # Rules
 t428b2d80 = Aturan
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = Berlaku mulai permintaan berikutnya, juga saat perekaman dijeda. Dari atas ke bawah: blokir, file, atau host pertama yang menang, dan setiap aturan header yang cocok diterapkan.
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = Aturan berlaku mulai permintaan berikutnya, juga saat perekaman dijeda. Dari atas ke bawah: blokir, file, atau host pertama yang cocok menang, dan setiap aturan lain yang cocok berlaku, berurutan. Aturan yang mengubah body atau status mengubah apa yang dikirim server.
 
 # Import rules…
 t5edc205d = Impor aturan…

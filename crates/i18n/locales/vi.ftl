@@ -640,6 +640,27 @@ tfad4aaaa = Đặt header cho request
 # Set a response header
 tcbbc20d0 = Đặt header cho response
 
+# Remove a request header
+t5228dd84 = Xóa header của request
+
+# Remove a response header
+teeb5735a = Xóa header của response
+
+# Set a query parameter
+t73d9419b = Đặt tham số query
+
+# Remove a query parameter
+t12633da9 = Xóa tham số query
+
+# Change the request body
+t41101201 = Đổi body của request
+
+# Change the response body
+tdd259b73 = Đổi body của response
+
+# Change the status
+t4bbdfba8 = Đổi status
+
 # Pause the request
 t40ecc39b = Tạm dừng request
 
@@ -661,6 +682,18 @@ t80793085 = Tên header
 # Its value
 t43968778 = Giá trị của nó
 
+# Parameter's name
+t313c8e35 = Tên tham số
+
+# Text to find, or empty for the whole body
+t8255fc87 = Chữ cần tìm, hoặc để trống để thay cả body
+
+# What to put in its place
+t03671fd5 = Nội dung thay vào
+
+# Status the client gets, like 500
+t5e4d3088 = Status client nhận được, như 500
+
 # "{first}" is not a status
 td43128d3 = "{ $first }" không phải là một status
 
@@ -678,6 +711,33 @@ taa230766 = Request: { $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = Response: { $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = Request: không có { $header }
+
+# Response: no {header}
+t23960a2e = Response: không có { $header }
+
+# Query: {name}={value}
+t0ee6c1c0 = Query: { $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = Query: không có { $name }
+
+# Status {status}
+tad048e53 = Status { $status }
+
+# Request body: {replace}
+te4856c36 = Body của request: { $replace }
+
+# Response body: {replace}
+t8600dc42 = Body của response: { $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = Body của request: { $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = Body của response: { $find } → { $replace }
 
 # Name
 t0fe07306 = Tên
@@ -733,8 +793,8 @@ t35afca3b = Huỷ
 # Rules
 t428b2d80 = Quy tắc
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = Áp dụng từ request kế tiếp, kể cả khi đang tạm dừng ghi. Từ trên xuống dưới: quy tắc chặn, trả file hoặc đổi host khớp đầu tiên được dùng, và mọi quy tắc header khớp đều áp dụng.
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = Rule có hiệu lực từ request kế tiếp, kể cả khi đang tạm dừng ghi. Từ trên xuống: rule chặn, trả file hoặc đổi host đầu tiên khớp sẽ thắng, mọi rule khác khớp đều áp dụng, theo thứ tự. Rule đổi body hay status thì đổi những gì server gửi về.
 
 # Import rules…
 t5edc205d = Nhập quy tắc…

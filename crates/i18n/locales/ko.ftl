@@ -640,6 +640,27 @@ tfad4aaaa = 요청 헤더 설정
 # Set a response header
 tcbbc20d0 = 응답 헤더 설정
 
+# Remove a request header
+t5228dd84 = 요청 헤더 제거
+
+# Remove a response header
+teeb5735a = 응답 헤더 제거
+
+# Set a query parameter
+t73d9419b = 쿼리 매개변수 설정
+
+# Remove a query parameter
+t12633da9 = 쿼리 매개변수 제거
+
+# Change the request body
+t41101201 = 요청 본문 변경
+
+# Change the response body
+tdd259b73 = 응답 본문 변경
+
+# Change the status
+t4bbdfba8 = 상태 변경
+
 # Pause the request
 t40ecc39b = 요청 일시 정지
 
@@ -661,6 +682,18 @@ t80793085 = 헤더 이름
 # Its value
 t43968778 = 값
 
+# Parameter's name
+t313c8e35 = 매개변수 이름
+
+# Text to find, or empty for the whole body
+t8255fc87 = 찾을 텍스트, 비우면 본문 전체
+
+# What to put in its place
+t03671fd5 = 대신 넣을 내용
+
+# Status the client gets, like 500
+t5e4d3088 = 클라이언트가 받을 상태, 예: 500
+
 # "{first}" is not a status
 td43128d3 = "{ $first }"은(는) 상태 코드가 아닙니다
 
@@ -678,6 +711,33 @@ taa230766 = 요청: { $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = 응답: { $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = 요청: { $header } 없음
+
+# Response: no {header}
+t23960a2e = 응답: { $header } 없음
+
+# Query: {name}={value}
+t0ee6c1c0 = 쿼리: { $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = 쿼리: { $name } 없음
+
+# Status {status}
+tad048e53 = 상태 { $status }
+
+# Request body: {replace}
+te4856c36 = 요청 본문: { $replace }
+
+# Response body: {replace}
+t8600dc42 = 응답 본문: { $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = 요청 본문: { $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = 응답 본문: { $find } → { $replace }
 
 # Name
 t0fe07306 = 이름
@@ -733,8 +793,8 @@ t35afca3b = 취소
 # Rules
 t428b2d80 = 규칙
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = 다음 요청부터 적용되며, 기록이 일시 정지된 동안에도 적용됩니다. 위에서 아래로 확인하며, 처음 일치하는 차단, 파일, 호스트 규칙이 우선하고, 일치하는 헤더 규칙은 모두 적용됩니다.
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = 규칙은 다음 요청부터, 기록이 일시 중지된 동안에도 적용됩니다. 위에서 아래로: 처음 맞는 차단, 파일, 호스트 규칙이 이기고, 맞는 다른 규칙은 모두 순서대로 적용됩니다. 본문이나 상태를 바꾸는 규칙은 서버가 보낸 내용을 바꿉니다.
 
 # Import rules…
 t5edc205d = 규칙 가져오기…

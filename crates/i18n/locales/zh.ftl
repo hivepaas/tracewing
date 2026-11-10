@@ -640,6 +640,27 @@ tfad4aaaa = 设置请求标头
 # Set a response header
 tcbbc20d0 = 设置响应标头
 
+# Remove a request header
+t5228dd84 = 移除请求标头
+
+# Remove a response header
+teeb5735a = 移除响应标头
+
+# Set a query parameter
+t73d9419b = 设置查询参数
+
+# Remove a query parameter
+t12633da9 = 移除查询参数
+
+# Change the request body
+t41101201 = 修改请求正文
+
+# Change the response body
+tdd259b73 = 修改响应正文
+
+# Change the status
+t4bbdfba8 = 修改状态码
+
 # Pause the request
 t40ecc39b = 暂停请求
 
@@ -659,7 +680,19 @@ tdfedd004 = 目标地址，如 http://localhost:3000
 t80793085 = 标头名称
 
 # Its value
-t43968778 = 标头值
+t43968778 = 值
+
+# Parameter's name
+t313c8e35 = 参数名称
+
+# Text to find, or empty for the whole body
+t8255fc87 = 要查找的文本，留空则替换整个正文
+
+# What to put in its place
+t03671fd5 = 替换成的内容
+
+# Status the client gets, like 500
+t5e4d3088 = 客户端收到的状态码，如 500
 
 # "{first}" is not a status
 td43128d3 = “{ $first }” 不是有效的状态码
@@ -678,6 +711,33 @@ taa230766 = 请求：{ $header }: { $value }
 
 # Response: {header}: {value}
 t30f9e2c2 = 响应：{ $header }: { $value }
+
+# Request: no {header}
+t6f0b3f5a = 请求：去掉 { $header }
+
+# Response: no {header}
+t23960a2e = 响应：去掉 { $header }
+
+# Query: {name}={value}
+t0ee6c1c0 = 查询：{ $name }={ $value }
+
+# Query: no {name}
+tf2e7bf27 = 查询：去掉 { $name }
+
+# Status {status}
+tad048e53 = 状态码 { $status }
+
+# Request body: {replace}
+te4856c36 = 请求正文：{ $replace }
+
+# Response body: {replace}
+t8600dc42 = 响应正文：{ $replace }
+
+# Request body: {find} → {replace}
+taec471a9 = 请求正文：{ $find } → { $replace }
+
+# Response body: {find} → {replace}
+tc1449525 = 响应正文：{ $find } → { $replace }
 
 # Name
 t0fe07306 = 名称
@@ -733,8 +793,8 @@ t35afca3b = 取消
 # Rules
 t428b2d80 = 规则
 
-# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-tb44c7227 = 规则从下一个请求开始生效，暂停录制时同样生效。按从上到下的顺序：第一条匹配的拦截、文件或主机规则生效，所有匹配的标头规则都会应用。
+# They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
+tbe44b31e = 规则从下一个请求起生效，暂停记录时也一样。自上而下：第一个匹配的拦截、文件或主机规则生效，其他匹配的规则按顺序全部生效。修改正文或状态码的规则，改的是服务器发来的内容。
 
 # Import rules…
 t5edc205d = 导入规则…

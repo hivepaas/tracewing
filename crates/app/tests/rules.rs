@@ -16,7 +16,10 @@ use tracewing::{
     traffic::{Screen, Traffic},
 };
 use tracewing_dev::benchkit;
-use tracewing_proxy::{throttle::Conditions, traffic_rules::TrafficRules};
+use tracewing_proxy::{
+    throttle::Conditions,
+    traffic_rules::{Action, TrafficRules},
+};
 use tracewing_store::settings::StorageSettings;
 
 fn wait_for(
@@ -214,6 +217,40 @@ fn rules_made_in_the_window_change_traffic() {
     assert_eq!(TrafficRules::load(&file).unwrap().rules.len(), 2, "kept");
     cx.run_until_parked();
     shot(&mut cx, window.into(), "68-rules-imported");
+
+    // A body rule: what to find on one line, what goes in its place on several,
+    // kept as typed, and back in the form to be edited.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.clear_rule_form(cx);
+            view.set_rule_kind(RuleKind::ResponseBody, cx);
+            view.fill_rule(
+                "Rename",
+                "api.test/*",
+                "\"mocked\"",
+                "\"changed\",\n\"by\": 1",
+                cx,
+            );
+            view.save_rule(cx);
+            let rules = view.traffic_rules();
+            assert_eq!(
+                rules.rules[2].action,
+                Action::ReplaceResponseBody {
+                    find: "\"mocked\"".to_owned(),
+                    replace: "\"changed\",\n\"by\": 1".to_owned(),
+                }
+            );
+            view.edit_rule(2, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "86-rule-body");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.clear_rule_form(cx);
+            view.delete_rule(2, cx);
+        })
+        .unwrap();
 
     // A slow network: a preset, then numbers of one's own, then off again.
     window
