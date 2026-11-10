@@ -101,6 +101,20 @@ pub fn ca_locations(cert_pem: &Path) -> Result<Vec<Place>> {
     os::ca_locations(cert_pem, &ca_der(cert_pem)?)
 }
 
+/// Whether a browser trusts the root CA, as far as its stores can say.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BrowserTrust {
+    /// It reads the system's store, so it trusts the CA when the system does.
+    System,
+    /// It reads stores of its own: one for Chromium's family, one a profile
+    /// for Firefox. `of` is 0 for a Firefox that has made no profile yet.
+    Own { holding: usize, of: usize },
+}
+
+pub fn browser_trust(browser: &launch::Browser) -> BrowserTrust {
+    os::browser_trust(browser)
+}
+
 pub fn ca_install(cert_pem: &Path, scope: Scope) -> Result<()> {
     os::ca_install(cert_pem, &ca_der(cert_pem)?, scope)
 }

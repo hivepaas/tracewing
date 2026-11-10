@@ -132,24 +132,41 @@ fn escape_html(text: &str) -> String {
         .replace('\'', "&#39;")
 }
 
-/// The last browser to reach the test page.
+/// A browser that reached the test page.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CheckVisit {
     pub user_agent: String,
+    /// `Sec-CH-UA`, which tells Chromium's family apart where the user agent
+    /// does not. Browsers send it over HTTPS only.
+    pub brands: String,
     /// Over HTTPS, so the browser trusts the certificate.
     pub secure: bool,
 }
 
+/// How many browsers the test page remembers.
+const VISITS_KEPT: usize = 16;
+
+/// The browsers that reached the test page, the latest visit of each, oldest
+/// first.
 #[derive(Debug, Default)]
-pub struct Check(Mutex<Option<CheckVisit>>);
+pub struct Check(Mutex<Vec<CheckVisit>>);
 
 impl Check {
     pub fn last(&self) -> Option<CheckVisit> {
+        self.visits().pop()
+    }
+
+    pub fn visits(&self) -> Vec<CheckVisit> {
         self.0.lock().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     fn saw(&self, visit: CheckVisit) {
-        *self.0.lock().unwrap_or_else(|e| e.into_inner()) = Some(visit);
+        let mut visits = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        visits.retain(|v| (&v.user_agent, &v.brands) != (&visit.user_agent, &visit.brands));
+        visits.push(visit);
+        if visits.len() > VISITS_KEPT {
+            visits.remove(0);
+        }
     }
 }
 
@@ -517,6 +534,12 @@ impl HttpHandler for FlowHandler {
             if !here {
                 self.check.saw(CheckVisit {
                     user_agent: header_text(req.headers(), header::USER_AGENT).unwrap_or_default(),
+                    brands: req
+                        .headers()
+                        .get("sec-ch-ua")
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or_default()
+                        .to_owned(),
                     secure: scheme == "https",
                 });
             }
@@ -1176,6 +1199,29 @@ fn unix_micros() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_check_keeps_each_browsers_latest_visit() {
+        let check = Check::default();
+        let visit = |agent: &str, secure| CheckVisit {
+            user_agent: agent.into(),
+            brands: String::new(),
+            secure,
+        };
+        check.saw(visit("Firefox", false));
+        check.saw(visit("Chrome", true));
+        check.saw(visit("Firefox", true));
+        assert_eq!(
+            check.visits(),
+            [visit("Chrome", true), visit("Firefox", true)]
+        );
+        assert_eq!(check.last(), Some(visit("Firefox", true)));
+        for n in 0..VISITS_KEPT {
+            check.saw(visit(&n.to_string(), true));
+        }
+        assert_eq!(check.visits().len(), VISITS_KEPT);
+        assert_eq!(check.visits()[0].user_agent, "0");
+    }
 
     #[test]
     fn a_device_opening_the_proxy_is_told_how_to_set_it_up() {

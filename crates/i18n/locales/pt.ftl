@@ -1053,6 +1053,53 @@ tf3a7f60b = Três passos para ver o tráfego HTTPS deste computador.
 # See traffic
 t980eee79 = Ver tráfego
 
+# the browsers' own stores
+tddf6836c = os repositórios próprios dos navegadores
+
+# Trusts the certificate.
+tc5bba858 = Confia no certificado.
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = Ainda não confia no certificado.
+
+# Looking…
+t284579ba = Procurando…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = Ainda não tem perfil. Abra-o uma vez e procure de novo.
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 =
+    { $n ->
+        [one] { $holding } de { $n } perfil confia no certificado.
+        [many] { $holding } de { $n } perfis confiam no certificado.
+       *[other] { $holding } de { $n } perfis confiam no certificado.
+    }
+
+# Has not opened the test page yet.
+t67f9cb49 = Ainda não abriu a página de teste.
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = Abriu a página de teste pelo tracewing, por HTTPS.
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = Abriu a página de teste pelo tracewing, mas sem HTTPS.
+
+# Browsers
+td580efd4 = Navegadores
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = Cada um decide sozinho em que confiar e para onde mandar seu tráfego. Verificar abre a página de teste nele.
+
+# Look again
+t98416222 = Procurar de novo
+
+# No browser found on this computer.
+t0e46bb34 = Nenhum navegador encontrado neste computador.
+
+# Check
+t592c8de7 = Verificar
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = A porta UDP 443 está bloqueada neste computador, então os apps recuam do HTTP/3 para o HTTP/2 e passam pelo tracewing. O bloqueio para quando o tracewing fecha, ou se ele travar.
 
@@ -1175,9 +1222,6 @@ t71fd4acf = Desfazer
 
 # Android emulators and USB devices
 t379e433c = Emuladores Android e dispositivos USB
-
-# Look again
-t98416222 = Procurar de novo
 
 # Find devices
 t54d4af39 = Encontrar dispositivos

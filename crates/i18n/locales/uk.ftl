@@ -1081,6 +1081,54 @@ tf3a7f60b = Три кроки, щоб бачити HTTPS-трафік цього
 # See traffic
 t980eee79 = Переглянути трафік
 
+# the browsers' own stores
+tddf6836c = власні сховища браузерів
+
+# Trusts the certificate.
+tc5bba858 = Довіряє сертифікату.
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = Поки не довіряє сертифікату.
+
+# Looking…
+t284579ba = Пошук…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = Профілю ще немає. Відкрийте браузер один раз, потім пошукайте знову.
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 =
+    { $n ->
+        [one] { $holding } з { $n } профілю довіряють сертифікату.
+        [few] { $holding } з { $n } профілів довіряють сертифікату.
+        [many] { $holding } з { $n } профілів довіряють сертифікату.
+       *[other] { $holding } з { $n } профілю довіряють сертифікату.
+    }
+
+# Has not opened the test page yet.
+t67f9cb49 = Тестову сторінку ще не відкривав.
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = Відкрив тестову сторінку через tracewing, по HTTPS.
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = Відкрив тестову сторінку через tracewing, але без HTTPS.
+
+# Browsers
+td580efd4 = Браузери
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = Кожен браузер сам вирішує, чому довіряти й куди надсилати трафік. «Перевірити» відкриває в ньому тестову сторінку.
+
+# Look again
+t98416222 = Пошукати знову
+
+# No browser found on this computer.
+t0e46bb34 = На цьому комп’ютері браузерів не знайдено.
+
+# Check
+t592c8de7 = Перевірити
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = UDP-порт 443 на цьому комп’ютері заблоковано, тож застосунки переходять з HTTP/3 на HTTP/2 і проходять через tracewing. Блокування припиниться, коли tracewing закриється або аварійно завершить роботу.
 
@@ -1203,9 +1251,6 @@ t71fd4acf = Відмінити
 
 # Android emulators and USB devices
 t379e433c = Емулятори Android і USB-пристрої
-
-# Look again
-t98416222 = Пошукати знову
 
 # Find devices
 t54d4af39 = Знайти пристрої

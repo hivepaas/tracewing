@@ -18,13 +18,27 @@ const TERMINAL_BUNDLE: &str = "terminal-roots.pem";
 /// Hosts that go straight out, as the system proxy leaves them too.
 const NO_PROXY: &str = "localhost,127.0.0.1,::1";
 
-/// A Chromium-based browser found on this machine.
+/// What a browser is built on, which decides how it is opened and where it
+/// keeps what it trusts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Engine {
+    Chromium,
+    Firefox,
+    Safari,
+}
+
+/// A browser found on this machine.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Browser {
     pub name: &'static str,
+    pub engine: Engine,
     pub program: PathBuf,
     /// Its profile for tracewing, apart from the user's own.
     pub profile: PathBuf,
+    /// Linux only: the NSS database a Chromium reads, or the folders a
+    /// Firefox keeps its profiles in. Empty where browsers read the system's
+    /// store.
+    pub nss: Vec<PathBuf>,
 }
 
 /// Opens a terminal whose programs go through the proxy and trust its CA.
@@ -91,9 +105,29 @@ fn pem_block(der: &[u8]) -> String {
     out
 }
 
-/// The first Chromium-based browser found: Chrome, Chromium, Edge or Brave.
-pub fn find_browser(data_dir: &Path) -> Option<Browser> {
-    os::find_browser(&data_dir.join("browser"))
+/// The browsers found on this machine, one of each name, in the order the
+/// OS's list has them: Chromium's family first.
+pub fn find_browsers(data_dir: &Path) -> Vec<Browser> {
+    os::find_browsers(&data_dir.join("browser"))
+}
+
+/// Opens `url` in `browser`, in the user's own profile, as if they had.
+pub fn open_url(browser: &Browser, url: &str) -> Result<()> {
+    // A Mac app already running takes the URL from `open`, not from a second
+    // copy of its program.
+    #[cfg(target_os = "macos")]
+    if let Some(app) = browser
+        .program
+        .ancestors()
+        .find(|dir| dir.extension().is_some_and(|ext| ext == "app"))
+    {
+        let mut command = Command::new("/usr/bin/open");
+        command.arg("-a").arg(app).arg(url);
+        return spawn(command).with_context(|| format!("open {}", app.display()));
+    }
+    let mut command = Command::new(&browser.program);
+    command.arg(url);
+    spawn(command).with_context(|| format!("open {}", browser.program.display()))
 }
 
 /// Opens `browser` at `url`, going through the proxy. `spki` is the leaves'

@@ -9,8 +9,8 @@ use anyhow::{Context, Result, bail};
 use std::{fs, net::SocketAddr, path::Path, path::PathBuf, process::Command};
 
 use super::{
-    Place, Saved, Scope,
-    launch::{self, Browser},
+    BrowserTrust, Place, Saved, Scope,
+    launch::{self, Browser, Engine},
 };
 
 const AGENT_LABEL: &str = "com.hivepaas.tracewing.proxy-recovery";
@@ -354,26 +354,41 @@ pub fn open_terminal(env: &[(&str, String)], banner: &str, data_dir: &Path) -> R
     launch::spawn(command).context("open Terminal")
 }
 
-const BROWSERS: &[(&str, &str)] = &[
-    ("Google Chrome", "Chrome"),
-    ("Chromium", "Chromium"),
-    ("Microsoft Edge", "Edge"),
-    ("Brave Browser", "Brave"),
+/// Apps, by bundle and program, and what they are.
+const BROWSERS: &[(&str, &str, &str, Engine)] = &[
+    ("Google Chrome", "Google Chrome", "Chrome", Engine::Chromium),
+    ("Chromium", "Chromium", "Chromium", Engine::Chromium),
+    ("Microsoft Edge", "Microsoft Edge", "Edge", Engine::Chromium),
+    ("Brave Browser", "Brave Browser", "Brave", Engine::Chromium),
+    ("Opera", "Opera", "Opera", Engine::Chromium),
+    ("Firefox", "firefox", "Firefox", Engine::Firefox),
+    ("Safari", "Safari", "Safari", Engine::Safari),
 ];
 
-pub fn find_browser(profiles: &Path) -> Option<Browser> {
+pub fn find_browsers(profiles: &Path) -> Vec<Browser> {
     let mut apps = vec![PathBuf::from("/Applications")];
     if let Ok(home) = home() {
         apps.push(home.join("Applications"));
     }
-    BROWSERS.iter().find_map(|(app, name)| {
-        apps.iter()
-            .map(|dir| dir.join(format!("{app}.app/Contents/MacOS/{app}")))
-            .find(|program| program.is_file())
-            .map(|program| Browser {
-                name,
-                program,
-                profile: profiles.join(name.to_lowercase()),
-            })
-    })
+    BROWSERS
+        .iter()
+        .filter_map(|&(app, program, name, engine)| {
+            apps.iter()
+                .map(|dir| dir.join(format!("{app}.app/Contents/MacOS/{program}")))
+                .find(|program| program.is_file())
+                .map(|program| Browser {
+                    name,
+                    engine,
+                    program,
+                    profile: profiles.join(name.to_lowercase()),
+                    nss: Vec::new(),
+                })
+        })
+        .collect()
+}
+
+/// Safari and Chromium's family read the keychains, and so does Firefox
+/// since version 120.
+pub fn browser_trust(_browser: &Browser) -> BrowserTrust {
+    BrowserTrust::System
 }

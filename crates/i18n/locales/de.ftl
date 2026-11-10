@@ -1053,6 +1053,52 @@ tf3a7f60b = Drei Schritte, um den HTTPS-Traffic dieses Computers zu sehen.
 # See traffic
 t980eee79 = Traffic ansehen
 
+# the browsers' own stores
+tddf6836c = die eigenen Speicher der Browser
+
+# Trusts the certificate.
+tc5bba858 = Vertraut dem Zertifikat.
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = Vertraut dem Zertifikat noch nicht.
+
+# Looking…
+t284579ba = Wird gesucht…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = Hat noch kein Profil. Einmal öffnen, dann erneut suchen.
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 =
+    { $n ->
+        [one] { $holding } von { $n } Profil vertraut dem Zertifikat.
+       *[other] { $holding } von { $n } Profilen vertrauen dem Zertifikat.
+    }
+
+# Has not opened the test page yet.
+t67f9cb49 = Hat die Testseite noch nicht geöffnet.
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = Hat die Testseite über tracewing geöffnet, per HTTPS.
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = Hat die Testseite über tracewing geöffnet, aber ohne HTTPS.
+
+# Browsers
+td580efd4 = Browser
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = Jeder entscheidet selbst, wem er vertraut und wohin er seinen Verkehr schickt. Mit Prüfen öffnet sich die Testseite darin.
+
+# Look again
+t98416222 = Erneut suchen
+
+# No browser found on this computer.
+t0e46bb34 = Kein Browser auf diesem Computer gefunden.
+
+# Check
+t592c8de7 = Prüfen
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = UDP-Port 443 ist auf diesem Computer blockiert, daher weichen Apps von HTTP/3 auf HTTP/2 aus und laufen über tracewing. Das endet, wenn tracewing beendet wird oder abstürzt.
 
@@ -1175,9 +1221,6 @@ t71fd4acf = Rückgängig
 
 # Android emulators and USB devices
 t379e433c = Android-Emulatoren und USB-Geräte
-
-# Look again
-t98416222 = Erneut suchen
 
 # Find devices
 t54d4af39 = Geräte suchen

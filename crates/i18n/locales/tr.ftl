@@ -1053,6 +1053,52 @@ tf3a7f60b = Bu bilgisayarın HTTPS trafiğini görmek için üç adım.
 # See traffic
 t980eee79 = Trafiği gör
 
+# the browsers' own stores
+tddf6836c = tarayıcıların kendi depoları
+
+# Trusts the certificate.
+tc5bba858 = Sertifikaya güveniyor.
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = Sertifikaya henüz güvenmiyor.
+
+# Looking…
+t284579ba = Aranıyor…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = Henüz profili yok. Bir kez açın, sonra yeniden arayın.
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 =
+    { $n ->
+        [one] { $n } profilinden { $holding } tanesi sertifikaya güveniyor.
+       *[other] { $n } profilinden { $holding } tanesi sertifikaya güveniyor.
+    }
+
+# Has not opened the test page yet.
+t67f9cb49 = Test sayfasını henüz açmadı.
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = Test sayfasını tracewing üzerinden, HTTPS ile açtı.
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = Test sayfasını tracewing üzerinden açtı, ama HTTPS olmadan.
+
+# Browsers
+td580efd4 = Tarayıcılar
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = Her biri neye güveneceğine ve trafiğini nereye göndereceğine kendisi karar verir. Denetle, test sayfasını onda açar.
+
+# Look again
+t98416222 = Yeniden bak
+
+# No browser found on this computer.
+t0e46bb34 = Bu bilgisayarda tarayıcı bulunamadı.
+
+# Check
+t592c8de7 = Denetle
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = Bu bilgisayarda UDP port 443 engelli, bu yüzden uygulamalar HTTP/3'ten HTTP/2'ye geri düşer ve tracewing üzerinden geçer. Engel, tracewing kapandığında ya da çökerse kalkar.
 
@@ -1175,9 +1221,6 @@ t71fd4acf = Geri al
 
 # Android emulators and USB devices
 t379e433c = Android emülatörleri ve USB cihazları
-
-# Look again
-t98416222 = Yeniden bak
 
 # Find devices
 t54d4af39 = Cihazları bul

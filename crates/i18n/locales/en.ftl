@@ -389,6 +389,24 @@ te4e36f65 = Open the test page
 t43c06abc = Set up
 tf3a7f60b = Three steps to see HTTPS traffic from this computer.
 t980eee79 = See traffic
+tddf6836c = the browsers' own stores
+tc5bba858 = Trusts the certificate.
+tf2a0b8c5 = Does not trust the certificate yet.
+t284579ba = Looking…
+t00e4c88d = Has no profile yet. Open it once, then look again.
+t2a9826b9 =
+    { $n ->
+        [one] { $holding } of its { $n } profile trusts the certificate.
+       *[other] { $holding } of its { $n } profiles trust the certificate.
+    }
+t67f9cb49 = Has not opened the test page yet.
+t99f8c07e = Opened the test page through tracewing, over HTTPS.
+t7d4b60bb = Opened the test page through tracewing, but without HTTPS.
+td580efd4 = Browsers
+t57bc4b30 = Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t98416222 = Look again
+t0e46bb34 = No browser found on this computer.
+t592c8de7 = Check
 t3c727cd5 = UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t64ab600f = Some apps speak HTTP/3, over UDP, and go around the proxy. Blocking UDP port 443 on this computer makes them fall back to HTTP/2 through tracewing. It takes an administrator's password, and stops when tracewing closes. A VPN that uses UDP port 443 stops working meanwhile.
 t2cfe5270 = Apps on HTTP/3
@@ -430,7 +448,6 @@ tc65b7cf7 = No device is connected. Start an emulator, or plug in a phone with U
 t9144d1fc = Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
 t71fd4acf = Undo
 t379e433c = Android emulators and USB devices
-t98416222 = Look again
 t54d4af39 = Find devices
 t2dc39047 = Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
 tec38833c = Elsewhere, in the tool's MCP settings:

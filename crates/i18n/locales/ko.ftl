@@ -1039,6 +1039,48 @@ tf3a7f60b = 이 컴퓨터의 HTTPS 트래픽을 보기 위한 세 단계입니�
 # See traffic
 t980eee79 = 트래픽 보기
 
+# the browsers' own stores
+tddf6836c = 브라우저 자체 저장소
+
+# Trusts the certificate.
+tc5bba858 = 인증서를 신뢰합니다.
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = 아직 인증서를 신뢰하지 않습니다.
+
+# Looking…
+t284579ba = 찾는 중…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = 아직 프로필이 없습니다. 한 번 연 다음 다시 찾으세요.
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 = 프로필 { $n }개 중 { $holding }개가 인증서를 신뢰합니다.
+
+# Has not opened the test page yet.
+t67f9cb49 = 아직 테스트 페이지를 열지 않았습니다.
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = tracewing을 거쳐 HTTPS로 테스트 페이지를 열었습니다.
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = tracewing을 거쳐 테스트 페이지를 열었지만 HTTPS가 아닙니다.
+
+# Browsers
+td580efd4 = 브라우저
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = 브라우저마다 무엇을 신뢰하고 트래픽을 어디로 보낼지 따로 정합니다. 확인을 누르면 그 브라우저에서 테스트 페이지가 열립니다.
+
+# Look again
+t98416222 = 다시 찾기
+
+# No browser found on this computer.
+t0e46bb34 = 이 컴퓨터에서 브라우저를 찾지 못했습니다.
+
+# Check
+t592c8de7 = 확인
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = 이 컴퓨터에서 UDP 포트 443이 차단되어 있어, 앱이 HTTP/3 대신 HTTP/2로 전환하고 tracewing을 거칩니다. tracewing을 닫거나 비정상 종료되면 차단이 해제됩니다.
 
@@ -1161,9 +1203,6 @@ t71fd4acf = 실행 취소
 
 # Android emulators and USB devices
 t379e433c = Android 에뮬레이터 및 USB 기기
-
-# Look again
-t98416222 = 다시 찾기
 
 # Find devices
 t54d4af39 = 기기 찾기

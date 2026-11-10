@@ -1039,6 +1039,48 @@ tf3a7f60b = このコンピュータの HTTPS トラフィックを見るため�
 # See traffic
 t980eee79 = トラフィックを見る
 
+# the browsers' own stores
+tddf6836c = 各ブラウザー独自のストア
+
+# Trusts the certificate.
+tc5bba858 = 証明書を信頼しています。
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = まだ証明書を信頼していません。
+
+# Looking…
+t284579ba = 探しています…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = まだプロファイルがありません。一度開いてから、もう一度探してください。
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 = { $n } 個のプロファイルのうち { $holding } 個が証明書を信頼しています。
+
+# Has not opened the test page yet.
+t67f9cb49 = テストページをまだ開いていません。
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = tracewing 経由で、HTTPS でテストページを開きました。
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = tracewing 経由でテストページを開きましたが、HTTPS ではありません。
+
+# Browsers
+td580efd4 = ブラウザー
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = ブラウザーはそれぞれ、何を信頼し、通信をどこへ送るかを独自に決めます。「確認」でそのブラウザーにテストページを開きます。
+
+# Look again
+t98416222 = 再検索
+
+# No browser found on this computer.
+t0e46bb34 = このコンピューターにブラウザーが見つかりません。
+
+# Check
+t592c8de7 = 確認
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = このコンピュータで UDP ポート 443 をブロックしているため、アプリは HTTP/3 から HTTP/2 に切り替えて tracewing を経由します。ブロックは、tracewing を閉じたとき、またはクラッシュしたときに解除されます。
 
@@ -1161,9 +1203,6 @@ t71fd4acf = 元に戻す
 
 # Android emulators and USB devices
 t379e433c = Android エミュレータと USB デバイス
-
-# Look again
-t98416222 = 再検索
 
 # Find devices
 t54d4af39 = デバイスを探す

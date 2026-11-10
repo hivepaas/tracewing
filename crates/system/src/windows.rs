@@ -35,8 +35,8 @@ use windows_sys::{
 };
 
 use super::{
-    Place, Saved, Scope,
-    launch::{self, Browser},
+    BrowserTrust, Place, Saved, Scope,
+    launch::{self, Browser, Engine},
 };
 
 const RUN_ONCE: &str = r"Software\Microsoft\Windows\CurrentVersion\RunOnce";
@@ -394,30 +394,58 @@ pub fn open_terminal(env: &[(&str, String)], banner: &str, _data_dir: &Path) -> 
     launch::spawn(command).context("open a console")
 }
 
-const BROWSERS: &[(&str, &str)] = &[
-    (r"Google\Chrome\Application\chrome.exe", "Chrome"),
-    (r"Microsoft\Edge\Application\msedge.exe", "Edge"),
+/// Programs, under Program Files or the user's local app data, and what they
+/// are.
+const BROWSERS: &[(&str, &str, Engine)] = &[
+    (
+        r"Google\Chrome\Application\chrome.exe",
+        "Chrome",
+        Engine::Chromium,
+    ),
+    (
+        r"Microsoft\Edge\Application\msedge.exe",
+        "Edge",
+        Engine::Chromium,
+    ),
     (
         r"BraveSoftware\Brave-Browser\Application\brave.exe",
         "Brave",
+        Engine::Chromium,
     ),
-    (r"Chromium\Application\chrome.exe", "Chromium"),
+    (
+        r"Chromium\Application\chrome.exe",
+        "Chromium",
+        Engine::Chromium,
+    ),
+    (r"Programs\Opera\opera.exe", "Opera", Engine::Chromium),
+    (r"Mozilla Firefox\firefox.exe", "Firefox", Engine::Firefox),
 ];
 
-pub fn find_browser(profiles: &Path) -> Option<Browser> {
+pub fn find_browsers(profiles: &Path) -> Vec<Browser> {
     let roots: Vec<std::path::PathBuf> = ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"]
         .iter()
         .filter_map(|var| std::env::var_os(var).map(std::path::PathBuf::from))
         .collect();
-    BROWSERS.iter().find_map(|(relative, name)| {
-        roots
-            .iter()
-            .map(|root| root.join(relative))
-            .find(|program| program.is_file())
-            .map(|program| Browser {
-                name,
-                program,
-                profile: profiles.join(name.to_lowercase()),
-            })
-    })
+    BROWSERS
+        .iter()
+        .filter_map(|&(relative, name, engine)| {
+            roots
+                .iter()
+                .map(|root| root.join(relative))
+                .find(|program| program.is_file())
+                .map(|program| Browser {
+                    name,
+                    engine,
+                    program,
+                    profile: profiles.join(name.to_lowercase()),
+                    nss: Vec::new(),
+                })
+        })
+        .collect()
+}
+
+/// Chromium's family reads the system's store, and so does Firefox since
+/// version 120.
+pub fn browser_trust(_browser: &Browser) -> BrowserTrust {
+    BrowserTrust::System
 }
