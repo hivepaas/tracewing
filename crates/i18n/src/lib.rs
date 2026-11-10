@@ -341,6 +341,23 @@ mod tests {
             assert_eq!(tr!("Not yet: {e}", e = "x"), "Not yet: x", "{tag}");
             assert_eq!(tr_n!(2, "{n} flow", "{n} flows"), "2 flows", "{tag}");
         }
+        // A count of tracewing's own, in the forms each language has.
+        let flows = |n: i64| tr_n!(n, "{count} flow", "{count} flows", count = n);
+        set_language(Some("ru"));
+        assert_ne!(flows(1), flows(3));
+        assert_ne!(flows(3), flows(5));
+        for (tag, _) in CATALOGS {
+            set_language(Some(tag));
+            for n in [1, 2, 5, 21] {
+                let said = flows(n);
+                assert!(
+                    said.contains(&n.to_string()) && !said.contains(['{', '$']),
+                    "{tag}: {said}"
+                );
+            }
+        }
+        set_language(Some("vi"));
+        assert_eq!(tr!("Settings"), "Cài đặt");
         set_language(Some("en"));
     }
 

@@ -2,1312 +2,1366 @@
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
 # … {size} more
-# ta8dc6eab =
+ta8dc6eab = … 还有 { $size }
 
 # {size} · {count} line | {size} · {count} lines
-# t51332550 =
+t51332550 =
+    { $n ->
+       *[other] { $size } · { $count } 行
+    }
 
 # {size} · reading {percent}%
-# t49fe2cb3 =
+t49fe2cb3 = { $size } · 正在读取 { $percent }%
 
 # Appearance: {now}. Click for {next}.
-# t332cfa6d =
+t332cfa6d = 外观：{ $now }。点击切换为 { $next }。
 
 # Method
-# t98a2c750 =
+t98a2c750 = 方法
 
 # Status
-# t005ef20f =
+t005ef20f = 状态
 
 # App
-# t81f51acc =
+t81f51acc = 应用
 
 # Host
-# t302af18f =
+t302af18f = 主机
 
 # Path
-# teb66e456 =
+teb66e456 = 路径
 
 # Size
-# ta6478e7c =
+ta6478e7c = 大小
 
 # Time
-# tdfe4e404 =
+tdfe4e404 = 时间
 
 # Number
-# t61e9eac0 =
+t61e9eac0 = 序号
 
 # "{method}" is not a method
-# tacdcf5cb =
+tacdcf5cb = “{ $method }” 不是有效的方法
 
 # its request body was not kept whole, so it cannot be sent again
-# t1f9e5368 =
+t1f9e5368 = 其请求正文未完整保留，因此无法重新发送
 
 # name: value, one a line
-# t4df37bea =
+t4df37bea = 名称: 值，每行一个
 
 # No body
-# tfa4c2902 =
+tfa4c2902 = 无正文
 
 # No flow is chosen
-# t550b0a98 =
+t550b0a98 = 未选择流量记录
 
 # This flow: {e}
-# t296762f8 =
+t296762f8 = 此流量记录：{ $e }
 
 # Request
-# t82454152 =
+t82454152 = 请求
 
 # Headers
-# t334f5989 =
+t334f5989 = 标头
 
 # Body
-# t428a1095 =
+t428a1095 = 正文
 
 # Sending…
-# te946e7bf =
+te946e7bf = 正在发送…
 
 # Send
-# tf28e14cf =
+tf28e14cf = 发送
 
 # New
-# t8b242db1 =
+t8b242db1 = 新建
 
 # … {count} more bytes: the flow in Traffic has them all.
-# tf43ea06c =
+tf43ea06c = … 还有 { $count } 字节：“流量”中的该流量记录包含完整内容。
 
 # Response
-# t55a982fe =
+t55a982fe = 响应
 
 # Compose
-# t18049f93 =
+t18049f93 = 编写
 
 # A request of your own, or one sent again. It goes through tracewing, so rules apply and it shows in Traffic too.
-# t7a9cf113 =
+t7a9cf113 = 自己编写的请求，或重新发送的请求。它会经过 tracewing，因此规则同样生效，也会显示在“流量”中。
 
 # {version} both sides
-# t961a5ea0 =
+t961a5ea0 = 两端均为 { $version }
 
 # {client} to the proxy, {server} to the server
-# t3d237646 =
+t3d237646 = 与代理之间 { $client }，与服务器之间 { $server }
 
 # Queued
-# t9e437c74 =
+t9e437c74 = 排队
 
 # Connect
-# tdb89a899 =
+tdb89a899 = 连接
 
 # Waiting
-# tc9450e48 =
+tc9450e48 = 等待响应
 
 # Download
-# t6964bb19 =
+t6964bb19 = 下载
 
 # No file picker: {e}
-# t6935fbd3 =
+t6935fbd3 = 无法打开文件选择器：{ $e }
 
 # Writing the HAR…
-# t725a0e89 =
+t725a0e89 = 正在写入 HAR…
 
 # {n} flow written to {path} | {n} flows written to {path}
-# t643f96ee =
+t643f96ee =
+    { $n ->
+       *[other] 已将 { $n } 条流量记录写入 { $path }
+    }
 
 # The HAR was not written: {e}
-# tef8ec569 =
+tef8ec569 = 未能写入 HAR：{ $e }
 
 # Open
-# t538b10e9 =
+t538b10e9 = 打开
 
 # Reading {path}…
-# tc0e7c8f4 =
+tc0e7c8f4 = 正在读取 { $path }…
 
 # , {n} entry left out | , {n} entries left out
-# td848c31b =
+td848c31b =
+    { $n ->
+       *[other] ，省略了 { $n } 个条目
+    }
 
 # {n} flow read from a {format} | {n} flows read from a {format}
-# t610d7810 =
+t610d7810 =
+    { $n ->
+       *[other] 已从 { $format } 读取 { $n } 条流量记录
+    }
 
 # The file was not read: {e}
-# t7f49510f =
+t7f49510f = 未能读取文件：{ $e }
 
 # it is no longer kept
-# ta7b4c380 =
+ta7b4c380 = 已不再保留
 
 # {size} saved to {path}
-# tc6932467 =
+tc6932467 = 已将 { $size } 保存到 { $path }
 
 # The body was not saved: {e}
-# t189900b4 =
+t189900b4 = 未能保存正文：{ $e }
 
 # Fiddler session
-# t9f5c89a3 =
+t9f5c89a3 = Fiddler 会话
 
 # Charles session
-# tb4f56f2b =
+tb4f56f2b = Charles 会话
 
 # All
-# t75afe364 =
+t75afe364 = 全部
 
 # Errors
-# te9ed60a6 =
+te9ed60a6 = 错误
 
 # Media
-# td10fcaa3 =
+td10fcaa3 = 媒体
 
 # Rule: {rule}
-# teca2074f =
+teca2074f = 规则：{ $rule }
 
 # Events
-# t003420a4 =
+t003420a4 = 事件
 
 # Not decrypted
-# t8090a1ba =
+t8090a1ba = 未解密
 
 # open
-# td35ec4c9 =
+td35ec4c9 = 进行中
 
 # This flow is gone.
-# t3343999e =
+t3343999e = 此流量记录已不存在。
 
 # This host is not decrypted, so what it sends cannot be seen.
-# tf85fe84f =
+tf85fe84f = 此主机未解密，因此无法查看其发送的内容。
 
 # No body.
-# t31e4d044 =
+t31e4d044 = 无正文。
 
 # This body was not kept: the disk was nearly full, or too much was waiting for it.
-# t884aad28 =
+t884aad28 = 此正文未保留：磁盘即将用满，或待写入的内容过多。
 
 # This body was not kept.
-# te46616b5 =
+te46616b5 = 此正文未保留。
 
 # This body is gone: it was dropped with the oldest flows, or cannot be read.
-# tf9a7ab60 =
+tf9a7ab60 = 此正文已不存在：已随最早的流量记录一起丢弃，或无法读取。
 
 # Cannot open this body: {e}
-# t620a039b =
+t620a039b = 无法打开此正文：{ $e }
 
 # Inspector
-# t4def410e =
+t4def410e = 检查器
 
 # Choose a flow to see it here
-# tc7be91e8 =
+tc7be91e8 = 选择一条流量记录以在此查看
 
 # Not decrypted. New connections to this host go through unread.
-# ta05ec37a =
+ta05ec37a = 未解密。到此主机的新连接将直接通过，不被读取。
 
 # If an app fails with this host, it may pin its certificates.
-# t3cbba118 =
+t3cbba118 = 如果某个应用连接此主机失败，它可能使用了证书锁定。
 
 # Make a rule
-# t0ac0e062 =
+t0ac0e062 = 创建规则
 
 # Decrypt this host
-# tb7367e2c =
+tb7367e2c = 解密此主机
 
 # Do not decrypt this host
-# t5fa113f6 =
+t5fa113f6 = 不解密此主机
 
 # Picture · {size}
-# te97ed633 =
+te97ed633 = 图片 · { $size }
 
 # Messages {count}
-# te61b841a =
+te61b841a = 消息 { $count }
 
 # Headers {headers}
-# t04b0146d =
+t04b0146d = 标头 { $headers }
 
 # Cookies {cookies}
-# td58eb84b =
+td58eb84b = Cookie { $cookies }
 
 # Query {query}
-# t4756f9f5 =
+t4756f9f5 = 查询参数 { $query }
 
 # Form {form}
-# tfa6e7203 =
+tfa6e7203 = 表单 { $form }
 
 # Connection
-# t09ea4ff9 =
+t09ea4ff9 = 连接
 
 # Save body
-# te2c44424 =
+te2c44424 = 保存正文
 
 # Send again
-# tf5910557 =
+tf5910557 = 重新发送
 
 # Edit and send
-# tf837e542 =
+tf837e542 = 编辑后发送
 
 # Copied
-# t8dc21305 =
+t8dc21305 = 已复制
 
 # Copy as cURL
-# t866d1e3e =
+t866d1e3e = 复制为 cURL
 
 # Copy as…
-# t9c1ad448 =
+t9c1ad448 = 复制为…
 
 # This picture cannot be drawn. Save the body to look at it.
-# t1e92fb27 =
+t1e92fb27 = 无法显示此图片。请保存正文后查看。
 
 # Opening…
-# tc40f2321 =
+tc40f2321 = 正在打开…
 
 # No response
-# t8c2c37b1 =
+t8c2c37b1 = 无响应
 
 # Tunnel, not decrypted
-# tce693254 =
+tce693254 = 隧道，未解密
 
 # GraphQL: {operation}
-# t2d65757d =
+t2d65757d = GraphQL：{ $operation }
 
 # Over connection {id}, made before: no time went on connecting.
-# t84144a81 =
+t84144a81 = 复用之前建立的连接 { $id }：没有花费连接时间。
 
 # {app}, pid {pid}
-# t627147b4 =
+t627147b4 = { $app }，pid { $pid }
 
 # Not found: it may have ended, or belong to another user
-# t0efce58b =
+t0efce58b = 未找到：可能已结束，或属于其他用户
 
 # On another device
-# t2b964a37 =
+t2b964a37 = 在其他设备上
 
 # CLIENT
-# t6d3cd99e =
+t6d3cd99e = 客户端
 
 # Device
-# tbdcbb413 =
+tbdcbb413 = 设备
 
 # Program
-# tc4253b6b =
+tc4253b6b = 程序
 
 # Address
-# t700560f3 =
+t700560f3 = 地址
 
 # SERVER
-# te3b27612 =
+te3b27612 = 服务器
 
 # What this connection was is no longer kept: it went with older flows.
-# t1ef5a00a =
+t1ef5a00a = 此连接的信息已不再保留：已随较早的流量记录一起清除。
 
 # Not decrypted: tracewing passed it on without looking.
-# t0427c9b1 =
+t0427c9b1 = 未解密：tracewing 未查看内容便直接转发。
 
 # No connection was made.
-# tf348eb92 =
+tf348eb92 = 未建立连接。
 
 # None: it was answered without one.
-# tac71808e =
+tac71808e = 无：未建立连接即已响应。
 
 # {id}, given up during TLS
-# t0ec66a8c =
+t0ec66a8c = { $id }，在 TLS 阶段放弃
 
 # {id}, made for this flow
-# t7fe32cfc =
+t7fe32cfc = { $id }，为此流量记录新建
 
 # {id}, made before and used again
-# ta904c078 =
+ta904c078 = { $id }，复用之前建立的连接
 
 # Server
-# t6d7302f2 =
+t6d7302f2 = 服务器
 
 # None: plain HTTP
-# t05606349 =
+t05606349 = 无：纯 HTTP
 
 # THE SERVER SHOWED NO CERTIFICATES
-# te476fbb8 =
+te476fbb8 = 服务器未出示证书
 
 # WHAT THE SERVER SHOWED, ITS OWN FIRST
-# ta51f3107 =
+ta51f3107 = 服务器出示的证书，其自身证书在前
 
 # NO CERTIFICATES
-# te6f31dce =
+te6f31dce = 无证书
 
 # CERTIFICATE
-# t1c902790 =
+t1c902790 = 证书
 
 # {n} CERTIFICATE, THE SERVER'S FIRST | {n} CERTIFICATES, THE SERVER'S FIRST
-# td5295f62 =
+td5295f62 =
+    { $n ->
+       *[other] { $n } 个证书，服务器自身证书在前
+    }
 
 # tracewing would not go on with this server: {error}. If the app trusts it some other way, such as through a company CA, choose “Do not decrypt this host” and the app will check the server itself.
-# t13ced472 =
+t13ced472 = tracewing 拒绝继续连接此服务器：{ $error }。如果应用通过其他方式信任它（例如通过公司 CA），请选择“不解密此主机”，由应用自行验证服务器。
 
 # Cipher
-# t5b3bed6a =
+t5b3bed6a = 加密套件
 
 # none
-# tada7afdb =
+tada7afdb = 无
 
 # not valid until {when}
-# t0a14b2d8 =
+t0a14b2d8 = { $when }才生效
 
 # expired {when}
-# t932538c2 =
+t932538c2 = 已于 { $when }过期
 
 # expires {when}
-# t679bcb51 =
+t679bcb51 = 将于 { $when }过期
 
 # {names}, and {n} more | {names}, and {n} more
-# t4cd375ad =
+t4cd375ad =
+    { $n ->
+       *[other] { $names }，以及另外 { $n } 个
+    }
 
 # Issued by {issuer}
-# t15a1ce5a =
+t15a1ce5a = 颁发者：{ $issuer }
 
 # Valid {from} to {to} · {when}
-# t0e47d4f2 =
+t0e47d4f2 = 有效期 { $from } 至 { $to } · { $when }
 
 # Names {names}
-# tda75e459 =
+tda75e459 = 名称：{ $names }
 
 # Serial {serial}
-# td1f0d98b =
+td1f0d98b = 序列号：{ $serial }
 
 # These headers were not kept.
-# tb8739fec =
+tb8739fec = 这些标头未保留。
 
 # No headers.
-# tf3dacb5e =
+tf3dacb5e = 没有标头。
 
 # File {filename} · {kind} · {size}
-# t6dbd239f =
+t6dbd239f = 文件 { $filename } · { $kind } · { $size }
 
 # no type
-# t902a6ece =
+t902a6ece = 无类型
 
 # No cookies were sent.
-# t58e85ab2 =
+t58e85ab2 = 未发送 Cookie。
 
 # No cookies were set.
-# tf57dbabc =
+tf57dbabc = 未设置 Cookie。
 
 # JWT · {algorithm} · signature not checked
-# t2db33271 =
+t2db33271 = JWT · { $algorithm } · 未验证签名
 
 # JWT · signature not checked
-# t05f8b533 =
+t05f8b533 = JWT · 未验证签名
 
 # Header
-# t114f9980 =
+t114f9980 = 头部
 
 # Payload
-# ta0639745 =
+ta0639745 = 载荷
 
 # Expires
-# tc7aa0523 =
+tc7aa0523 = 过期时间
 
 # Issued
-# tb1835ecc =
+tb1835ecc = 签发时间
 
 # Not before
-# td10dacd9 =
+td10dacd9 = 生效时间
 
 # in {amount}
-# tfda57c3e =
+tfda57c3e = { $amount }后
 
 # {amount} ago
-# t5f968014 =
+t5f968014 = { $amount }前
 
 # Light
-# t8ad2f8cf =
+t8ad2f8cf = 浅色
 
 # Dark
-# t45570065 =
+t45570065 = 深色
 
 # System
-# t8f3184bc =
+t8f3184bc = 跟随系统
 
 # streamed in {count} chunk | streamed in {count} chunks
-# t76711a1a =
+t76711a1a =
+    { $n ->
+       *[other] 分 { $count } 块流式传输
+    }
 
 # stopped: {stop}
-# tfa48fb30 =
+tfa48fb30 = 停止原因：{ $stop }
 
 # {input} in · {output} out tokens
-# tc8bbc724 =
+tc8bbc724 = 输入 { $input } · 输出 { $output } token
 
 # Reading the call…
-# t33b52a3c =
+t33b52a3c = 正在读取调用…
 
 # Answer
-# tf94ea0ff =
+tf94ea0ff = 回答
 
 # Thinking: {thinking}
-# t737ece33 =
+t737ece33 = 思考：{ $thinking }
 
 # Calls {name}{id}
-# t017882e4 =
+t017882e4 = 调用 { $name }{ $id }
 
 # Nothing yet.
-# td9b71d16 =
+td9b71d16 = 暂无内容。
 
 # {text}… and {count} more character | {text}… and {count} more characters
-# t6a16c074 =
+t6a16c074 =
+    { $n ->
+       *[other] { $text }… 还有 { $count } 个字符
+    }
 
 # Copy the answer
-# t69975ed7 =
+t69975ed7 = 复制回答
 
 # Asked
-# t4e3af9c3 =
+t4e3af9c3 = 提问
 
 # Tools offered: {tools}
-# tb871bcf4 =
+tb871bcf4 = 提供的工具：{ $tools }
 
 # Not kept
-# tba30b5fa =
+tba30b5fa = 未保留
 
 # This message was not kept: too much was waiting, or the disk was nearly full.
-# tb888a3c3 =
+tb888a3c3 = 此消息未保留：待处理的内容过多，或磁盘即将用满。
 
 # This message is empty.
-# tdb0ec01f =
+tdb0ec01f = 此消息为空。
 
 # No messages yet
-# t51e7624c =
+t51e7624c = 暂无消息
 
 # {said} kept, of {size}
-# t3558745a =
+t3558745a = 已保留 { $said }，共 { $size }
 
 # {what}: {text} is not a whole number
-# t2a8515ce =
+t2a8515ce = { $what }：{ $text } 不是整数
 
 # Latency
-# t23a45ef9 =
+t23a45ef9 = 延迟
 
 # Down
-# ta4995035 =
+ta4995035 = 下行
 
 # Up
-# t42f35940 =
+t42f35940 = 上行
 
 # Loss
-# t69db303a =
+t69db303a = 丢包
 
 # Give a latency, a speed or a loss to slow it down by
-# t7cfd6404 =
+t7cfd6404 = 请填写要模拟的延迟、速度或丢包率
 
 # Latency, ms
-# tefe18ab9 =
+tefe18ab9 = 延迟（ms）
 
 # Down, kbit/s
-# t08c4ae33 =
+t08c4ae33 = 下行（kbit/s）
 
 # Up, kbit/s
-# td55cfe9a =
+td55cfe9a = 上行（kbit/s）
 
 # Loss, %
-# tea4af439 =
+tea4af439 = 丢包率（%）
 
 # Only these hosts, like *.example.com; all if empty
-# t77a1f991 =
+t77a1f991 = 仅限这些主机，如 *.example.com；留空则为全部
 
 # Not kept for next time: {e}
-# tdce4d67c =
+tdce4d67c = 未能保存以供下次使用：{ $e }
 
 # Slow network
-# td51ddfce =
+td51ddfce = 慢速网络
 
 # Off: traffic goes as fast as it can
-# tf0f34db0 =
+tf0f34db0 = 关闭：流量以最快速度传输
 
 # Custom
-# t9525b78e =
+t9525b78e = 自定义
 
 # Only these hosts
-# tfe16992b =
+tfe16992b = 仅限这些主机
 
 # Apply
-# tca77bbdb =
+tca77bbdb = 应用
 
 # Applies from the next request. Latency is added to each round trip; the speed is a link that every slowed flow shares; a lost piece waits to be sent again, as TCP does. Hosts left alone are not slowed.
-# t5ee4034d =
+t5ee4034d = 从下一个请求开始生效。每次往返都会增加延迟；速度是所有被限速的流量记录共享的一条链路；丢失的数据包会像 TCP 一样等待重传。未列出的主机不受限速。
 
 # Header line {line} has no ":"
-# t891b076d =
+t891b076d = 标头第 { $line } 行缺少 “:”
 
 # Header line {line} has no name
-# te3247b96 =
+te3247b96 = 标头第 { $line } 行缺少名称
 
 # URL
-# t7569633e =
+t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
-# td6aec821 =
+td6aec821 =
+    { $n ->
+       *[other] { $n } 字节非文本内容：将按原样传递。
+    }
 
 # Nothing is paused
-# t8cf68b4c =
+t8cf68b4c = 没有已暂停的项
 
 # "{status}" is not a status
-# t40a529af =
+t40a529af = “{ $status }” 不是有效的状态码
 
 # REQUEST
-# t1f3f6dd2 =
+t1f3f6dd2 = 请求
 
 # RESPONSE
-# tc85f77de =
+tc85f77de = 响应
 
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
-# tf9ab4327 =
+tf9ab4327 = 没有已暂停的项。在“规则”页面添加“暂停”规则，即可在此拦停流量。
 
 # for {method} {url}
-# t093a86f6 =
+t093a86f6 = 针对 { $method } { $url }
 
 # The request, before the server gets it
-# tc840fed6 =
+tc840fed6 = 服务器收到之前的请求
 
 # The response, before the app gets it
-# t6683d72a =
+t6683d72a = 应用收到之前的响应
 
 # Send as it came
-# tb593e730 =
+tb593e730 = 按原样发送
 
 # Drop
-# t108524ac =
+t108524ac = 丢弃
 
 # Paused
-# tde281feb =
+tde281feb = 已暂停
 
 # Nothing is waiting.
-# tea613769 =
+tea613769 = 没有等待中的项。
 
 # {n} waits to be sent on. | {n} wait to be sent on.
-# t745634c6 =
+t745634c6 =
+    { $n ->
+       *[other] { $n } 项等待继续发送。
+    }
 
 # Send all as they came
-# tdce25640 =
+tdce25640 = 全部按原样发送
 
 # Block
-# tbd074002 =
+tbd074002 = 拦截
 
 # Answer from a file
-# td8edab50 =
+td8edab50 = 用文件响应
 
 # Send to another host
-# te3cd85d7 =
+te3cd85d7 = 转发到其他主机
 
 # Set a request header
-# tfad4aaaa =
+tfad4aaaa = 设置请求标头
 
 # Set a response header
-# tcbbc20d0 =
+tcbbc20d0 = 设置响应标头
 
 # Pause the request
-# t40ecc39b =
+t40ecc39b = 暂停请求
 
 # Pause the response
-# t18a34799 =
+t18a34799 = 暂停响应
 
 # Status to answer with, like 403
-# t8f3ebb6c =
+t8f3ebb6c = 要返回的状态码，如 403
 
 # Full path of a file or folder
-# t9fb9ae4c =
+t9fb9ae4c = 文件或文件夹的完整路径
 
 # Where to, like http://localhost:3000
-# tdfedd004 =
+tdfedd004 = 目标地址，如 http://localhost:3000
 
 # Header's name
-# t80793085 =
+t80793085 = 标头名称
 
 # Its value
-# t43968778 =
+t43968778 = 标头值
 
 # "{first}" is not a status
-# td43128d3 =
+td43128d3 = “{ $first }” 不是有效的状态码
 
 # Block with {status}
-# t1727e984 =
+t1727e984 = 以 { $status } 拦截
 
 # Answer from {path}
-# taefc08fa =
+taefc08fa = 用 { $path } 响应
 
 # Send to {to}
-# t5e256873 =
+t5e256873 = 转发到 { $to }
 
 # Request: {header}: {value}
-# taa230766 =
+taa230766 = 请求：{ $header }: { $value }
 
 # Response: {header}: {value}
-# t30f9e2c2 =
+t30f9e2c2 = 响应：{ $header }: { $value }
 
 # Name
-# t0fe07306 =
+t0fe07306 = 名称
 
 # URL, like api.myapp.dev/v1/*
-# t4dd91658 =
+t4dd91658 = URL，如 api.myapp.dev/v1/*
 
 # Method, or empty for all
-# tb2b869ac =
+tb2b869ac = 方法，留空则匹配全部
 
 # {n} rule written to {path} | {n} rules written to {path}
-# t4a2e843a =
+t4a2e843a =
+    { $n ->
+       *[other] 已将 { $n } 条规则写入 { $path }
+    }
 
 # The rules were not written: {e}
-# te7ac257f =
+te7ac257f = 未能写入规则：{ $e }
 
 # Import
-# t573e0af4 =
+t573e0af4 = 导入
 
 # {path} could not be read: {e}
-# t32a3ce94 =
+t32a3ce94 = 无法读取 { $path }：{ $e }
 
 # Nothing was imported: {e}
-# tb9f7257a =
+tb9f7257a = 未导入任何内容：{ $e }
 
 # Edit
-# tc2c76cb1 =
+tc2c76cb1 = 编辑
 
 # Delete
-# t5797ea6a =
+t5797ea6a = 删除
 
 # Change this rule
-# t9160f393 =
+t9160f393 = 修改此规则
 
 # A new rule
-# t55a722a0 =
+t55a722a0 = 新规则
 
 # It waits under Paused until you send it on, changed or not.
-# tca566a57 =
+tca566a57 = 它会在“已暂停”中等待，直到你继续发送（修改与否均可）。
 
 # Save
-# t4d2d5d68 =
+t4d2d5d68 = 保存
 
 # Add
-# t9dc3aa14 =
+t9dc3aa14 = 添加
 
 # Cancel
-# t35afca3b =
+t35afca3b = 取消
 
 # Rules
-# t428b2d80 =
+t428b2d80 = 规则
 
 # They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-# tb44c7227 =
+tb44c7227 = 规则从下一个请求开始生效，暂停录制时同样生效。按从上到下的顺序：第一条匹配的拦截、文件或主机规则生效，所有匹配的标头规则都会应用。
 
 # Import rules…
-# t5edc205d =
+t5edc205d = 导入规则…
 
 # Export rules…
-# t6e09ca20 =
+t6e09ca20 = 导出规则…
 
 # {n} rule added | {n} rules added
-# tbc5e0866 =
+tbc5e0866 =
+    { $n ->
+       *[other] 已添加 { $n } 条规则
+    }
 
 # {n} here already | {n} here already
-# t65dc1281 =
+t65dc1281 =
+    { $n ->
+       *[other] { $n } 条已存在
+    }
 
 # left out: {why}
-# ta81e95e2 =
+ta81e95e2 = 已跳过：{ $why }
 
 # No flows
-# t6dc463eb =
+t6dc463eb = 无流量记录
 
 # Name it to keep it
-# t52c1a402 =
+t52c1a402 = 命名后即可保留
 
 # {size} · written by another version, so it cannot be opened
-# t878e5c80 =
+t878e5c80 = { $size } · 由其他版本写入，无法打开
 
 # {count} flow · {size} | {count} flows · {size}
-# t3f3c0eb4 =
+t3f3c0eb4 =
+    { $n ->
+       *[other] { $count } 条流量记录 · { $size }
+    }
 
 # Recording now
-# t3cb3e6fc =
+t3cb3e6fc = 正在录制
 
 # Export HAR
-# t4d6458cc =
+t4d6458cc = 导出 HAR
 
 # Delete for good?
-# ta7737f13 =
+ta7737f13 = 永久删除？
 
 # Sessions
-# tb69a8aec =
+tb69a8aec = 会话
 
 # A session with a name is kept until you delete it. Of the others, the newest {kept} stay.
-# t6391f080 =
+t6391f080 = 已命名的会话会一直保留，直到你将其删除。其余会话只保留最新的 { $kept } 个。
 
 # Working…
-# td5507854 =
+td5507854 = 正在处理…
 
 # Open a session file
-# tae8622fc =
+tae8622fc = 打开会话文件
 
 # HAR, Fiddler .saz, or Charles .chlsj
-# td8955e6d =
+td8955e6d = HAR、Fiddler .saz 或 Charles .chlsj
 
 # Exported HAR files leave out tokens and cookies
-# td4a2f543 =
+td4a2f543 = 导出的 HAR 文件不包含令牌和 Cookie
 
 # Other devices
-# t9e7d8362 =
+t9e7d8362 = 其他设备
 
 # Let other devices use the proxy
-# t13e626b3 =
+t13e626b3 = 允许其他设备使用代理
 
 # Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-# t2e14229d =
+t2e14229d = 开启后，你网络中的手机和其他电脑可以将流量发送到这里。但同一网络中的任何人也都可以：在不信任的网络上请保持关闭。重新启动 tracewing 后生效。
 
 # Servers
-# tcd0cf113 =
+tcd0cf113 = 服务器
 
 # Trust what this computer trusts
-# tfea2d91b =
+tfea2d91b = 信任本机信任的证书
 
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
-# t1705bfb4 =
+t1705bfb4 = 对于持有本机已安装的证书颁发机构（例如公司自己的 CA）所颁发证书的服务器，将像本机浏览器一样正常访问。关闭时，仅信任公共证书颁发机构。重新启动 tracewing 后生效。
 
 # AI tools
-# t294d7ea4 =
+t294d7ea4 = AI 工具
 
 # Let AI tools see tokens and cookies
-# te1d26d3c =
+te1d26d3c = 允许 AI 工具查看令牌和 Cookie
 
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
-# tb496980f =
+tb496980f = AI 工具通过 tracewing 的 MCP 服务器读取已录制的流量。关闭时，提供给它们的内容不包含 Authorization、Cookie 和 Set-Cookie 的值。立即生效。
 
 # HTTP/3
-# tfec0f477 =
+tfec0f477 = HTTP/3
 
 # Keep apps off HTTP/3
-# te42733a9 =
+te42733a9 = 阻止应用使用 HTTP/3
 
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-# t2aa7be0d =
+t2aa7be0d = HTTP/3 基于 UDP，而代理无法转发 UDP，因此使用 HTTP/3 的应用会绕过 tracewing。此选项会从服务器响应中移除 HTTP/3 通告，让应用继续使用 HTTP/2。流量记录中仍会显示服务器发送的原始通告。重新启动 tracewing 后生效。
 
 # Size of a session
-# ta20fa102 =
+ta20fa102 = 会话大小
 
 # Past this, the oldest flows are dropped.
-# td2914f46 =
+td2914f46 = 超过此值时，将丢弃最早的流量记录。
 
 # Room to leave on the disk
-# t8674a3b3 =
+t8674a3b3 = 磁盘保留空间
 
 # With less than this free, flows are still listed but bodies are not kept.
-# t5b3a31a3 =
+t5b3a31a3 = 可用空间低于此值时，流量记录仍会列出，但不保留正文。
 
 # Earlier sessions to keep
-# td356194a =
+td356194a = 保留的历史会话数
 
 # Older ones are deleted when a new session starts.
-# t66556513 =
+t66556513 = 新会话开始时，将删除更早的会话。
 
 # Bodies
-# tdb4d0409 =
+tdb4d0409 = 正文
 
 # Most kept of one body
-# t777508dd =
+t777508dd = 单个正文最大保留量
 
 # It still reaches the client whole.
-# t386fee28 =
+t386fee28 = 客户端仍会收到完整内容。
 
 # Most unpacked for viewing
-# tc3fe2efd =
+tc3fe2efd = 查看时最大解压量
 
 # Stops a small download that unpacks to many GB.
-# tf9c49515 =
+tf9c49515 = 防止体积很小的下载内容解压后膨胀到数 GB。
 
 # Small body size
-# ta8996af1 =
+ta8996af1 = 小正文阈值
 
 # Smaller bodies wait in memory and share a file. Larger ones get a file of their own as they arrive.
-# t20c108b4 =
+t20c108b4 = 较小的正文先暂存在内存中，并共用一个文件。较大的正文在接收时各自写入单独的文件。
 
 # Compress plain text on disk
-# tee503c2e =
+tee503c2e = 在磁盘上压缩纯文本
 
 # Takes about half the room, and is skipped when traffic is too fast for it.
-# t6d70f53f =
+t6d70f53f = 约可节省一半空间；流量过大来不及压缩时会跳过。
 
 # Compression level
-# td386c9ef =
+td386c9ef = 压缩级别
 
 # 1 to 19. Higher is smaller and slower.
-# td42a987d =
+td42a987d = 1 到 19。数值越高，体积越小、速度越慢。
 
 # Search
-# tc646a2c9 =
+tc646a2c9 = 搜索
 
 # Search URLs
-# t0c3e0b3d =
+t0c3e0b3d = 搜索 URL
 
 # Finds any part of a URL as you type. Costs little.
-# t3f22d666 =
+t3f22d666 = 输入时即可匹配 URL 的任意部分。开销很小。
 
 # Search bodies
-# t8eec0293 =
+t8eec0293 = 搜索正文
 
 # Finds words in bodies. Can take as much disk as the bodies do.
-# tcac3872a =
+tcac3872a = 在正文中查找文字。占用的磁盘空间可能与正文本身相当。
 
 # Searched part of each body
-# tab293b21 =
+tab293b21 = 每个正文的搜索范围
 
 # Words past this are not found. More takes more disk.
-# t0bf65f4a =
+t0bf65f4a = 超出此范围的文字不会被搜到。范围越大，占用磁盘越多。
 
 # Under heavy traffic
-# ta99888cb =
+ta99888cb = 高流量时
 
 # Memory for bodies waiting to be written
-# t7d6ff799 =
+t7d6ff799 = 待写入正文的内存上限
 
 # Past this, flows are listed without their bodies. Traffic is never held back.
-# t5b268fb2 =
+t5b268fb2 = 超过此值时，流量记录将不带正文列出。流量本身永远不会被阻塞。
 
 # Memory for large bodies waiting to be written
-# t07b9de08 =
+t07b9de08 = 待写入大正文的内存上限
 
 # Past this, large bodies stop being kept.
-# tfe61a4f3 =
+tfe61a4f3 = 超过此值时，将不再保留大正文。
 
 # {key}: "{text}" is not a whole number
-# ta8606963 =
+ta8606963 = { $key }：“{ $text }” 不是整数
 
 # {key}: must not be negative
-# t9c4debaa =
+t9c4debaa = { $key }：不能为负数
 
 # Saved. The limits apply the next time tracewing starts.
-# tc8bd2065 =
+tc8bd2065 = 已保存。这些限制将在下次启动 tracewing 时生效。
 
 # Settings
-# t4b058728 =
+t4b058728 = 设置
 
 # Back to defaults
-# ta3162a13 =
+ta3162a13 = 恢复默认值
 
 # Hosts not to decrypt
-# tb457f0b3 =
+tb457f0b3 = 不解密的主机
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-# t7647c310 =
+t7647c310 = 每行一个：主机名，或 *.example.com（匹配该域名及其所有子域名）。这些主机的流量将直接通过，不被读取。此列表保存后立即生效。
 
 # Language
-# t9a73db9b =
+t9a73db9b = 语言
 
 # System ({system_name})
-# tb5c7a1d4 =
+tb5c7a1d4 = 跟随系统（{ $system_name }）
 
 # Applies at once.
-# tefb7a0f9 =
+tefb7a0f9 = 立即生效。
 
 # Your browser
-# tb5a48dd2 =
+tb5a48dd2 = 你的浏览器
 
 # Its private key is in the system keychain.
-# t62a47808 =
+t62a47808 = 其私钥存放在系统钥匙串中。
 
 # Its private key is in ca.key, which only you can read.
-# td9c6165d =
+td9c6165d = 其私钥存放在 ca.key 中，只有你能读取。
 
 # Its private key is in ca.key, which only you can read, as the system keychain cannot take it: {why}.
-# t453607d0 =
+t453607d0 = 其私钥存放在 ca.key 中，只有你能读取，因为系统钥匙串无法存储它：{ $why }。
 
 # Open the page. If the browser warns about the certificate, or cannot find the page, one of the steps above is not done for that browser.
-# t2e93b53b =
+t2e93b53b = 打开该页面。如果浏览器发出证书警告，或找不到页面，说明该浏览器尚未完成上述某个步骤。
 
 # {name} goes through tracewing and trusts it.
-# t82bd2456 =
+t82bd2456 = { $name } 已通过 tracewing 连接，并信任 tracewing。
 
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
-# tfb6feb04 =
+tfb6feb04 = { $name } 已通过 tracewing 连接，但未使用 HTTPS 打开页面。请通过 https:// 重新打开。
 
 # A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-# t9f95b7b8 =
+t9f95b7b8 = 手机或其他电脑也可以将流量发送到这里。在“设置”中开启“允许其他设备使用代理”，然后重新启动 tracewing。
 
 # this computer's address, port {port}
-# t2188b3f4 =
+t2188b3f4 = 本机地址，端口 { $port }
 
 # On the device, set the Wi-Fi proxy to {addr}. Then open http://{host} there, get the certificate and trust it. Its flows show its address, and can be filtered with device:. Name it from one of them, in Connection.
-# tc8ccf306 =
+tc8ccf306 = 在该设备上，将 Wi-Fi 代理设置为 { $addr }。然后在设备上打开 http://{ $host }，下载证书并信任它。其流量记录会显示设备地址，可用 device: 过滤。可在任一条流量记录的“连接”中为设备命名。
 
 # Looking for it…
-# t50ee7452 =
+t50ee7452 = 正在查找…
 
 # Installing. The system may ask you to confirm.
-# ta41c38ec =
+ta41c38ec = 正在安装。系统可能会要求你确认。
 
 # This computer trusts it.
-# t27d6bacc =
+t27d6bacc = 本机已信任该证书。
 
 # Installed in: {places}.
-# tb5bcc244 =
+tb5bcc244 = 已安装到：{ $places }。
 
 # Command-line tools trust it, but browsers keep stores of their own. Until it is in them, HTTPS through tracewing fails in a browser.
-# t327bf8fc =
+t327bf8fc = 命令行工具已信任该证书，但浏览器有各自的证书存储。在证书加入其中之前，浏览器中经过 tracewing 的 HTTPS 将会失败。
 
 # tracewing reads HTTPS with a certificate made for this computer alone. Until it is trusted, HTTPS through tracewing fails.
-# tafd8dae2 =
+tafd8dae2 = tracewing 使用专为本机生成的证书来读取 HTTPS。在该证书受信任之前，经过 tracewing 的 HTTPS 将会失败。
 
 # Trust the certificate
-# t26618699 =
+t26618699 = 信任证书
 
 # Install
-# tb50cbd40 =
+tb50cbd40 = 安装
 
 # Also for command-line tools
-# t0db8faea =
+t0db8faea = 同时用于命令行工具
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
-# t83387edf =
+t83387edf = 使用系统设置的应用现在会通过 { $addr }。tracewing 关闭或崩溃时，将恢复为原来的设置。
 
 # Sends this computer's traffic through tracewing, for apps that use the system's setting. Or point one app at {addr} yourself.
-# tdcc53241 =
+tdcc53241 = 让使用系统设置的应用将本机流量经由 tracewing 发送。也可以自行将某个应用指向 { $addr }。
 
 # Turn on the system proxy
-# t52b88441 =
+t52b88441 = 开启系统代理
 
 # Turn off
-# tcd03e04b =
+tcd03e04b = 关闭
 
 # Turn on
-# t65a0c5a7 =
+t65a0c5a7 = 开启
 
 # Check it in your browser
-# tbed6e83a =
+tbed6e83a = 在浏览器中检查
 
 # Open the test page
-# te4e36f65 =
+te4e36f65 = 打开测试页面
 
 # Set up
-# t43c06abc =
+t43c06abc = 配置
 
 # Three steps to see HTTPS traffic from this computer.
-# tf3a7f60b =
+tf3a7f60b = 三步即可查看本机的 HTTPS 流量。
 
 # See traffic
-# t980eee79 =
+t980eee79 = 查看流量
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
-# t3c727cd5 =
+t3c727cd5 = 本机已阻止 UDP 443 端口，因此应用会从 HTTP/3 回退到 HTTP/2 并经过 tracewing。tracewing 关闭或崩溃时，阻止将自动解除。
 
 # Some apps speak HTTP/3, over UDP, and go around the proxy. Blocking UDP port 443 on this computer makes them fall back to HTTP/2 through tracewing. It takes an administrator's password, and stops when tracewing closes. A VPN that uses UDP port 443 stops working meanwhile.
-# t64ab600f =
+t64ab600f = 有些应用通过 UDP 使用 HTTP/3，会绕过代理。在本机阻止 UDP 443 端口，可让它们回退到 HTTP/2 并经过 tracewing。此操作需要管理员密码，tracewing 关闭时会自动解除。在此期间，使用 UDP 443 端口的 VPN 将无法工作。
 
 # Apps on HTTP/3
-# t2cfe5270 =
+t2cfe5270 = 使用 HTTP/3 的应用
 
 # Stop blocking
-# t318358d8 =
+t318358d8 = 停止阻止
 
 # Block HTTP/3
-# t88231e40 =
+t88231e40 = 阻止 HTTP/3
 
 # Or one app at a time
-# t91c63f1c =
+t91c63f1c = 或者逐个应用设置
 
 # A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-# t259dbb0e =
+t259dbb0e = 打开一个经过 tracewing 的终端，或使用独立配置文件的浏览器，系统代理和其他应用均保持不变。
 
 # Open a terminal
-# t4b629c72 =
+t4b629c72 = 打开终端
 
 # Open {name}
-# tbd869c4a =
+tbd869c4a = 打开 { $name }
 
 # iPhone and iPad
-# ta550cc97 =
+ta550cc97 = iPhone 和 iPad
 
 # Flutter apps
-# ta04ee397 =
+ta04ee397 = Flutter 应用
 
 # 1. In Settings, Wi-Fi, choose the network, then Configure Proxy, Manual: server {server}, port {port}.
-# t996be047 =
+t996be047 = 1. 在“设置”>“无线局域网”中选择该网络，然后选择“配置代理”>“手动”：服务器填 { $server }，端口填 { $port }。
 
 # 2. Scan the code with the camera, or open {page} in Safari, and get the certificate. Allow the download.
-# t4fa14138 =
+t4fa14138 = 2. 用相机扫描二维码，或在 Safari 中打开 { $page }，下载证书。在提示时选择“允许”。
 
 # 3. In Settings, General, VPN & Device Management, choose the tracewing CA profile and install it.
-# t7127295f =
+t7127295f = 3. 在“设置”>“通用”>“VPN与设备管理”中，选择 tracewing CA 描述文件并安装。
 
 # 4. In Settings, General, About, Certificate Trust Settings, turn on full trust for tracewing CA.
-# t1b22723c =
+t1b22723c = 4. 在“设置”>“通用”>“关于本机”>“证书信任设置”中，为 tracewing CA 开启完全信任。
 
 # 5. Open https://{host} in Safari. If it says it works, apps that use the system's settings go through tracewing.
-# t4adfec01 =
+t4adfec01 = 5. 在 Safari 中打开 https://{ $host }。如果页面显示工作正常，使用系统设置的应用就会经过 tracewing。
 
 # 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host {host}, port {port}.
-# t4f837b10 =
+t4f837b10 = 1. 在“设置”>“WLAN”中修改该网络，在“高级选项”中将“代理”设为“手动”：主机名填 { $host }，端口填 { $port }。
 
 # 2. Scan the code, or open {page} in the browser, and get the certificate.
-# t654a829b =
+t654a829b = 2. 扫描二维码，或在浏览器中打开 { $page }，下载证书。
 
 # 3. In Settings, Security, Encryption & credentials (the names vary by maker), choose Install a certificate, then CA certificate, and pick tracewing.crt.
-# t8263ba6b =
+t8263ba6b = 3. 在“设置”>“安全”>“加密与凭据”中（名称因厂商而异），选择“安装证书”>“CA 证书”，然后选择 tracewing.crt。
 
 # 4. Since Android 7, apps trust certificates the user added only if they say so. For a debug build of your own app, add res/xml/network_security_config.xml:
-# tb7fa0462 =
+tb7fa0462 = 4. 从 Android 7 开始，应用只有在明确声明时才会信任用户添加的证书。对于你自己应用的调试版本，请添加 res/xml/network_security_config.xml：
 
 # and point to it from AndroidManifest.xml:
-# t02ad844b =
+t02ad844b = 并在 AndroidManifest.xml 中引用它：
 
 # Other apps keep refusing the certificate: their traffic shows as failed flows.
-# t02e57826 =
+t02e57826 = 其他应用仍会拒绝该证书：它们的流量将显示为失败的流量记录。
 
 # Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
-# t4ffc0abf =
+t4ffc0abf = Dart 的 HttpClient（Flutter 的 http 和 Dio 都基于它）不会遵循手机的代理设置，并且在 Android 上不信任用户添加的证书。在调试版本中，可将其指向这里：
 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
-# t991340f1 =
+t991340f1 = badCertificateCallback 会放行任何证书，因此只能用于调试版本。
 
 # Copy
-# t658f3664 =
+t658f3664 = 复制
 
 # Open settings
-# t1336b4d6 =
+t1336b4d6 = 打开设置
 
 # Phones and other devices
-# t2e3c591c =
+t2e3c591c = 手机和其他设备
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
-# td0629ca6 =
+td0629ca6 = 此网络中的手机、平板或其他电脑可以通过 { $proxy } 经由 tracewing 连接。扫描二维码即可打开证书下载页面。其流量记录会显示设备地址，可用 device: 过滤，也可在任一条流量记录的“连接”中为设备命名。
 
 # Set up. The certificate is among the system's until the device restarts.
-# t84db6961 =
+t84db6961 = 已设置完成。在设备重启之前，该证书会保留在系统证书中。
 
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
-# tbcad7fa7 =
+tbcad7fa7 = 已设置完成。证书位于“下载”文件夹：在刚打开的“设置”中，选择“加密与凭据”>“安装证书”>“CA 证书”，然后选择 tracewing.crt。
 
 # Apps that trust only the system's certificates will still refuse it.
-# t6fb5ba4b =
+t6fb5ba4b = 只信任系统证书的应用仍会拒绝它。
 
 # An emulator.
-# t14b6b86d =
+t14b6b86d = 模拟器。
 
 # On USB.
-# t67dafc14 =
+t67dafc14 = 通过 USB 连接。
 
 # Accept the USB debugging prompt on the device, then look again.
-# tff6a046e =
+tff6a046e = 请在设备上接受 USB 调试提示，然后重新查找。
 
 # Still starting. Look again in a moment.
-# t13f68b64 =
+t13f68b64 = 仍在启动中。请稍后重新查找。
 
 # adb says it is {state}.
-# t2b7d71da =
+t2b7d71da = adb 报告其状态为 { $state }。
 
 # Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-# tc28e5d10 =
+tc28e5d10 = 为 Android 模拟器或已开启 USB 调试并连接的手机设置代理，并安装证书。流量通过 ADB 传输，因此它们无需连接到此网络。
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
-# t4af01006 =
+t4af01006 = 未找到 adb。请安装 Android Studio 或 Android 平台工具，然后重新查找。
 
 # No device is connected. Start an emulator, or plug in a phone with USB debugging on, then look again.
-# tc65b7cf7 =
+tc65b7cf7 = 未连接任何设备。请启动模拟器，或连接已开启 USB 调试的手机，然后重新查找。
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
-# t9144d1fc =
+t9144d1fc = 设置设备，将其流量发送到这里。点击“撤销”或关闭 tracewing，即可移除设备上的代理设置。
 
 # Undo
-# t71fd4acf =
+t71fd4acf = 撤销
 
 # Android emulators and USB devices
-# t379e433c =
+t379e433c = Android 模拟器和 USB 设备
 
 # Look again
-# t98416222 =
+t98416222 = 重新查找
 
 # Find devices
-# t54d4af39 =
+t54d4af39 = 查找设备
 
 # Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
-# t2dc39047 =
+t2dc39047 = Claude Code、Cursor、VS Code 等 AI 工具可以通过 tracewing 的 MCP 服务器列出并读取其录制的流量记录。除非在“设置”中允许，否则不会包含令牌和 Cookie。在 Claude Code 中：
 
 # Elsewhere, in the tool's MCP settings:
-# tec38833c =
+tec38833c = 在其他工具中，请在其 MCP 设置中添加：
 
 # Flows
-# t4db77db2 =
+t4db77db2 = 流量记录
 
 # Choose the flow above or below
-# tecb3adec =
+tecb3adec = 选择上一条或下一条流量记录
 
 # The first or the last flow
-# t7e278a00 =
+t7e278a00 = 第一条或最后一条流量记录
 
 # A page up or down
-# t23b1814b =
+t23b1814b = 向上或向下翻页
 
 # Filter
-# tf4a9c097 =
+tf4a9c097 = 过滤
 
 # Pause or resume recording
-# t6e21519a =
+t6e21519a = 暂停或继续录制
 
 # Clear the list
-# tf2a55d1f =
+tf2a55d1f = 清空列表
 
 # The chosen flow
-# te0a729de =
+te0a729de = 所选流量记录
 
 # Its request
-# tb3970784 =
+tb3970784 = 查看请求
 
 # Its response
-# t221fc168 =
+t221fc168 = 查看响应
 
 # Send it again
-# tef7d1944 =
+tef7d1944 = 重新发送
 
 # Edit it and send it
-# t6bc99e5c =
+t6bc99e5c = 编辑后发送
 
 # Copy it as cURL
-# tc99a11a3 =
+tc99a11a3 = 复制为 cURL
 
 # The window
-# t2af18488 =
+t2af18488 = 窗口
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
-# t9df89562 =
+t9df89562 = 配置、流量、规则、已暂停、编写、会话、设置
 
 # Show or hide the sidebar
-# t67adca04 =
+t67adca04 = 显示或隐藏侧边栏
 
 # Show or hide the inspector
-# ta5a7b9e9 =
+ta5a7b9e9 = 显示或隐藏检查器
 
 # The inspector beside the list or below it
-# t51e214f7 =
+t51e214f7 = 将检查器置于列表旁边或下方
 
 # These shortcuts
-# tbdf3b62b =
+tbdf3b62b = 此快捷键列表
 
 # Close them
-# tf3a4b1ef =
+tf3a4b1ef = 关闭快捷键列表
 
 # Keyboard shortcuts
-# t31eaddb7 =
+t31eaddb7 = 键盘快捷键
 
 # Close
-# tcd86acc3 =
+tcd86acc3 = 关闭
 
 # The certificate: {e}
-# t0235648c =
+t0235648c = 证书：{ $e }
 
 # The terminal
-# tf542b2f4 =
+tf542b2f4 = 终端
 
 # The system proxy: {e}
-# tc99726ce =
+tc99726ce = 系统代理：{ $e }
 
 # Blocking HTTP/3: {e}
-# t024ec871 =
+t024ec871 = 阻止 HTTP/3：{ $e }
 
 # host:, status:4xx, or text in bodies
-# t00d0cf30 =
+t00d0cf30 = host:、status:4xx 或正文中的文字
 
 # A name, as iPhone test
-# t19f89214 =
+t19f89214 = 名称，如：测试用 iPhone
 
 # The search index: {e}
-# te3c971c9 =
+te3c971c9 = 搜索索引：{ $e }
 
 # An earlier session: {name}
-# t73446a1d =
+t73446a1d = 历史会话：{ $name }
 
 # Read-only. Search covers more as its index is finished. Recording goes on.
-# td8659d5b =
+td8659d5b = 只读。随着索引逐步完成，搜索范围会不断扩大。录制仍在继续。
 
 # Read-only. Recording goes on.
-# te2f35d9e =
+te2f35d9e = 只读。录制仍在继续。
 
 # Back to live
-# t317c0453 =
+t317c0453 = 返回实时
 
 # {shown} of {total}
-# tf2cc0563 =
+tf2cc0563 = { $shown } / { $total }
 
 # Recording
-# te75cf20c =
+te75cf20c = 录制
 
 # System proxy off · {addr}
-# t7e813d25 =
+t7e813d25 = 系统代理已关闭 · { $addr }
 
 # System proxy…
-# t29e7dcd0 =
+t29e7dcd0 = 系统代理…
 
 # System proxy on · {addr}
-# t319ad6b9 =
+t319ad6b9 = 系统代理已开启 · { $addr }
 
 # Apps
-# t53d91aad =
+t53d91aad = 应用
 
 # Devices
-# t27acf320 =
+t27acf320 = 设备
 
 # Hosts
-# tcf9aefb4 =
+tcf9aefb4 = 主机
 
 # All hosts
-# tfc7bfe37 =
+tfc7bfe37 = 所有主机
 
 # Hidden
-# t3c2dfe59 =
+t3c2dfe59 = 已隐藏
 
 # Newest
-# t324b6d0b =
+t324b6d0b = 最新
 
 # No flow fits this filter
-# t7eb295f4 =
+t7eb295f4 = 没有符合此过滤条件的流量记录
 
 # Nothing yet
-# tbd00747c =
+tbd00747c = 暂无内容
 
 # Turn on the system proxy above, or point an app at {addr}. To try it: curl --proxy http://{addr} --cacert {ca} https://example.com/
-# t61730a16 =
+t61730a16 = 开启上方的系统代理，或将应用指向 { $addr }。试一试：curl --proxy http://{ $addr } --cacert { $ca } https://example.com/
 
 # Beside the list
-# t3b4853f8 =
+t3b4853f8 = 列表旁边
 
 # Below the list
-# t23658daf =
+t23658daf = 列表下方
 
 # Drop it on a place · Esc puts it back
-# t0fa632ba =
+t0fa632ba = 拖放到目标位置 · 按 Esc 还原
 
 # Traffic
-# t4b589266 =
+t4b589266 = 流量
 
 # Certificate trusted on this computer
-# t7b93f551 =
+t7b93f551 = 本机已信任证书
 
 # Checking the certificate…
-# tbf8942c3 =
+tbf8942c3 = 正在检查证书…
 
 # Installing the certificate; the system may ask you to confirm…
-# t068dcaff =
+t068dcaff = 正在安装证书，系统可能会要求你确认…
 
 # HTTPS will fail until the certificate is trusted: set up
-# t4b34beb2 =
+t4b34beb2 = 在证书受信任之前，HTTPS 将会失败：去配置
 
 # settings.toml was not used: {problem}
-# tc3e1f9c8 =
+tc3e1f9c8 = 未使用 settings.toml：{ $problem }
 
 # The proxy stopped: {failure}
-# t04dcff11 =
+t04dcff11 = 代理已停止：{ $failure }
 
 # The disk is nearly full: bodies are not being kept
-# te99f9959 =
+te99f9959 = 磁盘即将用满：暂不保留正文
 
 # {count} flow not recorded | {count} flows not recorded
-# tdbd64fe6 =
+tdbd64fe6 =
+    { $n ->
+       *[other] { $count } 条流量记录未录制
+    }
 
 # {count} flow without bodies | {count} flows without bodies
-# t249093b0 =
+t249093b0 =
+    { $n ->
+       *[other] { $count } 条流量记录没有正文
+    }
 
 # {count} oldest flow dropped to stay under {size} | {count} oldest flows dropped to stay under {size}
-# te30201f0 =
+te30201f0 =
+    { $n ->
+       *[other] 为保持在 { $size } 以内，已丢弃最早的 { $count } 条流量记录
+    }
 
 # {count} flow | {count} flows
-# t57bf5200 =
+t57bf5200 =
+    { $n ->
+       *[other] { $count } 条流量记录
+    }
 
 # Export as HAR
-# t95b6b766 =
+t95b6b766 = 导出为 HAR
 
 # Shortcuts {keys}
-# t4ab0ecb4 =
+t4ab0ecb4 = 快捷键 { $keys }
 
 # Columns
-# tea156fdc =
+tea156fdc = 列

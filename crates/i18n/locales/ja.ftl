@@ -2,1312 +2,1366 @@
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
 # … {size} more
-# ta8dc6eab =
+ta8dc6eab = … あと { $size }
 
 # {size} · {count} line | {size} · {count} lines
-# t51332550 =
+t51332550 =
+    { $n ->
+       *[other] { $size } · { $count } 行
+    }
 
 # {size} · reading {percent}%
-# t49fe2cb3 =
+t49fe2cb3 = { $size } · 読み込み中 { $percent }%
 
 # Appearance: {now}. Click for {next}.
-# t332cfa6d =
+t332cfa6d = 外観: { $now }。クリックすると{ $next }に切り替わります。
 
 # Method
-# t98a2c750 =
+t98a2c750 = メソッド
 
 # Status
-# t005ef20f =
+t005ef20f = ステータス
 
 # App
-# t81f51acc =
+t81f51acc = アプリ
 
 # Host
-# t302af18f =
+t302af18f = ホスト
 
 # Path
-# teb66e456 =
+teb66e456 = パス
 
 # Size
-# ta6478e7c =
+ta6478e7c = サイズ
 
 # Time
-# tdfe4e404 =
+tdfe4e404 = 時間
 
 # Number
-# t61e9eac0 =
+t61e9eac0 = 番号
 
 # "{method}" is not a method
-# tacdcf5cb =
+tacdcf5cb = "{ $method }" はメソッドではありません
 
 # its request body was not kept whole, so it cannot be sent again
-# t1f9e5368 =
+t1f9e5368 = リクエストボディが完全には保持されていないため、再送信できません
 
 # name: value, one a line
-# t4df37bea =
+t4df37bea = 名前: 値（1 行に 1 つ）
 
 # No body
-# tfa4c2902 =
+tfa4c2902 = ボディなし
 
 # No flow is chosen
-# t550b0a98 =
+t550b0a98 = フローが選択されていません
 
 # This flow: {e}
-# t296762f8 =
+t296762f8 = このフロー: { $e }
 
 # Request
-# t82454152 =
+t82454152 = リクエスト
 
 # Headers
-# t334f5989 =
+t334f5989 = ヘッダー
 
 # Body
-# t428a1095 =
+t428a1095 = ボディ
 
 # Sending…
-# te946e7bf =
+te946e7bf = 送信中…
 
 # Send
-# tf28e14cf =
+tf28e14cf = 送信
 
 # New
-# t8b242db1 =
+t8b242db1 = 新規
 
 # … {count} more bytes: the flow in Traffic has them all.
-# tf43ea06c =
+tf43ea06c = … 残り { $count } バイト: トラフィックのフローにすべて含まれています。
 
 # Response
-# t55a982fe =
+t55a982fe = レスポンス
 
 # Compose
-# t18049f93 =
+t18049f93 = 作成
 
 # A request of your own, or one sent again. It goes through tracewing, so rules apply and it shows in Traffic too.
-# t7a9cf113 =
+t7a9cf113 = 自分で作成したリクエスト、または再送信したリクエストです。tracewing を経由するため、ルールが適用され、トラフィックにも表示されます。
 
 # {version} both sides
-# t961a5ea0 =
+t961a5ea0 = 両側とも { $version }
 
 # {client} to the proxy, {server} to the server
-# t3d237646 =
+t3d237646 = プロキシまで { $client }、サーバーまで { $server }
 
 # Queued
-# t9e437c74 =
+t9e437c74 = キュー待ち
 
 # Connect
-# tdb89a899 =
+tdb89a899 = 接続
 
 # Waiting
-# tc9450e48 =
+tc9450e48 = 待機
 
 # Download
-# t6964bb19 =
+t6964bb19 = ダウンロード
 
 # No file picker: {e}
-# t6935fbd3 =
+t6935fbd3 = ファイル選択ダイアログを開けません: { $e }
 
 # Writing the HAR…
-# t725a0e89 =
+t725a0e89 = HAR を書き出しています…
 
 # {n} flow written to {path} | {n} flows written to {path}
-# t643f96ee =
+t643f96ee =
+    { $n ->
+       *[other] { $n } 件のフローを { $path } に書き出しました
+    }
 
 # The HAR was not written: {e}
-# tef8ec569 =
+tef8ec569 = HAR を書き出せませんでした: { $e }
 
 # Open
-# t538b10e9 =
+t538b10e9 = 開く
 
 # Reading {path}…
-# tc0e7c8f4 =
+tc0e7c8f4 = { $path } を読み込んでいます…
 
 # , {n} entry left out | , {n} entries left out
-# td848c31b =
+td848c31b =
+    { $n ->
+       *[other] 、{ $n } 件のエントリは除外
+    }
 
 # {n} flow read from a {format} | {n} flows read from a {format}
-# t610d7810 =
+t610d7810 =
+    { $n ->
+       *[other] { $format } から { $n } 件のフローを読み込みました
+    }
 
 # The file was not read: {e}
-# t7f49510f =
+t7f49510f = ファイルを読み込めませんでした: { $e }
 
 # it is no longer kept
-# ta7b4c380 =
+ta7b4c380 = もう保持されていません
 
 # {size} saved to {path}
-# tc6932467 =
+tc6932467 = { $size } を { $path } に保存しました
 
 # The body was not saved: {e}
-# t189900b4 =
+t189900b4 = ボディを保存できませんでした: { $e }
 
 # Fiddler session
-# t9f5c89a3 =
+t9f5c89a3 = Fiddler セッション
 
 # Charles session
-# tb4f56f2b =
+tb4f56f2b = Charles セッション
 
 # All
-# t75afe364 =
+t75afe364 = すべて
 
 # Errors
-# te9ed60a6 =
+te9ed60a6 = エラー
 
 # Media
-# td10fcaa3 =
+td10fcaa3 = メディア
 
 # Rule: {rule}
-# teca2074f =
+teca2074f = ルール: { $rule }
 
 # Events
-# t003420a4 =
+t003420a4 = イベント
 
 # Not decrypted
-# t8090a1ba =
+t8090a1ba = 未復号
 
 # open
-# td35ec4c9 =
+td35ec4c9 = オープン
 
 # This flow is gone.
-# t3343999e =
+t3343999e = このフローはもうありません。
 
 # This host is not decrypted, so what it sends cannot be seen.
-# tf85fe84f =
+tf85fe84f = このホストは復号されないため、送信内容は見えません。
 
 # No body.
-# t31e4d044 =
+t31e4d044 = ボディはありません。
 
 # This body was not kept: the disk was nearly full, or too much was waiting for it.
-# t884aad28 =
+t884aad28 = このボディは保持されていません: ディスクの空きがほとんどないか、書き込み待ちのデータが多すぎました。
 
 # This body was not kept.
-# te46616b5 =
+te46616b5 = このボディは保持されていません。
 
 # This body is gone: it was dropped with the oldest flows, or cannot be read.
-# tf9a7ab60 =
+tf9a7ab60 = このボディはもうありません: 最も古いフローとともに破棄されたか、読み込めません。
 
 # Cannot open this body: {e}
-# t620a039b =
+t620a039b = このボディを開けません: { $e }
 
 # Inspector
-# t4def410e =
+t4def410e = インスペクタ
 
 # Choose a flow to see it here
-# tc7be91e8 =
+tc7be91e8 = フローを選択するとここに表示されます
 
 # Not decrypted. New connections to this host go through unread.
-# ta05ec37a =
+ta05ec37a = 未復号。このホストへの新しい接続は、中身を読まずに通過します。
 
 # If an app fails with this host, it may pin its certificates.
-# t3cbba118 =
+t3cbba118 = このホストでアプリが失敗する場合、アプリが証明書をピン留めしている可能性があります。
 
 # Make a rule
-# t0ac0e062 =
+t0ac0e062 = ルールを作成
 
 # Decrypt this host
-# tb7367e2c =
+tb7367e2c = このホストを復号する
 
 # Do not decrypt this host
-# t5fa113f6 =
+t5fa113f6 = このホストを復号しない
 
 # Picture · {size}
-# te97ed633 =
+te97ed633 = 画像 · { $size }
 
 # Messages {count}
-# te61b841a =
+te61b841a = メッセージ { $count }
 
 # Headers {headers}
-# t04b0146d =
+t04b0146d = ヘッダー { $headers }
 
 # Cookies {cookies}
-# td58eb84b =
+td58eb84b = Cookie { $cookies }
 
 # Query {query}
-# t4756f9f5 =
+t4756f9f5 = クエリ { $query }
 
 # Form {form}
-# tfa6e7203 =
+tfa6e7203 = フォーム { $form }
 
 # Connection
-# t09ea4ff9 =
+t09ea4ff9 = 接続
 
 # Save body
-# te2c44424 =
+te2c44424 = ボディを保存
 
 # Send again
-# tf5910557 =
+tf5910557 = 再送信
 
 # Edit and send
-# tf837e542 =
+tf837e542 = 編集して送信
 
 # Copied
-# t8dc21305 =
+t8dc21305 = コピーしました
 
 # Copy as cURL
-# t866d1e3e =
+t866d1e3e = cURL としてコピー
 
 # Copy as…
-# t9c1ad448 =
+t9c1ad448 = 形式を指定してコピー…
 
 # This picture cannot be drawn. Save the body to look at it.
-# t1e92fb27 =
+t1e92fb27 = この画像は表示できません。ボディを保存して確認してください。
 
 # Opening…
-# tc40f2321 =
+tc40f2321 = 開いています…
 
 # No response
-# t8c2c37b1 =
+t8c2c37b1 = レスポンスなし
 
 # Tunnel, not decrypted
-# tce693254 =
+tce693254 = トンネル、未復号
 
 # GraphQL: {operation}
-# t2d65757d =
+t2d65757d = GraphQL: { $operation }
 
 # Over connection {id}, made before: no time went on connecting.
-# t84144a81 =
+t84144a81 = 以前に確立された接続 { $id } を使用: 接続に時間はかかっていません。
 
 # {app}, pid {pid}
-# t627147b4 =
+t627147b4 = { $app }、pid { $pid }
 
 # Not found: it may have ended, or belong to another user
-# t0efce58b =
+t0efce58b = 見つかりません: 終了したか、別のユーザーのものである可能性があります
 
 # On another device
-# t2b964a37 =
+t2b964a37 = 別のデバイス上
 
 # CLIENT
-# t6d3cd99e =
+t6d3cd99e = クライアント
 
 # Device
-# tbdcbb413 =
+tbdcbb413 = デバイス
 
 # Program
-# tc4253b6b =
+tc4253b6b = プログラム
 
 # Address
-# t700560f3 =
+t700560f3 = アドレス
 
 # SERVER
-# te3b27612 =
+te3b27612 = サーバー
 
 # What this connection was is no longer kept: it went with older flows.
-# t1ef5a00a =
+t1ef5a00a = この接続の情報はもう保持されていません: 古いフローとともに破棄されました。
 
 # Not decrypted: tracewing passed it on without looking.
-# t0427c9b1 =
+t0427c9b1 = 未復号: tracewing は中身を見ずにそのまま転送しました。
 
 # No connection was made.
-# tf348eb92 =
+tf348eb92 = 接続は確立されませんでした。
 
 # None: it was answered without one.
-# tac71808e =
+tac71808e = なし: 接続せずに応答しました。
 
 # {id}, given up during TLS
-# t0ec66a8c =
+t0ec66a8c = { $id }、TLS 中に中断
 
 # {id}, made for this flow
-# t7fe32cfc =
+t7fe32cfc = { $id }、このフローのために確立
 
 # {id}, made before and used again
-# ta904c078 =
+ta904c078 = { $id }、以前に確立され再利用
 
 # Server
-# t6d7302f2 =
+t6d7302f2 = サーバー
 
 # None: plain HTTP
-# t05606349 =
+t05606349 = なし: 平文の HTTP
 
 # THE SERVER SHOWED NO CERTIFICATES
-# te476fbb8 =
+te476fbb8 = サーバーは証明書を提示しませんでした
 
 # WHAT THE SERVER SHOWED, ITS OWN FIRST
-# ta51f3107 =
+ta51f3107 = サーバーが提示した証明書（サーバー自身のものが先頭）
 
 # NO CERTIFICATES
-# te6f31dce =
+te6f31dce = 証明書なし
 
 # CERTIFICATE
-# t1c902790 =
+t1c902790 = 証明書
 
 # {n} CERTIFICATE, THE SERVER'S FIRST | {n} CERTIFICATES, THE SERVER'S FIRST
-# td5295f62 =
+td5295f62 =
+    { $n ->
+       *[other] { $n } 件の証明書（サーバーのものが先頭）
+    }
 
 # tracewing would not go on with this server: {error}. If the app trusts it some other way, such as through a company CA, choose “Do not decrypt this host” and the app will check the server itself.
-# t13ced472 =
+t13ced472 = tracewing はこのサーバーとの通信を続行しませんでした: { $error }。社内 CA など別の方法でアプリがこのサーバーを信頼している場合は、「このホストを復号しない」を選ぶと、アプリ自身がサーバーを検証します。
 
 # Cipher
-# t5b3bed6a =
+t5b3bed6a = 暗号スイート
 
 # none
-# tada7afdb =
+tada7afdb = なし
 
 # not valid until {when}
-# t0a14b2d8 =
+t0a14b2d8 = { $when }まで無効
 
 # expired {when}
-# t932538c2 =
+t932538c2 = { $when }に期限切れ
 
 # expires {when}
-# t679bcb51 =
+t679bcb51 = { $when }に失効
 
 # {names}, and {n} more | {names}, and {n} more
-# t4cd375ad =
+t4cd375ad =
+    { $n ->
+       *[other] { $names }、ほか { $n } 件
+    }
 
 # Issued by {issuer}
-# t15a1ce5a =
+t15a1ce5a = 発行者 { $issuer }
 
 # Valid {from} to {to} · {when}
-# t0e47d4f2 =
+t0e47d4f2 = 有効期間 { $from }～{ $to } · { $when }
 
 # Names {names}
-# tda75e459 =
+tda75e459 = 名前 { $names }
 
 # Serial {serial}
-# td1f0d98b =
+td1f0d98b = シリアル { $serial }
 
 # These headers were not kept.
-# tb8739fec =
+tb8739fec = これらのヘッダーは保持されていません。
 
 # No headers.
-# tf3dacb5e =
+tf3dacb5e = ヘッダーはありません。
 
 # File {filename} · {kind} · {size}
-# t6dbd239f =
+t6dbd239f = ファイル { $filename } · { $kind } · { $size }
 
 # no type
-# t902a6ece =
+t902a6ece = タイプなし
 
 # No cookies were sent.
-# t58e85ab2 =
+t58e85ab2 = Cookie は送信されませんでした。
 
 # No cookies were set.
-# tf57dbabc =
+tf57dbabc = Cookie は設定されませんでした。
 
 # JWT · {algorithm} · signature not checked
-# t2db33271 =
+t2db33271 = JWT · { $algorithm } · 署名は未検証
 
 # JWT · signature not checked
-# t05f8b533 =
+t05f8b533 = JWT · 署名は未検証
 
 # Header
-# t114f9980 =
+t114f9980 = ヘッダー
 
 # Payload
-# ta0639745 =
+ta0639745 = ペイロード
 
 # Expires
-# tc7aa0523 =
+tc7aa0523 = 有効期限
 
 # Issued
-# tb1835ecc =
+tb1835ecc = 発行日時
 
 # Not before
-# td10dacd9 =
+td10dacd9 = 有効開始
 
 # in {amount}
-# tfda57c3e =
+tfda57c3e = { $amount }後
 
 # {amount} ago
-# t5f968014 =
+t5f968014 = { $amount }前
 
 # Light
-# t8ad2f8cf =
+t8ad2f8cf = ライト
 
 # Dark
-# t45570065 =
+t45570065 = ダーク
 
 # System
-# t8f3184bc =
+t8f3184bc = システム
 
 # streamed in {count} chunk | streamed in {count} chunks
-# t76711a1a =
+t76711a1a =
+    { $n ->
+       *[other] { $count } チャンクでストリーミング
+    }
 
 # stopped: {stop}
-# tfa48fb30 =
+tfa48fb30 = 停止: { $stop }
 
 # {input} in · {output} out tokens
-# tc8bbc724 =
+tc8bbc724 = 入力 { $input } · 出力 { $output } トークン
 
 # Reading the call…
-# t33b52a3c =
+t33b52a3c = 呼び出しを読み込んでいます…
 
 # Answer
-# tf94ea0ff =
+tf94ea0ff = 回答
 
 # Thinking: {thinking}
-# t737ece33 =
+t737ece33 = 思考: { $thinking }
 
 # Calls {name}{id}
-# t017882e4 =
+t017882e4 = { $name }{ $id } を呼び出し
 
 # Nothing yet.
-# td9b71d16 =
+td9b71d16 = まだ何もありません。
 
 # {text}… and {count} more character | {text}… and {count} more characters
-# t6a16c074 =
+t6a16c074 =
+    { $n ->
+       *[other] { $text }… ほか { $count } 文字
+    }
 
 # Copy the answer
-# t69975ed7 =
+t69975ed7 = 回答をコピー
 
 # Asked
-# t4e3af9c3 =
+t4e3af9c3 = 質問
 
 # Tools offered: {tools}
-# tb871bcf4 =
+tb871bcf4 = 提供されたツール: { $tools }
 
 # Not kept
-# tba30b5fa =
+tba30b5fa = 未保持
 
 # This message was not kept: too much was waiting, or the disk was nearly full.
-# tb888a3c3 =
+tb888a3c3 = このメッセージは保持されていません: 書き込み待ちのデータが多すぎたか、ディスクの空きがほとんどありませんでした。
 
 # This message is empty.
-# tdb0ec01f =
+tdb0ec01f = このメッセージは空です。
 
 # No messages yet
-# t51e7624c =
+t51e7624c = まだメッセージはありません
 
 # {said} kept, of {size}
-# t3558745a =
+t3558745a = { $size } 中 { $said } を保持
 
 # {what}: {text} is not a whole number
-# t2a8515ce =
+t2a8515ce = { $what }: { $text } は整数ではありません
 
 # Latency
-# t23a45ef9 =
+t23a45ef9 = レイテンシ
 
 # Down
-# ta4995035 =
+ta4995035 = ダウンロード
 
 # Up
-# t42f35940 =
+t42f35940 = アップロード
 
 # Loss
-# t69db303a =
+t69db303a = パケットロス
 
 # Give a latency, a speed or a loss to slow it down by
-# t7cfd6404 =
+t7cfd6404 = 遅くするには、レイテンシ、速度、パケットロスのいずれかを入力してください
 
 # Latency, ms
-# tefe18ab9 =
+tefe18ab9 = レイテンシ (ms)
 
 # Down, kbit/s
-# t08c4ae33 =
+t08c4ae33 = ダウンロード (kbit/s)
 
 # Up, kbit/s
-# td55cfe9a =
+td55cfe9a = アップロード (kbit/s)
 
 # Loss, %
-# tea4af439 =
+tea4af439 = パケットロス (%)
 
 # Only these hosts, like *.example.com; all if empty
-# t77a1f991 =
+t77a1f991 = 対象ホストのみ（例: *.example.com）。空欄ならすべて
 
 # Not kept for next time: {e}
-# tdce4d67c =
+tdce4d67c = 次回用に保存できませんでした: { $e }
 
 # Slow network
-# td51ddfce =
+td51ddfce = 低速ネットワーク
 
 # Off: traffic goes as fast as it can
-# tf0f34db0 =
+tf0f34db0 = オフ: トラフィックは最大速度で流れます
 
 # Custom
-# t9525b78e =
+t9525b78e = カスタム
 
 # Only these hosts
-# tfe16992b =
+tfe16992b = 対象ホストのみ
 
 # Apply
-# tca77bbdb =
+tca77bbdb = 適用
 
 # Applies from the next request. Latency is added to each round trip; the speed is a link that every slowed flow shares; a lost piece waits to be sent again, as TCP does. Hosts left alone are not slowed.
-# t5ee4034d =
+t5ee4034d = 次のリクエストから適用されます。レイテンシは往復ごとに加算されます。速度は、遅くしたすべてのフローが共有する 1 本の回線として扱われます。失われたパケットは、TCP と同様に再送信を待ちます。対象外のホストは遅くなりません。
 
 # Header line {line} has no ":"
-# t891b076d =
+t891b076d = ヘッダーの { $line } 行目に ":" がありません
 
 # Header line {line} has no name
-# te3247b96 =
+te3247b96 = ヘッダーの { $line } 行目に名前がありません
 
 # URL
-# t7569633e =
+t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
-# td6aec821 =
+td6aec821 =
+    { $n ->
+       *[other] テキストではない { $n } バイト: 受け取ったまま送られます。
+    }
 
 # Nothing is paused
-# t8cf68b4c =
+t8cf68b4c = 一時停止中のものはありません
 
 # "{status}" is not a status
-# t40a529af =
+t40a529af = "{ $status }" はステータスではありません
 
 # REQUEST
-# t1f3f6dd2 =
+t1f3f6dd2 = リクエスト
 
 # RESPONSE
-# tc85f77de =
+tc85f77de = レスポンス
 
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
-# tf9ab4327 =
+tf9ab4327 = 一時停止中のものはありません。ここでトラフィックを止めるには、ルール画面で一時停止ルールを追加してください。
 
 # for {method} {url}
-# t093a86f6 =
+t093a86f6 = { $method } { $url } 宛て
 
 # The request, before the server gets it
-# tc840fed6 =
+tc840fed6 = サーバーが受け取る前のリクエスト
 
 # The response, before the app gets it
-# t6683d72a =
+t6683d72a = アプリが受け取る前のレスポンス
 
 # Send as it came
-# tb593e730 =
+tb593e730 = そのまま送信
 
 # Drop
-# t108524ac =
+t108524ac = 破棄
 
 # Paused
-# tde281feb =
+tde281feb = 一時停止中
 
 # Nothing is waiting.
-# tea613769 =
+tea613769 = 待機中のものはありません。
 
 # {n} waits to be sent on. | {n} wait to be sent on.
-# t745634c6 =
+t745634c6 =
+    { $n ->
+       *[other] { $n } 件が送信待ちです。
+    }
 
 # Send all as they came
-# tdce25640 =
+tdce25640 = すべてそのまま送信
 
 # Block
-# tbd074002 =
+tbd074002 = ブロック
 
 # Answer from a file
-# td8edab50 =
+td8edab50 = ファイルで応答
 
 # Send to another host
-# te3cd85d7 =
+te3cd85d7 = 別のホストへ送信
 
 # Set a request header
-# tfad4aaaa =
+tfad4aaaa = リクエストヘッダーを設定
 
 # Set a response header
-# tcbbc20d0 =
+tcbbc20d0 = レスポンスヘッダーを設定
 
 # Pause the request
-# t40ecc39b =
+t40ecc39b = リクエストを一時停止
 
 # Pause the response
-# t18a34799 =
+t18a34799 = レスポンスを一時停止
 
 # Status to answer with, like 403
-# t8f3ebb6c =
+t8f3ebb6c = 応答するステータス（例: 403）
 
 # Full path of a file or folder
-# t9fb9ae4c =
+t9fb9ae4c = ファイルまたはフォルダのフルパス
 
 # Where to, like http://localhost:3000
-# tdfedd004 =
+tdfedd004 = 転送先（例: http://localhost:3000）
 
 # Header's name
-# t80793085 =
+t80793085 = ヘッダー名
 
 # Its value
-# t43968778 =
+t43968778 = 値
 
 # "{first}" is not a status
-# td43128d3 =
+td43128d3 = "{ $first }" はステータスではありません
 
 # Block with {status}
-# t1727e984 =
+t1727e984 = { $status } でブロック
 
 # Answer from {path}
-# taefc08fa =
+taefc08fa = { $path } で応答
 
 # Send to {to}
-# t5e256873 =
+t5e256873 = { $to } へ送信
 
 # Request: {header}: {value}
-# taa230766 =
+taa230766 = リクエスト: { $header }: { $value }
 
 # Response: {header}: {value}
-# t30f9e2c2 =
+t30f9e2c2 = レスポンス: { $header }: { $value }
 
 # Name
-# t0fe07306 =
+t0fe07306 = 名前
 
 # URL, like api.myapp.dev/v1/*
-# t4dd91658 =
+t4dd91658 = URL（例: api.myapp.dev/v1/*）
 
 # Method, or empty for all
-# tb2b869ac =
+tb2b869ac = メソッド（空欄ならすべて）
 
 # {n} rule written to {path} | {n} rules written to {path}
-# t4a2e843a =
+t4a2e843a =
+    { $n ->
+       *[other] { $n } 件のルールを { $path } に書き出しました
+    }
 
 # The rules were not written: {e}
-# te7ac257f =
+te7ac257f = ルールを書き出せませんでした: { $e }
 
 # Import
-# t573e0af4 =
+t573e0af4 = インポート
 
 # {path} could not be read: {e}
-# t32a3ce94 =
+t32a3ce94 = { $path } を読み込めませんでした: { $e }
 
 # Nothing was imported: {e}
-# tb9f7257a =
+tb9f7257a = 何もインポートされませんでした: { $e }
 
 # Edit
-# tc2c76cb1 =
+tc2c76cb1 = 編集
 
 # Delete
-# t5797ea6a =
+t5797ea6a = 削除
 
 # Change this rule
-# t9160f393 =
+t9160f393 = このルールを変更
 
 # A new rule
-# t55a722a0 =
+t55a722a0 = 新しいルール
 
 # It waits under Paused until you send it on, changed or not.
-# tca566a57 =
+tca566a57 = 送信するまで「一時停止中」で待機します。変更してもしなくても送信できます。
 
 # Save
-# t4d2d5d68 =
+t4d2d5d68 = 保存
 
 # Add
-# t9dc3aa14 =
+t9dc3aa14 = 追加
 
 # Cancel
-# t35afca3b =
+t35afca3b = キャンセル
 
 # Rules
-# t428b2d80 =
+t428b2d80 = ルール
 
 # They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-# tb44c7227 =
+tb44c7227 = 次のリクエストから適用されます。記録を一時停止している間も同様です。上から順に評価され、最初に一致したブロック、ファイル、ホストのルールが優先されます。一致するヘッダールールはすべて適用されます。
 
 # Import rules…
-# t5edc205d =
+t5edc205d = ルールをインポート…
 
 # Export rules…
-# t6e09ca20 =
+t6e09ca20 = ルールをエクスポート…
 
 # {n} rule added | {n} rules added
-# tbc5e0866 =
+tbc5e0866 =
+    { $n ->
+       *[other] { $n } 件のルールを追加しました
+    }
 
 # {n} here already | {n} here already
-# t65dc1281 =
+t65dc1281 =
+    { $n ->
+       *[other] { $n } 件は既に存在します
+    }
 
 # left out: {why}
-# ta81e95e2 =
+ta81e95e2 = 除外: { $why }
 
 # No flows
-# t6dc463eb =
+t6dc463eb = フローなし
 
 # Name it to keep it
-# t52c1a402 =
+t52c1a402 = 名前を付けると保持されます
 
 # {size} · written by another version, so it cannot be opened
-# t878e5c80 =
+t878e5c80 = { $size } · 別のバージョンで書き込まれたため開けません
 
 # {count} flow · {size} | {count} flows · {size}
-# t3f3c0eb4 =
+t3f3c0eb4 =
+    { $n ->
+       *[other] { $count } 件のフロー · { $size }
+    }
 
 # Recording now
-# t3cb3e6fc =
+t3cb3e6fc = 記録中
 
 # Export HAR
-# t4d6458cc =
+t4d6458cc = HAR をエクスポート
 
 # Delete for good?
-# ta7737f13 =
+ta7737f13 = 完全に削除しますか？
 
 # Sessions
-# tb69a8aec =
+tb69a8aec = セッション
 
 # A session with a name is kept until you delete it. Of the others, the newest {kept} stay.
-# t6391f080 =
+t6391f080 = 名前を付けたセッションは、削除するまで保持されます。それ以外は、新しいものから { $kept } 件が残ります。
 
 # Working…
-# td5507854 =
+td5507854 = 処理中…
 
 # Open a session file
-# tae8622fc =
+tae8622fc = セッションファイルを開く
 
 # HAR, Fiddler .saz, or Charles .chlsj
-# td8955e6d =
+td8955e6d = HAR、Fiddler .saz、または Charles .chlsj
 
 # Exported HAR files leave out tokens and cookies
-# td4a2f543 =
+td4a2f543 = エクスポートした HAR ファイルには、トークンと Cookie は含まれません
 
 # Other devices
-# t9e7d8362 =
+t9e7d8362 = 他のデバイス
 
 # Let other devices use the proxy
-# t13e626b3 =
+t13e626b3 = 他のデバイスにプロキシの使用を許可
 
 # Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-# t2e14229d =
+t2e14229d = ネットワーク上のスマートフォンや他のコンピュータから、トラフィックをここに送れるようになります。同じネットワーク上の誰でも送れるため、信頼できないネットワークではオフにしておいてください。tracewing の再起動後に有効になります。
 
 # Servers
-# tcd0cf113 =
+tcd0cf113 = サーバー
 
 # Trust what this computer trusts
-# tfea2d91b =
+tfea2d91b = このコンピュータが信頼するものを信頼
 
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
-# t1705bfb4 =
+t1705bfb4 = このコンピュータにインストールされた認証局（社内の認証局など）の証明書を持つサーバーには、このコンピュータのブラウザと同じように接続します。オフの場合は、公的な認証局のみを信頼します。tracewing の再起動後に有効になります。
 
 # AI tools
-# t294d7ea4 =
+t294d7ea4 = AI ツール
 
 # Let AI tools see tokens and cookies
-# te1d26d3c =
+te1d26d3c = AI ツールにトークンと Cookie の参照を許可
 
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
-# tb496980f =
+tb496980f = AI ツールは、tracewing の MCP サーバーを通じて記録されたトラフィックを読み取ります。オフの場合、Authorization、Cookie、Set-Cookie の値は渡されません。すぐに適用されます。
 
 # HTTP/3
-# tfec0f477 =
+tfec0f477 = HTTP/3
 
 # Keep apps off HTTP/3
-# te42733a9 =
+te42733a9 = アプリに HTTP/3 を使わせない
 
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-# t2aa7be0d =
+t2aa7be0d = HTTP/3 は UDP 上で動作し、UDP を中継するプロキシはないため、HTTP/3 を使うアプリは tracewing を迂回します。この設定はサーバーのレスポンスから HTTP/3 の提示を取り除くため、アプリは HTTP/2 のままになります。フローには、サーバーが送ったとおりの提示が表示されます。tracewing の再起動後に有効になります。
 
 # Size of a session
-# ta20fa102 =
+ta20fa102 = セッションのサイズ
 
 # Past this, the oldest flows are dropped.
-# td2914f46 =
+td2914f46 = これを超えると、最も古いフローから破棄されます。
 
 # Room to leave on the disk
-# t8674a3b3 =
+t8674a3b3 = ディスクに残す空き容量
 
 # With less than this free, flows are still listed but bodies are not kept.
-# t5b3a31a3 =
+t5b3a31a3 = 空き容量がこれを下回ると、フローは一覧に表示されますが、ボディは保持されません。
 
 # Earlier sessions to keep
-# td356194a =
+td356194a = 保持する過去のセッション数
 
 # Older ones are deleted when a new session starts.
-# t66556513 =
+t66556513 = 新しいセッションの開始時に、それより古いものは削除されます。
 
 # Bodies
-# tdb4d0409 =
+tdb4d0409 = ボディ
 
 # Most kept of one body
-# t777508dd =
+t777508dd = 1 つのボディの最大保持サイズ
 
 # It still reaches the client whole.
-# t386fee28 =
+t386fee28 = クライアントには全体が届きます。
 
 # Most unpacked for viewing
-# tc3fe2efd =
+tc3fe2efd = 表示用に展開する最大サイズ
 
 # Stops a small download that unpacks to many GB.
-# tf9c49515 =
+tf9c49515 = 展開すると何 GB にもなる小さなダウンロードを防ぎます。
 
 # Small body size
-# ta8996af1 =
+ta8996af1 = 小さなボディのサイズ
 
 # Smaller bodies wait in memory and share a file. Larger ones get a file of their own as they arrive.
-# t20c108b4 =
+t20c108b4 = これより小さいボディはメモリで待機し、1 つのファイルを共有します。大きいボディは、届いた時点で専用のファイルに書き込まれます。
 
 # Compress plain text on disk
-# tee503c2e =
+tee503c2e = ディスク上のプレーンテキストを圧縮
 
 # Takes about half the room, and is skipped when traffic is too fast for it.
-# t6d70f53f =
+t6d70f53f = 容量が約半分になります。トラフィックが速すぎて追いつかない場合はスキップされます。
 
 # Compression level
-# td386c9ef =
+td386c9ef = 圧縮レベル
 
 # 1 to 19. Higher is smaller and slower.
-# td42a987d =
+td42a987d = 1～19。高いほど小さく、遅くなります。
 
 # Search
-# tc646a2c9 =
+tc646a2c9 = 検索
 
 # Search URLs
-# t0c3e0b3d =
+t0c3e0b3d = URL を検索
 
 # Finds any part of a URL as you type. Costs little.
-# t3f22d666 =
+t3f22d666 = 入力に合わせて、URL のどの部分でも見つけます。負荷は小さめです。
 
 # Search bodies
-# t8eec0293 =
+t8eec0293 = ボディを検索
 
 # Finds words in bodies. Can take as much disk as the bodies do.
-# tcac3872a =
+tcac3872a = ボディ内の語句を見つけます。ボディと同程度のディスク容量を使うことがあります。
 
 # Searched part of each body
-# tab293b21 =
+tab293b21 = 各ボディの検索対象範囲
 
 # Words past this are not found. More takes more disk.
-# t0bf65f4a =
+t0bf65f4a = これより後ろの語句は見つかりません。大きくするほどディスクを使います。
 
 # Under heavy traffic
-# ta99888cb =
+ta99888cb = 高負荷時
 
 # Memory for bodies waiting to be written
-# t7d6ff799 =
+t7d6ff799 = 書き込み待ちのボディ用メモリ
 
 # Past this, flows are listed without their bodies. Traffic is never held back.
-# t5b268fb2 =
+t5b268fb2 = これを超えると、フローはボディなしで一覧に表示されます。トラフィックが止められることはありません。
 
 # Memory for large bodies waiting to be written
-# t07b9de08 =
+t07b9de08 = 書き込み待ちの大きなボディ用メモリ
 
 # Past this, large bodies stop being kept.
-# tfe61a4f3 =
+tfe61a4f3 = これを超えると、大きなボディは保持されなくなります。
 
 # {key}: "{text}" is not a whole number
-# ta8606963 =
+ta8606963 = { $key }: "{ $text }" は整数ではありません
 
 # {key}: must not be negative
-# t9c4debaa =
+t9c4debaa = { $key }: 負の値は指定できません
 
 # Saved. The limits apply the next time tracewing starts.
-# tc8bd2065 =
+tc8bd2065 = 保存しました。上限は次回 tracewing を起動したときに適用されます。
 
 # Settings
-# t4b058728 =
+t4b058728 = 設定
 
 # Back to defaults
-# ta3162a13 =
+ta3162a13 = デフォルトに戻す
 
 # Hosts not to decrypt
-# tb457f0b3 =
+tb457f0b3 = 復号しないホスト
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-# t7647c310 =
+t7647c310 = 1 行に 1 つ: ホスト、またはそのホストと配下すべてを表す *.example.com。これらのトラフィックは中身を読まずに通過します。このリストは保存するとすぐに適用されます。
 
 # Language
-# t9a73db9b =
+t9a73db9b = 言語
 
 # System ({system_name})
-# tb5c7a1d4 =
+tb5c7a1d4 = システム（{ $system_name }）
 
 # Applies at once.
-# tefb7a0f9 =
+tefb7a0f9 = すぐに適用されます。
 
 # Your browser
-# tb5a48dd2 =
+tb5a48dd2 = ブラウザ
 
 # Its private key is in the system keychain.
-# t62a47808 =
+t62a47808 = 秘密鍵はシステムのキーチェーンにあります。
 
 # Its private key is in ca.key, which only you can read.
-# td9c6165d =
+td9c6165d = 秘密鍵は ca.key にあり、あなただけが読み取れます。
 
 # Its private key is in ca.key, which only you can read, as the system keychain cannot take it: {why}.
-# t453607d0 =
+t453607d0 = 秘密鍵は ca.key にあり、あなただけが読み取れます。システムのキーチェーンに保存できなかったためです: { $why }。
 
 # Open the page. If the browser warns about the certificate, or cannot find the page, one of the steps above is not done for that browser.
-# t2e93b53b =
+t2e93b53b = ページを開いてください。ブラウザが証明書について警告するか、ページが見つからない場合は、そのブラウザで上記の手順のいずれかが完了していません。
 
 # {name} goes through tracewing and trusts it.
-# t82bd2456 =
+t82bd2456 = { $name } は tracewing を経由しており、tracewing を信頼しています。
 
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
-# tfb6feb04 =
+tfb6feb04 = { $name } は tracewing を経由していますが、HTTPS を使わずにページを開きました。https:// でもう一度開いてください。
 
 # A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-# t9f95b7b8 =
+t9f95b7b8 = スマートフォンや別のコンピュータからも、トラフィックをここに送れます。設定で「他のデバイスにプロキシの使用を許可」をオンにして、tracewing を再起動してください。
 
 # this computer's address, port {port}
-# t2188b3f4 =
+t2188b3f4 = このコンピュータのアドレス、ポート { $port }
 
 # On the device, set the Wi-Fi proxy to {addr}. Then open http://{host} there, get the certificate and trust it. Its flows show its address, and can be filtered with device:. Name it from one of them, in Connection.
-# tc8ccf306 =
+tc8ccf306 = デバイスで Wi-Fi のプロキシを { $addr } に設定します。次にそのデバイスで http://{ $host } を開き、証明書を取得して信頼します。そのデバイスのフローにはアドレスが表示され、device: で絞り込めます。デバイス名は、そのフローのいずれかの「接続」で付けられます。
 
 # Looking for it…
-# t50ee7452 =
+t50ee7452 = 探しています…
 
 # Installing. The system may ask you to confirm.
-# ta41c38ec =
+ta41c38ec = インストールしています。システムが確認を求める場合があります。
 
 # This computer trusts it.
-# t27d6bacc =
+t27d6bacc = このコンピュータはこの証明書を信頼しています。
 
 # Installed in: {places}.
-# tb5bcc244 =
+tb5bcc244 = インストール先: { $places }。
 
 # Command-line tools trust it, but browsers keep stores of their own. Until it is in them, HTTPS through tracewing fails in a browser.
-# t327bf8fc =
+t327bf8fc = コマンドラインツールは信頼していますが、ブラウザは独自の証明書ストアを持っています。そこに追加されるまで、ブラウザでは tracewing 経由の HTTPS が失敗します。
 
 # tracewing reads HTTPS with a certificate made for this computer alone. Until it is trusted, HTTPS through tracewing fails.
-# tafd8dae2 =
+tafd8dae2 = tracewing は、このコンピュータ専用に作成した証明書で HTTPS を読み取ります。この証明書が信頼されるまで、tracewing 経由の HTTPS は失敗します。
 
 # Trust the certificate
-# t26618699 =
+t26618699 = 証明書を信頼する
 
 # Install
-# tb50cbd40 =
+tb50cbd40 = インストール
 
 # Also for command-line tools
-# t0db8faea =
+t0db8faea = コマンドラインツールにも
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
-# t83387edf =
+t83387edf = システムの設定を使うアプリは、現在 { $addr } を経由しています。tracewing を閉じたとき、またはクラッシュしたときに元の設定に戻ります。
 
 # Sends this computer's traffic through tracewing, for apps that use the system's setting. Or point one app at {addr} yourself.
-# tdcc53241 =
+tdcc53241 = システムの設定を使うアプリについて、このコンピュータのトラフィックを tracewing 経由で送ります。または、アプリ側で { $addr } を直接指定してください。
 
 # Turn on the system proxy
-# t52b88441 =
+t52b88441 = システムプロキシをオンにする
 
 # Turn off
-# tcd03e04b =
+tcd03e04b = オフにする
 
 # Turn on
-# t65a0c5a7 =
+t65a0c5a7 = オンにする
 
 # Check it in your browser
-# tbed6e83a =
+tbed6e83a = ブラウザで確認
 
 # Open the test page
-# te4e36f65 =
+te4e36f65 = テストページを開く
 
 # Set up
-# t43c06abc =
+t43c06abc = セットアップ
 
 # Three steps to see HTTPS traffic from this computer.
-# tf3a7f60b =
+tf3a7f60b = このコンピュータの HTTPS トラフィックを見るための 3 ステップです。
 
 # See traffic
-# t980eee79 =
+t980eee79 = トラフィックを見る
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
-# t3c727cd5 =
+t3c727cd5 = このコンピュータで UDP ポート 443 をブロックしているため、アプリは HTTP/3 から HTTP/2 に切り替えて tracewing を経由します。ブロックは、tracewing を閉じたとき、またはクラッシュしたときに解除されます。
 
 # Some apps speak HTTP/3, over UDP, and go around the proxy. Blocking UDP port 443 on this computer makes them fall back to HTTP/2 through tracewing. It takes an administrator's password, and stops when tracewing closes. A VPN that uses UDP port 443 stops working meanwhile.
-# t64ab600f =
+t64ab600f = 一部のアプリは UDP 上の HTTP/3 を使い、プロキシを迂回します。このコンピュータで UDP ポート 443 をブロックすると、それらのアプリは HTTP/2 に切り替えて tracewing を経由します。管理者パスワードが必要で、tracewing を閉じるとブロックは解除されます。その間、UDP ポート 443 を使う VPN は動作しなくなります。
 
 # Apps on HTTP/3
-# t2cfe5270 =
+t2cfe5270 = HTTP/3 を使うアプリ
 
 # Stop blocking
-# t318358d8 =
+t318358d8 = ブロックを解除
 
 # Block HTTP/3
-# t88231e40 =
+t88231e40 = HTTP/3 をブロック
 
 # Or one app at a time
-# t91c63f1c =
+t91c63f1c = または、アプリごとに
 
 # A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-# t259dbb0e =
+t259dbb0e = システムプロキシや他のアプリはそのままで、tracewing を経由するターミナル、または専用プロファイルのブラウザです。
 
 # Open a terminal
-# t4b629c72 =
+t4b629c72 = ターミナルを開く
 
 # Open {name}
-# tbd869c4a =
+tbd869c4a = { $name } を開く
 
 # iPhone and iPad
-# ta550cc97 =
+ta550cc97 = iPhone と iPad
 
 # Flutter apps
-# ta04ee397 =
+ta04ee397 = Flutter アプリ
 
 # 1. In Settings, Wi-Fi, choose the network, then Configure Proxy, Manual: server {server}, port {port}.
-# t996be047 =
+t996be047 = 1. 「設定」>「Wi-Fi」でネットワークを選び、「プロキシを構成」>「手動」で、サーバーを { $server }、ポートを { $port } に設定します。
 
 # 2. Scan the code with the camera, or open {page} in Safari, and get the certificate. Allow the download.
-# t4fa14138 =
+t4fa14138 = 2. カメラでコードをスキャンするか、Safari で { $page } を開き、証明書を取得します。ダウンロードを許可してください。
 
 # 3. In Settings, General, VPN & Device Management, choose the tracewing CA profile and install it.
-# t7127295f =
+t7127295f = 3. 「設定」>「一般」>「VPN とデバイス管理」で tracewing CA プロファイルを選び、インストールします。
 
 # 4. In Settings, General, About, Certificate Trust Settings, turn on full trust for tracewing CA.
-# t1b22723c =
+t1b22723c = 4. 「設定」>「一般」>「情報」>「証明書信頼設定」で、tracewing CA の「ルート証明書を全面的に信頼する」をオンにします。
 
 # 5. Open https://{host} in Safari. If it says it works, apps that use the system's settings go through tracewing.
-# t4adfec01 =
+t4adfec01 = 5. Safari で https://{ $host } を開きます。動作していると表示されれば、システムの設定を使うアプリは tracewing を経由します。
 
 # 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host {host}, port {port}.
-# t4f837b10 =
+t4f837b10 = 1. 「設定」>「Wi-Fi」でネットワークを編集し、「詳細設定」でプロキシを「手動」にして、ホストを { $host }、ポートを { $port } に設定します。
 
 # 2. Scan the code, or open {page} in the browser, and get the certificate.
-# t654a829b =
+t654a829b = 2. コードをスキャンするか、ブラウザで { $page } を開き、証明書を取得します。
 
 # 3. In Settings, Security, Encryption & credentials (the names vary by maker), choose Install a certificate, then CA certificate, and pick tracewing.crt.
-# t8263ba6b =
+t8263ba6b = 3. 「設定」>「セキュリティ」>「暗号化と認証情報」（名称はメーカーにより異なります）で、「証明書のインストール」>「CA 証明書」を選び、tracewing.crt を選択します。
 
 # 4. Since Android 7, apps trust certificates the user added only if they say so. For a debug build of your own app, add res/xml/network_security_config.xml:
-# tb7fa0462 =
+tb7fa0462 = 4. Android 7 以降、アプリはユーザーが追加した証明書を、アプリ側で明示した場合にのみ信頼します。自分のアプリのデバッグビルドでは、res/xml/network_security_config.xml を追加します:
 
 # and point to it from AndroidManifest.xml:
-# t02ad844b =
+t02ad844b = そして AndroidManifest.xml からそれを参照します:
 
 # Other apps keep refusing the certificate: their traffic shows as failed flows.
-# t02e57826 =
+t02e57826 = 他のアプリは引き続き証明書を拒否します。そのトラフィックは失敗したフローとして表示されます。
 
 # Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
-# t4ffc0abf =
+t4ffc0abf = Flutter の http や Dio が使う Dart の HttpClient は、端末のプロキシ設定に従わず、Android ではユーザーが追加した証明書を信頼しません。デバッグビルドで、次のようにここへ送るようにします:
 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
-# t991340f1 =
+t991340f1 = badCertificateCallback はどんな証明書でも通すため、デバッグビルド専用です。
 
 # Copy
-# t658f3664 =
+t658f3664 = コピー
 
 # Open settings
-# t1336b4d6 =
+t1336b4d6 = 設定を開く
 
 # Phones and other devices
-# t2e3c591c =
+t2e3c591c = スマートフォンと他のデバイス
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
-# td0629ca6 =
+td0629ca6 = このネットワーク上のスマートフォン、タブレット、別のコンピュータは、{ $proxy } で tracewing を経由できます。コードを読み取ると、証明書のページが開きます。そのデバイスのフローにはアドレスが表示され、device: で絞り込めます。デバイス名は、そのフローのいずれかの「接続」で付けられます。
 
 # Set up. The certificate is among the system's until the device restarts.
-# t84db6961 =
+t84db6961 = セットアップが完了しました。デバイスを再起動するまで、証明書はシステムの証明書に含まれます。
 
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
-# tbcad7fa7 =
+tbcad7fa7 = セットアップが完了しました。証明書は「ダウンロード」にあります。今開いた設定で「暗号化と認証情報」>「証明書のインストール」>「CA 証明書」を選び、tracewing.crt を選択してください。
 
 # Apps that trust only the system's certificates will still refuse it.
-# t6fb5ba4b =
+t6fb5ba4b = システムの証明書だけを信頼するアプリは、引き続きこの証明書を拒否します。
 
 # An emulator.
-# t14b6b86d =
+t14b6b86d = エミュレータです。
 
 # On USB.
-# t67dafc14 =
+t67dafc14 = USB 接続です。
 
 # Accept the USB debugging prompt on the device, then look again.
-# tff6a046e =
+tff6a046e = デバイスで USB デバッグの確認を許可してから、再検索してください。
 
 # Still starting. Look again in a moment.
-# t13f68b64 =
+t13f68b64 = まだ起動中です。少し待ってから再検索してください。
 
 # adb says it is {state}.
-# t2b7d71da =
+t2b7d71da = adb によると、状態は { $state } です。
 
 # Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-# tc28e5d10 =
+tc28e5d10 = Android エミュレータ、または USB デバッグをオンにして USB 接続したスマートフォンにプロキシを設定し、証明書をインストールします。トラフィックは ADB 経由で届くため、どちらもこのネットワークに接続している必要はありません。
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
-# t4af01006 =
+t4af01006 = adb が見つかりません。Android Studio または Android の Platform Tools をインストールしてから、再検索してください。
 
 # No device is connected. Start an emulator, or plug in a phone with USB debugging on, then look again.
-# tc65b7cf7 =
+tc65b7cf7 = デバイスが接続されていません。エミュレータを起動するか、USB デバッグをオンにしたスマートフォンを接続してから、再検索してください。
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
-# t9144d1fc =
+t9144d1fc = デバイスを設定して、トラフィックをここに送らせます。元に戻すか tracewing を閉じると、デバイスのプロキシ設定は解除されます。
 
 # Undo
-# t71fd4acf =
+t71fd4acf = 元に戻す
 
 # Android emulators and USB devices
-# t379e433c =
+t379e433c = Android エミュレータと USB デバイス
 
 # Look again
-# t98416222 =
+t98416222 = 再検索
 
 # Find devices
-# t54d4af39 =
+t54d4af39 = デバイスを探す
 
 # Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
-# t2dc39047 =
+t2dc39047 = Claude Code、Cursor、VS Code などの AI ツールは、tracewing の MCP サーバーを通じて、tracewing が記録したフローを一覧表示して読み取れます。設定で許可しない限り、トークンと Cookie は含まれません。Claude Code では:
 
 # Elsewhere, in the tool's MCP settings:
-# tec38833c =
+tec38833c = その他のツールでは、ツールの MCP 設定で:
 
 # Flows
-# t4db77db2 =
+t4db77db2 = フロー
 
 # Choose the flow above or below
-# tecb3adec =
+tecb3adec = 上または下のフローを選択
 
 # The first or the last flow
-# t7e278a00 =
+t7e278a00 = 最初または最後のフロー
 
 # A page up or down
-# t23b1814b =
+t23b1814b = 1 ページ上または下へ
 
 # Filter
-# tf4a9c097 =
+tf4a9c097 = フィルタ
 
 # Pause or resume recording
-# t6e21519a =
+t6e21519a = 記録を一時停止または再開
 
 # Clear the list
-# tf2a55d1f =
+tf2a55d1f = リストをクリア
 
 # The chosen flow
-# te0a729de =
+te0a729de = 選択中のフロー
 
 # Its request
-# tb3970784 =
+tb3970784 = そのリクエスト
 
 # Its response
-# t221fc168 =
+t221fc168 = そのレスポンス
 
 # Send it again
-# tef7d1944 =
+tef7d1944 = 再送信
 
 # Edit it and send it
-# t6bc99e5c =
+t6bc99e5c = 編集して送信
 
 # Copy it as cURL
-# tc99a11a3 =
+tc99a11a3 = cURL としてコピー
 
 # The window
-# t2af18488 =
+t2af18488 = ウィンドウ
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
-# t9df89562 =
+t9df89562 = セットアップ、トラフィック、ルール、一時停止中、作成、セッション、設定
 
 # Show or hide the sidebar
-# t67adca04 =
+t67adca04 = サイドバーの表示/非表示
 
 # Show or hide the inspector
-# ta5a7b9e9 =
+ta5a7b9e9 = インスペクタの表示/非表示
 
 # The inspector beside the list or below it
-# t51e214f7 =
+t51e214f7 = インスペクタをリストの横または下に表示
 
 # These shortcuts
-# tbdf3b62b =
+tbdf3b62b = このショートカット一覧
 
 # Close them
-# tf3a4b1ef =
+tf3a4b1ef = 一覧を閉じる
 
 # Keyboard shortcuts
-# t31eaddb7 =
+t31eaddb7 = キーボードショートカット
 
 # Close
-# tcd86acc3 =
+tcd86acc3 = 閉じる
 
 # The certificate: {e}
-# t0235648c =
+t0235648c = 証明書: { $e }
 
 # The terminal
-# tf542b2f4 =
+tf542b2f4 = ターミナル
 
 # The system proxy: {e}
-# tc99726ce =
+tc99726ce = システムプロキシ: { $e }
 
 # Blocking HTTP/3: {e}
-# t024ec871 =
+t024ec871 = HTTP/3 のブロック: { $e }
 
 # host:, status:4xx, or text in bodies
-# t00d0cf30 =
+t00d0cf30 = host:、status:4xx、またはボディ内のテキスト
 
 # A name, as iPhone test
-# t19f89214 =
+t19f89214 = 名前（例: iPhone テスト）
 
 # The search index: {e}
-# te3c971c9 =
+te3c971c9 = 検索インデックス: { $e }
 
 # An earlier session: {name}
-# t73446a1d =
+t73446a1d = 過去のセッション: { $name }
 
 # Read-only. Search covers more as its index is finished. Recording goes on.
-# td8659d5b =
+td8659d5b = 読み取り専用。インデックスの作成が進むにつれて、検索範囲が広がります。記録は続いています。
 
 # Read-only. Recording goes on.
-# te2f35d9e =
+te2f35d9e = 読み取り専用。記録は続いています。
 
 # Back to live
-# t317c0453 =
+t317c0453 = ライブに戻る
 
 # {shown} of {total}
-# tf2cc0563 =
+tf2cc0563 = { $shown } / { $total }
 
 # Recording
-# te75cf20c =
+te75cf20c = 記録中
 
 # System proxy off · {addr}
-# t7e813d25 =
+t7e813d25 = システムプロキシ オフ · { $addr }
 
 # System proxy…
-# t29e7dcd0 =
+t29e7dcd0 = システムプロキシ…
 
 # System proxy on · {addr}
-# t319ad6b9 =
+t319ad6b9 = システムプロキシ オン · { $addr }
 
 # Apps
-# t53d91aad =
+t53d91aad = アプリ
 
 # Devices
-# t27acf320 =
+t27acf320 = デバイス
 
 # Hosts
-# tcf9aefb4 =
+tcf9aefb4 = ホスト
 
 # All hosts
-# tfc7bfe37 =
+tfc7bfe37 = すべてのホスト
 
 # Hidden
-# t3c2dfe59 =
+t3c2dfe59 = 非表示
 
 # Newest
-# t324b6d0b =
+t324b6d0b = 最新
 
 # No flow fits this filter
-# t7eb295f4 =
+t7eb295f4 = このフィルタに一致するフローはありません
 
 # Nothing yet
-# tbd00747c =
+tbd00747c = まだ何もありません
 
 # Turn on the system proxy above, or point an app at {addr}. To try it: curl --proxy http://{addr} --cacert {ca} https://example.com/
-# t61730a16 =
+t61730a16 = 上でシステムプロキシをオンにするか、アプリで { $addr } を指定してください。試すには: curl --proxy http://{ $addr } --cacert { $ca } https://example.com/
 
 # Beside the list
-# t3b4853f8 =
+t3b4853f8 = リストの横
 
 # Below the list
-# t23658daf =
+t23658daf = リストの下
 
 # Drop it on a place · Esc puts it back
-# t0fa632ba =
+t0fa632ba = 配置先にドロップ · Esc で元に戻す
 
 # Traffic
-# t4b589266 =
+t4b589266 = トラフィック
 
 # Certificate trusted on this computer
-# t7b93f551 =
+t7b93f551 = このコンピュータで証明書が信頼されています
 
 # Checking the certificate…
-# tbf8942c3 =
+tbf8942c3 = 証明書を確認しています…
 
 # Installing the certificate; the system may ask you to confirm…
-# t068dcaff =
+t068dcaff = 証明書をインストールしています。システムが確認を求める場合があります…
 
 # HTTPS will fail until the certificate is trusted: set up
-# t4b34beb2 =
+t4b34beb2 = 証明書が信頼されるまで HTTPS は失敗します: セットアップ
 
 # settings.toml was not used: {problem}
-# tc3e1f9c8 =
+tc3e1f9c8 = settings.toml は使用されませんでした: { $problem }
 
 # The proxy stopped: {failure}
-# t04dcff11 =
+t04dcff11 = プロキシが停止しました: { $failure }
 
 # The disk is nearly full: bodies are not being kept
-# te99f9959 =
+te99f9959 = ディスクの空きがほとんどありません: ボディは保持されていません
 
 # {count} flow not recorded | {count} flows not recorded
-# tdbd64fe6 =
+tdbd64fe6 =
+    { $n ->
+       *[other] { $count } 件のフローが記録されませんでした
+    }
 
 # {count} flow without bodies | {count} flows without bodies
-# t249093b0 =
+t249093b0 =
+    { $n ->
+       *[other] ボディのないフロー { $count } 件
+    }
 
 # {count} oldest flow dropped to stay under {size} | {count} oldest flows dropped to stay under {size}
-# te30201f0 =
+te30201f0 =
+    { $n ->
+       *[other] { $size } 以内に収めるため、最も古いフロー { $count } 件を破棄しました
+    }
 
 # {count} flow | {count} flows
-# t57bf5200 =
+t57bf5200 =
+    { $n ->
+       *[other] { $count } 件のフロー
+    }
 
 # Export as HAR
-# t95b6b766 =
+t95b6b766 = HAR としてエクスポート
 
 # Shortcuts {keys}
-# t4ab0ecb4 =
+t4ab0ecb4 = ショートカット { $keys }
 
 # Columns
-# tea156fdc =
+tea156fdc = 列
