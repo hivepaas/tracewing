@@ -1,8 +1,19 @@
 # tracewing in Spanish. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# … {count} line {closer} | … {count} lines {closer}
+t2ba67348 =
+    { $n ->
+        [one] … { $count } línea { $closer }
+        [many] … { $count } líneas { $closer }
+       *[other] … { $count } líneas { $closer }
+    }
+
 # … {size} more
 ta8dc6eab = … { $size } más
+
+# Unfold all
+t3849d44e = Desplegar todo
 
 # {size} · {count} line | {size} · {count} lines
 t51332550 =

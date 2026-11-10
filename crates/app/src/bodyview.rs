@@ -15,11 +15,13 @@ use gpui::{
     Pixels, Point, Render, ScrollWheelEvent, SharedString, Window, canvas, div, prelude::*, px,
     rgb,
 };
-use std::{cell::Cell, rc::Rc, sync::Arc, time::Duration};
+use std::{cell::Cell, collections::BTreeMap, rc::Rc, sync::Arc, time::Duration};
 use tracewing_i18n::{tr, tr_n};
 
 pub const LINE_HEIGHT: f32 = 20.;
 const GUTTER_W: f32 = 52.;
+/// Where an object or an array is folded and unfolded, after the number.
+const FOLD_W: f32 = 16.;
 const INDENT_W: f32 = 14.;
 /// Past this the indent says what it is instead of pushing the text away.
 const INDENT_MAX: u32 = 40;
@@ -28,11 +30,86 @@ const BAR_W: f32 = 10.;
 /// How often a window with a scan running looks at its progress.
 const SCAN_POLL: Duration = Duration::from_millis(50);
 
+/// Objects and arrays folded away, each from its first line to the line that
+/// ends it. The first line stays in view; the rest, its closer too, do not.
+/// None is inside another: folding the outer one lets the inner ones go.
+#[derive(Debug, Default)]
+pub struct Folds(BTreeMap<u64, u64>);
+
+impl Folds {
+    /// Rows in view for a body of `lines` lines.
+    pub fn rows(&self, lines: u64) -> u64 {
+        lines - self.0.iter().map(|(start, end)| end - start).sum::<u64>()
+    }
+
+    /// The line at `row`.
+    pub fn line_of(&self, row: u64) -> u64 {
+        let mut line = row;
+        for (start, end) in &self.0 {
+            if *start >= line {
+                break;
+            }
+            line += end - start;
+        }
+        line
+    }
+
+    /// The row `line` is on, or the row of the fold that hides it.
+    pub fn row_of(&self, line: u64) -> u64 {
+        let mut row = line;
+        for (start, end) in &self.0 {
+            if *start >= line {
+                break;
+            }
+            if line <= *end {
+                return self.row_of(*start);
+            }
+            row -= end - start;
+        }
+        row
+    }
+
+    /// The line after `line` in view.
+    pub fn next_line(&self, line: u64) -> u64 {
+        self.0.get(&line).map_or(line + 1, |end| end + 1)
+    }
+
+    /// Where the fold from `line` ends, if it is folded.
+    pub fn end_of(&self, line: u64) -> Option<u64> {
+        self.0.get(&line).copied()
+    }
+
+    pub fn fold(&mut self, start: u64, end: u64) {
+        let inside: Vec<u64> = self.0.range(start + 1..=end).map(|(s, _)| *s).collect();
+        for line in inside {
+            self.0.remove(&line);
+        }
+        self.0.insert(start, end);
+    }
+
+    pub fn unfold(&mut self, start: u64) -> bool {
+        self.0.remove(&start).is_some()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+/// What the gutter says of a line: nothing, that it opens an object or an
+/// array, or that it is folded, with the closer's text and how many lines.
+enum FoldMark {
+    None,
+    Opens,
+    Folded(String, u64),
+}
+
 pub struct BodyView {
     body: Arc<Body>,
     syntax: Syntax,
-    /// The line at the top of the view, and how far it has scrolled out of it.
+    /// The row at the top of the view, and how far it has scrolled out of it.
     top: u64,
+    folds: Folds,
     sub: f32,
     dragging: bool,
     /// Where the view was last drawn: the height sets the scroll range, and a drag
@@ -70,6 +147,7 @@ impl BodyView {
             body,
             syntax,
             top: 0,
+            folds: Folds::default(),
             sub: 0.,
             dragging: false,
             bounds: Rc::new(Cell::new(Bounds::default())),
@@ -161,8 +239,41 @@ impl BodyView {
         &self.body
     }
 
+    /// The line at the top of the view.
     pub fn top(&self) -> u64 {
-        self.top
+        self.folds.line_of(self.top)
+    }
+
+    pub fn folds(&self) -> &Folds {
+        &self.folds
+    }
+
+    /// Folds the object or array `line` opens, or unfolds it. The line at the
+    /// top of the view stays there, or the fold that now hides it does.
+    pub fn toggle_fold(&mut self, line: u64, cx: &mut Context<Self>) {
+        let top_line = self.folds.line_of(self.top);
+        if !self.folds.unfold(line) {
+            // Not found yet when the scan has not reached it.
+            let Some(end) = self.body.closer(line) else {
+                return;
+            };
+            self.folds.fold(line, end);
+        }
+        self.top = self.folds.row_of(top_line);
+        self.set_position(self.position());
+        cx.notify();
+    }
+
+    /// Every fold opened again.
+    pub fn unfold_all(&mut self, cx: &mut Context<Self>) {
+        let top_line = self.folds.line_of(self.top);
+        self.folds = Folds::default();
+        self.top = top_line;
+        cx.notify();
+    }
+
+    fn rows(&self) -> u64 {
+        self.folds.rows(self.body.lines())
     }
 
     fn height(&self) -> f32 {
@@ -171,7 +282,7 @@ impl BodyView {
 
     /// The largest position with a full view below it, in pixels.
     pub fn max_position(&self) -> f64 {
-        (self.body.lines() as f64 * f64::from(LINE_HEIGHT) - f64::from(self.height())).max(0.)
+        (self.rows() as f64 * f64::from(LINE_HEIGHT) - f64::from(self.height())).max(0.)
     }
 
     /// Moves the top of the view to `y` pixels into the content, clamped.
@@ -200,7 +311,13 @@ impl BodyView {
         cx.notify();
     }
 
-    fn render_line(&self, line: u64, shown: Line) -> impl IntoElement {
+    fn render_line(
+        &self,
+        line: u64,
+        shown: Line,
+        mark: FoldMark,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         let indent = if shown.depth > INDENT_MAX {
             INDENT_MAX as f32 * INDENT_W
         } else {
@@ -214,6 +331,7 @@ impl BodyView {
             .map(|(range, token)| (range, highlight(token)))
             .collect();
         let text: SharedString = shown.text.into();
+        let folded = matches!(mark, FoldMark::Folded(..));
         let mut row = div()
             .h(px(LINE_HEIGHT))
             .flex()
@@ -225,21 +343,67 @@ impl BodyView {
                 div()
                     .w(px(GUTTER_W))
                     .flex_shrink_0()
-                    .pr_3()
+                    .pr_1()
                     .flex()
                     .justify_end()
                     .text_color(rgb(colors().faint))
                     .child(number),
             )
+            .child({
+                let toggle = div()
+                    .id(("fold", line))
+                    .w(px(FOLD_W))
+                    .flex_shrink_0()
+                    .flex()
+                    .justify_center()
+                    .text_color(rgb(colors().faint));
+                match &mark {
+                    FoldMark::None => toggle,
+                    FoldMark::Opens | FoldMark::Folded(..) => toggle
+                        .cursor_pointer()
+                        .hover(|d| d.text_color(rgb(colors().text)))
+                        .child(if matches!(mark, FoldMark::Opens) {
+                            "▾"
+                        } else {
+                            "▸"
+                        })
+                        // A press here folds; it does not start a selection.
+                        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                        .on_click(cx.listener(move |this, _, _, cx| this.toggle_fold(line, cx))),
+                }
+            })
             .child(div().w(px(indent)).flex_shrink_0())
             .child(
-                // The note below stays in view however long the text is.
+                // The note below stays in view however long the text is. A fold's
+                // note follows the text, as the closer it stands for would.
                 div()
-                    .flex_1()
+                    .when(!folded, |d| d.flex_1())
                     .min_w_0()
                     .overflow_hidden()
                     .child(self.select.piece_at(line, text, highlights)),
             );
+        if let FoldMark::Folded(closer, hidden) = mark {
+            row = row.child(
+                div()
+                    .id(("folded", line))
+                    .flex_shrink_0()
+                    .ml_1()
+                    .px_1()
+                    .rounded_sm()
+                    .cursor_pointer()
+                    .bg(rgb(colors().chip))
+                    .text_color(rgb(colors().muted))
+                    .child(tr_n!(
+                        hidden,
+                        "… {count} line {closer}",
+                        "… {count} lines {closer}",
+                        count = crate::flows::group_digits(hidden),
+                        closer = closer
+                    ))
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .on_click(cx.listener(move |this, _, _, cx| this.toggle_fold(line, cx))),
+            );
+        }
         if shown.cut > 0 {
             row = row.child(
                 div()
@@ -253,6 +417,57 @@ impl BodyView {
     }
 }
 
+impl BodyView {
+    /// The rows from the top of the view, read a run of lines at a time: a
+    /// fold is where one run ends and the next begins.
+    fn rows_in_view(&self, in_view: u64, cx: &mut Context<Self>) -> Vec<gpui::AnyElement> {
+        let lines = self.body.lines();
+        let mut shown = Vec::new();
+        let mut line = self.folds.line_of(self.top);
+        while line < lines && (shown.len() as u64) < in_view {
+            let start = line;
+            let mut end = start;
+            while end + 1 < lines
+                && self.folds.end_of(end).is_none()
+                && end + 1 - start < in_view - shown.len() as u64
+            {
+                end += 1;
+            }
+            // One more, to tell whether the run's last line opens something.
+            let read = self.body.read(start..(end + 2).min(lines));
+            let next_depths: Vec<Option<u32>> = read
+                .iter()
+                .skip(1)
+                .map(|l| Some(l.depth))
+                .chain(std::iter::once(None))
+                .collect();
+            for (i, text) in read
+                .into_iter()
+                .take((end - start + 1) as usize)
+                .enumerate()
+            {
+                let at = start + i as u64;
+                let mark = match self.folds.end_of(at) {
+                    Some(closer) => {
+                        let closed = self
+                            .body
+                            .read(closer..closer + 1)
+                            .pop()
+                            .map(|l| l.text)
+                            .unwrap_or_default();
+                        FoldMark::Folded(closed, closer - at)
+                    }
+                    None if next_depths[i] == Some(text.depth + 1) => FoldMark::Opens,
+                    None => FoldMark::None,
+                };
+                shown.push(self.render_line(at, text, mark, cx).into_any_element());
+            }
+            line = self.folds.next_line(end);
+        }
+        shown
+    }
+}
+
 impl Render for BodyView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
@@ -260,18 +475,10 @@ impl Render for BodyView {
         let in_view = (f32::from(window.viewport_size().height) / LINE_HEIGHT).ceil() as u64 + 1;
         let list_height = self.height();
         let lines = self.body.lines();
-        let end = lines.min(self.top + in_view);
-        let top = self.top;
-        let rows: Vec<_> = self
-            .body
-            .read(top..end)
-            .into_iter()
-            .enumerate()
-            .map(|(i, shown)| self.render_line(top + i as u64, shown))
-            .collect();
+        let rows = self.rows_in_view(in_view, cx);
 
         let max = self.max_position();
-        let thumb = thumb_size(list_height, lines);
+        let thumb = thumb_size(list_height, self.folds.rows(lines));
         let thumb_top = if max > 0. {
             (self.position() / max) as f32 * (list_height - thumb)
         } else {
@@ -286,9 +493,8 @@ impl Render for BodyView {
             }
         });
         let menu = self.select.menu().map(|at| {
-            let (copy, all, close) = (me.clone(), me.clone(), me.clone());
-            select::copy_menu(
-                at,
+            let (copy, all, close, unfold) = (me.clone(), me.clone(), me.clone(), me.clone());
+            let mut items = select::copy_items(
                 !self.select.is_empty(),
                 self.body.size() <= COPY_MAX as u64,
                 move |_, cx| {
@@ -297,13 +503,25 @@ impl Render for BodyView {
                 move |_, cx| {
                     let _ = all.update(cx, |this, cx| this.copy_all(cx));
                 },
-                move |_, cx| {
-                    let _ = close.update(cx, |this, cx| {
-                        this.select.set_menu(None);
-                        cx.notify();
-                    });
-                },
-            )
+            );
+            if !self.folds.is_empty() {
+                items.push(select::Item::new(
+                    "unfold-all",
+                    tr!("Unfold all"),
+                    Some(Rc::new(move |_: &mut Window, cx: &mut gpui::App| {
+                        let _ = unfold.update(cx, |this, cx| {
+                            this.select.set_menu(None);
+                            this.unfold_all(cx);
+                        });
+                    }) as select::Act),
+                ));
+            }
+            select::render_menu(at, items, move |_, cx| {
+                let _ = close.update(cx, |this, cx| {
+                    this.select.set_menu(None);
+                    cx.notify();
+                });
+            })
         });
         self.select.begin();
 
@@ -445,5 +663,41 @@ pub fn summary(body: &Body) -> String {
                 body.scanned() as f64 * 100. / body.size().max(1) as f64
             )
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn folds_hide_lines_and_rows_find_them() {
+        let mut folds = Folds::default();
+        folds.fold(2, 5);
+        folds.fold(10, 12);
+        // 0 1 2 [3 4 5] 6 7 8 9 10 [11 12] 13
+        assert_eq!(folds.rows(14), 9);
+        let lines: Vec<u64> = (0..9).map(|row| folds.line_of(row)).collect();
+        assert_eq!(lines, [0, 1, 2, 6, 7, 8, 9, 10, 13]);
+        for (row, line) in lines.iter().enumerate() {
+            assert_eq!(folds.row_of(*line), row as u64);
+        }
+        assert_eq!(folds.row_of(4), 2, "hidden: the fold's row");
+        assert_eq!(folds.next_line(2), 6);
+        assert_eq!(folds.next_line(6), 7);
+    }
+
+    #[test]
+    fn folding_the_outer_lets_the_inner_go() {
+        let mut folds = Folds::default();
+        folds.fold(3, 4);
+        folds.fold(6, 8);
+        folds.fold(1, 7);
+        assert_eq!(folds.0.into_iter().collect::<Vec<_>>(), [(1, 7)]);
+        let mut folds = Folds::default();
+        folds.fold(3, 4);
+        assert!(folds.unfold(3));
+        assert!(!folds.unfold(3));
+        assert!(folds.is_empty());
     }
 }
