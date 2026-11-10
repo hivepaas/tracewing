@@ -1440,6 +1440,66 @@ async fn json_lines_show_while_the_stream_lasts() {
     clean_up(conn, dir);
 }
 
+/// A stream that comes packed is unpacked as it comes, and cut as one that
+/// did not: its events show as they arrive, its body is kept as it came.
+#[tokio::test(flavor = "multi_thread")]
+async fn packed_streams_show_as_they_come() {
+    const EVENTS: i64 = 12;
+    let h = Harness::start("packed-streams").await;
+    let session_dir = h.dir.join("session");
+    let conn = loop {
+        if let Ok(conn) = Connection::open(session_dir.join("flows.db")) {
+            break conn;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    };
+    // A client that does not unpack, so that what it gets is what was sent.
+    let client = h.client(false);
+    for (at, enc) in ["gzip", "br", "zstd"].into_iter().enumerate() {
+        let mut res = client
+            .get(format!(
+                "{}/stream?events={EVENTS}&gap_ms=100&enc={enc}",
+                h.origin
+            ))
+            .header("accept-encoding", enc)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.headers()["content-encoding"], enc, "left packed");
+        let id = at as i64 + 1;
+        let open = |conn: &Connection| -> Option<(bool, i64)> {
+            conn.query_row(
+                "SELECT open, (SELECT count(*) FROM messages WHERE flow_id = ?1) FROM flows WHERE id = ?1",
+                [id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .ok()
+        };
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            if open(&conn).is_some_and(|(open, messages)| open && messages >= 1) {
+                break;
+            }
+            assert!(Instant::now() < deadline, "{enc}: {:?}", open(&conn));
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        while res.chunk().await.unwrap().is_some() {}
+    }
+    drop(conn);
+
+    let (_, conn, dir) = h.finish(3).await;
+    for id in 1..=3i64 {
+        let messages = session::stored_messages(&conn, id, 0, 100).unwrap();
+        assert_eq!(messages.len() as i64, EVENTS, "flow {id}");
+        let mut reader = BodyReader::new(&dir.join("session"));
+        let last = reader
+            .read_place(messages.last().unwrap().place.unwrap())
+            .unwrap();
+        assert_eq!(last, format!("data: event {}", EVENTS - 1).as_bytes());
+    }
+    clean_up(conn, dir);
+}
+
 /// A stream's body is found by its words once it ends, though its row was
 /// indexed while it was still going, with no body yet.
 #[tokio::test(flavor = "multi_thread")]

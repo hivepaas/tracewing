@@ -161,6 +161,97 @@ pub fn lossy_text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
+/// What a packed stream unpacks to, a frame at a time, for a stream that is
+/// read as it comes: its frames are cut wherever the server flushed them.
+/// It stops for good at an error, and past `max` bytes in all, which a few
+/// KB packed can come to.
+pub struct Unpacker {
+    state: UnpackState,
+    max: u64,
+    out: u64,
+}
+
+enum UnpackState {
+    /// "deflate" is zlib or raw, which only the first two bytes tell.
+    Deflate(Vec<u8>),
+    Gzip(flate2::write::MultiGzDecoder<Vec<u8>>),
+    Zlib(flate2::write::ZlibDecoder<Vec<u8>>),
+    Raw(flate2::write::DeflateDecoder<Vec<u8>>),
+    Brotli(Box<brotli::DecompressorWriter<Vec<u8>>>),
+    Zstd(zstd::stream::write::Decoder<'static, Vec<u8>>),
+    Stopped,
+}
+
+impl Unpacker {
+    /// `None` for what is not packed, or packed in a way it cannot read.
+    pub fn new(encoding: Encoding, max: u64) -> Option<Self> {
+        let state = match encoding {
+            Encoding::Gzip => UnpackState::Gzip(flate2::write::MultiGzDecoder::new(Vec::new())),
+            Encoding::Deflate => UnpackState::Deflate(Vec::new()),
+            Encoding::Brotli => {
+                UnpackState::Brotli(Box::new(brotli::DecompressorWriter::new(Vec::new(), 4096)))
+            }
+            Encoding::Zstd => {
+                UnpackState::Zstd(zstd::stream::write::Decoder::new(Vec::new()).ok()?)
+            }
+            Encoding::Identity | Encoding::Unknown => return None,
+        };
+        Some(Self { state, max, out: 0 })
+    }
+
+    /// What `data` unpacks to, as far as it goes.
+    pub fn feed(&mut self, data: &[u8]) -> Vec<u8> {
+        if let UnpackState::Deflate(head) = &mut self.state {
+            head.extend_from_slice(data);
+            if head.len() < 2 {
+                return Vec::new();
+            }
+            let head = std::mem::take(head);
+            let zlib =
+                head[0] & 0x0f == 8 && u16::from_be_bytes([head[0], head[1]]).is_multiple_of(31);
+            self.state = if zlib {
+                UnpackState::Zlib(flate2::write::ZlibDecoder::new(Vec::new()))
+            } else {
+                UnpackState::Raw(flate2::write::DeflateDecoder::new(Vec::new()))
+            };
+            return self.feed(&head);
+        }
+        let written = match &mut self.state {
+            UnpackState::Gzip(d) => d.write_all(data).and_then(|()| d.flush()),
+            UnpackState::Zlib(d) => d.write_all(data).and_then(|()| d.flush()),
+            UnpackState::Raw(d) => d.write_all(data).and_then(|()| d.flush()),
+            UnpackState::Brotli(d) => d.write_all(data).and_then(|()| d.flush()),
+            UnpackState::Zstd(d) => d.write_all(data).and_then(|()| d.flush()),
+            UnpackState::Deflate(_) | UnpackState::Stopped => return Vec::new(),
+        };
+        let out = self.take();
+        if written.is_err() {
+            self.state = UnpackState::Stopped;
+        }
+        out
+    }
+
+    /// What is unpacked so far and not yet given, within `max`.
+    fn take(&mut self) -> Vec<u8> {
+        let buffer = match &mut self.state {
+            UnpackState::Gzip(d) => d.get_mut(),
+            UnpackState::Zlib(d) => d.get_mut(),
+            UnpackState::Raw(d) => d.get_mut(),
+            UnpackState::Brotli(d) => d.get_mut(),
+            UnpackState::Zstd(d) => d.get_mut(),
+            UnpackState::Deflate(_) | UnpackState::Stopped => return Vec::new(),
+        };
+        let mut out = std::mem::take(buffer);
+        let room = self.max.saturating_sub(self.out);
+        if out.len() as u64 >= room {
+            out.truncate(room as usize);
+            self.state = UnpackState::Stopped;
+        }
+        self.out += out.len() as u64;
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,6 +299,56 @@ mod tests {
                 "{encoding:?}"
             );
         }
+    }
+
+    #[test]
+    fn a_stream_unpacks_as_it_comes_wherever_it_is_cut() {
+        let zlib = {
+            let mut out = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::new(6));
+            out.write_all(TEXT).unwrap();
+            out.finish().unwrap()
+        };
+        for (encoding, packed) in [
+            (Encoding::Gzip, gzip(TEXT)),
+            (Encoding::Deflate, zlib),
+            (Encoding::Brotli, brotli_of(TEXT)),
+            (Encoding::Zstd, zstd::encode_all(TEXT, 1).unwrap()),
+        ] {
+            for cut in [1, 7, 4096] {
+                let mut unpacker = Unpacker::new(encoding, 1 << 20).unwrap();
+                let mut out = Vec::new();
+                for frame in packed.chunks(cut) {
+                    out.extend(unpacker.feed(frame));
+                }
+                assert_eq!(out, TEXT, "{encoding:?} cut every {cut}");
+            }
+        }
+        assert!(Unpacker::new(Encoding::Identity, 1).is_none());
+    }
+
+    #[test]
+    fn a_stream_flushed_part_way_gives_what_came_before() {
+        let mut packer = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::new(6));
+        packer.write_all(b"data: one\n\n").unwrap();
+        packer.flush().unwrap();
+        let first = std::mem::take(packer.get_mut());
+        let mut unpacker = Unpacker::new(Encoding::Gzip, 1 << 20).unwrap();
+        assert_eq!(
+            unpacker.feed(&first),
+            b"data: one\n\n",
+            "before the stream ends"
+        );
+    }
+
+    #[test]
+    fn a_packed_stream_stops_at_its_limit_and_at_an_error() {
+        let bomb = gzip(&vec![0u8; 4 << 20]);
+        let mut unpacker = Unpacker::new(Encoding::Gzip, 1000).unwrap();
+        let out: usize = bomb.chunks(512).map(|f| unpacker.feed(f).len()).sum();
+        assert_eq!(out, 1000);
+        let mut broken = Unpacker::new(Encoding::Gzip, 1000).unwrap();
+        assert!(broken.feed(b"not gzip at all").is_empty());
+        assert!(broken.feed(&gzip(b"x")).is_empty(), "stopped for good");
     }
 
     #[test]

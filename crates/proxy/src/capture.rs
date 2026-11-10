@@ -38,6 +38,7 @@ use std::{
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
 use tracewing_store::app::AppAnswer;
+use tracewing_store::decode::{Encoding, Unpacker};
 use tracewing_store::graphql;
 use tracewing_store::spool::{Spool, SpoolFile};
 use tracewing_store::store::{BodyRecord, FlowRecord, Recorder, StreamHandle};
@@ -355,13 +356,17 @@ impl FlowHandler {
         let Some(flow) = flow else {
             return res;
         };
-        // Text only: what comes compressed cannot be cut apart as it comes.
-        let cut =
-            stream_cut(&res).filter(|_| !res.headers().contains_key(header::CONTENT_ENCODING));
+        // Packed, it is unpacked as it comes, if it is packed in a way that can be.
+        let encoding = Encoding::from_header(
+            res.headers()
+                .get(header::CONTENT_ENCODING)
+                .and_then(|v| v.to_str().ok()),
+        );
+        let cut = stream_cut(&res).filter(|_| encoding != Encoding::Unknown);
         if let Some(cut) = cut {
             flow.opened_as(cut.kind(), None);
         }
-        let stream = cut.and_then(|cut| Some((flow.stream()?, cut)));
+        let stream = cut.and_then(|cut| Some((flow.stream()?, cut, encoding)));
         let (cap, spool) = (self.log_max, self.spool.clone());
         res.map(move |body| TapBody::wrap(body, flow, Side::Response, cap, spool, stream))
     }
@@ -951,6 +956,10 @@ fn stream_cut<T>(res: &Response<T>) -> Option<Cut> {
     }
 }
 
+/// The most a packed stream is unpacked to, to cut into messages: a few KB
+/// packed can come to many GB. The body is kept as it came, whatever this is.
+const STREAM_UNPACK_MAX: u64 = 256 << 20;
+
 /// The most of one message waited for before it is written as it stands.
 const EVENT_MAX: usize = 1024 * 1024;
 
@@ -1211,8 +1220,9 @@ struct TapBody {
     done: bool,
     spool: Spool,
     file: Option<SpoolFile>,
-    /// A stream's messages, to cut apart as they pass.
-    events: Option<(StreamHandle, Splitter)>,
+    /// A stream's messages, to cut apart as they pass, unpacked first if it
+    /// came packed.
+    events: Option<(StreamHandle, Splitter, Option<Unpacker>)>,
 }
 
 impl TapBody {
@@ -1222,7 +1232,7 @@ impl TapBody {
         side: Side,
         cap: usize,
         spool: Spool,
-        events: Option<(StreamHandle, Cut)>,
+        events: Option<(StreamHandle, Cut, Encoding)>,
     ) -> Body {
         Body::from(BoxBody::new(Self {
             inner,
@@ -1233,15 +1243,27 @@ impl TapBody {
             done: false,
             spool,
             file: None,
-            events: events.map(|(stream, cut)| (stream, Splitter::new(cut))),
+            events: events.map(|(stream, cut, encoding)| {
+                (
+                    stream,
+                    Splitter::new(cut),
+                    Unpacker::new(encoding, STREAM_UNPACK_MAX),
+                )
+            }),
         }))
     }
 
     fn observe(&mut self, data: &Bytes) {
         self.body.bytes += data.len() as u64;
-        if let Some((stream, splitter)) = &mut self.events {
+        if let Some((stream, splitter, unpacker)) = &mut self.events {
             let kind = splitter.cut.message();
-            splitter.feed(data, |message| stream.message(false, kind, message));
+            match unpacker {
+                Some(unpacker) => {
+                    let plain = unpacker.feed(data);
+                    splitter.feed(&plain, |message| stream.message(false, kind, message));
+                }
+                None => splitter.feed(data, |message| stream.message(false, kind, message)),
+            }
         }
         let room = self.cap.saturating_sub(self.body.captured.len());
         if data.len() > room {
@@ -1267,7 +1289,7 @@ impl TapBody {
             return;
         }
         self.body.complete = complete;
-        if let Some((stream, splitter)) = &mut self.events {
+        if let Some((stream, splitter, _)) = &mut self.events {
             let kind = splitter.cut.message();
             splitter.finish(|message| stream.message(false, kind, message));
         }
