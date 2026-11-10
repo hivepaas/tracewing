@@ -18,18 +18,32 @@ use gpui::{
 };
 use std::net::{IpAddr, SocketAddr};
 use tracewing_i18n::tr;
+use tracewing_i18n::tr_n;
 use tracewing_proxy::{
     ca_key::KeyPlace,
     capture::{CHECK_HOST, CheckVisit},
 };
 use tracewing_system::{
-    Scope,
+    BrowserTrust, Scope,
     android::{Device, SetUp, Trust},
 };
 
-/// The browser in a `User-Agent`, in the order that tells them apart: Chrome's says
-/// Safari, and Edge's says both.
-pub fn browser_name(user_agent: &str) -> String {
+/// The browser that sent a `User-Agent` and a `Sec-CH-UA`. Chromium's family
+/// all say Chrome in the first, so the brands in the second come first. The
+/// rest go in the order that tells them apart: Chrome's says Safari, and Edge's
+/// says both.
+pub fn browser_name(user_agent: &str, brands: &str) -> String {
+    for (brand, name) in [
+        ("Brave", "Brave"),
+        ("Microsoft Edge", "Edge"),
+        ("Opera", "Opera"),
+        ("Google Chrome", "Chrome"),
+        ("Chromium", "Chromium"),
+    ] {
+        if brands.contains(brand) {
+            return name.to_owned();
+        }
+    }
     for (mark, name) in [
         ("Firefox/", "Firefox"),
         ("Edg/", "Edge"),
@@ -70,7 +84,7 @@ fn check_result(visit: Option<&CheckVisit>) -> (String, bool) {
             false,
         ),
         Some(visit) => {
-            let name = browser_name(&visit.user_agent);
+            let name = browser_name(&visit.user_agent, &visit.brands);
             if visit.secure {
                 (
                     tr!("{name} goes through tracewing and trusts it.", name = name),
@@ -224,13 +238,7 @@ impl Traffic {
             }
             CaState::Trusted => tr!(
                 "Installed in: {places}.",
-                places = self
-                    .system
-                    .ca_places
-                    .iter()
-                    .map(|place| place.name.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
+                places = places_text(&self.system.ca_places)
             ),
             // Linux: in the system's store, which browsers do not read.
             CaState::NotTrusted if !self.system.ca_places.is_empty() => {
@@ -358,11 +366,186 @@ impl Traffic {
             .child(ca_step)
             .child(proxy_step)
             .child(check_step)
+            .child(self.render_browsers(cx))
             .child(self.render_one_app(cx))
             .child(self.render_other_devices(cx))
             .child(self.render_android(cx))
             .child(self.render_http3(cx))
             .child(self.render_ai_tools())
+    }
+}
+
+/// Where the certificate is, in words. On Linux the browsers' stores are one
+/// per browser and profile, which the Browsers card tells apart.
+fn places_text(places: &[tracewing_system::Place]) -> String {
+    let mut names: Vec<String> = places
+        .iter()
+        .filter(|place| !cfg!(target_os = "linux") || !place.browsers)
+        .map(|place| place.name.clone())
+        .collect();
+    if cfg!(target_os = "linux") && places.iter().any(|place| place.browsers) {
+        names.push(tr!("the browsers' own stores"));
+    }
+    names.join(", ")
+}
+
+/// How a line of the Browsers card stands: well, not yet, or not known.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Mark {
+    Ok,
+    Missing,
+    Unknown,
+}
+
+/// Whether a browser trusts the certificate, in words.
+pub fn trust_text(trust: BrowserTrust, ca: &CaState) -> (String, Mark) {
+    let yes = || (tr!("Trusts the certificate."), Mark::Ok);
+    let not_yet = || (tr!("Does not trust the certificate yet."), Mark::Missing);
+    match trust {
+        BrowserTrust::System => match ca {
+            CaState::Trusted => yes(),
+            CaState::NotTrusted => not_yet(),
+            CaState::Checking | CaState::Installing => (tr!("Looking…"), Mark::Unknown),
+        },
+        BrowserTrust::Own { of: 0, .. } => (
+            tr!("Has no profile yet. Open it once, then look again."),
+            Mark::Missing,
+        ),
+        BrowserTrust::Own { holding, of } if holding >= of => yes(),
+        BrowserTrust::Own { of: 1, .. } => not_yet(),
+        BrowserTrust::Own { holding, of } => (
+            tr_n!(
+                of,
+                "{holding} of its {n} profile trusts the certificate.",
+                "{holding} of its {n} profiles trust the certificate.",
+                holding = holding.to_string()
+            ),
+            Mark::Missing,
+        ),
+    }
+}
+
+/// Whether a browser has reached the test page, in words, from the latest
+/// visit of a browser by that name.
+pub fn seen_text(name: &str, visits: &[CheckVisit]) -> (String, Mark) {
+    let visit = visits
+        .iter()
+        .rev()
+        .find(|visit| browser_name(&visit.user_agent, &visit.brands) == name);
+    match visit {
+        None => (tr!("Has not opened the test page yet."), Mark::Unknown),
+        Some(visit) if visit.secure => (
+            tr!("Opened the test page through tracewing, over HTTPS."),
+            Mark::Ok,
+        ),
+        Some(_) => (
+            tr!("Opened the test page through tracewing, but without HTTPS."),
+            Mark::Missing,
+        ),
+    }
+}
+
+/// A line of the Browsers card, after a dot that says how it stands.
+fn marked(text: String, mark: Mark) -> Div {
+    let c = colors();
+    let dot = match mark {
+        Mark::Ok => c.ok,
+        Mark::Missing => c.warn,
+        Mark::Unknown => c.faint,
+    };
+    div()
+        .flex()
+        .flex_row()
+        .items_center()
+        .gap(px(8.))
+        .child(
+            div()
+                .size(px(8.))
+                .flex_shrink_0()
+                .rounded_full()
+                .bg(rgb(dot)),
+        )
+        .child(div().text_color(rgb(c.muted)).child(text))
+}
+
+impl Traffic {
+    /// Each browser on this computer: whether it trusts the certificate, and
+    /// whether it has reached the test page through tracewing.
+    fn render_browsers(&mut self, cx: &mut Context<Self>) -> Div {
+        let c = colors();
+        let busy = matches!(self.system.ca, CaState::Checking | CaState::Installing);
+        let mut card = aside(
+            tr!("Browsers"),
+            tr!(
+                "Each keeps its own idea of what to trust and where to send its traffic. \
+                 Check one to open the test page in it."
+            ),
+        )
+        .child(
+            button("setup-browsers-look", tr!("Look again"), false)
+                .on_click(cx.listener(|this, _, _, cx| this.start_ca_check(cx))),
+        );
+        if self.system.browsers.is_empty() && !busy {
+            card = card.child(
+                div()
+                    .w_full()
+                    .text_color(rgb(c.muted))
+                    .child(tr!("No browser found on this computer.")),
+            );
+        }
+        for (i, (browser, trust)) in self.system.browsers.iter().enumerate() {
+            let name = browser.name;
+            let (trust_line, trust_mark) = trust_text(*trust, &self.system.ca);
+            let (seen_line, seen_mark) = seen_text(name, &self.check_visits);
+            // Its own stores can take the certificate now; the system's is step 1.
+            let can_install = !busy
+                && matches!(*trust, BrowserTrust::Own { holding, of } if of > 0 && holding < of);
+            card = card.child(
+                div()
+                    .id(("setup-browser-row", i))
+                    .w_full()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .items_center()
+                    .gap(px(12.))
+                    .pt(px(10.))
+                    .border_t_1()
+                    .border_color(rgb(c.surface))
+                    .child(
+                        div()
+                            .w(px(96.))
+                            .flex_shrink_0()
+                            .font_weight(FontWeight::BOLD)
+                            .child(name),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(240.))
+                            .flex()
+                            .flex_col()
+                            .gap(px(2.))
+                            .child(marked(trust_line, trust_mark))
+                            .child(marked(seen_line, seen_mark)),
+                    )
+                    .when(can_install, |d| {
+                        d.child(
+                            button(("setup-browser-install", i), tr!("Install"), true).on_click(
+                                cx.listener(|this, _, _, cx| {
+                                    this.install_certificate(Scope::User, cx)
+                                }),
+                            ),
+                        )
+                    })
+                    .child(
+                        button(("setup-browser-check", i), tr!("Check"), false).on_click(
+                            cx.listener(move |this, _, _, cx| this.check_in_browser(name, cx)),
+                        ),
+                    ),
+            );
+        }
+        card
     }
 }
 
@@ -412,7 +595,7 @@ impl Traffic {
     /// A terminal or a browser through tracewing, for when the system proxy
     /// would take more than the one app being debugged.
     fn render_one_app(&mut self, cx: &mut Context<Self>) -> Div {
-        let browser = self.system.browser.as_ref().map(|b| b.name);
+        let browser = self.browser_to_open().map(|b| b.name);
         aside(
             tr!("Or one app at a time"),
             tr!(
@@ -982,8 +1165,67 @@ mod tests {
             ),
             ("curl/8.5", "Your browser"),
         ] {
-            assert_eq!(browser_name(agent), name);
+            assert_eq!(browser_name(agent, ""), name);
         }
+        // Brave, Chromium and Chrome send the same user agent.
+        let chrome =
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/142.0.0.0 Safari/537.36";
+        for (brands, name) in [
+            (
+                r#""Chromium";v="142", "Brave";v="142", "Not_A Brand";v="99""#,
+                "Brave",
+            ),
+            (
+                r#""Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99""#,
+                "Chrome",
+            ),
+            (r#""Chromium";v="142", "Not_A Brand";v="99""#, "Chromium"),
+            (r#""Opera";v="124", "Chromium";v="142""#, "Opera"),
+        ] {
+            assert_eq!(browser_name(chrome, brands), name);
+        }
+    }
+
+    #[test]
+    fn a_browser_says_what_it_trusts() {
+        let own = |holding, of| BrowserTrust::Own { holding, of };
+        assert_eq!(trust_text(own(1, 1), &CaState::NotTrusted).1, Mark::Ok);
+        assert_eq!(trust_text(own(0, 1), &CaState::Trusted).1, Mark::Missing);
+        let (text, mark) = trust_text(own(1, 2), &CaState::Trusted);
+        assert_eq!(
+            (text.as_str(), mark),
+            ("1 of its 2 profiles trust the certificate.", Mark::Missing)
+        );
+        assert!(
+            trust_text(own(0, 0), &CaState::Trusted)
+                .0
+                .contains("no profile")
+        );
+        let system = BrowserTrust::System;
+        assert_eq!(trust_text(system, &CaState::Trusted).1, Mark::Ok);
+        assert_eq!(trust_text(system, &CaState::NotTrusted).1, Mark::Missing);
+        assert_eq!(trust_text(system, &CaState::Checking).1, Mark::Unknown);
+    }
+
+    #[test]
+    fn a_browser_says_whether_it_reached_the_test_page() {
+        let visit = |agent: &str, secure| CheckVisit {
+            user_agent: agent.into(),
+            brands: String::new(),
+            secure,
+        };
+        let visits = [
+            visit("Firefox/144.0", false),
+            visit("Chrome/142.0", true),
+            visit("Firefox/145.0", true),
+        ];
+        assert_eq!(
+            seen_text("Firefox", &visits).1,
+            Mark::Ok,
+            "the latest counts"
+        );
+        assert_eq!(seen_text("Firefox", &visits[..2]).1, Mark::Missing);
+        assert_eq!(seen_text("Edge", &visits).1, Mark::Unknown);
     }
 
     #[test]
@@ -991,6 +1233,7 @@ mod tests {
         assert!(!check_result(None).1);
         let plain = CheckVisit {
             user_agent: "Firefox/144.0".into(),
+            brands: String::new(),
             secure: false,
         };
         let (text, ok) = check_result(Some(&plain));

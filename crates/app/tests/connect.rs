@@ -23,18 +23,30 @@ use tracewing::{
     traffic::{Screen, Traffic},
 };
 use tracewing_store::settings::StorageSettings;
-use tracewing_system::Scope;
+use tracewing_system::{BrowserTrust, Scope};
 
 /// A `gsettings` that keeps its values in files in a folder.
-/// A `certutil` that keeps one certificate as a file. `-N` makes a database.
+/// A `certutil` that keeps the certificate as a file in each database, and says
+/// in the store that it added one. `-N` makes a database.
 const FAKE_CERTUTIL: &str = r#"#!/bin/sh
 store="$FAKE_GSETTINGS_DIR"
 case "$1" in
 -N) db=$(echo "$4" | sed 's/^sql://'); touch "$db/cert9.db" ;;
--A) touch "$store/certutil-added" ;;
--L) test -e "$store/certutil-added" ;;
+-A) db=$(echo "$3" | sed 's/^sql://'); touch "$db/tracewing-ca" "$store/certutil-added" ;;
+-L) db=$(echo "$3" | sed 's/^sql://'); test -e "$db/tracewing-ca" ;;
 esac
 "#;
+
+/// A browser that does nothing, for the Browsers card to find.
+const FAKE_BROWSER: &str = "#!/bin/sh\nexit 0\n";
+
+fn browser_trust(view: &Traffic, name: &str) -> Option<BrowserTrust> {
+    view.system
+        .browsers
+        .iter()
+        .find(|(browser, _)| browser.name == name)
+        .map(|(_, trust)| *trust)
+}
 
 const FAKE_GSETTINGS: &str = r#"#!/bin/sh
 store="$FAKE_GSETTINGS_DIR"
@@ -94,8 +106,16 @@ fn the_system_proxy_and_the_settings_from_the_window() {
     let certutil = bin.join("certutil");
     std::fs::write(&certutil, FAKE_CERTUTIL).unwrap();
     std::fs::set_permissions(&certutil, std::fs::Permissions::from_mode(0o755)).unwrap();
+    for name in ["google-chrome", "firefox"] {
+        let browser = bin.join(name);
+        std::fs::write(&browser, FAKE_BROWSER).unwrap();
+        std::fs::set_permissions(&browser, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
     let home = dir.join("home");
-    std::fs::create_dir_all(&home).unwrap();
+    // Firefox, with the one profile it made as it first started.
+    let profiles = home.join(".mozilla/firefox");
+    std::fs::create_dir_all(profiles.join("one.default")).unwrap();
+    std::fs::write(profiles.join("one.default/cert9.db"), "").unwrap();
     let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap());
     // SAFETY: the only test in this binary, before it starts any thread of its own.
     unsafe {
@@ -177,16 +197,39 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             assert_eq!(view.system.ca, CaState::Trusted);
             assert_eq!(
                 view.system.ca_places.len(),
-                1,
-                "{:?}",
+                2,
+                "Chrome's database and Firefox's profile: {:?}",
                 view.system.ca_places
             );
             assert!(!view.system.ca_verified);
+            let both = Some(BrowserTrust::Own { holding: 1, of: 1 });
+            assert_eq!(browser_trust(view, "Chrome"), both);
+            assert_eq!(browser_trust(view, "Firefox"), both);
         })
         .unwrap();
     assert!(store.join("certutil-added").exists());
     cx.run_until_parked();
     save_shot(&mut cx, window.into(), "14-setup-trusted");
+
+    // A Firefox profile made since does not trust it, until the card's Install.
+    std::fs::create_dir_all(profiles.join("two.work")).unwrap();
+    std::fs::write(profiles.join("two.work/cert9.db"), "").unwrap();
+    window
+        .update(&mut cx, |view, _, cx| view.start_ca_check(cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the new profile", |view| {
+        browser_trust(view, "Firefox") == Some(BrowserTrust::Own { holding: 1, of: 2 })
+    });
+    cx.run_until_parked();
+    save_shot(&mut cx, window.into(), "83-setup-browsers");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.install_certificate(Scope::User, cx)
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the profile to trust it", |view| {
+        browser_trust(view, "Firefox") == Some(BrowserTrust::Own { holding: 2, of: 2 })
+    });
 
     // On, and what was there before comes back when it goes off.
     window

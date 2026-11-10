@@ -278,6 +278,8 @@ pub struct Traffic {
     bounds_change: u64,
     /// Who last reached the test page, as the window has seen it.
     pub check_visit: Option<CheckVisit>,
+    /// Each browser's latest visit to the test page, oldest first.
+    pub check_visits: Vec<CheckVisit>,
     /// The menu of columns to show is open.
     columns_menu: bool,
     /// The list of keyboard shortcuts is open over the window.
@@ -419,6 +421,7 @@ impl Traffic {
             places_asked: 0,
             bounds_change: 0,
             check_visit: None,
+            check_visits: Vec::new(),
         }
     }
 
@@ -480,6 +483,10 @@ impl Traffic {
         self.screen = screen;
         if screen == Screen::Sessions {
             self.refresh_sessions(cx);
+        }
+        // A browser may have come, or made a profile, since the last look.
+        if screen == Screen::Setup {
+            self.start_ca_check(cx);
         }
         cx.notify();
     }
@@ -718,9 +725,10 @@ impl Traffic {
         }
         changed |= self.look_at_stream(cx);
         changed |= self.look_at_pauses(cx);
-        let visit = self.engine.check.last();
-        if visit != self.check_visit {
-            self.check_visit = visit;
+        let visits = self.engine.check.visits();
+        if visits != self.check_visits {
+            self.check_visit = visits.last().cloned();
+            self.check_visits = visits;
             changed = true;
         }
         let newest = self.bounds.map_or(0, |(_, last)| last);

@@ -1053,6 +1053,53 @@ tf3a7f60b = Tres pasos para ver el tráfico HTTPS de este equipo.
 # See traffic
 t980eee79 = Ver el tráfico
 
+# the browsers' own stores
+tddf6836c = los almacenes propios de los navegadores
+
+# Trusts the certificate.
+tc5bba858 = Confía en el certificado.
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = Aún no confía en el certificado.
+
+# Looking…
+t284579ba = Buscando…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = Aún no tiene perfil. Ábrelo una vez y vuelve a buscar.
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 =
+    { $n ->
+        [one] { $holding } de su { $n } perfil confía en el certificado.
+        [many] { $holding } de sus { $n } perfiles confían en el certificado.
+       *[other] { $holding } de sus { $n } perfiles confían en el certificado.
+    }
+
+# Has not opened the test page yet.
+t67f9cb49 = Aún no ha abierto la página de prueba.
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = Abrió la página de prueba a través de tracewing, por HTTPS.
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = Abrió la página de prueba a través de tracewing, pero sin HTTPS.
+
+# Browsers
+td580efd4 = Navegadores
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = Cada uno decide por su cuenta en qué confiar y adónde enviar su tráfico. Comprobar abre la página de prueba en él.
+
+# Look again
+t98416222 = Volver a buscar
+
+# No browser found on this computer.
+t0e46bb34 = No se encontró ningún navegador en este ordenador.
+
+# Check
+t592c8de7 = Comprobar
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = El puerto UDP 443 está bloqueado en este equipo, así que las apps pasan de HTTP/3 a HTTP/2 y van por tracewing. El bloqueo termina cuando se cierra tracewing, o si falla.
 
@@ -1175,9 +1222,6 @@ t71fd4acf = Deshacer
 
 # Android emulators and USB devices
 t379e433c = Emuladores de Android y dispositivos USB
-
-# Look again
-t98416222 = Volver a buscar
 
 # Find devices
 t54d4af39 = Buscar dispositivos

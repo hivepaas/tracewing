@@ -1039,6 +1039,48 @@ tf3a7f60b = 只要三個步驟，即可檢視這台電腦的 HTTPS 流量。
 # See traffic
 t980eee79 = 檢視流量
 
+# the browsers' own stores
+tddf6836c = 各瀏覽器自己的憑證庫
+
+# Trusts the certificate.
+tc5bba858 = 信任此憑證。
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = 尚未信任此憑證。
+
+# Looking…
+t284579ba = 正在尋找…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = 還沒有設定檔。先開啟一次，再重新尋找。
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 = { $n } 個設定檔中有 { $holding } 個信任此憑證。
+
+# Has not opened the test page yet.
+t67f9cb49 = 尚未開啟測試頁。
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = 已透過 tracewing 以 HTTPS 開啟測試頁。
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = 已透過 tracewing 開啟測試頁，但未使用 HTTPS。
+
+# Browsers
+td580efd4 = 瀏覽器
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = 每個瀏覽器各自決定信任什麼、把流量送往何處。按「檢查」會在該瀏覽器中開啟測試頁。
+
+# Look again
+t98416222 = 重新尋找
+
+# No browser found on this computer.
+t0e46bb34 = 在這台電腦上找不到瀏覽器。
+
+# Check
+t592c8de7 = 檢查
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = 這台電腦已封鎖 UDP 連接埠 443，因此 App 會從 HTTP/3 退回 HTTP/2 並經過 tracewing。tracewing 關閉或當機時，封鎖會自動解除。
 
@@ -1161,9 +1203,6 @@ t71fd4acf = 復原
 
 # Android emulators and USB devices
 t379e433c = Android 模擬器和 USB 裝置
-
-# Look again
-t98416222 = 重新尋找
 
 # Find devices
 t54d4af39 = 尋找裝置

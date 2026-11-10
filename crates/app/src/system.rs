@@ -16,7 +16,10 @@ use tracewing_proxy::{
     capture::CHECK_HOST,
     crypto_provider,
 };
-use tracewing_system::{self as system, Place, QuicBlock, Scope, TakenOver, launch::Browser};
+use tracewing_system::{
+    self as system, BrowserTrust, Place, QuicBlock, Scope, TakenOver,
+    launch::{Browser, Engine},
+};
 
 #[derive(Default)]
 pub enum ProxySwitch {
@@ -58,8 +61,10 @@ pub struct SystemState {
     pub problem: Option<String>,
     /// Off in tests, whose program cannot be a watchdog.
     pub no_watchdog: bool,
-    /// The browser "Open" starts, if there is one.
-    pub browser: Option<Browser>,
+    /// The browsers on this machine, and what each trusts.
+    pub browsers: Vec<(Browser, BrowserTrust)>,
+    /// The certificate check last started: an older one's answer is stale.
+    pub ca_job: u64,
     /// Where the CA's key is, once looked at.
     pub ca_key: Option<KeyPlace>,
     /// Which device's guide the Set up page shows.
@@ -82,6 +87,7 @@ struct CaFound {
     /// What went wrong installing, when some of it may still have gone in.
     problem: Option<String>,
     key: KeyPlace,
+    browsers: Vec<(Browser, BrowserTrust)>,
 }
 
 impl CaFound {
@@ -94,24 +100,31 @@ impl CaFound {
     }
 }
 
-fn look_for_ca(ca: &LocalCa) -> anyhow::Result<CaFound> {
+fn look_for_ca(ca: &LocalCa, data_dir: &Path) -> anyhow::Result<CaFound> {
     Ok(CaFound {
         verified: system::verify_ca(ca, crypto_provider()).is_ok(),
         places: system::ca_locations(ca.cert_path())?,
         problem: None,
         key: ca.key_place().clone(),
+        browsers: system::launch::find_browsers(data_dir)
+            .into_iter()
+            .map(|browser| {
+                let trust = system::browser_trust(&browser);
+                (browser, trust)
+            })
+            .collect(),
     })
 }
 
 fn check_ca(data_dir: &Path, store: KeyStore) -> anyhow::Result<CaFound> {
-    look_for_ca(&load_ca(data_dir, store)?)
+    look_for_ca(&load_ca(data_dir, store)?, data_dir)
 }
 
 fn install_ca(data_dir: &Path, scope: Scope, store: KeyStore) -> anyhow::Result<CaFound> {
     let ca = load_ca(data_dir, store)?;
     let installed = system::ca_install(ca.cert_path(), scope);
     // Some stores may have taken it although another failed: look either way.
-    let mut found = look_for_ca(&ca)?;
+    let mut found = look_for_ca(&ca, data_dir)?;
     found.problem = installed
         .err()
         .map(|e| tr!("The certificate: {e}", e = format!("{e:#}")));
@@ -119,8 +132,11 @@ fn install_ca(data_dir: &Path, scope: Scope, store: KeyStore) -> anyhow::Result<
 }
 
 impl Traffic {
-    pub(crate) fn start_ca_check(&mut self, cx: &mut Context<Self>) {
-        self.system.browser = system::launch::find_browser(&self.data_dir);
+    /// Looks again for the certificate in every store, and for the browsers.
+    pub fn start_ca_check(&mut self, cx: &mut Context<Self>) {
+        if self.system.ca == CaState::Installing {
+            return;
+        }
         let (data_dir, store) = (self.data_dir.clone(), self.engine.key_store);
         self.run_ca_job(move || check_ca(&data_dir, store), cx);
     }
@@ -141,9 +157,14 @@ impl Traffic {
         job: impl FnOnce() -> anyhow::Result<CaFound> + Send + 'static,
         cx: &mut Context<Self>,
     ) {
+        self.system.ca_job += 1;
+        let number = self.system.ca_job;
         cx.spawn(async move |this, cx| {
             let result = cx.background_spawn(async move { job() }).await;
             let _ = this.update(cx, |this, cx| {
+                if this.system.ca_job != number {
+                    return;
+                }
                 match result {
                     Ok(found) => {
                         this.system.ca = if found.browsers_trust() {
@@ -154,6 +175,7 @@ impl Traffic {
                         this.system.ca_verified = found.verified;
                         this.system.ca_key = Some(found.key);
                         this.system.ca_places = found.places;
+                        this.system.browsers = found.browsers;
                         if found.problem.is_some() {
                             this.system.problem = found.problem;
                         }
@@ -184,10 +206,33 @@ impl Traffic {
         );
     }
 
+    /// The browser "Open" starts: the first of Chromium's family.
+    pub fn browser_to_open(&self) -> Option<&Browser> {
+        self.system
+            .browsers
+            .iter()
+            .map(|(browser, _)| browser)
+            .find(|browser| browser.engine == Engine::Chromium)
+    }
+
+    /// The test page in `name`, in the user's own profile, to see whether that
+    /// browser goes through tracewing and trusts it.
+    pub fn check_in_browser(&mut self, name: &str, cx: &mut Context<Self>) {
+        let Some((browser, _)) = self.system.browsers.iter().find(|(b, _)| b.name == name) else {
+            return;
+        };
+        let browser = browser.clone();
+        self.run_launch(
+            browser.name.to_owned(),
+            move || system::launch::open_url(&browser, &format!("https://{CHECK_HOST}/")),
+            cx,
+        );
+    }
+
     /// A browser with a profile of its own that goes through the proxy, at the
     /// test page.
     pub fn open_browser(&mut self, cx: &mut Context<Self>) {
-        let Some(browser) = self.system.browser.clone() else {
+        let Some(browser) = self.browser_to_open().cloned() else {
             return;
         };
         let addr = self.engine.addr;
@@ -356,6 +401,7 @@ mod tests {
                 .collect(),
             problem: None,
             key: KeyPlace::Keychain,
+            browsers: Vec::new(),
         }
     }
 

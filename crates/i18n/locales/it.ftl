@@ -1053,6 +1053,53 @@ tf3a7f60b = Tre passaggi per vedere il traffico HTTPS di questo computer.
 # See traffic
 t980eee79 = Vedi il traffico
 
+# the browsers' own stores
+tddf6836c = gli archivi propri dei browser
+
+# Trusts the certificate.
+tc5bba858 = Si fida del certificato.
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = Non si fida ancora del certificato.
+
+# Looking…
+t284579ba = Ricerca…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = Non ha ancora un profilo. Aprilo una volta, poi cerca di nuovo.
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 =
+    { $n ->
+        [one] { $holding } su { $n } profilo si fida del certificato.
+        [many] { $holding } su { $n } profili si fidano del certificato.
+       *[other] { $holding } su { $n } profili si fidano del certificato.
+    }
+
+# Has not opened the test page yet.
+t67f9cb49 = Non ha ancora aperto la pagina di prova.
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = Ha aperto la pagina di prova tramite tracewing, in HTTPS.
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = Ha aperto la pagina di prova tramite tracewing, ma senza HTTPS.
+
+# Browsers
+td580efd4 = Browser
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = Ognuno decide per conto suo di cosa fidarsi e dove mandare il traffico. Verifica vi apre la pagina di prova.
+
+# Look again
+t98416222 = Cerca di nuovo
+
+# No browser found on this computer.
+t0e46bb34 = Nessun browser trovato su questo computer.
+
+# Check
+t592c8de7 = Verifica
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = La porta UDP 443 è bloccata su questo computer, quindi le app ripiegano da HTTP/3 a HTTP/2 e passano da tracewing. Il blocco termina quando tracewing si chiude, o se si arresta in modo anomalo.
 
@@ -1175,9 +1222,6 @@ t71fd4acf = Ripristina
 
 # Android emulators and USB devices
 t379e433c = Emulatori Android e dispositivi USB
-
-# Look again
-t98416222 = Cerca di nuovo
 
 # Find devices
 t54d4af39 = Trova dispositivi

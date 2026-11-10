@@ -327,7 +327,7 @@ fn the_window_shows_real_traffic() {
         })
         .unwrap();
     wait_for(&mut cx, window, "the visit", |view, _| {
-        view.check_visit.as_ref().is_some_and(|v| v.secure)
+        view.check_visits.last().is_some_and(|v| v.secure)
     });
 
     // A host left alone: a row that says so, and the way back.

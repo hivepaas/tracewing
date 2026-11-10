@@ -17,8 +17,8 @@ use std::{
 };
 
 use super::{
-    Place, Saved, Scope,
-    launch::{self, Browser},
+    BrowserTrust, Place, Saved, Scope,
+    launch::{self, Browser, Engine},
 };
 
 const NICKNAME: &str = "tracewing CA";
@@ -325,50 +325,88 @@ fn quote(path: &Path) -> String {
     format!("'{}'", path.display().to_string().replace('\'', r"'\''"))
 }
 
-/// Every NSS database of this user that a browser would read. Chromium shares
-/// `~/.pki/nssdb` unless it runs in a sandbox with its own home.
-fn nss_databases(create_shared: bool) -> Result<Vec<PathBuf>> {
-    let home = home()?;
-    let mut found = Vec::new();
+/// Where Chromium's family reads NSS: `~/.pki/nssdb`, or the same in the home
+/// a snap or a Flatpak gives it.
+fn chromium_databases(home: &Path) -> Vec<PathBuf> {
+    let mut homes = vec![home.to_owned(), home.join("snap/chromium/current")];
+    homes.extend(
+        FLATPAKS
+            .iter()
+            .filter(|(_, _, engine)| *engine == Engine::Chromium)
+            .map(|(id, _, _)| home.join(".var/app").join(id)),
+    );
+    homes.iter().map(|home| home.join(".pki/nssdb")).collect()
+}
 
-    let shared = home.join(".pki/nssdb");
-    if create_shared && !shared.join("cert9.db").exists() {
-        fs::create_dir_all(&shared)?;
-        run(
-            "certutil",
-            &[
-                "-N",
-                "--empty-password",
-                "-d",
-                &format!("sql:{}", shared.display()),
-            ],
-        )?;
-    }
-    for sandboxed in [
-        home.join(".pki/nssdb"),
-        home.join("snap/chromium/current/.pki/nssdb"),
-        home.join(".var/app/org.chromium.Chromium/.pki/nssdb"),
-        home.join(".var/app/com.google.Chrome/.pki/nssdb"),
-    ] {
-        if sandboxed.join("cert9.db").exists() {
-            found.push(sandboxed);
-        }
-    }
-
-    for firefox in [
+/// The folders Firefox keeps its profiles in: the old one and XDG's, as a
+/// package, a snap and a Flatpak have them.
+fn firefox_folders(home: &Path, snap: bool, flatpak: bool) -> Vec<PathBuf> {
+    let mut folders = vec![
         home.join(".mozilla/firefox"),
-        home.join("snap/firefox/common/.mozilla/firefox"),
-        home.join(".var/app/org.mozilla.firefox/.mozilla/firefox"),
-    ] {
-        let Ok(profiles) = fs::read_dir(&firefox) else {
+        home.join(".config/mozilla/firefox"),
+    ];
+    if snap {
+        folders.push(home.join("snap/firefox/common/.mozilla/firefox"));
+    }
+    if flatpak {
+        folders.extend(flatpak_firefox_folders(home));
+    }
+    folders
+}
+
+fn flatpak_firefox_folders(home: &Path) -> [PathBuf; 2] {
+    let sandbox = home.join(".var/app/org.mozilla.firefox");
+    [
+        sandbox.join(".mozilla/firefox"),
+        sandbox.join("config/mozilla/firefox"),
+    ]
+}
+
+/// The profiles in `folders`: those with a database, which Firefox makes as it
+/// first opens one.
+fn firefox_profiles(folders: &[PathBuf]) -> Vec<PathBuf> {
+    let mut profiles = Vec::new();
+    for folder in folders {
+        let Ok(entries) = fs::read_dir(folder) else {
             continue;
         };
-        for profile in profiles.flatten() {
-            if profile.path().join("cert9.db").exists() {
-                found.push(profile.path());
-            }
+        let mut here: Vec<PathBuf> = entries
+            .flatten()
+            .map(|entry| entry.path())
+            .filter(|path| path.join("cert9.db").exists())
+            .collect();
+        here.sort();
+        profiles.extend(here);
+    }
+    profiles
+}
+
+/// Every NSS database of this user that a browser would read. `create` makes
+/// the ones a Chromium would read but has not made yet: always the shared one,
+/// and in a sandbox's home once the browser has made that home.
+fn nss_databases(create: bool) -> Result<Vec<PathBuf>> {
+    let home = home()?;
+    let mut found = Vec::new();
+    for db in chromium_databases(&home) {
+        let shared = db.parent().and_then(Path::parent) == Some(home.as_path());
+        let sandbox_made = db.parent().and_then(Path::parent).is_some_and(Path::is_dir);
+        if create && !db.join("cert9.db").exists() && (shared || sandbox_made) {
+            fs::create_dir_all(&db)?;
+            run(
+                "certutil",
+                &[
+                    "-N",
+                    "--empty-password",
+                    "-d",
+                    &format!("sql:{}", db.display()),
+                ],
+            )?;
+        }
+        if db.join("cert9.db").exists() {
+            found.push(db);
         }
     }
+    found.extend(firefox_profiles(&firefox_folders(&home, true, true)));
     Ok(found)
 }
 
@@ -550,44 +588,129 @@ pub fn open_terminal(env: &[(&str, String)], banner: &str, _data_dir: &Path) -> 
     launch::spawn(command).with_context(|| format!("open {}", program.display()))
 }
 
-const BROWSERS: &[(&str, &str)] = &[
-    ("google-chrome", "Chrome"),
-    ("google-chrome-stable", "Chrome"),
-    ("chromium", "Chromium"),
-    ("chromium-browser", "Chromium"),
-    ("microsoft-edge", "Edge"),
-    ("microsoft-edge-stable", "Edge"),
-    ("brave-browser", "Brave"),
+/// Browsers on the `PATH`, by program, and what they are.
+const BROWSERS: &[(&str, &str, Engine)] = &[
+    ("google-chrome", "Chrome", Engine::Chromium),
+    ("google-chrome-stable", "Chrome", Engine::Chromium),
+    ("chromium", "Chromium", Engine::Chromium),
+    ("chromium-browser", "Chromium", Engine::Chromium),
+    ("microsoft-edge", "Edge", Engine::Chromium),
+    ("microsoft-edge-stable", "Edge", Engine::Chromium),
+    ("brave-browser", "Brave", Engine::Chromium),
+    ("opera", "Opera", Engine::Chromium),
+    ("firefox", "Firefox", Engine::Firefox),
 ];
 
-pub fn find_browser(profiles: &Path) -> Option<Browser> {
-    BROWSERS.iter().find_map(|(program, name)| {
-        let path = launch::on_path(program)?;
-        // A snap may write only in its own folder of the home. Ubuntu's
-        // chromium-browser is a script that starts the chromium snap.
-        let snap = (path.starts_with("/snap/")
-            || program.starts_with("chromium") && Path::new("/snap/bin/chromium").exists())
-        .then(|| {
-            if program.starts_with("chromium") {
-                "chromium"
-            } else {
-                program
-            }
-        });
-        let profile = match snap {
-            Some(snap) => home()
-                .ok()?
-                .join("snap")
-                .join(snap)
-                .join("common/tracewing-profile"),
-            None => profiles.join(name.to_lowercase()),
+/// Browsers installed as Flatpaks, by app id.
+const FLATPAKS: &[(&str, &str, Engine)] = &[
+    ("com.google.Chrome", "Chrome", Engine::Chromium),
+    ("org.chromium.Chromium", "Chromium", Engine::Chromium),
+    ("com.microsoft.Edge", "Edge", Engine::Chromium),
+    ("com.brave.Browser", "Brave", Engine::Chromium),
+    ("org.mozilla.firefox", "Firefox", Engine::Firefox),
+];
+
+pub fn find_browsers(profiles: &Path) -> Vec<Browser> {
+    let Ok(home) = home() else {
+        return Vec::new();
+    };
+    let mut found: Vec<Browser> = Vec::new();
+    for &(program, name, engine) in BROWSERS {
+        if found.iter().any(|b| b.name == name) {
+            continue;
+        }
+        if let Some(path) = launch::on_path(program) {
+            found.push(on_the_path(&home, profiles, program, path, name, engine));
+        }
+    }
+    // Flatpak puts its launchers where the PATH seldom looks.
+    let exports = [
+        PathBuf::from("/var/lib/flatpak/exports/bin"),
+        home.join(".local/share/flatpak/exports/bin"),
+    ];
+    for &(id, name, engine) in FLATPAKS {
+        if found.iter().any(|b| b.name == name) {
+            continue;
+        }
+        let Some(program) = exports.iter().map(|dir| dir.join(id)).find(|p| p.is_file()) else {
+            continue;
         };
-        Some(Browser {
+        // A Flatpak writes only in its own home.
+        let sandbox = home.join(".var/app").join(id);
+        found.push(Browser {
             name,
-            program: path,
-            profile,
-        })
-    })
+            engine,
+            program,
+            profile: sandbox.join("tracewing-profile"),
+            nss: match engine {
+                Engine::Firefox => flatpak_firefox_folders(&home).to_vec(),
+                _ => vec![sandbox.join(".pki/nssdb")],
+            },
+        });
+    }
+    found
+}
+
+fn on_the_path(
+    home: &Path,
+    profiles: &Path,
+    program: &str,
+    path: PathBuf,
+    name: &'static str,
+    engine: Engine,
+) -> Browser {
+    // A snap may write only in its own folder of the home. Ubuntu's
+    // chromium-browser and firefox are scripts that start the snap.
+    let snap_name = if program.starts_with("chromium") {
+        "chromium"
+    } else {
+        program
+    };
+    let snap = path.starts_with("/snap/")
+        || matches!(snap_name, "chromium" | "firefox")
+            && Path::new("/snap/bin").join(snap_name).exists();
+    let profile = if snap {
+        home.join("snap")
+            .join(snap_name)
+            .join("common/tracewing-profile")
+    } else {
+        profiles.join(name.to_lowercase())
+    };
+    let nss = match engine {
+        Engine::Firefox => firefox_folders(home, snap, false),
+        _ if snap => vec![home.join("snap").join(snap_name).join("current/.pki/nssdb")],
+        _ => vec![home.join(".pki/nssdb")],
+    };
+    Browser {
+        name,
+        engine,
+        program: path,
+        profile,
+        nss,
+    }
+}
+
+pub fn browser_trust(browser: &Browser) -> BrowserTrust {
+    let dbs: Vec<PathBuf> = match browser.engine {
+        Engine::Firefox => firefox_profiles(&browser.nss),
+        // A snap or a Flatpak never started has no home to put one in yet.
+        // One not made, in a home there is, holds nothing until it is made.
+        _ => browser
+            .nss
+            .iter()
+            .filter(|db| db.parent().and_then(Path::parent).is_some_and(Path::is_dir))
+            .cloned()
+            .collect(),
+    };
+    let tool = on_path("certutil");
+    let holding = dbs
+        .iter()
+        .filter(|db| tool && db.join("cert9.db").exists() && nss_holds(db))
+        .count();
+    BrowserTrust::Own {
+        holding,
+        of: dbs.len(),
+    }
 }
 
 #[cfg(test)]
@@ -631,6 +754,70 @@ mod tests {
         });
         assert_eq!(done, [PathBuf::from("a"), PathBuf::from("c")]);
         assert_eq!(result.unwrap_err().to_string(), "bad database: broken");
+    }
+
+    #[test]
+    fn a_browser_reads_the_stores_of_how_it_is_installed() {
+        let home = Path::new("/h");
+        let profiles = Path::new("/d/browser");
+        let chrome = on_the_path(
+            home,
+            profiles,
+            "google-chrome",
+            "/usr/bin/google-chrome".into(),
+            "Chrome",
+            Engine::Chromium,
+        );
+        assert_eq!(chrome.nss, [PathBuf::from("/h/.pki/nssdb")]);
+        assert_eq!(chrome.profile, Path::new("/d/browser/chrome"));
+        let snap = on_the_path(
+            home,
+            profiles,
+            "chromium",
+            "/snap/bin/chromium".into(),
+            "Chromium",
+            Engine::Chromium,
+        );
+        assert_eq!(
+            snap.nss,
+            [PathBuf::from("/h/snap/chromium/current/.pki/nssdb")]
+        );
+        assert_eq!(
+            snap.profile,
+            Path::new("/h/snap/chromium/common/tracewing-profile")
+        );
+        let firefox = on_the_path(
+            home,
+            profiles,
+            "firefox",
+            "/snap/bin/firefox".into(),
+            "Firefox",
+            Engine::Firefox,
+        );
+        assert!(
+            firefox
+                .nss
+                .contains(&PathBuf::from("/h/snap/firefox/common/.mozilla/firefox"))
+        );
+        assert!(firefox.nss.contains(&PathBuf::from("/h/.mozilla/firefox")));
+    }
+
+    #[test]
+    fn a_firefox_profile_counts_once_it_has_a_database() {
+        let dir = std::env::temp_dir().join(format!("tracewing-ff-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        for (profile, db) in [("b.work", true), ("a.default", true), ("c.new", false)] {
+            fs::create_dir_all(dir.join(profile)).unwrap();
+            if db {
+                fs::write(dir.join(profile).join("cert9.db"), "").unwrap();
+            }
+        }
+        fs::write(dir.join("profiles.ini"), "").unwrap();
+        assert_eq!(
+            firefox_profiles(&[dir.clone(), dir.join("missing")]),
+            [dir.join("a.default"), dir.join("b.work")]
+        );
+        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

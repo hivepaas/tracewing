@@ -1039,6 +1039,48 @@ tf3a7f60b = Tiga langkah untuk melihat lalu lintas HTTPS dari komputer ini.
 # See traffic
 t980eee79 = Lihat lalu lintas
 
+# the browsers' own stores
+tddf6836c = penyimpanan milik browser sendiri
+
+# Trusts the certificate.
+tc5bba858 = Memercayai sertifikat.
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = Belum memercayai sertifikat.
+
+# Looking…
+t284579ba = Mencari…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = Belum punya profil. Buka sekali, lalu cari lagi.
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 = { $holding } dari { $n } profilnya memercayai sertifikat.
+
+# Has not opened the test page yet.
+t67f9cb49 = Belum membuka halaman uji.
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = Membuka halaman uji melalui tracewing, lewat HTTPS.
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = Membuka halaman uji melalui tracewing, tetapi tanpa HTTPS.
+
+# Browsers
+td580efd4 = Browser
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = Masing-masing punya aturan sendiri tentang apa yang dipercaya dan ke mana lalu lintasnya dikirim. Periksa membuka halaman uji di browser itu.
+
+# Look again
+t98416222 = Cari lagi
+
+# No browser found on this computer.
+t0e46bb34 = Tidak ada browser yang ditemukan di komputer ini.
+
+# Check
+t592c8de7 = Periksa
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = Port UDP 443 diblokir di komputer ini, jadi aplikasi turun dari HTTP/3 ke HTTP/2 dan lewat tracewing. Pemblokiran berhenti saat tracewing ditutup, atau jika crash.
 
@@ -1161,9 +1203,6 @@ t71fd4acf = Urungkan
 
 # Android emulators and USB devices
 t379e433c = Emulator Android dan perangkat USB
-
-# Look again
-t98416222 = Cari lagi
 
 # Find devices
 t54d4af39 = Temukan perangkat

@@ -1039,6 +1039,48 @@ tf3a7f60b = Ba bước để xem traffic HTTPS của máy này.
 # See traffic
 t980eee79 = Xem traffic
 
+# the browsers' own stores
+tddf6836c = kho riêng của các trình duyệt
+
+# Trusts the certificate.
+tc5bba858 = Tin chứng chỉ.
+
+# Does not trust the certificate yet.
+tf2a0b8c5 = Chưa tin chứng chỉ.
+
+# Looking…
+t284579ba = Đang tìm…
+
+# Has no profile yet. Open it once, then look again.
+t00e4c88d = Chưa có profile. Hãy mở nó một lần, rồi tìm lại.
+
+# {holding} of its {n} profile trusts the certificate. | {holding} of its {n} profiles trust the certificate.
+t2a9826b9 = { $holding } trong { $n } profile của nó tin chứng chỉ.
+
+# Has not opened the test page yet.
+t67f9cb49 = Chưa mở trang kiểm tra.
+
+# Opened the test page through tracewing, over HTTPS.
+t99f8c07e = Đã mở trang kiểm tra qua tracewing, bằng HTTPS.
+
+# Opened the test page through tracewing, but without HTTPS.
+t7d4b60bb = Đã mở trang kiểm tra qua tracewing, nhưng không bằng HTTPS.
+
+# Browsers
+td580efd4 = Trình duyệt
+
+# Each keeps its own idea of what to trust and where to send its traffic. Check one to open the test page in it.
+t57bc4b30 = Mỗi trình duyệt có cách riêng để quyết định tin gì và gửi traffic đi đâu. Bấm Kiểm tra để mở trang kiểm tra trong trình duyệt đó.
+
+# Look again
+t98416222 = Tìm lại
+
+# No browser found on this computer.
+t0e46bb34 = Không tìm thấy trình duyệt nào trên máy này.
+
+# Check
+t592c8de7 = Kiểm tra
+
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t3c727cd5 = Cổng UDP 443 đang bị chặn trên máy này, nên app chuyển từ HTTP/3 về HTTP/2 và đi qua tracewing. Việc chặn dừng khi tracewing đóng, hoặc khi nó bị crash.
 
@@ -1161,9 +1203,6 @@ t71fd4acf = Hoàn tác
 
 # Android emulators and USB devices
 t379e433c = Android emulator và thiết bị USB
-
-# Look again
-t98416222 = Tìm lại
 
 # Find devices
 t54d4af39 = Tìm thiết bị
