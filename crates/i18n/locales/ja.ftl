@@ -277,6 +277,9 @@ t3d35ce69 = リクエストとレスポンスを横に並べる
 # Request above the response
 t83c63123 = リクエストをレスポンスの上に
 
+# Text
+t3e142d5e = テキスト
+
 # Picture · {size}
 te97ed633 = 画像 · { $size }
 

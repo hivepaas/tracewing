@@ -286,6 +286,9 @@ t3d35ce69 = Richiesta e risposta affiancate
 # Request above the response
 t83c63123 = Richiesta sopra la risposta
 
+# Text
+t3e142d5e = Testo
+
 # Picture · {size}
 te97ed633 = Immagine · { $size }
 

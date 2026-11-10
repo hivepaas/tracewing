@@ -277,6 +277,9 @@ t3d35ce69 = 请求和响应并排显示
 # Request above the response
 t83c63123 = 请求在响应上方
 
+# Text
+t3e142d5e = 文本
+
 # Picture · {size}
 te97ed633 = 图片 · { $size }
 

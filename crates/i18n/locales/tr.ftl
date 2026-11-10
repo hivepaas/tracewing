@@ -285,6 +285,9 @@ t3d35ce69 = İstek ve yanıt yan yana
 # Request above the response
 t83c63123 = İstek yanıtın üstünde
 
+# Text
+t3e142d5e = Metin
+
 # Picture · {size}
 te97ed633 = Resim · { $size }
 

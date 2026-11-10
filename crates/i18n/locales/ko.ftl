@@ -277,6 +277,9 @@ t3d35ce69 = 요청과 응답을 나란히
 # Request above the response
 t83c63123 = 요청을 응답 위에
 
+# Text
+t3e142d5e = 텍스트
+
 # Picture · {size}
 te97ed633 = 이미지 · { $size }
 

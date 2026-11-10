@@ -363,7 +363,13 @@ impl Body {
 
     /// Lines ready to show. The line being scanned has no end yet, so it waits.
     pub fn lines(&self) -> u64 {
-        if self.kind == Kind::Binary {
+        self.lines_in(false)
+    }
+
+    /// As [`Self::lines`], or with `hex` the lines of a dump of its bytes,
+    /// whatever it is.
+    pub fn lines_in(&self, hex: bool) -> u64 {
+        if hex || self.kind == Kind::Binary {
             return self.size().div_ceil(HEX_LINE as u64);
         }
         let done = self.is_scanned();
@@ -373,7 +379,12 @@ impl Body {
 
     /// The lines in `range`, which must be ready (below [`Self::lines`]).
     pub fn read(&self, range: Range<u64>) -> Vec<Line> {
-        if self.kind == Kind::Binary {
+        self.read_in(range, false)
+    }
+
+    /// As [`Self::read`], or with `hex` from a dump of its bytes.
+    pub fn read_in(&self, range: Range<u64>, hex: bool) -> Vec<Line> {
+        if hex || self.kind == Kind::Binary {
             return range.map(|line| self.hex_line(line)).collect();
         }
         if range.is_empty() {
@@ -453,12 +464,24 @@ impl Body {
     /// other text as it is in the file; bytes as their dump. None when that is
     /// more than `max` bytes.
     pub fn text(&self, from: (u64, usize), to: (u64, usize), max: usize) -> Option<String> {
-        let ready = self.lines();
+        self.text_in(from, to, max, false)
+    }
+
+    /// As [`Self::text`], or with `hex` from a dump of its bytes.
+    pub fn text_in(
+        &self,
+        from: (u64, usize),
+        to: (u64, usize),
+        max: usize,
+        hex: bool,
+    ) -> Option<String> {
+        let hex = hex || self.kind == Kind::Binary;
+        let ready = self.lines_in(hex);
         if from > to || from.0 >= ready {
             return Some(String::new());
         }
         let last = to.0.min(ready - 1);
-        if self.kind == Kind::Binary {
+        if hex {
             let mut out = String::new();
             for line in from.0..=last {
                 // A dump is ASCII, so any offset is a character's start.
@@ -802,6 +825,21 @@ mod tests {
                 .map(|at| at as u64);
             assert_eq!(body.closer(line as u64), expected, "line {line}");
         }
+        drop(body);
+        std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn text_can_be_shown_as_its_bytes() {
+        let (body, path) = opened("\u{feff}a b\r\n".as_bytes());
+        assert_eq!(body.kind(), Kind::Text);
+        assert_eq!(body.lines_in(true), 1);
+        let dump = body.read_in(0..1, true).pop().unwrap().text;
+        assert!(dump.starts_with("ef bb bf 61 20 62 0d 0a"), "{dump}");
+        assert_eq!(
+            body.text_in((0, 0), (0, 11), usize::MAX, true).as_deref(),
+            Some("ef bb bf 61")
+        );
         drop(body);
         std::fs::remove_file(&path).unwrap();
     }
