@@ -251,7 +251,11 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
             // `format=ndjson`: a JSON object a line, each frame ending inside the
             // next line, as a server writing as it goes may cut them.
             let ndjson = query.get("format") == Some(&"ndjson");
-            let stream = hudsucker::futures::stream::unfold(0, move |i| async move {
+            // `enc=gzip`, `br` or `zstd`: packed, and flushed after each event,
+            // as a server that packs a stream must for it to come as it goes.
+            let enc = query.get("enc").map(|enc| (*enc).to_owned());
+            let packer = enc.as_deref().map(StreamPacker::new);
+            let stream = hudsucker::futures::stream::unfold((0, packer), move |(i, mut packer)| async move {
                 if i >= events {
                     return None;
                 }
@@ -265,9 +269,17 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
                     let tail = if i + 1 < events { r#"{"n":"# } else { "" };
                     format!("{head}{i}}}\n{tail}")
                 };
-                Some((Ok::<_, Infallible>(Frame::data(Bytes::from(event))), i + 1))
+                let bytes = match &mut packer {
+                    Some(packer) => packer.pack(event.as_bytes(), i + 1 == events),
+                    None => event.into_bytes(),
+                };
+                Some((Ok::<_, Infallible>(Frame::data(Bytes::from(bytes))), (i + 1, packer)))
             });
-            Response::builder()
+            let mut response = Response::builder();
+            if let Some(enc) = &enc {
+                response = response.header(header::CONTENT_ENCODING, enc.as_str());
+            }
+            response
                 .header(
                     header::CONTENT_TYPE,
                     if ndjson {
@@ -285,6 +297,61 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
         *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
         res
     }))
+}
+
+/// Packs a stream a piece at a time, each piece flushed so that it can be
+/// unpacked before the next one comes.
+enum StreamPacker {
+    Gzip(flate2::write::GzEncoder<Vec<u8>>),
+    Brotli(Box<brotli::CompressorWriter<Vec<u8>>>),
+    Zstd(zstd::stream::write::Encoder<'static, Vec<u8>>),
+}
+
+impl StreamPacker {
+    fn new(encoding: &str) -> Self {
+        match encoding {
+            "br" => Self::Brotli(Box::new(brotli::CompressorWriter::new(
+                Vec::new(),
+                4096,
+                5,
+                22,
+            ))),
+            "zstd" => Self::Zstd(zstd::stream::write::Encoder::new(Vec::new(), 3).unwrap()),
+            _ => Self::Gzip(flate2::write::GzEncoder::new(
+                Vec::new(),
+                flate2::Compression::new(6),
+            )),
+        }
+    }
+
+    /// `data` packed and flushed; with `last`, the stream's end as well.
+    fn pack(&mut self, data: &[u8], last: bool) -> Vec<u8> {
+        use std::io::Write;
+        let out = match self {
+            Self::Gzip(p) => {
+                p.write_all(data).unwrap();
+                p.flush().unwrap();
+                if last {
+                    p.try_finish().unwrap();
+                }
+                p.get_mut()
+            }
+            Self::Brotli(p) => {
+                p.write_all(data).unwrap();
+                p.flush().unwrap();
+                p.get_mut()
+            }
+            Self::Zstd(p) => {
+                p.write_all(data).unwrap();
+                p.flush().unwrap();
+                if last {
+                    p.do_finish().unwrap();
+                }
+                p.get_mut()
+            }
+        };
+        std::mem::take(out)
+    }
 }
 
 /// A different body of about 2 KB each time, the kind search has to work for.

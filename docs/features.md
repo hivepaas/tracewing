@@ -59,8 +59,8 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Feature | Milestone | Plan |
 |---|---|---|
 | HTTP/1.1 and HTTP/2, both sides | Gate 0 | Free |
-| Server-sent events and JSON lines (NDJSON, JSON Lines, JSON text sequences), listed as they start and cut into messages as they arrive | Beta | Free |
-| Other streams, and server-sent events sent compressed, listed as they start | Beta | Free |
+| Server-sent events and JSON lines (NDJSON, JSON Lines, JSON text sequences), packed (gzip, Brotli, zstd, deflate) or not, listed as they start and cut into messages as they arrive | Beta | Free |
+| Other streams listed as they start | Beta | Free |
 | WebSocket: see every message | Beta | Free |
 | GraphQL: the operation name as a column (shown on request), queries laid out and colored, and variables formatted, batches and persisted queries too | Beta | Free |
 | WebSocket: breakpoints and sending messages | 1.x | Pro |
