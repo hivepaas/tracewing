@@ -190,6 +190,9 @@ teca2074f = Règle : { $rule }
 # Events
 t003420a4 = Événements
 
+# JSON lines
+te8ce2db0 = Lignes JSON
+
 # Not decrypted
 t8090a1ba = Non déchiffré
 

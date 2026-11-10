@@ -1398,6 +1398,48 @@ async fn events_show_while_the_stream_lasts() {
     clean_up(conn, dir);
 }
 
+/// JSON a line, as Ollama and many APIs stream it: listed while it lasts, a
+/// message a line however the frames cut them, and searched once over.
+#[tokio::test(flavor = "multi_thread")]
+async fn json_lines_show_while_the_stream_lasts() {
+    const LINES: i64 = 20;
+    let h = Harness::start_with("ndjson", StorageSettings::default()).await;
+    let session_dir = h.dir.join("session");
+    let mut res = h
+        .client(false)
+        .get(format!(
+            "{}/stream?format=ndjson&events={LINES}&gap_ms=100",
+            h.origin
+        ))
+        .send()
+        .await
+        .unwrap();
+    assert!(res.chunk().await.unwrap().is_some());
+    let conn = Connection::open(session_dir.join("flows.db")).unwrap();
+    let row = wait_for_row(&conn, "ndjson", |row| row.0 && row.2 >= 1).await;
+    assert!(
+        row.2 < LINES,
+        "it is listed while it is still going: {row:?}"
+    );
+    while res.chunk().await.unwrap().is_some() {}
+    drop(conn);
+
+    let (_, conn, dir) = h.finish(1).await;
+    let row = wait_for_row(&conn, "ndjson", |row| !row.0).await;
+    assert_eq!(row.2, LINES, "{row:?}");
+    let messages = session::stored_messages(&conn, 1, 0, 100).unwrap();
+    let mut reader = BodyReader::new(&dir.join("session"));
+    for (i, message) in messages.iter().enumerate() {
+        assert_eq!(message.kind, "line");
+        let text = reader.read_place(message.place.unwrap()).unwrap();
+        assert_eq!(text, format!(r#"{{"n":{i}}}"#).as_bytes());
+    }
+    drop(reader);
+    let found = search::find(&dir.join("session"), "bodies", "n", 1).unwrap();
+    assert_eq!(found, [1], "its body is searched");
+    clean_up(conn, dir);
+}
+
 /// A stream's body is found by its words once it ends, though its row was
 /// indexed while it was still going, with no body yet.
 #[tokio::test(flavor = "multi_thread")]

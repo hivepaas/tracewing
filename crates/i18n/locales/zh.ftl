@@ -181,6 +181,9 @@ teca2074f = 规则：{ $rule }
 # Events
 t003420a4 = 事件
 
+# JSON lines
+te8ce2db0 = JSON 行
+
 # Not decrypted
 t8090a1ba = 未解密
 

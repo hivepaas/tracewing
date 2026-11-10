@@ -183,7 +183,7 @@ impl Traffic {
                 } else {
                     ("↓", c.download)
                 };
-                let kind = matches!(message.kind.as_str(), "text" | "event")
+                let kind = matches!(message.kind.as_str(), "text" | "event" | "line")
                     .then_some(())
                     .map_or_else(|| Some(message.kind.clone()), |()| None);
                 row.flex()

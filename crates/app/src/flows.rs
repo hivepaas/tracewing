@@ -147,6 +147,7 @@ impl Flows {
                         .or_else(|| match kind.as_str() {
                             "websocket" => Some("WebSocket".into()),
                             "sse" => Some(tr!("Events").into()),
+                            "ndjson" => Some(tr!("JSON lines").into()),
                             "tunnel" => Some(tr!("Not decrypted").into()),
                             _ => None,
                         }),

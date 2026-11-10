@@ -221,6 +221,33 @@ fn streams_show_as_they_come() {
     });
     shot(&mut cx, window.into(), "21-events");
 
+    // JSON a line: the same again, a message a line.
+    let client =
+        benchkit::client_through_proxy(&format!("http://{addr}"), &proxy_ca, false).unwrap();
+    let url = format!("https://localhost:{origin_port}/stream?format=ndjson&events=6&gap_ms=120");
+    let lines = runtime.spawn(async move {
+        let bytes = client.get(url).send().await?.bytes().await?;
+        Ok::<_, reqwest::Error>(bytes.len())
+    });
+    wait_for(&mut cx, window, "the lines' row", |view| view.count() == 3);
+    window
+        .update(&mut cx, |view, _, cx| view.select_place(2, cx))
+        .unwrap();
+    let was_open = window
+        .update(&mut cx, |view, _, _| {
+            let detail = view.inspector.detail.as_ref().expect("chosen");
+            assert_eq!(detail.kind, "ndjson");
+            detail.open
+        })
+        .unwrap();
+    assert!(was_open, "listed while it was still going");
+    wait_for(&mut cx, window, "the lines", |view| messages(view) == 6);
+    assert!(runtime.block_on(lines).unwrap().unwrap() > 0);
+    wait_for(&mut cx, window, "them to end", |view| {
+        view.inspector.detail.as_ref().is_some_and(|d| !d.open)
+    });
+    shot(&mut cx, window.into(), "93-json-lines");
+
     drop(cx);
     runtime.shutdown_background();
     std::fs::remove_dir_all(&dir).unwrap();

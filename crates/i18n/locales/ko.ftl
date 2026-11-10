@@ -181,6 +181,9 @@ teca2074f = 규칙: { $rule }
 # Events
 t003420a4 = 이벤트
 
+# JSON lines
+te8ce2db0 = JSON 줄
+
 # Not decrypted
 t8090a1ba = 복호화 안 됨
 

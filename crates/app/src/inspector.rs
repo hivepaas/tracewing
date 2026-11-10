@@ -123,7 +123,7 @@ impl Traffic {
         };
         match Detail::load(flows.conn(), self.session_dir(), id) {
             Ok(detail) => {
-                let stream = matches!(detail.kind.as_str(), "websocket" | "sse");
+                let stream = matches!(detail.kind.as_str(), "websocket" | "sse" | "ndjson");
                 self.inspector.messages = stream.then(|| MessagesState::new(id));
                 let no_cookies = cookie_counts(&detail) == (0, 0);
                 let a_call = crate::llm::provider_of(&detail.method, &detail.url).is_some();

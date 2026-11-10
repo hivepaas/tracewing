@@ -189,6 +189,9 @@ teca2074f = Kural: { $rule }
 # Events
 t003420a4 = Olaylar
 
+# JSON lines
+te8ce2db0 = JSON satırları
+
 # Not decrypted
 t8090a1ba = Şifresi çözülmedi
 

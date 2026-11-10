@@ -110,6 +110,14 @@ pub fn is_text(content_type: Option<&str>) -> bool {
                 | "application/x-www-form-urlencoded"
                 | "application/graphql"
                 | "application/x-ndjson"
+                | "application/ndjson"
+                | "application/jsonl"
+                | "application/x-jsonl"
+                | "application/jsonlines"
+                | "application/x-jsonlines"
+                | "application/json-seq"
+                | "application/stream+json"
+                | "application/x-json-stream"
         )
 }
 

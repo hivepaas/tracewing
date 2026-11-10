@@ -248,6 +248,9 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
         "/stream" => {
             let events = number("events", 5);
             let gap = Duration::from_millis(number("gap_ms", 200));
+            // `format=ndjson`: a JSON object a line, each frame ending inside the
+            // next line, as a server writing as it goes may cut them.
+            let ndjson = query.get("format") == Some(&"ndjson");
             let stream = hudsucker::futures::stream::unfold(0, move |i| async move {
                 if i >= events {
                     return None;
@@ -255,11 +258,24 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
                 if i > 0 {
                     tokio::time::sleep(gap).await;
                 }
-                let event = Bytes::from(format!("data: event {i}\n\n"));
-                Some((Ok::<_, Infallible>(Frame::data(event)), i + 1))
+                let event = if !ndjson {
+                    format!("data: event {i}\n\n")
+                } else {
+                    let head = if i == 0 { r#"{"n":"# } else { "" };
+                    let tail = if i + 1 < events { r#"{"n":"# } else { "" };
+                    format!("{head}{i}}}\n{tail}")
+                };
+                Some((Ok::<_, Infallible>(Frame::data(Bytes::from(event))), i + 1))
             });
             Response::builder()
-                .header(header::CONTENT_TYPE, "text/event-stream")
+                .header(
+                    header::CONTENT_TYPE,
+                    if ndjson {
+                        "application/x-ndjson"
+                    } else {
+                        "text/event-stream"
+                    },
+                )
                 .body(BodyExt::boxed(StreamBody::new(stream)))
         }
         _ => Response::builder().body(Full::new(Bytes::from_static(b"ok")).boxed()),

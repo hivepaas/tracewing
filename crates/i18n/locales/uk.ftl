@@ -199,6 +199,9 @@ teca2074f = Правило: { $rule }
 # Events
 t003420a4 = Події
 
+# JSON lines
+te8ce2db0 = Рядки JSON
+
 # Not decrypted
 t8090a1ba = Не розшифровано
 
