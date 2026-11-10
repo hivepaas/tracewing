@@ -17,7 +17,7 @@ use tracewing::{
     detail::Side,
     engine::{Engine, EngineOptions},
     inspector::{BodyState, Part},
-    layout::{Appearance, Place},
+    layout::{Appearance, Place, Sides},
     traffic::Traffic,
 };
 use tracewing_dev::benchkit;
@@ -229,6 +229,57 @@ fn the_window_shows_real_traffic() {
         .unwrap();
     cx.run_until_parked();
     save(&mut cx, window.into(), "5-headers");
+
+    // Request and response at once: the POST, both of whose bodies were kept.
+    window
+        .update(&mut cx, |view, _, cx| {
+            let last = view.count() - 1;
+            view.select_place(last, cx);
+            view.set_part(Part::Body, cx);
+            view.set_sides(Sides::Beside, cx);
+        })
+        .unwrap();
+    let both = |view: &Traffic, _: &gpui::App| {
+        matches!(view.inspector.body, BodyState::Shown(_))
+            && matches!(view.inspector.other, BodyState::Shown(_))
+    };
+    wait_for(&mut cx, window, "both bodies", both);
+    save(&mut cx, window.into(), "88-sides-beside");
+    // Choosing the other side trades the two places; nothing is read again.
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(other) = &view.inspector.other else {
+                panic!()
+            };
+            let other = other.entity_id();
+            let side = view.inspector.side;
+            view.set_side(
+                if side == Side::Request {
+                    Side::Response
+                } else {
+                    Side::Request
+                },
+                cx,
+            );
+            let BodyState::Shown(now) = &view.inspector.body else {
+                panic!("read again")
+            };
+            assert_eq!(now.entity_id(), other);
+            view.set_sides(Sides::Stacked, cx);
+            view.set_part(Part::Headers, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    save(&mut cx, window.into(), "89-sides-stacked");
+    let kept = std::fs::read_to_string(Path::new(&dir).join("layout.toml")).unwrap();
+    assert!(kept.contains("sides = \"stacked\""), "{kept}");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_sides(Sides::Tabs, cx);
+            assert!(matches!(view.inspector.other, BodyState::Loading));
+            view.set_part(Part::Body, cx);
+        })
+        .unwrap();
 
     // Filters, on a worker thread.
     window

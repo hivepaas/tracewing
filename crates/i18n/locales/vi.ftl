@@ -232,6 +232,18 @@ tb7367e2c = Giải mã host này
 # Do not decrypt this host
 t5fa113f6 = Không giải mã host này
 
+# Request and response
+t04e060e6 = Request và response
+
+# Request and response one at a time
+t70397119 = Request và response, từng cái một
+
+# Request and response side by side
+t3d35ce69 = Request và response cạnh nhau
+
+# Request above the response
+t83c63123 = Request ở trên response
+
 # Picture · {size}
 te97ed633 = Hình ảnh · { $size }
 
