@@ -8,6 +8,7 @@ use crate::{
     llm::{self, Exchange, Provider},
     select::Selection,
     traffic::Traffic,
+    widgets::Reachable,
 };
 use gpui::{
     AppContext as _, ClipboardItem, Context, FontWeight, IntoElement, div, prelude::*, px, rgb,
@@ -260,6 +261,7 @@ impl Traffic {
                                 .py(px(3.))
                                 .rounded(px(12.))
                                 .cursor_pointer()
+                                .reachable()
                                 .text_size(px(12.))
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(rgb(c.link))

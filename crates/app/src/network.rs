@@ -6,7 +6,7 @@ use crate::{
     engine::THROTTLE_FILE,
     input::TextInput,
     traffic::{Screen, Traffic},
-    widgets::eyebrow,
+    widgets::{Reachable, eyebrow},
 };
 use gpui::{AppContext as _, Context, Div, Entity, FontWeight, div, prelude::*, px, rgb};
 use tracewing_i18n::tr;
@@ -222,6 +222,7 @@ impl Traffic {
                 .flex()
                 .items_center()
                 .cursor_pointer()
+                .reachable()
                 .text_size(px(12.5))
                 .font_weight(FontWeight::BOLD)
                 .when(chosen, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
@@ -281,6 +282,7 @@ impl Traffic {
                             .rounded(px(12.))
                             .flex()
                             .cursor_pointer()
+                            .reachable()
                             .when(on, |d| d.bg(rgb(c.accent)).justify_end())
                             .when(!on, |d| d.bg(rgb(c.input)))
                             .child(div().size(px(18.)).rounded(px(9.)).bg(rgb(if on {
@@ -349,6 +351,7 @@ impl Traffic {
                 .flex()
                 .items_center()
                 .cursor_pointer()
+                .reachable()
                 .bg(rgb(c.warn_ground))
                 .text_color(rgb(c.warn))
                 .font_weight(FontWeight::BOLD)

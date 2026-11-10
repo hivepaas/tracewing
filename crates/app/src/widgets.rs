@@ -72,3 +72,33 @@ pub fn tip(text: impl Into<SharedString>) -> impl Fn(&mut Window, &mut App) -> A
     let text = text.into();
     move |_, cx| cx.new(|_| Tip(text.clone())).into()
 }
+
+/// A control the keyboard reaches: Tab stops on it, Enter and Space press it
+/// as a click does (gpui's own keyboard click), and a ring shows where Tab
+/// is. The ring is a shadow, so it moves nothing. A mouse click presses it
+/// without taking the keyboard from where it was, so the window's keys go
+/// on working after a click, as they did.
+pub trait Reachable: gpui::InteractiveElement + gpui::Styled + Sized {
+    fn reachable(self) -> Self {
+        self.tab_index(0)
+            // Runs before gpui's own focus on press, which this tells to stay.
+            .on_mouse_down(gpui::MouseButton::Left, |_, window, _| {
+                window.prevent_default()
+            })
+            .focus_visible(|style| {
+                let c = colors();
+                let ring = |color: u32, spread: f32| gpui::BoxShadow {
+                    color: gpui::Hsla::from(rgb(color)),
+                    offset: gpui::point(px(0.), px(0.)),
+                    blur_radius: px(0.),
+                    spread_radius: px(spread),
+                    inset: false,
+                };
+                // The text's color, which stands out on any button, past a
+                // gap of the page's, so a blue button's ring is not lost on it.
+                style.shadow(vec![ring(c.text, 4.), ring(c.page, 2.)])
+            })
+    }
+}
+
+impl<T: gpui::InteractiveElement + gpui::Styled> Reachable for T {}

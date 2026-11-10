@@ -282,7 +282,8 @@ impl TextInput {
 
     fn with(placeholder: Placeholder, cx: &mut Context<Self>) -> Self {
         TextInput {
-            focus: cx.focus_handle().tab_stop(true),
+            // The same index as buttons', so that Tab goes as the window reads.
+            focus: cx.focus_handle().tab_stop(true).tab_index(0),
             content: SharedString::default(),
             placeholder,
             selected: 0..0,

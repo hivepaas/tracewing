@@ -8,6 +8,7 @@ use crate::{
     flows::{group_digits, size_text},
     input::{Changed, TextInput},
     traffic::{Screen, Traffic},
+    widgets::Reachable,
 };
 use chrono::{Local, TimeZone};
 use gpui::{AppContext as _, Context, Entity, FontWeight, SharedString, div, prelude::*, px, rgb};
@@ -158,6 +159,7 @@ impl Traffic {
                         .flex()
                         .items_center()
                         .cursor_pointer()
+                        .reachable()
                         .font_weight(FontWeight::BOLD)
                         .text_size(px(12.5))
                         .when(loud, |d| d.bg(rgb(c.error_ground)).text_color(rgb(c.error)))
@@ -309,6 +311,7 @@ impl Traffic {
                     .flex()
                     .items_center()
                     .cursor_pointer()
+                    .reachable()
                     .font_weight(FontWeight::BOLD)
                     .text_size(px(12.5))
                     .bg(rgb(c.accent))
@@ -334,6 +337,7 @@ impl Traffic {
                     .items_center()
                     .gap(px(8.))
                     .cursor_pointer()
+                    .reachable()
                     .child(
                         div()
                             .size(px(16.))

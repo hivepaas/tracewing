@@ -58,8 +58,15 @@ fn shot(cx: &mut HeadlessAppContext, window: gpui::AnyWindowHandle, name: &str) 
 
 fn press(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>, keys: &str) {
     // The window, not the view: the key goes to the view, which must be free.
+    // Down and up, as a keyboard sends them: a focused button is pressed as
+    // the key goes up.
     cx.update_window(window.into(), |_, window, cx| {
-        window.dispatch_keystroke(Keystroke::parse(keys).unwrap(), cx);
+        let keystroke = Keystroke::parse(keys).unwrap();
+        window.dispatch_keystroke(keystroke.clone(), cx);
+        window.dispatch_event(
+            gpui::PlatformInput::KeyUp(gpui::KeyUpEvent { keystroke }),
+            cx,
+        );
     })
     .unwrap();
     cx.run_until_parked();
@@ -222,6 +229,20 @@ fn shortcuts_do_what_they_say() {
     assert!(focused(&mut cx, |page| &page.url), "the URL after the name");
     press(&mut cx, window, "shift-tab");
     assert!(focused(&mut cx, |page| &page.name), "and back");
+    // Past the fields, the buttons: Enter on Add adds, as a click does. With
+    // nothing filled in, it says what is missing.
+    for _ in 0..4 {
+        press(&mut cx, window, "tab");
+    }
+    assert!(!focused(&mut cx, |page| &page.first), "past the last field");
+    shot(&mut cx, window.into(), "94-focus-ring");
+    press(&mut cx, window, "enter");
+    let problem = window
+        .update(&mut cx, |v, _, _| {
+            v.rules_page.as_ref().unwrap().problem.clone()
+        })
+        .unwrap();
+    assert!(problem.is_some(), "Add was pressed");
     window
         .update(&mut cx, |view, window, cx| {
             window.focus(&view.focus_handle(cx), cx);

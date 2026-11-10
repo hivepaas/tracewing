@@ -10,7 +10,7 @@ use crate::{
     qr::qr_code,
     system::{CaState, ProxySwitch, QuicSwitch},
     traffic::{Screen, Traffic},
-    widgets::icon,
+    widgets::{Reachable, icon},
 };
 use gpui::{
     ClipboardItem, Context, Div, ElementId, FontWeight, SharedString, Stateful, div, prelude::*,
@@ -116,6 +116,7 @@ fn button(id: impl Into<ElementId>, label: impl Into<SharedString>, loud: bool) 
         .flex()
         .items_center()
         .cursor_pointer()
+        .reachable()
         .font_weight(FontWeight::BOLD)
         .when(loud, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
         .when(!loud, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
@@ -873,6 +874,7 @@ fn code_block(id: impl Into<ElementId>, code: String) -> Div {
                 .py(px(3.))
                 .rounded(px(10.))
                 .cursor_pointer()
+                .reachable()
                 .font_family(crate::FONT)
                 .bg(rgb(c.chip))
                 .text_color(rgb(c.on_chip))
@@ -917,6 +919,7 @@ impl Traffic {
                 .py(px(6.))
                 .rounded(px(16.))
                 .cursor_pointer()
+                .reachable()
                 .font_weight(FontWeight::BOLD)
                 .when(on, |d| d.bg(rgb(c.tab_on)))
                 .when(!on, |d| d.text_color(rgb(c.muted)))

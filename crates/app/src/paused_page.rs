@@ -6,7 +6,7 @@ use crate::{
     colors::colors,
     input::TextInput,
     traffic::{Screen, Traffic},
-    widgets::eyebrow,
+    widgets::{Reachable, eyebrow},
 };
 use gpui::{AppContext as _, Context, Div, Entity, FontWeight, Stateful, div, prelude::*, px, rgb};
 use tracewing_i18n::{tr, tr_n};
@@ -229,6 +229,7 @@ impl Traffic {
                 .flex()
                 .items_center()
                 .cursor_pointer()
+                .reachable()
                 .font_weight(FontWeight::BOLD)
                 .when(loud, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
                 .when(!loud, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
@@ -263,6 +264,7 @@ impl Traffic {
                 .py(px(10.))
                 .rounded(px(14.))
                 .cursor_pointer()
+                .reachable()
                 .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
                 .when(!on, |d| d.bg(rgb(c.surface)))
                 .child(
