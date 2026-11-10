@@ -238,6 +238,9 @@ t3343999e = Questo flow non c'è più.
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Questo host non viene decifrato, quindi non si può vedere cosa invia.
 
+# Still coming: it shows once it ends.
+t42be95fb = Sta ancora arrivando: si vede quando finisce.
+
 # No body.
 t31e4d044 = Nessun body.
 

@@ -229,6 +229,9 @@ t3343999e = このフローはもうありません。
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = このホストは復号されないため、送信内容は見えません。
 
+# Still coming: it shows once it ends.
+t42be95fb = まだ届いています。終わると表示されます。
+
 # No body.
 t31e4d044 = ボディはありません。
 

@@ -237,6 +237,9 @@ t3343999e = Bu akış artık yok.
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Bu host'un şifresi çözülmüyor, bu yüzden gönderdikleri görülemez.
 
+# Still coming: it shows once it ends.
+t42be95fb = Hâlâ geliyor: bittiğinde görünür.
+
 # No body.
 t31e4d044 = Gövde yok.
 

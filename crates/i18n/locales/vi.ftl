@@ -229,6 +229,9 @@ t3343999e = Flow này không còn nữa.
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Host này không được giải mã, nên không xem được những gì nó gửi.
 
+# Still coming: it shows once it ends.
+t42be95fb = Vẫn đang tới: body hiện khi kết thúc.
+
 # No body.
 t31e4d044 = Không có body.
 

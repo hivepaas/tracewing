@@ -229,6 +229,9 @@ t3343999e = 이 플로우는 더 이상 없습니다.
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = 이 호스트는 복호화되지 않으므로 보내는 내용을 볼 수 없습니다.
 
+# Still coming: it shows once it ends.
+t42be95fb = 아직 오는 중입니다. 끝나면 보입니다.
+
 # No body.
 t31e4d044 = 본문이 없습니다.
 

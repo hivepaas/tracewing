@@ -367,6 +367,17 @@ impl FlowHandler {
             flow.opened_as(cut.kind(), None);
         }
         let stream = cut.and_then(|cut| Some((flow.stream()?, cut, encoding)));
+        // Any other response still going after a while is listed then: a long
+        // poll, a log as it is written, a big download.
+        if cut.is_none() && may_take_a_while(&res) {
+            let flow = Arc::downgrade(&flow);
+            tokio::spawn(async move {
+                tokio::time::sleep(LISTED_AFTER).await;
+                if let Some(flow) = flow.upgrade() {
+                    flow.open_if_going();
+                }
+            });
+        }
         let (cap, spool) = (self.log_max, self.spool.clone());
         res.map(move |body| TapBody::wrap(body, flow, Side::Response, cap, spool, stream))
     }
@@ -905,6 +916,25 @@ fn is_websocket<T>(req: &Request<T>) -> bool {
         .is_some_and(|v| v.eq_ignore_ascii_case("websocket"))
 }
 
+/// How long a response goes on before it is listed while it lasts.
+const LISTED_AFTER: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// Whether a response's body may take a while: none says how long it is, or
+/// it says it is long. One that says it is short is not watched.
+fn may_take_a_while<T>(res: &Response<T>) -> bool {
+    if matches!(
+        res.status(),
+        StatusCode::SWITCHING_PROTOCOLS | StatusCode::NO_CONTENT | StatusCode::NOT_MODIFIED
+    ) {
+        return false;
+    }
+    res.headers()
+        .get(header::CONTENT_LENGTH)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse::<u64>().ok())
+        .is_none_or(|len| len > 256 * 1024)
+}
+
 /// How a stream's body is cut into messages as it comes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Cut {
@@ -1091,6 +1121,8 @@ pub struct Flow {
     started: Instant,
     record: Mutex<FlowRecord>,
     stream: Mutex<Option<StreamHandle>>,
+    /// The response's body has ended, so its row is written whole as it goes.
+    ended: AtomicBool,
 }
 
 impl Flow {
@@ -1128,6 +1160,7 @@ impl Flow {
             recorder,
             started: Instant::now(),
             record: Mutex::new(record),
+            ended: AtomicBool::new(false),
             stream: Mutex::new(None),
         }
     }
@@ -1177,6 +1210,16 @@ impl Flow {
 
     fn stream(&self) -> Option<StreamHandle> {
         lock(&self.stream).clone()
+    }
+
+    /// Writes the row now if the response has not ended, so that a slow one
+    /// is listed while it goes. Its kind stays what it was.
+    fn open_if_going(&self) {
+        if self.ended.load(Ordering::Relaxed) || lock(&self.stream).is_some() {
+            return;
+        }
+        let kind = self.lock().kind;
+        self.opened_as(kind, None);
     }
 
     fn fail(&self, message: String) {
@@ -1328,6 +1371,7 @@ impl TapBody {
             Side::Response => {
                 record.response = body;
                 record.duration_us = Some(elapsed);
+                self.flow.ended.store(true, Ordering::Relaxed);
             }
         }
     }
