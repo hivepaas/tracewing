@@ -238,6 +238,18 @@ tb7367e2c = 解密此主機
 # Do not decrypt this host
 t5fa113f6 = 不要解密此主機
 
+# Request and response
+t04e060e6 = 請求和回應
+
+# Request and response one at a time
+t70397119 = 請求和回應逐一顯示
+
+# Request and response side by side
+t3d35ce69 = 請求和回應並排顯示
+
+# Request above the response
+t83c63123 = 請求在回應上方
+
 # Picture · {size}
 te97ed633 = 圖片 · { $size }
 

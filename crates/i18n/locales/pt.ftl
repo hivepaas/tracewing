@@ -247,6 +247,18 @@ tb7367e2c = Descriptografar este host
 # Do not decrypt this host
 t5fa113f6 = Não descriptografar este host
 
+# Request and response
+t04e060e6 = Requisição e resposta
+
+# Request and response one at a time
+t70397119 = Requisição e resposta, uma de cada vez
+
+# Request and response side by side
+t3d35ce69 = Requisição e resposta lado a lado
+
+# Request above the response
+t83c63123 = Requisição acima da resposta
+
 # Picture · {size}
 te97ed633 = Imagem · { $size }
 

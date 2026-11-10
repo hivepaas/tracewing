@@ -247,6 +247,18 @@ tb7367e2c = Descifrar este host
 # Do not decrypt this host
 t5fa113f6 = No descifrar este host
 
+# Request and response
+t04e060e6 = Solicitud y respuesta
+
+# Request and response one at a time
+t70397119 = Solicitud y respuesta, una a la vez
+
+# Request and response side by side
+t3d35ce69 = Solicitud y respuesta lado a lado
+
+# Request above the response
+t83c63123 = Solicitud encima de la respuesta
+
 # Picture · {size}
 te97ed633 = Imagen · { $size }
 

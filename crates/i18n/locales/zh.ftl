@@ -238,6 +238,18 @@ tb7367e2c = 解密此主机
 # Do not decrypt this host
 t5fa113f6 = 不解密此主机
 
+# Request and response
+t04e060e6 = 请求和响应
+
+# Request and response one at a time
+t70397119 = 请求和响应逐个显示
+
+# Request and response side by side
+t3d35ce69 = 请求和响应并排显示
+
+# Request above the response
+t83c63123 = 请求在响应上方
+
 # Picture · {size}
 te97ed633 = 图片 · { $size }
 

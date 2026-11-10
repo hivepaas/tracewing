@@ -13,11 +13,12 @@ use crate::{
     flows::{size_text, time_text},
     input::TextInput,
     jwt::{self, Jwt},
+    layout::Sides,
     messages::MessagesState,
     select::{self, Copied, Selection},
     snippets::{self, Language},
     traffic::Traffic,
-    widgets::{chip, eyebrow, icon, status_colors},
+    widgets::{chip, eyebrow, icon, status_colors, tip},
 };
 use gpui::{
     Anchor, AnyElement, ClipboardItem, Context, Div, ElementId, Entity, FontWeight, MouseButton,
@@ -75,10 +76,14 @@ pub struct InspectorState {
     pub side: Side,
     pub part: Part,
     pub body: BodyState,
+    /// The other side's body, when both sides are shown at once.
+    pub other: BodyState,
     /// Of the flow chosen, if it is a stream.
     pub messages: Option<MessagesState>,
     /// Which load the body is waiting for, so that a late one is ignored.
     load: u64,
+    /// The same for the other side's.
+    other_load: u64,
     copied: bool,
     /// The menu of languages to copy the request as is open.
     pub copy_menu: bool,
@@ -86,6 +91,25 @@ pub struct InspectorState {
     pub llm: Option<(crate::llm::Provider, crate::llm::Exchange)>,
     /// What is selected of the part shown, when it is not a body.
     pub select: Selection,
+}
+
+impl InspectorState {
+    fn slot(&mut self, other: bool) -> &mut BodyState {
+        if other {
+            &mut self.other
+        } else {
+            &mut self.body
+        }
+    }
+
+    /// The body of `side`, whichever is chosen, when both are shown.
+    fn body_of(&self, side: Side) -> &BodyState {
+        if side == self.side {
+            &self.body
+        } else {
+            &self.other
+        }
+    }
 }
 
 impl Traffic {
@@ -130,16 +154,36 @@ impl Traffic {
     }
 
     fn load_body(&mut self, cx: &mut Context<Self>) {
+        self.load_side(false, cx);
+        if self.layout.sides != Sides::Tabs {
+            self.load_side(true, cx);
+        } else {
+            self.inspector.other = BodyState::default();
+        }
+    }
+
+    /// One side's body: the side chosen's, or with `other` the other side's,
+    /// which is shown when both sides are.
+    fn load_side(&mut self, other: bool, cx: &mut Context<Self>) {
         let Some(detail) = &self.inspector.detail else {
             return;
         };
-        let side = self.inspector.side;
+        let side = if other {
+            self.inspector.side.other()
+        } else {
+            self.inspector.side
+        };
         let facts = detail.body(side).clone();
         let id = detail.id;
-        self.inspector.load += 1;
-        let load = self.inspector.load;
+        let counter = if other {
+            &mut self.inspector.other_load
+        } else {
+            &mut self.inspector.load
+        };
+        *counter += 1;
+        let load = *counter;
         if !facts.stored.exists() {
-            self.inspector.body = BodyState::Note(
+            *self.inspector.slot(other) = BodyState::Note(
                 if detail.kind == "tunnel" {
                     tr!("This host is not decrypted, so what it sends cannot be seen.")
                 } else if facts.bytes == 0 {
@@ -160,7 +204,7 @@ impl Traffic {
         };
         let picture = is_picture(content_type);
         let content_type = content_type.map(str::to_owned);
-        self.inspector.body = BodyState::Loading;
+        *self.inspector.slot(other) = BodyState::Loading;
         let session = self.session_dir().to_owned();
         let max = self.engine.settings.view_max();
         cx.spawn(async move |this, cx| {
@@ -168,10 +212,15 @@ impl Traffic {
                 .background_spawn(async move { body_file(&session, &facts, id, side, max) })
                 .await;
             let _ = this.update(cx, |this, cx| {
-                if this.inspector.load != load {
+                let now = if other {
+                    this.inspector.other_load
+                } else {
+                    this.inspector.load
+                };
+                if now != load {
                     return;
                 }
-                this.inspector.body = match file {
+                *this.inspector.slot(other) = match file {
                     None => BodyState::Note(
                         tr!("This body is gone: it was dropped with the oldest flows, or cannot be read.")
                             .into(),
@@ -228,8 +277,36 @@ impl Traffic {
 
     pub fn set_side(&mut self, side: Side, cx: &mut Context<Self>) {
         if self.inspector.side != side {
-            self.inspector.side = side;
             self.inspector.select.clear();
+            self.choose_side(side, cx);
+        }
+    }
+
+    /// How both sides are shown, or one at a time. Kept for the next start.
+    pub fn set_sides(&mut self, sides: Sides, cx: &mut Context<Self>) {
+        if self.layout.sides == sides {
+            return;
+        }
+        self.layout.sides = sides;
+        self.save_layout();
+        self.inspector.select.clear();
+        if sides == Sides::Tabs {
+            self.inspector.other = BodyState::default();
+        } else if matches!(self.inspector.other, BodyState::Loading) {
+            self.load_side(true, cx);
+        }
+        cx.notify();
+    }
+
+    /// Makes `side` the one chosen, which the body's buttons and keys act on.
+    /// With both sides shown, the bodies trade places and nothing is read
+    /// again; what is selected stays, as it may span both.
+    fn choose_side(&mut self, side: Side, cx: &mut Context<Self>) {
+        if self.inspector.side != side {
+            self.inspector.side = side;
+            let both = self.layout.sides != Sides::Tabs;
+            let loading = matches!(self.inspector.body, BodyState::Loading)
+                || matches!(self.inspector.other, BodyState::Loading);
             let part = self.inspector.part;
             let gone = matches!(part, Part::Query | Part::Form)
                 && self
@@ -240,7 +317,13 @@ impl Traffic {
             if gone {
                 self.inspector.part = Part::Body;
             }
-            self.load_body(cx);
+            if both && !loading {
+                let inspector = &mut self.inspector;
+                std::mem::swap(&mut inspector.body, &mut inspector.other);
+                std::mem::swap(&mut inspector.load, &mut inspector.other_load);
+            } else {
+                self.load_body(cx);
+            }
             cx.notify();
         }
     }
@@ -459,6 +542,23 @@ impl Traffic {
                 .child(label)
                 .on_click(cx.listener(move |view, _, _, cx| view.set_side(this, cx)))
         };
+        let sides = self.layout.sides;
+        let switch = |id: &'static str, name: &'static str, said: String, this: Sides| {
+            let on = sides == this;
+            div()
+                .id(id)
+                .size(px(30.))
+                .flex_shrink_0()
+                .rounded(px(14.))
+                .flex()
+                .items_center()
+                .justify_center()
+                .cursor_pointer()
+                .when(on, |d| d.bg(rgb(c.tab_on)))
+                .tooltip(tip(said))
+                .child(icon(name, 16., if on { c.text } else { c.muted }))
+                .on_click(cx.listener(move |view, _, _, cx| view.set_sides(this, cx)))
+        };
         div()
             .flex()
             .flex_row()
@@ -467,21 +567,67 @@ impl Traffic {
             .p(px(4.))
             .rounded(px(18.))
             .bg(rgb(c.code))
-            .child(tab("side-request", tr!("Request"), Side::Request))
-            .child(tab("side-response", tr!("Response"), Side::Response))
+            // Both shown, each pane says which it is.
+            .when(sides == Sides::Tabs, |d| {
+                d.child(tab("side-request", tr!("Request"), Side::Request))
+                    .child(tab("side-response", tr!("Response"), Side::Response))
+            })
+            .when(sides != Sides::Tabs, |d| {
+                d.child(
+                    div()
+                        .flex_1()
+                        .h(px(30.))
+                        .px(px(12.))
+                        .flex()
+                        .items_center()
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(rgb(c.muted))
+                        .child(tr!("Request and response")),
+                )
+            })
+            .child(div().w(px(1.)).my(px(6.)).bg(rgb(c.line)))
+            .child(switch(
+                "sides-tabs",
+                "tabs",
+                tr!("Request and response one at a time"),
+                Sides::Tabs,
+            ))
+            .child(switch(
+                "sides-beside",
+                "beside",
+                tr!("Request and response side by side"),
+                Sides::Beside,
+            ))
+            .child(switch(
+                "sides-stacked",
+                "below",
+                tr!("Request above the response"),
+                Sides::Stacked,
+            ))
     }
 
     fn render_parts(&self, detail: &Detail, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let part = self.inspector.part;
         let side = self.inspector.side;
-        let headers = detail.headers(side).map_or(0, <[_]>::len);
-        let (sent, set) = cookie_counts(detail);
-        let cookies = match side {
-            Side::Request => sent,
-            Side::Response => set,
+        let both = self.layout.sides != Sides::Tabs;
+        let headers = if both {
+            [Side::Request, Side::Response]
+                .iter()
+                .map(|side| detail.headers(*side).map_or(0, <[_]>::len))
+                .sum()
+        } else {
+            detail.headers(side).map_or(0, <[_]>::len)
         };
+        let (sent, set) = cookie_counts(detail);
+        let cookies = match (both, side) {
+            (true, _) => sent + set,
+            (false, Side::Request) => sent,
+            (false, Side::Response) => set,
+        };
+        // Both shown, each pane says its own.
         let summary_text: Option<String> = match (&self.inspector.body, part) {
+            _ if both && part == Part::Body => None,
             (BodyState::Shown(view), Part::Body) => Some(summary(view.read(cx).body())),
             (BodyState::Image(_, size), Part::Body) => {
                 Some(tr!("Picture · {size}", size = size_text(*size)))
@@ -543,7 +689,7 @@ impl Traffic {
                     Part::Cookies,
                 ))
             })
-            .when(side == Side::Request, |d| {
+            .when(both || side == Side::Request, |d| {
                 let query = fields::query(&detail.url).len();
                 let form = detail.form.as_ref().map_or(0, Vec::len);
                 d.when(query > 0, |d| {
@@ -705,7 +851,7 @@ impl Traffic {
             })
     }
 
-    fn render_part(&mut self, detail: &Detail, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_part(&mut self, detail: &Detail, cx: &mut Context<Self>) -> Div {
         let c = colors();
         let well = div()
             .flex_1()
@@ -715,7 +861,13 @@ impl Traffic {
             .bg(rgb(c.code));
         let sel = self.inspector.select.clone();
         sel.begin();
-        match self.inspector.part {
+        let part = self.inspector.part;
+        if self.layout.sides != Sides::Tabs
+            && matches!(part, Part::Body | Part::Headers | Part::Cookies)
+        {
+            return self.render_both(detail, &sel, cx);
+        }
+        match part {
             Part::Messages => well.child(self.render_messages(cx)),
             Part::Llm => self.selectable(well, &sel, cx).child(self.render_llm(&sel)),
             Part::Headers => self
@@ -738,32 +890,128 @@ impl Traffic {
                 self.inspector.side,
                 &sel,
             )),
-            Part::Body => match &self.inspector.body {
-                BodyState::Shown(view) => well.py(px(8.)).child(view.clone()),
-                BodyState::Image(path, _) => well.child(
-                    div()
-                        .size_full()
-                        .p(px(12.))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .child(
-                            img(path.clone())
-                                .max_w_full()
-                                .max_h_full()
-                                .object_fit(ObjectFit::Contain)
-                                .with_fallback(|| {
-                                    note(tr!(
-                                        "This picture cannot be drawn. Save the body to look at it."
-                                    ))
-                                    .into_any_element()
-                                }),
-                        ),
-                ),
-                BodyState::Loading => well.child(note(tr!("Opening…"))),
-                BodyState::Note(text) => well.child(note(text.clone())),
-            },
+            Part::Body => body_well(well, &self.inspector.body),
         }
+    }
+
+    /// The part chosen, for the request and the response at once: beside
+    /// each other or one above the other. A press in a pane makes its side
+    /// the one chosen.
+    fn render_both(&mut self, detail: &Detail, sel: &Selection, cx: &mut Context<Self>) -> Div {
+        let c = colors();
+        let part = self.inspector.part;
+        let chosen = self.inspector.side;
+        let mut panes = Vec::new();
+        for side in [Side::Request, Side::Response] {
+            let well = div()
+                .flex_1()
+                .min_h_0()
+                .rounded(px(16.))
+                .overflow_hidden()
+                .bg(rgb(c.code))
+                .border_1()
+                .border_color(rgb(if side == chosen { c.link } else { c.code }));
+            let content = match part {
+                Part::Headers => self
+                    .selectable(well, sel, cx)
+                    .child(render_headers(detail.headers(side), sel)),
+                Part::Cookies => self.selectable(well, sel, cx).child(render_cookies(
+                    detail.headers(side),
+                    side,
+                    sel,
+                )),
+                _ => body_well(well, self.inspector.body_of(side)),
+            };
+            let size = match (part, self.inspector.body_of(side)) {
+                (Part::Body, BodyState::Shown(view)) => Some(summary(view.read(cx).body())),
+                (Part::Body, BodyState::Image(_, size)) => {
+                    Some(tr!("Picture · {size}", size = size_text(*size)))
+                }
+                _ => None,
+            };
+            let name = match side {
+                Side::Request => tr!("Request"),
+                Side::Response => tr!("Response"),
+            };
+            panes.push(
+                div()
+                    .id(match side {
+                        Side::Request => "pane-request",
+                        Side::Response => "pane-response",
+                    })
+                    .flex_1()
+                    .min_w_0()
+                    .min_h_0()
+                    .flex()
+                    .flex_col()
+                    .gap(px(6.))
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(move |view, _, _, cx| view.choose_side(side, cx)),
+                    )
+                    .on_mouse_down(
+                        MouseButton::Right,
+                        cx.listener(move |view, _, _, cx| view.choose_side(side, cx)),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .gap(px(8.))
+                            .text_size(px(12.))
+                            .child(
+                                div()
+                                    .font_weight(FontWeight::BOLD)
+                                    .text_color(rgb(if side == chosen { c.text } else { c.muted }))
+                                    .child(name),
+                            )
+                            .children(size.map(|size| div().text_color(rgb(c.muted)).child(size))),
+                    )
+                    .child(content),
+            );
+        }
+        div()
+            .flex_1()
+            .min_h_0()
+            .flex()
+            .gap(px(8.))
+            .map(|d| {
+                if self.layout.sides == Sides::Stacked {
+                    d.flex_col()
+                } else {
+                    d.flex_row()
+                }
+            })
+            .children(panes)
+    }
+}
+
+/// A body in its well, or why it is not there.
+fn body_well(well: Div, state: &BodyState) -> Div {
+    match state {
+        BodyState::Shown(view) => well.py(px(8.)).child(view.clone()),
+        BodyState::Image(path, _) => well.child(
+            div()
+                .size_full()
+                .p(px(12.))
+                .flex()
+                .items_center()
+                .justify_center()
+                .child(
+                    img(path.clone())
+                        .max_w_full()
+                        .max_h_full()
+                        .object_fit(ObjectFit::Contain)
+                        .with_fallback(|| {
+                            note(tr!(
+                                "This picture cannot be drawn. Save the body to look at it."
+                            ))
+                            .into_any_element()
+                        }),
+                ),
+        ),
+        BodyState::Loading => well.child(note(tr!("Opening…"))),
+        BodyState::Note(text) => well.child(note(text.clone())),
     }
 }
 
@@ -857,8 +1105,10 @@ impl Traffic {
     /// Closes the menu to copy with, wherever it is open. False if it is not.
     pub(crate) fn close_copy_menu(&mut self, cx: &mut Context<Self>) -> bool {
         let mut views: Vec<Entity<BodyView>> = Vec::new();
-        if let BodyState::Shown(view) = &self.inspector.body {
-            views.push(view.clone());
+        for state in [&self.inspector.body, &self.inspector.other] {
+            if let BodyState::Shown(view) = state {
+                views.push(view.clone());
+            }
         }
         if let Some(view) = self
             .inspector
