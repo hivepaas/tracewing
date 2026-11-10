@@ -907,8 +907,8 @@ tae8622fc = 세션 파일 열기
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, Fiddler .saz 또는 Charles .chlsj
 
-# Exported HAR files leave out tokens and cookies
-td4a2f543 = 내보낸 HAR 파일에는 토큰과 쿠키가 포함되지 않습니다
+# Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
+t3435c213 = 내보낸 HAR 파일은 헤더, URL, 본문에서 쿠키, 토큰, 키, 비밀번호를 뺍니다
 
 # Other devices
 t9e7d8362 = 다른 기기

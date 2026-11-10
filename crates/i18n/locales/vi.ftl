@@ -907,8 +907,8 @@ tae8622fc = Mở file phiên
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, .saz của Fiddler, hoặc .chlsj của Charles
 
-# Exported HAR files leave out tokens and cookies
-td4a2f543 = File HAR xuất ra không kèm token và cookie
+# Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
+t3435c213 = File HAR export ra bỏ đi cookie, token, key và mật khẩu, trong header, URL và body
 
 # Other devices
 t9e7d8362 = Thiết bị khác

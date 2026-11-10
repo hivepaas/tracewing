@@ -925,8 +925,8 @@ tae8622fc = Sitzungsdatei öffnen
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, Fiddler .saz oder Charles .chlsj
 
-# Exported HAR files leave out tokens and cookies
-td4a2f543 = Exportierte HAR-Dateien lassen Tokens und Cookies weg
+# Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
+t3435c213 = Exportierte HAR-Dateien lassen Cookies, Tokens, Schlüssel und Passwörter weg, in Headern, URLs und Bodys
 
 # Other devices
 t9e7d8362 = Andere Geräte

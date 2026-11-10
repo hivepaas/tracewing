@@ -925,8 +925,8 @@ tae8622fc = Oturum dosyası aç
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, Fiddler .saz ya da Charles .chlsj
 
-# Exported HAR files leave out tokens and cookies
-td4a2f543 = Dışa aktarılan HAR dosyalarına token'lar ve çerezler dahil edilmez
+# Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
+t3435c213 = Dışa aktarılan HAR dosyaları başlıklarda, URL'lerde ve gövdelerde çerezleri, token'ları, anahtarları ve parolaları dışarıda bırakır
 
 # Other devices
 t9e7d8362 = Diğer cihazlar

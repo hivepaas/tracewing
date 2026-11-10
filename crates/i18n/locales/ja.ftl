@@ -907,8 +907,8 @@ tae8622fc = セッションファイルを開く
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR、Fiddler .saz、または Charles .chlsj
 
-# Exported HAR files leave out tokens and cookies
-td4a2f543 = エクスポートした HAR ファイルには、トークンと Cookie は含まれません
+# Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
+t3435c213 = エクスポートした HAR ファイルでは、ヘッダー・URL・ボディ内の Cookie、トークン、キー、パスワードを省きます
 
 # Other devices
 t9e7d8362 = 他のデバイス

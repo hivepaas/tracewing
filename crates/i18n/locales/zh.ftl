@@ -907,8 +907,8 @@ tae8622fc = 打开会话文件
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR、Fiddler .saz 或 Charles .chlsj
 
-# Exported HAR files leave out tokens and cookies
-td4a2f543 = 导出的 HAR 文件不包含令牌和 Cookie
+# Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
+t3435c213 = 导出的 HAR 文件会去掉标头、URL 和正文中的 Cookie、令牌、密钥和密码
 
 # Other devices
 t9e7d8362 = 其他设备
