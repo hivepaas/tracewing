@@ -37,6 +37,9 @@ t302af18f = 主機
 # Path
 teb66e456 = 路徑
 
+# Operation
+t218e02a6 = 操作
+
 # Size
 ta6478e7c = 大小
 
@@ -183,6 +186,27 @@ t8090a1ba = 未解密
 
 # open
 td35ec4c9 = 進行中
+
+# Reading the request…
+t51c96267 = 正在讀取請求…
+
+# The request's body was not kept, so its query cannot be shown.
+tba9e5628 = 請求本文未保存，因此無法顯示其查詢。
+
+# An operation without a name
+t38c4d30b = 未命名的操作
+
+# {n} of {count}: {name}
+t53045460 = 第 { $n }/{ $count } 個：{ $name }
+
+# Query
+t9e89e783 = 查詢
+
+# A persisted query: the server keeps its text, and the request sends only its hash.
+tf23e3c2a = 持久化查詢：伺服器保存其文字，請求只傳送其雜湊。
+
+# Variables
+t7996f062 = 變數
 
 # Cut
 t58e25863 = 剪下

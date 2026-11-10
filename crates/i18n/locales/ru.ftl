@@ -46,6 +46,9 @@ t302af18f = Хост
 # Path
 teb66e456 = Путь
 
+# Operation
+t218e02a6 = Операция
+
 # Size
 ta6478e7c = Размер
 
@@ -201,6 +204,27 @@ t8090a1ba = Не расшифровано
 
 # open
 td35ec4c9 = открыто
+
+# Reading the request…
+t51c96267 = Чтение запроса…
+
+# The request's body was not kept, so its query cannot be shown.
+tba9e5628 = Тело запроса не сохранено, поэтому его запрос нельзя показать.
+
+# An operation without a name
+t38c4d30b = Операция без имени
+
+# {n} of {count}: {name}
+t53045460 = { $n } из { $count }: { $name }
+
+# Query
+t9e89e783 = Запрос
+
+# A persisted query: the server keeps its text, and the request sends only its hash.
+tf23e3c2a = Persisted query: текст хранит сервер, а запрос отправляет только его хеш.
+
+# Variables
+t7996f062 = Переменные
 
 # Cut
 t58e25863 = Вырезать

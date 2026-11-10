@@ -37,6 +37,9 @@ t302af18f = Host
 # Path
 teb66e456 = Đường dẫn
 
+# Operation
+t218e02a6 = Operation
+
 # Size
 ta6478e7c = Kích thước
 
@@ -183,6 +186,27 @@ t8090a1ba = Không giải mã
 
 # open
 td35ec4c9 = đang mở
+
+# Reading the request…
+t51c96267 = Đang đọc request…
+
+# The request's body was not kept, so its query cannot be shown.
+tba9e5628 = Body của request không được lưu, nên không hiện được query.
+
+# An operation without a name
+t38c4d30b = Operation không có tên
+
+# {n} of {count}: {name}
+t53045460 = { $n }/{ $count }: { $name }
+
+# Query
+t9e89e783 = Query
+
+# A persisted query: the server keeps its text, and the request sends only its hash.
+tf23e3c2a = Persisted query: server giữ nội dung query, request chỉ gửi mã hash của nó.
+
+# Variables
+t7996f062 = Variables
 
 # Cut
 t58e25863 = Cắt

@@ -2390,7 +2390,7 @@ impl Render for Traffic {
 }
 
 /// The path is never squeezed below this.
-const PATH_MIN: f32 = 96.;
+const PATH_MIN: f32 = 80.;
 /// Room at the end of the header for the menu of columns, kept in each row too.
 const MENU_W: f32 = 26.;
 /// How far either side of a column's edge it can be taken hold of.
@@ -2612,6 +2612,10 @@ fn render_row(
         ..
     } = row;
     let status: SharedString = status.map_or("ERR".into(), |status| status.to_string().into());
+    // A column of its own says it, so the path need not.
+    let operation_shown = columns
+        .iter()
+        .any(|(column, _)| *column == Column::Operation);
     let cells = columns.iter().map(|&(column, width)| {
         let d = cell(column, width);
         match column {
@@ -2655,19 +2659,24 @@ fn render_row(
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(px(12.))
-                .children(graphql.clone().map(|operation| {
-                    div()
-                        // The operation says more than `/graphql` does.
-                        .flex_shrink_0()
-                        .max_w(gpui::relative(0.8))
-                        .mr(px(8.))
-                        .px(px(6.))
-                        .rounded(px(6.))
-                        .truncate()
-                        .bg(rgb(c.tonal))
-                        .text_color(rgb(c.on_tonal))
-                        .child(operation)
-                }))
+                .children(
+                    graphql
+                        .clone()
+                        .filter(|_| !operation_shown)
+                        .map(|operation| {
+                            div()
+                                // The operation says more than `/graphql` does.
+                                .flex_shrink_0()
+                                .max_w(gpui::relative(0.8))
+                                .mr(px(8.))
+                                .px(px(6.))
+                                .rounded(px(6.))
+                                .truncate()
+                                .bg(rgb(c.tonal))
+                                .text_color(rgb(c.on_tonal))
+                                .child(operation)
+                        }),
+                )
                 .child(div().min_w_0().truncate().child(path.clone()))
                 .children(note.clone().map(|note| {
                     div()
@@ -2678,6 +2687,14 @@ fn render_row(
                         .text_color(rgb(c.muted))
                         .child(note)
                 })),
+            Column::Operation => d
+                .pr(px(8.))
+                .font_family(crate::MONO_FONT)
+                .font_features(gpui::FontFeatures::disable_ligatures())
+                .text_size(px(12.))
+                .text_color(rgb(c.on_tonal))
+                .truncate()
+                .children(graphql.clone()),
             Column::Size => d.text_color(rgb(c.muted)).child(size.clone()),
             Column::Time => d
                 .text_color(rgb(if slow { c.slow } else { c.muted }))

@@ -43,6 +43,9 @@ t302af18f = Host
 # Path
 teb66e456 = Ruta
 
+# Operation
+t218e02a6 = Operación
+
 # Size
 ta6478e7c = Tamaño
 
@@ -192,6 +195,27 @@ t8090a1ba = No descifrado
 
 # open
 td35ec4c9 = abierto
+
+# Reading the request…
+t51c96267 = Leyendo la solicitud…
+
+# The request's body was not kept, so its query cannot be shown.
+tba9e5628 = El cuerpo de la solicitud no se guardó, así que su consulta no se puede mostrar.
+
+# An operation without a name
+t38c4d30b = Una operación sin nombre
+
+# {n} of {count}: {name}
+t53045460 = { $n } de { $count }: { $name }
+
+# Query
+t9e89e783 = Consulta
+
+# A persisted query: the server keeps its text, and the request sends only its hash.
+tf23e3c2a = Una consulta persistida: el servidor guarda su texto y la solicitud solo envía su hash.
+
+# Variables
+t7996f062 = Variables
 
 # Cut
 t58e25863 = Cortar

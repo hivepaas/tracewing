@@ -60,7 +60,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | HTTP/1.1 and HTTP/2, both sides | Gate 0 | Free |
 | Server-sent events and other streams, shown as they arrive | Beta | Free |
 | WebSocket: see every message | Beta | Free |
-| GraphQL: the operation name as a column, queries and variables formatted | Beta | Free |
+| GraphQL: the operation name as a column (shown on request), queries laid out and colored, and variables formatted, batches and persisted queries too | Beta | Free |
 | WebSocket: breakpoints and sending messages | 1.x | Pro |
 | gRPC and protobuf: decoded with a `.proto` file or without one, and editable | 1.x | Pro |
 | HTTP/3 | 2.0 | Pro |

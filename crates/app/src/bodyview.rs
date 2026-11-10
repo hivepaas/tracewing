@@ -627,7 +627,7 @@ fn thumb_size(list_height: f32, lines: u64) -> f32 {
     }
 }
 
-fn highlight(token: Token) -> HighlightStyle {
+pub(crate) fn highlight(token: Token) -> HighlightStyle {
     let c = colors();
     let color = match token {
         Token::Key | Token::Tag => c.json_key,

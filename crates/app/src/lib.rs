@@ -17,6 +17,7 @@ pub mod fields;
 pub mod files;
 pub mod filter;
 pub mod flows;
+pub mod graphql_view;
 pub mod hosts;
 pub mod input;
 pub mod inspector;
