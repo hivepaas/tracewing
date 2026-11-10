@@ -281,6 +281,8 @@ pub struct Traffic {
     columns_menu: bool,
     /// The list of keyboard shortcuts is open over the window.
     shortcuts_open: bool,
+    /// The slow network's fields, once the Rules screen has been shown.
+    pub(crate) network_form: Option<crate::network::NetworkForm>,
 }
 
 impl Traffic {
@@ -385,6 +387,7 @@ impl Traffic {
             filter,
             columns_menu: false,
             shortcuts_open: false,
+            network_form: None,
             ids: None,
             generation: 0,
             filter_due: now,
@@ -1391,6 +1394,7 @@ impl Traffic {
                     .child(if recording { "Recording" } else { "Paused" })
                     .on_click(cx.listener(|this, _, _, cx| this.toggle_recording(cx))),
             )
+            .children(self.render_network_chip(cx))
             .child(
                 pill_button("clear")
                     .w(px(40.))

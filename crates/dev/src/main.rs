@@ -282,6 +282,7 @@ async fn main() -> Result<()> {
                     recording: Arc::new(AtomicBool::new(true)),
                     rules: Default::default(),
                     traffic_rules: Default::default(),
+                    network: Default::default(),
                     check: Default::default(),
                     leaf_spki,
                     pauses: Default::default(),

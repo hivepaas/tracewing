@@ -20,6 +20,7 @@ use tracewing_proxy::{
     pause::{Paused, Pauses, Stage, Verdict},
     rules::HostRules,
     run_proxy,
+    throttle::{Conditions, Network},
     traffic_rules::{Action, TrafficRule, TrafficRules},
 };
 use tracewing_store::{
@@ -35,6 +36,7 @@ struct Harness {
     traffic_rules: Arc<RwLock<TrafficRules>>,
     check: Arc<Check>,
     pauses: Arc<Pauses>,
+    network: Arc<Network>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -92,6 +94,7 @@ impl Harness {
         let traffic_rules = Arc::new(RwLock::new(TrafficRules::default()));
         let check = Arc::new(Check::default());
         let pauses = Arc::new(Pauses::default());
+        let network = Arc::new(Network::default());
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -107,6 +110,7 @@ impl Harness {
                 recording: Arc::clone(&recording),
                 rules: Arc::clone(&rules),
                 traffic_rules: Arc::clone(&traffic_rules),
+                network: Arc::clone(&network),
                 check: Arc::clone(&check),
                 leaf_spki: Default::default(),
                 pauses: Arc::clone(&pauses),
@@ -129,6 +133,7 @@ impl Harness {
             traffic_rules,
             check,
             pauses,
+            network,
             dir,
             proxy_url,
             origin: format!("https://localhost:{origin_port}"),
@@ -1230,6 +1235,111 @@ async fn a_posted_stream_keeps_the_bodies_after_it() {
         )
         .unwrap();
     assert_eq!(shed, 0, "{summary:?}");
+    clean_up(conn, dir);
+}
+
+/// A slow network slows what it applies to, both ways, and the flows it slowed
+/// say so.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_slow_network_slows_what_it_applies_to() {
+    let h = Harness::start("slow").await;
+    let client = h.client(false);
+    // The connection and its TLS are made first, and not timed.
+    client
+        .get(format!("{}/", h.origin))
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    h.network.set(Conditions {
+        on: true,
+        name: "Test".to_owned(),
+        latency_ms: 200,
+        down_kbps: 800,
+        up_kbps: 400,
+        ..Conditions::default()
+    });
+
+    // 100 KB down at 100 KB a second, and a round trip of 200 ms more.
+    let started = Instant::now();
+    let body = client
+        .get(format!("{}/json?size=100000", h.origin))
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    let down = started.elapsed();
+    assert_eq!(body.len(), 100_000);
+    assert!(down >= Duration::from_millis(1150), "down in {down:?}");
+    assert!(down < Duration::from_secs(6), "down in {down:?}");
+
+    // 25 KB up at 50 KB a second, to a server that reads it all first.
+    let started = Instant::now();
+    let got = client
+        .post(format!("{}/upload", h.origin))
+        .body(vec![b'x'; 25_000])
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    let up = started.elapsed();
+    assert_eq!(got, "25000");
+    assert!(up >= Duration::from_millis(650), "up in {up:?}");
+
+    // Every slice lost: each waits to be sent again, with no other limit.
+    h.network.set(Conditions {
+        on: true,
+        name: "Test".to_owned(),
+        loss_percent: 100,
+        ..Conditions::default()
+    });
+    let started = Instant::now();
+    client
+        .get(format!("{}/json?size=50000", h.origin))
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    let lossy = started.elapsed();
+    assert!(
+        lossy >= Duration::from_millis(600),
+        "four slices, in {lossy:?}"
+    );
+
+    // Only for another host: this one is fast again.
+    h.network.set(Conditions {
+        hosts: vec!["elsewhere.test".to_owned()],
+        ..h.network.conditions()
+    });
+    let started = Instant::now();
+    client
+        .get(format!("{}/json?size=100000", h.origin))
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    let fast = started.elapsed();
+    assert!(fast < Duration::from_millis(600), "not slowed, in {fast:?}");
+
+    let (_, conn, dir) = h.finish(5).await;
+    let slowed: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM flows WHERE rule = 'Test network'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(slowed, 3);
     clean_up(conn, dir);
 }
 

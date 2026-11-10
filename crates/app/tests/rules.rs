@@ -16,7 +16,7 @@ use tracewing::{
     traffic::{Screen, Traffic},
 };
 use tracewing_dev::benchkit;
-use tracewing_proxy::traffic_rules::TrafficRules;
+use tracewing_proxy::{throttle::Conditions, traffic_rules::TrafficRules};
 use tracewing_store::settings::StorageSettings;
 
 fn wait_for(
@@ -214,6 +214,40 @@ fn rules_made_in_the_window_change_traffic() {
     assert_eq!(TrafficRules::load(&file).unwrap().rules.len(), 2, "kept");
     cx.run_until_parked();
     shot(&mut cx, window.into(), "68-rules-imported");
+
+    // A slow network: a preset, then numbers of one's own, then off again.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.choose_network("Slow 3G", cx);
+            let now = view.network_conditions();
+            assert!(now.on);
+            assert_eq!((now.latency_ms, now.down_kbps), (400, 400));
+        })
+        .unwrap();
+    let kept = Conditions::load(&dir.join("throttle.toml")).unwrap();
+    assert_eq!(kept.name, "Slow 3G", "kept for next time");
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "71-slow-network");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.fill_network_form(["250", "2000", "", "", "api.test"], cx);
+            view.apply_network_form(cx);
+            let now = view.network_conditions();
+            assert_eq!(now.name, "Custom");
+            assert_eq!((now.latency_ms, now.down_kbps, now.up_kbps), (250, 2000, 0));
+            assert_eq!(now.hosts, ["api.test"]);
+            view.fill_network_form(["", "", "", "200", ""], cx);
+            view.apply_network_form(cx);
+            assert_eq!(
+                view.network_conditions().latency_ms,
+                250,
+                "refused, as it was"
+            );
+            view.toggle_network(cx);
+            assert!(!view.network_conditions().on);
+        })
+        .unwrap();
+    assert!(!Conditions::load(&dir.join("throttle.toml")).unwrap().on);
 
     drop(cx);
     runtime.shutdown_background();

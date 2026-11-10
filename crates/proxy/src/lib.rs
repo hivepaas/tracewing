@@ -7,6 +7,7 @@ pub mod ca_key;
 pub mod capture;
 pub mod pause;
 pub mod rules;
+pub mod throttle;
 pub mod traffic_rules;
 pub mod upstream;
 
@@ -81,6 +82,8 @@ pub struct ProxyOptions {
     pub rules: Arc<RwLock<HostRules>>,
     /// What to change on traffic's way. Changes apply to the next request.
     pub traffic_rules: Arc<RwLock<TrafficRules>>,
+    /// A slow network on purpose. Changes apply to the next request.
+    pub network: Arc<throttle::Network>,
     /// Who has reached the test page.
     pub check: Arc<Check>,
     /// What breakpoints hold, for the window to let go.
@@ -196,6 +199,7 @@ pub async fn run_proxy(
                 .then(|| apps::Apps::spawn(listen_addr.port()))
                 .transpose()?,
             hide_http3: opts.settings.hide_http3,
+            network: opts.network,
         },
     );
     let stop_limit = opts.stop_limit;
