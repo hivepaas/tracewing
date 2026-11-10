@@ -43,7 +43,7 @@ use std::{
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
 use time::{Duration, OffsetDateTime};
-use tracing::debug;
+use tracing::{debug, warn};
 
 const CA_CERT_FILE: &str = "ca.pem";
 const CA_KEY_FILE: &str = "ca.key";
@@ -57,6 +57,10 @@ const LEAF_BACKDATE: Duration = Duration::days(1);
 /// Cached configs are dropped well before their leaf expires.
 const CACHE_FOR: std::time::Duration = std::time::Duration::from_secs(7 * 24 * 60 * 60);
 const CACHE_MAX: usize = 10_000;
+/// The name a leaf is issued for when the host asked for cannot be one, so
+/// that the client sees a certificate for another name instead of a
+/// connection cut off.
+const STAND_IN_HOST: &str = "unnamed.tracewing.invalid";
 
 pub struct LocalCa {
     issuer: Issuer<'static, KeyPair>,
@@ -217,6 +221,17 @@ impl CertificateAuthority for LocalCa {
             .trim_start_matches('[')
             .trim_end_matches(']');
 
+        self.config_for(host)
+    }
+}
+
+impl LocalCa {
+    /// The server side of TLS for `host`, from the cache while it is fresh.
+    /// A host no certificate can be issued for gets one for a stand-in name,
+    /// which its client refuses as it would any wrong name; nothing panics.
+    /// What reaches here is ASCII already: rustls takes only DNS names from
+    /// SNI, and a `CONNECT` whose host is not ASCII is refused before.
+    fn config_for(&self, host: &str) -> Arc<ServerConfig> {
         if let Some((issued, config)) = self.cache.lock().unwrap().get(host)
             && issued.elapsed() < CACHE_FOR
         {
@@ -224,9 +239,20 @@ impl CertificateAuthority for LocalCa {
         }
 
         debug!(host, "issuing leaf certificate");
-        let config = self
-            .server_config(host)
-            .unwrap_or_else(|e| panic!("issue certificate for {host}: {e:#}"));
+        let config = match self.server_config(host) {
+            Ok(config) => config,
+            Err(e) => {
+                warn!(
+                    host,
+                    "no certificate for this host, a stand-in instead: {e:#}"
+                );
+                // Not kept: the next try may do better, and the cache holds
+                // only what is right for its host.
+                return self
+                    .server_config(STAND_IN_HOST)
+                    .expect("a certificate for a fixed, valid name is always issued");
+            }
+        };
 
         let mut cache = self.cache.lock().unwrap();
         if cache.len() >= CACHE_MAX {
@@ -296,6 +322,65 @@ fn hostname() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_host_no_certificate_can_be_issued_for_gets_a_stand_in() {
+        let dir =
+            std::env::temp_dir().join(format!("tracewing-ca-stand-in-{}", std::process::id()));
+        let ca = LocalCa::load_or_create(&dir, crate::crypto_provider(), KeyStore::File).unwrap();
+        // A DNS name in a certificate is ASCII: punycode, for a name that is not.
+        assert!(ca.issue_leaf("bücher.example").is_err());
+        assert!(ca.issue_leaf("xn--bcher-kva.example").is_ok());
+        let config = ca.config_for("bücher.example");
+        assert!(!config.alpn_protocols.is_empty(), "a config all the same");
+        assert!(
+            !ca.cache.lock().unwrap().contains_key("bücher.example"),
+            "not kept"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_leaf_lasts_thirty_days_and_names_its_host_as_it_is() {
+        use x509_parser::extensions::GeneralName;
+        let dir = std::env::temp_dir().join(format!("tracewing-ca-leaf-{}", std::process::id()));
+        let ca = LocalCa::load_or_create(&dir, crate::crypto_provider(), KeyStore::File).unwrap();
+        for (host, ip) in [
+            ("api.example.com", false),
+            ("10.0.0.1", true),
+            ("::1", true),
+        ] {
+            let leaf = ca.issue_leaf(host).unwrap();
+            let (_, cert) = x509_parser::parse_x509_certificate(&leaf).unwrap();
+            let validity = cert.validity();
+            let days = (validity.not_after.timestamp() - validity.not_before.timestamp()) / 86_400;
+            assert_eq!(days, 31, "30 days on, from a day back: {host}");
+            let names = cert.subject_alternative_name().unwrap().unwrap();
+            let name = &names.value.general_names[0];
+            match (name, ip) {
+                (GeneralName::IPAddress(bytes), true) => {
+                    assert_eq!(
+                        bytes.len(),
+                        if host.contains(':') { 16 } else { 4 },
+                        "{host}"
+                    )
+                }
+                (GeneralName::DNSName(dns), false) => assert_eq!(*dns, host),
+                other => panic!("{host}: {other:?}"),
+            }
+        }
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_host_that_is_not_ascii_does_not_get_this_far() {
+        // What hudsucker issues for comes from SNI, which rustls checks, or
+        // from a CONNECT's authority, which does not parse.
+        assert!(Authority::try_from("bücher.example").is_err());
+        assert!(Authority::try_from("bücher.example:443").is_err());
+        assert!(hudsucker::rustls::pki_types::ServerName::try_from("bücher.example").is_err());
+        assert!(Authority::try_from("xn--bcher-kva.example:443").is_ok());
+    }
 
     #[test]
     fn the_spki_hash_is_that_of_the_leaves() {
