@@ -81,6 +81,7 @@ const ICONS: &[(&str, &[u8])] = icons![
     "search",
     "beside",
     "below",
+    "tabs",
     "sidebar",
     "down",
     "up",

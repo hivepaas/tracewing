@@ -262,6 +262,18 @@ tb7367e2c = Dekripsi host ini
 # Do not decrypt this host
 t5fa113f6 = Jangan dekripsi host ini
 
+# Request and response
+t04e060e6 = Permintaan dan respons
+
+# Request and response one at a time
+t70397119 = Permintaan dan respons satu per satu
+
+# Request and response side by side
+t3d35ce69 = Permintaan dan respons berdampingan
+
+# Request above the response
+t83c63123 = Permintaan di atas respons
+
 # Picture · {size}
 te97ed633 = Gambar · { $size }
 
