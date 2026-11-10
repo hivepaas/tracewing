@@ -1,0 +1,512 @@
+# tracewing's English, from the code (scripts/i18n.py update writes it:
+# do not edit). The source for translations.
+
+ta8dc6eab = … { $size } more
+t51332550 =
+    { $n ->
+        [one] { $size } · { $count } line
+       *[other] { $size } · { $count } lines
+    }
+t49fe2cb3 = { $size } · reading { $percent }%
+t332cfa6d = Appearance: { $now }. Click for { $next }.
+t98a2c750 = Method
+t005ef20f = Status
+t81f51acc = App
+t302af18f = Host
+teb66e456 = Path
+ta6478e7c = Size
+tdfe4e404 = Time
+t61e9eac0 = Number
+tacdcf5cb = "{ $method }" is not a method
+t1f9e5368 = its request body was not kept whole, so it cannot be sent again
+t4df37bea = name: value, one a line
+tfa4c2902 = No body
+t550b0a98 = No flow is chosen
+t296762f8 = This flow: { $e }
+t82454152 = Request
+t334f5989 = Headers
+t428a1095 = Body
+te946e7bf = Sending…
+tf28e14cf = Send
+t8b242db1 = New
+tf43ea06c = … { $count } more bytes: the flow in Traffic has them all.
+t55a982fe = Response
+t18049f93 = Compose
+t7a9cf113 = A request of your own, or one sent again. It goes through tracewing, so rules apply and it shows in Traffic too.
+t961a5ea0 = { $version } both sides
+t3d237646 = { $client } to the proxy, { $server } to the server
+t9e437c74 = Queued
+tdb89a899 = Connect
+tc9450e48 = Waiting
+t6964bb19 = Download
+t6935fbd3 = No file picker: { $e }
+t725a0e89 = Writing the HAR…
+t643f96ee =
+    { $n ->
+        [one] { $n } flow written to { $path }
+       *[other] { $n } flows written to { $path }
+    }
+tef8ec569 = The HAR was not written: { $e }
+t538b10e9 = Open
+tc0e7c8f4 = Reading { $path }…
+td848c31b =
+    { $n ->
+        [one] , { $n } entry left out
+       *[other] , { $n } entries left out
+    }
+t610d7810 =
+    { $n ->
+        [one] { $n } flow read from a { $format }
+       *[other] { $n } flows read from a { $format }
+    }
+t7f49510f = The file was not read: { $e }
+ta7b4c380 = it is no longer kept
+tc6932467 = { $size } saved to { $path }
+t189900b4 = The body was not saved: { $e }
+t9f5c89a3 = Fiddler session
+tb4f56f2b = Charles session
+t75afe364 = All
+te9ed60a6 = Errors
+td10fcaa3 = Media
+teca2074f = Rule: { $rule }
+t003420a4 = Events
+t8090a1ba = Not decrypted
+td35ec4c9 = open
+t3343999e = This flow is gone.
+tf85fe84f = This host is not decrypted, so what it sends cannot be seen.
+t31e4d044 = No body.
+t884aad28 = This body was not kept: the disk was nearly full, or too much was waiting for it.
+te46616b5 = This body was not kept.
+tf9a7ab60 = This body is gone: it was dropped with the oldest flows, or cannot be read.
+t620a039b = Cannot open this body: { $e }
+t4def410e = Inspector
+tc7be91e8 = Choose a flow to see it here
+ta05ec37a = Not decrypted. New connections to this host go through unread.
+t3cbba118 = If an app fails with this host, it may pin its certificates.
+t0ac0e062 = Make a rule
+tb7367e2c = Decrypt this host
+t5fa113f6 = Do not decrypt this host
+te97ed633 = Picture · { $size }
+te61b841a = Messages { $count }
+t04b0146d = Headers { $headers }
+td58eb84b = Cookies { $cookies }
+t4756f9f5 = Query { $query }
+tfa6e7203 = Form { $form }
+t09ea4ff9 = Connection
+te2c44424 = Save body
+tf5910557 = Send again
+tf837e542 = Edit and send
+t8dc21305 = Copied
+t866d1e3e = Copy as cURL
+t9c1ad448 = Copy as…
+t1e92fb27 = This picture cannot be drawn. Save the body to look at it.
+tc40f2321 = Opening…
+t8c2c37b1 = No response
+tce693254 = Tunnel, not decrypted
+t2d65757d = GraphQL: { $operation }
+t84144a81 = Over connection { $id }, made before: no time went on connecting.
+t627147b4 = { $app }, pid { $pid }
+t0efce58b = Not found: it may have ended, or belong to another user
+t2b964a37 = On another device
+t6d3cd99e = CLIENT
+tbdcbb413 = Device
+tc4253b6b = Program
+t700560f3 = Address
+te3b27612 = SERVER
+t1ef5a00a = What this connection was is no longer kept: it went with older flows.
+t0427c9b1 = Not decrypted: tracewing passed it on without looking.
+tf348eb92 = No connection was made.
+tac71808e = None: it was answered without one.
+t0ec66a8c = { $id }, given up during TLS
+t7fe32cfc = { $id }, made for this flow
+ta904c078 = { $id }, made before and used again
+t6d7302f2 = Server
+t05606349 = None: plain HTTP
+te476fbb8 = THE SERVER SHOWED NO CERTIFICATES
+ta51f3107 = WHAT THE SERVER SHOWED, ITS OWN FIRST
+te6f31dce = NO CERTIFICATES
+t1c902790 = CERTIFICATE
+td5295f62 =
+    { $n ->
+        [one] { $n } CERTIFICATE, THE SERVER'S FIRST
+       *[other] { $n } CERTIFICATES, THE SERVER'S FIRST
+    }
+t13ced472 = tracewing would not go on with this server: { $error }. If the app trusts it some other way, such as through a company CA, choose “Do not decrypt this host” and the app will check the server itself.
+t5b3bed6a = Cipher
+tada7afdb = none
+t0a14b2d8 = not valid until { $when }
+t932538c2 = expired { $when }
+t679bcb51 = expires { $when }
+t4cd375ad =
+    { $n ->
+        [one] { $names }, and { $n } more
+       *[other] { $names }, and { $n } more
+    }
+t15a1ce5a = Issued by { $issuer }
+t0e47d4f2 = Valid { $from } to { $to } · { $when }
+tda75e459 = Names { $names }
+td1f0d98b = Serial { $serial }
+tb8739fec = These headers were not kept.
+tf3dacb5e = No headers.
+t6dbd239f = File { $filename } · { $kind } · { $size }
+t902a6ece = no type
+t58e85ab2 = No cookies were sent.
+tf57dbabc = No cookies were set.
+t2db33271 = JWT · { $algorithm } · signature not checked
+t05f8b533 = JWT · signature not checked
+t114f9980 = Header
+ta0639745 = Payload
+tc7aa0523 = Expires
+tb1835ecc = Issued
+td10dacd9 = Not before
+tfda57c3e = in { $amount }
+t5f968014 = { $amount } ago
+t8ad2f8cf = Light
+t45570065 = Dark
+t8f3184bc = System
+t76711a1a =
+    { $n ->
+        [one] streamed in { $count } chunk
+       *[other] streamed in { $count } chunks
+    }
+tfa48fb30 = stopped: { $stop }
+tc8bbc724 = { $input } in · { $output } out tokens
+t33b52a3c = Reading the call…
+tf94ea0ff = Answer
+t737ece33 = Thinking: { $thinking }
+t017882e4 = Calls { $name }{ $id }
+td9b71d16 = Nothing yet.
+t6a16c074 =
+    { $n ->
+        [one] { $text }… and { $count } more character
+       *[other] { $text }… and { $count } more characters
+    }
+t69975ed7 = Copy the answer
+t4e3af9c3 = Asked
+tb871bcf4 = Tools offered: { $tools }
+tba30b5fa = Not kept
+tb888a3c3 = This message was not kept: too much was waiting, or the disk was nearly full.
+tdb0ec01f = This message is empty.
+t51e7624c = No messages yet
+t3558745a = { $said } kept, of { $size }
+t2a8515ce = { $what }: { $text } is not a whole number
+t23a45ef9 = Latency
+ta4995035 = Down
+t42f35940 = Up
+t69db303a = Loss
+t7cfd6404 = Give a latency, a speed or a loss to slow it down by
+tefe18ab9 = Latency, ms
+t08c4ae33 = Down, kbit/s
+td55cfe9a = Up, kbit/s
+tea4af439 = Loss, %
+t77a1f991 = Only these hosts, like *.example.com; all if empty
+tdce4d67c = Not kept for next time: { $e }
+td51ddfce = Slow network
+tf0f34db0 = Off: traffic goes as fast as it can
+t9525b78e = Custom
+tfe16992b = Only these hosts
+tca77bbdb = Apply
+t5ee4034d = Applies from the next request. Latency is added to each round trip; the speed is a link that every slowed flow shares; a lost piece waits to be sent again, as TCP does. Hosts left alone are not slowed.
+t891b076d = Header line { $line } has no ":"
+te3247b96 = Header line { $line } has no name
+t7569633e = URL
+td6aec821 =
+    { $n ->
+        [one] { $n } bytes that are not text: they go on as they came.
+       *[other] { $n } bytes that are not text: they go on as they came.
+    }
+t8cf68b4c = Nothing is paused
+t40a529af = "{ $status }" is not a status
+t1f3f6dd2 = REQUEST
+tc85f77de = RESPONSE
+tf9ab4327 = Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
+t093a86f6 = for { $method } { $url }
+tc840fed6 = The request, before the server gets it
+t6683d72a = The response, before the app gets it
+tb593e730 = Send as it came
+t108524ac = Drop
+tde281feb = Paused
+tea613769 = Nothing is waiting.
+t745634c6 =
+    { $n ->
+        [one] { $n } waits to be sent on.
+       *[other] { $n } wait to be sent on.
+    }
+tdce25640 = Send all as they came
+tbd074002 = Block
+td8edab50 = Answer from a file
+te3cd85d7 = Send to another host
+tfad4aaaa = Set a request header
+tcbbc20d0 = Set a response header
+t40ecc39b = Pause the request
+t18a34799 = Pause the response
+t8f3ebb6c = Status to answer with, like 403
+t9fb9ae4c = Full path of a file or folder
+tdfedd004 = Where to, like http://localhost:3000
+t80793085 = Header's name
+t43968778 = Its value
+td43128d3 = "{ $first }" is not a status
+t1727e984 = Block with { $status }
+taefc08fa = Answer from { $path }
+t5e256873 = Send to { $to }
+taa230766 = Request: { $header }: { $value }
+t30f9e2c2 = Response: { $header }: { $value }
+t0fe07306 = Name
+t4dd91658 = URL, like api.myapp.dev/v1/*
+tb2b869ac = Method, or empty for all
+t4a2e843a =
+    { $n ->
+        [one] { $n } rule written to { $path }
+       *[other] { $n } rules written to { $path }
+    }
+te7ac257f = The rules were not written: { $e }
+t573e0af4 = Import
+t32a3ce94 = { $path } could not be read: { $e }
+tb9f7257a = Nothing was imported: { $e }
+tc2c76cb1 = Edit
+t5797ea6a = Delete
+t9160f393 = Change this rule
+t55a722a0 = A new rule
+tca566a57 = It waits under Paused until you send it on, changed or not.
+t4d2d5d68 = Save
+t9dc3aa14 = Add
+t35afca3b = Cancel
+t428b2d80 = Rules
+tb44c7227 = They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
+t5edc205d = Import rules…
+t6e09ca20 = Export rules…
+tbc5e0866 =
+    { $n ->
+        [one] { $n } rule added
+       *[other] { $n } rules added
+    }
+t65dc1281 =
+    { $n ->
+        [one] { $n } here already
+       *[other] { $n } here already
+    }
+ta81e95e2 = left out: { $why }
+t6dc463eb = No flows
+t52c1a402 = Name it to keep it
+t878e5c80 = { $size } · written by another version, so it cannot be opened
+t3f3c0eb4 =
+    { $n ->
+        [one] { $count } flow · { $size }
+       *[other] { $count } flows · { $size }
+    }
+t3cb3e6fc = Recording now
+t4d6458cc = Export HAR
+ta7737f13 = Delete for good?
+tb69a8aec = Sessions
+t6391f080 = A session with a name is kept until you delete it. Of the others, the newest { $kept } stay.
+td5507854 = Working…
+tae8622fc = Open a session file
+td8955e6d = HAR, Fiddler .saz, or Charles .chlsj
+td4a2f543 = Exported HAR files leave out tokens and cookies
+t9e7d8362 = Other devices
+t13e626b3 = Let other devices use the proxy
+t2e14229d = Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
+tcd0cf113 = Servers
+tfea2d91b = Trust what this computer trusts
+t1705bfb4 = Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
+t294d7ea4 = AI tools
+te1d26d3c = Let AI tools see tokens and cookies
+tb496980f = AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
+tfec0f477 = HTTP/3
+te42733a9 = Keep apps off HTTP/3
+t2aa7be0d = HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
+ta20fa102 = Size of a session
+td2914f46 = Past this, the oldest flows are dropped.
+t8674a3b3 = Room to leave on the disk
+t5b3a31a3 = With less than this free, flows are still listed but bodies are not kept.
+td356194a = Earlier sessions to keep
+t66556513 = Older ones are deleted when a new session starts.
+tdb4d0409 = Bodies
+t777508dd = Most kept of one body
+t386fee28 = It still reaches the client whole.
+tc3fe2efd = Most unpacked for viewing
+tf9c49515 = Stops a small download that unpacks to many GB.
+ta8996af1 = Small body size
+t20c108b4 = Smaller bodies wait in memory and share a file. Larger ones get a file of their own as they arrive.
+tee503c2e = Compress plain text on disk
+t6d70f53f = Takes about half the room, and is skipped when traffic is too fast for it.
+td386c9ef = Compression level
+td42a987d = 1 to 19. Higher is smaller and slower.
+tc646a2c9 = Search
+t0c3e0b3d = Search URLs
+t3f22d666 = Finds any part of a URL as you type. Costs little.
+t8eec0293 = Search bodies
+tcac3872a = Finds words in bodies. Can take as much disk as the bodies do.
+tab293b21 = Searched part of each body
+t0bf65f4a = Words past this are not found. More takes more disk.
+ta99888cb = Under heavy traffic
+t7d6ff799 = Memory for bodies waiting to be written
+t5b268fb2 = Past this, flows are listed without their bodies. Traffic is never held back.
+t07b9de08 = Memory for large bodies waiting to be written
+tfe61a4f3 = Past this, large bodies stop being kept.
+ta8606963 = { $key }: "{ $text }" is not a whole number
+t9c4debaa = { $key }: must not be negative
+tc8bd2065 = Saved. The limits apply the next time tracewing starts.
+t4b058728 = Settings
+ta3162a13 = Back to defaults
+tb457f0b3 = Hosts not to decrypt
+t7647c310 = One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
+t9a73db9b = Language
+tb5c7a1d4 = System ({ $system_name })
+tefb7a0f9 = Applies at once.
+tb5a48dd2 = Your browser
+t62a47808 = Its private key is in the system keychain.
+td9c6165d = Its private key is in ca.key, which only you can read.
+t453607d0 = Its private key is in ca.key, which only you can read, as the system keychain cannot take it: { $why }.
+t2e93b53b = Open the page. If the browser warns about the certificate, or cannot find the page, one of the steps above is not done for that browser.
+t82bd2456 = { $name } goes through tracewing and trusts it.
+tfb6feb04 = { $name } goes through tracewing, but opened the page without HTTPS. Open it again over https://.
+t9f95b7b8 = A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
+t2188b3f4 = this computer's address, port { $port }
+tc8ccf306 = On the device, set the Wi-Fi proxy to { $addr }. Then open http://{ $host } there, get the certificate and trust it. Its flows show its address, and can be filtered with device:. Name it from one of them, in Connection.
+t50ee7452 = Looking for it…
+ta41c38ec = Installing. The system may ask you to confirm.
+t27d6bacc = This computer trusts it.
+tb5bcc244 = Installed in: { $places }.
+t327bf8fc = Command-line tools trust it, but browsers keep stores of their own. Until it is in them, HTTPS through tracewing fails in a browser.
+tafd8dae2 = tracewing reads HTTPS with a certificate made for this computer alone. Until it is trusted, HTTPS through tracewing fails.
+t26618699 = Trust the certificate
+tb50cbd40 = Install
+t0db8faea = Also for command-line tools
+t83387edf = Apps that use the system's setting now go through { $addr }. It goes back to what it was when tracewing closes, or if it crashes.
+tdcc53241 = Sends this computer's traffic through tracewing, for apps that use the system's setting. Or point one app at { $addr } yourself.
+t52b88441 = Turn on the system proxy
+tcd03e04b = Turn off
+t65a0c5a7 = Turn on
+tbed6e83a = Check it in your browser
+te4e36f65 = Open the test page
+t43c06abc = Set up
+tf3a7f60b = Three steps to see HTTPS traffic from this computer.
+t980eee79 = See traffic
+t3c727cd5 = UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
+t64ab600f = Some apps speak HTTP/3, over UDP, and go around the proxy. Blocking UDP port 443 on this computer makes them fall back to HTTP/2 through tracewing. It takes an administrator's password, and stops when tracewing closes. A VPN that uses UDP port 443 stops working meanwhile.
+t2cfe5270 = Apps on HTTP/3
+t318358d8 = Stop blocking
+t88231e40 = Block HTTP/3
+t91c63f1c = Or one app at a time
+t259dbb0e = A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
+t4b629c72 = Open a terminal
+tbd869c4a = Open { $name }
+ta550cc97 = iPhone and iPad
+ta04ee397 = Flutter apps
+t996be047 = 1. In Settings, Wi-Fi, choose the network, then Configure Proxy, Manual: server { $server }, port { $port }.
+t4fa14138 = 2. Scan the code with the camera, or open { $page } in Safari, and get the certificate. Allow the download.
+t7127295f = 3. In Settings, General, VPN & Device Management, choose the tracewing CA profile and install it.
+t1b22723c = 4. In Settings, General, About, Certificate Trust Settings, turn on full trust for tracewing CA.
+t4adfec01 = 5. Open https://{ $host } in Safari. If it says it works, apps that use the system's settings go through tracewing.
+t4f837b10 = 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host { $host }, port { $port }.
+t654a829b = 2. Scan the code, or open { $page } in the browser, and get the certificate.
+t8263ba6b = 3. In Settings, Security, Encryption & credentials (the names vary by maker), choose Install a certificate, then CA certificate, and pick tracewing.crt.
+tb7fa0462 = 4. Since Android 7, apps trust certificates the user added only if they say so. For a debug build of your own app, add res/xml/network_security_config.xml:
+t02ad844b = and point to it from AndroidManifest.xml:
+t02e57826 = Other apps keep refusing the certificate: their traffic shows as failed flows.
+t4ffc0abf = Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
+t991340f1 = badCertificateCallback lets any certificate through, which is why it is for debug builds only.
+t658f3664 = Copy
+t1336b4d6 = Open settings
+t2e3c591c = Phones and other devices
+td0629ca6 = A phone, a tablet or another computer on this network can go through tracewing at { $proxy }. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
+t84db6961 = Set up. The certificate is among the system's until the device restarts.
+tbcad7fa7 = Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
+t6fb5ba4b = Apps that trust only the system's certificates will still refuse it.
+t14b6b86d = An emulator.
+t67dafc14 = On USB.
+tff6a046e = Accept the USB debugging prompt on the device, then look again.
+t13f68b64 = Still starting. Look again in a moment.
+t2b7d71da = adb says it is { $state }.
+tc28e5d10 = Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t4af01006 = adb was not found. Install Android Studio, or Android's platform tools, then look again.
+tc65b7cf7 = No device is connected. Start an emulator, or plug in a phone with USB debugging on, then look again.
+t9144d1fc = Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
+t71fd4acf = Undo
+t379e433c = Android emulators and USB devices
+t98416222 = Look again
+t54d4af39 = Find devices
+t2dc39047 = Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
+tec38833c = Elsewhere, in the tool's MCP settings:
+t4db77db2 = Flows
+tecb3adec = Choose the flow above or below
+t7e278a00 = The first or the last flow
+t23b1814b = A page up or down
+tf4a9c097 = Filter
+t6e21519a = Pause or resume recording
+tf2a55d1f = Clear the list
+te0a729de = The chosen flow
+tb3970784 = Its request
+t221fc168 = Its response
+tef7d1944 = Send it again
+t6bc99e5c = Edit it and send it
+tc99a11a3 = Copy it as cURL
+t2af18488 = The window
+t9df89562 = Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
+t67adca04 = Show or hide the sidebar
+ta5a7b9e9 = Show or hide the inspector
+t51e214f7 = The inspector beside the list or below it
+tbdf3b62b = These shortcuts
+tf3a4b1ef = Close them
+t31eaddb7 = Keyboard shortcuts
+tcd86acc3 = Close
+t0235648c = The certificate: { $e }
+tf542b2f4 = The terminal
+tc99726ce = The system proxy: { $e }
+t024ec871 = Blocking HTTP/3: { $e }
+t00d0cf30 = host:, status:4xx, or text in bodies
+t19f89214 = A name, as iPhone test
+te3c971c9 = The search index: { $e }
+t73446a1d = An earlier session: { $name }
+td8659d5b = Read-only. Search covers more as its index is finished. Recording goes on.
+te2f35d9e = Read-only. Recording goes on.
+t317c0453 = Back to live
+tf2cc0563 = { $shown } of { $total }
+te75cf20c = Recording
+t7e813d25 = System proxy off · { $addr }
+t29e7dcd0 = System proxy…
+t319ad6b9 = System proxy on · { $addr }
+t53d91aad = Apps
+t27acf320 = Devices
+tcf9aefb4 = Hosts
+tfc7bfe37 = All hosts
+t3c2dfe59 = Hidden
+t324b6d0b = Newest
+t7eb295f4 = No flow fits this filter
+tbd00747c = Nothing yet
+t61730a16 = Turn on the system proxy above, or point an app at { $addr }. To try it: curl --proxy http://{ $addr } --cacert { $ca } https://example.com/
+t3b4853f8 = Beside the list
+t23658daf = Below the list
+t0fa632ba = Drop it on a place · Esc puts it back
+t4b589266 = Traffic
+t7b93f551 = Certificate trusted on this computer
+tbf8942c3 = Checking the certificate…
+t068dcaff = Installing the certificate; the system may ask you to confirm…
+t4b34beb2 = HTTPS will fail until the certificate is trusted: set up
+tc3e1f9c8 = settings.toml was not used: { $problem }
+t04dcff11 = The proxy stopped: { $failure }
+te99f9959 = The disk is nearly full: bodies are not being kept
+tdbd64fe6 =
+    { $n ->
+        [one] { $count } flow not recorded
+       *[other] { $count } flows not recorded
+    }
+t249093b0 =
+    { $n ->
+        [one] { $count } flow without bodies
+       *[other] { $count } flows without bodies
+    }
+te30201f0 =
+    { $n ->
+        [one] { $count } oldest flow dropped to stay under { $size }
+       *[other] { $count } oldest flows dropped to stay under { $size }
+    }
+t57bf5200 =
+    { $n ->
+        [one] { $count } flow
+       *[other] { $count } flows
+    }
+t95b6b766 = Export as HAR
+t4ab0ecb4 = Shortcuts { $keys }
+tea156fdc = Columns

@@ -8,6 +8,7 @@ use std::{
     path::Path,
     time::{Duration, Instant},
 };
+use tracewing_i18n::tr;
 use tracewing_proxy::pause::{HOLD_MAX, Message};
 use tracewing_store::decode::{self, Encoding};
 
@@ -47,8 +48,13 @@ pub fn send(proxy: SocketAddr, ca_pem: &Path, message: &Message) -> Result<Answe
         .redirect(reqwest::redirect::Policy::none())
         .timeout(WAIT_MAX)
         .build()?;
-    let method = reqwest::Method::from_bytes(message.method.trim().as_bytes())
-        .with_context(|| format!("\"{}\" is not a method", message.method))?;
+    let method =
+        reqwest::Method::from_bytes(message.method.trim().as_bytes()).with_context(|| {
+            tr!(
+                "\"{method}\" is not a method",
+                method = message.method.as_str()
+            )
+        })?;
     let mut request = client.request(method, message.url.trim());
     for (name, value) in &message.headers {
         if !LEFT_OUT.contains(&name.to_ascii_lowercase().as_str()) {
@@ -112,7 +118,9 @@ pub fn from_flow(
     body_whole: bool,
 ) -> Result<Message> {
     if !body_whole {
-        bail!("its request body was not kept whole, so it cannot be sent again");
+        bail!(tr!(
+            "its request body was not kept whole, so it cannot be sent again"
+        ));
     }
     let mut headers = headers.to_vec();
     // A body read back from the session is unpacked.

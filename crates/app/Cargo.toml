@@ -19,6 +19,7 @@ headless = ["gpui_platform/test-support", "dep:gpui_wgpu", "dep:image"]
 tracewing-proxy.workspace = true
 tracewing-store.workspace = true
 tracewing-system.workspace = true
+tracewing-i18n.workspace = true
 # The same GPUI snapshot as packwing and shellwing.
 gpui = { package = "gpui-pre", version = "=0.3.9" }
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.9", default-features = false, features = ["font-kit", "runtime_shaders"] }

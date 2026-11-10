@@ -33,6 +33,7 @@ use gpui::{
 use crate::colors::colors;
 use crate::layout::Appearance;
 use crate::widgets::tip;
+use tracewing_i18n::tr;
 
 /// The title bar: as tall as GNOME's own on Linux; on macOS and Windows a
 /// little more than the system's own.
@@ -174,10 +175,10 @@ pub fn appearance_switch(now: Appearance) -> Stateful<Div> {
         Appearance::Dark => "icons/appearance-dark.svg",
         Appearance::System => "icons/appearance-system.svg",
     };
-    let said = format!(
-        "Appearance: {}. Click for {}.",
-        now.name(),
-        now.next().name()
+    let said = tr!(
+        "Appearance: {now}. Click for {next}.",
+        now = now.name(),
+        next = now.next().name()
     );
     div()
         .id("appearance")

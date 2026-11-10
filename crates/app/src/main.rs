@@ -91,7 +91,10 @@ fn main() -> Result<()> {
         .with_assets(Assets)
         .run(move |cx| {
             tracewing::load_fonts(cx);
-            let saved = Layout::load(&data_dir.join("layout.toml")).window;
+            let layout = Layout::load(&data_dir.join("layout.toml"));
+            // Before anything is said. Tests start no `main`, and speak English.
+            tracewing_i18n::set_language(layout.language.as_deref());
+            let saved = layout.window;
             let bounds = placement::initial(saved, cx);
             // GNOME's Wayland compositor draws no window frame, so Linux gets
             // client-side decorations. macOS and Windows keep the system's frame

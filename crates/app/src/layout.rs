@@ -4,6 +4,7 @@
 use crate::{columns::Columns, hosts::HostMarks};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use tracewing_i18n::tr;
 
 pub const SIDEBAR_MIN: f32 = 140.;
 pub const SIDEBAR_MAX: f32 = 480.;
@@ -50,11 +51,11 @@ pub enum Appearance {
 }
 
 impl Appearance {
-    pub fn name(self) -> &'static str {
+    pub fn name(self) -> String {
         match self {
-            Self::Light => "Light",
-            Self::Dark => "Dark",
-            Self::System => "System",
+            Self::Light => tr!("Light"),
+            Self::Dark => tr!("Dark"),
+            Self::System => tr!("System"),
         }
     }
 
@@ -88,6 +89,8 @@ pub struct Layout {
     pub columns: Columns,
     /// Hosts pinned to the top of the sidebar, and hosts hidden from the list.
     pub hosts: HostMarks,
+    /// The language chosen, as a tag; `None` for the system's.
+    pub language: Option<String>,
 }
 
 impl Default for Layout {
@@ -104,6 +107,7 @@ impl Default for Layout {
             window: None,
             columns: Columns::default(),
             hosts: HostMarks::default(),
+            language: None,
         }
     }
 }

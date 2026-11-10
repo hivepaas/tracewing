@@ -245,6 +245,34 @@ fn the_system_proxy_and_the_settings_from_the_window() {
         .unwrap();
     cx.run_until_parked();
     save_shot(&mut cx, window.into(), "12-settings-saved");
+    // A language chosen is used at once and kept; the system's is the default.
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.set_language(Some("vi"), window, cx);
+            assert_eq!(tracewing_i18n::language(), "vi");
+            view.set_language(None, window, cx);
+        })
+        .unwrap();
+    assert_eq!(
+        tracewing::layout::Layout::load(&data_dir.join("layout.toml")).language,
+        None
+    );
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.set_language(Some("vi"), window, cx)
+        })
+        .unwrap();
+    assert_eq!(
+        tracewing::layout::Layout::load(&data_dir.join("layout.toml"))
+            .language
+            .as_deref(),
+        Some("vi")
+    );
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.set_language(Some("en"), window, cx)
+        })
+        .unwrap();
     let saved = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();
     // The list of hosts applies at once, and is kept.
     window

@@ -5,23 +5,19 @@
 use crate::{colors::colors, input::TextInput, traffic::Traffic, widgets::eyebrow};
 use gpui::{Context, Entity, FontWeight, Window, div, prelude::*, px, rgb};
 use std::path::Path;
+use tracewing_i18n::tr;
 use tracewing_proxy::rules::HostRules;
 use tracewing_store::settings::StorageSettings;
 
 /// One setting. `key` is its name in the file; a test sees that none is forgotten.
 struct Row {
     key: &'static str,
-    label: &'static str,
-    help: &'static str,
+    label: String,
+    help: String,
     unit: &'static str,
 }
 
-const fn row(
-    key: &'static str,
-    label: &'static str,
-    help: &'static str,
-    unit: &'static str,
-) -> Row {
+fn row(key: &'static str, label: String, help: String, unit: &'static str) -> Row {
     Row {
         key,
         label,
@@ -30,150 +26,169 @@ const fn row(
     }
 }
 
-const GROUPS: &[(&str, &[Row])] = &[
-    (
-        "Other devices",
-        &[row(
-            "other_devices",
-            "Let other devices use the proxy",
-            "Phones and other computers on your network can then send their traffic here. \
-             So can anyone else on it: leave this off on a network you do not trust. \
-             Takes effect when tracewing starts again.",
-            "",
-        )],
-    ),
-    (
-        "Servers",
-        &[row(
-            "os_roots",
-            "Trust what this computer trusts",
-            "Servers with a certificate from an authority installed on this computer, such as \
-             a company's own, are reached as this computer's browsers reach them. Off, only \
-             the public authorities are trusted. Takes effect when tracewing starts again.",
-            "",
-        )],
-    ),
-    (
-        "AI tools",
-        &[row(
-            "ai_secrets",
-            "Let AI tools see tokens and cookies",
-            "AI tools read recorded traffic through tracewing's MCP server. Off, the values of \
-             Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.",
-            "",
-        )],
-    ),
-    (
-        "HTTP/3",
-        &[row(
-            "hide_http3",
-            "Keep apps off HTTP/3",
-            "HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around \
-             tracewing. This takes servers' offers of it out of their responses, and apps stay \
-             on HTTP/2. Flows still show the offers as servers sent them. \
-             Takes effect when tracewing starts again.",
-            "",
-        )],
-    ),
-    (
-        "Sessions",
-        &[
-            row(
-                "session_max_mib",
-                "Size of a session",
-                "Past this, the oldest flows are dropped.",
-                "MiB",
-            ),
-            row(
-                "disk_reserve_mib",
-                "Room to leave on the disk",
-                "With less than this free, flows are still listed but bodies are not kept.",
-                "MiB",
-            ),
-            row(
-                "sessions_kept",
-                "Earlier sessions to keep",
-                "Older ones are deleted when a new session starts.",
+/// The settings by group, said in the language in use.
+fn groups() -> Vec<(String, Vec<Row>)> {
+    vec![
+        (
+            tr!("Other devices"),
+            vec![row(
+                "other_devices",
+                tr!("Let other devices use the proxy"),
+                tr!(
+                    "Phones and other computers on your network can then send their traffic here. \
+                     So can anyone else on it: leave this off on a network you do not trust. \
+                     Takes effect when tracewing starts again."
+                ),
                 "",
-            ),
-        ],
-    ),
-    (
-        "Bodies",
-        &[
-            row(
-                "body_max_mib",
-                "Most kept of one body",
-                "It still reaches the client whole.",
-                "MiB",
-            ),
-            row(
-                "view_max_mib",
-                "Most unpacked for viewing",
-                "Stops a small download that unpacks to many GB.",
-                "MiB",
-            ),
-            row(
-                "log_max_kib",
-                "Small body size",
-                "Smaller bodies wait in memory and share a file. Larger ones get a file of their own as they arrive.",
-                "KiB",
-            ),
-            row(
-                "compress_stored",
-                "Compress plain text on disk",
-                "Takes about half the room, and is skipped when traffic is too fast for it.",
+            )],
+        ),
+        (
+            tr!("Servers"),
+            vec![row(
+                "os_roots",
+                tr!("Trust what this computer trusts"),
+                tr!(
+                    "Servers with a certificate from an authority installed on this computer, such as \
+                     a company's own, are reached as this computer's browsers reach them. Off, only \
+                     the public authorities are trusted. Takes effect when tracewing starts again."
+                ),
                 "",
-            ),
-            row(
-                "compress_level",
-                "Compression level",
-                "1 to 19. Higher is smaller and slower.",
+            )],
+        ),
+        (
+            tr!("AI tools"),
+            vec![row(
+                "ai_secrets",
+                tr!("Let AI tools see tokens and cookies"),
+                tr!(
+                    "AI tools read recorded traffic through tracewing's MCP server. Off, the values of \
+                     Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once."
+                ),
                 "",
-            ),
-        ],
-    ),
-    (
-        "Search",
-        &[
-            row(
-                "index_urls",
-                "Search URLs",
-                "Finds any part of a URL as you type. Costs little.",
+            )],
+        ),
+        (
+            tr!("HTTP/3"),
+            vec![row(
+                "hide_http3",
+                tr!("Keep apps off HTTP/3"),
+                tr!(
+                    "HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around \
+                     tracewing. This takes servers' offers of it out of their responses, and apps stay \
+                     on HTTP/2. Flows still show the offers as servers sent them. \
+                     Takes effect when tracewing starts again."
+                ),
                 "",
-            ),
-            row(
-                "index_bodies",
-                "Search bodies",
-                "Finds words in bodies. Can take as much disk as the bodies do.",
-                "",
-            ),
-            row(
-                "index_kib_per_body",
-                "Searched part of each body",
-                "Words past this are not found. More takes more disk.",
-                "KiB",
-            ),
-        ],
-    ),
-    (
-        "Under heavy traffic",
-        &[
-            row(
-                "queue_budget_mib",
-                "Memory for bodies waiting to be written",
-                "Past this, flows are listed without their bodies. Traffic is never held back.",
-                "MiB",
-            ),
-            row(
-                "spool_budget_mib",
-                "Memory for large bodies waiting to be written",
-                "Past this, large bodies stop being kept.",
-                "MiB",
-            ),
-        ],
-    ),
-];
+            )],
+        ),
+        (
+            tr!("Sessions"),
+            vec![
+                row(
+                    "session_max_mib",
+                    tr!("Size of a session"),
+                    tr!("Past this, the oldest flows are dropped."),
+                    "MiB",
+                ),
+                row(
+                    "disk_reserve_mib",
+                    tr!("Room to leave on the disk"),
+                    tr!(
+                        "With less than this free, flows are still listed but bodies are not kept."
+                    ),
+                    "MiB",
+                ),
+                row(
+                    "sessions_kept",
+                    tr!("Earlier sessions to keep"),
+                    tr!("Older ones are deleted when a new session starts."),
+                    "",
+                ),
+            ],
+        ),
+        (
+            tr!("Bodies"),
+            vec![
+                row(
+                    "body_max_mib",
+                    tr!("Most kept of one body"),
+                    tr!("It still reaches the client whole."),
+                    "MiB",
+                ),
+                row(
+                    "view_max_mib",
+                    tr!("Most unpacked for viewing"),
+                    tr!("Stops a small download that unpacks to many GB."),
+                    "MiB",
+                ),
+                row(
+                    "log_max_kib",
+                    tr!("Small body size"),
+                    tr!(
+                        "Smaller bodies wait in memory and share a file. Larger ones get a file of their own as they arrive."
+                    ),
+                    "KiB",
+                ),
+                row(
+                    "compress_stored",
+                    tr!("Compress plain text on disk"),
+                    tr!(
+                        "Takes about half the room, and is skipped when traffic is too fast for it."
+                    ),
+                    "",
+                ),
+                row(
+                    "compress_level",
+                    tr!("Compression level"),
+                    tr!("1 to 19. Higher is smaller and slower."),
+                    "",
+                ),
+            ],
+        ),
+        (
+            tr!("Search"),
+            vec![
+                row(
+                    "index_urls",
+                    tr!("Search URLs"),
+                    tr!("Finds any part of a URL as you type. Costs little."),
+                    "",
+                ),
+                row(
+                    "index_bodies",
+                    tr!("Search bodies"),
+                    tr!("Finds words in bodies. Can take as much disk as the bodies do."),
+                    "",
+                ),
+                row(
+                    "index_kib_per_body",
+                    tr!("Searched part of each body"),
+                    tr!("Words past this are not found. More takes more disk."),
+                    "KiB",
+                ),
+            ],
+        ),
+        (
+            tr!("Under heavy traffic"),
+            vec![
+                row(
+                    "queue_budget_mib",
+                    tr!("Memory for bodies waiting to be written"),
+                    tr!(
+                        "Past this, flows are listed without their bodies. Traffic is never held back."
+                    ),
+                    "MiB",
+                ),
+                row(
+                    "spool_budget_mib",
+                    tr!("Memory for large bodies waiting to be written"),
+                    tr!("Past this, large bodies stop being kept."),
+                    "MiB",
+                ),
+            ],
+        ),
+    ]
+}
 
 enum Field {
     Toggle(bool),
@@ -199,8 +214,8 @@ impl SettingsPage {
     pub fn new(settings: &StorageSettings, cx: &mut Context<Traffic>) -> Self {
         let table = toml::Value::try_from(settings).expect("settings are plain values");
         let mut fields = Vec::new();
-        for (_, rows) in GROUPS {
-            for row in *rows {
+        for (_, rows) in groups() {
+            for row in rows {
                 let value = &table[row.key];
                 let field = match value {
                     toml::Value::Boolean(on) => Field::Toggle(*on),
@@ -233,11 +248,15 @@ impl SettingsPage {
                 Field::Toggle(on) => toml::Value::Boolean(*on),
                 Field::Number(input) => {
                     let text = input.read(cx).text().trim().to_owned();
-                    let number: i64 = text
-                        .parse()
-                        .map_err(|_| format!("{key}: \"{text}\" is not a whole number"))?;
+                    let number: i64 = text.parse().map_err(|_| {
+                        tr!(
+                            "{key}: \"{text}\" is not a whole number",
+                            key = *key,
+                            text = text.as_str()
+                        )
+                    })?;
                     if number < 0 {
-                        return Err(format!("{key}: must not be negative"));
+                        return Err(tr!("{key}: must not be negative", key = *key));
                     }
                     toml::Value::Integer(number)
                 }
@@ -346,6 +365,7 @@ impl Traffic {
         if self.settings_page.is_none() {
             self.open_settings(cx);
         }
+        let language = self.render_language(cx);
         let page = self.settings_page.as_ref().expect("just made");
         let field_of = |key: &str| {
             page.fields
@@ -354,7 +374,7 @@ impl Traffic {
                 .map(|(_, field)| field)
                 .expect("every row has a field")
         };
-        let groups = GROUPS.iter().map(|(title, rows)| {
+        let groups = groups().into_iter().map(|(title, rows)| {
             div()
                 .flex()
                 .flex_col()
@@ -363,7 +383,7 @@ impl Traffic {
                 .rounded(px(22.))
                 .bg(rgb(c.surface))
                 .child(eyebrow(title).px(px(6.)).pb(px(6.)))
-                .children(rows.iter().map(|row| {
+                .children(rows.into_iter().map(|row| {
                     let key = row.key;
                     let control = match field_of(key) {
                         Field::Toggle(on) => {
@@ -449,7 +469,7 @@ impl Traffic {
                         .child(control)
                 }))
         });
-        let button = |id: &'static str, label: &'static str, loud: bool| {
+        let button = |id: &'static str, label: String, loud: bool| {
             div()
                 .id(id)
                 .h(px(36.))
@@ -466,7 +486,7 @@ impl Traffic {
         let status = match (&page.problem, page.saved) {
             (Some(problem), _) => Some((problem.clone(), c.error)),
             (None, true) => Some((
-                "Saved. The limits apply the next time tracewing starts.".to_owned(),
+                tr!("Saved. The limits apply the next time tracewing starts."),
                 c.ok,
             )),
             _ => None,
@@ -490,19 +510,20 @@ impl Traffic {
                         div()
                             .text_size(px(20.))
                             .font_weight(FontWeight::BOLD)
-                            .child("Settings"),
+                            .child(tr!("Settings")),
                     )
                     .child(div().flex_1())
                     .children(status.map(|(text, color)| div().text_color(rgb(color)).child(text)))
                     .child(
-                        button("settings-defaults", "Back to defaults", false)
+                        button("settings-defaults", tr!("Back to defaults"), false)
                             .on_click(cx.listener(|this, _, _, cx| this.reset_settings(cx))),
                     )
                     .child(
-                        button("settings-save", "Save", true)
+                        button("settings-save", tr!("Save"), true)
                             .on_click(cx.listener(|this, _, _, cx| this.save_settings(cx))),
                     ),
             )
+            .child(language)
             .child(
                 div()
                     .flex()
@@ -511,13 +532,13 @@ impl Traffic {
                     .p(px(14.))
                     .rounded(px(22.))
                     .bg(rgb(c.surface))
-                    .child(eyebrow("Hosts not to decrypt").px(px(6.)))
+                    .child(eyebrow(tr!("Hosts not to decrypt")).px(px(6.)))
                     .child(
                         div()
                             .px(px(6.))
                             .text_size(px(12.))
                             .text_color(rgb(c.muted))
-                            .child("One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved."),
+                            .child(tr!("One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.")),
                     )
                     .child(
                         div()
@@ -530,6 +551,78 @@ impl Traffic {
                     ),
             )
             .children(groups)
+    }
+}
+
+impl Traffic {
+    /// The language: the system's, or one of those there are, each named in
+    /// itself so that it is found by someone who cannot read the others.
+    fn render_language(&self, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let chosen = self.layout.language.clone();
+        let chip = |id: String, label: String, on: bool| {
+            div()
+                .id(gpui::ElementId::Name(id.into()))
+                .h(px(30.))
+                .px(px(12.))
+                .rounded(px(15.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .text_size(px(12.5))
+                .font_weight(FontWeight::BOLD)
+                .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
+                .when(!on, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
+                .child(label)
+        };
+        let system = tracewing_i18n::system_language();
+        let system_name = tracewing_i18n::LANGUAGES
+            .iter()
+            .find(|(tag, _)| *tag == system)
+            .map_or("English", |(_, name)| name);
+        let languages = tracewing_i18n::LANGUAGES.iter().map(|&(tag, name)| {
+            chip(
+                format!("language-{tag}"),
+                name.to_owned(),
+                chosen.as_deref() == Some(tag),
+            )
+            .on_click(
+                cx.listener(move |this, _, window, cx| this.set_language(Some(tag), window, cx)),
+            )
+        });
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(8.))
+            .p(px(14.))
+            .rounded(px(22.))
+            .bg(rgb(c.surface))
+            .child(eyebrow(tr!("Language")).px(px(6.)))
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .gap(px(6.))
+                    .child(
+                        chip(
+                            "language-system".to_owned(),
+                            tr!("System ({system_name})", system_name = system_name),
+                            chosen.is_none(),
+                        )
+                        .on_click(
+                            cx.listener(|this, _, window, cx| this.set_language(None, window, cx)),
+                        ),
+                    )
+                    .children(languages),
+            )
+            .child(
+                div()
+                    .px(px(6.))
+                    .text_size(px(12.))
+                    .text_color(rgb(c.muted))
+                    .child(tr!("Applies at once.")),
+            )
     }
 }
 
@@ -546,9 +639,9 @@ mod tests {
             .keys()
             .map(String::as_str)
             .collect();
-        let mut rows: Vec<&str> = GROUPS
-            .iter()
-            .flat_map(|(_, rows)| rows.iter().map(|row| row.key))
+        let mut rows: Vec<&str> = groups()
+            .into_iter()
+            .flat_map(|(_, rows)| rows.into_iter().map(|row| row.key))
             .collect();
         keys.sort_unstable();
         rows.sort_unstable();

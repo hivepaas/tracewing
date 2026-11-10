@@ -8,6 +8,7 @@ use crate::{
 };
 use gpui::{AppContext as _, Context, PathPromptOptions};
 use std::path::{Path, PathBuf};
+use tracewing_i18n::{tr, tr_n};
 use tracewing_store::{
     har::{self, ExportOptions},
     import,
@@ -74,7 +75,8 @@ impl Traffic {
                 Ok(Ok(None)) | Err(_) => return,
                 Ok(Err(e)) => {
                     let _ = this.update(cx, |this, cx| {
-                        this.files().note = Some((format!("No file picker: {e:#}"), true));
+                        this.files().note =
+                            Some((tr!("No file picker: {e}", e = format!("{e:#}")), true));
                         cx.notify();
                     });
                     return;
@@ -97,7 +99,7 @@ impl Traffic {
             without_secrets: self.files().without_secrets,
         };
         self.files().busy = true;
-        self.files().note = Some(("Writing the HAR…".to_owned(), false));
+        self.files().note = Some((tr!("Writing the HAR…"), false));
         cx.notify();
         cx.spawn(async move |this, cx| {
             let target = path.clone();
@@ -112,9 +114,19 @@ impl Traffic {
                 let state = this.files();
                 state.busy = false;
                 state.note = Some(match result {
-                    Ok(1) => (format!("1 flow written to {}", path.display()), false),
-                    Ok(n) => (format!("{n} flows written to {}", path.display()), false),
-                    Err(e) => (format!("The HAR was not written: {e:#}"), true),
+                    Ok(n) => (
+                        tr_n!(
+                            n,
+                            "{n} flow written to {path}",
+                            "{n} flows written to {path}",
+                            path = path.display().to_string()
+                        ),
+                        false,
+                    ),
+                    Err(e) => (
+                        tr!("The HAR was not written: {e}", e = format!("{e:#}")),
+                        true,
+                    ),
                 });
                 cx.notify();
             });
@@ -131,14 +143,15 @@ impl Traffic {
             files: true,
             directories: false,
             multiple: false,
-            prompt: Some("Open".into()),
+            prompt: Some(tr!("Open").into()),
         });
         cx.spawn(async move |this, cx| {
             let path = match chosen.await {
                 Ok(Ok(Some(mut paths))) if !paths.is_empty() => paths.swap_remove(0),
                 Ok(Err(e)) => {
                     let _ = this.update(cx, |this, cx| {
-                        this.files().note = Some((format!("No file picker: {e:#}"), true));
+                        this.files().note =
+                            Some((tr!("No file picker: {e}", e = format!("{e:#}")), true));
                         cx.notify();
                     });
                     return;
@@ -161,7 +174,10 @@ impl Traffic {
         );
         let settings = self.engine.settings.clone();
         self.files().busy = true;
-        self.files().note = Some((format!("Reading {}…", path.display()), false));
+        self.files().note = Some((
+            tr!("Reading {path}…", path = path.display().to_string()),
+            false,
+        ));
         cx.notify();
         cx.spawn(async move |this, cx| {
             let target = session.clone();
@@ -181,22 +197,24 @@ impl Traffic {
                     Ok((format, imported)) => {
                         let skipped = match imported.skipped {
                             0 => String::new(),
-                            n => format!(", {n} entries left out"),
+                            n => tr_n!(n, ", {n} entry left out", ", {n} entries left out"),
                         };
-                        this.files().note = Some((
-                            format!(
-                                "{} flows read from a {}{skipped}",
-                                imported.flows,
-                                format.name()
-                            ),
-                            false,
-                        ));
+                        let read = tr_n!(
+                            imported.flows,
+                            "{n} flow read from a {format}",
+                            "{n} flows read from a {format}",
+                            format = format_name(format)
+                        );
+                        this.files().note = Some((format!("{read}{skipped}"), false));
                         this.open_session(&session, cx);
                         this.set_screen(Screen::Traffic, cx);
                         this.refresh_sessions(cx);
                     }
                     Err(e) => {
-                        this.files().note = Some((format!("The file was not read: {e:#}"), true));
+                        this.files().note = Some((
+                            tr!("The file was not read: {e}", e = format!("{e:#}")),
+                            true,
+                        ));
                     }
                 }
                 cx.notify();
@@ -230,7 +248,8 @@ impl Traffic {
                 Ok(Ok(None)) | Err(_) => return,
                 Ok(Err(e)) => {
                     let _ = this.update(cx, |this, cx| {
-                        this.files().note = Some((format!("No file picker: {e:#}"), true));
+                        this.files().note =
+                            Some((tr!("No file picker: {e}", e = format!("{e:#}")), true));
                         cx.notify();
                     });
                     return;
@@ -258,7 +277,7 @@ impl Traffic {
                     let mut out = std::io::BufWriter::new(file);
                     let size = BodyReader::new(&session)
                         .unpack_into(&stored, u64::MAX, &mut out)
-                        .ok_or_else(|| anyhow::anyhow!("it is no longer kept"))?;
+                        .ok_or_else(|| anyhow::anyhow!(tr!("it is no longer kept")))?;
                     std::io::Write::flush(&mut out)?;
                     anyhow::Ok(size)
                 })
@@ -268,16 +287,19 @@ impl Traffic {
                 state.busy = false;
                 state.note = Some(match result {
                     Ok(size) => (
-                        format!(
-                            "{} saved to {}",
-                            crate::flows::size_text(size),
-                            path.display()
+                        tr!(
+                            "{size} saved to {path}",
+                            size = crate::flows::size_text(size),
+                            path = path.display().to_string()
                         ),
                         false,
                     ),
                     Err(e) => {
                         let _ = std::fs::remove_file(&path);
-                        (format!("The body was not saved: {e:#}"), true)
+                        (
+                            tr!("The body was not saved: {e}", e = format!("{e:#}")),
+                            true,
+                        )
                     }
                 });
                 cx.notify();
@@ -330,6 +352,15 @@ pub fn body_file_name(url: &str, content_type: Option<&str>, side: Side) -> Stri
         Side::Response => "response",
     };
     format!("{stem}.{extension}")
+}
+
+/// The kind of file a session was read from, in words.
+fn format_name(format: import::Format) -> String {
+    match format {
+        import::Format::Har => "HAR".to_owned(),
+        import::Format::Saz => tr!("Fiddler session"),
+        import::Format::Charles => tr!("Charles session"),
+    }
 }
 
 fn file_stem(session: &Path) -> String {

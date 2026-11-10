@@ -24,6 +24,7 @@ use gpui::{
     px, relative, rgb,
 };
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tracewing_i18n::{tr, tr_n};
 use tracewing_store::session::BodyReader;
 
 /// As much of a request's body as can go on a command line, and one byte more to
@@ -117,7 +118,7 @@ impl Traffic {
             Err(_) => {
                 // It went with the oldest flows between the click and now.
                 self.inspector.detail = None;
-                self.inspector.body = BodyState::Note("This flow is gone.".into());
+                self.inspector.body = BodyState::Note(tr!("This flow is gone.").into());
             }
         }
     }
@@ -134,13 +135,13 @@ impl Traffic {
         if !facts.stored.exists() {
             self.inspector.body = BodyState::Note(
                 if detail.kind == "tunnel" {
-                    "This host is not decrypted, so what it sends cannot be seen."
+                    tr!("This host is not decrypted, so what it sends cannot be seen.")
                 } else if facts.bytes == 0 {
-                    "No body."
+                    tr!("No body.")
                 } else if facts.shed {
-                    "This body was not kept: the disk was nearly full, or too much was waiting for it."
+                    tr!("This body was not kept: the disk was nearly full, or too much was waiting for it.")
                 } else {
-                    "This body was not kept."
+                    tr!("This body was not kept.")
                 }
                 .into(),
             );
@@ -166,10 +167,10 @@ impl Traffic {
                 }
                 this.inspector.body = match file {
                     None => BodyState::Note(
-                        "This body is gone: it was dropped with the oldest flows, or cannot be read."
+                        tr!("This body is gone: it was dropped with the oldest flows, or cannot be read.")
                             .into(),
                     ),
-                    Some((_, 0)) => BodyState::Note("No body.".into()),
+                    Some((_, 0)) => BodyState::Note(tr!("No body.").into()),
                     Some((path, size)) if picture && size <= PICTURE_MAX => {
                         BodyState::Image(path, size)
                     }
@@ -177,7 +178,9 @@ impl Traffic {
                         Ok(body) => BodyState::Shown(
                             cx.new(|cx| BodyView::new(body, content_type.as_deref(), cx)),
                         ),
-                        Err(e) => BodyState::Note(format!("Cannot open this body: {e:#}").into()),
+                        Err(e) => BodyState::Note(
+                            tr!("Cannot open this body: {e}", e = format!("{e:#}")).into(),
+                        ),
                     },
                 };
                 cx.notify();
@@ -304,7 +307,7 @@ impl Traffic {
                         }),
                     ),
             )
-            .child(eyebrow("Inspector"));
+            .child(eyebrow(tr!("Inspector")));
         let panel = div()
             .size_full()
             .p(px(14.))
@@ -323,7 +326,7 @@ impl Traffic {
                     .items_center()
                     .justify_center()
                     .text_color(rgb(c.muted))
-                    .child("Choose a flow to see it here"),
+                    .child(tr!("Choose a flow to see it here")),
             );
         };
         panel
@@ -349,9 +352,9 @@ impl Traffic {
         let host = detail.host.clone();
         let url = detail.url.clone();
         let text = if left_alone {
-            "Not decrypted. New connections to this host go through unread."
+            tr!("Not decrypted. New connections to this host go through unread.")
         } else {
-            "If an app fails with this host, it may pin its certificates."
+            tr!("If an app fails with this host, it may pin its certificates.")
         };
         div()
             .flex()
@@ -381,7 +384,7 @@ impl Traffic {
                     .text_color(rgb(c.on_chip))
                     .text_size(px(12.))
                     .font_weight(FontWeight::BOLD)
-                    .child("Make a rule")
+                    .child(tr!("Make a rule"))
                     .on_click(cx.listener(move |view, _, _, cx| {
                         view.start_rule_for(&url, cx);
                     })),
@@ -401,9 +404,9 @@ impl Traffic {
                     .text_size(px(12.))
                     .font_weight(FontWeight::BOLD)
                     .child(if left_alone {
-                        "Decrypt this host"
+                        tr!("Decrypt this host")
                     } else {
-                        "Do not decrypt this host"
+                        tr!("Do not decrypt this host")
                     })
                     .on_click(cx.listener(move |view, _, _, cx| {
                         let host = host.clone();
@@ -424,7 +427,7 @@ impl Traffic {
     fn render_sides(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let side = self.inspector.side;
-        let tab = |id: &'static str, label: &'static str, this: Side| {
+        let tab = |id: &'static str, label: String, this: Side| {
             let on = side == this;
             div()
                 .id(id)
@@ -449,8 +452,8 @@ impl Traffic {
             .p(px(4.))
             .rounded(px(18.))
             .bg(rgb(c.code))
-            .child(tab("side-request", "Request", Side::Request))
-            .child(tab("side-response", "Response", Side::Response))
+            .child(tab("side-request", tr!("Request"), Side::Request))
+            .child(tab("side-response", tr!("Response"), Side::Response))
     }
 
     fn render_parts(&self, detail: &Detail, cx: &mut Context<Self>) -> impl IntoElement {
@@ -466,7 +469,7 @@ impl Traffic {
         let summary_text: Option<String> = match (&self.inspector.body, part) {
             (BodyState::Shown(view), Part::Body) => Some(summary(view.read(cx).body())),
             (BodyState::Image(_, size), Part::Body) => {
-                Some(format!("Picture · {}", size_text(*size)))
+                Some(tr!("Picture · {size}", size = size_text(*size)))
             }
             _ => None,
         };
@@ -505,23 +508,23 @@ impl Traffic {
             .children(self.inspector.messages.as_ref().map(|state| {
                 tab(
                     "part-messages",
-                    format!(
-                        "Messages {}",
-                        crate::flows::group_digits(state.list.len() as u64)
+                    tr!(
+                        "Messages {count}",
+                        count = crate::flows::group_digits(state.list.len() as u64)
                     ),
                     Part::Messages,
                 )
             }))
-            .child(tab("part-body", "Body".to_owned(), Part::Body))
+            .child(tab("part-body", tr!("Body"), Part::Body))
             .child(tab(
                 "part-headers",
-                format!("Headers {headers}"),
+                tr!("Headers {headers}", headers = headers),
                 Part::Headers,
             ))
             .when(sent + set > 0, |d| {
                 d.child(tab(
                     "part-cookies",
-                    format!("Cookies {cookies}"),
+                    tr!("Cookies {cookies}", cookies = cookies),
                     Part::Cookies,
                 ))
             })
@@ -529,17 +532,21 @@ impl Traffic {
                 let query = fields::query(&detail.url).len();
                 let form = detail.form.as_ref().map_or(0, Vec::len);
                 d.when(query > 0, |d| {
-                    d.child(tab("part-query", format!("Query {query}"), Part::Query))
+                    d.child(tab(
+                        "part-query",
+                        tr!("Query {query}", query = query),
+                        Part::Query,
+                    ))
                 })
                 .when(form > 0, |d| {
-                    d.child(tab("part-form", format!("Form {form}"), Part::Form))
+                    d.child(tab(
+                        "part-form",
+                        tr!("Form {form}", form = form),
+                        Part::Form,
+                    ))
                 })
             })
-            .child(tab(
-                "part-connection",
-                "Connection".to_owned(),
-                Part::Connection,
-            ))
+            .child(tab("part-connection", tr!("Connection"), Part::Connection))
             .child(div().flex_1())
             .children(summary_text.map(|text| {
                 div()
@@ -563,7 +570,7 @@ impl Traffic {
                             .text_color(rgb(c.on_chip))
                             .text_size(px(12.))
                             .font_weight(FontWeight::BOLD)
-                            .child("Save body")
+                            .child(tr!("Save body"))
                             .on_click(cx.listener(|view, _, _, cx| view.ask_save_body(cx))),
                     )
                 },
@@ -571,7 +578,7 @@ impl Traffic {
             .when(
                 !matches!(detail.kind.as_str(), "tunnel" | "websocket"),
                 |d| {
-                    let small = |id: &'static str, label: &'static str| {
+                    let small = |id: &'static str, label: String| {
                         div()
                             .id(id)
                             .h(px(28.))
@@ -592,21 +599,21 @@ impl Traffic {
                             .flex_row()
                             .gap(px(6.))
                             .child(
-                                small("send-again", "Send again").on_click(
+                                small("send-again", tr!("Send again")).on_click(
                                     cx.listener(|view, _, _, cx| view.send_flow_again(cx)),
                                 ),
                             )
                             .child(
-                                small("edit-send", "Edit and send")
+                                small("edit-send", tr!("Edit and send"))
                                     .on_click(cx.listener(|view, _, _, cx| view.edit_flow(cx))),
                             )
                             .child(
                                 small(
                                     "copy-curl",
                                     if self.inspector.copied {
-                                        "Copied"
+                                        tr!("Copied")
                                     } else {
-                                        "Copy as cURL"
+                                        tr!("Copy as cURL")
                                     },
                                 )
                                 .on_click(cx.listener(|view, _, _, cx| view.copy_as_curl(cx))),
@@ -649,7 +656,7 @@ impl Traffic {
                     .text_color(rgb(if open { c.on_tonal } else { c.on_chip }))
                     .text_size(px(12.))
                     .font_weight(FontWeight::BOLD)
-                    .child("Copy as…")
+                    .child(tr!("Copy as…"))
                     .on_click(cx.listener(move |view, _, _, cx| view.set_copy_menu(!open, cx))),
             )
             .when(open, |d| {
@@ -721,12 +728,14 @@ impl Traffic {
                                 .max_h_full()
                                 .object_fit(ObjectFit::Contain)
                                 .with_fallback(|| {
-                                    note("This picture cannot be drawn. Save the body to look at it.")
-                                        .into_any_element()
+                                    note(tr!(
+                                        "This picture cannot be drawn. Save the body to look at it."
+                                    ))
+                                    .into_any_element()
                                 }),
                         ),
                 ),
-                BodyState::Loading => well.child(note("Opening…")),
+                BodyState::Loading => well.child(note(tr!("Opening…"))),
                 BodyState::Note(text) => well.child(note(text.clone())),
             },
         }
@@ -780,7 +789,7 @@ fn render_title(detail: &Detail) -> impl IntoElement {
 
 fn status_text(status: Option<u16>) -> String {
     match status {
-        None => "No response".to_owned(),
+        None => tr!("No response"),
         Some(status) => {
             let reason = http::StatusCode::from_u16(status)
                 .ok()
@@ -804,7 +813,7 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
             .flex_row()
             .flex_shrink_0()
             .gap(px(6.))
-            .child(plain("Tunnel, not decrypted".to_owned()));
+            .child(plain(tr!("Tunnel, not decrypted")));
     }
     let encoding = detail.response.stored.encoding.clone();
     let size = match encoding {
@@ -822,17 +831,18 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
             detail
                 .rule
                 .clone()
-                .map(|rule| chip(format!("Rule: {rule}"), c.tonal, c.on_tonal)),
+                .map(|rule| chip(tr!("Rule: {rule}", rule = rule), c.tonal, c.on_tonal)),
         )
-        .children(
-            detail
-                .graphql
-                .clone()
-                .map(|operation| chip(format!("GraphQL: {operation}"), c.tonal, c.on_tonal)),
-        )
+        .children(detail.graphql.clone().map(|operation| {
+            chip(
+                tr!("GraphQL: {operation}", operation = operation),
+                c.tonal,
+                c.on_tonal,
+            )
+        }))
         .child(plain(detail.protocols()))
         .children(if detail.open {
-            Some(chip("Open", c.ok_ground, c.ok))
+            Some(chip(tr!("Open"), c.ok_ground, c.ok))
         } else {
             detail.duration_us.map(|d| plain(time_text(d)))
         })
@@ -872,7 +882,12 @@ fn render_timing(detail: &Detail) -> Option<impl IntoElement> {
             .items_center()
             .gap(px(10.))
             .text_size(px(12.))
-            .child(div().w(px(64.)).text_color(rgb(c.muted)).child(phase.label))
+            .child(
+                div()
+                    .w(px(64.))
+                    .text_color(rgb(c.muted))
+                    .child(phase.name()),
+            )
             .child(
                 div()
                     .flex_1()
@@ -903,8 +918,9 @@ fn render_timing(detail: &Detail) -> Option<impl IntoElement> {
             )
     };
     let reused = match (detail.conn_id, detail.connect_us) {
-        (Some(id), None) => Some(format!(
-            "Over connection {id}, made before: no time went on connecting."
+        (Some(id), None) => Some(tr!(
+            "Over connection {id}, made before: no time went on connecting.",
+            id = id.to_string()
         )),
         _ => None,
     };
@@ -940,7 +956,7 @@ fn now_secs() -> i64 {
 /// `naming` is the box for the name of the device it came from, if another sent it.
 fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyElement {
     let c = colors();
-    let row = |label: &'static str, value: String| {
+    let row = |label: String, value: String| {
         div()
             .flex()
             .flex_row()
@@ -964,12 +980,12 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
             .child(text)
     };
     let app = match (&detail.app, detail.app_pid) {
-        (Some(app), Some(pid)) => format!("{app}, pid {pid}"),
+        (Some(app), Some(pid)) => tr!("{app}, pid {pid}", app = app, pid = pid.to_string()),
         (Some(app), None) => app.clone(),
         _ if device_of(&detail.client).is_none() => {
-            "Not found: it may have ended, or belong to another user".to_owned()
+            tr!("Not found: it may have ended, or belong to another user")
         }
-        _ => "On another device".to_owned(),
+        _ => tr!("On another device"),
     };
     let list = div()
         .id("connection")
@@ -982,8 +998,8 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
         .font_family(crate::MONO_FONT)
         .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(px(12.))
-        .child(heading("CLIENT".to_owned()))
-        .child(row("App", app))
+        .child(heading(tr!("CLIENT")))
+        .child(row(tr!("App"), app))
         .children(naming.map(|input| {
             div()
                 .flex()
@@ -995,7 +1011,7 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
                         .w(relative(0.26))
                         .flex_shrink_0()
                         .text_color(rgb(c.json_key))
-                        .child("Device"),
+                        .child(tr!("Device")),
                 )
                 .child(
                     div()
@@ -1013,15 +1029,22 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
                         .child(input),
                 )
         }))
-        .children(detail.app_path.clone().map(|path| row("Program", path)))
-        .child(row("Address", detail.client.clone()))
-        .child(heading("SERVER".to_owned()));
+        .children(
+            detail
+                .app_path
+                .clone()
+                .map(|path| row(tr!("Program"), path)),
+        )
+        .child(row(tr!("Address"), detail.client.clone()))
+        .child(heading(tr!("SERVER")));
     let Some(connection) = detail.connection.clone() else {
         let why = match (detail.conn_id, detail.kind.as_str()) {
-            (Some(_), _) => "What this connection was is no longer kept: it went with older flows.",
-            (None, "tunnel") => "Not decrypted: tracewing passed it on without looking.",
-            (None, _) if detail.error.is_some() => "No connection was made.",
-            (None, _) => "None: it was answered without one.",
+            (Some(_), _) => {
+                tr!("What this connection was is no longer kept: it went with older flows.")
+            }
+            (None, "tunnel") => tr!("Not decrypted: tracewing passed it on without looking."),
+            (None, _) if detail.error.is_some() => tr!("No connection was made."),
+            (None, _) => tr!("None: it was answered without one."),
         };
         return list
             .child(
@@ -1037,27 +1060,31 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
         .as_ref()
         .is_some_and(|tls| tls.error.is_some());
     let made = match (detail.conn_id, detail.connect_us) {
-        (Some(id), _) if refused => format!("{id}, given up during TLS"),
-        (Some(id), Some(_)) => format!("{id}, made for this flow"),
-        (Some(id), None) => format!("{id}, made before and used again"),
+        (Some(id), _) if refused => tr!("{id}, given up during TLS", id = id.to_string()),
+        (Some(id), Some(_)) => tr!("{id}, made for this flow", id = id.to_string()),
+        (Some(id), None) => tr!("{id}, made before and used again", id = id.to_string()),
         _ => "–".to_owned(),
     };
     let list = list
-        .child(row("Server", connection.remote.clone()))
-        .child(row("Connection", made));
+        .child(row(tr!("Server"), connection.remote.clone()))
+        .child(row(tr!("Connection"), made));
     let Some(tls) = connection.tls else {
         return list
-            .child(row("TLS", "None: plain HTTP".to_owned()))
+            .child(row("TLS".to_owned(), tr!("None: plain HTTP")))
             .into_any_element();
     };
     let now = now_secs();
     let refused = tls.error.is_some();
     let chain_heading = match (refused, tls.chain.len()) {
-        (true, 0) => "THE SERVER SHOWED NO CERTIFICATES".to_owned(),
-        (true, _) => "WHAT THE SERVER SHOWED, ITS OWN FIRST".to_owned(),
-        (false, 0) => "NO CERTIFICATES".to_owned(),
-        (false, 1) => "CERTIFICATE".to_owned(),
-        (false, n) => format!("{n} CERTIFICATES, THE SERVER'S FIRST"),
+        (true, 0) => tr!("THE SERVER SHOWED NO CERTIFICATES"),
+        (true, _) => tr!("WHAT THE SERVER SHOWED, ITS OWN FIRST"),
+        (false, 0) => tr!("NO CERTIFICATES"),
+        (false, 1) => tr!("CERTIFICATE"),
+        (false, n) => tr_n!(
+            n,
+            "{n} CERTIFICATE, THE SERVER'S FIRST",
+            "{n} CERTIFICATES, THE SERVER'S FIRST"
+        ),
     };
     let known = |text: String| (!text.is_empty()).then_some(text);
     list.children(tls.error.map(|error| {
@@ -1067,16 +1094,15 @@ fn render_connection(detail: &Detail, naming: Option<Entity<TextInput>>) -> AnyE
             .bg(rgb(c.error_ground))
             .text_color(rgb(c.error))
             .font_family(crate::FONT)
-            .child(format!(
-                "tracewing would not go on with this server: {error}. If the app trusts \
-                 it some other way, such as through a company CA, choose \u{201c}Do not \
-                 decrypt this host\u{201d} and the app will check the server itself."
+            .child(tr!(
+                "tracewing would not go on with this server: {error}. If the app trusts it some other way, such as through a company CA, choose “Do not decrypt this host” and the app will check the server itself.",
+                error = error
             ))
     }))
-    .children(known(tls.version).map(|v| row("TLS", v)))
-    .children(known(tls.cipher).map(|v| row("Cipher", v)))
+    .children(known(tls.version).map(|v| row("TLS".to_owned(), v)))
+    .children(known(tls.cipher).map(|v| row(tr!("Cipher"), v)))
     .when(!refused, |d| {
-        d.child(row("ALPN", tls.alpn.unwrap_or_else(|| "none".to_owned())))
+        d.child(row("ALPN".to_owned(), tls.alpn.unwrap_or_else(|| tr!("none"))))
     })
     .child(heading(chain_heading))
     .children(
@@ -1094,18 +1120,22 @@ fn render_certificate(cert: Certificate, now: i64) -> impl IntoElement {
     let c = colors();
     let late = cert.out_of_date(now);
     let when = if now < cert.not_before {
-        format!("not valid until {}", jwt::relative(cert.not_before, now))
+        tr!(
+            "not valid until {when}",
+            when = jwt::relative(cert.not_before, now)
+        )
     } else if late {
-        format!("expired {}", jwt::relative(cert.not_after, now))
+        tr!("expired {when}", when = jwt::relative(cert.not_after, now))
     } else {
-        format!("expires {}", jwt::relative(cert.not_after, now))
+        tr!("expires {when}", when = jwt::relative(cert.not_after, now))
     };
     let names = match cert.names.len() {
         0 => None,
-        n if n > NAMES_SHOWN => Some(format!(
-            "{}, and {} more",
-            cert.names[..NAMES_SHOWN].join(", "),
-            n - NAMES_SHOWN
+        n if n > NAMES_SHOWN => Some(tr_n!(
+            n - NAMES_SHOWN,
+            "{names}, and {n} more",
+            "{names}, and {n} more",
+            names = cert.names[..NAMES_SHOWN].join(", ")
         )),
         _ => Some(cert.names.join(", ")),
     };
@@ -1128,17 +1158,18 @@ fn render_certificate(cert: Certificate, now: i64) -> impl IntoElement {
                     cert.subject.clone()
                 }),
         )
-        .child(line(format!("Issued by {}", cert.issuer)))
+        .child(line(tr!("Issued by {issuer}", issuer = &cert.issuer)))
         .child(
             div()
                 .text_color(rgb(if late { c.error } else { c.text }))
-                .child(format!(
-                    "Valid {} to {} · {when}",
-                    jwt::local_time(cert.not_before),
-                    jwt::local_time(cert.not_after)
+                .child(tr!(
+                    "Valid {from} to {to} · {when}",
+                    from = jwt::local_time(cert.not_before),
+                    to = jwt::local_time(cert.not_after),
+                    when = when
                 )),
         )
-        .children(names.map(|names| line(format!("Names {names}"))))
+        .children(names.map(|names| line(tr!("Names {names}", names = names))))
         .child(
             div()
                 .text_color(rgb(c.muted))
@@ -1147,17 +1178,17 @@ fn render_certificate(cert: Certificate, now: i64) -> impl IntoElement {
         .child(
             div()
                 .text_color(rgb(c.muted))
-                .child(format!("Serial {}", cert.serial)),
+                .child(tr!("Serial {serial}", serial = &cert.serial)),
         )
 }
 
 fn render_headers(headers: Option<&[(String, String)]>) -> impl IntoElement {
     let c = colors();
     let Some(headers) = headers else {
-        return note("These headers were not kept.").into_any_element();
+        return note(tr!("These headers were not kept.")).into_any_element();
     };
     if headers.is_empty() {
-        return note("No headers.").into_any_element();
+        return note(tr!("No headers.")).into_any_element();
     }
     div()
         .id("headers")
@@ -1224,10 +1255,11 @@ fn render_fields(found: Vec<Field>) -> impl IntoElement {
                     filename,
                     content_type,
                     bytes,
-                } => div().text_color(rgb(c.muted)).child(format!(
-                    "File {filename} · {} · {}",
-                    content_type.unwrap_or_else(|| "no type".to_owned()),
-                    size_text(bytes as u64)
+                } => div().text_color(rgb(c.muted)).child(tr!(
+                    "File {filename} · {kind} · {size}",
+                    filename = filename,
+                    kind = content_type.unwrap_or_else(|| tr!("no type")),
+                    size = size_text(bytes as u64)
                 )),
             };
             div()
@@ -1255,13 +1287,13 @@ fn cookie_counts(detail: &Detail) -> (usize, usize) {
 fn render_cookies(headers: Option<&[(String, String)]>, side: Side) -> impl IntoElement {
     let c = colors();
     let Some(headers) = headers else {
-        return note("These headers were not kept.").into_any_element();
+        return note(tr!("These headers were not kept.")).into_any_element();
     };
     let found = cookies::of(headers, side);
     if found.is_empty() {
         return note(match side {
-            Side::Request => "No cookies were sent.",
-            Side::Response => "No cookies were set.",
+            Side::Request => tr!("No cookies were sent."),
+            Side::Response => tr!("No cookies were set."),
         })
         .into_any_element();
     }
@@ -1316,10 +1348,13 @@ fn render_jwt(jwt: Jwt) -> Div {
     let c = colors();
     let now = now_secs();
     let title = match jwt.algorithm() {
-        Some(algorithm) => format!("JWT · {algorithm} · signature not checked"),
-        None => "JWT · signature not checked".to_owned(),
+        Some(algorithm) => tr!(
+            "JWT · {algorithm} · signature not checked",
+            algorithm = algorithm
+        ),
+        None => tr!("JWT · signature not checked"),
     };
-    let label = |text: &'static str| {
+    let label = |text: String| {
         div()
             .mt(px(4.))
             .text_size(px(11.))
@@ -1346,14 +1381,15 @@ fn render_jwt(jwt: Jwt) -> Div {
             div()
                 .text_color(rgb(if late { c.error } else { c.text }))
                 .child(format!(
-                    "{label} {} · {}",
+                    "{} {} · {}",
+                    jwt::time_label(label),
                     jwt::local_time(at),
                     jwt::relative(at, now)
                 ))
         }))
-        .child(label("Header"))
+        .child(label(tr!("Header")))
         .child(jwt.header_text())
-        .child(label("Payload"))
+        .child(label(tr!("Payload")))
         .child(jwt.payload_text())
 }
 

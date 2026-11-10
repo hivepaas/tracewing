@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tracewing_i18n::tr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -35,23 +36,23 @@ impl Column {
     ];
 
     /// In the header.
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            Self::Number => "#",
-            Self::Method => "Method",
-            Self::Status => "Status",
-            Self::App => "App",
-            Self::Host => "Host",
-            Self::Path => "Path",
-            Self::Size => "Size",
-            Self::Time => "Time",
+            Self::Number => "#".to_owned(),
+            Self::Method => tr!("Method"),
+            Self::Status => tr!("Status"),
+            Self::App => tr!("App"),
+            Self::Host => tr!("Host"),
+            Self::Path => tr!("Path"),
+            Self::Size => tr!("Size"),
+            Self::Time => tr!("Time"),
         }
     }
 
     /// In the menu, where `#` would say little.
-    pub fn name(self) -> &'static str {
+    pub fn name(self) -> String {
         match self {
-            Self::Number => "Number",
+            Self::Number => tr!("Number"),
             other => other.label(),
         }
     }

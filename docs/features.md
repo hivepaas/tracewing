@@ -149,7 +149,7 @@ keyboard.
 | Feature | Milestone | Plan |
 |---|---|---|
 | Light and dark; keyboard first | Beta | Free |
-| English and Vietnamese | 1.0 | Free |
+| 15 languages: English, German, Spanish, French, Indonesian, Italian, Brazilian Portuguese, Turkish, Vietnamese, Russian, Ukrainian, Japanese, Korean, simplified and traditional Chinese | 1.0 | Free |
 | Signed builds: Windows (Microsoft Store and an installer), macOS (notarized, with the helper), Linux (`.deb`, `.rpm`, AppImage) | 1.0 | — |
 | Signed automatic updates | 1.0 | — |
 | Licenses: Pro and Team keys, an offline license file, prices by region | 1.0 | — |

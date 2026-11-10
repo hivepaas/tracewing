@@ -49,6 +49,7 @@ use std::{
     },
     time::{Duration, Instant},
 };
+use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::{capture::CheckVisit, rules::HostRules};
 use tracewing_store::{search::Indexer, session};
 
@@ -300,8 +301,9 @@ impl Traffic {
             .spawn(move || work(session_dir, job_rx, done_tx))
             .expect("a thread can start");
 
-        let filter_input = cx.new(|cx| TextInput::new("host:, status:4xx, or text in bodies", cx));
-        let device_name = cx.new(|cx| TextInput::new("A name, as iPhone test", cx));
+        let filter_input =
+            cx.new(|cx| TextInput::said(|| tr!("host:, status:4xx, or text in bodies"), cx));
+        let device_name = cx.new(|cx| TextInput::said(|| tr!("A name, as iPhone test"), cx));
         cx.subscribe(&device_name, |this, input, _: &Changed, cx| {
             let name = input.read(cx).text().to_owned();
             this.name_chosen_device(&name, cx);
@@ -546,7 +548,9 @@ impl Traffic {
         self.show_session(cx);
         match Indexer::catch_up(dir, &self.engine.settings) {
             Ok(indexer) => self.catching_up = Some(indexer),
-            Err(e) => self.system.problem = Some(format!("The search index: {e:#}")),
+            Err(e) => {
+                self.system.problem = Some(tr!("The search index: {e}", e = format!("{e:#}")))
+            }
         }
     }
 
@@ -583,12 +587,14 @@ impl Traffic {
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
-                        .child(format!("An earlier session: {name}")),
+                        .child(tr!("An earlier session: {name}", name = name)),
                 )
                 .child(div().child(if self.catching_up.is_some() {
-                    "Read-only. Search covers more as its index is finished. Recording goes on."
+                    tr!(
+                        "Read-only. Search covers more as its index is finished. Recording goes on."
+                    )
                 } else {
-                    "Read-only. Recording goes on."
+                    tr!("Read-only. Recording goes on.")
                 }))
                 .child(div().flex_1())
                 .child(
@@ -603,7 +609,7 @@ impl Traffic {
                         .bg(rgb(c.accent))
                         .text_color(rgb(c.on_accent))
                         .font_weight(FontWeight::BOLD)
-                        .child("Back to live")
+                        .child(tr!("Back to live"))
                         .on_click(cx.listener(|this, _, _, cx| this.back_to_live(cx))),
                 ),
         )
@@ -1098,6 +1104,19 @@ impl Traffic {
         self.layout.save(&self.layout_path);
     }
 
+    /// `None` for the system's. Words change as views are drawn again, the
+    /// list's rows as they are read again.
+    pub fn set_language(&mut self, tag: Option<&str>, window: &mut Window, cx: &mut Context<Self>) {
+        tracewing_i18n::set_language(tag);
+        if let Some(flows) = &mut self.flows {
+            flows.forget_all();
+        }
+        self.layout.language = tag.map(str::to_owned);
+        self.save_layout();
+        window.refresh();
+        cx.notify();
+    }
+
     /// Where the inspector goes if let go here: in the right third it stays beside
     /// the list, in the lower half of the rest it goes below.
     fn place_under(&self, position: Point<Pixels>) -> Place {
@@ -1364,10 +1383,10 @@ impl Traffic {
         let recording = self.engine.is_recording();
         let filtered = self.ids.is_some() || self.filtering;
         let count = if filtered {
-            format!(
-                "{} of {}",
-                group_digits(self.count() as u64),
-                group_digits(self.total() as u64)
+            tr!(
+                "{shown} of {total}",
+                shown = group_digits(self.count() as u64),
+                total = group_digits(self.total() as u64)
             )
         } else {
             String::new()
@@ -1391,7 +1410,11 @@ impl Traffic {
                     } else {
                         icon("pause", 14., c.muted)
                     })
-                    .child(if recording { "Recording" } else { "Paused" })
+                    .child(if recording {
+                        tr!("Recording")
+                    } else {
+                        tr!("Paused")
+                    })
                     .on_click(cx.listener(|this, _, _, cx| this.toggle_recording(cx))),
             )
             .children(self.render_network_chip(cx))
@@ -1441,9 +1464,15 @@ impl Traffic {
         let c = colors();
         let addr = self.engine.addr;
         let (text, on) = match self.system.proxy {
-            ProxySwitch::Off => (format!("System proxy off · {addr}"), false),
-            ProxySwitch::Working => ("System proxy…".to_owned(), false),
-            ProxySwitch::On(_) => (format!("System proxy on · {addr}"), true),
+            ProxySwitch::Off => (
+                tr!("System proxy off · {addr}", addr = addr.to_string()),
+                false,
+            ),
+            ProxySwitch::Working => (tr!("System proxy…"), false),
+            ProxySwitch::On(_) => (
+                tr!("System proxy on · {addr}", addr = addr.to_string()),
+                true,
+            ),
         };
         pill_button("system-proxy")
             .px(px(14.))
@@ -1471,7 +1500,7 @@ impl Traffic {
             .children(Kind::ALL.into_iter().map(|kind| {
                 let on = kind == current;
                 div()
-                    .id(kind.label())
+                    .id(("kind", kind as u64))
                     .h(px(32.))
                     .px(px(12.))
                     .rounded(px(16.))
@@ -1568,7 +1597,7 @@ impl Traffic {
             .overflow_y_scroll()
             .bg(rgb(c.surface))
             .when(!self.apps.is_empty(), |d| {
-                d.child(eyebrow("Apps").px(px(10.)).py(px(4.)))
+                d.child(eyebrow(tr!("Apps")).px(px(10.)).py(px(4.)))
                     .children(self.apps.iter().map(|(app, count)| {
                         let on = chosen_app.as_deref() == Some(app.as_ref());
                         let name = app.to_string();
@@ -1584,7 +1613,7 @@ impl Traffic {
                     .child(div().h(px(8.)).flex_shrink_0())
             })
             .when(!self.device_counts.is_empty(), |d| {
-                d.child(eyebrow("Devices").px(px(10.)).py(px(4.)))
+                d.child(eyebrow(tr!("Devices")).px(px(10.)).py(px(4.)))
                     .children(self.device_counts.iter().map(|(ip, count)| {
                         let on = chosen_device.as_deref() == Some(ip.as_ref());
                         let shown: SharedString = self.devices.shown(ip).to_owned().into();
@@ -1600,11 +1629,11 @@ impl Traffic {
                     }))
                     .child(div().h(px(8.)).flex_shrink_0())
             })
-            .child(eyebrow("Hosts").px(px(10.)).py(px(4.)))
+            .child(eyebrow(tr!("Hosts")).px(px(10.)).py(px(4.)))
             .child(
                 line(
                     "all-hosts".into(),
-                    "All hosts".into(),
+                    tr!("All hosts").into(),
                     total,
                     chosen.is_none(),
                 )
@@ -1622,7 +1651,7 @@ impl Traffic {
             }))
             .when(!hidden.is_empty(), |d| {
                 d.child(div().h(px(8.)).flex_shrink_0())
-                    .child(eyebrow("Hidden").px(px(10.)).py(px(4.)))
+                    .child(eyebrow(tr!("Hidden")).px(px(10.)).py(px(4.)))
                     .children(
                         hidden
                             .into_iter()
@@ -1813,7 +1842,7 @@ impl Traffic {
                                 .font_weight(FontWeight::BOLD)
                                 .text_size(px(12.5))
                                 .child(icon("down", 14., c.on_accent))
-                                .child("Newest")
+                                .child(tr!("Newest"))
                                 .on_click(cx.listener(|this, _, _, cx| this.jump_to_newest(cx))),
                         )
                     }),
@@ -1825,13 +1854,14 @@ impl Traffic {
         let addr = self.engine.addr;
         let (title, hint): (SharedString, Option<String>) = if self.ids.is_some() || self.filtering
         {
-            ("No flow fits this filter".into(), None)
+            (tr!("No flow fits this filter").into(), None)
         } else {
             (
-                "Nothing yet".into(),
-                Some(format!(
-                    "Turn on the system proxy above, or point an app at {addr}. To try it: curl --proxy http://{addr} --cacert {} https://example.com/",
-                    self.data_dir.join("ca.pem").display()
+                tr!("Nothing yet").into(),
+                Some(tr!(
+                    "Turn on the system proxy above, or point an app at {addr}. To try it: curl --proxy http://{addr} --cacert {ca} https://example.com/",
+                    addr = addr.to_string(),
+                    ca = self.data_dir.join("ca.pem").display().to_string()
                 )),
             )
         };
@@ -1898,7 +1928,7 @@ impl Traffic {
         } else {
             0.
         };
-        let zone = |place: Place, label: &'static str| {
+        let zone = |place: Place, label: String| {
             let on = hover == place;
             let base = div()
                 .absolute()
@@ -1932,8 +1962,8 @@ impl Traffic {
             .absolute()
             .size_full()
             .bg(rgba(with_alpha(c.page, 0xd8)))
-            .child(zone(Place::Beside, "Beside the list"))
-            .child(zone(Place::Below, "Below the list"))
+            .child(zone(Place::Beside, tr!("Beside the list")))
+            .child(zone(Place::Below, tr!("Below the list")))
             .child(
                 div()
                     .absolute()
@@ -1945,7 +1975,7 @@ impl Traffic {
                     .font_weight(FontWeight::BOLD)
                     .bg(rgb(c.surface))
                     .text_color(rgb(c.text))
-                    .child("Drop it on a place · Esc puts it back"),
+                    .child(tr!("Drop it on a place · Esc puts it back")),
             )
     }
 
@@ -1953,7 +1983,7 @@ impl Traffic {
         let c = colors();
         let current = self.screen;
         let waiting = self.paused_count();
-        let item = |id: &'static str, label: &'static str, name: &'static str, screen: Screen| {
+        let item = |id: &'static str, label: String, name: &'static str, screen: Screen| {
             let on = current == screen;
             let ink = if on { c.on_tonal } else { c.muted };
             div()
@@ -2000,13 +2030,18 @@ impl Traffic {
                     .bg(rgb(c.accent))
                     .child(icon("logo", 24., c.on_accent)),
             )
-            .child(item("rail-setup", "Set up", "setup", Screen::Setup))
-            .child(item("rail-traffic", "Traffic", "traffic", Screen::Traffic))
-            .child(item("rail-rules", "Rules", "rules", Screen::Rules))
+            .child(item("rail-setup", tr!("Set up"), "setup", Screen::Setup))
+            .child(item(
+                "rail-traffic",
+                tr!("Traffic"),
+                "traffic",
+                Screen::Traffic,
+            ))
+            .child(item("rail-rules", tr!("Rules"), "rules", Screen::Rules))
             .child(
                 div()
                     .relative()
-                    .child(item("rail-paused", "Paused", "pause", Screen::Paused))
+                    .child(item("rail-paused", tr!("Paused"), "pause", Screen::Paused))
                     .when(waiting > 0, |d| {
                         d.child(
                             div()
@@ -2028,16 +2063,21 @@ impl Traffic {
                         )
                     }),
             )
-            .child(item("rail-compose", "Compose", "send", Screen::Compose))
+            .child(item(
+                "rail-compose",
+                tr!("Compose"),
+                "send",
+                Screen::Compose,
+            ))
             .child(item(
                 "rail-sessions",
-                "Sessions",
+                tr!("Sessions"),
                 "sessions",
                 Screen::Sessions,
             ))
             .child(item(
                 "rail-settings",
-                "Settings",
+                tr!("Settings"),
                 "settings",
                 Screen::Settings,
             ))
@@ -2049,18 +2089,24 @@ impl Traffic {
         match self.system.ca {
             CaState::Trusted => row
                 .child(icon("shield", 14., c.ok))
-                .child("Certificate trusted on this computer")
+                .child(tr!("Certificate trusted on this computer"))
                 .into_any_element(),
-            CaState::Checking => row.child("Checking the certificate…").into_any_element(),
+            CaState::Checking => row
+                .child(tr!("Checking the certificate…"))
+                .into_any_element(),
             CaState::Installing => row
-                .child("Installing the certificate; the system may ask you to confirm…")
+                .child(tr!(
+                    "Installing the certificate; the system may ask you to confirm…"
+                ))
                 .into_any_element(),
             CaState::NotTrusted => row
                 .id("install-ca")
                 .cursor_pointer()
                 .text_color(rgb(c.warn))
                 .child(icon("shield-off", 14., c.warn))
-                .child("HTTPS will fail until the certificate is trusted: set up")
+                .child(tr!(
+                    "HTTPS will fail until the certificate is trusted: set up"
+                ))
                 .on_click(cx.listener(|this, _, _, cx| this.set_screen(Screen::Setup, cx)))
                 .into_any_element(),
         }
@@ -2079,26 +2125,42 @@ impl Traffic {
             notes.push((problem.clone(), c.error));
         }
         if let Some(problem) = &self.settings_problem {
-            notes.push((format!("settings.toml was not used: {problem}"), c.error));
+            notes.push((
+                tr!("settings.toml was not used: {problem}", problem = problem),
+                c.error,
+            ));
         }
         if let Some(failure) = self.engine.failure() {
-            notes.push((format!("The proxy stopped: {failure}"), c.error));
+            notes.push((
+                tr!("The proxy stopped: {failure}", failure = failure),
+                c.error,
+            ));
         }
         if low {
             notes.push((
-                "The disk is nearly full: bodies are not being kept".to_owned(),
+                tr!("The disk is nearly full: bodies are not being kept"),
                 c.warn,
             ));
         }
         if dropped > 0 {
             notes.push((
-                format!("{} flows not recorded", group_digits(dropped)),
+                tr_n!(
+                    dropped,
+                    "{count} flow not recorded",
+                    "{count} flows not recorded",
+                    count = group_digits(dropped)
+                ),
                 c.warn,
             ));
         }
         if shed > 0 {
             notes.push((
-                format!("{} flows without bodies", group_digits(shed)),
+                tr_n!(
+                    shed,
+                    "{count} flow without bodies",
+                    "{count} flows without bodies",
+                    count = group_digits(shed)
+                ),
                 c.warn,
             ));
         }
@@ -2107,10 +2169,12 @@ impl Traffic {
         }
         if trimmed > 0 {
             notes.push((
-                format!(
-                    "{} oldest flows dropped to stay under {}",
-                    group_digits(trimmed),
-                    crate::flows::size_text(self.engine.settings.session_max())
+                tr_n!(
+                    trimmed,
+                    "{count} oldest flow dropped to stay under {size}",
+                    "{count} oldest flows dropped to stay under {size}",
+                    count = group_digits(trimmed),
+                    size = crate::flows::size_text(self.engine.settings.session_max())
                 ),
                 c.muted,
             ));
@@ -2125,17 +2189,19 @@ impl Traffic {
             .min_h(px(28.))
             .text_size(px(12.))
             .text_color(rgb(c.muted))
-            .child(match self.total() {
-                1 => "1 flow".to_owned(),
-                total => format!("{} flows", group_digits(total as u64)),
-            })
+            .child(tr_n!(
+                self.total(),
+                "{count} flow",
+                "{count} flows",
+                count = group_digits(self.total() as u64)
+            ))
             .when(self.total() > 0, |d| {
                 d.child(
                     div()
                         .id("export-har")
                         .cursor_pointer()
                         .text_color(rgb(c.link))
-                        .child("Export as HAR")
+                        .child(tr!("Export as HAR"))
                         .on_click(cx.listener(|this, _, _, cx| this.ask_export_shown(cx))),
                 )
             })
@@ -2145,7 +2211,7 @@ impl Traffic {
                     .id("shortcuts-link")
                     .cursor_pointer()
                     .text_color(rgb(c.link))
-                    .child(format!("Shortcuts {}", shortcuts::label("mod+/")))
+                    .child(tr!("Shortcuts {keys}", keys = shortcuts::label("mod+/")))
                     .on_click(cx.listener(|this, _, _, cx| this.set_shortcuts(true, cx))),
             )
             .children(
@@ -2442,7 +2508,7 @@ impl Traffic {
     fn render_columns_menu(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let columns = &self.layout.columns;
-        let item = |id: SharedString, on: Option<bool>, text: &'static str| {
+        let item = |id: SharedString, on: Option<bool>, text: String| {
             div()
                 .id(id)
                 .h(px(30.))
@@ -2477,7 +2543,7 @@ impl Traffic {
             .text_size(px(13.))
             .font_weight(FontWeight::NORMAL)
             .text_color(rgb(c.text))
-            .child(eyebrow("Columns").px(px(10.)).py(px(4.)))
+            .child(eyebrow(tr!("Columns")).px(px(10.)).py(px(4.)))
             .children(
                 Column::ALL
                     .into_iter()
@@ -2493,7 +2559,7 @@ impl Traffic {
             )
             .child(div().h(px(1.)).my(px(4.)).bg(rgb(c.line)))
             .child(
-                item("reset-columns".into(), None, "Back to defaults")
+                item("reset-columns".into(), None, tr!("Back to defaults"))
                     .when(columns.is_default(), |d| d.text_color(rgb(c.muted)))
                     .on_click(cx.listener(|this, _, _, cx| this.reset_columns(cx))),
             )

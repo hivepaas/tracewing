@@ -3,6 +3,7 @@
 
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde_json::{Map, Value};
+use tracewing_i18n::tr;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Jwt {
@@ -83,6 +84,16 @@ impl Jwt {
     }
 }
 
+/// What to show for a time claim's label from [`Jwt::times`].
+pub fn time_label(label: &str) -> String {
+    match label {
+        "Expires" => tr!("Expires"),
+        "Issued" => tr!("Issued"),
+        "Not before" => tr!("Not before"),
+        other => other.to_owned(),
+    }
+}
+
 /// `in 2 h`, `5 min ago`.
 pub fn relative(at: i64, now: i64) -> String {
     let delta = at - now;
@@ -95,9 +106,9 @@ pub fn relative(at: i64, now: i64) -> String {
         _ => format!("{} y", span / 31_536_000),
     };
     if delta >= 0 {
-        format!("in {amount}")
+        tr!("in {amount}", amount = amount)
     } else {
-        format!("{amount} ago")
+        tr!("{amount} ago", amount = amount)
     }
 }
 
