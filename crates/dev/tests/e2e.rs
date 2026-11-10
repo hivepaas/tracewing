@@ -1392,6 +1392,34 @@ async fn events_show_while_the_stream_lasts() {
     clean_up(conn, dir);
 }
 
+/// A stream's body is found by its words once it ends, though its row was
+/// indexed while it was still going, with no body yet.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_stream_is_searched_by_what_it_said_once_over() {
+    let h = Harness::start_with("stream-search", StorageSettings::default()).await;
+    let session_dir = h.dir.join("session");
+    let mut res = h
+        .client(false)
+        .get(format!("{}/stream?events=6&gap_ms=200", h.origin))
+        .send()
+        .await
+        .unwrap();
+    // The index has seen the open row: its URL is found.
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while search::find(&session_dir, "urls", "stream", 1).unwrap_or_default() != [1] {
+        assert!(Instant::now() < deadline, "the open row was never indexed");
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    while res.chunk().await.unwrap().is_some() {}
+
+    let (_, conn, dir) = h.finish(1).await;
+    let row = wait_for_row(&conn, "sse", |row| !row.0).await;
+    assert_eq!(row.2, 6, "{row:?}");
+    let found = search::find(&dir.join("session"), "bodies", "event 5", 1).unwrap();
+    assert_eq!(found, [1], "what the stream said is found");
+    clean_up(conn, dir);
+}
+
 /// A WebSocket has a row from its upgrade, and each message on it, both ways.
 #[tokio::test(flavor = "multi_thread")]
 async fn websocket_messages_are_recorded_both_ways() {
