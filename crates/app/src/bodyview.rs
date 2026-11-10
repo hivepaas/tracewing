@@ -110,6 +110,8 @@ pub struct BodyView {
     /// The row at the top of the view, and how far it has scrolled out of it.
     top: u64,
     folds: Folds,
+    /// The bytes as a dump, whatever the body is.
+    hex: bool,
     sub: f32,
     dragging: bool,
     /// Where the view was last drawn: the height sets the scroll range, and a drag
@@ -148,6 +150,7 @@ impl BodyView {
             syntax,
             top: 0,
             folds: Folds::default(),
+            hex: false,
             sub: 0.,
             dragging: false,
             bounds: Rc::new(Cell::new(Bounds::default())),
@@ -169,10 +172,12 @@ impl BodyView {
     }
 
     fn copy(&self, start: Spot, end: Spot) -> Copied {
-        match self
-            .body
-            .text((start.piece, start.at), (end.piece, end.at), COPY_MAX)
-        {
+        match self.body.text_in(
+            (start.piece, start.at),
+            (end.piece, end.at),
+            COPY_MAX,
+            self.hex,
+        ) {
             Some(text) if text.is_empty() => Copied::Nothing,
             Some(text) => Copied::Text(text),
             None => Copied::TooLarge,
@@ -181,7 +186,7 @@ impl BodyView {
 
     /// The first and the last spot of the body.
     fn ends(&self) -> Option<(Spot, Spot)> {
-        let last = self.body.lines().checked_sub(1)?;
+        let last = self.lines().checked_sub(1)?;
         Some((
             Spot::default(),
             Spot {
@@ -272,8 +277,31 @@ impl BodyView {
         cx.notify();
     }
 
+    /// Lines as shown: the body's, or its dump's.
+    fn lines(&self) -> u64 {
+        self.body.lines_in(self.hex)
+    }
+
+    pub fn is_hex(&self) -> bool {
+        self.hex
+    }
+
+    /// Shows the bytes as a dump, or the body as it was told to be. Folds,
+    /// what is selected and the place in it belong to the other, so they go.
+    pub fn set_hex(&mut self, hex: bool, cx: &mut Context<Self>) {
+        if self.hex == hex {
+            return;
+        }
+        self.hex = hex;
+        self.folds = Folds::default();
+        self.select.clear();
+        self.top = 0;
+        self.sub = 0.;
+        cx.notify();
+    }
+
     fn rows(&self) -> u64 {
-        self.folds.rows(self.body.lines())
+        self.folds.rows(self.lines())
     }
 
     fn height(&self) -> f32 {
@@ -324,12 +352,15 @@ impl BodyView {
             shown.depth as f32 * INDENT_W
         };
         let number = (line + 1).to_string();
-        let highlights: Vec<_> = self
-            .syntax
-            .runs(&shown.text)
-            .into_iter()
-            .map(|(range, token)| (range, highlight(token)))
-            .collect();
+        let highlights: Vec<_> = if self.hex {
+            Vec::new()
+        } else {
+            self.syntax
+                .runs(&shown.text)
+                .into_iter()
+                .map(|(range, token)| (range, highlight(token)))
+                .collect()
+        };
         let text: SharedString = shown.text.into();
         let folded = matches!(mark, FoldMark::Folded(..));
         let mut row = div()
@@ -418,10 +449,15 @@ impl BodyView {
 }
 
 impl BodyView {
+    /// The body's size and lines, as shown.
+    pub fn summary(&self) -> String {
+        summary_in(&self.body, self.hex)
+    }
+
     /// The rows from the top of the view, read a run of lines at a time: a
     /// fold is where one run ends and the next begins.
     fn rows_in_view(&self, in_view: u64, cx: &mut Context<Self>) -> Vec<gpui::AnyElement> {
-        let lines = self.body.lines();
+        let lines = self.lines();
         let mut shown = Vec::new();
         let mut line = self.folds.line_of(self.top);
         while line < lines && (shown.len() as u64) < in_view {
@@ -434,7 +470,7 @@ impl BodyView {
                 end += 1;
             }
             // One more, to tell whether the run's last line opens something.
-            let read = self.body.read(start..(end + 2).min(lines));
+            let read = self.body.read_in(start..(end + 2).min(lines), self.hex);
             let next_depths: Vec<Option<u32>> = read
                 .iter()
                 .skip(1)
@@ -474,7 +510,7 @@ impl Render for BodyView {
         // Enough for any size of the panel; what does not fit is clipped.
         let in_view = (f32::from(window.viewport_size().height) / LINE_HEIGHT).ceil() as u64 + 1;
         let list_height = self.height();
-        let lines = self.body.lines();
+        let lines = self.lines();
         let rows = self.rows_in_view(in_view, cx);
 
         let max = self.max_position();
@@ -646,13 +682,19 @@ pub(crate) fn highlight(token: Token) -> HighlightStyle {
 
 /// `2.1 MB · 40,000 lines`, or how far the reading has got.
 pub fn summary(body: &Body) -> String {
-    if body.is_scanned() {
+    summary_in(body, false)
+}
+
+/// As [`summary`], counting the lines of a dump with `hex`.
+pub fn summary_in(body: &Body, hex: bool) -> String {
+    let lines = body.lines_in(hex);
+    if hex || body.is_scanned() {
         tr_n!(
-            body.lines(),
+            lines,
             "{size} · {count} line",
             "{size} · {count} lines",
             size = size_text(body.size()),
-            count = crate::flows::group_digits(body.lines())
+            count = crate::flows::group_digits(lines)
         )
     } else {
         tr!(

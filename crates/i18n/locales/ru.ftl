@@ -292,6 +292,9 @@ t3d35ce69 = Запрос и ответ рядом
 # Request above the response
 t83c63123 = Запрос над ответом
 
+# Text
+t3e142d5e = Текст
+
 # Picture · {size}
 te97ed633 = Изображение · { $size }
 
