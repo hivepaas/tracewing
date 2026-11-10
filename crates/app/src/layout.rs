@@ -40,6 +40,17 @@ pub struct WindowState {
     pub mode: WindowMode,
 }
 
+/// How the inspector shows a flow's request and its response.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Sides {
+    /// One at a time, as tabs.
+    #[default]
+    Tabs,
+    Beside,
+    Stacked,
+}
+
 /// The look the window wears.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -91,6 +102,7 @@ pub struct Layout {
     pub hosts: HostMarks,
     /// The language chosen, as a tag; `None` for the system's.
     pub language: Option<String>,
+    pub sides: Sides,
 }
 
 impl Default for Layout {
@@ -108,6 +120,7 @@ impl Default for Layout {
             columns: Columns::default(),
             hosts: HostMarks::default(),
             language: None,
+            sides: Sides::default(),
         }
     }
 }

@@ -280,6 +280,18 @@ tb7367e2c = Розшифровувати цей хост
 # Do not decrypt this host
 t5fa113f6 = Не розшифровувати цей хост
 
+# Request and response
+t04e060e6 = Запит і відповідь
+
+# Request and response one at a time
+t70397119 = Запит і відповідь по черзі
+
+# Request and response side by side
+t3d35ce69 = Запит і відповідь поруч
+
+# Request above the response
+t83c63123 = Запит над відповіддю
+
 # Picture · {size}
 te97ed633 = Зображення · { $size }
 

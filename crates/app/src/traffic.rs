@@ -1108,7 +1108,7 @@ impl Traffic {
         .detach();
     }
 
-    fn save_layout(&self) {
+    pub(crate) fn save_layout(&self) {
         self.layout.save(&self.layout_path);
     }
 
