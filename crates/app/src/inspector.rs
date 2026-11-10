@@ -56,6 +56,8 @@ pub enum Part {
     Messages,
     /// A call to an LLM's API, put back together.
     Llm,
+    /// What a GraphQL request asks for, laid out.
+    GraphQl,
 }
 
 #[derive(Default)]
@@ -84,6 +86,8 @@ pub struct InspectorState {
     pub copy_menu: bool,
     /// The chosen flow as a call to a model, once its bodies are read.
     pub llm: Option<(crate::llm::Provider, crate::llm::Exchange)>,
+    /// What the chosen flow's GraphQL request sends, once its body is read.
+    pub graphql: Option<Vec<tracewing_store::graphql::Sent>>,
     /// What is selected of the part shown, when it is not a body.
     pub select: Selection,
 }
@@ -108,6 +112,7 @@ impl Traffic {
                     (_, Part::Llm) if a_call => Part::Llm,
                     (false, Part::Messages | Part::Llm) => Part::Body,
                     (false, Part::Cookies) if no_cookies => Part::Body,
+                    (false, Part::GraphQl) if detail.graphql.is_none() => Part::Body,
                     (false, Part::Query | Part::Form) if !has_part(&detail, part_now, side_now) => {
                         Part::Body
                     }
@@ -117,6 +122,7 @@ impl Traffic {
                 self.inspector.copied = false;
                 self.inspector.llm = None;
                 self.load_llm(cx);
+                self.load_graphql(cx);
                 self.show_device_name(cx);
                 self.take_new_messages();
                 self.load_body(cx);
@@ -530,6 +536,9 @@ impl Traffic {
                     Part::Messages,
                 )
             }))
+            .when(detail.graphql.is_some(), |d| {
+                d.child(tab("part-graphql", "GraphQL".to_owned(), Part::GraphQl))
+            })
             .child(tab("part-body", tr!("Body"), Part::Body))
             .child(tab(
                 "part-headers",
@@ -718,6 +727,9 @@ impl Traffic {
         match self.inspector.part {
             Part::Messages => well.child(self.render_messages(cx)),
             Part::Llm => self.selectable(well, &sel, cx).child(self.render_llm(&sel)),
+            Part::GraphQl => self
+                .selectable(well, &sel, cx)
+                .child(self.render_graphql(&sel)),
             Part::Headers => self
                 .selectable(well, &sel, cx)
                 .child(render_headers(detail.headers(self.inspector.side), &sel)),

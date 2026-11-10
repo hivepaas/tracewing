@@ -37,6 +37,9 @@ t302af18f = Host
 # Path
 teb66e456 = Path
 
+# Operation
+t218e02a6 = Operasi
+
 # Size
 ta6478e7c = Ukuran
 
@@ -183,6 +186,27 @@ t8090a1ba = Tidak didekripsi
 
 # open
 td35ec4c9 = terbuka
+
+# Reading the request…
+t51c96267 = Membaca permintaan…
+
+# The request's body was not kept, so its query cannot be shown.
+tba9e5628 = Body permintaan tidak disimpan, jadi query-nya tidak bisa ditampilkan.
+
+# An operation without a name
+t38c4d30b = Operasi tanpa nama
+
+# {n} of {count}: {name}
+t53045460 = { $n } dari { $count }: { $name }
+
+# Query
+t9e89e783 = Query
+
+# A persisted query: the server keeps its text, and the request sends only its hash.
+tf23e3c2a = Persisted query: server menyimpan teksnya, dan permintaan hanya mengirim hash-nya.
+
+# Variables
+t7996f062 = Variabel
 
 # Cut
 t58e25863 = Potong

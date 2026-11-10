@@ -16,6 +16,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tracewing::{
+    columns::Column,
     detail::Side,
     engine::{Engine, EngineOptions},
     filter::Kind,
@@ -193,6 +194,19 @@ fn graphql_cookies_and_tokens_are_read() {
         .unwrap();
     wait_for(&mut cx, window, "three flows", |view| view.count() == 3);
     shot(&mut cx, window.into(), "40-graphql-list");
+    // A column of its own, asked for: the path no longer needs to say it.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.toggle_column(Column::Operation, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "90-graphql-column");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.toggle_column(Column::Operation, cx)
+        })
+        .unwrap();
 
     // The chip and the box both find them by their operation.
     window
@@ -233,6 +247,28 @@ fn graphql_cookies_and_tokens_are_read() {
         .unwrap();
     cx.run_until_parked();
     shot(&mut cx, window.into(), "41-jwt-in-headers");
+
+    // The query laid out, and its variables, instead of one escaped string.
+    window
+        .update(&mut cx, |view, _, cx| view.set_part(Part::GraphQl, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the query read", |view| {
+        view.inspector.graphql.is_some()
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let sent = view.inspector.graphql.as_ref().unwrap();
+            assert_eq!(sent.len(), 1);
+            assert_eq!(sent[0].name.as_deref(), Some("GetUser"));
+            assert_eq!(sent[0].variables, Some(serde_json::json!({"id": "42"})));
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "91-graphql-query");
+    window
+        .update(&mut cx, |view, _, cx| view.set_part(Part::Headers, cx))
+        .unwrap();
+    cx.run_until_parked();
 
     // A drag over the first header takes its name and value, as a line of HTTP.
     let (name_at, value_at, name, value) = window

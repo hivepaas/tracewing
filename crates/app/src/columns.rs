@@ -15,6 +15,8 @@ pub enum Column {
     App,
     Host,
     Path,
+    /// A GraphQL request's operation.
+    Operation,
     Size,
     Time,
 }
@@ -24,13 +26,14 @@ pub const WIDTH_MIN: f32 = 40.;
 pub const WIDTH_MAX: f32 = 640.;
 
 impl Column {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Number,
         Self::Method,
         Self::Status,
         Self::App,
         Self::Host,
         Self::Path,
+        Self::Operation,
         Self::Size,
         Self::Time,
     ];
@@ -44,6 +47,7 @@ impl Column {
             Self::App => tr!("App"),
             Self::Host => tr!("Host"),
             Self::Path => tr!("Path"),
+            Self::Operation => tr!("Operation"),
             Self::Size => tr!("Size"),
             Self::Time => tr!("Time"),
         }
@@ -65,6 +69,7 @@ impl Column {
             Self::App => "app",
             Self::Host => "host",
             Self::Path => "path",
+            Self::Operation => "operation",
             Self::Size => "size",
             Self::Time => "time",
         }
@@ -79,9 +84,16 @@ impl Column {
             Self::Host => 170.,
             // It takes what is left.
             Self::Path => 0.,
+            Self::Operation => 150.,
             Self::Size => 74.,
             Self::Time => 70.,
         }
+    }
+
+    /// Hidden until asked for: most traffic is not GraphQL, and the path says
+    /// the operation as well while this is hidden.
+    pub fn opt_in(self) -> bool {
+        self == Self::Operation
     }
 
     /// The path takes the room the others leave; it is always there.
@@ -97,8 +109,10 @@ impl Column {
     /// In a narrow list these give way, down to this, before the path does.
     pub fn gives_way_to(self) -> Option<f32> {
         match self {
+            Self::Number => Some(52.),
             Self::App => Some(56.),
             Self::Host => Some(96.),
+            Self::Operation => Some(56.),
             _ => None,
         }
     }
@@ -113,6 +127,7 @@ impl Column {
             Self::App => "app",
             Self::Host => "host",
             Self::Path => "path",
+            Self::Operation => "graphql",
             Self::Size => "resp_bytes",
             Self::Time => "duration_us",
         }
@@ -151,6 +166,8 @@ impl Sort {
 #[serde(default)]
 pub struct Columns {
     hidden: Vec<Column>,
+    /// Columns hidden until asked for, which have been.
+    shown: Vec<Column>,
     /// Only those changed from their defaults.
     widths: BTreeMap<Column, f32>,
 }
@@ -160,17 +177,29 @@ impl Columns {
     pub fn shown(&self) -> Vec<Column> {
         Column::ALL
             .into_iter()
-            .filter(|column| column.fills() || !self.hidden.contains(column))
+            .filter(|column| self.is_shown(*column))
             .collect()
     }
 
     pub fn is_shown(&self, column: Column) -> bool {
+        if column.opt_in() {
+            return self.shown.contains(&column);
+        }
         column.fills() || !self.hidden.contains(&column)
     }
 
     /// Shows a hidden column, or hides a shown one. The path stays.
     pub fn toggle(&mut self, column: Column) {
         if column.fills() {
+            return;
+        }
+        if column.opt_in() {
+            match self.shown.iter().position(|c| *c == column) {
+                Some(at) => {
+                    self.shown.remove(at);
+                }
+                None => self.shown.push(column),
+            }
             return;
         }
         if let Some(at) = self.hidden.iter().position(|c| *c == column) {

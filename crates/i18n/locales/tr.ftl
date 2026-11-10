@@ -42,6 +42,9 @@ t302af18f = Host
 # Path
 teb66e456 = Yol
 
+# Operation
+t218e02a6 = İşlem
+
 # Size
 ta6478e7c = Boyut
 
@@ -191,6 +194,27 @@ t8090a1ba = Şifresi çözülmedi
 
 # open
 td35ec4c9 = açık
+
+# Reading the request…
+t51c96267 = İstek okunuyor…
+
+# The request's body was not kept, so its query cannot be shown.
+tba9e5628 = İsteğin gövdesi saklanmadı, bu yüzden sorgusu gösterilemiyor.
+
+# An operation without a name
+t38c4d30b = Adı olmayan bir işlem
+
+# {n} of {count}: {name}
+t53045460 = { $count } içinden { $n }: { $name }
+
+# Query
+t9e89e783 = Sorgu
+
+# A persisted query: the server keeps its text, and the request sends only its hash.
+tf23e3c2a = Persisted query: metnini sunucu tutar, istek yalnızca hash'ini gönderir.
+
+# Variables
+t7996f062 = Değişkenler
 
 # Cut
 t58e25863 = Kes

@@ -37,6 +37,9 @@ t302af18f = ホスト
 # Path
 teb66e456 = パス
 
+# Operation
+t218e02a6 = オペレーション
+
 # Size
 ta6478e7c = サイズ
 
@@ -183,6 +186,27 @@ t8090a1ba = 未復号
 
 # open
 td35ec4c9 = オープン
+
+# Reading the request…
+t51c96267 = リクエストを読んでいます…
+
+# The request's body was not kept, so its query cannot be shown.
+tba9e5628 = リクエストのボディが保存されていないため、クエリを表示できません。
+
+# An operation without a name
+t38c4d30b = 名前のないオペレーション
+
+# {n} of {count}: {name}
+t53045460 = { $count } 件中 { $n }: { $name }
+
+# Query
+t9e89e783 = クエリ
+
+# A persisted query: the server keeps its text, and the request sends only its hash.
+tf23e3c2a = Persisted Query です。テキストはサーバーが保持し、リクエストはハッシュだけを送ります。
+
+# Variables
+t7996f062 = 変数
 
 # Cut
 t58e25863 = 切り取り

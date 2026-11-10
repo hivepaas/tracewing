@@ -43,6 +43,9 @@ t302af18f = Host
 # Path
 teb66e456 = Caminho
 
+# Operation
+t218e02a6 = Operação
+
 # Size
 ta6478e7c = Tamanho
 
@@ -192,6 +195,27 @@ t8090a1ba = Não descriptografado
 
 # open
 td35ec4c9 = aberto
+
+# Reading the request…
+t51c96267 = Lendo a requisição…
+
+# The request's body was not kept, so its query cannot be shown.
+tba9e5628 = O corpo da requisição não foi guardado, então sua query não pode ser mostrada.
+
+# An operation without a name
+t38c4d30b = Uma operação sem nome
+
+# {n} of {count}: {name}
+t53045460 = { $n } de { $count }: { $name }
+
+# Query
+t9e89e783 = Query
+
+# A persisted query: the server keeps its text, and the request sends only its hash.
+tf23e3c2a = Uma persisted query: o servidor guarda o texto, e a requisição envia só o hash.
+
+# Variables
+t7996f062 = Variáveis
 
 # Cut
 t58e25863 = Recortar

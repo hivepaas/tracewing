@@ -37,6 +37,9 @@ t302af18f = 호스트
 # Path
 teb66e456 = 경로
 
+# Operation
+t218e02a6 = 오퍼레이션
+
 # Size
 ta6478e7c = 크기
 
@@ -183,6 +186,27 @@ t8090a1ba = 복호화 안 됨
 
 # open
 td35ec4c9 = 열림
+
+# Reading the request…
+t51c96267 = 요청을 읽는 중…
+
+# The request's body was not kept, so its query cannot be shown.
+tba9e5628 = 요청 본문이 저장되지 않아 쿼리를 보여줄 수 없습니다.
+
+# An operation without a name
+t38c4d30b = 이름 없는 오퍼레이션
+
+# {n} of {count}: {name}
+t53045460 = { $count }개 중 { $n }: { $name }
+
+# Query
+t9e89e783 = 쿼리
+
+# A persisted query: the server keeps its text, and the request sends only its hash.
+tf23e3c2a = Persisted query: 텍스트는 서버가 가지고 있고, 요청은 해시만 보냅니다.
+
+# Variables
+t7996f062 = 변수
 
 # Cut
 t58e25863 = 잘라내기

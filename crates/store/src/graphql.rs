@@ -53,6 +53,272 @@ pub fn operation(
     }
 }
 
+/// One operation a request sends: its text, if it sent one (a persisted
+/// query sends only a hash), its name, and its variables.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Sent {
+    pub name: Option<String>,
+    pub query: Option<String>,
+    pub variables: Option<Value>,
+}
+
+/// What a GraphQL request sends, each operation of a batch on its own. Empty
+/// when it is not GraphQL.
+pub fn sent(method: &str, path: &str, content_type: Option<&str>, body: &[u8]) -> Vec<Sent> {
+    if method.eq_ignore_ascii_case("GET") {
+        let Some((_, query)) = path.split_once('?') else {
+            return Vec::new();
+        };
+        let mut one = Sent {
+            name: None,
+            query: None,
+            variables: None,
+        };
+        for pair in query.split('&') {
+            match pair.split_once('=') {
+                Some(("query", value)) => one.query = Some(decode::percent_decode(value)),
+                Some(("operationName", value)) => {
+                    one.name = Some(decode::percent_decode(value)).filter(|n| !n.is_empty())
+                }
+                Some(("variables", value)) => {
+                    one.variables = serde_json::from_str(&decode::percent_decode(value)).ok()
+                }
+                _ => {}
+            }
+        }
+        return if one.query.is_some() || one.name.is_some() {
+            vec![one]
+        } else {
+            Vec::new()
+        };
+    }
+    let essence = content_type
+        .unwrap_or_default()
+        .split(';')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+    if essence == "application/graphql" {
+        return std::str::from_utf8(body).map_or(Vec::new(), |text| {
+            vec![Sent {
+                name: None,
+                query: Some(text.to_owned()),
+                variables: None,
+            }]
+        });
+    }
+    if !essence.ends_with("json") {
+        return Vec::new();
+    }
+    let read = |value: &Value| {
+        let query = value
+            .get("query")
+            .and_then(Value::as_str)
+            .map(str::to_owned);
+        let name = value
+            .get("operationName")
+            .and_then(Value::as_str)
+            .filter(|n| !n.is_empty())
+            .map(str::to_owned);
+        (query.is_some() || name.is_some()).then(|| Sent {
+            name,
+            query,
+            variables: value.get("variables").filter(|v| !v.is_null()).cloned(),
+        })
+    };
+    match serde_json::from_slice::<Value>(body) {
+        Ok(Value::Array(batch)) => batch.iter().filter_map(read).collect(),
+        Ok(value) => read(&value).into_iter().collect(),
+        Err(_) => Vec::new(),
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Piece {
+    Punct,
+    Spread,
+    Name,
+    Value,
+    Comment,
+}
+
+/// A query's text, a token at a time, with what kind each is.
+fn pieces(text: &str) -> Vec<(Piece, &str)> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        let start = i;
+        let piece = match bytes[i] {
+            b if b.is_ascii_whitespace() || b == b',' => {
+                i += 1;
+                continue;
+            }
+            b'#' => {
+                while i < bytes.len() && bytes[i] != b'\n' {
+                    i += 1;
+                }
+                Piece::Comment
+            }
+            b'"' => {
+                i = skip_string(bytes, i);
+                Piece::Value
+            }
+            b'.' if bytes[i..].starts_with(b"...") => {
+                i += 3;
+                Piece::Spread
+            }
+            b if is_name_start(b) => {
+                i += name_at(bytes, i).len();
+                Piece::Name
+            }
+            b if b.is_ascii_digit() || b == b'-' => {
+                i += 1;
+                while i < bytes.len()
+                    && (bytes[i].is_ascii_alphanumeric() || matches!(bytes[i], b'.' | b'+' | b'-'))
+                {
+                    i += 1;
+                }
+                Piece::Value
+            }
+            _ => {
+                // One character, whole: a punctuator, or something stray.
+                i += text[i..].chars().next().map_or(1, char::len_utf8);
+                Piece::Punct
+            }
+        };
+        out.push((piece, &text[start..i.min(bytes.len())]));
+    }
+    out
+}
+
+/// A query laid out as a formatter would: a field a line, two spaces deeper
+/// in each selection, arguments and input values on the field's line. It
+/// only moves whitespace and commas, so what it does with a query that is
+/// not quite GraphQL is still that query.
+pub fn pretty(text: &str) -> String {
+    let pieces = pieces(text);
+    let mut out = String::new();
+    let mut line = String::new();
+    let mut depth = 0usize;
+    // Inside `(` or `[`, or an input object, everything stays on the line.
+    let mut inline = 0usize;
+    // Braces opened inline, which close inline.
+    let mut inline_braces: Vec<bool> = Vec::new();
+    let mut previous: Option<(Piece, &str)> = None;
+    let flush = |out: &mut String, line: &mut String, depth: usize| {
+        if !line.trim().is_empty() {
+            out.push_str(&"  ".repeat(depth));
+            out.push_str(line.trim());
+            out.push('\n');
+        }
+        line.clear();
+    };
+    for &(piece, token) in &pieces {
+        let before = previous.map(|(_, t)| t);
+        let ends_value = matches!(
+            previous,
+            Some((Piece::Name | Piece::Value, _)) | Some((Piece::Punct, "]" | "}" | "!"))
+        );
+        match (piece, token) {
+            (Piece::Comment, _) => {
+                flush(&mut out, &mut line, depth);
+                line.push_str(token);
+                flush(&mut out, &mut line, depth);
+            }
+            (Piece::Punct, "{") if inline > 0 => {
+                if ends_value && !matches!(before, Some(":" | "(" | "[" | "{" | "=")) {
+                    line.push_str(", ");
+                }
+                line.push('{');
+                inline += 1;
+                inline_braces.push(true);
+            }
+            (Piece::Punct, "{") => {
+                line.push_str(" {");
+                flush(&mut out, &mut line, depth);
+                depth += 1;
+                inline_braces.push(false);
+            }
+            (Piece::Punct, "}") => {
+                if inline_braces.pop() == Some(true) {
+                    line.push('}');
+                    inline = inline.saturating_sub(1);
+                } else {
+                    flush(&mut out, &mut line, depth);
+                    depth = depth.saturating_sub(1);
+                    line.push('}');
+                    flush(&mut out, &mut line, depth);
+                }
+            }
+            (Piece::Punct, "(" | "[") => {
+                if inline > 0
+                    && ends_value
+                    && token == "["
+                    && !matches!(before, Some(":" | "(" | "[" | "="))
+                {
+                    line.push_str(", ");
+                }
+                line.push_str(token);
+                inline += 1;
+            }
+            (Piece::Punct, ")" | "]") => {
+                line.push_str(token);
+                inline = inline.saturating_sub(1);
+            }
+            (Piece::Punct, ":") => line.push_str(": "),
+            (Piece::Punct, "!") => line.push('!'),
+            (Piece::Punct, "=") => line.push_str(" = "),
+            (Piece::Punct, "@") => {
+                line.push_str(" @");
+            }
+            (Piece::Punct, "$") => {
+                if inline > 0 && ends_value && !matches!(before, Some(":" | "(" | "[" | "{" | "="))
+                {
+                    line.push_str(", ");
+                } else if !line.is_empty() && !line.ends_with(['(', '[', '{', ' ']) {
+                    line.push(' ');
+                }
+                line.push('$');
+            }
+            (Piece::Punct, other) => {
+                line.push_str(other);
+            }
+            (Piece::Spread, _) => {
+                if depth > 0 && inline == 0 {
+                    flush(&mut out, &mut line, depth);
+                }
+                line.push_str("...");
+            }
+            (Piece::Name | Piece::Value, _) => {
+                let after_spread = matches!(previous, Some((Piece::Spread, _)));
+                let joined = matches!(before, Some("$" | "@" | "(" | "[" | "{"))
+                    || (after_spread && token != "on")
+                    || line.ends_with(": ")
+                    || line.ends_with(" = ");
+                let field_start = depth > 0
+                    && inline == 0
+                    && !joined
+                    && !after_spread
+                    && before != Some("on")
+                    && !matches!(before, Some(":" | "@"));
+                if field_start {
+                    flush(&mut out, &mut line, depth);
+                } else if inline > 0 && ends_value && !joined {
+                    line.push_str(", ");
+                } else if !joined && !line.is_empty() && !line.ends_with(' ') {
+                    line.push(' ');
+                }
+                line.push_str(token);
+            }
+        }
+        previous = Some((piece, token));
+    }
+    flush(&mut out, &mut line, depth);
+    out.trim_end().to_owned()
+}
+
 fn one(value: &Value) -> Option<String> {
     let text = value.get("query").and_then(Value::as_str);
     let name = value
@@ -210,6 +476,70 @@ mod tests {
             Some("application/json"),
             body.as_bytes(),
         )
+    }
+
+    #[test]
+    fn a_minified_query_comes_out_laid_out() {
+        let text = r#"query GetUser($id: ID!, $first: Int = 10) { user(id: $id) { id name friends(first: $first, where: {age: {gt: 18}, tags: ["a", "b"]}) { edges { node { ...Friend @include(if: true) } } } } } fragment Friend on User { name ... on Admin { level } }"#;
+        assert_eq!(
+            pretty(text),
+            "query GetUser($id: ID!, $first: Int = 10) {
+  user(id: $id) {
+    id
+    name
+    friends(first: $first, where: {age: {gt: 18}, tags: [\"a\", \"b\"]}) {
+      edges {
+        node {
+          ...Friend @include(if: true)
+        }
+      }
+    }
+  }
+}
+fragment Friend on User {
+  name
+  ... on Admin {
+    level
+  }
+}"
+        );
+    }
+
+    #[test]
+    fn laid_out_twice_is_laid_out_once() {
+        let text = "mutation { a: addUser(input: {name: \"x y\"}) { id } } # done";
+        let once = pretty(text);
+        assert_eq!(pretty(&once), once);
+        assert!(
+            once.contains("a: addUser(input: {name: \"x y\"}) {"),
+            "{once}"
+        );
+        assert!(once.ends_with("# done"), "{once}");
+    }
+
+    #[test]
+    fn what_a_request_sends_is_read_whole() {
+        let body = r#"[{"operationName":"A","query":"query A { a }","variables":{"x":1}},
+                       {"operationName":"B","extensions":{"persistedQuery":{"sha256Hash":"ab"}}}]"#;
+        let sent = sent(
+            "POST",
+            "/graphql",
+            Some("application/json"),
+            body.as_bytes(),
+        );
+        assert_eq!(sent.len(), 2);
+        assert_eq!(sent[0].name.as_deref(), Some("A"));
+        assert_eq!(sent[0].variables, Some(serde_json::json!({"x": 1})));
+        assert_eq!(sent[1].query, None, "persisted: the server has the text");
+        let got = super::sent(
+            "GET",
+            "/graphql?query=%7Bme%7Bid%7D%7D&variables=%7B%22a%22%3A2%7D",
+            None,
+            b"",
+        );
+        assert_eq!(got[0].query.as_deref(), Some("{me{id}}"));
+        assert_eq!(got[0].variables, Some(serde_json::json!({"a": 2})));
+        assert!(super::sent("POST", "/x", Some("text/plain"), b"{}").is_empty());
     }
 
     #[test]
