@@ -717,23 +717,23 @@ impl Traffic {
         sel.begin();
         match self.inspector.part {
             Part::Messages => well.child(self.render_messages(cx)),
-            Part::Llm => well.child(self.render_llm(cx)),
+            Part::Llm => self.selectable(well, &sel, cx).child(self.render_llm(&sel)),
             Part::Headers => self
-                .selectable(well, cx)
+                .selectable(well, &sel, cx)
                 .child(render_headers(detail.headers(self.inspector.side), &sel)),
             Part::Connection => {
                 let naming = (detail.app.is_none() && device_of(&detail.client).is_some())
                     .then(|| self.device_name_input().clone());
-                self.selectable(well, cx)
+                self.selectable(well, &sel, cx)
                     .child(render_connection(detail, naming, &sel))
             }
             Part::Query => self
-                .selectable(well, cx)
+                .selectable(well, &sel, cx)
                 .child(render_fields(fields::query(&detail.url), &sel)),
             Part::Form => self
-                .selectable(well, cx)
+                .selectable(well, &sel, cx)
                 .child(render_fields(detail.form.clone().unwrap_or_default(), &sel)),
-            Part::Cookies => self.selectable(well, cx).child(render_cookies(
+            Part::Cookies => self.selectable(well, &sel, cx).child(render_cookies(
                 detail.headers(self.inspector.side),
                 self.inspector.side,
                 &sel,
@@ -768,64 +768,64 @@ impl Traffic {
 }
 
 impl Traffic {
-    /// A part whose text can be selected: a press starts a selection, a drag
-    /// moves its end, and a right click opens the menu to copy it.
-    fn selectable(&mut self, well: Div, cx: &mut Context<Self>) -> Div {
-        let sel = self.inspector.select.clone();
+    /// A view whose text can be selected with `sel`: a press starts a
+    /// selection, a drag moves its end, and a right click opens the menu to
+    /// copy it.
+    pub(crate) fn selectable(&mut self, view: Div, sel: &Selection, cx: &mut Context<Self>) -> Div {
         let me = cx.entity().downgrade();
-        let follow = select::follow_drag(&sel, {
-            let sel = sel.clone();
+        let redraw = {
             let me = me.clone();
+            move |cx: &mut gpui::App| {
+                let _ = me.update(cx, |_, cx| cx.notify());
+            }
+        };
+        let follow = select::follow_drag(sel, {
+            let (sel, redraw) = (sel.clone(), redraw.clone());
             move |at, _, cx| {
                 if sel.drag_to(at) {
-                    let _ = me.update(cx, |_, cx| cx.notify());
+                    redraw(cx);
                 }
             }
         });
         let menu = sel.menu().map(|at| {
-            let copy = me.clone();
-            let all = me.clone();
-            let close = me.clone();
-            select::render_menu(
+            let (copy, all, close) = (sel.clone(), sel.clone(), sel.clone());
+            let (r1, r2, r3) = (redraw.clone(), redraw.clone(), redraw.clone());
+            select::copy_menu(
                 at,
                 !sel.is_empty(),
                 true,
                 move |_, cx| {
-                    let _ = copy.update(cx, |this, cx| this.copy_selection(cx));
+                    copy.set_menu(None);
+                    write_copied(copy.selected_text(), cx);
+                    r1(cx);
                 },
                 move |_, cx| {
-                    let _ = all.update(cx, |this, cx| {
-                        let text = this.inspector.select.all_text();
-                        this.inspector.select.set_menu(None);
-                        write_copied(text, cx);
-                        cx.notify();
-                    });
+                    all.set_menu(None);
+                    write_copied(all.all_text(), cx);
+                    r2(cx);
                 },
                 move |_, cx| {
-                    let _ = close.update(cx, |this, cx| {
-                        this.inspector.select.set_menu(None);
-                        cx.notify();
-                    });
+                    close.set_menu(None);
+                    r3(cx);
                 },
             )
         });
-        well.relative()
+        let (press, menu_at) = (sel.clone(), sel.clone());
+        view.relative()
             .cursor(gpui::CursorStyle::IBeam)
             .on_mouse_down(
                 MouseButton::Left,
-                cx.listener(|this, e: &MouseDownEvent, window, cx| {
+                cx.listener(move |this, e: &MouseDownEvent, window, cx| {
                     window.focus(&this.focus, cx);
-                    this.inspector
-                        .select
-                        .press(e.position, e.click_count, e.modifiers.shift);
+                    press.press(e.position, e.click_count, e.modifiers.shift);
                     cx.notify();
                 }),
             )
             .on_mouse_down(
                 MouseButton::Right,
-                cx.listener(|this, e: &MouseDownEvent, window, cx| {
+                cx.listener(move |this, e: &MouseDownEvent, window, cx| {
                     window.focus(&this.focus, cx);
-                    this.inspector.select.set_menu(Some(e.position));
+                    menu_at.set_menu(Some(e.position));
                     cx.notify();
                 }),
             )
@@ -877,10 +877,16 @@ impl Traffic {
                 closed = true;
             }
         }
-        if self.inspector.select.menu().is_some() {
-            self.inspector.select.set_menu(None);
-            cx.notify();
-            closed = true;
+        let compose = self.compose_page.as_ref().map(|page| page.select.clone());
+        for sel in [Some(self.inspector.select.clone()), compose]
+            .into_iter()
+            .flatten()
+        {
+            if sel.menu().is_some() {
+                sel.set_menu(None);
+                cx.notify();
+                closed = true;
+            }
         }
         closed
     }
@@ -898,7 +904,15 @@ impl Traffic {
                 Some(view) => view.update(cx, |v, cx| v.select_all(cx)),
                 None => return false,
             },
-            (Part::Headers | Part::Cookies | Part::Connection | Part::Query | Part::Form, _) => {
+            (
+                Part::Headers
+                | Part::Cookies
+                | Part::Connection
+                | Part::Query
+                | Part::Form
+                | Part::Llm,
+                _,
+            ) => {
                 self.inspector.select.select_all();
                 cx.notify();
             }

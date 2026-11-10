@@ -360,9 +360,25 @@ pub fn follow_drag(
     )
 }
 
-/// The menu a right click opens: copy what is selected, or everything.
-/// Everything is not offered when it is more than a copy takes.
-pub fn render_menu(
+/// What a menu item does when it is chosen.
+pub type Act = Rc<dyn Fn(&mut Window, &mut App)>;
+
+/// An item of a menu: its label, and what it does, if it can be chosen.
+pub struct Item {
+    pub id: &'static str,
+    pub label: String,
+    pub act: Option<Act>,
+}
+
+impl Item {
+    pub fn new(id: &'static str, label: String, act: Option<Act>) -> Self {
+        Self { id, label, act }
+    }
+}
+
+/// The menu a right click opens over selected text: copy what is selected,
+/// or everything, which is not offered when it is more than a copy takes.
+pub fn copy_menu(
     at: Point<Pixels>,
     can_copy: bool,
     all_fits: bool,
@@ -370,17 +386,36 @@ pub fn render_menu(
     on_copy_all: impl Fn(&mut Window, &mut App) + 'static,
     on_close: impl Fn(&mut Window, &mut App) + 'static,
 ) -> AnyElement {
-    let c = colors();
-    let item = |id: &'static str, label: String, enabled: bool| {
-        div()
-            .id(id)
-            .px(px(12.))
-            .py(px(5.))
-            .rounded(px(8.))
-            .text_color(rgb(if enabled { c.text } else { c.faint }))
-            .when(enabled, |d| d.cursor_pointer().hover(|s| s.bg(rgb(c.chip))))
-            .child(label)
+    let all = if all_fits {
+        tr!("Copy all")
+    } else {
+        tr!("Too large to copy all")
     };
+    render_menu(
+        at,
+        vec![
+            Item::new(
+                "copy-selection",
+                tr!("Copy"),
+                can_copy.then(|| Rc::new(on_copy) as Act),
+            ),
+            Item::new(
+                "copy-all",
+                all,
+                all_fits.then(|| Rc::new(on_copy_all) as Act),
+            ),
+        ],
+        on_close,
+    )
+}
+
+/// A menu at `at`, over everything. A press outside it closes it.
+pub fn render_menu(
+    at: Point<Pixels>,
+    items: Vec<Item>,
+    on_close: impl Fn(&mut Window, &mut App) + 'static,
+) -> AnyElement {
+    let c = colors();
     deferred(
         anchored().position(at).child(
             div()
@@ -397,31 +432,23 @@ pub fn render_menu(
                 .font_family(crate::FONT)
                 .text_size(px(13.))
                 .on_mouse_down_out(move |_, window, cx| on_close(window, cx))
-                .child(
-                    item("copy-selection", tr!("Copy"), can_copy).when(can_copy, |d| {
-                        d.on_mouse_down(MouseButton::Left, move |_, window, cx| {
-                            cx.stop_propagation();
-                            on_copy(window, cx)
+                .children(items.into_iter().map(|item| {
+                    let enabled = item.act.is_some();
+                    div()
+                        .id(item.id)
+                        .px(px(12.))
+                        .py(px(5.))
+                        .rounded(px(8.))
+                        .text_color(rgb(if enabled { c.text } else { c.faint }))
+                        .when(enabled, |d| d.cursor_pointer().hover(|s| s.bg(rgb(c.chip))))
+                        .child(item.label)
+                        .when_some(item.act, |d, act| {
+                            d.on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                                cx.stop_propagation();
+                                act(window, cx)
+                            })
                         })
-                    }),
-                )
-                .child(
-                    item(
-                        "copy-all",
-                        if all_fits {
-                            tr!("Copy all")
-                        } else {
-                            tr!("Too large to copy all")
-                        },
-                        all_fits,
-                    )
-                    .when(all_fits, |d| {
-                        d.on_mouse_down(MouseButton::Left, move |_, window, cx| {
-                            cx.stop_propagation();
-                            on_copy_all(window, cx)
-                        })
-                    }),
-                ),
+                })),
         ),
     )
     .with_priority(2)

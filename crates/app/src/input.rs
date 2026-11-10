@@ -20,6 +20,7 @@ use gpui::{
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::colors::colors;
+use tracewing_i18n::tr;
 
 /// The text changed.
 pub struct Changed;
@@ -54,6 +55,8 @@ pub struct TextInput {
     /// Code: colored by part, its lines numbered, as high as its parent.
     code: Option<Painter>,
     history: History,
+    /// The menu a right click opens, where it was asked for.
+    menu: Option<Point<Pixels>>,
 }
 
 /// What the text was before an edit, to go back to.
@@ -293,6 +296,7 @@ impl TextInput {
             lines: None,
             code: None,
             history: History::default(),
+            menu: None,
         }
     }
 
@@ -593,6 +597,10 @@ impl TextInput {
 
     fn on_key(&mut self, ev: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
         let k = &ev.keystroke;
+        if k.key == "escape" && self.menu.take().is_some() {
+            cx.notify();
+            return cx.stop_propagation();
+        }
         let m = &k.modifiers;
         // The platform's shortcut modifier: Cmd on macOS, Ctrl elsewhere.
         let cmd = if cfg!(target_os = "macos") {
@@ -633,16 +641,103 @@ impl TextInput {
                 "end" if m.shift => self.select_to(end, cx),
                 "home" => self.move_to(start, cx),
                 "end" => self.move_to(end, cx),
-                "v" if cmd => {
-                    if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
-                        self.replace(self.selected.clone(), &text.replace("\r\n", "\n"), cx);
-                    }
-                }
+                "v" if cmd => self.paste(cx),
                 _ => return self.on_key_line(ev, cx),
             }
             return cx.stop_propagation();
         }
         self.on_key_line(ev, cx)
+    }
+
+    /// Where the field was last drawn.
+    pub fn drawn_at(&self) -> Option<Bounds<Pixels>> {
+        self.last_bounds
+    }
+
+    /// Whether the menu a right click opens is open.
+    pub fn menu_open(&self) -> bool {
+        self.menu.is_some()
+    }
+
+    pub fn select_all(&mut self, cx: &mut Context<Self>) {
+        self.move_to(0, cx);
+        self.select_to(self.content.len(), cx);
+    }
+
+    /// Whether there is anything to copy: a hidden field gives nothing out.
+    fn can_copy(&self) -> bool {
+        !self.selected.is_empty() && !self.masked
+    }
+
+    fn copy(&mut self, cx: &mut Context<Self>) {
+        if self.can_copy() {
+            let text = self.content[self.selected.clone()].to_string();
+            cx.write_to_clipboard(ClipboardItem::new_string(text));
+        }
+    }
+
+    fn cut(&mut self, cx: &mut Context<Self>) {
+        if self.can_copy() {
+            self.copy(cx);
+            self.replace(self.selected.clone(), "", cx);
+        }
+    }
+
+    /// The clipboard's text in place of the selection: its line breaks kept
+    /// in a field of several lines, spaces in one of one line.
+    fn paste(&mut self, cx: &mut Context<Self>) {
+        if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
+            let text = if self.lines.is_some() {
+                text.replace("\r\n", "\n")
+            } else {
+                text.replace(['\r', '\n'], " ")
+            };
+            self.replace(self.selected.clone(), &text, cx);
+        }
+    }
+
+    fn open_menu(&mut self, e: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        cx.stop_propagation();
+        window.focus(&self.focus, cx);
+        self.menu = Some(e.position);
+        cx.notify();
+    }
+
+    fn render_menu(&self, at: Point<Pixels>, cx: &mut Context<Self>) -> gpui::AnyElement {
+        use crate::select::{Act, Item, render_menu};
+        use std::rc::Rc;
+        let me = cx.entity().downgrade();
+        let act = |f: fn(&mut Self, &mut Context<Self>)| -> Act {
+            let me = me.clone();
+            Rc::new(move |_, cx| {
+                let _ = me.update(cx, |input, cx| {
+                    input.menu = None;
+                    f(input, cx);
+                    cx.notify();
+                });
+            })
+        };
+        let copy = self.can_copy();
+        let close = me.clone();
+        render_menu(
+            at,
+            vec![
+                Item::new("field-cut", tr!("Cut"), copy.then(|| act(Self::cut))),
+                Item::new("field-copy", tr!("Copy"), copy.then(|| act(Self::copy))),
+                Item::new("field-paste", tr!("Paste"), Some(act(Self::paste))),
+                Item::new(
+                    "field-select-all",
+                    tr!("Select all"),
+                    (!self.content.is_empty()).then(|| act(Self::select_all)),
+                ),
+            ],
+            move |_, cx| {
+                let _ = close.update(cx, |input, cx| {
+                    input.menu = None;
+                    cx.notify();
+                });
+            },
+        )
     }
 
     /// The keys a field of one line takes (those of several lines too).
@@ -692,18 +787,10 @@ impl TextInput {
             }
             "home" => self.move_to(0, cx),
             "end" => self.move_to(self.content.len(), cx),
-            "a" if cmd => {
-                self.move_to(0, cx);
-                self.select_to(self.content.len(), cx);
-            }
-            "v" if cmd => {
-                if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
-                    self.replace(self.selected.clone(), &text.replace(['\r', '\n'], " "), cx);
-                }
-            }
-            "c" | "x" if cmd && !self.selected.is_empty() && !self.masked => {
-                let text = self.content[self.selected.clone()].to_string();
-                cx.write_to_clipboard(ClipboardItem::new_string(text));
+            "a" if cmd => self.select_all(cx),
+            "v" if cmd => self.paste(cx),
+            "c" | "x" if cmd && self.can_copy() => {
+                self.copy(cx);
                 if k.key == "x" {
                     self.replace(self.selected.clone(), "", cx);
                 }
@@ -1176,6 +1263,7 @@ impl Render for TextInput {
             .cursor(CursorStyle::IBeam)
             .on_key_down(cx.listener(Self::on_key))
             .on_mouse_down(MouseButton::Left, cx.listener(Self::mouse_down))
+            .on_mouse_down(MouseButton::Right, cx.listener(Self::open_menu))
             .on_mouse_up(MouseButton::Left, cx.listener(Self::mouse_up))
             .on_mouse_up_out(MouseButton::Left, cx.listener(Self::mouse_up))
             .on_mouse_move(cx.listener(Self::mouse_move))
@@ -1186,6 +1274,7 @@ impl Render for TextInput {
             .when(self.lines.is_some(), |d| {
                 d.child(AreaElement { input: cx.entity() })
             })
+            .children(self.menu.map(|at| self.render_menu(at, cx)))
     }
 }
 

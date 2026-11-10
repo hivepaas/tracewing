@@ -8,6 +8,7 @@ use crate::{
     detail::Side,
     input::TextInput,
     paused_page::{headers_text, parse_headers},
+    select::{Copied, Selection},
     traffic::{Screen, Traffic},
     widgets::eyebrow,
 };
@@ -27,6 +28,8 @@ pub struct ComposePage {
     pub sending: bool,
     pub answer: Option<Answer>,
     pub problem: Option<String>,
+    /// What is selected of the answer.
+    pub select: Selection,
 }
 
 fn set(input: &Entity<TextInput>, text: &str, cx: &mut Context<Traffic>) {
@@ -44,6 +47,7 @@ impl ComposePage {
             sending: false,
             answer: None,
             problem: None,
+            select: Selection::default(),
         };
         set(&page.method, "GET", cx);
         page
@@ -164,7 +168,10 @@ impl Traffic {
                 let page = this.compose_page(cx);
                 page.sending = false;
                 match result {
-                    Ok(answer) => page.answer = Some(answer),
+                    Ok(answer) => {
+                        page.answer = Some(answer);
+                        page.select.clear();
+                    }
                     Err(e) => page.problem = Some(format!("{e:#}")),
                 }
                 cx.notify();
@@ -172,6 +179,33 @@ impl Traffic {
         })
         .detach();
         cx.notify();
+    }
+
+    /// Copies what is selected of the answer. False when nothing is.
+    pub fn copy_composed(&mut self, cx: &mut Context<Self>) -> bool {
+        let Some(page) = &self.compose_page else {
+            return false;
+        };
+        page.select.set_menu(None);
+        match page.select.selected_text() {
+            Copied::Text(text) => {
+                cx.write_to_clipboard(gpui::ClipboardItem::new_string(text));
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Selects all of the answer, if there is one.
+    pub fn select_all_composed(&mut self, cx: &mut Context<Self>) -> bool {
+        match &self.compose_page {
+            Some(page) if page.answer.is_some() => {
+                page.select.select_all();
+                cx.notify();
+                true
+            }
+            _ => false,
+        }
     }
 
     pub fn new_compose(&mut self, cx: &mut Context<Self>) {
@@ -189,6 +223,8 @@ impl Traffic {
         let c = colors();
         self.compose_page(cx);
         let page = self.compose_page.as_ref().expect("just made");
+        let sel = page.select.clone();
+        sel.begin();
         let field = |input: &Entity<TextInput>| {
             div()
                 .w_full()
@@ -225,7 +261,7 @@ impl Traffic {
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(px(12.))
-                .child(text)
+                .child(sel.piece(text, "\n\n", Vec::new()))
         };
 
         let editor = div()
@@ -293,7 +329,7 @@ impl Traffic {
                     div()
                         .font_weight(FontWeight::BOLD)
                         .text_color(rgb(fg))
-                        .child(compose::summary(answer)),
+                        .child(sel.piece(compose::summary(answer), "\n", Vec::new())),
                 )
                 .child(eyebrow(tr!("Headers")))
                 .child(mono_block(headers_text(&answer.headers)))
@@ -329,6 +365,6 @@ impl Traffic {
                     ))),
             )
             .child(editor)
-            .children(answer)
+            .children(answer.map(|answer| self.selectable(answer, &sel, cx)))
     }
 }

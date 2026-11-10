@@ -1310,6 +1310,10 @@ impl Traffic {
             Action::SendAgain if chosen => self.send_flow_again(cx),
             Action::EditAndSend if chosen => self.edit_flow(cx),
             Action::CopyCurl if chosen => self.copy_as_curl(cx),
+            Action::Copy if self.screen == Screen::Compose => return self.copy_composed(cx),
+            Action::SelectAll if self.screen == Screen::Compose => {
+                return self.select_all_composed(cx);
+            }
             Action::Copy if chosen => return self.copy_selection(cx),
             Action::SelectAll if chosen && self.screen == Screen::Traffic => {
                 return self.select_all(cx);

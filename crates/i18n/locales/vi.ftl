@@ -178,6 +178,18 @@ t8090a1ba = Không giải mã
 # open
 td35ec4c9 = đang mở
 
+# Cut
+t58e25863 = Cắt
+
+# Copy
+t658f3664 = Sao chép
+
+# Paste
+tb34a0288 = Dán
+
+# Select all
+t6af21072 = Chọn tất cả
+
 # This flow is gone.
 t3343999e = Flow này không còn nữa.
 
@@ -738,9 +750,6 @@ t65dc1281 =
 
 # left out: {why}
 ta81e95e2 = bỏ qua: { $why }
-
-# Copy
-t658f3664 = Sao chép
 
 # Copy all
 t6aef5c37 = Sao chép tất cả

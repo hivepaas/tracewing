@@ -178,6 +178,18 @@ t8090a1ba = Tidak didekripsi
 # open
 td35ec4c9 = terbuka
 
+# Cut
+t58e25863 = Potong
+
+# Copy
+t658f3664 = Salin
+
+# Paste
+tb34a0288 = Tempel
+
+# Select all
+t6af21072 = Pilih semua
+
 # This flow is gone.
 t3343999e = Flow ini sudah tidak ada.
 
@@ -738,9 +750,6 @@ t65dc1281 =
 
 # left out: {why}
 ta81e95e2 = dilewati: { $why }
-
-# Copy
-t658f3664 = Salin
 
 # Copy all
 t6aef5c37 = Salin semua

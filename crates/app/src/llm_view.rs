@@ -6,8 +6,8 @@ use crate::{
     flows::group_digits,
     inspector::Part,
     llm::{self, Exchange, Provider},
+    select::Selection,
     traffic::Traffic,
-    widgets::eyebrow,
 };
 use gpui::{
     AppContext as _, ClipboardItem, Context, FontWeight, IntoElement, div, prelude::*, px, rgb,
@@ -112,7 +112,8 @@ impl Traffic {
         .detach();
     }
 
-    pub(crate) fn render_llm(&self, _cx: &mut Context<Self>) -> impl IntoElement {
+    /// The call, its text selectable with `sel`.
+    pub(crate) fn render_llm(&self, sel: &Selection) -> impl IntoElement {
         let c = colors();
         let Some((provider, call)) = &self.inspector.llm else {
             return div()
@@ -121,6 +122,7 @@ impl Traffic {
                 .text_color(rgb(c.muted))
                 .child(tr!("Reading the call…"));
         };
+        let piece = |text: String, before: &'static str| sel.piece(text, before, Vec::new());
         let block = |text: String, muted: bool| {
             div()
                 .w_full()
@@ -129,7 +131,7 @@ impl Traffic {
                 .rounded(px(12.))
                 .bg(rgb(c.surface))
                 .text_color(rgb(if muted { c.muted } else { c.text }))
-                .child(text)
+                .child(piece(text, "\n"))
         };
         let code = |text: String| {
             div()
@@ -141,9 +143,17 @@ impl Traffic {
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(px(12.))
-                .child(text)
+                .child(piece(text, "\n"))
         };
-        let section = |title: String| eyebrow(title).pt(px(6.));
+        // A title, said in the copy as it is: the eyebrow shows it in capitals.
+        let section = |title: String| {
+            div()
+                .pt(px(6.))
+                .text_size(px(11.))
+                .font_weight(FontWeight::BOLD)
+                .text_color(rgb(c.muted))
+                .child(piece(title.to_uppercase(), "\n\n"))
+        };
 
         let mut answer = div()
             .flex()
@@ -151,7 +161,11 @@ impl Traffic {
             .gap(px(8.))
             .child(section(tr!("Answer")));
         if let Some(error) = &call.error {
-            answer = answer.child(div().text_color(rgb(c.error)).child(error.clone()));
+            answer = answer.child(
+                div()
+                    .text_color(rgb(c.error))
+                    .child(piece(error.clone(), "\n")),
+            );
         }
         if !call.thinking.is_empty() {
             answer = answer.child(block(
@@ -169,10 +183,9 @@ impl Traffic {
                 .map(|id| format!(" · {id}"))
                 .unwrap_or_default();
             answer = answer
-                .child(div().font_weight(FontWeight::BOLD).child(tr!(
-                    "Calls {name}{id}",
-                    name = &tool.name,
-                    id = id
+                .child(div().font_weight(FontWeight::BOLD).child(piece(
+                    tr!("Calls {name}{id}", name = &tool.name, id = id),
+                    "\n",
                 )))
                 .when(!tool.arguments.is_empty(), |d| {
                     d.child(code(tool.arguments.clone()))
@@ -208,7 +221,7 @@ impl Traffic {
                         .text_size(px(11.))
                         .font_weight(FontWeight::BOLD)
                         .text_color(rgb(c.muted))
-                        .child(message.role.to_uppercase()),
+                        .child(piece(message.role.to_uppercase(), "\n\n")),
                 )
                 .child(block(text, false))
         });
@@ -263,11 +276,10 @@ impl Traffic {
             .child(section(tr!("Asked")))
             .children(messages)
             .when(!call.tools.is_empty(), |d| {
-                d.child(
-                    div()
-                        .text_color(rgb(c.muted))
-                        .child(tr!("Tools offered: {tools}", tools = call.tools.join(", "))),
-                )
+                d.child(div().text_color(rgb(c.muted)).child(piece(
+                    tr!("Tools offered: {tools}", tools = call.tools.join(", ")),
+                    "\n\n",
+                )))
             })
     }
 }

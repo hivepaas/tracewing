@@ -178,6 +178,18 @@ t8090a1ba = 복호화 안 됨
 # open
 td35ec4c9 = 열림
 
+# Cut
+t58e25863 = 잘라내기
+
+# Copy
+t658f3664 = 복사
+
+# Paste
+tb34a0288 = 붙여넣기
+
+# Select all
+t6af21072 = 모두 선택
+
 # This flow is gone.
 t3343999e = 이 플로우는 더 이상 없습니다.
 
@@ -738,9 +750,6 @@ t65dc1281 =
 
 # left out: {why}
 ta81e95e2 = 제외됨: { $why }
-
-# Copy
-t658f3664 = 복사
 
 # Copy all
 t6aef5c37 = 모두 복사

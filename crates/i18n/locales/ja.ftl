@@ -178,6 +178,18 @@ t8090a1ba = 未復号
 # open
 td35ec4c9 = オープン
 
+# Cut
+t58e25863 = 切り取り
+
+# Copy
+t658f3664 = コピー
+
+# Paste
+tb34a0288 = 貼り付け
+
+# Select all
+t6af21072 = すべて選択
+
 # This flow is gone.
 t3343999e = このフローはもうありません。
 
@@ -738,9 +750,6 @@ t65dc1281 =
 
 # left out: {why}
 ta81e95e2 = 除外: { $why }
-
-# Copy
-t658f3664 = コピー
 
 # Copy all
 t6aef5c37 = すべてコピー

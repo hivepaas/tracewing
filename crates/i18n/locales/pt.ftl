@@ -182,6 +182,18 @@ t8090a1ba = Não descriptografado
 # open
 td35ec4c9 = aberto
 
+# Cut
+t58e25863 = Recortar
+
+# Copy
+t658f3664 = Copiar
+
+# Paste
+tb34a0288 = Colar
+
+# Select all
+t6af21072 = Selecionar tudo
+
 # This flow is gone.
 t3343999e = Este fluxo não existe mais.
 
@@ -751,9 +763,6 @@ t65dc1281 =
 
 # left out: {why}
 ta81e95e2 = deixado de fora: { $why }
-
-# Copy
-t658f3664 = Copiar
 
 # Copy all
 t6aef5c37 = Copiar tudo
