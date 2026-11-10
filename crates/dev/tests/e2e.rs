@@ -1346,25 +1346,31 @@ async fn a_slow_network_slows_what_it_applies_to() {
 /// Server-sent events show as they come, not when the stream ends.
 #[tokio::test(flavor = "multi_thread")]
 async fn events_show_while_the_stream_lasts() {
+    const EVENTS: i64 = 20;
     let h = Harness::start("events").await;
     let session_dir = h.dir.join("session");
     let mut res = h
         .client(false)
-        .get(format!("{}/stream?events=4&gap_ms=150", h.origin))
+        .get(format!("{}/stream?events={EVENTS}&gap_ms=100", h.origin))
         .send()
         .await
         .unwrap();
     assert!(res.chunk().await.unwrap().is_some());
     let conn = Connection::open(session_dir.join("flows.db")).unwrap();
-    let row = wait_for_row(&conn, "sse", |row| row.2 >= 1).await;
-    assert!(row.0, "it is listed while it is still going: {row:?}");
+    // Long enough to be seen open on a slow runner: 4 events in 0.6 s once
+    // ended before Windows CI looked.
+    let row = wait_for_row(&conn, "sse", |row| row.0 && row.2 >= 1).await;
+    assert!(
+        row.2 < EVENTS,
+        "it is listed while it is still going: {row:?}"
+    );
     assert_eq!(row.1, Some(200));
     while res.chunk().await.unwrap().is_some() {}
     drop(conn);
 
     let (_, conn, dir) = h.finish(1).await;
     let row = wait_for_row(&conn, "sse", |row| !row.0).await;
-    assert_eq!(row.2, 4, "{row:?}");
+    assert_eq!(row.2, EVENTS, "{row:?}");
     let (id, bytes): (i64, i64) = conn
         .query_row(
             "SELECT id, resp_bytes FROM flows WHERE kind = 'sse'",
@@ -1380,7 +1386,7 @@ async fn events_show_while_the_stream_lasts() {
         "and kept as well"
     );
     let messages = session::stored_messages(&conn, 1, 0, 100).unwrap();
-    assert_eq!(messages.len(), 4);
+    assert_eq!(messages.len() as i64, EVENTS);
     let mut reader = BodyReader::new(&dir.join("session"));
     for (i, message) in messages.iter().enumerate() {
         assert_eq!(message.kind, "event");
