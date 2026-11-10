@@ -1729,15 +1729,24 @@ async fn rules_change_traffic_and_say_so() {
     clean_up(conn, dir);
 }
 
-/// The first message held, once there is one.
-async fn first_held(pauses: &Pauses) -> Paused {
-    for _ in 0..500 {
+/// The first message held, once there is one. `client` is the request that
+/// should be held: if it ends first, it went through or failed, which is a
+/// bug, not a slow machine. The first request through a new proxy can take
+/// seconds on a busy CI runner (its leaf certificate is made then), so the
+/// wait is long, but it ends as soon as there is something.
+async fn first_held<T>(pauses: &Pauses, client: &tokio::task::JoinHandle<T>) -> Paused {
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while Instant::now() < deadline {
         if let Some(held) = pauses.held().into_iter().next() {
             return held;
         }
+        assert!(
+            !client.is_finished(),
+            "the request ended without being held"
+        );
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    panic!("nothing was held");
+    panic!("nothing was held in 30 s");
 }
 
 /// Breakpoints through the real proxy: a request changed on its way, a response
@@ -1768,7 +1777,7 @@ async fn breakpoints_hold_until_let_go() {
                 .unwrap()
         }
     });
-    let held = first_held(&h.pauses).await;
+    let held = first_held(&h.pauses, &sent).await;
     assert_eq!(held.stage, Stage::Request);
     assert_eq!(held.rule, "rule for */json?size=5*");
     assert_eq!(held.message.method, "POST");
@@ -1792,7 +1801,7 @@ async fn breakpoints_hold_until_let_go() {
             (res.status().as_u16(), res.text().await.unwrap())
         }
     });
-    let held = first_held(&h.pauses).await;
+    let held = first_held(&h.pauses, &got).await;
     assert_eq!(held.stage, Stage::Response);
     assert_eq!(held.message.status, 200);
     assert_eq!(held.message.body.len(), 60);
@@ -1811,7 +1820,7 @@ async fn breakpoints_hold_until_let_go() {
             (res.status().as_u16(), res.text().await.unwrap())
         }
     });
-    let held = first_held(&h.pauses).await;
+    let held = first_held(&h.pauses, &dropped).await;
     assert!(h.pauses.decide(held.id, Verdict::Drop));
     let (status, text) = dropped.await.unwrap();
     assert_eq!(status, 502);
