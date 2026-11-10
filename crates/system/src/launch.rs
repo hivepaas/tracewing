@@ -161,22 +161,75 @@ pub fn open_browser(
 }
 
 /// What a Firefox profile for tracewing holds: the proxy, the system's roots
-/// (where Firefox can read them, which is not Linux), and no first-run pages.
+/// (where Firefox can read them, which is not Linux), no first-run pages, and
+/// as little of Firefox's own traffic as can be had, so that what is listed is
+/// what the user does. In its first 12 s, a new profile went from 108 flows
+/// to 34 with these, none of them mozilla.org's welcome. Remote settings
+/// stay: Firefox learns of revoked certificates from them.
 pub fn firefox_prefs(addr: SocketAddr) -> String {
     let (host, port) = (addr.ip(), addr.port());
-    let prefs: [(&str, String); 9] = [
+    let text = |value: &str| format!("\"{value}\"");
+    let prefs: Vec<(&str, String)> = vec![
         ("network.proxy.type", "1".to_owned()),
-        ("network.proxy.http", format!("\"{host}\"")),
+        ("network.proxy.http", text(&host.to_string())),
         ("network.proxy.http_port", port.to_string()),
-        ("network.proxy.ssl", format!("\"{host}\"")),
+        ("network.proxy.ssl", text(&host.to_string())),
         ("network.proxy.ssl_port", port.to_string()),
         ("security.enterprise_roots.enabled", "true".to_owned()),
+        // No first run: no welcome, no privacy notice, no default browser ask.
         ("browser.shell.checkDefaultBrowser", "false".to_owned()),
         ("browser.aboutwelcome.enabled", "false".to_owned()),
+        ("browser.startup.homepage_override.mstone", text("ignore")),
+        ("browser.startup.firstrunSkipsHomepage", "true".to_owned()),
+        ("startup.homepage_welcome_url", text("")),
+        ("startup.homepage_welcome_url.additional", text("")),
+        ("datareporting.policy.firstRunURL", text("")),
         (
-            "browser.startup.homepage_override.mstone",
-            "\"ignore\"".to_owned(),
+            "datareporting.policy.dataSubmissionPolicyBypassNotification",
+            "true".to_owned(),
         ),
+        (
+            "toolkit.telemetry.reportingpolicy.firstRun",
+            "false".to_owned(),
+        ),
+        // Less of Firefox's own traffic.
+        (
+            "datareporting.healthreport.uploadEnabled",
+            "false".to_owned(),
+        ),
+        (
+            "datareporting.policy.dataSubmissionEnabled",
+            "false".to_owned(),
+        ),
+        ("toolkit.telemetry.enabled", "false".to_owned()),
+        ("toolkit.telemetry.unified", "false".to_owned()),
+        ("browser.newtabpage.enabled", "false".to_owned()),
+        (
+            "browser.newtabpage.activity-stream.feeds.topsites",
+            "false".to_owned(),
+        ),
+        (
+            "browser.newtabpage.activity-stream.feeds.section.topstories",
+            "false".to_owned(),
+        ),
+        (
+            "browser.newtabpage.activity-stream.showSponsored",
+            "false".to_owned(),
+        ),
+        (
+            "browser.newtabpage.activity-stream.showSponsoredTopSites",
+            "false".to_owned(),
+        ),
+        ("browser.urlbar.quicksuggest.enabled", "false".to_owned()),
+        (
+            "browser.urlbar.suggest.quicksuggest.sponsored",
+            "false".to_owned(),
+        ),
+        ("app.normandy.enabled", "false".to_owned()),
+        ("app.shield.optoutstudies.enabled", "false".to_owned()),
+        ("extensions.pocket.enabled", "false".to_owned()),
+        ("network.captive-portal-service.enabled", "false".to_owned()),
+        ("network.connectivity-service.enabled", "false".to_owned()),
     ];
     prefs
         .iter()
@@ -293,6 +346,8 @@ mod tests {
         assert!(prefs.contains("user_pref(\"network.proxy.type\", 1);\n"));
         assert!(prefs.contains("user_pref(\"network.proxy.ssl\", \"127.0.0.1\");\n"));
         assert!(prefs.contains("user_pref(\"network.proxy.ssl_port\", 9090);\n"));
+        assert!(prefs.contains("user_pref(\"datareporting.policy.firstRunURL\", \"\");\n"));
+        assert!(prefs.contains("user_pref(\"toolkit.telemetry.enabled\", false);\n"));
         assert_eq!(
             firefox_args(Path::new("/p"), "https://tracewing.test/"),
             [
