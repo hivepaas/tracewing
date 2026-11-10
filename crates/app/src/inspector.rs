@@ -3,7 +3,7 @@
 
 use crate::{
     body::Body,
-    bodyview::{BodyView, summary},
+    bodyview::BodyView,
     colors::colors,
     connection::Certificate,
     cookies,
@@ -612,6 +612,60 @@ impl Traffic {
             ))
     }
 
+    /// Shows the chosen side's body as a dump of its bytes, or as it was told
+    /// to be.
+    pub fn set_body_hex(&mut self, hex: bool, cx: &mut Context<Self>) {
+        if let BodyState::Shown(view) = &self.inspector.body {
+            view.update(cx, |view, cx| view.set_hex(hex, cx));
+            cx.notify();
+        }
+    }
+
+    /// The body as it reads, or its bytes: two halves of one switch. A body
+    /// that is bytes already has only the one.
+    fn render_hex_switch(&self, part: Part, cx: &mut Context<Self>) -> Option<Div> {
+        let BodyState::Shown(view) = &self.inspector.body else {
+            return None;
+        };
+        let view = view.read(cx);
+        let kind = view.body().kind();
+        if part != Part::Body || kind == crate::body::Kind::Binary {
+            return None;
+        }
+        let c = colors();
+        let hex = view.is_hex();
+        let half = |id: &'static str, label: String, on: bool, to_hex: bool| {
+            div()
+                .id(id)
+                .h(px(24.))
+                .px(px(10.))
+                .rounded(px(12.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .text_size(px(12.))
+                .font_weight(FontWeight::BOLD)
+                .when(on, |d| d.bg(rgb(c.tab_on)).text_color(rgb(c.text)))
+                .when(!on, |d| d.text_color(rgb(c.muted)))
+                .child(label)
+                .on_click(cx.listener(move |view, _, _, cx| view.set_body_hex(to_hex, cx)))
+        };
+        let read = match kind {
+            crate::body::Kind::Json => "JSON".to_owned(),
+            _ => tr!("Text"),
+        };
+        Some(
+            div()
+                .flex()
+                .flex_row()
+                .p(px(2.))
+                .rounded(px(14.))
+                .bg(rgb(c.chip))
+                .child(half("body-as-read", read, !hex, false))
+                .child(half("body-as-hex", "Hex".to_owned(), hex, true)),
+        )
+    }
+
     /// The parts the chosen flow has tabs for, in the tabs' order.
     pub fn parts_offered(&self) -> Vec<Part> {
         let Some(detail) = &self.inspector.detail else {
@@ -684,7 +738,7 @@ impl Traffic {
         // Both shown, each pane says its own.
         let summary_text: Option<String> = match (&self.inspector.body, part) {
             _ if both && part == Part::Body => None,
-            (BodyState::Shown(view), Part::Body) => Some(summary(view.read(cx).body())),
+            (BodyState::Shown(view), Part::Body) => Some(view.read(cx).summary()),
             (BodyState::Image(_, size), Part::Body) => {
                 Some(tr!("Picture · {size}", size = size_text(*size)))
             }
@@ -774,6 +828,7 @@ impl Traffic {
                     .text_color(rgb(c.muted))
                     .child(text)
             }))
+            .children(self.render_hex_switch(part, cx))
             .when(
                 part == Part::Body && detail.body(side).stored.exists(),
                 |d| {
@@ -985,7 +1040,7 @@ impl Traffic {
                 _ => body_well(well, self.inspector.body_of(side)),
             };
             let size = match (part, self.inspector.body_of(side)) {
-                (Part::Body, BodyState::Shown(view)) => Some(summary(view.read(cx).body())),
+                (Part::Body, BodyState::Shown(view)) => Some(view.read(cx).summary()),
                 (Part::Body, BodyState::Image(_, size)) => {
                     Some(tr!("Picture · {size}", size = size_text(*size)))
                 }

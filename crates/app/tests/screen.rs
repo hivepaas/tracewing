@@ -258,6 +258,23 @@ fn the_window_shows_real_traffic() {
         })
         .unwrap();
 
+    // The same body as its bytes, and back.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_body_hex(true, cx);
+            let BodyState::Shown(body) = &view.inspector.body else {
+                panic!()
+            };
+            let body = body.read(cx);
+            assert!(body.is_hex());
+            assert!(body.folds().is_empty(), "folds are the text's");
+        })
+        .unwrap();
+    save(&mut cx, window.into(), "92-body-hex");
+    window
+        .update(&mut cx, |view, _, cx| view.set_body_hex(false, cx))
+        .unwrap();
+
     window
         .update(&mut cx, |view, _, cx| view.set_part(Part::Headers, cx))
         .unwrap();

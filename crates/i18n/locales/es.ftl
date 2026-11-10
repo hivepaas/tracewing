@@ -283,6 +283,9 @@ t3d35ce69 = Solicitud y respuesta lado a lado
 # Request above the response
 t83c63123 = Solicitud encima de la respuesta
 
+# Text
+t3e142d5e = Texto
+
 # Picture · {size}
 te97ed633 = Imagen · { $size }
 
