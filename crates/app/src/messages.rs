@@ -125,7 +125,11 @@ impl Traffic {
                     return;
                 }
                 if let Some(body) = file.and_then(|path| Body::open(&path).ok()) {
-                    state.view = Some(cx.new(|cx| BodyView::new(body, None, cx)));
+                    let focus = this.focus.clone();
+                    let Some(state) = this.inspector.messages.as_mut() else {
+                        return;
+                    };
+                    state.view = Some(cx.new(|cx| BodyView::new(body, None, focus, cx)));
                 }
                 cx.notify();
             });

@@ -364,6 +364,100 @@ impl Body {
         out
     }
 
+    /// The text from `from` to `to`, each a line and a byte offset into what
+    /// that line shows; an offset at or past the end of what a line shows takes
+    /// the rest of it. JSON comes out as it is shown, a line each, indented;
+    /// other text as it is in the file; bytes as their dump. None when that is
+    /// more than `max` bytes.
+    pub fn text(&self, from: (u64, usize), to: (u64, usize), max: usize) -> Option<String> {
+        let ready = self.lines();
+        if from > to || from.0 >= ready {
+            return Some(String::new());
+        }
+        let last = to.0.min(ready - 1);
+        if self.kind == Kind::Binary {
+            let mut out = String::new();
+            for line in from.0..=last {
+                // A dump is ASCII, so any offset is a character's start.
+                let text = self.hex_line(line).text;
+                let a = if line == from.0 {
+                    from.1.min(text.len())
+                } else {
+                    0
+                };
+                let b = if line == to.0 {
+                    to.1.min(text.len())
+                } else {
+                    text.len()
+                };
+                if line > from.0 {
+                    out.push('\n');
+                }
+                out.push_str(&text[a..b.max(a)]);
+                if out.len() > max {
+                    return None;
+                }
+            }
+            return Some(out);
+        }
+        let (offset, depth) = self.index.mark_before(from.0);
+        let mut lines = Lines::resume(&self.map, self.kind, offset as usize, depth)
+            .skip((from.0 % MARK_EVERY) as usize)
+            .peekable();
+        // Where an offset into what a line shows is in the file: what it shows
+        // starts where the line does, a byte for a byte.
+        let at = |start: usize, end: usize, depth: u32, offset: usize| {
+            let shown = self.shown(start, end, depth).text.len();
+            if offset >= shown {
+                start + content_len(&self.map[start..end], self.kind)
+            } else {
+                start + offset
+            }
+        };
+        let mut out = Vec::new();
+        let mut first_byte = None;
+        for line in from.0..=last {
+            let Some((start, depth)) = lines.next() else {
+                break;
+            };
+            let end = lines.peek().map_or(self.map.len(), |(next, _)| *next);
+            let a = if line == from.0 {
+                at(start, end, depth, from.1)
+            } else {
+                start
+            };
+            let b = if line == to.0 {
+                at(start, end, depth, to.1)
+            } else {
+                start + content_len(&self.map[start..end], self.kind)
+            };
+            match self.kind {
+                Kind::Json => {
+                    if line > from.0 {
+                        out.push(b'\n');
+                    }
+                    if a == start {
+                        out.extend(std::iter::repeat_n(b' ', 2 * depth as usize));
+                    }
+                    out.extend_from_slice(&self.map[a..b.max(a)]);
+                    if out.len() > max {
+                        return None;
+                    }
+                }
+                _ => {
+                    let from_byte = *first_byte.get_or_insert(a);
+                    if b.saturating_sub(from_byte) > max {
+                        return None;
+                    }
+                    if line == last {
+                        out.extend_from_slice(&self.map[from_byte..b.max(from_byte)]);
+                    }
+                }
+            }
+        }
+        Some(String::from_utf8_lossy(&out).into_owned())
+    }
+
     fn shown(&self, start: usize, end: usize, depth: u32) -> Line {
         let whole = &self.map[start..end];
         let shown = cut_at_char(whole, SHOWN_BYTES_MAX);
@@ -431,6 +525,18 @@ impl Body {
                 }
                 next_report = lines.position() + PROGRESS_EVERY;
             }
+        }
+    }
+}
+
+/// How much of a line is its text: JSON without the whitespace before the
+/// next token, other text without its line break.
+fn content_len(line: &[u8], kind: Kind) -> usize {
+    match kind {
+        Kind::Json => line.trim_ascii_end().len(),
+        _ => {
+            let line = line.strip_suffix(b"\n").unwrap_or(line);
+            line.strip_suffix(b"\r").unwrap_or(line).len()
         }
     }
 }
@@ -553,6 +659,55 @@ mod tests {
             .collect();
         std::fs::remove_file(&path).unwrap();
         out
+    }
+
+    fn opened(contents: &[u8]) -> (Arc<Body>, std::path::PathBuf) {
+        let path = std::env::temp_dir().join(format!(
+            "body-text-{}-{:x}",
+            std::process::id(),
+            contents.as_ptr() as usize
+        ));
+        File::create(&path).unwrap().write_all(contents).unwrap();
+        let body = Body::open(&path).unwrap();
+        while !body.is_scanned() {
+            std::thread::yield_now();
+        }
+        (body, path)
+    }
+
+    #[test]
+    fn json_copies_as_it_is_shown() {
+        let (body, path) = opened(br#"{"a":1,"b":[true,{"c":"x"}]}"#);
+        let all = body.text((0, 0), (body.lines() - 1, usize::MAX), 1 << 20);
+        assert_eq!(
+            all.as_deref(),
+            Some("{\n  \"a\":1,\n  \"b\":[\n    true,\n    {\n      \"c\":\"x\"\n    }\n  ]\n}")
+        );
+        // From inside a line to inside another: no indent before the first.
+        assert_eq!(
+            body.text((1, 1), (3, 3), 1 << 20).as_deref(),
+            Some("a\":1,\n  \"b\":[\n    tru")
+        );
+        assert_eq!(body.text((0, 0), (8, 1), 10), None);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn text_copies_as_it_is_in_the_file() {
+        let (body, path) = opened(b"one\ttab\r\ntwo\n\nfour\n");
+        assert_eq!(
+            body.text((0, 4), (3, usize::MAX), 1 << 20).as_deref(),
+            Some("tab\r\ntwo\n\nfour")
+        );
+        assert_eq!(body.text((1, 0), (1, 2), 1 << 20).as_deref(), Some("tw"));
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn bytes_copy_as_their_dump() {
+        let (body, path) = opened(&[0u8, 1, 2, 0xff]);
+        assert_eq!(body.text((0, 0), (0, 5), 1 << 20).as_deref(), Some("00 01"));
+        std::fs::remove_file(path).unwrap();
     }
 
     fn plain(lines: &[(u32, &str)]) -> Vec<(u32, String)> {

@@ -147,7 +147,7 @@ pub fn said<V: 'static>(
 /// The word around `offset` in `text`: a run of letters and digits, or of
 /// what is neither. A click just past a word's end (the right half of its
 /// last letter) takes that word.
-fn word_around(text: &str, offset: usize) -> Range<usize> {
+pub(crate) fn word_around(text: &str, offset: usize) -> Range<usize> {
     let offset = offset.min(text.len());
     let words: Vec<Range<usize>> = text
         .split_word_bound_indices()
@@ -757,6 +757,8 @@ impl TextInput {
     }
 
     fn mouse_down(&mut self, e: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        // The field's press, not the start of a selection in what holds it.
+        cx.stop_propagation();
         window.focus(&self.focus, cx);
         let at = self.index_for_position(e.position);
         // A second click picks the word, a third the line.

@@ -23,6 +23,108 @@ use tracewing::{
 use tracewing_dev::benchkit;
 use tracewing_store::settings::StorageSettings;
 
+fn mouse(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>, event: gpui::PlatformInput) {
+    cx.update_window(window.into(), |_, window, cx| {
+        window.dispatch_event(event, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+}
+
+/// A press at `from` and a drag to `to`, as a hand would select.
+fn drag(
+    cx: &mut HeadlessAppContext,
+    window: WindowHandle<Traffic>,
+    from: gpui::Point<gpui::Pixels>,
+    to: gpui::Point<gpui::Pixels>,
+) {
+    use gpui::{
+        Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PlatformInput,
+    };
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseMove(MouseMoveEvent {
+            position: from,
+            pressed_button: None,
+            modifiers: Modifiers::default(),
+        }),
+    );
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseDown(MouseDownEvent {
+            button: MouseButton::Left,
+            position: from,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            first_mouse: false,
+        }),
+    );
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseMove(MouseMoveEvent {
+            position: to,
+            pressed_button: Some(MouseButton::Left),
+            modifiers: Modifiers::default(),
+        }),
+    );
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseUp(MouseUpEvent {
+            button: MouseButton::Left,
+            position: to,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+        }),
+    );
+}
+
+fn right_click(
+    cx: &mut HeadlessAppContext,
+    window: WindowHandle<Traffic>,
+    at: gpui::Point<gpui::Pixels>,
+) {
+    use gpui::{Modifiers, MouseButton, MouseDownEvent, MouseUpEvent, PlatformInput};
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseDown(MouseDownEvent {
+            button: MouseButton::Right,
+            position: at,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            first_mouse: false,
+        }),
+    );
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseUp(MouseUpEvent {
+            button: MouseButton::Right,
+            position: at,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+        }),
+    );
+}
+
+fn key(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>, keys: &str) {
+    cx.update_window(window.into(), |_, window, cx| {
+        window.dispatch_keystroke(gpui::Keystroke::parse(keys).unwrap(), cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+}
+
+fn clipboard(cx: &mut HeadlessAppContext) -> String {
+    cx.update(|cx| cx.read_from_clipboard())
+        .and_then(|item| item.text())
+        .expect("copied")
+}
+
 fn wait_for(
     cx: &mut HeadlessAppContext,
     window: WindowHandle<Traffic>,
@@ -283,6 +385,54 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
         });
         shot(&mut cx, window.into(), name);
     }
+
+    // A drag over the page's first two lines copies them as the file has them,
+    // and all of it is the file.
+    window
+        .update(&mut cx, |view, _, cx| view.select_place(3, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the page", |view| {
+        matches!(view.inspector.body, BodyState::Shown(..))
+    });
+    let (line0, line1) = window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            let sel = body.read(cx).selection();
+            (sel.drawn_at(0).unwrap(), sel.drawn_at(1).unwrap())
+        })
+        .unwrap();
+    drag(
+        &mut cx,
+        window,
+        gpui::point(line0.left() + px(1.), line0.center().y),
+        gpui::point(line1.right() + px(80.), line1.center().y),
+    );
+    key(&mut cx, window, "ctrl-c");
+    let mut lines = benchkit::PAGE_HTML.lines();
+    assert_eq!(
+        clipboard(&mut cx),
+        format!("{}\n{}", lines.next().unwrap(), lines.next().unwrap())
+    );
+    shot(&mut cx, window.into(), "79-body-selected");
+    key(&mut cx, window, "ctrl-a");
+    key(&mut cx, window, "ctrl-c");
+    assert_eq!(clipboard(&mut cx), benchkit::PAGE_HTML.trim_end());
+    let menu_open = |cx: &mut HeadlessAppContext| {
+        window
+            .update(cx, |view, _, cx| {
+                let BodyState::Shown(body) = &view.inspector.body else {
+                    unreachable!()
+                };
+                body.read(cx).selection().menu().is_some()
+            })
+            .unwrap()
+    };
+    right_click(&mut cx, window, line1.center());
+    assert!(menu_open(&mut cx));
+    key(&mut cx, window, "escape");
+    assert!(!menu_open(&mut cx));
 
     // The form's POST, as code to paste.
     window

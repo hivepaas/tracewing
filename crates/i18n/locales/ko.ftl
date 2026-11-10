@@ -739,6 +739,15 @@ t65dc1281 =
 # left out: {why}
 ta81e95e2 = 제외됨: { $why }
 
+# Copy
+t658f3664 = 복사
+
+# Copy all
+t6aef5c37 = 모두 복사
+
+# Too large to copy all
+t2fe8ff9f = 너무 커서 모두 복사할 수 없음
+
 # No flows
 t6dc463eb = 플로우 없음
 
@@ -1093,9 +1102,6 @@ t4ffc0abf = Flutter의 http와 Dio가 사용하는 Dart의 HttpClient는 휴대�
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback은 모든 인증서를 통과시키므로 디버그 빌드에서만 사용해야 합니다.
 
-# Copy
-t658f3664 = 복사
-
 # Open settings
 t1336b4d6 = 설정 열기
 
@@ -1197,6 +1203,12 @@ t6bc99e5c = 편집 후 보내기
 
 # Copy it as cURL
 tc99a11a3 = cURL로 복사
+
+# Select all of the part shown
+tf9168168 = 표시된 부분 모두 선택
+
+# Copy the selected text
+t00b090d3 = 선택한 텍스트 복사
 
 # The window
 t2af18488 = 창

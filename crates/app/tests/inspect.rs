@@ -57,6 +57,108 @@ fn shot(cx: &mut HeadlessAppContext, window: gpui::AnyWindowHandle, name: &str) 
         .unwrap();
 }
 
+fn mouse(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>, event: gpui::PlatformInput) {
+    cx.update_window(window.into(), |_, window, cx| {
+        window.dispatch_event(event, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+}
+
+/// A press at `from` and a drag to `to`, as a hand would select.
+fn drag(
+    cx: &mut HeadlessAppContext,
+    window: WindowHandle<Traffic>,
+    from: gpui::Point<gpui::Pixels>,
+    to: gpui::Point<gpui::Pixels>,
+) {
+    use gpui::{
+        Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PlatformInput,
+    };
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseMove(MouseMoveEvent {
+            position: from,
+            pressed_button: None,
+            modifiers: Modifiers::default(),
+        }),
+    );
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseDown(MouseDownEvent {
+            button: MouseButton::Left,
+            position: from,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            first_mouse: false,
+        }),
+    );
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseMove(MouseMoveEvent {
+            position: to,
+            pressed_button: Some(MouseButton::Left),
+            modifiers: Modifiers::default(),
+        }),
+    );
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseUp(MouseUpEvent {
+            button: MouseButton::Left,
+            position: to,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+        }),
+    );
+}
+
+fn right_click(
+    cx: &mut HeadlessAppContext,
+    window: WindowHandle<Traffic>,
+    at: gpui::Point<gpui::Pixels>,
+) {
+    use gpui::{Modifiers, MouseButton, MouseDownEvent, MouseUpEvent, PlatformInput};
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseDown(MouseDownEvent {
+            button: MouseButton::Right,
+            position: at,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            first_mouse: false,
+        }),
+    );
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseUp(MouseUpEvent {
+            button: MouseButton::Right,
+            position: at,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+        }),
+    );
+}
+
+fn key(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>, keys: &str) {
+    cx.update_window(window.into(), |_, window, cx| {
+        window.dispatch_keystroke(gpui::Keystroke::parse(keys).unwrap(), cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+}
+
+fn clipboard(cx: &mut HeadlessAppContext) -> String {
+    cx.update(|cx| cx.read_from_clipboard())
+        .and_then(|item| item.text())
+        .expect("copied")
+}
+
 fn type_in(input: &Entity<TextInput>, text: &str, cx: &mut gpui::Context<Traffic>) {
     input.update(cx, |input, cx| input.set_text(text, 0..0, cx));
 }
@@ -229,6 +331,49 @@ fn graphql_cookies_and_tokens_are_read() {
         .unwrap();
     cx.run_until_parked();
     shot(&mut cx, window.into(), "41-jwt-in-headers");
+
+    // A drag over the first header takes its name and value, as a line of HTTP.
+    let (name_at, value_at, name, value) = window
+        .update(&mut cx, |view, _, _| {
+            let sel = &view.inspector.select;
+            let detail = view.inspector.detail.as_ref().unwrap();
+            let (name, value) = detail.headers(Side::Request).unwrap()[0].clone();
+            (
+                sel.drawn_at(0).unwrap(),
+                sel.drawn_at(1).unwrap(),
+                name,
+                value,
+            )
+        })
+        .unwrap();
+    drag(
+        &mut cx,
+        window,
+        gpui::point(name_at.left() + px(1.), name_at.center().y),
+        gpui::point(value_at.right() + px(40.), value_at.top() + px(4.)),
+    );
+    key(&mut cx, window, "ctrl-c");
+    assert_eq!(clipboard(&mut cx), format!("{name}: {value}"));
+    shot(&mut cx, window.into(), "77-header-selected");
+    // All of them, the token with them; the menu offers the same.
+    key(&mut cx, window, "ctrl-a");
+    key(&mut cx, window, "ctrl-c");
+    let all = clipboard(&mut cx);
+    assert!(all.contains(&format!(": Bearer {EXPIRED_JWT}")), "{all}");
+    assert!(all.contains(&format!("{name}: {value}\n")), "{all}");
+    right_click(&mut cx, window, value_at.center());
+    assert!(
+        window
+            .update(&mut cx, |view, _, _| view.inspector.select.menu().is_some())
+            .unwrap()
+    );
+    shot(&mut cx, window.into(), "78-copy-menu");
+    key(&mut cx, window, "escape");
+    assert!(
+        window
+            .update(&mut cx, |view, _, _| view.inspector.select.menu().is_none())
+            .unwrap()
+    );
 
     window
         .update(&mut cx, |view, _, cx| view.set_part(Part::Cookies, cx))

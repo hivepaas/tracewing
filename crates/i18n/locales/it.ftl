@@ -752,6 +752,15 @@ t65dc1281 =
 # left out: {why}
 ta81e95e2 = esclusa: { $why }
 
+# Copy
+t658f3664 = Copia
+
+# Copy all
+t6aef5c37 = Copia tutto
+
+# Too large to copy all
+t2fe8ff9f = Troppo grande per copiare tutto
+
 # No flows
 t6dc463eb = Nessun flow
 
@@ -1107,9 +1116,6 @@ t4ffc0abf = L'HttpClient di Dart, usato da http e Dio in Flutter, non segue l'im
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback lascia passare qualsiasi certificato, ed è per questo che va usato solo nelle build di debug.
 
-# Copy
-t658f3664 = Copia
-
 # Open settings
 t1336b4d6 = Apri le impostazioni
 
@@ -1211,6 +1217,12 @@ t6bc99e5c = Modificalo e invialo
 
 # Copy it as cURL
 tc99a11a3 = Copialo come cURL
+
+# Select all of the part shown
+tf9168168 = Seleziona tutto nella parte mostrata
+
+# Copy the selected text
+t00b090d3 = Copia il testo selezionato
 
 # The window
 t2af18488 = La finestra

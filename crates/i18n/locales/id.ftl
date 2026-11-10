@@ -739,6 +739,15 @@ t65dc1281 =
 # left out: {why}
 ta81e95e2 = dilewati: { $why }
 
+# Copy
+t658f3664 = Salin
+
+# Copy all
+t6aef5c37 = Salin semua
+
+# Too large to copy all
+t2fe8ff9f = Terlalu besar untuk disalin semua
+
 # No flows
 t6dc463eb = Tidak ada flow
 
@@ -1093,9 +1102,6 @@ t4ffc0abf = HttpClient milik Dart, yang dipakai http dan Dio di Flutter, tidak m
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback meloloskan sertifikat apa pun, karena itu hanya untuk build debug.
 
-# Copy
-t658f3664 = Salin
-
 # Open settings
 t1336b4d6 = Buka setelan
 
@@ -1197,6 +1203,12 @@ t6bc99e5c = Edit lalu kirim
 
 # Copy it as cURL
 tc99a11a3 = Salin sebagai cURL
+
+# Select all of the part shown
+tf9168168 = Pilih semua di bagian yang ditampilkan
+
+# Copy the selected text
+t00b090d3 = Salin teks yang dipilih
 
 # The window
 t2af18488 = Jendela
