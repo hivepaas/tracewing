@@ -277,6 +277,20 @@ fn the_system_proxy_and_the_settings_from_the_window() {
     cx.run_until_parked();
     save_shot(&mut cx, window.into(), "73-setup-vi");
     assert_eq!(tracewing_i18n::tr!("Settings"), "Cài đặt");
+    // Long words, Cyrillic and Japanese fit the same window.
+    for (tag, shot) in [
+        ("de", "74-setup-de"),
+        ("ru", "75-setup-ru"),
+        ("ja", "76-setup-ja"),
+    ] {
+        window
+            .update(&mut cx, |view, window, cx| {
+                view.set_language(Some(tag), window, cx)
+            })
+            .unwrap();
+        cx.run_until_parked();
+        save_shot(&mut cx, window.into(), shot);
+    }
     window
         .update(&mut cx, |view, window, cx| {
             view.set_language(Some("en"), window, cx);

@@ -2,1312 +2,1420 @@
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
 # … {size} more
-# ta8dc6eab =
+ta8dc6eab = … ещё { $size }
 
 # {size} · {count} line | {size} · {count} lines
-# t51332550 =
+t51332550 =
+    { $n ->
+        [one] { $size } · { $count } строка
+        [few] { $size } · { $count } строки
+        [many] { $size } · { $count } строк
+       *[other] { $size } · { $count } строки
+    }
 
 # {size} · reading {percent}%
-# t49fe2cb3 =
+t49fe2cb3 = { $size } · чтение { $percent }%
 
 # Appearance: {now}. Click for {next}.
-# t332cfa6d =
+t332cfa6d = Оформление: { $now }. Нажмите, чтобы переключить: { $next }.
 
 # Method
-# t98a2c750 =
+t98a2c750 = Метод
 
 # Status
-# t005ef20f =
+t005ef20f = Статус
 
 # App
-# t81f51acc =
+t81f51acc = Приложение
 
 # Host
-# t302af18f =
+t302af18f = Хост
 
 # Path
-# teb66e456 =
+teb66e456 = Путь
 
 # Size
-# ta6478e7c =
+ta6478e7c = Размер
 
 # Time
-# tdfe4e404 =
+tdfe4e404 = Время
 
 # Number
-# t61e9eac0 =
+t61e9eac0 = Номер
 
 # "{method}" is not a method
-# tacdcf5cb =
+tacdcf5cb = "{ $method }" — не метод
 
 # its request body was not kept whole, so it cannot be sent again
-# t1f9e5368 =
+t1f9e5368 = тело запроса сохранено не целиком, поэтому его нельзя отправить повторно
 
 # name: value, one a line
-# t4df37bea =
+t4df37bea = имя: значение, по одному на строку
 
 # No body
-# tfa4c2902 =
+tfa4c2902 = Без тела
 
 # No flow is chosen
-# t550b0a98 =
+t550b0a98 = Поток не выбран
 
 # This flow: {e}
-# t296762f8 =
+t296762f8 = Этот поток: { $e }
 
 # Request
-# t82454152 =
+t82454152 = Запрос
 
 # Headers
-# t334f5989 =
+t334f5989 = Заголовки
 
 # Body
-# t428a1095 =
+t428a1095 = Тело
 
 # Sending…
-# te946e7bf =
+te946e7bf = Отправка…
 
 # Send
-# tf28e14cf =
+tf28e14cf = Отправить
 
 # New
-# t8b242db1 =
+t8b242db1 = Новый
 
 # … {count} more bytes: the flow in Traffic has them all.
-# tf43ea06c =
+tf43ea06c = … ещё { $count } байт: в потоке в разделе Трафик есть всё.
 
 # Response
-# t55a982fe =
+t55a982fe = Ответ
 
 # Compose
-# t18049f93 =
+t18049f93 = Конструктор
 
 # A request of your own, or one sent again. It goes through tracewing, so rules apply and it shows in Traffic too.
-# t7a9cf113 =
+t7a9cf113 = Ваш собственный запрос или отправленный повторно. Он идёт через tracewing, поэтому к нему применяются правила, и он тоже виден в разделе Трафик.
 
 # {version} both sides
-# t961a5ea0 =
+t961a5ea0 = { $version } с обеих сторон
 
 # {client} to the proxy, {server} to the server
-# t3d237646 =
+t3d237646 = { $client } до прокси, { $server } до сервера
 
 # Queued
-# t9e437c74 =
+t9e437c74 = В очереди
 
 # Connect
-# tdb89a899 =
+tdb89a899 = Подключение
 
 # Waiting
-# tc9450e48 =
+tc9450e48 = Ожидание
 
 # Download
-# t6964bb19 =
+t6964bb19 = Загрузка
 
 # No file picker: {e}
-# t6935fbd3 =
+t6935fbd3 = Нет окна выбора файла: { $e }
 
 # Writing the HAR…
-# t725a0e89 =
+t725a0e89 = Запись HAR…
 
 # {n} flow written to {path} | {n} flows written to {path}
-# t643f96ee =
+t643f96ee =
+    { $n ->
+        [one] { $n } поток записан в { $path }
+        [few] { $n } потока записано в { $path }
+        [many] { $n } потоков записано в { $path }
+       *[other] { $n } потока записано в { $path }
+    }
 
 # The HAR was not written: {e}
-# tef8ec569 =
+tef8ec569 = HAR не записан: { $e }
 
 # Open
-# t538b10e9 =
+t538b10e9 = Открыть
 
 # Reading {path}…
-# tc0e7c8f4 =
+tc0e7c8f4 = Чтение { $path }…
 
 # , {n} entry left out | , {n} entries left out
-# td848c31b =
+td848c31b =
+    { $n ->
+        [one] , { $n } запись пропущена
+        [few] , { $n } записи пропущено
+        [many] , { $n } записей пропущено
+       *[other] , { $n } записи пропущено
+    }
 
 # {n} flow read from a {format} | {n} flows read from a {format}
-# t610d7810 =
+t610d7810 =
+    { $n ->
+        [one] { $n } поток прочитан ({ $format })
+        [few] { $n } потока прочитано ({ $format })
+        [many] { $n } потоков прочитано ({ $format })
+       *[other] { $n } потока прочитано ({ $format })
+    }
 
 # The file was not read: {e}
-# t7f49510f =
+t7f49510f = Файл не прочитан: { $e }
 
 # it is no longer kept
-# ta7b4c380 =
+ta7b4c380 = больше не хранится
 
 # {size} saved to {path}
-# tc6932467 =
+tc6932467 = { $size } сохранено в { $path }
 
 # The body was not saved: {e}
-# t189900b4 =
+t189900b4 = Тело не сохранено: { $e }
 
 # Fiddler session
-# t9f5c89a3 =
+t9f5c89a3 = Сессия Fiddler
 
 # Charles session
-# tb4f56f2b =
+tb4f56f2b = Сессия Charles
 
 # All
-# t75afe364 =
+t75afe364 = Все
 
 # Errors
-# te9ed60a6 =
+te9ed60a6 = Ошибки
 
 # Media
-# td10fcaa3 =
+td10fcaa3 = Медиа
 
 # Rule: {rule}
-# teca2074f =
+teca2074f = Правило: { $rule }
 
 # Events
-# t003420a4 =
+t003420a4 = События
 
 # Not decrypted
-# t8090a1ba =
+t8090a1ba = Не расшифровано
 
 # open
-# td35ec4c9 =
+td35ec4c9 = открыто
 
 # This flow is gone.
-# t3343999e =
+t3343999e = Этого потока больше нет.
 
 # This host is not decrypted, so what it sends cannot be seen.
-# tf85fe84f =
+tf85fe84f = Этот хост не расшифровывается, поэтому то, что он отправляет, не видно.
 
 # No body.
-# t31e4d044 =
+t31e4d044 = Без тела.
 
 # This body was not kept: the disk was nearly full, or too much was waiting for it.
-# t884aad28 =
+t884aad28 = Это тело не сохранено: диск был почти заполнен или в очереди было слишком много данных.
 
 # This body was not kept.
-# te46616b5 =
+te46616b5 = Это тело не сохранено.
 
 # This body is gone: it was dropped with the oldest flows, or cannot be read.
-# tf9a7ab60 =
+tf9a7ab60 = Этого тела больше нет: оно удалено вместе с самыми старыми потоками или не читается.
 
 # Cannot open this body: {e}
-# t620a039b =
+t620a039b = Не удаётся открыть это тело: { $e }
 
 # Inspector
-# t4def410e =
+t4def410e = Инспектор
 
 # Choose a flow to see it here
-# tc7be91e8 =
+tc7be91e8 = Выберите поток, чтобы увидеть его здесь
 
 # Not decrypted. New connections to this host go through unread.
-# ta05ec37a =
+ta05ec37a = Не расшифровано. Новые подключения к этому хосту проходят без чтения.
 
 # If an app fails with this host, it may pin its certificates.
-# t3cbba118 =
+t3cbba118 = Если приложение не работает с этим хостом, возможно, оно использует пиннинг сертификатов.
 
 # Make a rule
-# t0ac0e062 =
+t0ac0e062 = Создать правило
 
 # Decrypt this host
-# tb7367e2c =
+tb7367e2c = Расшифровывать этот хост
 
 # Do not decrypt this host
-# t5fa113f6 =
+t5fa113f6 = Не расшифровывать этот хост
 
 # Picture · {size}
-# te97ed633 =
+te97ed633 = Изображение · { $size }
 
 # Messages {count}
-# te61b841a =
+te61b841a = Сообщения { $count }
 
 # Headers {headers}
-# t04b0146d =
+t04b0146d = Заголовки { $headers }
 
 # Cookies {cookies}
-# td58eb84b =
+td58eb84b = Cookie { $cookies }
 
 # Query {query}
-# t4756f9f5 =
+t4756f9f5 = Параметры { $query }
 
 # Form {form}
-# tfa6e7203 =
+tfa6e7203 = Форма { $form }
 
 # Connection
-# t09ea4ff9 =
+t09ea4ff9 = Подключение
 
 # Save body
-# te2c44424 =
+te2c44424 = Сохранить тело
 
 # Send again
-# tf5910557 =
+tf5910557 = Отправить повторно
 
 # Edit and send
-# tf837e542 =
+tf837e542 = Изменить и отправить
 
 # Copied
-# t8dc21305 =
+t8dc21305 = Скопировано
 
 # Copy as cURL
-# t866d1e3e =
+t866d1e3e = Копировать как cURL
 
 # Copy as…
-# t9c1ad448 =
+t9c1ad448 = Копировать как…
 
 # This picture cannot be drawn. Save the body to look at it.
-# t1e92fb27 =
+t1e92fb27 = Это изображение не удаётся отобразить. Сохраните тело, чтобы посмотреть его.
 
 # Opening…
-# tc40f2321 =
+tc40f2321 = Открытие…
 
 # No response
-# t8c2c37b1 =
+t8c2c37b1 = Нет ответа
 
 # Tunnel, not decrypted
-# tce693254 =
+tce693254 = Туннель, не расшифровано
 
 # GraphQL: {operation}
-# t2d65757d =
+t2d65757d = GraphQL: { $operation }
 
 # Over connection {id}, made before: no time went on connecting.
-# t84144a81 =
+t84144a81 = Через подключение { $id }, созданное ранее: на подключение время не ушло.
 
 # {app}, pid {pid}
-# t627147b4 =
+t627147b4 = { $app }, pid { $pid }
 
 # Not found: it may have ended, or belong to another user
-# t0efce58b =
+t0efce58b = Не найдено: возможно, процесс завершился или принадлежит другому пользователю
 
 # On another device
-# t2b964a37 =
+t2b964a37 = На другом устройстве
 
 # CLIENT
-# t6d3cd99e =
+t6d3cd99e = КЛИЕНТ
 
 # Device
-# tbdcbb413 =
+tbdcbb413 = Устройство
 
 # Program
-# tc4253b6b =
+tc4253b6b = Программа
 
 # Address
-# t700560f3 =
+t700560f3 = Адрес
 
 # SERVER
-# te3b27612 =
+te3b27612 = СЕРВЕР
 
 # What this connection was is no longer kept: it went with older flows.
-# t1ef5a00a =
+t1ef5a00a = Сведения об этом подключении больше не хранятся: они удалены вместе с более старыми потоками.
 
 # Not decrypted: tracewing passed it on without looking.
-# t0427c9b1 =
+t0427c9b1 = Не расшифровано: tracewing передал его дальше, не заглядывая внутрь.
 
 # No connection was made.
-# tf348eb92 =
+tf348eb92 = Подключение не устанавливалось.
 
 # None: it was answered without one.
-# tac71808e =
+tac71808e = Нет: ответ дан без подключения.
 
 # {id}, given up during TLS
-# t0ec66a8c =
+t0ec66a8c = { $id }, прервано во время TLS
 
 # {id}, made for this flow
-# t7fe32cfc =
+t7fe32cfc = { $id }, создано для этого потока
 
 # {id}, made before and used again
-# ta904c078 =
+ta904c078 = { $id }, создано ранее и использовано повторно
 
 # Server
-# t6d7302f2 =
+t6d7302f2 = Сервер
 
 # None: plain HTTP
-# t05606349 =
+t05606349 = Нет: обычный HTTP
 
 # THE SERVER SHOWED NO CERTIFICATES
-# te476fbb8 =
+te476fbb8 = СЕРВЕР НЕ ПОКАЗАЛ СЕРТИФИКАТОВ
 
 # WHAT THE SERVER SHOWED, ITS OWN FIRST
-# ta51f3107 =
+ta51f3107 = ЧТО ПОКАЗАЛ СЕРВЕР, СНАЧАЛА ЕГО СОБСТВЕННЫЙ
 
 # NO CERTIFICATES
-# te6f31dce =
+te6f31dce = НЕТ СЕРТИФИКАТОВ
 
 # CERTIFICATE
-# t1c902790 =
+t1c902790 = СЕРТИФИКАТ
 
 # {n} CERTIFICATE, THE SERVER'S FIRST | {n} CERTIFICATES, THE SERVER'S FIRST
-# td5295f62 =
+td5295f62 =
+    { $n ->
+        [one] { $n } СЕРТИФИКАТ, СНАЧАЛА СЕРВЕРНЫЙ
+        [few] { $n } СЕРТИФИКАТА, СНАЧАЛА СЕРВЕРНЫЙ
+        [many] { $n } СЕРТИФИКАТОВ, СНАЧАЛА СЕРВЕРНЫЙ
+       *[other] { $n } СЕРТИФИКАТА, СНАЧАЛА СЕРВЕРНЫЙ
+    }
 
 # tracewing would not go on with this server: {error}. If the app trusts it some other way, such as through a company CA, choose “Do not decrypt this host” and the app will check the server itself.
-# t13ced472 =
+t13ced472 = tracewing не стал продолжать с этим сервером: { $error }. Если приложение доверяет ему иным способом, например через корпоративный CA, выберите «Не расшифровывать этот хост», и приложение само проверит сервер.
 
 # Cipher
-# t5b3bed6a =
+t5b3bed6a = Шифр
 
 # none
-# tada7afdb =
+tada7afdb = нет
 
 # not valid until {when}
-# t0a14b2d8 =
+t0a14b2d8 = начнёт действовать { $when }
 
 # expired {when}
-# t932538c2 =
+t932538c2 = истёк { $when }
 
 # expires {when}
-# t679bcb51 =
+t679bcb51 = истекает { $when }
 
 # {names}, and {n} more | {names}, and {n} more
-# t4cd375ad =
+t4cd375ad =
+    { $n ->
+        [one] { $names } и ещё { $n }
+        [few] { $names } и ещё { $n }
+        [many] { $names } и ещё { $n }
+       *[other] { $names } и ещё { $n }
+    }
 
 # Issued by {issuer}
-# t15a1ce5a =
+t15a1ce5a = Выдан: { $issuer }
 
 # Valid {from} to {to} · {when}
-# t0e47d4f2 =
+t0e47d4f2 = Действителен с { $from } по { $to } · { $when }
 
 # Names {names}
-# tda75e459 =
+tda75e459 = Имена { $names }
 
 # Serial {serial}
-# td1f0d98b =
+td1f0d98b = Серийный номер { $serial }
 
 # These headers were not kept.
-# tb8739fec =
+tb8739fec = Эти заголовки не сохранены.
 
 # No headers.
-# tf3dacb5e =
+tf3dacb5e = Нет заголовков.
 
 # File {filename} · {kind} · {size}
-# t6dbd239f =
+t6dbd239f = Файл { $filename } · { $kind } · { $size }
 
 # no type
-# t902a6ece =
+t902a6ece = без типа
 
 # No cookies were sent.
-# t58e85ab2 =
+t58e85ab2 = Cookie не отправлялись.
 
 # No cookies were set.
-# tf57dbabc =
+tf57dbabc = Cookie не устанавливались.
 
 # JWT · {algorithm} · signature not checked
-# t2db33271 =
+t2db33271 = JWT · { $algorithm } · подпись не проверена
 
 # JWT · signature not checked
-# t05f8b533 =
+t05f8b533 = JWT · подпись не проверена
 
 # Header
-# t114f9980 =
+t114f9980 = Заголовок
 
 # Payload
-# ta0639745 =
+ta0639745 = Payload
 
 # Expires
-# tc7aa0523 =
+tc7aa0523 = Истекает
 
 # Issued
-# tb1835ecc =
+tb1835ecc = Выдан
 
 # Not before
-# td10dacd9 =
+td10dacd9 = Не ранее
 
 # in {amount}
-# tfda57c3e =
+tfda57c3e = через { $amount }
 
 # {amount} ago
-# t5f968014 =
+t5f968014 = { $amount } назад
 
 # Light
-# t8ad2f8cf =
+t8ad2f8cf = Светлое
 
 # Dark
-# t45570065 =
+t45570065 = Тёмное
 
 # System
-# t8f3184bc =
+t8f3184bc = Системное
 
 # streamed in {count} chunk | streamed in {count} chunks
-# t76711a1a =
+t76711a1a =
+    { $n ->
+        [one] передано частями: { $count }
+        [few] передано частями: { $count }
+        [many] передано частями: { $count }
+       *[other] передано частями: { $count }
+    }
 
 # stopped: {stop}
-# tfa48fb30 =
+tfa48fb30 = остановлено: { $stop }
 
 # {input} in · {output} out tokens
-# tc8bbc724 =
+tc8bbc724 = токены: { $input } на входе · { $output } на выходе
 
 # Reading the call…
-# t33b52a3c =
+t33b52a3c = Чтение вызова…
 
 # Answer
-# tf94ea0ff =
+tf94ea0ff = Ответ
 
 # Thinking: {thinking}
-# t737ece33 =
+t737ece33 = Размышления: { $thinking }
 
 # Calls {name}{id}
-# t017882e4 =
+t017882e4 = Вызывает { $name }{ $id }
 
 # Nothing yet.
-# td9b71d16 =
+td9b71d16 = Пока ничего.
 
 # {text}… and {count} more character | {text}… and {count} more characters
-# t6a16c074 =
+t6a16c074 =
+    { $n ->
+        [one] { $text }… и ещё { $count } символ
+        [few] { $text }… и ещё { $count } символа
+        [many] { $text }… и ещё { $count } символов
+       *[other] { $text }… и ещё { $count } символа
+    }
 
 # Copy the answer
-# t69975ed7 =
+t69975ed7 = Копировать ответ
 
 # Asked
-# t4e3af9c3 =
+t4e3af9c3 = Вопрос
 
 # Tools offered: {tools}
-# tb871bcf4 =
+tb871bcf4 = Предложенные инструменты: { $tools }
 
 # Not kept
-# tba30b5fa =
+tba30b5fa = Не сохранено
 
 # This message was not kept: too much was waiting, or the disk was nearly full.
-# tb888a3c3 =
+tb888a3c3 = Это сообщение не сохранено: в очереди было слишком много данных или диск был почти заполнен.
 
 # This message is empty.
-# tdb0ec01f =
+tdb0ec01f = Это сообщение пустое.
 
 # No messages yet
-# t51e7624c =
+t51e7624c = Сообщений пока нет
 
 # {said} kept, of {size}
-# t3558745a =
+t3558745a = Сохранено { $said } из { $size }
 
 # {what}: {text} is not a whole number
-# t2a8515ce =
+t2a8515ce = { $what }: { $text } — не целое число
 
 # Latency
-# t23a45ef9 =
+t23a45ef9 = Задержка
 
 # Down
-# ta4995035 =
+ta4995035 = Загрузка
 
 # Up
-# t42f35940 =
+t42f35940 = Выгрузка
 
 # Loss
-# t69db303a =
+t69db303a = Потери
 
 # Give a latency, a speed or a loss to slow it down by
-# t7cfd6404 =
+t7cfd6404 = Укажите задержку, скорость или потери, чтобы замедлить сеть
 
 # Latency, ms
-# tefe18ab9 =
+tefe18ab9 = Задержка, ms
 
 # Down, kbit/s
-# t08c4ae33 =
+t08c4ae33 = Загрузка, kbit/s
 
 # Up, kbit/s
-# td55cfe9a =
+td55cfe9a = Выгрузка, kbit/s
 
 # Loss, %
-# tea4af439 =
+tea4af439 = Потери, %
 
 # Only these hosts, like *.example.com; all if empty
-# t77a1f991 =
+t77a1f991 = Только эти хосты, например *.example.com; если пусто — все
 
 # Not kept for next time: {e}
-# tdce4d67c =
+tdce4d67c = Не сохранено на следующий раз: { $e }
 
 # Slow network
-# td51ddfce =
+td51ddfce = Медленная сеть
 
 # Off: traffic goes as fast as it can
-# tf0f34db0 =
+tf0f34db0 = Выключено: трафик идёт с максимальной скоростью
 
 # Custom
-# t9525b78e =
+t9525b78e = Свои значения
 
 # Only these hosts
-# tfe16992b =
+tfe16992b = Только эти хосты
 
 # Apply
-# tca77bbdb =
+tca77bbdb = Применить
 
 # Applies from the next request. Latency is added to each round trip; the speed is a link that every slowed flow shares; a lost piece waits to be sent again, as TCP does. Hosts left alone are not slowed.
-# t5ee4034d =
+t5ee4034d = Действует со следующего запроса. Задержка добавляется к каждому обмену туда-обратно; скорость — это канал, общий для всех замедленных потоков; потерянный фрагмент ждёт повторной отправки, как в TCP. Остальные хосты не замедляются.
 
 # Header line {line} has no ":"
-# t891b076d =
+t891b076d = В строке заголовка { $line } нет ":"
 
 # Header line {line} has no name
-# te3247b96 =
+te3247b96 = В строке заголовка { $line } нет имени
 
 # URL
-# t7569633e =
+t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
-# td6aec821 =
+td6aec821 =
+    { $n ->
+        [one] { $n } байт — не текст: передаётся как пришёл.
+        [few] { $n } байта — не текст: передаются как пришли.
+        [many] { $n } байт — не текст: передаются как пришли.
+       *[other] { $n } байта — не текст: передаются как пришли.
+    }
 
 # Nothing is paused
-# t8cf68b4c =
+t8cf68b4c = Ничего не на паузе
 
 # "{status}" is not a status
-# t40a529af =
+t40a529af = "{ $status }" — не статус
 
 # REQUEST
-# t1f3f6dd2 =
+t1f3f6dd2 = ЗАПРОС
 
 # RESPONSE
-# tc85f77de =
+tc85f77de = ОТВЕТ
 
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
-# tf9ab4327 =
+tf9ab4327 = Ничего не на паузе. Добавьте правило «Пауза» на экране «Правила», чтобы останавливать трафик здесь.
 
 # for {method} {url}
-# t093a86f6 =
+t093a86f6 = для { $method } { $url }
 
 # The request, before the server gets it
-# tc840fed6 =
+tc840fed6 = Запрос, до того как его получит сервер
 
 # The response, before the app gets it
-# t6683d72a =
+t6683d72a = Ответ, до того как его получит приложение
 
 # Send as it came
-# tb593e730 =
+tb593e730 = Отправить как есть
 
 # Drop
-# t108524ac =
+t108524ac = Отбросить
 
 # Paused
-# tde281feb =
+tde281feb = На паузе
 
 # Nothing is waiting.
-# tea613769 =
+tea613769 = Ничего не ждёт.
 
 # {n} waits to be sent on. | {n} wait to be sent on.
-# t745634c6 =
+t745634c6 =
+    { $n ->
+        [one] { $n } ждёт отправки.
+        [few] { $n } ждут отправки.
+        [many] { $n } ждут отправки.
+       *[other] { $n } ждут отправки.
+    }
 
 # Send all as they came
-# tdce25640 =
+tdce25640 = Отправить все как есть
 
 # Block
-# tbd074002 =
+tbd074002 = Блокировать
 
 # Answer from a file
-# td8edab50 =
+td8edab50 = Ответить из файла
 
 # Send to another host
-# te3cd85d7 =
+te3cd85d7 = Отправить на другой хост
 
 # Set a request header
-# tfad4aaaa =
+tfad4aaaa = Задать заголовок запроса
 
 # Set a response header
-# tcbbc20d0 =
+tcbbc20d0 = Задать заголовок ответа
 
 # Pause the request
-# t40ecc39b =
+t40ecc39b = Приостановить запрос
 
 # Pause the response
-# t18a34799 =
+t18a34799 = Приостановить ответ
 
 # Status to answer with, like 403
-# t8f3ebb6c =
+t8f3ebb6c = Статус ответа, например 403
 
 # Full path of a file or folder
-# t9fb9ae4c =
+t9fb9ae4c = Полный путь к файлу или папке
 
 # Where to, like http://localhost:3000
-# tdfedd004 =
+tdfedd004 = Куда, например http://localhost:3000
 
 # Header's name
-# t80793085 =
+t80793085 = Имя заголовка
 
 # Its value
-# t43968778 =
+t43968778 = Его значение
 
 # "{first}" is not a status
-# td43128d3 =
+td43128d3 = "{ $first }" — не статус
 
 # Block with {status}
-# t1727e984 =
+t1727e984 = Блокировать с { $status }
 
 # Answer from {path}
-# taefc08fa =
+taefc08fa = Ответить из { $path }
 
 # Send to {to}
-# t5e256873 =
+t5e256873 = Отправить на { $to }
 
 # Request: {header}: {value}
-# taa230766 =
+taa230766 = Запрос: { $header }: { $value }
 
 # Response: {header}: {value}
-# t30f9e2c2 =
+t30f9e2c2 = Ответ: { $header }: { $value }
 
 # Name
-# t0fe07306 =
+t0fe07306 = Имя
 
 # URL, like api.myapp.dev/v1/*
-# t4dd91658 =
+t4dd91658 = URL, например api.myapp.dev/v1/*
 
 # Method, or empty for all
-# tb2b869ac =
+tb2b869ac = Метод, или пусто для всех
 
 # {n} rule written to {path} | {n} rules written to {path}
-# t4a2e843a =
+t4a2e843a =
+    { $n ->
+        [one] { $n } правило записано в { $path }
+        [few] { $n } правила записано в { $path }
+        [many] { $n } правил записано в { $path }
+       *[other] { $n } правила записано в { $path }
+    }
 
 # The rules were not written: {e}
-# te7ac257f =
+te7ac257f = Правила не записаны: { $e }
 
 # Import
-# t573e0af4 =
+t573e0af4 = Импорт
 
 # {path} could not be read: {e}
-# t32a3ce94 =
+t32a3ce94 = Не удалось прочитать { $path }: { $e }
 
 # Nothing was imported: {e}
-# tb9f7257a =
+tb9f7257a = Ничего не импортировано: { $e }
 
 # Edit
-# tc2c76cb1 =
+tc2c76cb1 = Изменить
 
 # Delete
-# t5797ea6a =
+t5797ea6a = Удалить
 
 # Change this rule
-# t9160f393 =
+t9160f393 = Изменить это правило
 
 # A new rule
-# t55a722a0 =
+t55a722a0 = Новое правило
 
 # It waits under Paused until you send it on, changed or not.
-# tca566a57 =
+tca566a57 = Он ждёт в разделе «На паузе», пока вы не отправите его дальше, с изменениями или без.
 
 # Save
-# t4d2d5d68 =
+t4d2d5d68 = Сохранить
 
 # Add
-# t9dc3aa14 =
+t9dc3aa14 = Добавить
 
 # Cancel
-# t35afca3b =
+t35afca3b = Отмена
 
 # Rules
-# t428b2d80 =
+t428b2d80 = Правила
 
 # They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every header rule that fits applies.
-# tb44c7227 =
+tb44c7227 = Действуют со следующего запроса, даже когда запись приостановлена. Сверху вниз: побеждает первая блокировка, файл или хост, а каждое подходящее правило заголовков применяется.
 
 # Import rules…
-# t5edc205d =
+t5edc205d = Импортировать правила…
 
 # Export rules…
-# t6e09ca20 =
+t6e09ca20 = Экспортировать правила…
 
 # {n} rule added | {n} rules added
-# tbc5e0866 =
+tbc5e0866 =
+    { $n ->
+        [one] Добавлено { $n } правило
+        [few] Добавлено { $n } правила
+        [many] Добавлено { $n } правил
+       *[other] Добавлено { $n } правила
+    }
 
 # {n} here already | {n} here already
-# t65dc1281 =
+t65dc1281 =
+    { $n ->
+        [one] { $n } уже есть
+        [few] { $n } уже есть
+        [many] { $n } уже есть
+       *[other] { $n } уже есть
+    }
 
 # left out: {why}
-# ta81e95e2 =
+ta81e95e2 = пропущено: { $why }
 
 # No flows
-# t6dc463eb =
+t6dc463eb = Нет потоков
 
 # Name it to keep it
-# t52c1a402 =
+t52c1a402 = Дайте имя, чтобы сохранить
 
 # {size} · written by another version, so it cannot be opened
-# t878e5c80 =
+t878e5c80 = { $size } · записано другой версией, поэтому не открывается
 
 # {count} flow · {size} | {count} flows · {size}
-# t3f3c0eb4 =
+t3f3c0eb4 =
+    { $n ->
+        [one] { $count } поток · { $size }
+        [few] { $count } потока · { $size }
+        [many] { $count } потоков · { $size }
+       *[other] { $count } потока · { $size }
+    }
 
 # Recording now
-# t3cb3e6fc =
+t3cb3e6fc = Идёт запись
 
 # Export HAR
-# t4d6458cc =
+t4d6458cc = Экспорт HAR
 
 # Delete for good?
-# ta7737f13 =
+ta7737f13 = Удалить навсегда?
 
 # Sessions
-# tb69a8aec =
+tb69a8aec = Сессии
 
 # A session with a name is kept until you delete it. Of the others, the newest {kept} stay.
-# t6391f080 =
+t6391f080 = Сессия с именем хранится, пока вы её не удалите. Из остальных остаются { $kept } самых новых.
 
 # Working…
-# td5507854 =
+td5507854 = Выполняется…
 
 # Open a session file
-# tae8622fc =
+tae8622fc = Открыть файл сессии
 
 # HAR, Fiddler .saz, or Charles .chlsj
-# td8955e6d =
+td8955e6d = HAR, Fiddler .saz или Charles .chlsj
 
 # Exported HAR files leave out tokens and cookies
-# td4a2f543 =
+td4a2f543 = В экспортированных файлах HAR нет токенов и cookie
 
 # Other devices
-# t9e7d8362 =
+t9e7d8362 = Другие устройства
 
 # Let other devices use the proxy
-# t13e626b3 =
+t13e626b3 = Разрешить другим устройствам использовать прокси
 
 # Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-# t2e14229d =
+t2e14229d = Тогда телефоны и другие компьютеры в вашей сети смогут отправлять сюда свой трафик. Как и любой другой в этой сети: не включайте это в сети, которой не доверяете. Вступает в силу после перезапуска tracewing.
 
 # Servers
-# tcd0cf113 =
+tcd0cf113 = Серверы
 
 # Trust what this computer trusts
-# tfea2d91b =
+tfea2d91b = Доверять тому, чему доверяет этот компьютер
 
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
-# t1705bfb4 =
+t1705bfb4 = К серверам с сертификатом от центра сертификации, установленного на этом компьютере (например, корпоративного), подключение идёт так же, как у браузеров этого компьютера. Если выключено, доверие есть только публичным центрам сертификации. Вступает в силу после перезапуска tracewing.
 
 # AI tools
-# t294d7ea4 =
+t294d7ea4 = ИИ-инструменты
 
 # Let AI tools see tokens and cookies
-# te1d26d3c =
+te1d26d3c = Разрешить ИИ-инструментам видеть токены и cookie
 
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
-# tb496980f =
+tb496980f = ИИ-инструменты читают записанный трафик через MCP-сервер tracewing. Если выключено, значения Authorization, Cookie и Set-Cookie в получаемые ими данные не попадают. Применяется сразу.
 
 # HTTP/3
-# tfec0f477 =
+tfec0f477 = HTTP/3
 
 # Keep apps off HTTP/3
-# te42733a9 =
+te42733a9 = Не пускать приложения на HTTP/3
 
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-# t2aa7be0d =
+t2aa7be0d = HTTP/3 работает поверх UDP, который не передаёт ни один прокси, поэтому приложение, использующее его, идёт в обход tracewing. Эта настройка убирает из ответов серверов предложения HTTP/3, и приложения остаются на HTTP/2. В потоках предложения по-прежнему видны такими, какими их отправили серверы. Вступает в силу после перезапуска tracewing.
 
 # Size of a session
-# ta20fa102 =
+ta20fa102 = Размер сессии
 
 # Past this, the oldest flows are dropped.
-# td2914f46 =
+td2914f46 = При превышении самые старые потоки удаляются.
 
 # Room to leave on the disk
-# t8674a3b3 =
+t8674a3b3 = Свободное место на диске
 
 # With less than this free, flows are still listed but bodies are not kept.
-# t5b3a31a3 =
+t5b3a31a3 = Если свободного места меньше, потоки по-прежнему отображаются, но тела не сохраняются.
 
 # Earlier sessions to keep
-# td356194a =
+td356194a = Сколько хранить прошлых сессий
 
 # Older ones are deleted when a new session starts.
-# t66556513 =
+t66556513 = Более старые удаляются при начале новой сессии.
 
 # Bodies
-# tdb4d0409 =
+tdb4d0409 = Тела
 
 # Most kept of one body
-# t777508dd =
+t777508dd = Максимум хранимого из одного тела
 
 # It still reaches the client whole.
-# t386fee28 =
+t386fee28 = Клиент всё равно получает его целиком.
 
 # Most unpacked for viewing
-# tc3fe2efd =
+tc3fe2efd = Максимум распаковки для просмотра
 
 # Stops a small download that unpacks to many GB.
-# tf9c49515 =
+tf9c49515 = Не даёт маленькой загрузке распаковаться во много GB.
 
 # Small body size
-# ta8996af1 =
+ta8996af1 = Размер маленького тела
 
 # Smaller bodies wait in memory and share a file. Larger ones get a file of their own as they arrive.
-# t20c108b4 =
+t20c108b4 = Тела меньшего размера ждут в памяти и делят один файл. Более крупные получают собственный файл по мере поступления.
 
 # Compress plain text on disk
-# tee503c2e =
+tee503c2e = Сжимать простой текст на диске
 
 # Takes about half the room, and is skipped when traffic is too fast for it.
-# t6d70f53f =
+t6d70f53f = Занимает примерно вдвое меньше места; пропускается, если трафик идёт слишком быстро.
 
 # Compression level
-# td386c9ef =
+td386c9ef = Уровень сжатия
 
 # 1 to 19. Higher is smaller and slower.
-# td42a987d =
+td42a987d = От 1 до 19. Выше — меньше и медленнее.
 
 # Search
-# tc646a2c9 =
+tc646a2c9 = Поиск
 
 # Search URLs
-# t0c3e0b3d =
+t0c3e0b3d = Поиск по URL
 
 # Finds any part of a URL as you type. Costs little.
-# t3f22d666 =
+t3f22d666 = Находит любую часть URL по мере ввода. Обходится дёшево.
 
 # Search bodies
-# t8eec0293 =
+t8eec0293 = Поиск по телам
 
 # Finds words in bodies. Can take as much disk as the bodies do.
-# tcac3872a =
+tcac3872a = Находит слова в телах. Может занять на диске столько же места, сколько сами тела.
 
 # Searched part of each body
-# tab293b21 =
+tab293b21 = Просматриваемая часть каждого тела
 
 # Words past this are not found. More takes more disk.
-# t0bf65f4a =
+t0bf65f4a = Слова дальше этого предела не находятся. Больше — больше места на диске.
 
 # Under heavy traffic
-# ta99888cb =
+ta99888cb = При высокой нагрузке
 
 # Memory for bodies waiting to be written
-# t7d6ff799 =
+t7d6ff799 = Память для тел, ожидающих записи
 
 # Past this, flows are listed without their bodies. Traffic is never held back.
-# t5b268fb2 =
+t5b268fb2 = При превышении потоки отображаются без тел. Трафик никогда не задерживается.
 
 # Memory for large bodies waiting to be written
-# t07b9de08 =
+t07b9de08 = Память для больших тел, ожидающих записи
 
 # Past this, large bodies stop being kept.
-# tfe61a4f3 =
+tfe61a4f3 = При превышении большие тела перестают сохраняться.
 
 # {key}: "{text}" is not a whole number
-# ta8606963 =
+ta8606963 = { $key }: "{ $text }" — не целое число
 
 # {key}: must not be negative
-# t9c4debaa =
+t9c4debaa = { $key }: не может быть отрицательным
 
 # Saved. The limits apply the next time tracewing starts.
-# tc8bd2065 =
+tc8bd2065 = Сохранено. Ограничения вступят в силу при следующем запуске tracewing.
 
 # Settings
-# t4b058728 =
+t4b058728 = Настройки
 
 # Back to defaults
-# ta3162a13 =
+ta3162a13 = Сбросить настройки
 
 # Hosts not to decrypt
-# tb457f0b3 =
+tb457f0b3 = Хосты без расшифровки
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-# t7647c310 =
+t7647c310 = По одному на строку: хост или *.example.com для него и всего, что под ним. Их трафик проходит без чтения. Список применяется сразу после сохранения.
 
 # Language
-# t9a73db9b =
+t9a73db9b = Язык
 
 # System ({system_name})
-# tb5c7a1d4 =
+tb5c7a1d4 = Системный ({ $system_name })
 
 # Applies at once.
-# tefb7a0f9 =
+tefb7a0f9 = Применяется сразу.
 
 # Your browser
-# tb5a48dd2 =
+tb5a48dd2 = Ваш браузер
 
 # Its private key is in the system keychain.
-# t62a47808 =
+t62a47808 = Его закрытый ключ хранится в системной связке ключей.
 
 # Its private key is in ca.key, which only you can read.
-# td9c6165d =
+td9c6165d = Его закрытый ключ хранится в ca.key, который можете прочитать только вы.
 
 # Its private key is in ca.key, which only you can read, as the system keychain cannot take it: {why}.
-# t453607d0 =
+t453607d0 = Его закрытый ключ хранится в ca.key, который можете прочитать только вы, так как системная связка ключей не может его принять: { $why }.
 
 # Open the page. If the browser warns about the certificate, or cannot find the page, one of the steps above is not done for that browser.
-# t2e93b53b =
+t2e93b53b = Откройте страницу. Если браузер предупреждает о сертификате или не находит страницу, один из шагов выше не выполнен для этого браузера.
 
 # {name} goes through tracewing and trusts it.
-# t82bd2456 =
+t82bd2456 = { $name } работает через tracewing и доверяет ему.
 
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
-# tfb6feb04 =
+tfb6feb04 = { $name } работает через tracewing, но открыл страницу без HTTPS. Откройте её снова через https://.
 
 # A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-# t9f95b7b8 =
+t9f95b7b8 = Телефон или другой компьютер тоже может отправлять сюда свой трафик. Включите «Разрешить другим устройствам использовать прокси» в Настройках, затем перезапустите tracewing.
 
 # this computer's address, port {port}
-# t2188b3f4 =
+t2188b3f4 = адрес этого компьютера, порт { $port }
 
 # On the device, set the Wi-Fi proxy to {addr}. Then open http://{host} there, get the certificate and trust it. Its flows show its address, and can be filtered with device:. Name it from one of them, in Connection.
-# tc8ccf306 =
+tc8ccf306 = На устройстве укажите прокси для Wi-Fi: { $addr }. Затем откройте там http://{ $host }, скачайте сертификат и сделайте его доверенным. Потоки устройства показывают его адрес и фильтруются через device:. Дайте устройству имя по одному из них, в разделе Подключение.
 
 # Looking for it…
-# t50ee7452 =
+t50ee7452 = Поиск…
 
 # Installing. The system may ask you to confirm.
-# ta41c38ec =
+ta41c38ec = Установка. Система может запросить подтверждение.
 
 # This computer trusts it.
-# t27d6bacc =
+t27d6bacc = Этот компьютер ему доверяет.
 
 # Installed in: {places}.
-# tb5bcc244 =
+tb5bcc244 = Установлен в: { $places }.
 
 # Command-line tools trust it, but browsers keep stores of their own. Until it is in them, HTTPS through tracewing fails in a browser.
-# t327bf8fc =
+t327bf8fc = Инструменты командной строки ему доверяют, но у браузеров собственные хранилища. Пока его там нет, HTTPS через tracewing в браузере не работает.
 
 # tracewing reads HTTPS with a certificate made for this computer alone. Until it is trusted, HTTPS through tracewing fails.
-# tafd8dae2 =
+tafd8dae2 = tracewing читает HTTPS с помощью сертификата, созданного только для этого компьютера. Пока ему не доверяют, HTTPS через tracewing не работает.
 
 # Trust the certificate
-# t26618699 =
+t26618699 = Доверять сертификату
 
 # Install
-# tb50cbd40 =
+tb50cbd40 = Установить
 
 # Also for command-line tools
-# t0db8faea =
+t0db8faea = Также для инструментов командной строки
 
 # Apps that use the system's setting now go through {addr}. It goes back to what it was when tracewing closes, or if it crashes.
-# t83387edf =
+t83387edf = Приложения, использующие системную настройку, теперь идут через { $addr }. Она вернётся к прежнему значению, когда tracewing закроется или аварийно завершится.
 
 # Sends this computer's traffic through tracewing, for apps that use the system's setting. Or point one app at {addr} yourself.
-# tdcc53241 =
+tdcc53241 = Направляет трафик этого компьютера через tracewing для приложений, использующих системную настройку. Или сами направьте приложение на { $addr }.
 
 # Turn on the system proxy
-# t52b88441 =
+t52b88441 = Включить системный прокси
 
 # Turn off
-# tcd03e04b =
+tcd03e04b = Выключить
 
 # Turn on
-# t65a0c5a7 =
+t65a0c5a7 = Включить
 
 # Check it in your browser
-# tbed6e83a =
+tbed6e83a = Проверьте в браузере
 
 # Open the test page
-# te4e36f65 =
+te4e36f65 = Открыть тестовую страницу
 
 # Set up
-# t43c06abc =
+t43c06abc = Настройка
 
 # Three steps to see HTTPS traffic from this computer.
-# tf3a7f60b =
+tf3a7f60b = Три шага, чтобы увидеть HTTPS-трафик этого компьютера.
 
 # See traffic
-# t980eee79 =
+t980eee79 = Смотреть трафик
 
 # UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
-# t3c727cd5 =
+t3c727cd5 = UDP-порт 443 на этом компьютере заблокирован, поэтому приложения откатываются с HTTP/3 на HTTP/2 и идут через tracewing. Блокировка снимается, когда tracewing закрывается или аварийно завершается.
 
 # Some apps speak HTTP/3, over UDP, and go around the proxy. Blocking UDP port 443 on this computer makes them fall back to HTTP/2 through tracewing. It takes an administrator's password, and stops when tracewing closes. A VPN that uses UDP port 443 stops working meanwhile.
-# t64ab600f =
+t64ab600f = Некоторые приложения используют HTTP/3 поверх UDP и обходят прокси. Блокировка UDP-порта 443 на этом компьютере заставляет их откатиться на HTTP/2 через tracewing. Нужен пароль администратора; блокировка снимается, когда tracewing закрывается. VPN, использующий UDP-порт 443, на это время перестаёт работать.
 
 # Apps on HTTP/3
-# t2cfe5270 =
+t2cfe5270 = Приложения на HTTP/3
 
 # Stop blocking
-# t318358d8 =
+t318358d8 = Снять блокировку
 
 # Block HTTP/3
-# t88231e40 =
+t88231e40 = Блокировать HTTP/3
 
 # Or one app at a time
-# t91c63f1c =
+t91c63f1c = Или по одному приложению
 
 # A terminal, or a browser with a profile of its own, that goes through tracewing while the system proxy and every other app are left as they are.
-# t259dbb0e =
+t259dbb0e = Терминал или браузер с отдельным профилем, которые идут через tracewing, а системный прокси и все остальные приложения остаются как есть.
 
 # Open a terminal
-# t4b629c72 =
+t4b629c72 = Открыть терминал
 
 # Open {name}
-# tbd869c4a =
+tbd869c4a = Открыть { $name }
 
 # iPhone and iPad
-# ta550cc97 =
+ta550cc97 = iPhone и iPad
 
 # Flutter apps
-# ta04ee397 =
+ta04ee397 = Приложения Flutter
 
 # 1. In Settings, Wi-Fi, choose the network, then Configure Proxy, Manual: server {server}, port {port}.
-# t996be047 =
+t996be047 = 1. В Настройках, Wi-Fi, выберите сеть, затем Настройка прокси, Вручную: сервер { $server }, порт { $port }.
 
 # 2. Scan the code with the camera, or open {page} in Safari, and get the certificate. Allow the download.
-# t4fa14138 =
+t4fa14138 = 2. Отсканируйте код камерой или откройте { $page } в Safari и скачайте сертификат. Разрешите загрузку.
 
 # 3. In Settings, General, VPN & Device Management, choose the tracewing CA profile and install it.
-# t7127295f =
+t7127295f = 3. В Настройках, Основные, VPN и управление устройством, выберите профиль tracewing CA и установите его.
 
 # 4. In Settings, General, About, Certificate Trust Settings, turn on full trust for tracewing CA.
-# t1b22723c =
+t1b22723c = 4. В Настройках, Основные, Об этом устройстве, Доверие сертификатам, включите полное доверие для tracewing CA.
 
 # 5. Open https://{host} in Safari. If it says it works, apps that use the system's settings go through tracewing.
-# t4adfec01 =
+t4adfec01 = 5. Откройте https://{ $host } в Safari. Если там сказано, что всё работает, приложения, использующие системные настройки, идут через tracewing.
 
 # 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host {host}, port {port}.
-# t4f837b10 =
+t4f837b10 = 1. В Настройках, Wi-Fi, измените сеть и в разделе Расширенные настройки задайте прокси Вручную: хост { $host }, порт { $port }.
 
 # 2. Scan the code, or open {page} in the browser, and get the certificate.
-# t654a829b =
+t654a829b = 2. Отсканируйте код или откройте { $page } в браузере и скачайте сертификат.
 
 # 3. In Settings, Security, Encryption & credentials (the names vary by maker), choose Install a certificate, then CA certificate, and pick tracewing.crt.
-# t8263ba6b =
+t8263ba6b = 3. В Настройках, Безопасность, Шифрование и учетные данные (названия зависят от производителя), выберите Установка сертификата, затем Сертификат ЦС, и укажите tracewing.crt.
 
 # 4. Since Android 7, apps trust certificates the user added only if they say so. For a debug build of your own app, add res/xml/network_security_config.xml:
-# tb7fa0462 =
+tb7fa0462 = 4. Начиная с Android 7, приложения доверяют сертификатам, добавленным пользователем, только если сами это разрешают. Для отладочной сборки своего приложения добавьте res/xml/network_security_config.xml:
 
 # and point to it from AndroidManifest.xml:
-# t02ad844b =
+t02ad844b = и сошлитесь на него в AndroidManifest.xml:
 
 # Other apps keep refusing the certificate: their traffic shows as failed flows.
-# t02e57826 =
+t02e57826 = Другие приложения по-прежнему отклоняют сертификат: их трафик виден как неудачные потоки.
 
 # Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
-# t4ffc0abf =
+t4ffc0abf = HttpClient из Dart, который используют http и Dio во Flutter, не следует настройке прокси телефона, а на Android не доверяет сертификатам, добавленным пользователем. В отладочной сборке направьте его сюда:
 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
-# t991340f1 =
+t991340f1 = badCertificateCallback пропускает любой сертификат, поэтому он только для отладочных сборок.
 
 # Copy
-# t658f3664 =
+t658f3664 = Копировать
 
 # Open settings
-# t1336b4d6 =
+t1336b4d6 = Открыть настройки
 
 # Phones and other devices
-# t2e3c591c =
+t2e3c591c = Телефоны и другие устройства
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
-# td0629ca6 =
+td0629ca6 = Телефон, планшет или другой компьютер в этой сети может работать через tracewing по адресу { $proxy }. Код открывает страницу с сертификатом. Потоки устройства показывают его адрес, фильтруются через device:, а имя устройству можно дать по одному из них, в разделе Подключение.
 
 # Set up. The certificate is among the system's until the device restarts.
-# t84db6961 =
+t84db6961 = Готово. Сертификат находится среди системных до перезагрузки устройства.
 
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
-# tbcad7fa7 =
+tbcad7fa7 = Готово. Сертификат в Загрузках: в только что открытых Настройках выберите Шифрование и учетные данные, Установка сертификата, Сертификат ЦС и укажите tracewing.crt.
 
 # Apps that trust only the system's certificates will still refuse it.
-# t6fb5ba4b =
+t6fb5ba4b = Приложения, доверяющие только системным сертификатам, всё равно будут его отклонять.
 
 # An emulator.
-# t14b6b86d =
+t14b6b86d = Эмулятор.
 
 # On USB.
-# t67dafc14 =
+t67dafc14 = По USB.
 
 # Accept the USB debugging prompt on the device, then look again.
-# tff6a046e =
+tff6a046e = Подтвердите запрос на отладку по USB на устройстве, затем поищите снова.
 
 # Still starting. Look again in a moment.
-# t13f68b64 =
+t13f68b64 = Ещё запускается. Поищите снова чуть позже.
 
 # adb says it is {state}.
-# t2b7d71da =
+t2b7d71da = adb сообщает состояние: { $state }.
 
 # Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-# tc28e5d10 =
+tc28e5d10 = Настраивает прокси на эмуляторе Android или телефоне, подключённом по USB с включённой отладкой по USB, и устанавливает сертификат. Трафик идёт через ADB, поэтому им не нужно быть в этой сети.
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
-# t4af01006 =
+t4af01006 = adb не найден. Установите Android Studio или Android platform tools, затем поищите снова.
 
 # No device is connected. Start an emulator, or plug in a phone with USB debugging on, then look again.
-# tc65b7cf7 =
+tc65b7cf7 = Нет подключённых устройств. Запустите эмулятор или подключите телефон с включённой отладкой по USB, затем поищите снова.
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
-# t9144d1fc =
+t9144d1fc = Настройте устройство, чтобы оно отправляло сюда свой трафик. Отмена или закрытие tracewing снова убирает с него прокси.
 
 # Undo
-# t71fd4acf =
+t71fd4acf = Отменить
 
 # Android emulators and USB devices
-# t379e433c =
+t379e433c = Эмуляторы Android и USB-устройства
 
 # Look again
-# t98416222 =
+t98416222 = Поискать снова
 
 # Find devices
-# t54d4af39 =
+t54d4af39 = Найти устройства
 
 # Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
-# t2dc39047 =
+t2dc39047 = Claude Code, Cursor, VS Code и другие ИИ-инструменты могут получать список потоков, записанных tracewing, и читать их через его MCP-сервер. Токены и cookie не передаются, если Настройки этого не разрешают. В Claude Code:
 
 # Elsewhere, in the tool's MCP settings:
-# tec38833c =
+tec38833c = В других инструментах, в их настройках MCP:
 
 # Flows
-# t4db77db2 =
+t4db77db2 = Потоки
 
 # Choose the flow above or below
-# tecb3adec =
+tecb3adec = Выбрать поток выше или ниже
 
 # The first or the last flow
-# t7e278a00 =
+t7e278a00 = Первый или последний поток
 
 # A page up or down
-# t23b1814b =
+t23b1814b = На страницу вверх или вниз
 
 # Filter
-# tf4a9c097 =
+tf4a9c097 = Фильтр
 
 # Pause or resume recording
-# t6e21519a =
+t6e21519a = Приостановить или продолжить запись
 
 # Clear the list
-# tf2a55d1f =
+tf2a55d1f = Очистить список
 
 # The chosen flow
-# te0a729de =
+te0a729de = Выбранный поток
 
 # Its request
-# tb3970784 =
+tb3970784 = Его запрос
 
 # Its response
-# t221fc168 =
+t221fc168 = Его ответ
 
 # Send it again
-# tef7d1944 =
+tef7d1944 = Отправить повторно
 
 # Edit it and send it
-# t6bc99e5c =
+t6bc99e5c = Изменить и отправить
 
 # Copy it as cURL
-# tc99a11a3 =
+tc99a11a3 = Копировать как cURL
 
 # The window
-# t2af18488 =
+t2af18488 = Окно
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
-# t9df89562 =
+t9df89562 = Настройка, Трафик, Правила, На паузе, Конструктор, Сессии, Настройки
 
 # Show or hide the sidebar
-# t67adca04 =
+t67adca04 = Показать или скрыть боковую панель
 
 # Show or hide the inspector
-# ta5a7b9e9 =
+ta5a7b9e9 = Показать или скрыть инспектор
 
 # The inspector beside the list or below it
-# t51e214f7 =
+t51e214f7 = Инспектор сбоку от списка или под ним
 
 # These shortcuts
-# tbdf3b62b =
+tbdf3b62b = Эти сочетания клавиш
 
 # Close them
-# tf3a4b1ef =
+tf3a4b1ef = Закрыть их
 
 # Keyboard shortcuts
-# t31eaddb7 =
+t31eaddb7 = Сочетания клавиш
 
 # Close
-# tcd86acc3 =
+tcd86acc3 = Закрыть
 
 # The certificate: {e}
-# t0235648c =
+t0235648c = Сертификат: { $e }
 
 # The terminal
-# tf542b2f4 =
+tf542b2f4 = Терминал
 
 # The system proxy: {e}
-# tc99726ce =
+tc99726ce = Системный прокси: { $e }
 
 # Blocking HTTP/3: {e}
-# t024ec871 =
+t024ec871 = Блокировка HTTP/3: { $e }
 
 # host:, status:4xx, or text in bodies
-# t00d0cf30 =
+t00d0cf30 = host:, status:4xx или текст в телах
 
 # A name, as iPhone test
-# t19f89214 =
+t19f89214 = Имя, например iPhone тест
 
 # The search index: {e}
-# te3c971c9 =
+te3c971c9 = Поисковый индекс: { $e }
 
 # An earlier session: {name}
-# t73446a1d =
+t73446a1d = Прошлая сессия: { $name }
 
 # Read-only. Search covers more as its index is finished. Recording goes on.
-# td8659d5b =
+td8659d5b = Только чтение. Поиск охватывает больше по мере построения индекса. Запись продолжается.
 
 # Read-only. Recording goes on.
-# te2f35d9e =
+te2f35d9e = Только чтение. Запись продолжается.
 
 # Back to live
-# t317c0453 =
+t317c0453 = Вернуться к живой записи
 
 # {shown} of {total}
-# tf2cc0563 =
+tf2cc0563 = { $shown } из { $total }
 
 # Recording
-# te75cf20c =
+te75cf20c = Запись
 
 # System proxy off · {addr}
-# t7e813d25 =
+t7e813d25 = Системный прокси выключен · { $addr }
 
 # System proxy…
-# t29e7dcd0 =
+t29e7dcd0 = Системный прокси…
 
 # System proxy on · {addr}
-# t319ad6b9 =
+t319ad6b9 = Системный прокси включён · { $addr }
 
 # Apps
-# t53d91aad =
+t53d91aad = Приложения
 
 # Devices
-# t27acf320 =
+t27acf320 = Устройства
 
 # Hosts
-# tcf9aefb4 =
+tcf9aefb4 = Хосты
 
 # All hosts
-# tfc7bfe37 =
+tfc7bfe37 = Все хосты
 
 # Hidden
-# t3c2dfe59 =
+t3c2dfe59 = Скрытые
 
 # Newest
-# t324b6d0b =
+t324b6d0b = Новые
 
 # No flow fits this filter
-# t7eb295f4 =
+t7eb295f4 = Нет потоков под этот фильтр
 
 # Nothing yet
-# tbd00747c =
+tbd00747c = Пока ничего
 
 # Turn on the system proxy above, or point an app at {addr}. To try it: curl --proxy http://{addr} --cacert {ca} https://example.com/
-# t61730a16 =
+t61730a16 = Включите системный прокси выше или направьте приложение на { $addr }. Для проверки: curl --proxy http://{ $addr } --cacert { $ca } https://example.com/
 
 # Beside the list
-# t3b4853f8 =
+t3b4853f8 = Сбоку от списка
 
 # Below the list
-# t23658daf =
+t23658daf = Под списком
 
 # Drop it on a place · Esc puts it back
-# t0fa632ba =
+t0fa632ba = Перетащите в нужное место · Esc — вернуть
 
 # Traffic
-# t4b589266 =
+t4b589266 = Трафик
 
 # Certificate trusted on this computer
-# t7b93f551 =
+t7b93f551 = Этот компьютер доверяет сертификату
 
 # Checking the certificate…
-# tbf8942c3 =
+tbf8942c3 = Проверка сертификата…
 
 # Installing the certificate; the system may ask you to confirm…
-# t068dcaff =
+t068dcaff = Установка сертификата; система может запросить подтверждение…
 
 # HTTPS will fail until the certificate is trusted: set up
-# t4b34beb2 =
+t4b34beb2 = HTTPS не будет работать, пока сертификату не доверяют: настройка
 
 # settings.toml was not used: {problem}
-# tc3e1f9c8 =
+tc3e1f9c8 = settings.toml не применён: { $problem }
 
 # The proxy stopped: {failure}
-# t04dcff11 =
+t04dcff11 = Прокси остановлен: { $failure }
 
 # The disk is nearly full: bodies are not being kept
-# te99f9959 =
+te99f9959 = Диск почти заполнен: тела не сохраняются
 
 # {count} flow not recorded | {count} flows not recorded
-# tdbd64fe6 =
+tdbd64fe6 =
+    { $n ->
+        [one] { $count } поток не записан
+        [few] { $count } потока не записано
+        [many] { $count } потоков не записано
+       *[other] { $count } потока не записано
+    }
 
 # {count} flow without bodies | {count} flows without bodies
-# t249093b0 =
+t249093b0 =
+    { $n ->
+        [one] { $count } поток без тела
+        [few] { $count } потока без тел
+        [many] { $count } потоков без тел
+       *[other] { $count } потока без тел
+    }
 
 # {count} oldest flow dropped to stay under {size} | {count} oldest flows dropped to stay under {size}
-# te30201f0 =
+te30201f0 =
+    { $n ->
+        [one] { $count } самый старый поток удалён, чтобы не превысить { $size }
+        [few] { $count } самых старых потока удалено, чтобы не превысить { $size }
+        [many] { $count } самых старых потоков удалено, чтобы не превысить { $size }
+       *[other] { $count } самых старых потока удалено, чтобы не превысить { $size }
+    }
 
 # {count} flow | {count} flows
-# t57bf5200 =
+t57bf5200 =
+    { $n ->
+        [one] { $count } поток
+        [few] { $count } потока
+        [many] { $count } потоков
+       *[other] { $count } потока
+    }
 
 # Export as HAR
-# t95b6b766 =
+t95b6b766 = Экспортировать как HAR
 
 # Shortcuts {keys}
-# t4ab0ecb4 =
+t4ab0ecb4 = Сочетания клавиш { $keys }
 
 # Columns
-# tea156fdc =
+tea156fdc = Столбцы
