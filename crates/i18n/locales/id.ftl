@@ -1375,11 +1375,26 @@ t6bc99e5c = Edit lalu kirim
 # Copy it as cURL
 tc99a11a3 = Salin sebagai cURL
 
+# The part before or after the one shown
+tdf4221d9 = Bagian sebelum atau sesudah yang ditampilkan
+
+# Save the body shown
+t20d9b7c0 = Simpan body yang ditampilkan
+
 # Select all of the part shown
 tf9168168 = Pilih semua di bagian yang ditampilkan
 
 # Copy the selected text
 t00b090d3 = Salin teks yang dipilih
+
+# Send it on, as edited
+t8c35fa5a = Kirim, sesuai suntingan
+
+# Send it on as it was
+t16f7abb5 = Kirim apa adanya
+
+# Drop it
+t4e7f48b9 = Buang
 
 # The window
 t2af18488 = Jendela
@@ -1395,6 +1410,9 @@ ta5a7b9e9 = Tampilkan atau sembunyikan inspektor
 
 # The inspector beside the list or below it
 t51e214f7 = Inspektor di samping daftar atau di bawahnya
+
+# The next or the previous field
+ta4b4bd5e = Kolom berikutnya atau sebelumnya
 
 # These shortcuts
 tbdf3b62b = Pintasan ini

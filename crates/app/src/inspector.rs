@@ -612,6 +612,56 @@ impl Traffic {
             ))
     }
 
+    /// The parts the chosen flow has tabs for, in the tabs' order.
+    pub fn parts_offered(&self) -> Vec<Part> {
+        let Some(detail) = &self.inspector.detail else {
+            return Vec::new();
+        };
+        let both = self.layout.sides != Sides::Tabs;
+        let side = self.inspector.side;
+        let (sent, set) = cookie_counts(detail);
+        let mut parts = Vec::new();
+        if self.inspector.llm.is_some()
+            || crate::llm::provider_of(&detail.method, &detail.url).is_some()
+        {
+            parts.push(Part::Llm);
+        }
+        if self.inspector.messages.is_some() {
+            parts.push(Part::Messages);
+        }
+        if detail.graphql.is_some() {
+            parts.push(Part::GraphQl);
+        }
+        parts.extend([Part::Body, Part::Headers]);
+        if sent + set > 0 {
+            parts.push(Part::Cookies);
+        }
+        if both || side == Side::Request {
+            if !fields::query(&detail.url).is_empty() {
+                parts.push(Part::Query);
+            }
+            if detail.form.as_ref().is_some_and(|form| !form.is_empty()) {
+                parts.push(Part::Form);
+            }
+        }
+        parts.push(Part::Connection);
+        parts
+    }
+
+    /// The part `by` tabs from the one shown, round the ends.
+    pub fn step_part(&mut self, by: i32, cx: &mut Context<Self>) {
+        let parts = self.parts_offered();
+        if parts.is_empty() {
+            return;
+        }
+        let at = parts
+            .iter()
+            .position(|part| *part == self.inspector.part)
+            .unwrap_or(0) as i32;
+        let next = (at + by).rem_euclid(parts.len() as i32) as usize;
+        self.set_part(parts[next], cx);
+    }
+
     fn render_parts(&self, detail: &Detail, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let part = self.inspector.part;

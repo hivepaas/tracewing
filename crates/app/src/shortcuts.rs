@@ -26,6 +26,13 @@ pub enum Action {
     SendAgain,
     EditAndSend,
     CopyCurl,
+    /// The inspector's part before or after the one shown.
+    PreviousPart,
+    NextPart,
+    SaveBody,
+    /// On Paused: sends the request or response held as it was, or drops it.
+    SendUnchanged,
+    Drop,
     /// Copies what is selected in the inspector.
     Copy,
     SelectAll,
@@ -70,6 +77,10 @@ pub fn action_of(key: &str, secondary: bool, shift: bool, typing: bool) -> Optio
             ("[", false) => Some(Request),
             ("]", false) => Some(Response),
             ("enter", false) => Some(SendAgain),
+            ("enter", true) => Some(SendUnchanged),
+            // In a text field it deletes a word: never drops what is being edited.
+            ("backspace", false) if !typing => Some(Drop),
+            ("s", false) => Some(SaveBody),
             ("e", false) => Some(EditAndSend),
             ("c", true) => Some(CopyCurl),
             // In a text field these are the field's.
@@ -96,6 +107,8 @@ pub fn action_of(key: &str, secondary: bool, shift: bool, typing: bool) -> Optio
         "pagedown" => Some(PageDown),
         "?" => Some(Shortcuts),
         "/" if shift => Some(Shortcuts),
+        "[" => Some(PreviousPart),
+        "]" => Some(NextPart),
         _ => None,
     }
 }
@@ -121,6 +134,9 @@ pub fn label(keys: &str) -> String {
                 "pageup" => "Page Up",
                 "pagedown" => "Page Down",
                 "escape" => "Esc",
+                "backspace" if mac => "⌫",
+                "backspace" => "Backspace",
+                "tab" => "Tab",
                 other => return other.to_uppercase(),
             }
             .to_owned()
@@ -154,8 +170,18 @@ pub fn list() -> Vec<Group> {
                 ("mod+enter", tr!("Send it again")),
                 ("mod+e", tr!("Edit it and send it")),
                 ("mod+shift+c", tr!("Copy it as cURL")),
+                ("[ / ]", tr!("The part before or after the one shown")),
+                ("mod+s", tr!("Save the body shown")),
                 ("mod+a", tr!("Select all of the part shown")),
                 ("mod+c", tr!("Copy the selected text")),
+            ],
+        ),
+        (
+            tr!("Paused"),
+            vec![
+                ("mod+enter", tr!("Send it on, as edited")),
+                ("mod+shift+enter", tr!("Send it on as it was")),
+                ("mod+backspace", tr!("Drop it")),
             ],
         ),
         (
@@ -168,6 +194,7 @@ pub fn list() -> Vec<Group> {
                 ("mod+b", tr!("Show or hide the sidebar")),
                 ("mod+i", tr!("Show or hide the inspector")),
                 ("mod+\\", tr!("The inspector beside the list or below it")),
+                ("tab / shift+tab", tr!("The next or the previous field")),
                 ("mod+/", tr!("These shortcuts")),
                 ("escape", tr!("Close them")),
             ],
@@ -294,6 +321,22 @@ mod tests {
         assert_eq!(action_of("?", false, true, false), Some(Action::Shortcuts));
         assert_eq!(action_of("home", false, false, false), Some(Action::First));
         assert_eq!(action_of("escape", false, false, true), Some(Action::Close));
+        assert_eq!(action_of("]", false, false, false), Some(Action::NextPart));
+        assert_eq!(action_of("[", false, false, true), None, "typed");
+        assert_eq!(action_of("s", true, false, true), Some(Action::SaveBody));
+        assert_eq!(
+            action_of("enter", true, true, false),
+            Some(Action::SendUnchanged)
+        );
+        assert_eq!(
+            action_of("backspace", true, false, false),
+            Some(Action::Drop)
+        );
+        assert_eq!(
+            action_of("backspace", true, false, true),
+            None,
+            "a word deleted, not what is being edited"
+        );
     }
 
     #[test]
@@ -310,6 +353,10 @@ mod tests {
                 for alt in keys.split(" / ").flat_map(|k| k.split(" … ")) {
                     let parts: Vec<&str> = alt.split('+').collect();
                     let key = *parts.last().unwrap();
+                    // A text field's own: it moves to the next field.
+                    if key == "tab" {
+                        continue;
+                    }
                     let secondary = parts.contains(&"mod");
                     let shift = parts.contains(&"shift");
                     assert!(

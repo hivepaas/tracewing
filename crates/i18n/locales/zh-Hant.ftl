@@ -1375,11 +1375,26 @@ t6bc99e5c = 編輯後傳送
 # Copy it as cURL
 tc99a11a3 = 複製為 cURL
 
+# The part before or after the one shown
+tdf4221d9 = 目前分頁的前一個或後一個
+
+# Save the body shown
+t20d9b7c0 = 儲存目前顯示的本文
+
 # Select all of the part shown
 tf9168168 = 全選目前顯示的部分
 
 # Copy the selected text
 t00b090d3 = 複製所選文字
+
+# Send it on, as edited
+t8c35fa5a = 依修改後的內容送出
+
+# Send it on as it was
+t16f7abb5 = 依原樣送出
+
+# Drop it
+t4e7f48b9 = 丟棄
 
 # The window
 t2af18488 = 視窗
@@ -1395,6 +1410,9 @@ ta5a7b9e9 = 顯示或隱藏檢查器
 
 # The inspector beside the list or below it
 t51e214f7 = 將檢查器置於清單旁邊或下方
+
+# The next or the previous field
+ta4b4bd5e = 下一個或上一個輸入欄
 
 # These shortcuts
 tbdf3b62b = 此快速鍵清單

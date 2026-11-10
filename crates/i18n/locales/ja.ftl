@@ -1375,11 +1375,26 @@ t6bc99e5c = 編集して送信
 # Copy it as cURL
 tc99a11a3 = cURL としてコピー
 
+# The part before or after the one shown
+tdf4221d9 = 表示中の前後のタブ
+
+# Save the body shown
+t20d9b7c0 = 表示中のボディを保存
+
 # Select all of the part shown
 tf9168168 = 表示中の部分をすべて選択
 
 # Copy the selected text
 t00b090d3 = 選択したテキストをコピー
+
+# Send it on, as edited
+t8c35fa5a = 編集した内容で送る
+
+# Send it on as it was
+t16f7abb5 = 元のまま送る
+
+# Drop it
+t4e7f48b9 = 破棄する
 
 # The window
 t2af18488 = ウィンドウ
@@ -1395,6 +1410,9 @@ ta5a7b9e9 = インスペクタの表示/非表示
 
 # The inspector beside the list or below it
 t51e214f7 = インスペクタをリストの横または下に表示
+
+# The next or the previous field
+ta4b4bd5e = 次または前の入力欄
 
 # These shortcuts
 tbdf3b62b = このショートカット一覧

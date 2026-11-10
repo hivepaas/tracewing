@@ -1375,11 +1375,26 @@ t6bc99e5c = Sửa rồi gửi
 # Copy it as cURL
 tc99a11a3 = Sao chép dạng cURL
 
+# The part before or after the one shown
+tdf4221d9 = Tab trước hoặc sau tab đang xem
+
+# Save the body shown
+t20d9b7c0 = Lưu body đang xem
+
 # Select all of the part shown
 tf9168168 = Chọn tất cả trong phần đang xem
 
 # Copy the selected text
 t00b090d3 = Sao chép đoạn đã chọn
+
+# Send it on, as edited
+t8c35fa5a = Gửi tiếp, với phần đã sửa
+
+# Send it on as it was
+t16f7abb5 = Gửi tiếp như ban đầu
+
+# Drop it
+t4e7f48b9 = Bỏ nó
 
 # The window
 t2af18488 = Cửa sổ
@@ -1395,6 +1410,9 @@ ta5a7b9e9 = Hiện hoặc ẩn khung chi tiết
 
 # The inspector beside the list or below it
 t51e214f7 = Khung chi tiết bên cạnh hay bên dưới danh sách
+
+# The next or the previous field
+ta4b4bd5e = Ô kế tiếp hoặc ô trước
 
 # These shortcuts
 tbdf3b62b = Các phím tắt này
