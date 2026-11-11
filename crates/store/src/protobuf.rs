@@ -112,7 +112,7 @@ fn trailer_lines(payload: &[u8]) -> impl Iterator<Item = (String, String)> + '_ 
 }
 
 /// A frame's flags, its payload, and what is after it.
-fn frame(data: &[u8]) -> Option<(u8, &[u8], &[u8])> {
+pub(crate) fn frame(data: &[u8]) -> Option<(u8, &[u8], &[u8])> {
     let (head, rest) = data.split_at_checked(5)?;
     let len = u32::from_be_bytes(head[1..5].try_into().expect("four bytes")) as usize;
     let (payload, after) = rest.split_at_checked(len)?;
@@ -149,7 +149,7 @@ fn frame_json(flags: u8, payload: &[u8], schema: Option<&MessageDescriptor>) -> 
 }
 
 /// A compressed message, unpacked by what its first bytes say it is.
-fn unpack(data: &[u8]) -> Option<Vec<u8>> {
+pub(crate) fn unpack(data: &[u8]) -> Option<Vec<u8>> {
     let max = crate::binjson::DECODE_MAX;
     let mut out = Vec::new();
     let read = match data {
@@ -169,7 +169,7 @@ fn unpack(data: &[u8]) -> Option<Vec<u8>> {
 }
 
 /// Base64 sent in pieces, each with its own padding.
-fn from_base64(data: &[u8]) -> Option<Vec<u8>> {
+pub(crate) fn from_base64(data: &[u8]) -> Option<Vec<u8>> {
     use base64::Engine;
     let clean: Vec<u8> = data
         .iter()

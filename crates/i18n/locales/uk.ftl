@@ -85,6 +85,9 @@ t550b0a98 = Потік не вибрано
 # This flow: {e}
 t296762f8 = Цей потік: { $e }
 
+# The body is not a {message}: {e}
+t3220a10a = Тіло не є { $message }: { $e }
+
 # Request
 t82454152 = Запит
 
@@ -93,6 +96,9 @@ t334f5989 = Заголовки
 
 # Body
 t428a1095 = Тіло
+
+# Protobuf {message}, written as JSON: it is sent as Protobuf.
+t83b6cd6e = Protobuf { $message }, записаний як JSON: надсилається як Protobuf.
 
 # Sending…
 te946e7bf = Надсилання…
@@ -108,6 +114,9 @@ tf43ea06c = … ще байтів: { $count }; усі вони є в потоц�
 
 # Response
 t55a982fe = Відповідь
+
+# Body · {message}
+taa3cc3ff = Тіло · { $message }
 
 # Compose
 t18049f93 = Створити запит

@@ -764,5 +764,51 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
         cx.run_until_parked();
     }
 
+    // A gRPC call written as JSON goes as Protobuf in its frame, and its
+    // answer reads as JSON; edited again, the flow's body is JSON once more.
+    let status = send(
+        &mut cx,
+        window,
+        "POST",
+        &format!("https://localhost:{trusted}/shop.Orders/Get"),
+        "content-type: application/grpc\nte: trailers",
+        "{\"id\": 7}",
+    );
+    assert_eq!(status, 200);
+    window
+        .update(&mut cx, |view, _, _| {
+            let page = view.compose_page.as_ref().unwrap();
+            assert_eq!(page.proto.as_deref(), Some("shop.GetOrder"));
+            let (message, json) = page.answer_json.as_ref().expect("the answer as JSON");
+            assert_eq!(message, "shop.Order");
+            assert!(json.contains("\"customer\": \"Nguyễn Văn A\""), "{json}");
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "75-compose-grpc");
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the call sent", |view| view.count() == 13);
+    window
+        .update(&mut cx, |view, _, cx| view.select_place(12, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "its detail", |view| {
+        view.inspector
+            .detail
+            .as_ref()
+            .is_some_and(|d| d.id == 13 && d.request.bytes == 7)
+    });
+    window
+        .update(&mut cx, |view, _, cx| view.edit_flow(cx))
+        .unwrap();
+    window
+        .update(&mut cx, |view, _, cx| {
+            let page = view.compose_page.as_ref().unwrap();
+            assert_eq!(page.proto.as_deref(), Some("shop.GetOrder"));
+            assert_eq!(page.body.read(cx).text(), "{\n  \"id\": 7\n}");
+        })
+        .unwrap();
+
     std::fs::remove_dir_all(&dir).ok();
 }

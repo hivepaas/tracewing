@@ -5,7 +5,7 @@
 use crate::{
     colors::colors,
     compose::{self, Answer},
-    detail::Side,
+    detail::{Side, message_of},
     input::TextInput,
     paused_page::{headers_text, parse_headers},
     select::{Copied, Selection},
@@ -15,7 +15,23 @@ use crate::{
 use gpui::{AppContext as _, Context, Entity, FontWeight, div, prelude::*, px, rgb};
 use tracewing_i18n::tr;
 use tracewing_proxy::pause::{self, Message};
-use tracewing_store::session::BodyReader;
+use tracewing_store::{
+    binjson, prost_reflect::MessageDescriptor, protojson, schema::Library, session::BodyReader,
+};
+
+/// An answer's Protobuf as JSON, with the message it is, if the `.proto`
+/// files describe it.
+fn answer_json(protos: &Library, url: &str, answer: &Answer) -> Option<(String, String)> {
+    let content_type = answer
+        .headers
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case("content-type"))
+        .map(|(_, value)| value.as_str());
+    let format = binjson::format_of(content_type).filter(|f| f.numbered())?;
+    let message = message_of(protos, url, content_type, Side::Response)?;
+    let json = protojson::to_editable(&answer.body, format, &message)?;
+    Some((message.full_name().to_owned(), json))
+}
 
 /// The most of an answer's body drawn as text.
 const SHOWN_MAX: usize = 64 * 1024;
@@ -27,7 +43,15 @@ pub struct ComposePage {
     pub body: Entity<TextInput>,
     pub sending: bool,
     pub answer: Option<Answer>,
+    /// The answer's Protobuf as JSON, and the message it is.
+    pub answer_json: Option<(String, String)>,
     pub problem: Option<String>,
+    /// The body as put in the editor, and the bytes it stands for: sent as
+    /// they were while the text is not changed, so that bytes that are not
+    /// text go as they came.
+    pub loaded: Option<(String, Vec<u8>)>,
+    /// The Protobuf message the body is written as, as JSON.
+    pub proto: Option<String>,
     /// What is selected of the answer.
     pub select: Selection,
 }
@@ -46,7 +70,10 @@ impl ComposePage {
             body: cx.new(|cx| TextInput::said(|| tr!("No body"), cx).multiline(5, 24)),
             sending: false,
             answer: None,
+            answer_json: None,
             problem: None,
+            loaded: None,
+            proto: None,
             select: Selection::default(),
         };
         set(&page.method, "GET", cx);
@@ -62,12 +89,41 @@ impl Traffic {
         self.compose_page.as_mut().expect("just made")
     }
 
-    /// Puts `message` in the editor, and sends it at once if `now`.
+    /// The Protobuf message a request to `url` with these headers sends, if
+    /// the `.proto` files chosen say.
+    fn request_proto(
+        &self,
+        url: &str,
+        headers: &[(String, String)],
+    ) -> Option<(binjson::Format, MessageDescriptor)> {
+        let content_type = headers
+            .iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case("content-type"))
+            .map(|(_, value)| value.as_str());
+        let format = binjson::format_of(content_type).filter(|f| f.numbered())?;
+        let message = message_of(&self.protos, url, content_type, Side::Request)?;
+        Some((format, message))
+    }
+
+    /// Puts `message` in the editor, and sends it at once if `now`. A
+    /// Protobuf body the `.proto` files describe is written as JSON.
     pub fn compose(&mut self, message: Message, now: bool, cx: &mut Context<Self>) {
+        let proto =
+            self.request_proto(&message.url, &message.headers)
+                .and_then(|(format, schema)| {
+                    let text = protojson::to_editable(&message.body, format, &schema)?;
+                    Some((text, schema.full_name().to_owned()))
+                });
         let page = self.compose_page(cx);
         page.answer = None;
+        page.answer_json = None;
         page.problem = None;
-        let body = String::from_utf8_lossy(&message.body).into_owned();
+        let body = match &proto {
+            Some((text, _)) => text.clone(),
+            None => String::from_utf8_lossy(&message.body).into_owned(),
+        };
+        page.loaded = Some((body.clone(), message.body.clone()));
+        page.proto = proto.map(|(_, name)| name);
         let fields = [
             (page.method.clone(), message.method.clone()),
             (page.url.clone(), message.url.clone()),
@@ -131,12 +187,29 @@ impl Traffic {
     fn composed_message(&mut self, cx: &mut Context<Self>) -> Result<Message, String> {
         let page = self.compose_page(cx);
         let read = |input: &Entity<TextInput>| input.read(cx).text().to_owned();
-        let message = Message {
+        let text = read(&page.body);
+        let loaded = page.loaded.clone();
+        let mut message = Message {
             method: read(&page.method).trim().to_owned(),
             url: read(&page.url).trim().to_owned(),
             status: 0,
             headers: parse_headers(&read(&page.headers))?,
-            body: read(&page.body).into_bytes(),
+            body: Vec::new(),
+        };
+        let proto = self.request_proto(&message.url, &message.headers);
+        self.compose_page(cx).proto = proto.as_ref().map(|(_, m)| m.full_name().to_owned());
+        message.body = match (loaded, proto) {
+            (Some((shown, bytes)), _) if shown == text => bytes,
+            (_, Some((format, schema))) if text.trim_start().starts_with(['{', '[']) => {
+                protojson::from_editable(&text, format, &schema).map_err(|e| {
+                    tr!(
+                        "The body is not a {message}: {e}",
+                        message = schema.full_name().to_owned(),
+                        e = e
+                    )
+                })?
+            }
+            _ => text.into_bytes(),
         };
         // The same checks a breakpoint's edit gets.
         pause::request_from(message.clone())?;
@@ -159,10 +232,19 @@ impl Traffic {
         page.sending = true;
         page.problem = None;
         page.answer = None;
+        page.answer_json = None;
         let (proxy, ca) = (self.engine.addr, self.data_dir.join("ca.pem"));
+        let protos = std::sync::Arc::clone(&self.protos);
         cx.spawn(async move |this, cx| {
-            let result = cx
-                .background_spawn(async move { compose::send(proxy, &ca, &message) })
+            let (result, json) = cx
+                .background_spawn(async move {
+                    let result = compose::send(proxy, &ca, &message);
+                    let json = result
+                        .as_ref()
+                        .ok()
+                        .and_then(|answer| answer_json(&protos, &message.url, answer));
+                    (result, json)
+                })
                 .await;
             let _ = this.update(cx, |this, cx| {
                 let page = this.compose_page(cx);
@@ -170,6 +252,7 @@ impl Traffic {
                 match result {
                     Ok(answer) => {
                         page.answer = Some(answer);
+                        page.answer_json = json;
                         page.select.clear();
                     }
                     Err(e) => page.problem = Some(format!("{e:#}")),
@@ -284,6 +367,12 @@ impl Traffic {
             .child(eyebrow(tr!("Headers")))
             .child(field(&page.headers))
             .child(eyebrow(tr!("Body")))
+            .children(page.proto.clone().map(|message| {
+                div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                    "Protobuf {message}, written as JSON: it is sent as Protobuf.",
+                    message = message
+                ))
+            }))
             .child(field(&page.body))
             .children(
                 page.problem
@@ -334,11 +423,14 @@ impl Traffic {
                 )
                 .child(eyebrow(tr!("Headers")))
                 .child(mono_block(headers_text(&answer.headers)))
-                .child(eyebrow(tr!("Body")))
-                .child(mono_block(if body.is_empty() {
-                    tr!("No body")
-                } else {
-                    body
+                .child(eyebrow(match &page.answer_json {
+                    Some((message, _)) => tr!("Body · {message}", message = message.clone()),
+                    None => tr!("Body"),
+                }))
+                .child(mono_block(match &page.answer_json {
+                    Some((_, json)) => json.clone(),
+                    None if body.is_empty() => tr!("No body"),
+                    None => body,
                 }))
         });
 
