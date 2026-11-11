@@ -1522,14 +1522,17 @@ t53d91aad = App
 # Devices
 t27acf320 = 裝置
 
-# Hosts
-tcf9aefb4 = 主機
-
 # All hosts
 tfc7bfe37 = 所有主機
 
+# No host has this in its name
+t838c1d44 = 沒有名稱包含此內容的主機
+
 # Hidden
 t3c2dfe59 = 已隱藏
+
+# Hosts
+tcf9aefb4 = 主機
 
 # Newest
 t324b6d0b = 最新

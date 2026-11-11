@@ -21,7 +21,7 @@ use crate::{
     settings_page::SettingsPage,
     shortcuts::{self, Action, PAGE, action_of},
     system::{CaState, ProxySwitch, SystemState},
-    widgets::{Reachable, eyebrow, icon, status_colors},
+    widgets::{Reachable, eyebrow, icon, section_badge, status_colors},
 };
 use crate::{
     compose_page::ComposePage,
@@ -242,6 +242,8 @@ pub struct Traffic {
     jobs: Sender<Job>,
     done: Receiver<Done>,
     filter_input: Entity<TextInput>,
+    /// Narrows the hosts in the sidebar to those with this in their name.
+    host_filter: Entity<TextInput>,
     filter: Filter,
     /// With a filter on, the flows that fit. Without one, every id in `bounds`.
     ids: Option<Arc<Vec<i64>>>,
@@ -308,6 +310,9 @@ impl Traffic {
         let filter_input =
             cx.new(|cx| TextInput::said(|| tr!("host:, status:4xx, or text in bodies"), cx));
         let device_name = cx.new(|cx| TextInput::said(|| tr!("A name, as iPhone test"), cx));
+        let host_filter = cx.new(|cx| TextInput::said(|| tr!("Filter"), cx));
+        cx.subscribe(&host_filter, |_, _, _: &Changed, cx| cx.notify())
+            .detach();
         cx.subscribe(&device_name, |this, input, _: &Changed, cx| {
             let name = input.read(cx).text().to_owned();
             this.name_chosen_device(&name, cx);
@@ -393,6 +398,7 @@ impl Traffic {
             jobs: job_tx,
             done: done_rx,
             filter_input,
+            host_filter,
             filter,
             columns_menu: false,
             shortcuts_open: false,
@@ -1601,6 +1607,12 @@ impl Traffic {
         let chosen_device = self.filter.exact_device.clone();
         let total = self.total() as u64;
         let (shown, hidden) = self.layout.hosts.arrange(&self.hosts);
+        let wanted = self.host_filter.read(cx).text().to_owned();
+        let (shown, hidden) = (
+            crate::hosts::matching(shown, &wanted),
+            crate::hosts::matching(hidden, &wanted),
+        );
+        let none_match = !wanted.trim().is_empty() && shown.is_empty() && hidden.is_empty();
         let line = |id: SharedString, text: SharedString, count: u64, on: bool| {
             div()
                 .id(id)
@@ -1636,39 +1648,49 @@ impl Traffic {
             .overflow_y_scroll()
             .bg(rgb(c.surface))
             .when(!self.apps.is_empty(), |d| {
-                d.child(eyebrow(tr!("Apps")).px(px(10.)).py(px(4.)))
-                    .children(self.apps.iter().map(|(app, count)| {
-                        let on = chosen_app.as_deref() == Some(app.as_ref());
-                        let name = app.to_string();
-                        line(format!("app-{app}").into(), app.clone(), *count, on).on_click(
-                            cx.listener(move |this, _, _, cx| {
-                                let next = (this.filter.exact_app.as_deref()
-                                    != Some(name.as_str()))
+                d.child(
+                    div()
+                        .flex()
+                        .px(px(6.))
+                        .py(px(4.))
+                        .child(section_badge(tr!("Apps"))),
+                )
+                .children(self.apps.iter().map(|(app, count)| {
+                    let on = chosen_app.as_deref() == Some(app.as_ref());
+                    let name = app.to_string();
+                    line(format!("app-{app}").into(), app.clone(), *count, on).on_click(
+                        cx.listener(move |this, _, _, cx| {
+                            let next = (this.filter.exact_app.as_deref() != Some(name.as_str()))
                                 .then(|| name.clone());
-                                this.set_app(next, cx);
-                            }),
-                        )
-                    }))
-                    .child(div().h(px(8.)).flex_shrink_0())
+                            this.set_app(next, cx);
+                        }),
+                    )
+                }))
+                .child(div().h(px(8.)).flex_shrink_0())
             })
             .when(!self.device_counts.is_empty(), |d| {
-                d.child(eyebrow(tr!("Devices")).px(px(10.)).py(px(4.)))
-                    .children(self.device_counts.iter().map(|(ip, count)| {
-                        let on = chosen_device.as_deref() == Some(ip.as_ref());
-                        let shown: SharedString = self.devices.shown(ip).to_owned().into();
-                        let ip = ip.to_string();
-                        line(format!("device-{ip}").into(), shown, *count, on).on_click(
-                            cx.listener(move |this, _, _, cx| {
-                                let next = (this.filter.exact_device.as_deref()
-                                    != Some(ip.as_str()))
+                d.child(
+                    div()
+                        .flex()
+                        .px(px(6.))
+                        .py(px(4.))
+                        .child(section_badge(tr!("Devices"))),
+                )
+                .children(self.device_counts.iter().map(|(ip, count)| {
+                    let on = chosen_device.as_deref() == Some(ip.as_ref());
+                    let shown: SharedString = self.devices.shown(ip).to_owned().into();
+                    let ip = ip.to_string();
+                    line(format!("device-{ip}").into(), shown, *count, on).on_click(cx.listener(
+                        move |this, _, _, cx| {
+                            let next = (this.filter.exact_device.as_deref() != Some(ip.as_str()))
                                 .then(|| ip.clone());
-                                this.set_device(next, cx);
-                            }),
-                        )
-                    }))
-                    .child(div().h(px(8.)).flex_shrink_0())
+                            this.set_device(next, cx);
+                        },
+                    ))
+                }))
+                .child(div().h(px(8.)).flex_shrink_0())
             })
-            .child(eyebrow(tr!("Hosts")).px(px(10.)).py(px(4.)))
+            .child(self.render_hosts_heading(cx))
             .child(
                 line(
                     "all-hosts".into(),
@@ -1678,6 +1700,16 @@ impl Traffic {
                 )
                 .on_click(cx.listener(|this, _, _, cx| this.set_host(None, cx))),
             )
+            .when(none_match, |d| {
+                d.child(
+                    div()
+                        .px(px(10.))
+                        .py(px(6.))
+                        .text_size(px(12.))
+                        .text_color(rgb(c.muted))
+                        .child(tr!("No host has this in its name")),
+                )
+            })
             .children(shown.into_iter().map(|host| {
                 let on = chosen.as_deref() == Some(host.host.as_ref());
                 let name = host.host.to_string();
@@ -1690,13 +1722,65 @@ impl Traffic {
             }))
             .when(!hidden.is_empty(), |d| {
                 d.child(div().h(px(8.)).flex_shrink_0())
-                    .child(eyebrow(tr!("Hidden")).px(px(10.)).py(px(4.)))
+                    .child(
+                        div()
+                            .flex()
+                            .px(px(6.))
+                            .py(px(4.))
+                            .child(section_badge(tr!("Hidden"))),
+                    )
                     .children(
                         hidden
                             .into_iter()
                             .map(|host| self.host_line(host, false, true, cx)),
                     )
             })
+    }
+
+    /// "Hosts", and a field beside it that narrows them by name. Escape
+    /// empties it, and only then goes on to whatever else it closes.
+    fn render_hosts_heading(&self, cx: &mut Context<Self>) -> Div {
+        let c = colors();
+        div()
+            .flex()
+            .flex_row()
+            .items_center()
+            .gap(px(8.))
+            .px(px(6.))
+            .py(px(4.))
+            .child(section_badge(tr!("Hosts")))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .h(px(26.))
+                    .px(px(10.))
+                    .rounded(px(13.))
+                    .flex()
+                    .items_center()
+                    .gap(px(6.))
+                    .bg(rgb(c.input))
+                    .text_size(px(12.))
+                    .on_key_down(cx.listener(|this, ev: &KeyDownEvent, _, cx| {
+                        if ev.keystroke.key == "escape"
+                            && !this.host_filter.read(cx).text().is_empty()
+                        {
+                            this.filter_hosts("", cx);
+                            cx.stop_propagation();
+                        }
+                    }))
+                    .child(icon("search", 12., c.muted))
+                    .child(div().flex_1().min_w_0().child(self.host_filter.clone())),
+            )
+    }
+
+    /// Types into the field that narrows the hosts. For tests, and Escape.
+    #[doc(hidden)]
+    pub fn filter_hosts(&mut self, text: &str, cx: &mut Context<Self>) {
+        self.host_filter.update(cx, |input, cx| {
+            input.set_text(text, text.len()..text.len(), cx)
+        });
+        cx.notify();
     }
 
     /// A host in the sidebar. On hover it can be pinned, or hidden; a hidden one
