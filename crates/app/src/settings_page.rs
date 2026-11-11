@@ -41,8 +41,7 @@ fn groups() -> Vec<(String, Vec<Row>)> {
                 tr!("Let other devices use the proxy"),
                 tr!(
                     "Phones and other computers on your network can then send their traffic here. \
-                     So can anyone else on it: leave this off on a network you do not trust. \
-                     Takes effect when tracewing starts again."
+                     So can anyone else on it: leave this off on a network you do not trust."
                 ),
                 "",
             )],
@@ -273,16 +272,24 @@ impl SettingsPage {
         Ok(settings)
     }
 
-    fn save(&mut self, path: &Path, cx: &gpui::App) {
+    /// Writes the settings, and gives them back once they are written.
+    fn save(&mut self, path: &Path, cx: &gpui::App) -> Option<StorageSettings> {
         self.saved = false;
         self.problem = None;
         let written = self.read(cx).and_then(|settings| {
             let text = settings.to_toml().map_err(|e| format!("{e:#}"))?;
-            std::fs::write(path, text).map_err(|e| format!("{}: {e}", path.display()))
+            std::fs::write(path, text).map_err(|e| format!("{}: {e}", path.display()))?;
+            Ok(settings)
         });
         match written {
-            Ok(()) => self.saved = true,
-            Err(problem) => self.problem = Some(problem),
+            Ok(settings) => {
+                self.saved = true;
+                Some(settings)
+            }
+            Err(problem) => {
+                self.problem = Some(problem);
+                None
+            }
         }
     }
 }
@@ -326,11 +333,16 @@ impl Traffic {
     pub fn save_settings(&mut self, cx: &mut Context<Self>) {
         let path = self.settings_path();
         let mut rules = None;
+        let mut saved = None;
         if let Some(page) = &mut self.settings_page {
-            page.save(&path, cx);
-            if page.problem.is_none() {
+            saved = page.save(&path, cx);
+            if saved.is_some() {
                 rules = Some(HostRules::from_lines(page.no_decrypt.read(cx).text()));
             }
+        }
+        // The rest wait for tracewing to start again.
+        if let Some(settings) = saved {
+            self.engine.set_other_devices(settings.other_devices);
         }
         if let Some(rules) = rules {
             self.change_rules(|now| *now = rules, cx);

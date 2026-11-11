@@ -916,8 +916,8 @@ t9e7d8362 = 其他设备
 # Let other devices use the proxy
 t13e626b3 = 允许其他设备使用代理
 
-# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-t2e14229d = 开启后，你网络中的手机和其他电脑可以将流量发送到这里。但同一网络中的任何人也都可以：在不信任的网络上请保持关闭。重新启动 tracewing 后生效。
+# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
+t76098911 = 开启后，你网络中的手机和其他电脑可以将流量发送到这里。但同一网络中的任何人也都可以：在不信任的网络上请保持关闭。
 
 # Servers
 tcd0cf113 = 服务器
@@ -1084,8 +1084,8 @@ t82bd2456 = { $name } 已通过 tracewing 连接，并信任 tracewing。
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
 tfb6feb04 = { $name } 已通过 tracewing 连接，但未使用 HTTPS 打开页面。请通过 https:// 重新打开。
 
-# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-t9f95b7b8 = 手机或其他电脑也可以将流量发送到这里。在“设置”中开启“允许其他设备使用代理”，然后重新启动 tracewing。
+# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings.
+tc18aec73 = 手机或其他电脑也可以将流量发送到这里。在“设置”中开启“允许其他设备使用代理”。
 
 # this computer's address, port {port}
 t2188b3f4 = 本机地址，端口 { $port }
@@ -1311,6 +1311,9 @@ t2e3c591c = 手机和其他设备
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = 此网络中的手机、平板或其他电脑可以通过 { $proxy } 经由 tracewing 连接。扫描二维码即可打开证书下载页面。其流量记录会显示设备地址，可用 device: 过滤，也可在任一条流量记录的“连接”中为设备命名。
+
+# Other devices cannot reach tracewing at one of this computer's addresses: {problem}
+t77fb5f02 = 其他设备无法通过这台电脑的某个地址连接到 tracewing：{ $problem }
 
 # {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
 t864ac93f = { $n } 台设备经过了 tracewing（{ $names }）。用完之后，请按下方说明关闭其 Wi-Fi 代理：若保持开启，tracewing 关闭后它在此网络上将无法上网。

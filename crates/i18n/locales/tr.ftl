@@ -934,8 +934,8 @@ t9e7d8362 = Diğer cihazlar
 # Let other devices use the proxy
 t13e626b3 = Diğer cihazların proxy'yi kullanmasına izin ver
 
-# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-t2e14229d = Böylece ağınızdaki telefonlar ve diğer bilgisayarlar trafiklerini buraya gönderebilir. O ağdaki herkes de gönderebilir: güvenmediğiniz bir ağda bunu kapalı tutun. tracewing yeniden başladığında etkili olur.
+# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
+t76098911 = Böylece ağınızdaki telefonlar ve diğer bilgisayarlar trafiklerini buraya gönderebilir. O ağdaki herkes de gönderebilir: güvenmediğiniz bir ağda bunu kapalı tutun.
 
 # Servers
 tcd0cf113 = Sunucular
@@ -1102,8 +1102,8 @@ t82bd2456 = { $name }, tracewing üzerinden geçiyor ve ona güveniyor.
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
 tfb6feb04 = { $name }, tracewing üzerinden geçiyor ama sayfayı HTTPS olmadan açtı. https:// ile yeniden açın.
 
-# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-t9f95b7b8 = Bir telefon ya da başka bir bilgisayar da trafiğini buraya gönderebilir. Ayarlar'da “Diğer cihazların proxy'yi kullanmasına izin ver”i açın, sonra tracewing'i yeniden başlatın.
+# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings.
+tc18aec73 = Bir telefon ya da başka bir bilgisayar da trafiğini buraya gönderebilir. Ayarlar'da “Diğer cihazların proxy'yi kullanmasına izin ver”i açın.
 
 # this computer's address, port {port}
 t2188b3f4 = bu bilgisayarın adresi, port { $port }
@@ -1333,6 +1333,9 @@ t2e3c591c = Telefonlar ve diğer cihazlar
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = Bu ağdaki bir telefon, tablet ya da başka bir bilgisayar { $proxy } adresinde tracewing üzerinden geçebilir. Kod, sertifikanın bulunduğu sayfayı açar. Cihazın akışları adresini gösterir, device: ile filtrelenebilir ve cihaza akışlarından birinden, Bağlantı bölümünde ad verilebilir.
+
+# Other devices cannot reach tracewing at one of this computer's addresses: {problem}
+t77fb5f02 = Diğer cihazlar bu bilgisayarın adreslerinden birinde tracewing'e ulaşamıyor: { $problem }
 
 # {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
 t864ac93f =

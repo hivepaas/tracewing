@@ -213,6 +213,16 @@ impl LocalCa {
     }
 }
 
+/// The CA, for more than one listener at once: they share its leaves.
+#[derive(Clone)]
+pub struct SharedCa(pub Arc<LocalCa>);
+
+impl CertificateAuthority for SharedCa {
+    async fn gen_server_config(&self, authority: &Authority) -> Arc<ServerConfig> {
+        self.0.gen_server_config(authority).await
+    }
+}
+
 impl CertificateAuthority for LocalCa {
     async fn gen_server_config(&self, authority: &Authority) -> Arc<ServerConfig> {
         // IPv6 authorities keep their brackets in `host()`.

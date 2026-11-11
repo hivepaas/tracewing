@@ -916,8 +916,8 @@ t9e7d8362 = Thiết bị khác
 # Let other devices use the proxy
 t13e626b3 = Cho thiết bị khác dùng proxy
 
-# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-t2e14229d = Điện thoại và máy tính khác trong mạng của bạn có thể gửi traffic qua đây. Bất kỳ ai khác trong mạng cũng vậy: hãy tắt khi ở mạng không tin cậy. Có hiệu lực khi tracewing khởi động lại.
+# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
+t76098911 = Điện thoại và máy tính khác trong mạng của bạn có thể gửi traffic qua đây. Bất kỳ ai khác trong mạng cũng vậy: hãy tắt khi ở mạng không tin cậy.
 
 # Servers
 tcd0cf113 = Server
@@ -1084,8 +1084,8 @@ t82bd2456 = { $name } đi qua tracewing và tin chứng chỉ của nó.
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
 tfb6feb04 = { $name } đi qua tracewing, nhưng đã mở trang không qua HTTPS. Hãy mở lại bằng https://.
 
-# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-t9f95b7b8 = Điện thoại hoặc máy tính khác cũng có thể gửi traffic qua đây. Hãy bật “Cho thiết bị khác dùng proxy” trong Cài đặt, rồi khởi động lại tracewing.
+# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings.
+tc18aec73 = Điện thoại hoặc máy tính khác cũng có thể gửi traffic qua đây. Hãy bật “Cho thiết bị khác dùng proxy” trong Cài đặt.
 
 # this computer's address, port {port}
 t2188b3f4 = địa chỉ của máy này, cổng { $port }
@@ -1311,6 +1311,9 @@ t2e3c591c = Điện thoại và thiết bị khác
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = Điện thoại, máy tính bảng hoặc máy tính khác trong mạng này có thể đi qua tracewing tại { $proxy }. Mã QR mở trang có chứng chỉ. Flow của thiết bị hiện địa chỉ của nó, lọc được bằng device:, và đặt tên được từ một flow của nó, ở tab Kết nối.
+
+# Other devices cannot reach tracewing at one of this computer's addresses: {problem}
+t77fb5f02 = Thiết bị khác không kết nối được tới tracewing tại một địa chỉ của máy này: { $problem }
 
 # {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
 t864ac93f = { $n } thiết bị đã đi qua tracewing ({ $names }). Khi đã xong, hãy tắt proxy Wi-Fi trên đó như hướng dẫn bên dưới: nếu để nguyên, thiết bị sẽ mất Internet trên mạng này khi tracewing tắt.

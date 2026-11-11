@@ -352,7 +352,7 @@ td8955e6d = HAR, Fiddler .saz, or Charles .chlsj
 t3435c213 = Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t9e7d8362 = Other devices
 t13e626b3 = Let other devices use the proxy
-t2e14229d = Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
+t76098911 = Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
 tcd0cf113 = Servers
 tfea2d91b = Trust what this computer trusts
 t1705bfb4 = Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
@@ -408,7 +408,7 @@ t453607d0 = Its private key is in ca.key, which only you can read, as the system
 t2e93b53b = Open the page. If the browser warns about the certificate, or cannot find the page, one of the steps above is not done for that browser.
 t82bd2456 = { $name } goes through tracewing and trusts it.
 tfb6feb04 = { $name } goes through tracewing, but opened the page without HTTPS. Open it again over https://.
-t9f95b7b8 = A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
+tc18aec73 = A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings.
 t2188b3f4 = this computer's address, port { $port }
 tc8ccf306 = On the device, set the Wi-Fi proxy to { $addr }. Then open http://{ $host } there, get the certificate and trust it. Its flows show its address, and can be filtered with device:. Name it from one of them, in Connection.
 t50ee7452 = Looking for it…
@@ -488,6 +488,7 @@ t12aba34f = Take TracewingProxy and its line in main() out before a release, tho
 t1336b4d6 = Open settings
 t2e3c591c = Phones and other devices
 td0629ca6 = A phone, a tablet or another computer on this network can go through tracewing at { $proxy }. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
+t77fb5f02 = Other devices cannot reach tracewing at one of this computer's addresses: { $problem }
 t864ac93f =
     { $n ->
         [one] { $n } device went through tracewing ({ $names }). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes.

@@ -173,8 +173,7 @@ fn other_devices_text(on: bool, port: u16, here: Option<IpAddr>) -> String {
     if !on {
         return tr!(
             "A phone or another computer can send its traffic here too. Turn on \
-             \u{201c}Let other devices use the proxy\u{201d} in Settings, then start \
-             tracewing again."
+             \u{201c}Let other devices use the proxy\u{201d} in Settings."
         );
     }
     let addr = match here {
@@ -1001,6 +1000,19 @@ impl Traffic {
                             ))),
                     ),
             )
+            .children(self.engine.other_devices.problem().map(|problem| {
+                div()
+                    .px(px(14.))
+                    .py(px(10.))
+                    .rounded(px(14.))
+                    .bg(rgb(c.warn_ground))
+                    .text_color(rgb(c.warn))
+                    .child(tr!(
+                        "Other devices cannot reach tracewing at one of this computer's \
+                         addresses: {problem}",
+                        problem = problem
+                    ))
+            }))
             .children(self.render_devices_to_undo())
             .child(
                 div()

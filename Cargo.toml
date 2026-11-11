@@ -50,6 +50,7 @@ webpki-roots = "1.0.11"
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_Ndis",
     "Win32_NetworkManagement_WindowsFilteringPlatform",
     "Win32_Networking_WinInet",
     "Win32_Networking_WinSock",

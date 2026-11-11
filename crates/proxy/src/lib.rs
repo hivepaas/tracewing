@@ -5,6 +5,7 @@ pub mod apps;
 pub mod ca;
 pub mod ca_key;
 pub mod capture;
+pub mod lan;
 pub mod pause;
 pub mod rules;
 pub mod throttle;
@@ -97,6 +98,9 @@ pub struct ProxyOptions {
     /// How long a stop waits for connections to end. A stream or a WebSocket that
     /// is still open would otherwise hold it up for as long as it stays open.
     pub stop_limit: Duration,
+    /// Whether other devices on the network may use the proxy, switched while
+    /// it runs. `None` keeps them out.
+    pub other_devices: Option<Arc<lan::OtherDevices>>,
 }
 
 #[derive(Debug)]
@@ -205,6 +209,23 @@ pub async fn run_proxy(
     let stop_limit = opts.stop_limit;
     let pauses = opts.pauses;
     let (stopping_tx, stopping) = tokio::sync::oneshot::channel();
+    let ca = ca::SharedCa(Arc::new(ca));
+    // The listeners for other devices stop with this one.
+    let (lan_stop_tx, lan_stop) = tokio::sync::watch::channel(false);
+    let lan = opts.other_devices.map(|devices| {
+        let serve = LanServe {
+            ca: ca.clone(),
+            connector: connector.clone(),
+            handler: handler.clone(),
+            upstream_tls: upstream_tls.clone(),
+        };
+        tokio::spawn(serve_other_devices(
+            serve,
+            devices,
+            own_addr.port(),
+            lan_stop,
+        ))
+    });
     let proxy = Proxy::builder()
         .with_listener(listener)
         .with_ca(ca)
@@ -214,6 +235,7 @@ pub async fn run_proxy(
         .with_websocket_connector(Connector::Rustls(Arc::new(upstream_tls)))
         .with_graceful_shutdown(async move {
             shutdown.await;
+            let _ = lan_stop_tx.send(true);
             // Held, they would keep their connections, and the stop, waiting.
             pauses.release_all();
             let _ = stopping_tx.send(());
@@ -232,6 +254,9 @@ pub async fn run_proxy(
     }
     if let Some(reporter) = reporter {
         reporter.abort();
+    }
+    if let Some(lan) = lan {
+        let _ = tokio::time::timeout(stop_limit, lan).await;
     }
 
     // The index goes first, with the writer still there to keep the session to its
@@ -287,6 +312,96 @@ pub async fn run_proxy(
         index_lag,
         index_errors,
     })
+}
+
+/// What a listener for other devices is served with: the same as the
+/// loopback's, so its flows go to the same session under the same rules.
+struct LanServe {
+    ca: ca::SharedCa,
+    connector: upstream::TimedConnector,
+    handler: FlowHandler,
+    upstream_tls: ClientConfig,
+}
+
+/// How often the addresses this machine has on its networks are looked at
+/// while other devices may use the proxy.
+const LAN_LOOK_EVERY: Duration = Duration::from_secs(3);
+
+/// Listens for other devices on each of this machine's addresses, on the
+/// loopback's port, while they may: an address that comes gets a listener,
+/// and one that goes, or all of them when the switch goes off, has its
+/// listener stopped. Connections it took are left to end on their own, as
+/// a phone's may be in the middle of something.
+async fn serve_other_devices(
+    serve: LanServe,
+    devices: Arc<lan::OtherDevices>,
+    port: u16,
+    mut stop: tokio::sync::watch::Receiver<bool>,
+) {
+    let mut running: std::collections::BTreeMap<
+        std::net::Ipv4Addr,
+        tokio::sync::oneshot::Sender<()>,
+    > = std::collections::BTreeMap::new();
+    loop {
+        let wanted: Vec<std::net::Ipv4Addr> = if devices.is_on() {
+            lan::addresses()
+        } else {
+            Vec::new()
+        };
+        running.retain(|ip, _| wanted.contains(ip));
+        let mut problem = None;
+        for ip in wanted {
+            if running.contains_key(&ip) {
+                continue;
+            }
+            match TcpListener::bind((ip, port)).await {
+                Ok(listener) => {
+                    let _ = socket2::SockRef::from(&listener).set_tcp_nodelay(true);
+                    let (stop_one, stopped) = tokio::sync::oneshot::channel::<()>();
+                    let built = Proxy::builder()
+                        .with_listener(listener)
+                        .with_ca(serve.ca.clone())
+                        .with_http_connector(serve.connector.clone())
+                        .with_http_handler(serve.handler.clone())
+                        .with_websocket_handler(serve.handler.clone())
+                        .with_websocket_connector(Connector::Rustls(Arc::new(
+                            serve.upstream_tls.clone(),
+                        )))
+                        .with_graceful_shutdown(async move {
+                            let _ = stopped.await;
+                        })
+                        .build();
+                    match built {
+                        Ok(proxy) => {
+                            tokio::spawn(async move {
+                                if let Err(e) = proxy.start().await {
+                                    tracing::warn!("listening on {ip}: {e:#}");
+                                }
+                            });
+                            running.insert(ip, stop_one);
+                        }
+                        Err(e) => problem = Some(format!("{ip}:{port}: {e:#}")),
+                    }
+                }
+                Err(e) => problem = Some(format!("{ip}:{port}: {e}")),
+            }
+        }
+        devices.listen_at(
+            running
+                .keys()
+                .map(|ip| SocketAddr::new((*ip).into(), port))
+                .collect(),
+            problem,
+        );
+        tokio::select! {
+            _ = tokio::time::sleep(LAN_LOOK_EVERY), if devices.is_on() => {}
+            _ = devices.changed().notified() => {}
+            _ = stop.changed() => break,
+        }
+    }
+    // Dropping each sender stops its listener.
+    running.clear();
+    devices.listen_at(Vec::new(), None);
 }
 
 /// How the proxy checks servers, and the checker on its own, which the
