@@ -1,7 +1,8 @@
 //! MessagePack and CBOR, which hold JSON's values as bytes, turned into JSON
 //! to be read, folded and searched as JSON is. What JSON has no word for, such
 //! as bytes, a CBOR tag or an integer past 64 bits, is said in a string or an
-//! object that tells what it was.
+//! object that tells what it was. Protocol Buffers and gRPC are read the same
+//! way, by [`crate::protobuf`].
 
 use serde_json::{Map, Number, Value};
 use std::fmt::Write;
@@ -17,6 +18,12 @@ const BYTES_SHOWN: usize = 32;
 pub enum Format {
     MessagePack,
     Cbor,
+    Protobuf,
+    /// Protobuf messages in gRPC's frames, as gRPC and gRPC-Web send them.
+    Grpc,
+    GrpcWeb,
+    /// gRPC-Web's frames in base64.
+    GrpcWebText,
 }
 
 impl Format {
@@ -25,7 +32,15 @@ impl Format {
         match self {
             Self::MessagePack => "MessagePack",
             Self::Cbor => "CBOR",
+            Self::Protobuf => "Protobuf",
+            Self::Grpc => "gRPC",
+            Self::GrpcWeb | Self::GrpcWebText => "gRPC-Web",
         }
+    }
+
+    /// Whether its fields are named by number, with no schema to name them.
+    pub fn numbered(self) -> bool {
+        !matches!(self, Self::MessagePack | Self::Cbor)
     }
 }
 
@@ -33,10 +48,24 @@ impl Format {
 pub fn format_of(content_type: Option<&str>) -> Option<Format> {
     let essence = content_type?.split(';').next()?.trim().to_ascii_lowercase();
     let subtype = essence.split('/').nth(1)?;
+    // gRPC names what its messages are after a `+`: only Protobuf is read.
+    let (base, suffix) = subtype.split_once('+').unwrap_or((subtype, "proto"));
+    let grpc = match base {
+        "grpc" => Some(Format::Grpc),
+        "grpc-web" => Some(Format::GrpcWeb),
+        "grpc-web-text" => Some(Format::GrpcWebText),
+        _ => None,
+    };
+    if let Some(grpc) = grpc {
+        return (suffix == "proto").then_some(grpc);
+    }
     let name = subtype.rsplit('+').next().unwrap_or(subtype);
     match name {
         "msgpack" | "x-msgpack" | "vnd.msgpack" => Some(Format::MessagePack),
         "cbor" | "x-cbor" => Some(Format::Cbor),
+        "protobuf" | "x-protobuf" | "vnd.google.protobuf" | "x-google-protobuf" | "proto" => {
+            Some(Format::Protobuf)
+        }
         _ => None,
     }
 }
@@ -45,6 +74,12 @@ pub fn format_of(content_type: Option<&str>) -> Option<Format> {
 /// one after another make an array; bytes after the last that can be read
 /// are said at its end.
 pub fn to_json(data: &[u8], format: Format) -> Option<String> {
+    match format {
+        Format::Protobuf => return crate::protobuf::message_to_json(data),
+        Format::Grpc | Format::GrpcWeb => return crate::protobuf::grpc_to_json(data, false),
+        Format::GrpcWebText => return crate::protobuf::grpc_to_json(data, true),
+        Format::MessagePack | Format::Cbor => {}
+    }
     let mut rest = data;
     let mut values = Vec::new();
     while !rest.is_empty() {
@@ -56,6 +91,7 @@ pub fn to_json(data: &[u8], format: Format) -> Option<String> {
             Format::Cbor => ciborium::de::from_reader::<ciborium::Value, _>(&mut cursor)
                 .ok()
                 .map(from_cbor),
+            _ => unreachable!("read above"),
         };
         match value {
             Some(value) if cursor.len() < rest.len() => {
@@ -82,7 +118,8 @@ pub fn to_json(data: &[u8], format: Format) -> Option<String> {
     serde_json::to_string(&json).ok()
 }
 
-fn bytes(data: &[u8]) -> Value {
+/// Bytes as a string that says how many there are, and the first in hex.
+pub(crate) fn bytes(data: &[u8]) -> Value {
     let mut text = format!("<{} bytes: ", data.len());
     for b in data.iter().take(BYTES_SHOWN) {
         write!(text, "{b:02x}").expect("a String takes any text");
@@ -195,6 +232,28 @@ mod tests {
             Some(Format::MessagePack)
         );
         assert_eq!(format_of(Some("Application/CBOR")), Some(Format::Cbor));
+        assert_eq!(
+            format_of(Some("application/x-protobuf; messageType=\"shop.Order\"")),
+            Some(Format::Protobuf)
+        );
+        assert_eq!(
+            format_of(Some("application/vnd.shop+protobuf")),
+            Some(Format::Protobuf)
+        );
+        assert_eq!(format_of(Some("application/grpc")), Some(Format::Grpc));
+        assert_eq!(
+            format_of(Some("application/grpc+proto")),
+            Some(Format::Grpc)
+        );
+        assert_eq!(format_of(Some("application/grpc+json")), None);
+        assert_eq!(
+            format_of(Some("application/grpc-web+proto")),
+            Some(Format::GrpcWeb)
+        );
+        assert_eq!(
+            format_of(Some("application/grpc-web-text")),
+            Some(Format::GrpcWebText)
+        );
         assert_eq!(format_of(Some("application/json")), None);
         assert_eq!(format_of(None), None);
     }

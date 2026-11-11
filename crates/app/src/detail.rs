@@ -315,7 +315,7 @@ pub fn body_file(
     Some((path, size))
 }
 
-/// A MessagePack or CBOR body beside its file as JSON, to be shown as JSON
+/// A MessagePack, CBOR or Protobuf body beside its file as JSON, to be shown as JSON
 /// is. `None` for any other body, one too large to hold, or one that cannot
 /// be read.
 pub fn json_file(

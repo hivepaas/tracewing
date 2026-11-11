@@ -253,7 +253,7 @@ impl Traffic {
                         Ok(body) => BodyState::Shown({
                             let focus = this.focus.clone();
                             let mode = this.inspector.body_mode;
-                            // MessagePack or CBOR, shown as the JSON made of it.
+                            // MessagePack, CBOR or Protobuf, shown as the JSON made of it.
                             let json = json.and_then(|json| Body::open(&json).ok());
                             cx.new(|cx| {
                                 let mut view = match json {
