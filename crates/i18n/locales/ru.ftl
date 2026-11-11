@@ -487,6 +487,9 @@ tb8739fec = Эти заголовки не сохранены.
 # No headers.
 tf3dacb5e = Нет заголовков.
 
+# Trailers, sent after the body
+t3447e9de = Трейлеры, отправленные после тела
+
 # File {filename} · {kind} · {size}
 t6dbd239f = Файл { $filename } · { $kind } · { $size }
 

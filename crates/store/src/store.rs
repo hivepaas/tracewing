@@ -70,6 +70,11 @@ pub struct FlowRecord {
     /// which is what keeps the list fast.
     pub req_headers: String,
     pub resp_headers: String,
+    /// The response's trailers, as `name: value` lines, as gRPC sends its
+    /// status in them.
+    pub resp_trailers: String,
+    /// gRPC's status, from the trailers, the headers, or gRPC-Web's last frame.
+    pub grpc_status: Option<u16>,
     pub head: Option<LogPlace>,
     /// A stream still going.
     pub open: bool,
@@ -401,12 +406,13 @@ impl WriterThread {
 
 fn open(path: &Path) -> Result<Connection> {
     let conn = Connection::open(path).with_context(|| format!("open {}", path.display()))?;
+    session::upgrade(&conn)?;
     // Without a limit the WAL stays the largest it has ever been.
     conn.execute_batch(
         "PRAGMA journal_mode = WAL;
          PRAGMA synchronous = NORMAL;
          PRAGMA journal_size_limit = 67108864;
-         PRAGMA user_version = 6;
+         PRAGMA user_version = 7;
          CREATE TABLE IF NOT EXISTS flows (
              id INTEGER PRIMARY KEY,
              started_us INTEGER NOT NULL,
@@ -462,7 +468,8 @@ fn open(path: &Path) -> Result<Connection> {
              conn_len INTEGER,
              app TEXT,
              app_pid INTEGER,
-             app_path TEXT
+             app_path TEXT,
+             grpc_status INTEGER
          );
          CREATE TABLE IF NOT EXISTS messages (
              id INTEGER PRIMARY KEY,
@@ -787,7 +794,11 @@ impl Writer {
         if self.shared.low_disk.load(Ordering::Relaxed) {
             return;
         }
-        let both = session::join_headers(&record.req_headers, &record.resp_headers);
+        let both = session::join_headers(
+            &record.req_headers,
+            &record.resp_headers,
+            &record.resp_trailers,
+        );
         record.head = Some(self.log.append(both.as_bytes()));
     }
 
@@ -1005,11 +1016,11 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                  resp_segment, resp_offset, resp_len, resp_zstd, resp_spool, resp_spool_lost, resp_shed,
                  head_segment, head_offset, head_len, open, rule, graphql,
                  conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len,
-                 app, app_pid, app_path
+                 app, app_pid, app_path, grpc_status
              ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
                        ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27,
                        ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42, ?43, ?44,
-                       ?45, ?46, ?47, ?48, ?49, ?50, ?51, ?52, ?53, ?54, ?55)",
+                       ?45, ?46, ?47, ?48, ?49, ?50, ?51, ?52, ?53, ?54, ?55, ?56)",
         )?;
         for (i, r) in batch.iter().enumerate() {
             let (req, resp) = (r.request.place, r.response.place);
@@ -1071,6 +1082,7 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                 app.as_ref().map(|a| &a.name),
                 app.as_ref().map(|a| a.pid),
                 app.as_ref().and_then(|a| a.path.as_ref()),
+                r.grpc_status,
             ])?;
         }
     }

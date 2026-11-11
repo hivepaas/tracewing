@@ -86,6 +86,9 @@ pub struct Detail {
     pub response: BodyFacts,
     /// `None` if they were not kept.
     pub headers: Option<(Headers, Headers)>,
+    /// What came after the response's body, as gRPC's status does.
+    pub trailers: Headers,
+    pub grpc_status: Option<u16>,
 }
 
 impl Detail {
@@ -96,7 +99,7 @@ impl Detail {
              req_bytes, req_truncated, req_shed, req_spool_lost, {},
              resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}, graphql,
              conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len,
-             req_content_type, app, app_pid, app_path",
+             req_content_type, app, app_pid, app_path, grpc_status",
             StoredBody::columns("req"),
             StoredBody::columns("resp")
         );
@@ -148,13 +151,18 @@ impl Detail {
                     app: r.get(45)?,
                     app_pid: r.get(46)?,
                     app_path: r.get(47)?,
+                    grpc_status: r.get(48)?,
                     form: None,
                     headers: None,
+                    trailers: Vec::new(),
                 })
             },
         )?;
         let mut reader = BodyReader::new(session_dir);
-        detail.headers = session::stored_headers(flows, &mut reader, id)?;
+        if let Some(head) = session::stored_head(flows, &mut reader, id)? {
+            detail.headers = Some((head.request, head.response));
+            detail.trailers = head.trailers;
+        }
         detail.connection = detail
             .conn_id
             .and_then(|conn| connection_place(flows, id, conn).ok().flatten())
@@ -223,6 +231,20 @@ impl Detail {
             Side::Request => request.as_slice(),
             Side::Response => response.as_slice(),
         })
+    }
+
+    /// The response's trailers; a request has none kept.
+    pub fn trailers(&self, side: Side) -> &[(String, String)] {
+        match side {
+            Side::Request => &[],
+            Side::Response => &self.trailers,
+        }
+    }
+
+    /// `grpc-message`, which says why a call failed.
+    pub fn grpc_message(&self) -> Option<String> {
+        let headers = self.headers(Side::Response).unwrap_or_default();
+        crate::grpc::message(&self.trailers, headers)
     }
 
     /// `HTTP/2 both sides`, or each side when they differ.
@@ -370,6 +392,8 @@ mod tests {
             request: BodyFacts::default(),
             response: BodyFacts::default(),
             headers: None,
+            trailers: Vec::new(),
+            grpc_status: None,
         }
     }
 

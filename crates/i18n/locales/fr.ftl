@@ -473,6 +473,9 @@ tb8739fec = Ces en-têtes n'ont pas été conservés.
 # No headers.
 tf3dacb5e = Aucun en-tête.
 
+# Trailers, sent after the body
+t3447e9de = Trailers, envoyés après le corps
+
 # File {filename} · {kind} · {size}
 t6dbd239f = Fichier { $filename } · { $kind } · { $size }
 

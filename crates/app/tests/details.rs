@@ -20,6 +20,7 @@ use tracewing::{
     bodyview::BodyMode,
     detail::Side,
     engine::{Engine, EngineOptions},
+    filter::Kind,
     input::TextInput,
     inspector::{BodyState, Part},
     snippets::Language,
@@ -551,6 +552,72 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
             })
             .unwrap();
     }
+
+    // A gRPC call that failed says so in trailers after its body: the
+    // inspector shows them and the status, and Errors finds the call.
+    let status = send(
+        &mut cx,
+        window,
+        "POST",
+        &format!("https://localhost:{trusted}/shop.Orders/Get"),
+        "content-type: application/grpc\nte: trailers",
+        "",
+    );
+    assert_eq!(status, 200, "gRPC fails inside an HTTP success");
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the gRPC call", |view| view.count() == 12);
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(11, cx);
+            view.set_side(Side::Response, cx);
+            view.set_part(Part::Headers, cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "its detail", |view| {
+        view.inspector
+            .detail
+            .as_ref()
+            .is_some_and(|detail| detail.url.ends_with("/shop.Orders/Get"))
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let detail = view.inspector.detail.as_ref().unwrap();
+            assert_eq!(detail.grpc_status, Some(5));
+            assert_eq!(detail.grpc_message().as_deref(), Some("order 42 is gone"));
+            assert!(
+                detail
+                    .trailers(Side::Response)
+                    .iter()
+                    .any(|(n, _)| n == "grpc-status"),
+                "{:?}",
+                detail.trailers
+            );
+            assert!(detail.trailers(Side::Request).is_empty());
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "71-grpc-status");
+    window
+        .update(&mut cx, |view, _, cx| view.set_kind(Kind::Errors, cx))
+        .unwrap();
+    // The refused certificate's flow, and the gRPC call.
+    wait_for(&mut cx, window, "errors", |view| {
+        !view.is_filtering() && view.count() == 2
+    });
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_kind(Kind::All, cx);
+            view.set_filter_text("grpc:not_found", cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "grpc:not_found", |view| {
+        !view.is_filtering() && view.count() == 1
+    });
+    window
+        .update(&mut cx, |view, _, cx| view.set_filter_text("", cx))
+        .unwrap();
 
     std::fs::remove_dir_all(&dir).ok();
 }

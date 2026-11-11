@@ -158,6 +158,27 @@ pub fn order_grpc_web() -> Vec<u8> {
     out
 }
 
+/// A gRPC call that failed: the order's frame, then trailers that say it
+/// was not found, as gRPC sends them after the body over HTTP/2.
+pub fn grpc_not_found() -> Response<OriginBody> {
+    let mut frame = vec![0u8];
+    let order = order_protobuf();
+    frame.extend_from_slice(&(order.len() as u32).to_be_bytes());
+    frame.extend_from_slice(&order);
+    let mut trailers = http::HeaderMap::new();
+    trailers.insert("grpc-status", http::HeaderValue::from_static("5"));
+    trailers.insert(
+        "grpc-message",
+        http::HeaderValue::from_static("order%2042%20is%20gone"),
+    );
+    let frames = [Frame::data(Bytes::from(frame)), Frame::trailers(trailers)];
+    let stream = hudsucker::futures::stream::iter(frames.map(Ok::<_, Infallible>));
+    Response::builder()
+        .header(header::CONTENT_TYPE, "application/grpc")
+        .body(BodyExt::boxed(StreamBody::new(stream)))
+        .expect("a valid answer")
+}
+
 /// A SOAP answer, all on one line as servers send it.
 pub const SOAP_XML: &str = r#"<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetOrderResponse xmlns="urn:shop"><Order id="42" status="paid"><Customer>Nguyễn Văn A</Customer><Items><Item sku="A-1" qty="2">Áo thun</Item><Item sku="B-7" qty="1"/></Items><!-- totals in VND --><Total currency="VND">350000</Total><Note><![CDATA[Giao trước <5pm>]]></Note></Order></GetOrderResponse></soap:Body></soap:Envelope>"#;
 
@@ -339,6 +360,7 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
         "/order.grpc-web" => Response::builder()
             .header(header::CONTENT_TYPE, "application/grpc-web+proto")
             .body(Full::new(Bytes::from(order_grpc_web())).boxed()),
+        "/shop.Orders/Get" => Ok(grpc_not_found()),
         "/soap.xml" => Response::builder()
             .header(header::CONTENT_TYPE, "text/xml; charset=utf-8")
             .body(Full::new(Bytes::from_static(SOAP_XML.as_bytes())).boxed()),

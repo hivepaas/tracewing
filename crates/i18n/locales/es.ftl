@@ -473,6 +473,9 @@ tb8739fec = Estos encabezados no se guardaron.
 # No headers.
 tf3dacb5e = Sin encabezados.
 
+# Trailers, sent after the body
+t3447e9de = Trailers, enviados después del cuerpo
+
 # File {filename} · {kind} · {size}
 t6dbd239f = Archivo { $filename } · { $kind } · { $size }
 

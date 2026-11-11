@@ -179,6 +179,7 @@ tda75e459 = Names { $names }
 td1f0d98b = Serial { $serial }
 tb8739fec = These headers were not kept.
 tf3dacb5e = No headers.
+t3447e9de = Trailers, sent after the body
 t6dbd239f = File { $filename } · { $kind } · { $size }
 t902a6ece = no type
 t58e85ab2 = No cookies were sent.

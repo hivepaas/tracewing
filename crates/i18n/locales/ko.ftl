@@ -457,6 +457,9 @@ tb8739fec = 이 헤더는 보관되지 않았습니다.
 # No headers.
 tf3dacb5e = 헤더가 없습니다.
 
+# Trailers, sent after the body
+t3447e9de = 트레일러 (본문 다음에 전송됨)
+
 # File {filename} · {kind} · {size}
 t6dbd239f = 파일 { $filename } · { $kind } · { $size }
 

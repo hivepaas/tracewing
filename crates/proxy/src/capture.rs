@@ -39,10 +39,10 @@ use std::{
 };
 use tracewing_store::app::AppAnswer;
 use tracewing_store::decode::{Encoding, Unpacker};
-use tracewing_store::graphql;
 use tracewing_store::settings::Live;
 use tracewing_store::spool::{Spool, SpoolFile};
 use tracewing_store::store::{BodyRecord, FlowRecord, Recorder, StreamHandle};
+use tracewing_store::{binjson, graphql, protobuf};
 
 /// The CRL the proxy answers for itself, and the address it answers on.
 #[derive(Clone)]
@@ -1107,6 +1107,35 @@ fn header_text(headers: &http::HeaderMap, name: header::HeaderName) -> Option<St
         .map(str::to_owned)
 }
 
+/// gRPC's status: in the trailers, or in the headers of an answer with no
+/// body, or in gRPC-Web's last frame.
+fn grpc_status(record: &FlowRecord, body: &BodyRecord) -> Option<u16> {
+    let in_lines = |lines: &str| {
+        lines
+            .lines()
+            .filter_map(|line| line.split_once(": "))
+            .find(|(name, _)| name.eq_ignore_ascii_case("grpc-status"))
+            .and_then(|(_, value)| value.trim().parse().ok())
+    };
+    if let Some(status) = in_lines(&record.resp_trailers).or_else(|| in_lines(&record.resp_headers))
+    {
+        return Some(status);
+    }
+    let plain = record
+        .resp_encoding
+        .as_deref()
+        .is_none_or(|e| e.eq_ignore_ascii_case("identity"));
+    if !plain || body.truncated {
+        return None;
+    }
+    let text = match binjson::format_of(record.content_type.as_deref())? {
+        binjson::Format::GrpcWeb => false,
+        binjson::Format::GrpcWebText => true,
+        _ => return None,
+    };
+    protobuf::grpc_web_status(&body.captured, text)
+}
+
 fn header_lines(headers: &http::HeaderMap) -> String {
     let mut lines = String::new();
     for (name, value) in headers {
@@ -1268,6 +1297,8 @@ struct TapBody {
     /// A stream's messages, to cut apart as they pass, unpacked first if it
     /// came packed.
     events: Option<(StreamHandle, Splitter, Option<Unpacker>)>,
+    /// Trailers sent after the body, as `name: value` lines.
+    trailers: String,
 }
 
 impl TapBody {
@@ -1295,6 +1326,7 @@ impl TapBody {
                     Unpacker::new(encoding, STREAM_UNPACK_MAX),
                 )
             }),
+            trailers: String::new(),
         }))
     }
 
@@ -1371,6 +1403,8 @@ impl TapBody {
                 record.request = body;
             }
             Side::Response => {
+                record.resp_trailers = std::mem::take(&mut self.trailers);
+                record.grpc_status = grpc_status(&record, &body);
                 record.response = body;
                 record.duration_us = Some(elapsed);
                 self.flow.ended.store(true, Ordering::Relaxed);
@@ -1393,6 +1427,8 @@ impl http_body::Body for TapBody {
             Poll::Ready(Some(Ok(frame))) => {
                 if let Some(data) = frame.data_ref() {
                     this.observe(data);
+                } else if let Some(trailers) = frame.trailers_ref() {
+                    this.trailers.push_str(&header_lines(trailers));
                 }
             }
             Poll::Ready(Some(Err(e))) => this.finish(false, Some(error_chain(e))),

@@ -75,7 +75,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | A million flows scroll at the display's refresh rate | Gate 0 | Free |
 | Columns to show, hide, resize and sort | Beta | Free |
 | A sidebar of hosts and devices; pin a host, hide a noisy one | Beta | Free |
-| Filter by host, method, status class and type; search every URL and body | Beta | Free |
+| Filter by host, method, status class, gRPC status and type; search every URL and body | Beta | Free |
 | Sessions: name them, keep them, open them again | Beta | Free |
 | A size limit per session, oldest flows dropped first | Beta | Free |
 | Compare two flows side by side | 1.x | Pro |
@@ -101,7 +101,7 @@ keyboard.
 |---|---|---|
 | Overview: timing (DNS, connect, TLS, waiting, download), the size each way, protocol on each side, the client app | Beta | Free |
 | Headers, cookies, query and form fields | Beta | Free |
-| Bodies: JSON laid out and folded by object and array, XML a tag a line and folded by element, MessagePack, CBOR, Protobuf and gRPC (with gRPC-Web) shown as the JSON they hold, Protobuf fields by number (bodies of any size); Pretty, Raw as sent and Hex for any body; long lines of text wrapped; HTML, JavaScript and CSS highlighted; images; gzip, Brotli, zstd and deflate decoded for display | Beta | Free |
+| Bodies: JSON laid out and folded by object and array, XML a tag a line and folded by element, MessagePack, CBOR, Protobuf and gRPC (with gRPC-Web) shown as the JSON they hold, Protobuf fields by number (bodies of any size); gRPC status and trailers kept, a failed call counted as an error; Pretty, Raw as sent and Hex for any body; long lines of text wrapped; HTML, JavaScript and CSS highlighted; images; gzip, Brotli, zstd and deflate decoded for display | Beta | Free |
 | JWTs decoded | Beta | Free |
 | Bodies of 50 MB and more open without freezing the window | Beta | Free |
 | Copy as cURL; save a body to a file | Beta | Free |
