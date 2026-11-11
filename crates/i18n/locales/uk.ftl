@@ -733,8 +733,20 @@ tdce25640 = Надіслати всі без змін
 # The list was not saved: {e}
 tfceba380 = Список не збережено: { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c =
+    { $n ->
+        [one] { $count } сервіс: { $names }
+        [few] { $count } сервіси: { $names }
+        [many] { $count } сервісів: { $names }
+       *[other] { $count } сервісу: { $names }
+    }
+
 # Add
 t9dc3aa14 = Додати
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com або http://localhost:50051
 
 # Reading…
 t6aad8485 = Читання…
@@ -793,6 +805,15 @@ ted08dbe5 = Додати файли…
 # Read again
 t2f0dcc5d = Перечитати
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = Або попросіть файли в сервера з gRPC reflection. https:// іде через tracewing; http:// — gRPC без TLS, напряму до сервера.
+
+# Asking…
+tf9cf22fe = Запит…
+
+# Fetch
+t533a3183 = Отримати
+
 # Find a message
 te6f78626 = Знайти повідомлення
 
@@ -819,6 +840,27 @@ t70ff68f9 =
         [many] і ще { $count }: введіть, щоб звузити
        *[other] і ще { $count }: введіть, щоб звузити
     }
+
+# Write the server's address first
+t4f68f91a = Спершу введіть адресу сервера
+
+# "{address}" is not a server's address
+t8c4d03a6 = «{ $address }» — не адреса сервера
+
+# The server has no services to describe
+tfa5b7ad8 = Сервер не має сервісів для опису
+
+# The server sent no files for its services
+tdca19bdc = Сервер не надіслав файлів своїх сервісів
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = Сервер відповів { $status }: можливо, він не має gRPC reflection
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = Сервер відповів { $code }: можливо, він не має gRPC reflection. { $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = Сервер нічого не відповів: можливо, він не має gRPC reflection
 
 # Block
 tbd074002 = Заблокувати

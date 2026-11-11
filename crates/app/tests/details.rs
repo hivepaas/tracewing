@@ -810,5 +810,38 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
         })
         .unwrap();
 
+    // A server that offers gRPC reflection says what its files are; they are
+    // kept beside the others. This one has the older version only.
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Settings, cx))
+        .unwrap();
+    cx.run_until_parked();
+    window
+        .update(&mut cx, |view, _, cx| {
+            let input = view.protos_server.clone().expect("drawn");
+            type_in(&input, &format!("https://localhost:{trusted}"), cx);
+            view.fetch_protos(cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the server's files", |view| {
+        !view.protos_fetching && view.protos_fetched.is_some()
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let fetched = view.protos_fetched.clone().unwrap();
+            assert_eq!(fetched, Ok("1 service: shop.Orders".to_owned()));
+            let read = view.protos_read.as_ref().expect("read again");
+            let source = read
+                .sources
+                .iter()
+                .find(|s| s.path.extension().is_some_and(|e| e == "pb"))
+                .expect("the set fetched is a source");
+            assert_eq!(source.problems, Vec::<String>::new());
+            assert_eq!((source.files, source.services), (1, 1));
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "76-reflection");
+
     std::fs::remove_dir_all(&dir).ok();
 }

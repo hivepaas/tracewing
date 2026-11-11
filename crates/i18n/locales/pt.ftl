@@ -711,8 +711,19 @@ tdce25640 = Enviar todos como chegaram
 # The list was not saved: {e}
 tfceba380 = A lista não foi salva: { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c =
+    { $n ->
+        [one] { $count } serviço: { $names }
+        [many] { $count } serviços: { $names }
+       *[other] { $count } serviços: { $names }
+    }
+
 # Add
 t9dc3aa14 = Adicionar
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com ou http://localhost:50051
 
 # Reading…
 t6aad8485 = Lendo…
@@ -767,6 +778,15 @@ ted08dbe5 = Adicionar arquivos…
 # Read again
 t2f0dcc5d = Ler de novo
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = Ou peça os arquivos a um servidor que ofereça reflexão gRPC. https:// passa pelo tracewing; http:// é gRPC sem TLS, direto ao servidor.
+
+# Asking…
+tf9cf22fe = Pedindo…
+
+# Fetch
+t533a3183 = Buscar
+
 # Find a message
 te6f78626 = Buscar uma mensagem
 
@@ -792,6 +812,27 @@ t70ff68f9 =
         [many] e mais { $count }: digite para filtrar
        *[other] e mais { $count }: digite para filtrar
     }
+
+# Write the server's address first
+t4f68f91a = Escreva primeiro o endereço do servidor
+
+# "{address}" is not a server's address
+t8c4d03a6 = "{ $address }" não é o endereço de um servidor
+
+# The server has no services to describe
+tfa5b7ad8 = O servidor não tem serviços para descrever
+
+# The server sent no files for its services
+tdca19bdc = O servidor não enviou arquivos para seus serviços
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = O servidor respondeu { $status }: talvez não ofereça reflexão gRPC
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = O servidor respondeu { $code }: talvez não ofereça reflexão gRPC. { $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = O servidor não respondeu nada: talvez não ofereça reflexão gRPC
 
 # Block
 tbd074002 = Bloquear

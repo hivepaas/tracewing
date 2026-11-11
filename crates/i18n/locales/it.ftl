@@ -711,8 +711,19 @@ tdce25640 = Invia tutto così com'è
 # The list was not saved: {e}
 tfceba380 = L’elenco non è stato salvato: { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c =
+    { $n ->
+        [one] { $count } servizio: { $names }
+        [many] { $count } servizi: { $names }
+       *[other] { $count } servizi: { $names }
+    }
+
 # Add
 t9dc3aa14 = Aggiungi
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com o http://localhost:50051
 
 # Reading…
 t6aad8485 = Lettura…
@@ -767,6 +778,15 @@ ted08dbe5 = Aggiungi file…
 # Read again
 t2f0dcc5d = Rileggi
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = Oppure chiedi i file a un server che offre la reflection gRPC. https:// passa da tracewing; http:// è gRPC senza TLS, diretto al server.
+
+# Asking…
+tf9cf22fe = Richiesta in corso…
+
+# Fetch
+t533a3183 = Recupera
+
 # Find a message
 te6f78626 = Cerca un messaggio
 
@@ -792,6 +812,27 @@ t70ff68f9 =
         [many] e altri { $count }: scrivi per restringere
        *[other] e altri { $count }: scrivi per restringere
     }
+
+# Write the server's address first
+t4f68f91a = Scrivi prima l’indirizzo del server
+
+# "{address}" is not a server's address
+t8c4d03a6 = "{ $address }" non è l’indirizzo di un server
+
+# The server has no services to describe
+tfa5b7ad8 = Il server non ha servizi da descrivere
+
+# The server sent no files for its services
+tdca19bdc = Il server non ha inviato file per i suoi servizi
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = Il server ha risposto { $status }: forse non offre la reflection gRPC
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = Il server ha risposto { $code }: forse non offre la reflection gRPC. { $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = Il server non ha risposto nulla: forse non offre la reflection gRPC
 
 # Block
 tbd074002 = Blocca

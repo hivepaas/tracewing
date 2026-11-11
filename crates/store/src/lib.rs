@@ -10,6 +10,7 @@ pub mod har;
 pub mod import;
 pub mod protobuf;
 pub mod protojson;
+pub mod reflection;
 pub mod saz;
 pub mod schema;
 pub mod search;

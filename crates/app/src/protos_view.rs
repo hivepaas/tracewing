@@ -88,6 +88,55 @@ impl Traffic {
         cx.notify();
     }
 
+    /// Asks the server whose address is written for its files by gRPC
+    /// reflection, keeps them, and reads them with the rest.
+    pub fn fetch_protos(&mut self, cx: &mut Context<Self>) {
+        let Some(input) = &self.protos_server else {
+            return;
+        };
+        if self.protos_fetching {
+            return;
+        }
+        let address = input.read(cx).text().to_owned();
+        self.protos_fetching = true;
+        self.protos_fetched = None;
+        let protos = Arc::clone(&self.protos);
+        let (proxy, ca) = (self.engine.addr, self.data_dir.join("ca.pem"));
+        let dir = self.data_dir.join("reflection");
+        cx.spawn(async move |this, cx| {
+            let done = cx
+                .background_spawn(async move {
+                    let fetched = crate::reflection::fetch(&address, proxy, &ca, &dir)
+                        .map_err(|e| format!("{e:#}"))?;
+                    let schema = protos
+                        .add([fetched.path.clone()])
+                        .map_err(|e| tr!("The list was not saved: {e}", e = e.to_string()))?;
+                    Ok::<_, String>((fetched, schema))
+                })
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                this.protos_fetching = false;
+                this.protos_fetched = Some(match done {
+                    Ok((fetched, schema)) => {
+                        this.protos_read = Some(schema);
+                        this.load_body(cx);
+                        Ok(tr_n!(
+                            fetched.services.len(),
+                            "{count} service: {names}",
+                            "{count} services: {names}",
+                            count = fetched.services.len(),
+                            names = fetched.services.join(", ")
+                        ))
+                    }
+                    Err(problem) => Err(problem),
+                });
+                cx.notify();
+            });
+        })
+        .detach();
+        cx.notify();
+    }
+
     /// Asks for folders, or for files, to add.
     pub fn ask_for_protos(&mut self, folders: bool, cx: &mut Context<Self>) {
         let chosen = cx.prompt_for_paths(PathPromptOptions {
@@ -113,6 +162,17 @@ impl Traffic {
             self.read_protos(cx);
         }
         let read = self.protos_read.clone();
+        let server = self
+            .protos_server
+            .get_or_insert_with(|| {
+                cx.new(|cx| {
+                    TextInput::said(
+                        || tr!("https://api.example.com or http://localhost:50051"),
+                        cx,
+                    )
+                })
+            })
+            .clone();
         let button = |id: &'static str, label: String| {
             div()
                 .id(id)
@@ -230,6 +290,8 @@ impl Traffic {
                 )
         });
         let busy = self.protos_busy;
+        let fetching = self.protos_fetching;
+        let fetched = self.protos_fetched.clone();
         div()
             .flex()
             .flex_col()
@@ -285,6 +347,59 @@ impl Traffic {
                         )
                     }),
             )
+            .child(
+                div()
+                    .px(px(6.))
+                    .pt(px(4.))
+                    .text_size(px(12.))
+                    .text_color(rgb(c.muted))
+                    .child(tr!("Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.")),
+            )
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap(px(8.))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .h(px(32.))
+                            .px(px(12.))
+                            .rounded(px(16.))
+                            .flex()
+                            .items_center()
+                            .bg(rgb(c.input))
+                            .font_family(crate::MONO_FONT)
+                            .font_features(gpui::FontFeatures::disable_ligatures())
+                            .text_size(px(12.))
+                            .on_key_down(cx.listener(|this, ev: &gpui::KeyDownEvent, _, cx| {
+                                if ev.keystroke.key == "enter" {
+                                    this.fetch_protos(cx);
+                                    cx.stop_propagation();
+                                }
+                            }))
+                            .child(server),
+                    )
+                    .child(if fetching {
+                        button("protos-fetch", tr!("Asking…"))
+                    } else {
+                        button("protos-fetch", tr!("Fetch"))
+                            .on_click(cx.listener(|this, _, _, cx| this.fetch_protos(cx)))
+                    }),
+            )
+            .children(fetched.map(|fetched| {
+                let (text, color) = match fetched {
+                    Ok(text) => (text, c.ok),
+                    Err(text) => (text, c.error),
+                };
+                div()
+                    .px(px(6.))
+                    .text_size(px(12.))
+                    .text_color(rgb(color))
+                    .child(text)
+            }))
     }
 
     /// The host, path and side of the body shown, if it is Protobuf that
