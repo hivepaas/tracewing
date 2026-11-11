@@ -745,6 +745,8 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         assert_eq!(version, VERSION);
+        // Windows will not remove a file still open.
+        drop(flows);
         fs::remove_dir_all(&sessions).unwrap();
     }
 
