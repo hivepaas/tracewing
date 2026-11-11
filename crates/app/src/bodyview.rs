@@ -28,7 +28,9 @@ use tracewing_i18n::{tr, tr_n};
 pub const LINE_HEIGHT: f32 = 20.;
 const GUTTER_W: f32 = 52.;
 /// Where an object or an array is folded and unfolded, after the number.
-const FOLD_W: f32 = 16.;
+const FOLD_W: f32 = 20.;
+/// The fold's arrow: twice the text, which made it too small to aim at.
+const FOLD_TEXT: f32 = 24.;
 const INDENT_W: f32 = 14.;
 /// Past this the indent says what it is instead of pushing the text away.
 const INDENT_MAX: u32 = 40;
@@ -673,9 +675,13 @@ impl BodyView {
                 let toggle = div()
                     .id(("fold", line))
                     .w(px(FOLD_W))
+                    .h(px(LINE_HEIGHT))
                     .flex_shrink_0()
                     .flex()
+                    .items_center()
                     .justify_center()
+                    .text_size(px(FOLD_TEXT))
+                    .line_height(px(LINE_HEIGHT))
                     .text_color(rgb(colors().faint));
                 match &mark {
                     FoldMark::None => toggle,
