@@ -145,6 +145,9 @@ pub struct BodyView {
     body: Arc<Body>,
     /// The body read again as it was sent, once it is asked for.
     raw: Option<Arc<Body>>,
+    /// The bytes as they came, when what is shown was made from them, as
+    /// JSON is from MessagePack. Its dump is what Hex shows.
+    original: Option<Arc<Body>>,
     syntax: Syntax,
     /// The row at the top of the view, and how far it has scrolled out of it.
     top: u64,
@@ -182,6 +185,7 @@ impl BodyView {
         Self {
             body,
             raw: None,
+            original: None,
             syntax,
             top: 0,
             place: Place::default(),
@@ -464,9 +468,34 @@ impl BodyView {
 
     /// The body as read for the mode: as sent, or as it was told to be.
     fn shown(&self) -> &Arc<Body> {
-        match (&self.raw, self.mode) {
-            (Some(raw), BodyMode::Raw) => raw,
+        match (self.mode, &self.raw, &self.original) {
+            (BodyMode::Raw, Some(raw), _) => raw,
+            (BodyMode::Hex, _, Some(original)) => original,
             _ => &self.body,
+        }
+    }
+
+    /// Shows JSON made from `original`, whose bytes Hex shows. Bytes as
+    /// text would say nothing, so there is no Raw.
+    pub fn set_original(&mut self, original: Arc<Body>, cx: &mut Context<Self>) {
+        watch_scan(Arc::clone(&original), cx);
+        self.original = Some(original);
+        self.mode = self.fit(self.mode);
+        cx.notify();
+    }
+
+    /// Whether the body can be shown as sent, as text.
+    pub fn has_raw(&self) -> bool {
+        self.original.is_none()
+    }
+
+    /// `mode`, or the nearest this body has.
+    fn fit(&self, mode: BodyMode) -> BodyMode {
+        match mode {
+            BodyMode::Raw if !self.has_raw() => BodyMode::Pretty,
+            // Made from bytes, what is shown is never as sent, laid out or not.
+            BodyMode::Pretty if !self.has_pretty() && self.has_raw() => BodyMode::Raw,
+            mode => mode,
         }
     }
 
@@ -490,19 +519,13 @@ impl BodyView {
 
     /// The mode in use. Text that cannot be laid out is as sent.
     pub fn mode(&self) -> BodyMode {
-        match self.mode {
-            BodyMode::Pretty if !self.has_pretty() => BodyMode::Raw,
-            mode => mode,
-        }
+        self.fit(self.mode)
     }
 
     /// Shows the body laid out, as sent, or as a dump of its bytes. Folds,
     /// what is selected and the place in it belong to the other, so they go.
     pub fn set_mode(&mut self, mode: BodyMode, cx: &mut Context<Self>) {
-        let mode = match mode {
-            BodyMode::Pretty if !self.has_pretty() => BodyMode::Raw,
-            mode => mode,
-        };
+        let mode = self.fit(mode);
         if self.mode() == mode {
             return;
         }

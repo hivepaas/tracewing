@@ -315,6 +315,25 @@ pub fn body_file(
     Some((path, size))
 }
 
+/// A MessagePack or CBOR body beside its file as JSON, to be shown as JSON
+/// is. `None` for any other body, one too large to hold, or one that cannot
+/// be read.
+pub fn json_file(
+    path: &std::path::Path,
+    size: u64,
+    content_type: Option<&str>,
+) -> Option<std::path::PathBuf> {
+    use tracewing_store::binjson;
+    let format = binjson::format_of(content_type)?;
+    if size > binjson::DECODE_MAX {
+        return None;
+    }
+    let json = binjson::to_json(&std::fs::read(path).ok()?, format)?;
+    let out = path.with_extension("json");
+    std::fs::write(&out, json).ok()?;
+    Some(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
