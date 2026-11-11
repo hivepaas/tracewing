@@ -38,7 +38,7 @@ rmpv = "1"
 ciborium = "0.2"
 miette = { version = "7", default-features = false }
 prost = "0.14"
-prost-reflect = "0.16"
+prost-reflect = { version = "0.16", features = ["serde"] }
 prost-types = "0.14"
 protox = { version = "0.10", default-features = false }
 toml = "0.9"

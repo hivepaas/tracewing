@@ -70,6 +70,9 @@ t550b0a98 = Belum ada flow yang dipilih
 # This flow: {e}
 t296762f8 = Flow ini: { $e }
 
+# The body is not a {message}: {e}
+t3220a10a = Body bukan { $message }: { $e }
+
 # Request
 t82454152 = Permintaan
 
@@ -78,6 +81,9 @@ t334f5989 = Header
 
 # Body
 t428a1095 = Body
+
+# Protobuf {message}, written as JSON: it is sent as Protobuf.
+t83b6cd6e = Protobuf { $message }, ditulis sebagai JSON: dikirim sebagai Protobuf.
 
 # Sending…
 te946e7bf = Mengirim…
@@ -93,6 +99,9 @@ tf43ea06c = … { $count } byte lagi: flow di Lalu Lintas memuat semuanya.
 
 # Response
 t55a982fe = Respons
+
+# Body · {message}
+taa3cc3ff = Body · { $message }
 
 # Compose
 t18049f93 = Susun

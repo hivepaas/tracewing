@@ -70,6 +70,9 @@ t550b0a98 = フローが選択されていません
 # This flow: {e}
 t296762f8 = このフロー: { $e }
 
+# The body is not a {message}: {e}
+t3220a10a = 本文が { $message } ではありません: { $e }
+
 # Request
 t82454152 = リクエスト
 
@@ -78,6 +81,9 @@ t334f5989 = ヘッダー
 
 # Body
 t428a1095 = ボディ
+
+# Protobuf {message}, written as JSON: it is sent as Protobuf.
+t83b6cd6e = Protobuf { $message } を JSON で書きます。送信時は Protobuf になります。
 
 # Sending…
 te946e7bf = 送信中…
@@ -93,6 +99,9 @@ tf43ea06c = … 残り { $count } バイト: トラフィックのフローに�
 
 # Response
 t55a982fe = レスポンス
+
+# Body · {message}
+taa3cc3ff = 本文 · { $message }
 
 # Compose
 t18049f93 = 作成

@@ -81,6 +81,9 @@ t550b0a98 = Aucun flow sélectionné
 # This flow: {e}
 t296762f8 = Ce flow : { $e }
 
+# The body is not a {message}: {e}
+t3220a10a = Le corps n’est pas un { $message } : { $e }
+
 # Request
 t82454152 = Requête
 
@@ -89,6 +92,9 @@ t334f5989 = En-têtes
 
 # Body
 t428a1095 = Corps
+
+# Protobuf {message}, written as JSON: it is sent as Protobuf.
+t83b6cd6e = Protobuf { $message }, écrit en JSON : il est envoyé en Protobuf.
 
 # Sending…
 te946e7bf = Envoi…
@@ -104,6 +110,9 @@ tf43ea06c = … { $count } octets de plus : le flow dans Trafic les contient tou
 
 # Response
 t55a982fe = Réponse
+
+# Body · {message}
+taa3cc3ff = Corps · { $message }
 
 # Compose
 t18049f93 = Composer

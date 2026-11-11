@@ -70,6 +70,9 @@ t550b0a98 = 未選取流量紀錄
 # This flow: {e}
 t296762f8 = 此流量紀錄：{ $e }
 
+# The body is not a {message}: {e}
+t3220a10a = 本文不是 { $message }：{ $e }
+
 # Request
 t82454152 = 請求
 
@@ -78,6 +81,9 @@ t334f5989 = 標頭
 
 # Body
 t428a1095 = 本文
+
+# Protobuf {message}, written as JSON: it is sent as Protobuf.
+t83b6cd6e = Protobuf { $message }，以 JSON 撰寫：傳送時為 Protobuf。
 
 # Sending…
 te946e7bf = 正在傳送…
@@ -93,6 +99,9 @@ tf43ea06c = … 還有 { $count } 位元組：「流量」中的該筆流量紀�
 
 # Response
 t55a982fe = 回應
+
+# Body · {message}
+taa3cc3ff = 本文 · { $message }
 
 # Compose
 t18049f93 = 撰寫

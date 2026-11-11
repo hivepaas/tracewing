@@ -70,6 +70,9 @@ t550b0a98 = Chưa chọn flow nào
 # This flow: {e}
 t296762f8 = Flow này: { $e }
 
+# The body is not a {message}: {e}
+t3220a10a = Body không phải một { $message }: { $e }
+
 # Request
 t82454152 = Yêu cầu
 
@@ -78,6 +81,9 @@ t334f5989 = Header
 
 # Body
 t428a1095 = Body
+
+# Protobuf {message}, written as JSON: it is sent as Protobuf.
+t83b6cd6e = Protobuf { $message }, viết dưới dạng JSON: khi gửi sẽ là Protobuf.
 
 # Sending…
 te946e7bf = Đang gửi…
@@ -93,6 +99,9 @@ tf43ea06c = … còn { $count } byte nữa: flow trong Traffic có đầy đủ.
 
 # Response
 t55a982fe = Phản hồi
+
+# Body · {message}
+taa3cc3ff = Body · { $message }
 
 # Compose
 t18049f93 = Soạn request

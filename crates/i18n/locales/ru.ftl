@@ -85,6 +85,9 @@ t550b0a98 = Поток не выбран
 # This flow: {e}
 t296762f8 = Этот поток: { $e }
 
+# The body is not a {message}: {e}
+t3220a10a = Тело не является { $message }: { $e }
+
 # Request
 t82454152 = Запрос
 
@@ -93,6 +96,9 @@ t334f5989 = Заголовки
 
 # Body
 t428a1095 = Тело
+
+# Protobuf {message}, written as JSON: it is sent as Protobuf.
+t83b6cd6e = Protobuf { $message }, записанный как JSON: отправляется как Protobuf.
 
 # Sending…
 te946e7bf = Отправка…
@@ -108,6 +114,9 @@ tf43ea06c = … ещё { $count } байт: в потоке в разделе Т
 
 # Response
 t55a982fe = Ответ
+
+# Body · {message}
+taa3cc3ff = Тело · { $message }
 
 # Compose
 t18049f93 = Конструктор

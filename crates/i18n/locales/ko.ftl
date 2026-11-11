@@ -70,6 +70,9 @@ t550b0a98 = 선택한 플로우가 없습니다
 # This flow: {e}
 t296762f8 = 이 플로우: { $e }
 
+# The body is not a {message}: {e}
+t3220a10a = 본문이 { $message }이(가) 아닙니다: { $e }
+
 # Request
 t82454152 = 요청
 
@@ -78,6 +81,9 @@ t334f5989 = 헤더
 
 # Body
 t428a1095 = 본문
+
+# Protobuf {message}, written as JSON: it is sent as Protobuf.
+t83b6cd6e = Protobuf { $message }을(를) JSON으로 씁니다. 보낼 때는 Protobuf로 갑니다.
 
 # Sending…
 te946e7bf = 보내는 중…
@@ -93,6 +99,9 @@ tf43ea06c = … { $count }바이트 더 있음: 트래픽의 플로우에 전부
 
 # Response
 t55a982fe = 응답
+
+# Body · {message}
+taa3cc3ff = 본문 · { $message }
 
 # Compose
 t18049f93 = 작성

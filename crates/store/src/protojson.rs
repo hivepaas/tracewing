@@ -240,6 +240,127 @@ fn write_any(message: &DynamicMessage, out: &mut String) {
     }
 }
 
+/// What an editor shows of a body to change and send again: Protobuf's own
+/// JSON, laid out, with nothing left out that is needed to make the same
+/// bytes again (bytes are base64, not cut). gRPC's messages, one a frame,
+/// are a list when there are more than one. `None` if it does not fit.
+pub fn to_editable(
+    data: &[u8],
+    format: crate::binjson::Format,
+    schema: &MessageDescriptor,
+) -> Option<String> {
+    let messages = messages_in(data, format)?;
+    let mut texts = Vec::with_capacity(messages.len());
+    for message in messages {
+        let message = DynamicMessage::decode(schema.clone(), &message[..]).ok()?;
+        texts.push(editable(&message)?);
+    }
+    match texts.len() {
+        0 => None,
+        1 => texts.pop(),
+        _ => Some(format!(
+            "[\n{}\n]",
+            texts
+                .iter()
+                .map(|text| indent(text))
+                .collect::<Vec<_>>()
+                .join(",\n")
+        )),
+    }
+}
+
+/// The bytes to send for JSON written as [`to_editable`] writes it: one
+/// message, or for gRPC a list of them, each in its frame.
+pub fn from_editable(
+    text: &str,
+    format: crate::binjson::Format,
+    schema: &MessageDescriptor,
+) -> Result<Vec<u8>, String> {
+    use crate::binjson::Format;
+    use prost::Message;
+    let value: serde_json::Value = serde_json::from_str(text).map_err(|e| e.to_string())?;
+    let items = match value {
+        serde_json::Value::Array(items) if format != Format::Protobuf => items,
+        other => vec![other],
+    };
+    let mut out = Vec::new();
+    for (i, item) in items.into_iter().enumerate() {
+        let message = DynamicMessage::deserialize(schema.clone(), item).map_err(|e| {
+            if i == 0 {
+                e.to_string()
+            } else {
+                format!("message {}: {e}", i + 1)
+            }
+        })?;
+        let bytes = message.encode_to_vec();
+        if format == Format::Protobuf {
+            out = bytes;
+        } else {
+            out.push(0);
+            out.extend_from_slice(&(bytes.len() as u32).to_be_bytes());
+            out.extend_from_slice(&bytes);
+        }
+    }
+    if format == Format::GrpcWebText {
+        use base64::Engine;
+        out = base64::engine::general_purpose::STANDARD
+            .encode(&out)
+            .into_bytes();
+    }
+    Ok(out)
+}
+
+/// The messages a body holds: itself, or gRPC's frames of them, unpacked.
+fn messages_in(data: &[u8], format: crate::binjson::Format) -> Option<Vec<Vec<u8>>> {
+    use crate::binjson::Format;
+    use crate::protobuf::{frame, from_base64, unpack};
+    let decoded;
+    let mut rest = match format {
+        Format::Protobuf => return Some(vec![data.to_vec()]),
+        Format::Grpc | Format::GrpcWeb => data,
+        Format::GrpcWebText => {
+            decoded = from_base64(data)?;
+            &decoded[..]
+        }
+        Format::MessagePack | Format::Cbor => return None,
+    };
+    let mut messages = Vec::new();
+    while !rest.is_empty() {
+        let (flags, payload, after) = frame(rest)?;
+        if flags & 0x80 == 0 {
+            messages.push(if flags & 1 != 0 {
+                unpack(payload)?
+            } else {
+                payload.to_vec()
+            });
+        }
+        rest = after;
+    }
+    Some(messages)
+}
+
+fn editable(message: &DynamicMessage) -> Option<String> {
+    use prost_reflect::SerializeOptions;
+    let options = SerializeOptions::new()
+        .use_proto_field_name(true)
+        .stringify_64_bit_integers(false)
+        .skip_default_fields(true);
+    let mut out = Vec::new();
+    let formatter = serde_json::ser::PrettyFormatter::with_indent(b"  ");
+    let mut serializer = serde_json::Serializer::with_formatter(&mut out, formatter);
+    message
+        .serialize_with_options(&mut serializer, &options)
+        .ok()?;
+    String::from_utf8(out).ok()
+}
+
+fn indent(text: &str) -> String {
+    text.lines()
+        .map(|line| format!("  {line}"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,6 +497,44 @@ message Order {
                     "change":-3,"rate":0.1,"$unknown":{"100":7}}"#
             )
         );
+    }
+
+    #[test]
+    fn an_edit_comes_back_as_the_same_bytes() {
+        use crate::binjson::Format;
+        use prost::Message;
+        let pool = pool();
+        let order = pool.get_message_by_name("t.Order").unwrap();
+        let mut message = DynamicMessage::new(order.clone());
+        message.set_field_by_name("id", Value::U64(42));
+        message.set_field_by_name("sig", Value::Bytes(vec![7u8; 40].into()));
+        message.set_field_by_name("state", Value::EnumNumber(1));
+        let bytes = message.encode_to_vec();
+
+        let text = to_editable(&bytes, Format::Protobuf, &order).unwrap();
+        assert!(text.starts_with("{\n  \"id\": 42,"), "{text}");
+        assert!(text.contains("\"state\": \"PAID\""), "{text}");
+        assert_eq!(
+            from_editable(&text, Format::Protobuf, &order).unwrap(),
+            bytes
+        );
+
+        // gRPC: a frame each, and a list for more than one.
+        let framed = |b: &[u8]| [&[0u8][..], &(b.len() as u32).to_be_bytes(), b].concat();
+        let two = [framed(&bytes), framed(&bytes)].concat();
+        let text = to_editable(&two, Format::Grpc, &order).unwrap();
+        assert!(text.starts_with("[\n  {"), "{text}");
+        assert_eq!(from_editable(&text, Format::Grpc, &order).unwrap(), two);
+        let one = to_editable(&framed(&bytes), Format::GrpcWebText, &order);
+        assert_eq!(one, None, "grpc-web-text is base64");
+
+        let edited = r#"{"id": "43", "customer": "Bà Tư"}"#;
+        let sent = from_editable(edited, Format::Protobuf, &order).unwrap();
+        let back = DynamicMessage::decode(order.clone(), &sent[..]).unwrap();
+        assert_eq!(back.get_field_by_name("id").unwrap().as_u64(), Some(43));
+        let problem = from_editable(r#"{"nope": 1}"#, Format::Protobuf, &order).unwrap_err();
+        assert!(problem.contains("nope"), "{problem}");
+        assert!(from_editable("{", Format::Protobuf, &order).is_err());
     }
 
     #[test]

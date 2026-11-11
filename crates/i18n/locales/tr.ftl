@@ -79,6 +79,9 @@ t550b0a98 = Seçili akış yok
 # This flow: {e}
 t296762f8 = Bu akış: { $e }
 
+# The body is not a {message}: {e}
+t3220a10a = Gövde bir { $message } değil: { $e }
+
 # Request
 t82454152 = İstek
 
@@ -87,6 +90,9 @@ t334f5989 = Başlıklar
 
 # Body
 t428a1095 = Gövde
+
+# Protobuf {message}, written as JSON: it is sent as Protobuf.
+t83b6cd6e = Protobuf { $message }, JSON olarak yazılır: Protobuf olarak gönderilir.
 
 # Sending…
 te946e7bf = Gönderiliyor…
@@ -102,6 +108,9 @@ tf43ea06c = … { $count } bayt daha: Trafik'teki akışta hepsi var.
 
 # Response
 t55a982fe = Yanıt
+
+# Body · {message}
+taa3cc3ff = Gövde · { $message }
 
 # Compose
 t18049f93 = Oluştur

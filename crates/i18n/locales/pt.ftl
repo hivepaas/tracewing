@@ -81,6 +81,9 @@ t550b0a98 = Nenhum fluxo escolhido
 # This flow: {e}
 t296762f8 = Este fluxo: { $e }
 
+# The body is not a {message}: {e}
+t3220a10a = O corpo não é um { $message }: { $e }
+
 # Request
 t82454152 = Requisição
 
@@ -89,6 +92,9 @@ t334f5989 = Cabeçalhos
 
 # Body
 t428a1095 = Corpo
+
+# Protobuf {message}, written as JSON: it is sent as Protobuf.
+t83b6cd6e = Protobuf { $message }, escrito como JSON: é enviado como Protobuf.
 
 # Sending…
 te946e7bf = Enviando…
@@ -104,6 +110,9 @@ tf43ea06c = … mais { $count } bytes: o fluxo em Tráfego tem todos.
 
 # Response
 t55a982fe = Resposta
+
+# Body · {message}
+taa3cc3ff = Corpo · { $message }
 
 # Compose
 t18049f93 = Compor
