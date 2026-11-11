@@ -964,8 +964,8 @@ t9e7d8362 = Інші пристрої
 # Let other devices use the proxy
 t13e626b3 = Дозволити іншим пристроям використовувати проксі
 
-# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-t2e14229d = Тоді телефони й інші комп’ютери у вашій мережі зможуть надсилати сюди свій трафік. Як і будь-хто інший у цій мережі, тому не вмикайте це в мережі, якій ви не довіряєте. Набуває чинності після перезапуску tracewing.
+# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
+t76098911 = Тоді телефони й інші комп’ютери у вашій мережі зможуть надсилати сюди свій трафік. Як і будь-хто інший у цій мережі, тому не вмикайте це в мережі, якій ви не довіряєте.
 
 # Servers
 tcd0cf113 = Сервери
@@ -1132,8 +1132,8 @@ t82bd2456 = { $name } працює через tracewing і довіряє йом
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
 tfb6feb04 = { $name } працює через tracewing, але відкрив сторінку без HTTPS. Відкрийте її знову через https://.
 
-# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-t9f95b7b8 = Телефон або інший комп’ютер також може надсилати сюди свій трафік. Увімкніть «Дозволити іншим пристроям використовувати проксі» в Налаштуваннях, а потім перезапустіть tracewing.
+# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings.
+tc18aec73 = Телефон або інший комп’ютер також може надсилати сюди свій трафік. Увімкніть «Дозволити іншим пристроям використовувати проксі» в Налаштуваннях.
 
 # this computer's address, port {port}
 t2188b3f4 = адреса цього комп’ютера, порт { $port }
@@ -1365,6 +1365,9 @@ t2e3c591c = Телефони та інші пристрої
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = Телефон, планшет або інший комп’ютер у цій мережі може працювати через tracewing за адресою { $proxy }. Код відкриває сторінку з його сертифікатом. Потоки пристрою показують його адресу, їх можна фільтрувати за допомогою device:, а сам пристрій можна назвати з будь-якого з них на вкладці «З’єднання».
+
+# Other devices cannot reach tracewing at one of this computer's addresses: {problem}
+t77fb5f02 = Інші пристрої не можуть під’єднатися до tracewing за однією з адрес цього комп’ютера: { $problem }
 
 # {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
 t864ac93f =

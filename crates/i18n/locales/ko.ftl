@@ -916,8 +916,8 @@ t9e7d8362 = 다른 기기
 # Let other devices use the proxy
 t13e626b3 = 다른 기기에서 프록시 사용 허용
 
-# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-t2e14229d = 네트워크에 있는 휴대폰과 다른 컴퓨터가 트래픽을 여기로 보낼 수 있게 됩니다. 같은 네트워크의 다른 사람도 마찬가지이므로, 신뢰할 수 없는 네트워크에서는 꺼 두세요. tracewing을 다시 시작하면 적용됩니다.
+# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
+t76098911 = 네트워크에 있는 휴대폰과 다른 컴퓨터가 트래픽을 여기로 보낼 수 있게 됩니다. 같은 네트워크의 다른 사람도 마찬가지이므로, 신뢰할 수 없는 네트워크에서는 꺼 두세요.
 
 # Servers
 tcd0cf113 = 서버
@@ -1084,8 +1084,8 @@ t82bd2456 = { $name }에서 tracewing을 거쳐 연결되며 tracewing을 신뢰
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
 tfb6feb04 = { $name }에서 tracewing을 거쳐 연결되었지만 HTTPS 없이 페이지를 열었습니다. https://로 다시 여세요.
 
-# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-t9f95b7b8 = 휴대폰이나 다른 컴퓨터도 트래픽을 여기로 보낼 수 있습니다. 설정에서 “다른 기기에서 프록시 사용 허용”을 켠 다음 tracewing을 다시 시작하세요.
+# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings.
+tc18aec73 = 휴대폰이나 다른 컴퓨터도 트래픽을 여기로 보낼 수 있습니다. 설정에서 “다른 기기에서 프록시 사용 허용”을 켜세요.
 
 # this computer's address, port {port}
 t2188b3f4 = 이 컴퓨터의 주소, 포트 { $port }
@@ -1311,6 +1311,9 @@ t2e3c591c = 휴대폰 및 다른 기기
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = 이 네트워크의 휴대폰, 태블릿 또는 다른 컴퓨터는 { $proxy } 주소로 tracewing을 거칠 수 있습니다. 코드를 스캔하면 인증서가 있는 페이지가 열립니다. 그 기기의 플로우에는 기기 주소가 표시되고, device:로 필터링할 수 있으며, 연결 탭에서 그 플로우 중 하나를 통해 이름을 지정할 수 있습니다.
+
+# Other devices cannot reach tracewing at one of this computer's addresses: {problem}
+t77fb5f02 = 다른 기기가 이 컴퓨터의 주소 중 하나에서 tracewing에 연결할 수 없습니다: { $problem }
 
 # {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
 t864ac93f = 기기 { $n }대가 tracewing을 거쳤습니다({ $names }). 다 쓴 뒤에는 아래처럼 Wi-Fi 프록시를 끄세요. 켜 둔 채로 두면 tracewing을 닫은 뒤 이 네트워크에서 인터넷이 되지 않습니다.

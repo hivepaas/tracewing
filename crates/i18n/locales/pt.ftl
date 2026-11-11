@@ -935,8 +935,8 @@ t9e7d8362 = Outros dispositivos
 # Let other devices use the proxy
 t13e626b3 = Permitir que outros dispositivos usem o proxy
 
-# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-t2e14229d = Celulares e outros computadores na sua rede poderão então enviar o tráfego deles para cá. Qualquer outra pessoa nela também: deixe isto desligado em uma rede em que você não confia. Vale quando o tracewing for reiniciado.
+# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
+t76098911 = Celulares e outros computadores na sua rede poderão então enviar o tráfego deles para cá. Qualquer outra pessoa nela também: deixe isto desligado em uma rede em que você não confia.
 
 # Servers
 tcd0cf113 = Servidores
@@ -1103,8 +1103,8 @@ t82bd2456 = { $name } passa pelo tracewing e confia nele.
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
 tfb6feb04 = { $name } passa pelo tracewing, mas abriu a página sem HTTPS. Abra de novo por https://.
 
-# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-t9f95b7b8 = Um celular ou outro computador também pode enviar o tráfego dele para cá. Ative “Permitir que outros dispositivos usem o proxy” em Configurações e reinicie o tracewing.
+# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings.
+tc18aec73 = Um celular ou outro computador também pode enviar o tráfego dele para cá. Ative “Permitir que outros dispositivos usem o proxy” em Configurações.
 
 # this computer's address, port {port}
 t2188b3f4 = o endereço deste computador, porta { $port }
@@ -1335,6 +1335,9 @@ t2e3c591c = Celulares e outros dispositivos
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = Um celular, um tablet ou outro computador nesta rede pode passar pelo tracewing em { $proxy }. O código abre a página com o certificado. Os fluxos dele mostram o endereço dele, podem ser filtrados com device: e podem receber um nome a partir de um deles, em Conexão.
+
+# Other devices cannot reach tracewing at one of this computer's addresses: {problem}
+t77fb5f02 = Outros dispositivos não conseguem chegar ao tracewing em um dos endereços deste computador: { $problem }
 
 # {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
 t864ac93f =

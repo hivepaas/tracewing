@@ -916,8 +916,8 @@ t9e7d8362 = 他のデバイス
 # Let other devices use the proxy
 t13e626b3 = 他のデバイスにプロキシの使用を許可
 
-# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-t2e14229d = ネットワーク上のスマートフォンや他のコンピュータから、トラフィックをここに送れるようになります。同じネットワーク上の誰でも送れるため、信頼できないネットワークではオフにしておいてください。tracewing の再起動後に有効になります。
+# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
+t76098911 = ネットワーク上のスマートフォンや他のコンピュータから、トラフィックをここに送れるようになります。同じネットワーク上の誰でも送れるため、信頼できないネットワークではオフにしておいてください。
 
 # Servers
 tcd0cf113 = サーバー
@@ -1084,8 +1084,8 @@ t82bd2456 = { $name } は tracewing を経由しており、tracewing を信頼�
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
 tfb6feb04 = { $name } は tracewing を経由していますが、HTTPS を使わずにページを開きました。https:// でもう一度開いてください。
 
-# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-t9f95b7b8 = スマートフォンや別のコンピュータからも、トラフィックをここに送れます。設定で「他のデバイスにプロキシの使用を許可」をオンにして、tracewing を再起動してください。
+# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings.
+tc18aec73 = スマートフォンや別のコンピュータからも、トラフィックをここに送れます。設定で「他のデバイスにプロキシの使用を許可」をオンにしてください。
 
 # this computer's address, port {port}
 t2188b3f4 = このコンピュータのアドレス、ポート { $port }
@@ -1311,6 +1311,9 @@ t2e3c591c = スマートフォンと他のデバイス
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = このネットワーク上のスマートフォン、タブレット、別のコンピュータは、{ $proxy } で tracewing を経由できます。コードを読み取ると、証明書のページが開きます。そのデバイスのフローにはアドレスが表示され、device: で絞り込めます。デバイス名は、そのフローのいずれかの「接続」で付けられます。
+
+# Other devices cannot reach tracewing at one of this computer's addresses: {problem}
+t77fb5f02 = このコンピュータのアドレスの一つで、他のデバイスが tracewing に接続できません: { $problem }
 
 # {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
 t864ac93f = { $n } 台のデバイスが tracewing を通りました（{ $names }）。終わったら、下の手順でその Wi-Fi プロキシをオフにしてください。そのままにすると、tracewing を閉じたあと、このネットワークでインターネットが使えなくなります。

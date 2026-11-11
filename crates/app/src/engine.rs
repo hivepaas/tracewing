@@ -15,6 +15,7 @@ use tracewing_proxy::{
     ProxyOptions,
     ca_key::KeyStore,
     capture::Check,
+    lan::OtherDevices,
     pause::Pauses,
     rules::HostRules,
     run_proxy,
@@ -65,6 +66,8 @@ pub struct Engine {
     pub pauses: Arc<Pauses>,
     /// Why the proxy stopped, if it did by itself.
     pub failure: Arc<Mutex<Option<String>>>,
+    /// Whether other devices may use the proxy, and where it listens for them.
+    pub other_devices: Arc<OtherDevices>,
     stop: Option<oneshot::Sender<()>>,
     thread: Option<JoinHandle<()>>,
 }
@@ -74,7 +77,8 @@ impl Engine {
         let sessions = opts.data_dir.join("sessions");
         session::forget_old(&sessions, opts.settings.sessions_kept);
         let session = sessions.join(next_session_name(&sessions));
-        let (listener, addr) = bind(opts.ports, opts.settings.other_devices)?;
+        let (listener, addr) = bind(opts.ports)?;
+        let other_devices = Arc::new(OtherDevices::new(opts.settings.other_devices));
 
         let shared = Arc::new(Shared::default());
         let recording = Arc::new(AtomicBool::new(true));
@@ -109,6 +113,7 @@ impl Engine {
             leave_index: true,
             find_apps: opts.find_apps,
             stop_limit: std::time::Duration::from_secs(2),
+            other_devices: Some(Arc::clone(&other_devices)),
         };
         let thread = {
             let failure = Arc::clone(&failure);
@@ -144,6 +149,7 @@ impl Engine {
             leaf_spki,
             pauses,
             failure,
+            other_devices,
             stop: Some(stop),
             thread: Some(thread),
         })
@@ -155,6 +161,13 @@ impl Engine {
 
     pub fn set_recording(&self, on: bool) {
         self.recording.store(on, Ordering::Relaxed);
+    }
+
+    /// Lets other devices on the network use the proxy, or stops letting them,
+    /// at once.
+    pub fn set_other_devices(&mut self, on: bool) {
+        self.settings.other_devices = on;
+        self.other_devices.set(on);
     }
 
     pub fn failure(&self) -> Option<String> {
@@ -181,21 +194,12 @@ impl Drop for Engine {
     }
 }
 
-/// Listens on this machine only, or with `everywhere` on every network too. The
-/// address given back is this machine's own either way, which is what the app
-/// and the system proxy use.
-fn bind(
-    ports: std::ops::Range<u16>,
-    everywhere: bool,
-) -> Result<(std::net::TcpListener, SocketAddr)> {
-    let ip = if everywhere {
-        Ipv4Addr::UNSPECIFIED
-    } else {
-        Ipv4Addr::LOCALHOST
-    };
+/// Listens on this machine's own address, which is what the app and the system
+/// proxy use. Other devices get listeners of their own on the same port.
+fn bind(ports: std::ops::Range<u16>) -> Result<(std::net::TcpListener, SocketAddr)> {
     let mut last = None;
     for port in ports {
-        match std::net::TcpListener::bind((ip, port)) {
+        match std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, port)) {
             Ok(listener) => {
                 listener.set_nonblocking(true)?;
                 let port = listener.local_addr()?.port();
@@ -231,17 +235,16 @@ mod tests {
 
     #[test]
     fn a_taken_port_means_the_next_one() {
-        let (held, first) = bind(49_321..49_331, false).unwrap();
-        let (_, second) = bind(first.port()..first.port() + 10, false).unwrap();
+        let (held, first) = bind(49_321..49_331).unwrap();
+        let (_, second) = bind(first.port()..first.port() + 10).unwrap();
         assert_ne!(first.port(), second.port());
         drop(held);
     }
 
     #[test]
-    fn listening_everywhere_is_still_reached_here() {
-        let (listener, addr) = bind(49_331..49_341, true).unwrap();
-        assert!(listener.local_addr().unwrap().ip().is_unspecified());
-        assert!(addr.ip().is_loopback());
-        assert_eq!(addr.port(), listener.local_addr().unwrap().port());
+    fn it_listens_on_this_machine_only() {
+        let (listener, addr) = bind(49_331..49_341).unwrap();
+        assert!(listener.local_addr().unwrap().ip().is_loopback());
+        assert_eq!(addr, listener.local_addr().unwrap());
     }
 }

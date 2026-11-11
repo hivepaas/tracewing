@@ -4,6 +4,7 @@
 
 use rusqlite::Connection;
 use std::{
+    net::SocketAddr,
     path::PathBuf,
     sync::{
         Arc, RwLock,
@@ -17,6 +18,7 @@ use tracewing_dev::benchkit;
 use tracewing_proxy::{
     ProxyOptions, ProxySummary,
     capture::{CHECK_HOST, Check},
+    lan::{self, OtherDevices},
     pause::{Paused, Pauses, Stage, Verdict},
     rules::HostRules,
     run_proxy,
@@ -37,6 +39,7 @@ struct Harness {
     check: Arc<Check>,
     pauses: Arc<Pauses>,
     network: Arc<Network>,
+    other_devices: Arc<OtherDevices>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -95,6 +98,7 @@ impl Harness {
         let check = Arc::new(Check::default());
         let pauses = Arc::new(Pauses::default());
         let network = Arc::new(Network::default());
+        let other_devices = Arc::new(OtherDevices::new(false));
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -117,6 +121,7 @@ impl Harness {
                 leave_index: false,
                 find_apps: true,
                 stop_limit: Duration::from_secs(1),
+                other_devices: Some(Arc::clone(&other_devices)),
             },
             async {
                 let _ = stopped.await;
@@ -134,6 +139,7 @@ impl Harness {
             check,
             pauses,
             network,
+            other_devices,
             dir,
             proxy_url,
             origin: format!("https://localhost:{origin_port}"),
@@ -1128,6 +1134,89 @@ async fn the_proxy_itself_tells_a_device_how_to_set_up() {
 
     let (summary, conn, dir) = h.finish(0).await;
     assert_eq!(summary.written, 0);
+    clean_up(conn, dir);
+}
+
+/// Waits for the proxy to listen for other devices where it is asked to, or to
+/// stop.
+async fn wait_for_listening(devices: &OtherDevices, there: SocketAddr, listening: bool) {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while devices.listening().contains(&there) != listening {
+        assert!(
+            Instant::now() < deadline,
+            "listening at {:?}, problem {:?}",
+            devices.listening(),
+            devices.problem()
+        );
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+}
+
+/// Other devices are let in, and out again, while the proxy runs: a phone
+/// in the middle of something keeps its connection, and a new one is turned
+/// away.
+#[tokio::test(flavor = "multi_thread")]
+async fn other_devices_come_and_go_without_a_restart() {
+    let h = Harness::start("lan").await;
+    let Some(ip) = lan::addresses().first().copied() else {
+        eprintln!("this machine is on no network: nothing to test");
+        let (_, conn, dir) = h.finish(0).await;
+        clean_up(conn, dir);
+        return;
+    };
+    let port: u16 = h.proxy_url.rsplit_once(':').unwrap().1.parse().unwrap();
+    let there = SocketAddr::from((ip, port));
+    let reached = || async move {
+        tokio::time::timeout(
+            Duration::from_secs(3),
+            tokio::net::TcpStream::connect(there),
+        )
+        .await
+        .is_ok_and(|connected| connected.is_ok())
+    };
+    assert!(!reached().await, "off, nothing listens at {there}");
+
+    h.other_devices.set(true);
+    wait_for_listening(&h.other_devices, there, true).await;
+    let phone =
+        benchkit::client_through_proxy(&format!("http://{there}"), &h.dir.join("ca/ca.pem"), true)
+            .unwrap();
+    let res = phone
+        .get(format!("{}/json?size=10", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    res.bytes().await.unwrap();
+
+    h.other_devices.set(false);
+    wait_for_listening(&h.other_devices, there, false).await;
+    assert!(
+        !reached().await,
+        "off again, {there} turns new devices away"
+    );
+    // Its tunnel is still open, and the pool sends the next request down it.
+    let res = phone
+        .get(format!("{}/json?size=20", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    res.bytes().await.unwrap();
+
+    let (summary, conn, dir) = h.finish(2).await;
+    assert_eq!(summary.written, 2);
+    let from: Vec<String> = conn
+        .prepare("SELECT client FROM flows ORDER BY id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(from.len(), 2, "{from:?}");
+    for addr in &from {
+        assert!(addr.starts_with(&format!("{ip}:")), "{addr}");
+    }
     clean_up(conn, dir);
 }
 

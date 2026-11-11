@@ -935,8 +935,8 @@ t9e7d8362 = Autres appareils
 # Let other devices use the proxy
 t13e626b3 = Autoriser les autres appareils à utiliser le proxy
 
-# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust. Takes effect when tracewing starts again.
-t2e14229d = Les téléphones et autres ordinateurs de votre réseau peuvent alors envoyer leur trafic ici. Tout autre utilisateur du réseau aussi : laissez cette option désactivée sur un réseau auquel vous ne faites pas confiance. Prend effet au prochain démarrage de tracewing.
+# Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
+t76098911 = Les téléphones et autres ordinateurs de votre réseau peuvent alors envoyer leur trafic ici. Tout autre utilisateur du réseau aussi : laissez cette option désactivée sur un réseau auquel vous ne faites pas confiance.
 
 # Servers
 tcd0cf113 = Serveurs
@@ -1103,8 +1103,8 @@ t82bd2456 = { $name } passe par tracewing et lui fait confiance.
 # {name} goes through tracewing, but opened the page without HTTPS. Open it again over https://.
 tfb6feb04 = { $name } passe par tracewing, mais a ouvert la page sans HTTPS. Rouvrez-la via https://.
 
-# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings, then start tracewing again.
-t9f95b7b8 = Un téléphone ou un autre ordinateur peut aussi envoyer son trafic ici. Activez « Autoriser les autres appareils à utiliser le proxy » dans Paramètres, puis redémarrez tracewing.
+# A phone or another computer can send its traffic here too. Turn on “Let other devices use the proxy” in Settings.
+tc18aec73 = Un téléphone ou un autre ordinateur peut aussi envoyer son trafic ici. Activez « Autoriser les autres appareils à utiliser le proxy » dans Paramètres.
 
 # this computer's address, port {port}
 t2188b3f4 = l'adresse de cet ordinateur, port { $port }
@@ -1335,6 +1335,9 @@ t2e3c591c = Téléphones et autres appareils
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = Un téléphone, une tablette ou un autre ordinateur de ce réseau peut passer par tracewing à { $proxy }. Le code ouvre la page avec son certificat. Ses flows affichent son adresse, peuvent être filtrés avec device: et l'appareil peut être nommé depuis l'un d'eux, dans Connexion.
+
+# Other devices cannot reach tracewing at one of this computer's addresses: {problem}
+t77fb5f02 = Les autres appareils ne peuvent pas joindre tracewing à l’une des adresses de cet ordinateur : { $problem }
 
 # {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
 t864ac93f =
