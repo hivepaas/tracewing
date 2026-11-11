@@ -18,6 +18,9 @@ t0a4220dc =
        *[other] { $size } { $format } · { $count } satır JSON
     }
 
+# The first {count} rows are shown.
+t16aa1c6d = Yalnızca ilk { $count } satır gösteriliyor.
+
 # Unfold all
 t3849d44e = Tümünü aç
 
@@ -391,6 +394,9 @@ t3d35ce69 = İstek ve yanıt yan yana
 
 # Request above the response
 t83c63123 = İstek yanıtın üstünde
+
+# Table
+td70ceb7f = Tablo
 
 # Pretty
 t7e09470d = Düzenli

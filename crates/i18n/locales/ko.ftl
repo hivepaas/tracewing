@@ -10,6 +10,9 @@ ta8dc6eab = … { $size } 더 있음
 # {size} {format} · {count} line of JSON | {size} {format} · {count} lines of JSON
 t0a4220dc = { $size } { $format } · JSON { $count }줄
 
+# The first {count} rows are shown.
+t16aa1c6d = 처음 { $count }행만 표시합니다.
+
 # Unfold all
 t3849d44e = 모두 펼치기
 
@@ -363,6 +366,9 @@ t3d35ce69 = 요청과 응답을 나란히
 
 # Request above the response
 t83c63123 = 요청을 응답 위에
+
+# Table
+td70ceb7f = 표
 
 # Pretty
 t7e09470d = 정리됨

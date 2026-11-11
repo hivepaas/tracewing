@@ -20,6 +20,9 @@ t0a4220dc =
        *[other] { $size } { $format } · { $count } linhas de JSON
     }
 
+# The first {count} rows are shown.
+t16aa1c6d = Só as primeiras { $count } linhas são mostradas.
+
 # Unfold all
 t3849d44e = Expandir tudo
 
@@ -397,6 +400,9 @@ t3d35ce69 = Requisição e resposta lado a lado
 
 # Request above the response
 t83c63123 = Requisição acima da resposta
+
+# Table
+td70ceb7f = Tabela
 
 # Pretty
 t7e09470d = Formatado

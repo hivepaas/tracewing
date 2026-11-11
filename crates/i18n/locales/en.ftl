@@ -12,6 +12,7 @@ t0a4220dc =
         [one] { $size } { $format } · { $count } line of JSON
        *[other] { $size } { $format } · { $count } lines of JSON
     }
+t16aa1c6d = The first { $count } rows are shown.
 t3849d44e = Unfold all
 t51332550 =
     { $n ->
@@ -158,6 +159,7 @@ t04e060e6 = Request and response
 t70397119 = Request and response one at a time
 t3d35ce69 = Request and response side by side
 t83c63123 = Request above the response
+td70ceb7f = Table
 t7e09470d = Pretty
 ta689aa91 = Raw
 te97ed633 = Picture · { $size }
