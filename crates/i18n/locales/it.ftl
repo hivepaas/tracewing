@@ -1559,14 +1559,17 @@ t53d91aad = App
 # Devices
 t27acf320 = Dispositivi
 
-# Hosts
-tcf9aefb4 = Host
-
 # All hosts
 tfc7bfe37 = Tutti gli host
 
+# No host has this in its name
+t838c1d44 = Nessun host lo contiene nel nome
+
 # Hidden
 t3c2dfe59 = Nascosti
+
+# Hosts
+tcf9aefb4 = Host
 
 # Newest
 t324b6d0b = Più recenti

@@ -1555,14 +1555,17 @@ t53d91aad = Uygulamalar
 # Devices
 t27acf320 = Cihazlar
 
-# Hosts
-tcf9aefb4 = Host'lar
-
 # All hosts
 tfc7bfe37 = Tüm host'lar
 
+# No host has this in its name
+t838c1d44 = Adında bu geçen bir host yok
+
 # Hidden
 t3c2dfe59 = Gizli
+
+# Hosts
+tcf9aefb4 = Host'lar
 
 # Newest
 t324b6d0b = En yeni

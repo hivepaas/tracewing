@@ -83,6 +83,18 @@ impl HostMarks {
     }
 }
 
+/// The hosts whose name has `text` in it, ignoring case. No text keeps all.
+pub fn matching(lines: Vec<HostLine>, text: &str) -> Vec<HostLine> {
+    let text = text.trim().to_lowercase();
+    if text.is_empty() {
+        return lines;
+    }
+    lines
+        .into_iter()
+        .filter(|line| line.host.to_lowercase().contains(&text))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,5 +157,28 @@ mod tests {
             toml::from_str::<HostMarks>("").unwrap(),
             HostMarks::default()
         );
+    }
+
+    #[test]
+    fn the_filter_finds_any_part_of_a_name() {
+        let line = |host: &str| HostLine {
+            host: host.to_owned().into(),
+            count: 1,
+            pinned: false,
+        };
+        let lines = vec![
+            line("api.example.com"),
+            line("cdn.Example.net"),
+            line("other.dev"),
+        ];
+        let names = |lines: Vec<HostLine>| -> Vec<String> {
+            lines.into_iter().map(|l| l.host.to_string()).collect()
+        };
+        assert_eq!(
+            names(matching(lines.clone(), " EXAMPLE ")),
+            ["api.example.com", "cdn.Example.net"]
+        );
+        assert_eq!(names(matching(lines.clone(), "")).len(), 3);
+        assert!(matching(lines, "nowhere").is_empty());
     }
 }

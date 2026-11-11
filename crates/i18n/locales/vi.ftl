@@ -1525,14 +1525,17 @@ t53d91aad = App
 # Devices
 t27acf320 = Thiết bị
 
-# Hosts
-tcf9aefb4 = Host
-
 # All hosts
 tfc7bfe37 = Tất cả host
 
+# No host has this in its name
+t838c1d44 = Không có host nào chứa chuỗi này
+
 # Hidden
 t3c2dfe59 = Đã ẩn
+
+# Hosts
+tcf9aefb4 = Host
 
 # Newest
 t324b6d0b = Mới nhất

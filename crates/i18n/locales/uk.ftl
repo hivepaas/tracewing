@@ -1591,14 +1591,17 @@ t53d91aad = Застосунки
 # Devices
 t27acf320 = Пристрої
 
-# Hosts
-tcf9aefb4 = Хости
-
 # All hosts
 tfc7bfe37 = Усі хости
 
+# No host has this in its name
+t838c1d44 = Немає хостів із цим в імені
+
 # Hidden
 t3c2dfe59 = Приховані
+
+# Hosts
+tcf9aefb4 = Хости
 
 # Newest
 t324b6d0b = Найновіші

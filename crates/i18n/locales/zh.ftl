@@ -1525,14 +1525,17 @@ t53d91aad = 应用
 # Devices
 t27acf320 = 设备
 
-# Hosts
-tcf9aefb4 = 主机
-
 # All hosts
 tfc7bfe37 = 所有主机
 
+# No host has this in its name
+t838c1d44 = 没有名称包含此内容的主机
+
 # Hidden
 t3c2dfe59 = 已隐藏
+
+# Hosts
+tcf9aefb4 = 主机
 
 # Newest
 t324b6d0b = 最新

@@ -1525,14 +1525,17 @@ t53d91aad = アプリ
 # Devices
 t27acf320 = デバイス
 
-# Hosts
-tcf9aefb4 = ホスト
-
 # All hosts
 tfc7bfe37 = すべてのホスト
 
+# No host has this in its name
+t838c1d44 = 名前にこれを含むホストはありません
+
 # Hidden
 t3c2dfe59 = 非表示
+
+# Hosts
+tcf9aefb4 = ホスト
 
 # Newest
 t324b6d0b = 最新
