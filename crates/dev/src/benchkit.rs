@@ -70,6 +70,46 @@ pub async fn serve_origin(listener: TcpListener, ca_out: &Path) -> Result<()> {
 }
 
 /// What `/page.html`, `/app.js` and `/style.css` answer with.
+/// An order as MessagePack: a map with text, numbers, a list and bytes.
+pub fn order_msgpack() -> Vec<u8> {
+    use rmpv::Value;
+    let order = Value::Map(vec![
+        ("id".into(), 42.into()),
+        ("customer".into(), "Nguyễn Văn A".into()),
+        ("total".into(), 350_000.into()),
+        (
+            "items".into(),
+            Value::Array(vec![
+                Value::Map(vec![("sku".into(), "A-1".into()), ("qty".into(), 2.into())]),
+                Value::Map(vec![("sku".into(), "B-7".into()), ("qty".into(), 1.into())]),
+            ]),
+        ),
+        (
+            "signature".into(),
+            Value::Binary(vec![0xca, 0xfe, 0xba, 0xbe]),
+        ),
+    ]);
+    let mut out = Vec::new();
+    rmpv::encode::write_value(&mut out, &order).expect("a Vec takes any bytes");
+    out
+}
+
+/// The same order as CBOR, with its time as a tagged date.
+pub fn order_cbor() -> Vec<u8> {
+    use ciborium::Value;
+    let order = Value::Map(vec![
+        ("id".into(), Value::Integer(42.into())),
+        ("customer".into(), "Nguyễn Văn A".into()),
+        (
+            "paid_at".into(),
+            Value::Tag(1, Box::new(Value::Integer(1_700_000_000.into()))),
+        ),
+    ]);
+    let mut out = Vec::new();
+    ciborium::ser::into_writer(&order, &mut out).expect("a Vec takes any bytes");
+    out
+}
+
 /// A SOAP answer, all on one line as servers send it.
 pub const SOAP_XML: &str = r#"<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetOrderResponse xmlns="urn:shop"><Order id="42" status="paid"><Customer>Nguyễn Văn A</Customer><Items><Item sku="A-1" qty="2">Áo thun</Item><Item sku="B-7" qty="1"/></Items><!-- totals in VND --><Total currency="VND">350000</Total><Note><![CDATA[Giao trước <5pm>]]></Note></Order></GetOrderResponse></soap:Body></soap:Envelope>"#;
 
@@ -239,6 +279,12 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
         "/page.html" => Response::builder()
             .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
             .body(Full::new(Bytes::from_static(PAGE_HTML.as_bytes())).boxed()),
+        "/order.msgpack" => Response::builder()
+            .header(header::CONTENT_TYPE, "application/msgpack")
+            .body(Full::new(Bytes::from(order_msgpack())).boxed()),
+        "/order.cbor" => Response::builder()
+            .header(header::CONTENT_TYPE, "application/cbor")
+            .body(Full::new(Bytes::from(order_cbor())).boxed()),
         "/soap.xml" => Response::builder()
             .header(header::CONTENT_TYPE, "text/xml; charset=utf-8")
             .body(Full::new(Bytes::from_static(SOAP_XML.as_bytes())).boxed()),

@@ -2,6 +2,7 @@
 //! `docs/measurements.md` for why it is this one.
 
 pub mod app;
+pub mod binjson;
 pub mod charles;
 pub mod decode;
 pub mod graphql;

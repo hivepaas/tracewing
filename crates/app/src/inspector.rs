@@ -219,7 +219,16 @@ impl Traffic {
         let max = self.engine.settings.view_max();
         cx.spawn(async move |this, cx| {
             let file = cx
-                .background_spawn(async move { body_file(&session, &facts, id, side, max) })
+                .background_spawn({
+                    let content_type = content_type.clone();
+                    async move {
+                        let file = body_file(&session, &facts, id, side, max);
+                        let json = file.as_ref().and_then(|(path, size)| {
+                            crate::detail::json_file(path, *size, content_type.as_deref())
+                        });
+                        (file, json)
+                    }
+                })
                 .await;
             let _ = this.update(cx, |this, cx| {
                 let now = if other {
@@ -230,6 +239,7 @@ impl Traffic {
                 if now != load {
                     return;
                 }
+                let (file, json) = file;
                 *this.inspector.slot(other) = match file {
                     None => BodyState::Note(
                         tr!("This body is gone: it was dropped with the oldest flows, or cannot be read.")
@@ -243,9 +253,18 @@ impl Traffic {
                         Ok(body) => BodyState::Shown({
                             let focus = this.focus.clone();
                             let mode = this.inspector.body_mode;
+                            // MessagePack or CBOR, shown as the JSON made of it.
+                            let json = json.and_then(|json| Body::open(&json).ok());
                             cx.new(|cx| {
-                                let mut view =
-                                    BodyView::new(body, content_type.as_deref(), focus, cx);
+                                let mut view = match json {
+                                    Some(json) => {
+                                        let mut view =
+                                            BodyView::new(json, Some("application/json"), focus, cx);
+                                        view.set_original(body, cx);
+                                        view
+                                    }
+                                    None => BodyView::new(body, content_type.as_deref(), focus, cx),
+                                };
                                 view.set_mode(mode, cx);
                                 view
                             })
@@ -647,7 +666,7 @@ impl Traffic {
             return None;
         }
         let c = colors();
-        let (mode, pretty) = (view.mode(), view.has_pretty());
+        let (mode, pretty, raw) = (view.mode(), view.has_pretty(), view.has_raw());
         let half = |id: &'static str, label: String, to: BodyMode| {
             let on = mode == to;
             div()
@@ -673,10 +692,12 @@ impl Traffic {
                 .p(px(2.))
                 .rounded(px(14.))
                 .bg(rgb(c.chip))
-                .when(pretty, |d| {
+                .when(pretty || !raw, |d| {
                     d.child(half("body-as-pretty", tr!("Pretty"), BodyMode::Pretty))
                 })
-                .child(half("body-as-raw", tr!("Raw"), BodyMode::Raw))
+                .when(raw, |d| {
+                    d.child(half("body-as-raw", tr!("Raw"), BodyMode::Raw))
+                })
                 .child(half("body-as-hex", "Hex".to_owned(), BodyMode::Hex)),
         )
     }

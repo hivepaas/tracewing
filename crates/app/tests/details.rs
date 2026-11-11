@@ -436,5 +436,86 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "68-xml");
 
+    // MessagePack and CBOR read as the JSON they hold; Hex is their bytes.
+    for (n, path) in [(8, "order.msgpack"), (9, "order.cbor")] {
+        let status = send(
+            &mut cx,
+            window,
+            "GET",
+            &format!("https://localhost:{trusted}/{path}"),
+            "",
+            "",
+        );
+        assert_eq!(status, 200);
+        window
+            .update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+            .unwrap();
+        wait_for(&mut cx, window, path, |view| view.count() == n);
+        window
+            .update(&mut cx, |view, _, cx| {
+                view.select_place(n - 1, cx);
+                view.set_side(Side::Response, cx);
+                view.set_part(Part::Body, cx);
+            })
+            .unwrap();
+        wait_for(&mut cx, window, path, |view| {
+            matches!(view.inspector.body, BodyState::Shown(..))
+        });
+        let deadline = Instant::now() + Duration::from_secs(20);
+        let text = loop {
+            let text = window
+                .update(&mut cx, |view, _, cx| {
+                    let BodyState::Shown(body) = &view.inspector.body else {
+                        unreachable!()
+                    };
+                    body.update(cx, |body, cx| {
+                        if !body.is_scanned() {
+                            return None;
+                        }
+                        assert!(!body.has_raw(), "bytes are no text");
+                        body.select_all(cx);
+                        match body.selected_text() {
+                            tracewing::select::Copied::Text(text) => Some(text),
+                            _ => None,
+                        }
+                    })
+                })
+                .unwrap();
+            if let Some(text) = text {
+                break text;
+            }
+            assert!(Instant::now() < deadline, "waiting for {path} read");
+            std::thread::sleep(Duration::from_millis(20));
+        };
+        let json: serde_json::Value = serde_json::from_str(&text).expect("laid-out JSON");
+        assert_eq!(json["id"], 42, "{text}");
+        assert_eq!(json["customer"], "Nguyễn Văn A");
+        if path.ends_with("msgpack") {
+            assert_eq!(json["items"][1]["sku"], "B-7");
+            assert_eq!(json["signature"], "<4 bytes: cafebabe>");
+            cx.run_until_parked();
+            shot(&mut cx, window.into(), "69-msgpack");
+        } else {
+            assert_eq!(json["paid_at"]["$tag"], 1);
+        }
+        let sent = if path.ends_with("msgpack") {
+            benchkit::order_msgpack()
+        } else {
+            benchkit::order_cbor()
+        };
+        window
+            .update(&mut cx, |view, _, cx| {
+                view.set_body_mode(BodyMode::Hex, cx);
+                let BodyState::Shown(body) = &view.inspector.body else {
+                    unreachable!()
+                };
+                let summary = body.read(cx).summary();
+                let size = tracewing::flows::size_text(sent.len() as u64);
+                assert!(summary.starts_with(&size), "{summary} is of the bytes");
+                view.set_body_mode(BodyMode::Pretty, cx);
+            })
+            .unwrap();
+    }
+
     std::fs::remove_dir_all(&dir).ok();
 }
