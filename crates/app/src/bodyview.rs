@@ -483,9 +483,9 @@ impl BodyView {
         self.hex()
     }
 
-    /// Whether the body can be laid out, as JSON can.
+    /// Whether the body can be laid out, as JSON and XML can.
     pub fn has_pretty(&self) -> bool {
-        self.body.kind() == Kind::Json
+        self.body.kind().is_laid_out()
     }
 
     /// The mode in use. Text that cannot be laid out is as sent.
