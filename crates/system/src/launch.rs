@@ -15,8 +15,10 @@ use crate::os;
 
 /// The roots a terminal opened from here trusts, kept in the data directory.
 const TERMINAL_BUNDLE: &str = "terminal-roots.pem";
-/// Hosts that go straight out, as the system proxy leaves them too.
-const NO_PROXY: &str = "localhost,127.0.0.1,::1";
+/// Hosts that go straight out: none. A server on this computer is often
+/// what is being debugged, so its traffic goes through the proxy as well.
+/// The system proxy still leaves it out, as that is every app's.
+const NO_PROXY: &str = "";
 
 /// What a browser is built on, which decides how it is opened and where it
 /// keeps what it trusts.
@@ -175,6 +177,9 @@ pub fn firefox_prefs(addr: SocketAddr) -> String {
         ("network.proxy.http_port", port.to_string()),
         ("network.proxy.ssl", text(&host.to_string())),
         ("network.proxy.ssl_port", port.to_string()),
+        // Servers on this computer too, which Firefox otherwise sends straight.
+        ("network.proxy.allow_hijacking_localhost", "true".to_owned()),
+        ("network.proxy.no_proxies_on", text("")),
         ("security.enterprise_roots.enabled", "true".to_owned()),
         // No first run: no welcome, no privacy notice, no default browser ask.
         ("browser.shell.checkDefaultBrowser", "false".to_owned()),
@@ -257,6 +262,8 @@ pub fn browser_args(
     let mut args = vec![
         format!("--user-data-dir={}", profile.display()),
         format!("--proxy-server=http://{addr}"),
+        // Servers on this computer too, which Chromium otherwise sends straight.
+        "--proxy-bypass-list=<-loopback>".to_owned(),
         "--no-first-run".to_owned(),
         "--no-default-browser-check".to_owned(),
     ];
@@ -311,7 +318,8 @@ mod tests {
         assert_eq!(get("http_proxy"), "http://127.0.0.1:9090");
         assert_eq!(get("SSL_CERT_FILE"), "/d/roots.pem");
         assert_eq!(get("NODE_EXTRA_CA_CERTS"), "/d/ca.pem");
-        assert_eq!(get("NO_PROXY"), NO_PROXY);
+        assert_eq!(get("NO_PROXY"), "", "localhost goes through too");
+        assert_eq!(get("no_proxy"), "");
     }
 
     #[test]
@@ -346,6 +354,8 @@ mod tests {
         assert!(prefs.contains("user_pref(\"network.proxy.type\", 1);\n"));
         assert!(prefs.contains("user_pref(\"network.proxy.ssl\", \"127.0.0.1\");\n"));
         assert!(prefs.contains("user_pref(\"network.proxy.ssl_port\", 9090);\n"));
+        assert!(prefs.contains("user_pref(\"network.proxy.allow_hijacking_localhost\", true);\n"));
+        assert!(prefs.contains("user_pref(\"network.proxy.no_proxies_on\", \"\");\n"));
         assert!(prefs.contains("user_pref(\"datareporting.policy.firstRunURL\", \"\");\n"));
         assert!(prefs.contains("user_pref(\"toolkit.telemetry.enabled\", false);\n"));
         assert_eq!(
@@ -373,6 +383,7 @@ mod tests {
             [
                 "--user-data-dir=/p",
                 "--proxy-server=http://127.0.0.1:9090",
+                "--proxy-bypass-list=<-loopback>",
                 "--no-first-run",
                 "--no-default-browser-check",
                 "--ignore-certificate-errors-spki-list=abc=",
