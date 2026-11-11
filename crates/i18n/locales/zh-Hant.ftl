@@ -1261,6 +1261,15 @@ t1b22723c = 4. 在「設定」>「一般」>「關於本機」>「憑證信任�
 # 5. Open https://{host} in Safari. If it says it works, apps that use the system's settings go through tracewing.
 t4adfec01 = 5. 在 Safari 中開啟 https://{ $host }。如果頁面顯示運作正常，使用系統設定的 App 就會經過 tracewing。
 
+# When you are done
+t62466f08 = 用完之後
+
+# 1. In Settings, Wi-Fi, choose the network, then Configure Proxy: Off. Left on, the device has no Internet on this network once tracewing closes.
+t21a2fdae = 1. 在「設定」→「Wi-Fi」中選擇該網路，然後「設定代理伺服器」：關閉。若保持開啟，tracewing 關閉後裝置在此網路上將無法上網。
+
+# 2. In Settings, General, VPN & Device Management, choose tracewing CA and remove the profile. Its full trust goes with it.
+t2090b614 = 2. 在「設定」→「一般」→「VPN 與裝置管理」中選擇 tracewing CA 並移除描述檔。它的完全信任也會一併取消。
+
 # 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host {host}, port {port}.
 t4f837b10 = 1. 在「設定」>「Wi-Fi」中編輯該網路，在「進階選項」中將「Proxy」設為「手動」：主機名稱填入 { $host }，通訊埠填入 { $port }。
 
@@ -1279,11 +1288,20 @@ t02ad844b = 並在 AndroidManifest.xml 中參照它：
 # Other apps keep refusing the certificate: their traffic shows as failed flows.
 t02e57826 = 其他 App 仍會拒絕此憑證：它們的流量會顯示為失敗的流量紀錄。
 
+# 1. In Settings, Wi-Fi, edit the network, and set the proxy back to None. Left on, the device has no Internet on this network once tracewing closes.
+t76754f49 = 1. 在「設定」→「Wi-Fi」中修改該網路，把代理伺服器改回「無」。若保持開啟，tracewing 關閉後裝置在此網路上將無法上網。
+
+# 2. In Settings, Security, Encryption & credentials, User credentials, choose tracewing and remove it. Delete tracewing.crt from Downloads too.
+tf08245e1 = 2. 在「設定」→「安全性」→「加密與憑證」→「使用者憑證」中選擇 tracewing 並刪除。也請刪除「下載」中的 tracewing.crt。
+
 # Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
 t4ffc0abf = Dart 的 HttpClient（Flutter 的 http 和 Dio 都以它為基礎）不會遵循手機的代理伺服器設定，而且在 Android 上不信任使用者新增的憑證。在偵錯版本中，可將其指向這裡：
 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback 會放行任何憑證，因此僅限用於偵錯版本。
+
+# Take TracewingProxy and its line in main() out before a release, though they do nothing outside debug builds. Nothing on the phone was changed.
+t12aba34f = 發布前請拿掉 TracewingProxy 以及 main() 中對應的那一行，儘管它們在除錯版本之外不起作用。手機上沒有任何變更。
 
 # Open settings
 t1336b4d6 = 開啟設定
@@ -1293,6 +1311,9 @@ t2e3c591c = 手機和其他裝置
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = 此網路中的手機、平板或其他電腦可以透過 { $proxy } 經由 tracewing 連線。掃描 QR 碼即可開啟憑證下載頁面。其流量紀錄會顯示裝置位址，可用 device: 篩選，也可在任一筆流量紀錄的「連線」中為裝置命名。
+
+# {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
+t864ac93f = { $n } 台裝置經過了 tracewing（{ $names }）。用完之後，請依下方說明關閉其 Wi-Fi 代理伺服器：若保持開啟，tracewing 關閉後它在此網路上將無法上網。
 
 # Set up. The certificate is among the system's until the device restarts.
 t84db6961 = 已設定完成。在裝置重新啟動之前，此憑證會保留在系統憑證中。
@@ -1338,6 +1359,9 @@ t379e433c = Android 模擬器和 USB 裝置
 
 # Find devices
 t54d4af39 = 尋找裝置
+
+# The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
+tf4b6cd8a = tracewing 關閉或當機時，系統代理和 HTTP/3 封鎖都會恢復原狀，透過 USB 設定的 Android 裝置也是如此。憑證會一直受信任，直到第 1 步中的「移除」將其刪除。手動設定的手機會保留 Wi-Fi 代理伺服器和憑證，直到在手機上將其刪除：各裝置的指南說明了做法。在「設定」中關閉該選項之前，其他裝置都能使用這台電腦的代理伺服器。
 
 # Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
 t2dc39047 = Claude Code、Cursor、VS Code 等 AI 工具可以透過 tracewing 的 MCP 伺服器列出並讀取其錄製的流量紀錄。除非在「設定」中允許，否則不會包含權杖和 Cookie。在 Claude Code 中：

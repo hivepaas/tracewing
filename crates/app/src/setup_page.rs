@@ -458,6 +458,7 @@ impl Traffic {
             .child(self.render_android(cx))
             .child(self.render_http3(cx))
             .child(self.render_ai_tools())
+            .child(self.render_when_done(cx))
     }
 }
 
@@ -737,6 +738,8 @@ impl Guide {
 /// A guide is said in text, with code to copy where code is needed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Part {
+    /// A part's own heading, as "When you are done".
+    Title(String),
     Text(String),
     Code(String),
 }
@@ -807,6 +810,15 @@ pub fn guide(guide: Guide, proxy: SocketAddr, page: &str) -> Vec<Part> {
                  system's settings go through tracewing.",
                 host = CHECK_HOST
             )),
+            Part::Title(tr!("When you are done")),
+            text(tr!(
+                "1. In Settings, Wi-Fi, choose the network, then Configure Proxy: Off. Left on, \
+                 the device has no Internet on this network once tracewing closes."
+            )),
+            text(tr!(
+                "2. In Settings, General, VPN & Device Management, choose tracewing CA and \
+                 remove the profile. Its full trust goes with it."
+            )),
         ],
         Guide::Android => vec![
             text(tr!(
@@ -833,6 +845,15 @@ pub fn guide(guide: Guide, proxy: SocketAddr, page: &str) -> Vec<Part> {
             text(tr!(
                 "Other apps keep refusing the certificate: their traffic shows as failed flows."
             )),
+            Part::Title(tr!("When you are done")),
+            text(tr!(
+                "1. In Settings, Wi-Fi, edit the network, and set the proxy back to None. Left \
+                 on, the device has no Internet on this network once tracewing closes."
+            )),
+            text(tr!(
+                "2. In Settings, Security, Encryption & credentials, User credentials, choose \
+                 tracewing and remove it. Delete tracewing.crt from Downloads too."
+            )),
         ],
         Guide::Flutter => vec![
             text(tr!(
@@ -844,6 +865,11 @@ pub fn guide(guide: Guide, proxy: SocketAddr, page: &str) -> Vec<Part> {
             text(tr!(
                 "badCertificateCallback lets any certificate through, which is why it is for \
                  debug builds only."
+            )),
+            Part::Title(tr!("When you are done")),
+            text(tr!(
+                "Take TracewingProxy and its line in main() out before a release, though they \
+                 do nothing outside debug builds. Nothing on the phone was changed."
             )),
         ],
     }
@@ -931,6 +957,9 @@ impl Traffic {
                 .into_iter()
                 .enumerate()
                 .map(|(at, part)| match part {
+                    Part::Title(title) => {
+                        div().pt(px(6.)).font_weight(FontWeight::BOLD).child(title)
+                    }
                     Part::Text(text) => div().child(text),
                     Part::Code(code) => code_block(("copy-guide", at), code),
                 });
@@ -972,6 +1001,7 @@ impl Traffic {
                             ))),
                     ),
             )
+            .children(self.render_devices_to_undo())
             .child(
                 div()
                     .flex()
@@ -981,6 +1011,42 @@ impl Traffic {
                     .children(tabs),
             )
             .child(div().flex().flex_col().gap(px(8.)).children(parts))
+    }
+
+    /// The devices this session has seen, which keep their proxy set until
+    /// someone takes it off there: tracewing cannot.
+    fn render_devices_to_undo(&self) -> Option<Div> {
+        if self.device_counts().is_empty() {
+            return None;
+        }
+        let c = colors();
+        let names: Vec<String> = self
+            .device_counts()
+            .iter()
+            .map(|(ip, _)| self.devices().shown(ip).to_owned())
+            .collect();
+        let count = names.len();
+        Some(
+            div()
+                .flex()
+                .flex_row()
+                .gap(px(10.))
+                .px(px(14.))
+                .py(px(10.))
+                .rounded(px(14.))
+                .bg(rgb(c.warn_ground))
+                .text_color(rgb(c.warn))
+                .child(tr_n!(
+                    count,
+                    "{n} device went through tracewing ({names}). When you are done, turn its \
+                     Wi-Fi proxy off, as below: left on, it has no Internet on this network once \
+                     tracewing closes.",
+                    "{n} devices went through tracewing ({names}). When you are done, turn their \
+                     Wi-Fi proxy off, as below: left on, they have no Internet on this network \
+                     once tracewing closes.",
+                    names = names.join(", ")
+                )),
+        )
     }
 }
 
@@ -1135,6 +1201,28 @@ pub fn mcp_setup(exe: &str) -> (String, String) {
 
 impl Traffic {
     /// AI tools, reading what tracewing records through its MCP server.
+    /// What goes back by itself, and what is the user's to undo, gathered.
+    fn render_when_done(&mut self, cx: &mut Context<Self>) -> Div {
+        let other_devices = self.engine.settings.other_devices;
+        aside(
+            tr!("When you are done"),
+            tr!(
+                "The system proxy and the block on HTTP/3 go back when tracewing closes, or if \
+                 it crashes, and so does an Android device set up over USB. The certificate \
+                 stays trusted until Remove, in step 1, takes it out. A phone set up by hand \
+                 keeps its Wi-Fi proxy and certificate until they are taken off there: each \
+                 device's guide says how. Other devices can reach this computer's proxy until \
+                 that is turned off in Settings."
+            ),
+        )
+        .when(other_devices, |d| {
+            d.child(
+                button("setup-done-devices", tr!("Open settings"), false)
+                    .on_click(cx.listener(|this, _, _, cx| this.set_screen(Screen::Settings, cx))),
+            )
+        })
+    }
+
     fn render_ai_tools(&self) -> Div {
         let exe = std::env::current_exe()
             .map(|p| p.display().to_string())
@@ -1213,7 +1301,7 @@ mod tests {
             super::guide(guide, proxy, page)
                 .into_iter()
                 .map(|part| match part {
-                    Part::Text(t) | Part::Code(t) => t,
+                    Part::Title(t) | Part::Text(t) | Part::Code(t) => t,
                 })
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -1231,6 +1319,16 @@ mod tests {
         let flutter = said(Guide::Flutter);
         assert!(flutter.contains("'PROXY 192.168.1.5:9090'"), "{flutter}");
         assert!(flutter.contains("kDebugMode"));
+        // Each ends by saying how to undo it.
+        for guide in Guide::ALL {
+            let parts = super::guide(guide, proxy, page);
+            assert!(
+                parts.contains(&Part::Title(tr!("When you are done"))),
+                "{guide:?}"
+            );
+        }
+        assert!(apple.contains("Configure Proxy: Off"), "{apple}");
+        assert!(android.contains("set the proxy back to None"), "{android}");
     }
 
     #[test]

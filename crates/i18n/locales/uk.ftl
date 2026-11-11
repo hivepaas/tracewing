@@ -1315,6 +1315,15 @@ t1b22723c = 4. У Параметрах → Загальні → «Про при�
 # 5. Open https://{host} in Safari. If it says it works, apps that use the system's settings go through tracewing.
 t4adfec01 = 5. Відкрийте https://{ $host } у Safari. Якщо там написано, що все працює, застосунки, які використовують системні налаштування, проходять через tracewing.
 
+# When you are done
+t62466f08 = Коли закінчите
+
+# 1. In Settings, Wi-Fi, choose the network, then Configure Proxy: Off. Left on, the device has no Internet on this network once tracewing closes.
+t21a2fdae = 1. У Параметрах, Wi-Fi виберіть мережу, потім Налаштування проксі: Вимк. Якщо залишити, пристрій лишиться без інтернету в цій мережі, коли tracewing закриється.
+
+# 2. In Settings, General, VPN & Device Management, choose tracewing CA and remove the profile. Its full trust goes with it.
+t2090b614 = 2. У Параметрах, Загальні, VPN і керування пристроєм виберіть tracewing CA і видаліть профіль. Повна довіра піде разом із ним.
+
 # 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host {host}, port {port}.
 t4f837b10 = 1. У Налаштуваннях → Wi-Fi змініть мережу й у розділі «Додатково» встановіть для проксі «Вручну»: хост { $host }, порт { $port }.
 
@@ -1333,11 +1342,20 @@ t02ad844b = і пошліться на нього в AndroidManifest.xml:
 # Other apps keep refusing the certificate: their traffic shows as failed flows.
 t02e57826 = Інші застосунки й далі відхилятимуть сертифікат: їхній трафік відображається як невдалі потоки.
 
+# 1. In Settings, Wi-Fi, edit the network, and set the proxy back to None. Left on, the device has no Internet on this network once tracewing closes.
+t76754f49 = 1. У Налаштуваннях, Wi-Fi змініть мережу й поверніть проксі на Немає. Якщо залишити, пристрій лишиться без інтернету в цій мережі, коли tracewing закриється.
+
+# 2. In Settings, Security, Encryption & credentials, User credentials, choose tracewing and remove it. Delete tracewing.crt from Downloads too.
+tf08245e1 = 2. У Налаштуваннях, Безпека, Шифрування й облікові дані, Облікові дані користувача виберіть tracewing і видаліть. Видаліть і tracewing.crt із Завантажень.
+
 # Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
 t4ffc0abf = HttpClient у Dart, який використовують http і Dio у Flutter, не враховує налаштування проксі телефона, а на Android не довіряє сертифікатам, доданим користувачем. У налагоджувальній збірці спрямуйте його сюди:
 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback пропускає будь-який сертифікат, тому він лише для налагоджувальних збірок.
+
+# Take TracewingProxy and its line in main() out before a release, though they do nothing outside debug builds. Nothing on the phone was changed.
+t12aba34f = Приберіть TracewingProxy і його рядок у main() перед випуском, хоча поза налагоджувальними збірками вони нічого не роблять. На телефоні нічого не змінювалося.
 
 # Open settings
 t1336b4d6 = Відкрити налаштування
@@ -1347,6 +1365,15 @@ t2e3c591c = Телефони та інші пристрої
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = Телефон, планшет або інший комп’ютер у цій мережі може працювати через tracewing за адресою { $proxy }. Код відкриває сторінку з його сертифікатом. Потоки пристрою показують його адресу, їх можна фільтрувати за допомогою device:, а сам пристрій можна назвати з будь-якого з них на вкладці «З’єднання».
+
+# {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
+t864ac93f =
+    { $n ->
+        [one] { $n } пристрій пройшов через tracewing ({ $names }). Коли закінчите, вимкніть на ньому проксі Wi-Fi, як описано нижче: якщо залишити, він лишиться без інтернету в цій мережі, коли tracewing закриється.
+        [few] { $n } пристрої пройшли через tracewing ({ $names }). Коли закінчите, вимкніть на них проксі Wi-Fi, як описано нижче: якщо залишити, вони лишаться без інтернету в цій мережі, коли tracewing закриється.
+        [many] { $n } пристроїв пройшли через tracewing ({ $names }). Коли закінчите, вимкніть на них проксі Wi-Fi, як описано нижче: якщо залишити, вони лишаться без інтернету в цій мережі, коли tracewing закриється.
+       *[other] { $n } пристрою пройшли через tracewing ({ $names }). Коли закінчите, вимкніть на них проксі Wi-Fi, як описано нижче: якщо залишити, вони лишаться без інтернету в цій мережі, коли tracewing закриється.
+    }
 
 # Set up. The certificate is among the system's until the device restarts.
 t84db6961 = Налаштовано. Сертифікат перебуває серед системних до перезапуску пристрою.
@@ -1392,6 +1419,9 @@ t379e433c = Емулятори Android і USB-пристрої
 
 # Find devices
 t54d4af39 = Знайти пристрої
+
+# The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
+tf4b6cd8a = Системний проксі й блокування HTTP/3 повертаються як було, коли tracewing закривається або падає, як і Android-пристрій, налаштований через USB. Сертифікат лишається довіреним, доки «Видалити» на кроці 1 його не прибере. Телефон, налаштований вручну, зберігає проксі Wi-Fi і сертифікат, доки їх не приберуть на ньому: як це зробити, сказано в інструкції для кожного пристрою. Інші пристрої можуть під’єднуватися до проксі цього комп’ютера, доки це не вимкнено в Налаштуваннях.
 
 # Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
 t2dc39047 = Claude Code, Cursor, VS Code та інші інструменти ШІ можуть переглядати й читати потоки, які записує tracewing, через його MCP-сервер. Токени й cookie не передаються, якщо Налаштування цього не дозволяють. У Claude Code:

@@ -1261,6 +1261,15 @@ t1b22723c = 4. 설정 > 일반 > 정보 > 인증서 신뢰 설정에서 tracewin
 # 5. Open https://{host} in Safari. If it says it works, apps that use the system's settings go through tracewing.
 t4adfec01 = 5. Safari에서 https://{ $host } 페이지를 엽니다. 작동한다고 표시되면, 시스템 설정을 사용하는 앱은 tracewing을 거칩니다.
 
+# When you are done
+t62466f08 = 다 쓴 뒤에는
+
+# 1. In Settings, Wi-Fi, choose the network, then Configure Proxy: Off. Left on, the device has no Internet on this network once tracewing closes.
+t21a2fdae = 1. 설정, Wi-Fi에서 네트워크를 선택한 다음 프록시 구성: 끔. 켜 둔 채로 두면 tracewing을 닫은 뒤 이 네트워크에서 인터넷이 되지 않습니다.
+
+# 2. In Settings, General, VPN & Device Management, choose tracewing CA and remove the profile. Its full trust goes with it.
+t2090b614 = 2. 설정, 일반, VPN 및 기기 관리에서 tracewing CA를 선택하고 프로파일을 삭제합니다. 전체 신뢰도 함께 사라집니다.
+
 # 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host {host}, port {port}.
 t4f837b10 = 1. 설정 > Wi-Fi에서 네트워크를 편집하고, ‘고급 옵션’에서 프록시를 ‘수동’으로 설정해 호스트 { $host }, 포트 { $port }를 입력합니다.
 
@@ -1279,11 +1288,20 @@ t02ad844b = 그리고 AndroidManifest.xml에서 이 파일을 가리키게 합�
 # Other apps keep refusing the certificate: their traffic shows as failed flows.
 t02e57826 = 다른 앱은 계속 인증서를 거부하며, 그 트래픽은 실패한 플로우로 표시됩니다.
 
+# 1. In Settings, Wi-Fi, edit the network, and set the proxy back to None. Left on, the device has no Internet on this network once tracewing closes.
+t76754f49 = 1. 설정, Wi-Fi에서 네트워크를 수정하고 프록시를 없음으로 되돌립니다. 켜 둔 채로 두면 tracewing을 닫은 뒤 이 네트워크에서 인터넷이 되지 않습니다.
+
+# 2. In Settings, Security, Encryption & credentials, User credentials, choose tracewing and remove it. Delete tracewing.crt from Downloads too.
+tf08245e1 = 2. 설정, 보안, 암호화 및 사용자 인증 정보, 사용자 인증 정보에서 tracewing을 선택해 삭제합니다. 다운로드의 tracewing.crt도 지우세요.
+
 # Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
 t4ffc0abf = Flutter의 http와 Dio가 사용하는 Dart의 HttpClient는 휴대폰의 프록시 설정을 따르지 않으며, Android에서는 사용자가 추가한 인증서를 신뢰하지 않습니다. 디버그 빌드에서 다음과 같이 여기로 보내도록 합니다:
 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback은 모든 인증서를 통과시키므로 디버그 빌드에서만 사용해야 합니다.
+
+# Take TracewingProxy and its line in main() out before a release, though they do nothing outside debug builds. Nothing on the phone was changed.
+t12aba34f = 릴리스 전에 TracewingProxy와 main()의 해당 줄을 빼세요. 디버그 빌드가 아니면 아무것도 하지 않지만요. 휴대폰에서는 바뀐 것이 없습니다.
 
 # Open settings
 t1336b4d6 = 설정 열기
@@ -1293,6 +1311,9 @@ t2e3c591c = 휴대폰 및 다른 기기
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = 이 네트워크의 휴대폰, 태블릿 또는 다른 컴퓨터는 { $proxy } 주소로 tracewing을 거칠 수 있습니다. 코드를 스캔하면 인증서가 있는 페이지가 열립니다. 그 기기의 플로우에는 기기 주소가 표시되고, device:로 필터링할 수 있으며, 연결 탭에서 그 플로우 중 하나를 통해 이름을 지정할 수 있습니다.
+
+# {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
+t864ac93f = 기기 { $n }대가 tracewing을 거쳤습니다({ $names }). 다 쓴 뒤에는 아래처럼 Wi-Fi 프록시를 끄세요. 켜 둔 채로 두면 tracewing을 닫은 뒤 이 네트워크에서 인터넷이 되지 않습니다.
 
 # Set up. The certificate is among the system's until the device restarts.
 t84db6961 = 설정 완료. 기기가 다시 시작될 때까지 인증서가 시스템 인증서에 포함됩니다.
@@ -1338,6 +1359,9 @@ t379e433c = Android 에뮬레이터 및 USB 기기
 
 # Find devices
 t54d4af39 = 기기 찾기
+
+# The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
+tf4b6cd8a = 시스템 프록시와 HTTP/3 차단은 tracewing이 닫히거나 비정상 종료되면 원래대로 돌아가며, USB로 설정한 Android 기기도 마찬가지입니다. 인증서는 1단계의 제거로 빼기 전까지 계속 신뢰됩니다. 직접 설정한 휴대폰은 그 기기에서 지울 때까지 Wi-Fi 프록시와 인증서가 남아 있습니다. 방법은 각 기기의 안내에 있습니다. 다른 기기는 설정에서 끄기 전까지 이 컴퓨터의 프록시를 쓸 수 있습니다.
 
 # Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
 t2dc39047 = Claude Code, Cursor, VS Code 및 기타 AI 도구는 tracewing의 MCP 서버를 통해 tracewing이 기록한 플로우를 나열하고 읽을 수 있습니다. 설정에서 허용하지 않으면 토큰과 쿠키는 제외됩니다. Claude Code에서는:
