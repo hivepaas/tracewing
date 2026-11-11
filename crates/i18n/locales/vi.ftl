@@ -718,6 +718,27 @@ ted08dbe5 = Thêm file…
 # Read again
 t2f0dcc5d = Đọc lại
 
+# Find a message
+te6f78626 = Tìm message
+
+# Read as {message}
+t87b6a380 = Đọc như { $message }
+
+# Read as…
+t1b90af95 = Đọc như…
+
+# Requests to {path} on {host} are read as the message chosen.
+t8826d766 = Request tới { $path } trên { $host } được đọc như message đã chọn.
+
+# Answers from {path} on {host} are read as the message chosen.
+tbbe012da = Response từ { $path } trên { $host } được đọc như message đã chọn.
+
+# Automatic (gRPC path or messageType)
+t134c9a06 = Tự động (path gRPC hoặc messageType)
+
+# and {count} more: type to narrow them | and {count} more: type to narrow them
+t70ff68f9 = và { $count } message khác: gõ để thu hẹp
+
 # Block
 tbd074002 = Chặn
 

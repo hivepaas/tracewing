@@ -92,6 +92,9 @@ pub struct InspectorState {
     copied: bool,
     /// The menu of languages to copy the request as is open.
     pub copy_menu: bool,
+    /// The list of messages to read a Protobuf body as is open, with what
+    /// narrows it.
+    pub read_as: Option<Entity<crate::input::TextInput>>,
     /// The chosen flow as a call to a model, once its bodies are read.
     pub llm: Option<(crate::llm::Provider, crate::llm::Exchange)>,
     /// What the chosen flow's GraphQL request sends, once its body is read.
@@ -165,6 +168,7 @@ impl Traffic {
     }
 
     pub(crate) fn load_body(&mut self, cx: &mut Context<Self>) {
+        self.inspector.read_as = None;
         self.load_side(false, cx);
         if self.layout.sides != Sides::Tabs {
             self.load_side(true, cx);
@@ -876,6 +880,7 @@ impl Traffic {
                     .child(text)
             }))
             .children(self.render_hex_switch(part, cx))
+            .children(self.render_read_as_button(cx))
             .when(
                 part == Part::Body && detail.body(side).stored.exists(),
                 |d| {
@@ -1060,7 +1065,10 @@ impl Traffic {
                 self.inspector.side,
                 &sel,
             )),
-            Part::Body => body_well(well, &self.inspector.body),
+            Part::Body => match self.render_read_as(cx) {
+                Some(picker) => well.child(picker),
+                None => body_well(well, &self.inspector.body),
+            },
         }
     }
 
@@ -1092,7 +1100,10 @@ impl Traffic {
                     side,
                     sel,
                 )),
-                _ => body_well(well, self.inspector.body_of(side)),
+                _ => match self.render_read_as(cx).filter(|_| side == chosen) {
+                    Some(picker) => well.child(picker),
+                    None => body_well(well, self.inspector.body_of(side)),
+                },
             };
             let size = match (part, self.inspector.body_of(side)) {
                 (Part::Body, BodyState::Shown(view)) => Some(view.read(cx).summary()),

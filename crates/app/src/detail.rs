@@ -367,8 +367,9 @@ pub fn json_file(
 }
 
 /// The message a Protobuf or gRPC body holds, if the `.proto` files chosen
-/// say: by the call's path, or as its type names it. Reads the files again
-/// if they changed, so not on the UI thread.
+/// say: the one chosen for its path by hand, else by the call's path, or as
+/// its type names it. Reads the files again if they changed, so not on the
+/// UI thread.
 pub fn message_of(
     protos: &Library,
     url: &str,
@@ -377,15 +378,22 @@ pub fn message_of(
 ) -> Option<MessageDescriptor> {
     use tracewing_store::binjson;
     let format = binjson::format_of(content_type).filter(|f| f.numbered())?;
+    let schema = protos.schema();
+    let (host, path) = host_and_path(url);
+    let request = side == Side::Request;
     protos
-        .schema()
-        .message_for(path_of(url), content_type, side == Side::Request, format)
+        .chosen(host, path, request)
+        .and_then(|name| schema.message(&name))
+        .or_else(|| schema.message_for(path, content_type, request, format))
 }
 
-/// The path of a URL, with its query.
-pub fn path_of(url: &str) -> &str {
+/// The host of a URL, with its port, and its path with its query.
+pub fn host_and_path(url: &str) -> (&str, &str) {
     let after = url.split_once("://").map_or(url, |(_, rest)| rest);
-    after.find('/').map_or("/", |at| &after[at..])
+    match after.find('/') {
+        Some(at) => (&after[..at], &after[at..]),
+        None => (after, "/"),
+    }
 }
 
 #[cfg(test)]

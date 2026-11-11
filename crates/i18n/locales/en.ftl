@@ -294,6 +294,17 @@ te5f4f07c = Folders of .proto files, or descriptor sets made with protoc -o, to 
 tb5930e43 = Add a folder…
 ted08dbe5 = Add files…
 t2f0dcc5d = Read again
+te6f78626 = Find a message
+t87b6a380 = Read as { $message }
+t1b90af95 = Read as…
+t8826d766 = Requests to { $path } on { $host } are read as the message chosen.
+tbbe012da = Answers from { $path } on { $host } are read as the message chosen.
+t134c9a06 = Automatic (gRPC path or messageType)
+t70ff68f9 =
+    { $n ->
+        [one] and { $count } more: type to narrow them
+       *[other] and { $count } more: type to narrow them
+    }
 tbd074002 = Block
 td8edab50 = Answer from a file
 te3cd85d7 = Send to another host

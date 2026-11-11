@@ -752,6 +752,31 @@ ted08dbe5 = Dosya ekle…
 # Read again
 t2f0dcc5d = Yeniden oku
 
+# Find a message
+te6f78626 = Mesaj bul
+
+# Read as {message}
+t87b6a380 = { $message } olarak oku
+
+# Read as…
+t1b90af95 = Şöyle oku…
+
+# Requests to {path} on {host} are read as the message chosen.
+t8826d766 = { $host } üzerindeki { $path } adresine giden istekler seçilen mesaj olarak okunur.
+
+# Answers from {path} on {host} are read as the message chosen.
+tbbe012da = { $host } üzerindeki { $path } adresinden gelen yanıtlar seçilen mesaj olarak okunur.
+
+# Automatic (gRPC path or messageType)
+t134c9a06 = Otomatik (gRPC yolu ya da messageType)
+
+# and {count} more: type to narrow them | and {count} more: type to narrow them
+t70ff68f9 =
+    { $n ->
+        [one] ve { $count } tane daha: daraltmak için yazın
+       *[other] ve { $count } tane daha: daraltmak için yazın
+    }
+
 # Block
 tbd074002 = Engelle
 

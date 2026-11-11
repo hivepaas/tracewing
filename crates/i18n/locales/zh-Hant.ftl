@@ -718,6 +718,27 @@ ted08dbe5 = 新增檔案…
 # Read again
 t2f0dcc5d = 重新讀取
 
+# Find a message
+te6f78626 = 尋找訊息
+
+# Read as {message}
+t87b6a380 = 以 { $message } 讀取
+
+# Read as…
+t1b90af95 = 讀取為…
+
+# Requests to {path} on {host} are read as the message chosen.
+t8826d766 = 傳到 { $host } 上 { $path } 的請求以所選訊息讀取。
+
+# Answers from {path} on {host} are read as the message chosen.
+tbbe012da = 來自 { $host } 上 { $path } 的回應以所選訊息讀取。
+
+# Automatic (gRPC path or messageType)
+t134c9a06 = 自動（gRPC 路徑或 messageType）
+
+# and {count} more: type to narrow them | and {count} more: type to narrow them
+t70ff68f9 = 還有 { $count } 個：輸入以縮小範圍
+
 # Block
 tbd074002 = 封鎖
 
