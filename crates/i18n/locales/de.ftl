@@ -1603,6 +1603,9 @@ t4b34beb2 = HTTPS schlägt fehl, bis dem Zertifikat vertraut wird: einrichten
 # settings.toml was not used: {problem}
 tc3e1f9c8 = settings.toml wurde nicht verwendet: { $problem }
 
+# A setting was not saved: {problem}
+tff1a5018 = Eine Einstellung wurde nicht gespeichert: { $problem }
+
 # The proxy stopped: {failure}
 t04dcff11 = Der Proxy wurde gestoppt: { $failure }
 

@@ -1607,6 +1607,9 @@ t4b34beb2 = HTTPS fallará hasta que se confíe en el certificado: configurar
 # settings.toml was not used: {problem}
 tc3e1f9c8 = No se usó settings.toml: { $problem }
 
+# A setting was not saved: {problem}
+tff1a5018 = Un ajuste no se guardó: { $problem }
+
 # The proxy stopped: {failure}
 t04dcff11 = El proxy se detuvo: { $failure }
 

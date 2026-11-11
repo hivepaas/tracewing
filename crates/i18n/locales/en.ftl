@@ -583,6 +583,7 @@ t068dcaff = Installing the certificate; the system may ask you to confirm…
 t913da735 = Removing the certificate; the system may ask you to confirm…
 t4b34beb2 = HTTPS will fail until the certificate is trusted: set up
 tc3e1f9c8 = settings.toml was not used: { $problem }
+tff1a5018 = A setting was not saved: { $problem }
 t04dcff11 = The proxy stopped: { $failure }
 te99f9959 = The disk is nearly full: bodies are not being kept
 tdbd64fe6 =

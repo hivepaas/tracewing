@@ -1573,6 +1573,9 @@ t4b34beb2 = 인증서를 신뢰할 때까지 HTTPS가 실패합니다: 시작하
 # settings.toml was not used: {problem}
 tc3e1f9c8 = settings.toml을 사용하지 않았습니다: { $problem }
 
+# A setting was not saved: {problem}
+tff1a5018 = 저장되지 않은 설정이 있습니다: { $problem }
+
 # The proxy stopped: {failure}
 t04dcff11 = 프록시가 중지되었습니다: { $failure }
 

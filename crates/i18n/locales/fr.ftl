@@ -1607,6 +1607,9 @@ t4b34beb2 = HTTPS échouera tant que le certificat n'est pas approuvé : configu
 # settings.toml was not used: {problem}
 tc3e1f9c8 = settings.toml n'a pas été utilisé : { $problem }
 
+# A setting was not saved: {problem}
+tff1a5018 = Un paramètre n'a pas été enregistré : { $problem }
+
 # The proxy stopped: {failure}
 t04dcff11 = Le proxy s'est arrêté : { $failure }
 

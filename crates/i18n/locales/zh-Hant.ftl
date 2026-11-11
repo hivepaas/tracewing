@@ -1573,6 +1573,9 @@ t4b34beb2 = 憑證受信任前，HTTPS 將無法使用：前往初始設定
 # settings.toml was not used: {problem}
 tc3e1f9c8 = 未使用 settings.toml：{ $problem }
 
+# A setting was not saved: {problem}
+tff1a5018 = 有一項設定未儲存：{ $problem }
+
 # The proxy stopped: {failure}
 t04dcff11 = 代理伺服器已停止：{ $failure }
 

@@ -1573,6 +1573,9 @@ t4b34beb2 = 証明書が信頼されるまで HTTPS は失敗します: セッ�
 # settings.toml was not used: {problem}
 tc3e1f9c8 = settings.toml は使用されませんでした: { $problem }
 
+# A setting was not saved: {problem}
+tff1a5018 = 保存されなかった設定があります: { $problem }
+
 # The proxy stopped: {failure}
 t04dcff11 = プロキシが停止しました: { $failure }
 

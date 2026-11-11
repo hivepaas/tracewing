@@ -1639,6 +1639,9 @@ t4b34beb2 = HTTPS не будет работать, пока сертифика�
 # settings.toml was not used: {problem}
 tc3e1f9c8 = settings.toml не применён: { $problem }
 
+# A setting was not saved: {problem}
+tff1a5018 = Настройка не сохранена: { $problem }
+
 # The proxy stopped: {failure}
 t04dcff11 = Прокси остановлен: { $failure }
 

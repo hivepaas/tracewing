@@ -5,12 +5,14 @@
 
 use crate::{
     colors::colors,
-    input::{Changed, TextInput},
+    input::TextInput,
     traffic::Traffic,
     widgets::{Reachable, eyebrow},
 };
-use gpui::{Context, Entity, FontWeight, Subscription, Window, div, prelude::*, px, rgb};
-use std::time::Duration;
+use gpui::{
+    Context, Entity, Focusable, FontWeight, KeyDownEvent, Subscription, Window, div, prelude::*,
+    px, rgb,
+};
 use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::rules::HostRules;
 use tracewing_store::settings::StorageSettings;
@@ -194,9 +196,6 @@ fn groups() -> Vec<(String, Vec<Row>)> {
     ]
 }
 
-/// How long typing has to stop before what was typed is written.
-const SAVE_AFTER: Duration = Duration::from_millis(400);
-
 enum Field {
     Toggle(bool),
     Number(Entity<TextInput>),
@@ -213,9 +212,9 @@ pub struct SettingsPage {
     pub problem: Option<String>,
     /// What there was before "Back to defaults", while it can be undone.
     undo: Option<StorageSettings>,
-    /// Counts the changes typed, so that only the last one's wait saves.
-    typed: u64,
-    _typing: Vec<Subscription>,
+    /// What writes a field when it is left. Made at the first draw, which has
+    /// the window.
+    leaving: Vec<Subscription>,
 }
 
 fn value_text(value: &toml::Value) -> String {
@@ -229,7 +228,6 @@ impl SettingsPage {
     pub fn new(settings: &StorageSettings, cx: &mut Context<Traffic>) -> Self {
         let table = toml::Value::try_from(settings).expect("settings are plain values");
         let mut fields = Vec::new();
-        let mut typing = Vec::new();
         for (_, rows) in groups() {
             for row in rows {
                 let value = &table[row.key];
@@ -237,25 +235,17 @@ impl SettingsPage {
                     toml::Value::Boolean(on) => Field::Toggle(*on),
                     value => {
                         let text = value_text(value);
-                        let input = cx.new(|cx| {
+                        Field::Number(cx.new(|cx| {
                             let mut input = TextInput::new("", cx);
                             input.set_text(&text, text.len()..text.len(), cx);
                             input
-                        });
-                        let key = row.key;
-                        typing.push(cx.subscribe(&input, move |this, _, _: &Changed, cx| {
-                            this.settings_typed(Some(key), cx)
-                        }));
-                        Field::Number(input)
+                        }))
                     }
                 };
                 fields.push((row.key, field));
             }
         }
         let no_decrypt = cx.new(|cx| TextInput::new("", cx).multiline(5, 12));
-        typing.push(cx.subscribe(&no_decrypt, |this, _, _: &Changed, cx| {
-            this.settings_typed(None, cx)
-        }));
         Self {
             fields,
             no_decrypt,
@@ -263,8 +253,7 @@ impl SettingsPage {
             editing: None,
             problem: None,
             undo: None,
-            typed: 0,
-            _typing: typing,
+            leaving: Vec::new(),
         }
     }
 
@@ -345,27 +334,57 @@ impl Traffic {
         }
     }
 
-    /// Something was typed: it is written once typing stops.
-    fn settings_typed(&mut self, key: Option<&'static str>, cx: &mut Context<Self>) {
-        let Some(page) = &mut self.settings_page else {
+    /// Each field is written when it is left, so that what is half typed
+    /// never applies.
+    fn watch_fields(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(page) = &self.settings_page else {
             return;
         };
-        page.editing = key;
-        page.typed += 1;
-        let typed = page.typed;
-        cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(SAVE_AFTER).await;
-            let _ = this.update(cx, |this, cx| {
-                if this
-                    .settings_page
-                    .as_ref()
-                    .is_some_and(|page| page.typed == typed)
-                {
-                    this.save_settings(cx);
-                }
-            });
-        })
-        .detach();
+        if !page.leaving.is_empty() {
+            return;
+        }
+        let mut fields: Vec<(Option<&'static str>, gpui::FocusHandle)> = page
+            .fields
+            .iter()
+            .filter_map(|(key, field)| match field {
+                Field::Number(input) => Some((Some(*key), input.focus_handle(cx))),
+                Field::Toggle(_) => None,
+            })
+            .collect();
+        fields.push((None, page.no_decrypt.focus_handle(cx)));
+        let leaving = fields
+            .into_iter()
+            .map(|(key, focus)| {
+                cx.on_blur(&focus, window, move |this, _, cx| this.field_left(key, cx))
+            })
+            .collect();
+        if let Some(page) = &mut self.settings_page {
+            page.leaving = leaving;
+        }
+    }
+
+    /// A field was left, or Enter pressed in it: what it says is written.
+    fn field_left(&mut self, key: Option<&'static str>, cx: &mut Context<Self>) {
+        if let Some(page) = &mut self.settings_page {
+            page.editing = key;
+        }
+        self.save_settings(cx);
+    }
+
+    /// The screen is left: what is still unwritten is written. A field that
+    /// cannot be goes back to what is written, and the footer says so, rather
+    /// than keep showing what does not apply.
+    pub fn leave_settings(&mut self, cx: &mut Context<Self>) {
+        self.save_settings(cx);
+        let Some(page) = &self.settings_page else {
+            return;
+        };
+        if let Some(problem) = page.problem.clone() {
+            let stored = page.stored.clone();
+            self.settings_left = Some(problem);
+            self.settings_page = Some(SettingsPage::new(&stored, cx));
+            self.show_rules(cx);
+        }
     }
 
     /// Writes what the fields say, if it can work and is not what is written
@@ -466,6 +485,21 @@ impl Traffic {
         self.save_settings(cx);
     }
 
+    /// Puts the cursor in a number field. For tests.
+    #[doc(hidden)]
+    pub fn focus_setting(&mut self, key: &str, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(page) = &self.settings_page else {
+            return;
+        };
+        for (name, field) in &page.fields {
+            if *name == key
+                && let Field::Number(input) = field
+            {
+                window.focus(&input.focus_handle(cx), cx);
+            }
+        }
+    }
+
     /// Types into a number field. For tests.
     #[doc(hidden)]
     pub fn set_setting(&mut self, key: &str, text: &str, cx: &mut Context<Self>) {
@@ -485,13 +519,14 @@ impl Traffic {
 
     pub(crate) fn render_settings(
         &mut self,
-        _: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let c = colors();
         if self.settings_page.is_none() {
             self.open_settings(cx);
         }
+        self.watch_fields(window, cx);
         let language = self.render_language(cx);
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);
@@ -544,6 +579,11 @@ impl Traffic {
                             .flex_row()
                             .items_center()
                             .gap(px(8.))
+                            .on_key_down(cx.listener(move |this, ev: &KeyDownEvent, _, cx| {
+                                if ev.keystroke.key == "enter" {
+                                    this.field_left(Some(key), cx);
+                                }
+                            }))
                             .child(
                                 div()
                                     .w(px(96.))

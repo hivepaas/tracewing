@@ -1573,6 +1573,9 @@ t4b34beb2 = HTTPS sẽ lỗi cho tới khi chứng chỉ được tin: thiết l
 # settings.toml was not used: {problem}
 tc3e1f9c8 = settings.toml không được dùng: { $problem }
 
+# A setting was not saved: {problem}
+tff1a5018 = Một cài đặt chưa được lưu: { $problem }
+
 # The proxy stopped: {failure}
 t04dcff11 = Proxy đã dừng: { $failure }
 
