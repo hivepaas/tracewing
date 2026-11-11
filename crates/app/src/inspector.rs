@@ -239,7 +239,7 @@ impl Traffic {
                     Some((path, size)) if picture && size <= PICTURE_MAX => {
                         BodyState::Image(path, size)
                     }
-                    Some((path, _)) => match Body::open(&path) {
+                    Some((path, _)) => match Body::open_typed(&path, content_type.as_deref()) {
                         Ok(body) => BodyState::Shown({
                             let focus = this.focus.clone();
                             let mode = this.inspector.body_mode;

@@ -27,6 +27,7 @@ impl Syntax {
     pub fn of(kind: Kind, content_type: Option<&str>, head: &[u8]) -> Self {
         match kind {
             Kind::Json => return Self::Json,
+            Kind::Xml => return Self::Markup,
             Kind::Binary => return Self::Plain,
             Kind::Text => {}
         }

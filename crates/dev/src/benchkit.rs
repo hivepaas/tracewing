@@ -70,6 +70,9 @@ pub async fn serve_origin(listener: TcpListener, ca_out: &Path) -> Result<()> {
 }
 
 /// What `/page.html`, `/app.js` and `/style.css` answer with.
+/// A SOAP answer, all on one line as servers send it.
+pub const SOAP_XML: &str = r#"<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetOrderResponse xmlns="urn:shop"><Order id="42" status="paid"><Customer>Nguyễn Văn A</Customer><Items><Item sku="A-1" qty="2">Áo thun</Item><Item sku="B-7" qty="1"/></Items><!-- totals in VND --><Total currency="VND">350000</Total><Note><![CDATA[Giao trước <5pm>]]></Note></Order></GetOrderResponse></soap:Body></soap:Envelope>"#;
+
 pub const PAGE_HTML: &str = r#"<!doctype html>
 <html lang="en">
 <head>
@@ -236,6 +239,9 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
         "/page.html" => Response::builder()
             .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
             .body(Full::new(Bytes::from_static(PAGE_HTML.as_bytes())).boxed()),
+        "/soap.xml" => Response::builder()
+            .header(header::CONTENT_TYPE, "text/xml; charset=utf-8")
+            .body(Full::new(Bytes::from_static(SOAP_XML.as_bytes())).boxed()),
         "/app.js" => Response::builder()
             .header(header::CONTENT_TYPE, "text/javascript")
             .body(Full::new(Bytes::from_static(APP_JS.as_bytes())).boxed()),

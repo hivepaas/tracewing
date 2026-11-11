@@ -17,6 +17,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tracewing::{
+    bodyview::BodyMode,
     detail::Side,
     engine::{Engine, EngineOptions},
     input::TextInput,
@@ -360,6 +361,80 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
     assert!(copied.starts_with("import requests\n"), "{copied}");
     assert!(copied.contains("requests.post("), "{copied}");
     assert!(copied.contains("city=H%C3%A0+N%E1%BB%99i"), "{copied}");
+
+    // XML sent on one line is laid out a tag a line, and folds.
+    let status = send(
+        &mut cx,
+        window,
+        "GET",
+        &format!("https://localhost:{trusted}/soap.xml"),
+        "",
+        "",
+    );
+    assert_eq!(status, 200);
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "seven flows", |view| view.count() == 7);
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(6, cx);
+            view.set_side(Side::Response, cx);
+            view.set_part(Part::Body, cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the XML", |view| {
+        matches!(view.inspector.body, BodyState::Shown(..))
+    });
+    let deadline = Instant::now() + Duration::from_secs(20);
+    loop {
+        let read = window
+            .update(&mut cx, |view, _, cx| match &view.inspector.body {
+                BodyState::Shown(body) => body.read(cx).is_scanned(),
+                _ => false,
+            })
+            .unwrap();
+        if read {
+            break;
+        }
+        assert!(Instant::now() < deadline, "waiting for the XML read");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            body.update(cx, |body, _| {
+                assert!(body.has_pretty());
+                assert_eq!(body.mode(), BodyMode::Pretty);
+                let lines = body.body().read(0..body.body().lines());
+                let shown: Vec<(&str, u32)> =
+                    lines.iter().map(|l| (l.text.as_str(), l.depth)).collect();
+                assert_eq!(
+                    shown[1],
+                    (
+                        "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">",
+                        0
+                    )
+                );
+                assert!(
+                    shown.contains(&("<Customer>Nguyễn Văn A</Customer>", 4)),
+                    "{shown:?}"
+                );
+                assert!(
+                    shown.contains(&("<Item sku=\"B-7\" qty=\"1\"/>", 5)),
+                    "{shown:?}"
+                );
+                assert_eq!(shown.last(), Some(&("</soap:Envelope>", 0)));
+                // The envelope folds to its end.
+                let end = body.body().closer(1).expect("closed");
+                assert_eq!(end, body.body().lines() - 1);
+            });
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "68-xml");
 
     std::fs::remove_dir_all(&dir).ok();
 }

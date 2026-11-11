@@ -150,10 +150,10 @@ pub struct Lines<'a> {
 
 impl<'a> Lines<'a> {
     fn new(data: &'a [u8], kind: Kind) -> Self {
-        let at = if kind == Kind::Json {
-            next_token(data, 0)
-        } else {
-            0
+        let at = match kind {
+            Kind::Json => next_token(data, 0),
+            Kind::Xml => next_token(data, data.strip_prefix(UTF8_BOM).map_or(0, |_| 3)),
+            _ => 0,
         };
         Self::resume(data, kind, at, 0)
     }
@@ -222,6 +222,52 @@ impl<'a> Lines<'a> {
         }
     }
 
+    /// A line for each tag, comment, declaration and run of text, a level
+    /// deeper inside an element. An element with only text in it, `<a>1</a>`,
+    /// stays on its line. Like JSON, it checks nothing else, so that broken
+    /// or cut XML still shows as far as it goes. A closing tag's depth is
+    /// taken off as it is found, so a line that is one is not counted again.
+    fn advance_xml(&mut self) {
+        let data = self.data;
+        let i = self.at;
+        if i >= data.len() {
+            return;
+        }
+        let rest = &data[i..];
+        let end = if rest.starts_with(b"<!--") {
+            past(data, i + 4, b"-->")
+        } else if rest.starts_with(b"<![CDATA[") {
+            past(data, i + 9, b"]]>")
+        } else if rest.starts_with(b"<?") {
+            past(data, i + 2, b"?>")
+        } else if rest.starts_with(b"<!") || rest.starts_with(b"</") {
+            tag_end(data, i)
+        } else if rest.starts_with(b"<") {
+            let end = tag_end(data, i);
+            let empty = data[..end].ends_with(b"/>");
+            // Text and then its element's end, or nothing between: one line.
+            let text_end = memchr(b'<', &data[end..]).map_or(data.len(), |at| end + at);
+            if !empty && data[text_end..].starts_with(b"</") {
+                tag_end(data, text_end)
+            } else {
+                if !empty {
+                    self.depth += 1;
+                }
+                end
+            }
+        } else {
+            memchr(b'<', rest).map_or(data.len(), |at| i + at)
+        };
+        let next = next_token(data, end.max(i + 1));
+        self.at = next;
+        if next < data.len() {
+            if data[next..].starts_with(b"</") {
+                self.depth = self.depth.saturating_sub(1);
+            }
+            self.begin_line(next);
+        }
+    }
+
     fn advance_text(&mut self) {
         let data = self.data;
         let i = self.at;
@@ -245,11 +291,36 @@ impl Iterator for Lines<'_> {
         let line = self.pending.take()?;
         match self.kind {
             Kind::Json => self.advance_json(),
+            Kind::Xml => self.advance_xml(),
             Kind::Text => self.advance_text(),
             Kind::Binary => {}
         }
         Some(line)
     }
+}
+
+const UTF8_BOM: &[u8] = b"\xef\xbb\xbf";
+
+/// Just past the first `end` from `from`, or the end of the data.
+fn past(data: &[u8], from: usize, end: &[u8]) -> usize {
+    let from = from.min(data.len());
+    memchr::memmem::find(&data[from..], end).map_or(data.len(), |at| from + at + end.len())
+}
+
+/// Just past the `>` that ends the tag at `at`. One inside an attribute's
+/// quotes does not end it.
+fn tag_end(data: &[u8], at: usize) -> usize {
+    let mut i = at + 1;
+    while i < data.len() {
+        match data[i] {
+            b'>' => return i + 1,
+            quote @ (b'"' | b'\'') => {
+                i = memchr(quote, &data[i + 1..]).map_or(data.len(), |found| i + 1 + found + 1);
+            }
+            _ => i += 1,
+        }
+    }
+    data.len()
 }
 
 fn next_token(data: &[u8], mut at: usize) -> usize {
@@ -276,9 +347,19 @@ fn skip_string(data: &[u8], open: usize) -> usize {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
     Json,
+    /// Laid out a tag a line, as JSON is a value a line.
+    Xml,
     Text,
     /// Shown as a hex dump, whose lines need no index.
     Binary,
+}
+
+impl Kind {
+    /// Laid out in lines of its own, with depths that fold, rather than shown
+    /// as it was sent.
+    pub fn is_laid_out(self) -> bool {
+        matches!(self, Self::Json | Self::Xml)
+    }
 }
 
 /// What the scanner has done so far.
@@ -310,10 +391,19 @@ impl Body {
     /// Maps the file and starts the scan. Returns before the scan has done
     /// anything, so it takes the same time for any size of file.
     pub fn open(path: &Path) -> Result<Arc<Self>> {
+        Self::open_typed(path, None)
+    }
+
+    /// As [`Self::open`], told the body's type too, which tells XML that
+    /// does not begin with `<?xml` from other text.
+    pub fn open_typed(path: &Path, content_type: Option<&str>) -> Result<Arc<Self>> {
         let file = File::open(path).with_context(|| format!("open {}", path.display()))?;
         // SAFETY: bodies are spooled once and never change while they are shown.
         let map = unsafe { Mmap::map(&file) }.with_context(|| format!("map {}", path.display()))?;
-        let kind = sniff(&map);
+        let kind = match sniff(&map) {
+            Kind::Text if looks_like_xml(&map, content_type) => Kind::Xml,
+            kind => kind,
+        };
         Self::start(Arc::new(map), kind)
     }
 
@@ -460,7 +550,7 @@ impl Body {
     /// a mark at a time, so a closer millions of lines on takes no longer to
     /// find than a few thousand marks.
     pub fn closer(&self, line: u64) -> Option<u64> {
-        if self.kind != Kind::Json || line + 1 >= self.lines() {
+        if !self.kind.is_laid_out() || line + 1 >= self.lines() {
             return None;
         }
         let mut lines = self.depths_from(line);
@@ -553,7 +643,7 @@ impl Body {
         // when it is wrapped, so an offset into it may be past what is cut.
         let at = |start: usize, end: usize, depth: u32, offset: usize| {
             let shown = match self.kind {
-                Kind::Json => self.shown(start, end, depth).text.len(),
+                Kind::Json | Kind::Xml => self.shown(start, end, depth).text.len(),
                 _ => content_len(&self.map[start..end], self.kind),
             };
             if offset >= shown {
@@ -580,7 +670,7 @@ impl Body {
                 start + content_len(&self.map[start..end], self.kind)
             };
             match self.kind {
-                Kind::Json => {
+                Kind::Json | Kind::Xml => {
                     if line > from.0 {
                         out.push(b'\n');
                     }
@@ -681,7 +771,7 @@ impl Body {
 /// next token, other text without its line break.
 fn content_len(line: &[u8], kind: Kind) -> usize {
     match kind {
-        Kind::Json => line.trim_ascii_end().len(),
+        Kind::Json | Kind::Xml => line.trim_ascii_end().len(),
         _ => {
             let line = line.strip_suffix(b"\n").unwrap_or(line);
             line.strip_suffix(b"\r").unwrap_or(line).len()
@@ -704,6 +794,25 @@ fn sniff(data: &[u8]) -> Kind {
         Some(b'{' | b'[') => Kind::Json,
         _ => Kind::Text,
     }
+}
+
+/// XML, by its declaration, or by its type and a tag to begin with. HTML,
+/// which leaves elements open, is not laid out.
+fn looks_like_xml(data: &[u8], content_type: Option<&str>) -> bool {
+    let data = data.strip_prefix(UTF8_BOM).unwrap_or(data);
+    let start = next_token(data, 0);
+    let head = &data[start..data.len().min(start + 64)];
+    let head = String::from_utf8_lossy(head).to_ascii_lowercase();
+    if !head.starts_with('<') || head.starts_with("<!doctype html") || head.starts_with("<html") {
+        return false;
+    }
+    let essence = content_type
+        .and_then(|t| t.split(';').next())
+        .map(|t| t.trim().to_ascii_lowercase())
+        .unwrap_or_default();
+    head.starts_with("<?xml")
+        || (essence != "application/xhtml+xml"
+            && (essence.ends_with("/xml") || essence.ends_with("+xml")))
 }
 
 /// At most `max` bytes, ending on a character boundary. A byte that starts no
@@ -1134,5 +1243,113 @@ mod tests {
         assert_eq!(sent.size(), body.size());
         assert_eq!(sent.closer(0), None, "nothing folds");
         std::fs::remove_file(path).ok();
+    }
+
+    /// The lines of `xml` laid out, as text and depth, once it is read whole.
+    fn xml_lines(name: &str, xml: &str) -> (Arc<Body>, Vec<(String, u32)>) {
+        let path = std::env::temp_dir().join(format!("xml-{name}-{}", std::process::id()));
+        std::fs::write(&path, xml).unwrap();
+        let body = Body::open_typed(&path, Some("application/xml")).unwrap();
+        while !body.is_scanned() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        std::fs::remove_file(path).ok();
+        let lines = body
+            .read(0..body.lines())
+            .into_iter()
+            .map(|l| (l.text, l.depth))
+            .collect();
+        (body, lines)
+    }
+
+    #[test]
+    fn xml_is_laid_out_a_tag_a_line() {
+        let (body, lines) = xml_lines(
+            "laid-out",
+            "<?xml version=\"1.0\"?>\n<root a=\"1>2\"><item id=\"1\">one</item><item/>\
+             <empty></empty><!-- a > b --><list>\n  <x>1</x>\n</list><![CDATA[a<b]]>text</root>",
+        );
+        assert_eq!(body.kind(), Kind::Xml);
+        let want = [
+            ("<?xml version=\"1.0\"?>", 0),
+            ("<root a=\"1>2\">", 0),
+            ("<item id=\"1\">one</item>", 1),
+            ("<item/>", 1),
+            ("<empty></empty>", 1),
+            ("<!-- a > b -->", 1),
+            ("<list>", 1),
+            ("<x>1</x>", 2),
+            ("</list>", 1),
+            ("<![CDATA[a<b]]>", 1),
+            ("text", 1),
+            ("</root>", 0),
+        ];
+        let got: Vec<(&str, u32)> = lines.iter().map(|(t, d)| (t.as_str(), *d)).collect();
+        assert_eq!(got, want);
+        assert_eq!(body.closer(1), Some(11), "the root folds to its end");
+        assert_eq!(body.closer(6), Some(8));
+        assert_eq!(body.closer(2), None, "one line already");
+    }
+
+    #[test]
+    fn xml_read_from_any_line_is_as_read_from_the_start() {
+        let mut xml = String::from("<feed>");
+        for n in 0..300 {
+            xml.push_str(&format!(
+                "<entry n=\"{n}\"><title>t{n}</title><p>a <b>b</b> c</p></entry>"
+            ));
+        }
+        xml.push_str("</feed>");
+        let (body, whole) = xml_lines("resume", &xml);
+        assert!(body.lines() > 2 * MARK_EVERY);
+        for at in [
+            1,
+            MARK_EVERY - 1,
+            MARK_EVERY,
+            MARK_EVERY + 3,
+            2 * MARK_EVERY + 7,
+        ] {
+            let one = body.read(at..at + 1).pop().unwrap();
+            assert_eq!(
+                (one.text, one.depth),
+                whole[at as usize].clone(),
+                "line {at}"
+            );
+        }
+        assert_eq!(whole.last().unwrap(), &("</feed>".to_owned(), 0));
+    }
+
+    #[test]
+    fn broken_xml_shows_as_far_as_it_goes() {
+        for (n, xml) in [
+            "<a><b>text",
+            "<a x=\"never closed",
+            "</a></b>stray<c",
+            "<!-- open",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let (_, lines) = xml_lines(&format!("broken-{n}"), xml);
+            let shown: usize = lines.iter().map(|(t, _)| t.len()).sum();
+            assert!(shown > 0 && shown <= xml.len(), "{xml}: {lines:?}");
+        }
+    }
+
+    #[test]
+    fn xml_is_told_by_its_declaration_or_its_type() {
+        assert!(looks_like_xml(b"<?xml version=\"1.0\"?><a/>", None));
+        assert!(looks_like_xml(
+            b"\xef\xbb\xbf <soap:Envelope/>",
+            Some("text/xml; charset=utf-8")
+        ));
+        assert!(looks_like_xml(b"<feed/>", Some("application/atom+xml")));
+        assert!(
+            !looks_like_xml(b"<feed/>", None),
+            "a tag alone could be HTML"
+        );
+        assert!(!looks_like_xml(b"<!DOCTYPE html><html>", Some("text/xml")));
+        assert!(!looks_like_xml(b"<html/>", Some("application/xhtml+xml")));
+        assert!(!looks_like_xml(b"plain", Some("application/xml")));
     }
 }
