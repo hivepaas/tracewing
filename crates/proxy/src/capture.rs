@@ -90,6 +90,25 @@ certificate, then CA certificate, and pick tracewing.crt. Apps trust it only if 
 certificates the user added: tracewing's Set up page shows how, for an app of your own.</p></details>
 "#;
 
+/// A WebSocket's URL written whole, `ws://` or `wss://`, as curl sends one to
+/// a proxy, as the `http://` or `https://` its upgrade starts as. hudsucker
+/// takes any scheme but `http` for one with TLS, and would reach a server
+/// with none by TLS.
+fn with_http_scheme<B>(req: Request<B>) -> Request<B> {
+    let scheme = match req.uri().scheme_str() {
+        Some(s) if s.eq_ignore_ascii_case("ws") => http::uri::Scheme::HTTP,
+        Some(s) if s.eq_ignore_ascii_case("wss") => http::uri::Scheme::HTTPS,
+        _ => return req,
+    };
+    let (mut parts, body) = req.into_parts();
+    let mut uri = parts.uri.clone().into_parts();
+    uri.scheme = Some(scheme);
+    if let Ok(uri) = http::Uri::from_parts(uri) {
+        parts.uri = uri;
+    }
+    Request::from_parts(parts, body)
+}
+
 /// The page a browser gets from the proxy itself. `proxy` is the address it
 /// was opened at, when it was opened directly rather than through the proxy:
 /// a device that has not been set up yet.
@@ -599,6 +618,7 @@ impl HttpHandler for FlowHandler {
             }
             return req.into();
         }
+        let req = with_http_scheme(req);
         // Revocation checks ask for this while the handshake waits, directly or
         // through the system proxy. They are not traffic the user sent.
         if req.uri().path() == CRL_PATH && request_host(&req) == Some(self.crl.host.as_str()) {

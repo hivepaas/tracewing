@@ -1875,6 +1875,66 @@ async fn websocket_messages_are_recorded_both_ways() {
     clean_up(conn, dir);
 }
 
+/// A WebSocket with no TLS asked for by its whole URL, `ws://`, as curl asks a
+/// proxy: it reaches the server without TLS, and is kept as any other.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_plain_websocket_asked_for_by_its_url_goes_through() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::{
+            WebSocketStream,
+            tungstenite::{Message, protocol::Role},
+        },
+    };
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let h = Harness::start("ws-url").await;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(tracewing_dev::playground::serve(listener));
+    let proxy = h.proxy_url.trim_start_matches("http://");
+    let mut tcp = tokio::net::TcpStream::connect(proxy).await.unwrap();
+    let ask = format!(
+        "GET ws://localhost:{port}/ws?ticks=0 HTTP/1.1\r\nHost: localhost:{port}\r\n\
+         Upgrade: websocket\r\nConnection: Upgrade\r\n\
+         Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n"
+    );
+    tcp.write_all(ask.as_bytes()).await.unwrap();
+    let mut reply = Vec::new();
+    while !reply.ends_with(b"\r\n\r\n") {
+        let mut byte = [0];
+        tcp.read_exact(&mut byte).await.unwrap();
+        reply.push(byte[0]);
+    }
+    let reply = String::from_utf8_lossy(&reply);
+    assert!(reply.starts_with("HTTP/1.1 101"), "{reply}");
+    let mut ws = WebSocketStream::from_raw_socket(tcp, Role::Client, None).await;
+    let hello = ws.next().await.unwrap().unwrap();
+    assert!(hello.to_text().unwrap().contains("hello"), "{hello:?}");
+    ws.send(Message::text("xin chào")).await.unwrap();
+    assert_eq!(ws.next().await.unwrap().unwrap(), Message::text("xin chào"));
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+
+    let (_, conn, dir) = h.finish(1).await;
+    let (scheme, host, path, status): (String, String, String, Option<u16>) = conn
+        .query_row(
+            "SELECT scheme, host, path, status FROM flows WHERE kind = 'websocket'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        (scheme.as_str(), host, path.as_str(), status),
+        (
+            "http",
+            format!("localhost:{port}"),
+            "/ws?ticks=0",
+            Some(101)
+        )
+    );
+    clean_up(conn, dir);
+}
+
 /// Dropping the oldest flows takes their messages along.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_full_session_drops_messages_with_their_flows() {
