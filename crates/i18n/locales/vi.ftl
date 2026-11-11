@@ -52,6 +52,81 @@ tdfe4e404 = Thời gian
 # Number
 t61e9eac0 = Số thứ tự
 
+# A body was not kept, so the two cannot be compared.
+t9d6abb2a = Một body không được giữ lại, nên không so sánh được.
+
+# … {count} line the same | … {count} lines the same
+tcc37e7ea = … { $count } dòng giống nhau
+
+# Nothing to compare.
+t9f32d942 = Không có gì để so sánh.
+
+# URL
+t7569633e = URL
+
+# Protocol
+t4a57ebd5 = Giao thức
+
+# Type
+td155d06d = Loại
+
+# Sizes
+td1a4a19d = Kích thước
+
+# Body
+t428a1095 = Body
+
+# Headers
+t334f5989 = Header
+
+# Query
+t9e89e783 = Query
+
+# Request
+t82454152 = Yêu cầu
+
+# Response
+t55a982fe = Phản hồi
+
+# Neither has headers kept.
+tb43ef094 = Cả hai đều không giữ header.
+
+# Trailers
+t7c44fa89 = Trailer
+
+# Neither URL has a query.
+t4d8203e0 = Cả hai URL đều không có query.
+
+# Comparing…
+ta8565d31 = Đang so sánh…
+
+# No body
+tfa4c2902 = Không có body
+
+# {kind}, its first {size} compared
+t1d894c39 = { $kind }, đã so sánh { $size } đầu tiên
+
+# Neither has a body.
+tf2c47725 = Cả hai đều không có body.
+
+# The bodies are the same.
+t85152e01 = Hai body giống nhau.
+
+# {count} line differs. | {count} lines differ.
+tf57a3157 = { $count } dòng khác nhau.
+
+# Compare
+td57a0a54 = So sánh
+
+# #{a} beside #{b}: what only #{a} has is red, what only #{b} has is green.
+t71ce2de9 = #{ $a } cạnh #{ $b }: phần chỉ #{ $a } có tô đỏ, phần chỉ #{ $b } có tô xanh.
+
+# Swap
+te519d36e = Đổi chỗ
+
+# Back to Traffic
+t644042d2 = Về Traffic
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" không phải là một method
 
@@ -61,9 +136,6 @@ t1f9e5368 = body của request không được giữ đầy đủ, nên không g
 # name: value, one a line
 t4df37bea = tên: giá trị, mỗi dòng một header
 
-# No body
-tfa4c2902 = Không có body
-
 # No flow is chosen
 t550b0a98 = Chưa chọn flow nào
 
@@ -72,15 +144,6 @@ t296762f8 = Flow này: { $e }
 
 # The body is not a {message}: {e}
 t3220a10a = Body không phải một { $message }: { $e }
-
-# Request
-t82454152 = Yêu cầu
-
-# Headers
-t334f5989 = Header
-
-# Body
-t428a1095 = Body
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, viết dưới dạng JSON: khi gửi sẽ là Protobuf.
@@ -96,9 +159,6 @@ t8b242db1 = Mới
 
 # … {count} more bytes: the flow in Traffic has them all.
 tf43ea06c = … còn { $count } byte nữa: flow trong Traffic có đầy đủ.
-
-# Response
-t55a982fe = Phản hồi
 
 # Body · {message}
 taa3cc3ff = Body · { $message }
@@ -213,9 +273,6 @@ t38c4d30b = Operation không có tên
 
 # {n} of {count}: {name}
 t53045460 = { $n }/{ $count }: { $name }
-
-# Query
-t9e89e783 = Query
 
 # A persisted query: the server keeps its text, and the request sends only its hash.
 tf23e3c2a = Persisted query: server giữ nội dung query, request chỉ gửi mã hash của nó.
@@ -333,6 +390,12 @@ t8dc21305 = Đã sao chép
 
 # Copy as cURL
 t866d1e3e = Sao chép dạng cURL
+
+# Click another flow…
+t59253578 = Bấm vào flow khác…
+
+# Compare with…
+t58dfe040 = So sánh với…
 
 # Copy as…
 t9c1ad448 = Sao chép dạng…
@@ -633,9 +696,6 @@ t891b076d = Dòng header { $line } không có ":"
 
 # Header line {line} has no name
 te3247b96 = Dòng header { $line } không có tên
-
-# URL
-t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
 td6aec821 =
@@ -1507,6 +1567,9 @@ t6e21519a = Tạm dừng hoặc tiếp tục ghi
 # Clear the list
 tf2a55d1f = Xoá danh sách
 
+# Compare the flow clicked with the chosen one
+te42cd067 = So sánh flow được bấm với flow đang chọn
+
 # The chosen flow
 te0a729de = Flow đang chọn
 
@@ -1596,6 +1659,9 @@ t19f89214 = Một cái tên, như iPhone test
 
 # The search index: {e}
 te3c971c9 = Chỉ mục tìm kiếm: { $e }
+
+# Click the flow to compare #{id} with.
+tac1ec1d2 = Bấm vào flow để so sánh với #{ $id }.
 
 # An earlier session: {name}
 t73446a1d = Một phiên trước: { $name }

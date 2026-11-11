@@ -6,6 +6,8 @@ pub mod bodyview;
 pub mod chrome;
 pub mod colors;
 pub mod columns;
+pub mod compare;
+pub mod compare_page;
 pub mod compose;
 pub mod compose_page;
 pub mod connection;

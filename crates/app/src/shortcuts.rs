@@ -137,6 +137,7 @@ pub fn label(keys: &str) -> String {
                 "backspace" if mac => "⌫",
                 "backspace" => "Backspace",
                 "tab" => "Tab",
+                "click" => "Click",
                 other => return other.to_uppercase(),
             }
             .to_owned()
@@ -160,6 +161,10 @@ pub fn list() -> Vec<Group> {
                 ("mod+f", tr!("Filter")),
                 ("mod+r", tr!("Pause or resume recording")),
                 ("mod+k", tr!("Clear the list")),
+                (
+                    "mod+click",
+                    tr!("Compare the flow clicked with the chosen one"),
+                ),
             ],
         ),
         (
@@ -354,8 +359,9 @@ mod tests {
                 for alt in keys.split(" / ").flat_map(|k| k.split(" … ")) {
                     let parts: Vec<&str> = alt.split('+').collect();
                     let key = *parts.last().unwrap();
-                    // A text field's own: it moves to the next field.
-                    if key == "tab" {
+                    // A text field's own: it moves to the next field. A
+                    // click is the list's.
+                    if key == "tab" || key == "click" {
                         continue;
                     }
                     let secondary = parts.contains(&"mod");

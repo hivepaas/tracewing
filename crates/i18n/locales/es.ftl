@@ -63,6 +63,91 @@ tdfe4e404 = Tiempo
 # Number
 t61e9eac0 = Número
 
+# A body was not kept, so the two cannot be compared.
+t9d6abb2a = No se guardó un body, así que no se pueden comparar.
+
+# … {count} line the same | … {count} lines the same
+tcc37e7ea =
+    { $n ->
+        [one] … { $count } línea igual
+        [many] … { $count } líneas iguales
+       *[other] … { $count } líneas iguales
+    }
+
+# Nothing to compare.
+t9f32d942 = Nada que comparar.
+
+# URL
+t7569633e = URL
+
+# Protocol
+t4a57ebd5 = Protocolo
+
+# Type
+td155d06d = Tipo
+
+# Sizes
+td1a4a19d = Tamaños
+
+# Body
+t428a1095 = Cuerpo
+
+# Headers
+t334f5989 = Encabezados
+
+# Query
+t9e89e783 = Consulta
+
+# Request
+t82454152 = Solicitud
+
+# Response
+t55a982fe = Respuesta
+
+# Neither has headers kept.
+tb43ef094 = Ninguno tiene cabeceras guardadas.
+
+# Trailers
+t7c44fa89 = Trailers
+
+# Neither URL has a query.
+t4d8203e0 = Ninguna URL tiene query.
+
+# Comparing…
+ta8565d31 = Comparando…
+
+# No body
+tfa4c2902 = Sin cuerpo
+
+# {kind}, its first {size} compared
+t1d894c39 = { $kind }, comparados sus primeros { $size }
+
+# Neither has a body.
+tf2c47725 = Ninguno tiene body.
+
+# The bodies are the same.
+t85152e01 = Los bodies son iguales.
+
+# {count} line differs. | {count} lines differ.
+tf57a3157 =
+    { $n ->
+        [one] { $count } línea es distinta.
+        [many] { $count } líneas son distintas.
+       *[other] { $count } líneas son distintas.
+    }
+
+# Compare
+td57a0a54 = Comparar
+
+# #{a} beside #{b}: what only #{a} has is red, what only #{b} has is green.
+t71ce2de9 = #{ $a } junto a #{ $b }: lo que solo tiene #{ $a } va en rojo, lo que solo tiene #{ $b } va en verde.
+
+# Swap
+te519d36e = Intercambiar
+
+# Back to Traffic
+t644042d2 = Volver a Traffic
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" no es un método
 
@@ -72,9 +157,6 @@ t1f9e5368 = el cuerpo de su solicitud no se guardó completo, así que no se pue
 # name: value, one a line
 t4df37bea = nombre: valor, uno por línea
 
-# No body
-tfa4c2902 = Sin cuerpo
-
 # No flow is chosen
 t550b0a98 = Ningún flow seleccionado
 
@@ -83,15 +165,6 @@ t296762f8 = Este flow: { $e }
 
 # The body is not a {message}: {e}
 t3220a10a = El cuerpo no es un { $message }: { $e }
-
-# Request
-t82454152 = Solicitud
-
-# Headers
-t334f5989 = Encabezados
-
-# Body
-t428a1095 = Cuerpo
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, escrito como JSON: se envía como Protobuf.
@@ -107,9 +180,6 @@ t8b242db1 = Nueva
 
 # … {count} more bytes: the flow in Traffic has them all.
 tf43ea06c = … { $count } bytes más: el flow en Tráfico los tiene todos.
-
-# Response
-t55a982fe = Respuesta
 
 # Body · {message}
 taa3cc3ff = Cuerpo · { $message }
@@ -228,9 +298,6 @@ t38c4d30b = Una operación sin nombre
 # {n} of {count}: {name}
 t53045460 = { $n } de { $count }: { $name }
 
-# Query
-t9e89e783 = Consulta
-
 # A persisted query: the server keeps its text, and the request sends only its hash.
 tf23e3c2a = Una consulta persistida: el servidor guarda su texto y la solicitud solo envía su hash.
 
@@ -347,6 +414,12 @@ t8dc21305 = Copiado
 
 # Copy as cURL
 t866d1e3e = Copiar como cURL
+
+# Click another flow…
+t59253578 = Haz clic en otro flujo…
+
+# Compare with…
+t58dfe040 = Comparar con…
 
 # Copy as…
 t9c1ad448 = Copiar como…
@@ -651,9 +724,6 @@ t891b076d = La línea de encabezado { $line } no tiene ":"
 
 # Header line {line} has no name
 te3247b96 = La línea de encabezado { $line } no tiene nombre
-
-# URL
-t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
 td6aec821 =
@@ -1576,6 +1646,9 @@ t6e21519a = Pausar o reanudar la grabación
 # Clear the list
 tf2a55d1f = Vaciar la lista
 
+# Compare the flow clicked with the chosen one
+te42cd067 = Comparar el flujo pulsado con el elegido
+
 # The chosen flow
 te0a729de = El flow elegido
 
@@ -1665,6 +1738,9 @@ t19f89214 = Un nombre, como iPhone de pruebas
 
 # The search index: {e}
 te3c971c9 = El índice de búsqueda: { $e }
+
+# Click the flow to compare #{id} with.
+tac1ec1d2 = Haz clic en el flujo que quieres comparar con #{ $id }.
 
 # An earlier session: {name}
 t73446a1d = Una sesión anterior: { $name }

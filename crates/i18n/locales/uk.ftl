@@ -67,6 +67,93 @@ tdfe4e404 = Час
 # Number
 t61e9eac0 = Номер
 
+# A body was not kept, so the two cannot be compared.
+t9d6abb2a = Одне з тіл не збережено, тож порівняти їх не можна.
+
+# … {count} line the same | … {count} lines the same
+tcc37e7ea =
+    { $n ->
+        [one] … { $count } однаковий рядок
+        [few] … { $count } однакові рядки
+        [many] … { $count } однакових рядків
+       *[other] … { $count } однакового рядка
+    }
+
+# Nothing to compare.
+t9f32d942 = Нічого порівнювати.
+
+# URL
+t7569633e = URL
+
+# Protocol
+t4a57ebd5 = Протокол
+
+# Type
+td155d06d = Тип
+
+# Sizes
+td1a4a19d = Розміри
+
+# Body
+t428a1095 = Тіло
+
+# Headers
+t334f5989 = Заголовки
+
+# Query
+t9e89e783 = Запит
+
+# Request
+t82454152 = Запит
+
+# Response
+t55a982fe = Відповідь
+
+# Neither has headers kept.
+tb43ef094 = Жоден не має збережених заголовків.
+
+# Trailers
+t7c44fa89 = Трейлери
+
+# Neither URL has a query.
+t4d8203e0 = Жодна URL не має query.
+
+# Comparing…
+ta8565d31 = Порівняння…
+
+# No body
+tfa4c2902 = Без тіла
+
+# {kind}, its first {size} compared
+t1d894c39 = { $kind }, порівняно перші { $size }
+
+# Neither has a body.
+tf2c47725 = Жоден не має тіла.
+
+# The bodies are the same.
+t85152e01 = Тіла однакові.
+
+# {count} line differs. | {count} lines differ.
+tf57a3157 =
+    { $n ->
+        [one] Відрізняється { $count } рядок.
+        [few] Відрізняються { $count } рядки.
+        [many] Відрізняються { $count } рядків.
+       *[other] Відрізняється { $count } рядка.
+    }
+
+# Compare
+td57a0a54 = Порівняння
+
+# #{a} beside #{b}: what only #{a} has is red, what only #{b} has is green.
+t71ce2de9 = #{ $a } поруч із #{ $b }: те, що є лише в #{ $a }, — червоним, те, що є лише в #{ $b }, — зеленим.
+
+# Swap
+te519d36e = Поміняти місцями
+
+# Back to Traffic
+t644042d2 = Назад до Traffic
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" не є методом
 
@@ -76,9 +163,6 @@ t1f9e5368 = тіло запиту не збережено повністю, то
 # name: value, one a line
 t4df37bea = назва: значення, по одному в рядку
 
-# No body
-tfa4c2902 = Без тіла
-
 # No flow is chosen
 t550b0a98 = Потік не вибрано
 
@@ -87,15 +171,6 @@ t296762f8 = Цей потік: { $e }
 
 # The body is not a {message}: {e}
 t3220a10a = Тіло не є { $message }: { $e }
-
-# Request
-t82454152 = Запит
-
-# Headers
-t334f5989 = Заголовки
-
-# Body
-t428a1095 = Тіло
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, записаний як JSON: надсилається як Protobuf.
@@ -111,9 +186,6 @@ t8b242db1 = Новий
 
 # … {count} more bytes: the flow in Traffic has them all.
 tf43ea06c = … ще байтів: { $count }; усі вони є в потоці на вкладці «Трафік».
-
-# Response
-t55a982fe = Відповідь
 
 # Body · {message}
 taa3cc3ff = Тіло · { $message }
@@ -238,9 +310,6 @@ t38c4d30b = Операція без назви
 # {n} of {count}: {name}
 t53045460 = { $n } з { $count }: { $name }
 
-# Query
-t9e89e783 = Запит
-
 # A persisted query: the server keeps its text, and the request sends only its hash.
 tf23e3c2a = Persisted query: текст зберігає сервер, а запит надсилає лише його хеш.
 
@@ -357,6 +426,12 @@ t8dc21305 = Скопійовано
 
 # Copy as cURL
 t866d1e3e = Копіювати як cURL
+
+# Click another flow…
+t59253578 = Натисніть на інший потік…
+
+# Compare with…
+t58dfe040 = Порівняти з…
 
 # Copy as…
 t9c1ad448 = Копіювати як…
@@ -669,9 +744,6 @@ t891b076d = У рядку заголовка { $line } немає ":"
 
 # Header line {line} has no name
 te3247b96 = У рядку заголовка { $line } немає назви
-
-# URL
-t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
 td6aec821 =
@@ -1615,6 +1687,9 @@ t6e21519a = Призупинити або відновити запис
 # Clear the list
 tf2a55d1f = Очистити список
 
+# Compare the flow clicked with the chosen one
+te42cd067 = Порівняти натиснутий потік із вибраним
+
 # The chosen flow
 te0a729de = Вибраний потік
 
@@ -1704,6 +1779,9 @@ t19f89214 = Назва, наприклад Тестовий iPhone
 
 # The search index: {e}
 te3c971c9 = Пошуковий індекс: { $e }
+
+# Click the flow to compare #{id} with.
+tac1ec1d2 = Натисніть на потік, щоб порівняти його з #{ $id }.
 
 # An earlier session: {name}
 t73446a1d = Попередній сеанс: { $name }
