@@ -16,7 +16,7 @@ FEATURES ?=
 APP := -p tracewing $(if $(FEATURES),--features $(FEATURES))
 
 .DEFAULT_GOAL := help
-.PHONY: help debug release build build-debug test test-window lint fmt clean
+.PHONY: help debug release build build-debug test test-window lint fmt playground clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -45,6 +45,9 @@ lint: ## Check the format and run clippy, as CI does
 
 fmt: ## Format the code
 	$(CARGO) fmt --all
+
+playground: ## Run a server to try tracewing on: http://localhost:10000 lists its paths
+	$(CARGO) run --release -p tracewing-dev -- playground
 
 clean: ## Remove what was built
 	$(CARGO) clean

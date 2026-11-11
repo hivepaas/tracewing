@@ -131,6 +131,12 @@ enum Command {
         #[arg(long, default_value = "origin-ca.pem")]
         ca_out: PathBuf,
     },
+    /// Run a server to try tracewing on by hand: each kind of body at a path
+    /// of its own, big ones too, streams, WebSocket and gRPC. `/` lists them.
+    Playground {
+        #[arg(long, default_value = "127.0.0.1:10000")]
+        listen: SocketAddr,
+    },
     /// Send load through the proxy, trusting only the proxy's CA.
     Load {
         #[arg(long, default_value = "http://127.0.0.1:9090")]
@@ -436,6 +442,15 @@ async fn main() -> Result<()> {
                 ca_out.display()
             );
             benchkit::serve_origin(listener, &ca_out).await?;
+        }
+        Command::Playground { listen } => {
+            let listener = TcpListener::bind(listen).await?;
+            let base = format!("http://localhost:{}", listener.local_addr()?.port());
+            println!("playground on {base}");
+            for (path, what) in tracewing_dev::playground::ROUTES {
+                println!("  {base}{path:<20} {what}");
+            }
+            tracewing_dev::playground::serve(listener).await?;
         }
         Command::Load {
             proxy,
