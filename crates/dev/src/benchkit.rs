@@ -38,7 +38,7 @@ use tokio::{
 };
 use tokio_rustls::TlsAcceptor;
 
-type OriginBody = BoxBody<Bytes, Infallible>;
+pub(crate) type OriginBody = BoxBody<Bytes, Infallible>;
 
 /// Serves the benchmark routes over TLS (HTTP/1.1 and HTTP/2) until the task
 /// is dropped. Writes the origin's CA to `ca_out` so the proxy can trust it.
@@ -127,6 +127,11 @@ pub fn order_cbor() -> Vec<u8> {
 /// The order as Protobuf, with no `.proto`: an id, a customer, its items as
 /// messages, a price as a double and a signature as bytes.
 pub fn order_protobuf() -> Vec<u8> {
+    order_protobuf_for(42)
+}
+
+/// [`order_protobuf`] with another id.
+pub fn order_protobuf_for(id: u64) -> Vec<u8> {
     fn varint(out: &mut Vec<u8>, mut n: u64) {
         while n >= 0x80 {
             out.push(n as u8 | 0x80);
@@ -148,7 +153,7 @@ pub fn order_protobuf() -> Vec<u8> {
     };
     let mut out = Vec::new();
     varint(&mut out, 1 << 3);
-    varint(&mut out, 42);
+    varint(&mut out, id);
     bytes(&mut out, 2, "Nguyễn Văn A".as_bytes());
     bytes(&mut out, 3, &item("A-1", 2));
     bytes(&mut out, 3, &item("B-7", 1));
@@ -220,7 +225,7 @@ pub fn shop_files() -> prost_types::FileDescriptorSet {
 
 /// Reflection's answers to the requests in `body`, then trailers that say
 /// all went well.
-fn reflection_answer(body: &[u8]) -> Response<OriginBody> {
+pub(crate) fn reflection_answer(body: &[u8]) -> Response<OriginBody> {
     use tracewing_store::reflection::{Request as Ask, answer, frames, unframe};
     let files = shop_files();
     let answers: Vec<_> = unframe::<Ask>(body)
@@ -629,7 +634,7 @@ fn make_pool(encoding: &str, size: usize) -> Vec<Bytes> {
         .collect()
 }
 
-fn pack(text: &[u8], encoding: &str) -> Vec<u8> {
+pub(crate) fn pack(text: &[u8], encoding: &str) -> Vec<u8> {
     match encoding {
         "gzip" => {
             let mut out = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::new(6));
@@ -659,7 +664,7 @@ fn json_body(size: usize) -> Bytes {
     Bytes::from(body)
 }
 
-fn parse_query(query: &str) -> BTreeMap<&str, &str> {
+pub(crate) fn parse_query(query: &str) -> BTreeMap<&str, &str> {
     query
         .split('&')
         .filter_map(|pair| pair.split_once('='))

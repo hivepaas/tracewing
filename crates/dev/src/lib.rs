@@ -2,4 +2,5 @@
 //! and an HTTPS origin and load generator to put through the proxy.
 
 pub mod benchkit;
+pub mod playground;
 pub mod seed;

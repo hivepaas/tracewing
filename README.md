@@ -24,6 +24,7 @@ make test                                   # includes end-to-end tests through 
 curl --proxy http://127.0.0.1:9090 \
      --cacert ~/.local/share/tracewing/ca.pem https://example.com/
 cargo run --release -p tracewing-dev -- settings       # every storage setting and its default
+make playground                             # a server to try it on: http://localhost:10000 lists its paths
 cargo test --release -p tracewing --features headless --test screen  # the window with no display; pictures in target/shots
 ```
 
