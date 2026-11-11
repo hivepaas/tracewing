@@ -42,6 +42,7 @@ pub mod syntax;
 pub mod system;
 pub mod traffic;
 pub mod widgets;
+pub mod wrap;
 
 use gpui::{App, AssetSource, SharedString};
 use std::borrow::Cow;

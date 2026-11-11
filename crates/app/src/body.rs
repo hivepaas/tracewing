@@ -418,6 +418,33 @@ impl Body {
         out
     }
 
+    /// The whole text of each line in `range`, for a view that wraps them:
+    /// not cut at [`SHOWN_BYTES_MAX`], which a line of text, at most
+    /// [`TEXT_LINE_MAX`] bytes, is not far past. Its offsets are the file's,
+    /// a byte for a byte, from where the line starts.
+    pub fn read_whole(&self, range: Range<u64>) -> Vec<String> {
+        if range.is_empty() || self.kind == Kind::Binary {
+            return Vec::new();
+        }
+        let (offset, depth) = self.index.mark_before(range.start);
+        let skip = range.start % MARK_EVERY;
+        let wanted = (range.end - range.start) as usize;
+        let mut lines = Lines::resume(&self.map, self.kind, offset as usize, depth)
+            .skip(skip as usize)
+            .peekable();
+        let mut out = Vec::with_capacity(wanted);
+        for _ in 0..wanted {
+            let Some((start, _)) = lines.next() else {
+                break;
+            };
+            let end = lines.peek().map_or(self.map.len(), |(next, _)| *next);
+            let line = &self.map[start..start + content_len(&self.map[start..end], self.kind)];
+            // The same length either way, so offsets stay the file's.
+            out.push(String::from_utf8_lossy(line).replace(['\n', '\r', '\t'], " "));
+        }
+        out
+    }
+
     /// The depths of the lines from `from`, in order, as far as they are ready.
     fn depths_from(&self, from: u64) -> impl Iterator<Item = (u64, u32)> + '_ {
         let (offset, depth) = self.index.mark_before(from);
@@ -522,9 +549,13 @@ impl Body {
             .skip((from.0 % MARK_EVERY) as usize)
             .peekable();
         // Where an offset into what a line shows is in the file: what it shows
-        // starts where the line does, a byte for a byte.
+        // starts where the line does, a byte for a byte. Text is shown whole
+        // when it is wrapped, so an offset into it may be past what is cut.
         let at = |start: usize, end: usize, depth: u32, offset: usize| {
-            let shown = self.shown(start, end, depth).text.len();
+            let shown = match self.kind {
+                Kind::Json => self.shown(start, end, depth).text.len(),
+                _ => content_len(&self.map[start..end], self.kind),
+            };
             if offset >= shown {
                 start + content_len(&self.map[start..end], self.kind)
             } else {

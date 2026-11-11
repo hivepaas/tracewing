@@ -12,7 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tracewing::{
-    bodyview::{BodyMode, BodyView},
+    bodyview::{BodyMode, BodyView, LINE_HEIGHT},
     colors,
     detail::Side,
     engine::{Engine, EngineOptions},
@@ -298,6 +298,44 @@ fn the_window_shows_real_traffic() {
         })
         .unwrap();
     save(&mut cx, window.into(), "93-body-raw");
+    // Wrapped to the view: its one line is rows, scrolled a row at a time,
+    // and no further than a view from its end.
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                panic!()
+            };
+            body.update(cx, |body, cx| {
+                body.scroll_by(10_000., cx);
+                let (line, row) = body.place();
+                assert_eq!(line, 0, "one line");
+                assert!(row > 0, "rows of it");
+                body.scroll_by(-(LINE_HEIGHT as f64), cx);
+                assert_eq!(body.place(), (0, row - 1));
+                body.scroll_by(-10_000., cx);
+                assert_eq!(body.place(), (0, 0));
+                // A selection of rows copies what they are of the line.
+                let text = |body: &BodyView, from: (usize, usize), to: (usize, usize)| {
+                    let spot = |(row, at)| tracewing::select::Spot {
+                        piece: tracewing::wrap::key(0, row),
+                        at,
+                    };
+                    body.selection().select(spot(from), spot(to));
+                    match body.selected_text() {
+                        tracewing::select::Copied::Text(text) => text,
+                        _ => panic!("copied"),
+                    }
+                };
+                let first = text(body, (0, 0), (1, 0));
+                let second = text(body, (1, 0), (2, 0));
+                let both = text(body, (0, 0), (2, 0));
+                assert_eq!(first.chars().count(), second.chars().count(), "full rows");
+                assert_eq!(both, format!("{first}{second}"));
+                assert!(both.starts_with("{\"id\":"), "{both}");
+                body.selection().clear();
+            });
+        })
+        .unwrap();
 
     // The same body as its bytes, and back.
     window

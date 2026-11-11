@@ -9,13 +9,20 @@ use crate::{
     flows::size_text,
     select::{self, COPY_MAX, Copied, Selection, Spot},
     syntax::Syntax,
+    wrap::{self, Place},
 };
 use gpui::{
     Bounds, ClipboardItem, Context, FocusHandle, HighlightStyle, Hsla, MouseButton, MouseDownEvent,
     Pixels, Point, Render, ScrollWheelEvent, SharedString, Window, canvas, div, prelude::*, px,
     rgb,
 };
-use std::{cell::Cell, collections::BTreeMap, rc::Rc, sync::Arc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    collections::{BTreeMap, HashMap},
+    rc::Rc,
+    sync::Arc,
+    time::Duration,
+};
 use tracewing_i18n::{tr, tr_n};
 
 pub const LINE_HEIGHT: f32 = 20.;
@@ -29,6 +36,10 @@ const THUMB_MIN: f32 = 28.;
 const BAR_W: f32 = 10.;
 /// How often a window with a scan running looks at its progress.
 const SCAN_POLL: Duration = Duration::from_millis(50);
+/// Lines counted on either side of one whose rows are asked for.
+const ROWS_READ_AROUND: u64 = 64;
+/// Lines whose rows are kept counted, past which they are counted again.
+const ROWS_KEPT: usize = 100_000;
 
 /// Objects and arrays folded away, each from its first line to the line that
 /// ends it. The first line stays in view; the rest, its closer too, do not.
@@ -137,6 +148,14 @@ pub struct BodyView {
     syntax: Syntax,
     /// The row at the top of the view, and how far it has scrolled out of it.
     top: u64,
+    /// The same for text, which is wrapped: its rows are only known near
+    /// where the view is.
+    place: Place,
+    /// Characters a wrapped row holds, from the width of the view.
+    cols: usize,
+    /// How many rows the lines read so far take at `cols`: a scroll asks of
+    /// the same few lines again and again.
+    row_counts: RefCell<HashMap<u64, usize>>,
     folds: Folds,
     mode: BodyMode,
     sub: f32,
@@ -165,6 +184,9 @@ impl BodyView {
             raw: None,
             syntax,
             top: 0,
+            place: Place::default(),
+            cols: 80,
+            row_counts: RefCell::default(),
             folds: Folds::default(),
             mode: BodyMode::Pretty,
             sub: 0.,
@@ -189,8 +211,8 @@ impl BodyView {
 
     fn copy(&self, start: Spot, end: Spot) -> Copied {
         match self.shown().text_in(
-            (start.piece, start.at),
-            (end.piece, end.at),
+            self.line_spot(start),
+            self.line_spot(end),
             COPY_MAX,
             self.hex(),
         ) {
@@ -203,13 +225,146 @@ impl BodyView {
     /// The first and the last spot of the body.
     fn ends(&self) -> Option<(Spot, Spot)> {
         let last = self.lines().checked_sub(1)?;
+        let piece = if self.wrapping() {
+            wrap::key(last, wrap::LAST_ROW)
+        } else {
+            last
+        };
         Some((
             Spot::default(),
             Spot {
-                piece: last,
+                piece,
                 at: usize::MAX,
             },
         ))
+    }
+
+    /// The line a spot is in, and its offset into what the line shows. A
+    /// wrapped row's spot is first made its line's.
+    fn line_spot(&self, spot: Spot) -> (u64, usize) {
+        if !self.wrapping() {
+            return (spot.piece, spot.at);
+        }
+        let (line, row) = wrap::unkey(spot.piece);
+        let base = self
+            .shown()
+            .read_whole(line..line + 1)
+            .first()
+            .map_or(0, |text| {
+                wrap::row_starts(text, self.cols)
+                    .get(row)
+                    .copied()
+                    .unwrap_or(text.len())
+            });
+        (line, base.saturating_add(spot.at))
+    }
+
+    /// Text is wrapped to the width of the view. JSON laid out, which is
+    /// folded instead, and dumps are not.
+    fn wrapping(&self) -> bool {
+        !self.hex() && self.shown().kind() == Kind::Text
+    }
+
+    /// How many rows `line` takes, wrapped. Lines around it are counted
+    /// with it, as they are read in one go and a scroll goes there next.
+    fn rows_of(&self, line: u64) -> usize {
+        if let Some(rows) = self.row_counts.borrow().get(&line) {
+            return *rows;
+        }
+        let body = self.shown();
+        let lines = self.lines();
+        let from = line.saturating_sub(ROWS_READ_AROUND);
+        let to = (line + ROWS_READ_AROUND).min(lines);
+        let mut counts = self.row_counts.borrow_mut();
+        if counts.len() > ROWS_KEPT {
+            counts.clear();
+        }
+        let mut found = 1;
+        for (at, text) in (from..).zip(body.read_whole(from..to)) {
+            let rows = wrap::row_starts(&text, self.cols).len();
+            // The last line may still grow while the scan reads it.
+            if at + 1 < lines || body.is_scanned() {
+                counts.insert(at, rows);
+            }
+            if at == line {
+                found = rows;
+            }
+        }
+        found
+    }
+
+    /// The rows a view holds whole.
+    fn rows_in_height(&self) -> u64 {
+        (self.height() / LINE_HEIGHT).floor().max(1.) as u64
+    }
+
+    /// The highest place wrapped text can be shown from.
+    fn last_place(&self) -> Place {
+        Place::last_top(self.lines(), self.rows_in_height(), &mut |line| {
+            self.rows_of(line)
+        })
+    }
+
+    /// Scrolls wrapped text by `dy` pixels, a row at a time, no further than
+    /// a full view from its end.
+    fn scroll_wrapped(&mut self, dy: f64) {
+        let lines = self.lines();
+        let last = self.last_place();
+        let line_height = f64::from(LINE_HEIGHT);
+        let mut place = self.place;
+        let mut y = f64::from(self.sub) + dy;
+        {
+            let mut rows = |line| self.rows_of(line);
+            while y >= line_height && place < last {
+                let Some(next) = place.next(lines, &mut rows) else {
+                    break;
+                };
+                place = next;
+                y -= line_height;
+            }
+            while y < 0. {
+                let Some(before) = place.back(&mut rows) else {
+                    y = 0.;
+                    break;
+                };
+                place = before;
+                y += line_height;
+            }
+        }
+        if place >= last {
+            place = last;
+            y = 0.;
+        }
+        self.place = place;
+        self.sub = y.clamp(0., line_height - 1.) as f32;
+    }
+
+    /// Scrolls as the wheel does. For tests.
+    #[doc(hidden)]
+    pub fn scroll_by(&mut self, dy: f64, cx: &mut Context<Self>) {
+        if self.wrapping() {
+            self.scroll_wrapped(dy);
+        } else {
+            self.set_position(self.position() + dy);
+        }
+        cx.notify();
+    }
+
+    /// The line and the row of it at the top of wrapped text. For tests.
+    #[doc(hidden)]
+    pub fn place(&self) -> (u64, usize) {
+        (self.place.line, self.place.row)
+    }
+
+    /// How far down wrapped text the view is, from 0 to 1.
+    fn wrapped_share(&self) -> f64 {
+        let mut rows = |line| self.rows_of(line);
+        let max = self.last_place().fraction(&mut rows);
+        if max <= 0. {
+            0.
+        } else {
+            (self.place.fraction(&mut rows) / max).clamp(0., 1.)
+        }
     }
 
     pub fn select_all(&mut self, cx: &mut Context<Self>) {
@@ -249,7 +404,12 @@ impl BodyView {
             px(0.)
         };
         if past != px(0.) {
-            self.set_position(self.position() + f64::from(f32::from(past)));
+            let past = f64::from(f32::from(past));
+            if self.wrapping() {
+                self.scroll_wrapped(past);
+            } else {
+                self.set_position(self.position() + past);
+            }
         }
         if self.select.drag_to(at) || past != px(0.) {
             cx.notify();
@@ -262,7 +422,11 @@ impl BodyView {
 
     /// The line at the top of the view.
     pub fn top(&self) -> u64 {
-        self.folds.line_of(self.top)
+        if self.wrapping() {
+            self.place.line
+        } else {
+            self.folds.line_of(self.top)
+        }
     }
 
     pub fn folds(&self) -> &Folds {
@@ -351,6 +515,8 @@ impl BodyView {
             self.raw = Some(raw);
         }
         self.mode = mode;
+        self.place = Place::default();
+        self.row_counts.borrow_mut().clear();
         self.folds = Folds::default();
         self.select.clear();
         self.top = 0;
@@ -385,21 +551,56 @@ impl BodyView {
 
     fn on_wheel(&mut self, event: &ScrollWheelEvent, _: &mut Window, cx: &mut Context<Self>) {
         let delta = f64::from(f32::from(event.delta.pixel_delta(px(LINE_HEIGHT)).y));
-        self.set_position(self.position() - delta);
+        if self.wrapping() {
+            self.scroll_wrapped(-delta);
+        } else {
+            self.set_position(self.position() - delta);
+        }
         cx.notify();
     }
 
     fn drag_to(&mut self, y: Pixels, cx: &mut Context<Self>) {
         let track = f64::from(self.height() - THUMB_MIN).max(1.);
         let inside = f32::from(y - self.bounds.get().origin.y);
-        let at = (f64::from(inside) - f64::from(THUMB_MIN) / 2.) / track;
-        self.set_position(at.clamp(0., 1.) * self.max_position());
+        let at = ((f64::from(inside) - f64::from(THUMB_MIN) / 2.) / track).clamp(0., 1.);
+        if self.wrapping() {
+            let lines = self.lines();
+            let mut rows = |line| self.rows_of(line);
+            let max = self.last_place().fraction(&mut rows);
+            let place = Place::at_fraction(at * max, lines, &mut rows);
+            self.place = place;
+            self.sub = 0.;
+        } else {
+            self.set_position(at * self.max_position());
+        }
         cx.notify();
     }
 
+    /// As many characters a row as the view is wide. The place in view stays
+    /// on its line when the width changes.
+    fn fit_cols(&mut self, window: &mut Window) {
+        let text_system = window.text_system();
+        let font = text_system.resolve_font(&gpui::font(crate::MONO_FONT));
+        let char_w = text_system
+            .advance(font, px(12.), 'm')
+            .map_or(7.2, |size| f32::from(size.width))
+            .max(1.);
+        let width = f32::from(self.bounds.get().size.width) - BAR_W - GUTTER_W - FOLD_W - 8.;
+        let cols = ((width / char_w).floor() as usize).max(8);
+        if cols != self.cols {
+            self.cols = cols;
+            self.row_counts.borrow_mut().clear();
+            self.place.row = self.place.row.min(self.rows_of(self.place.line) - 1);
+        }
+    }
+
+    /// A line, or with text wrapped one row of it: `key` tells it from the
+    /// rest for selecting, and only a line's first row has its number.
     fn render_line(
         &self,
         line: u64,
+        key: u64,
+        numbered: bool,
         shown: Line,
         mark: FoldMark,
         cx: &mut Context<Self>,
@@ -409,7 +610,11 @@ impl BodyView {
         } else {
             shown.depth as f32 * INDENT_W
         };
-        let number = (line + 1).to_string();
+        let number = if numbered {
+            (line + 1).to_string()
+        } else {
+            String::new()
+        };
         let highlights: Vec<_> = if self.hex() {
             Vec::new()
         } else {
@@ -469,7 +674,7 @@ impl BodyView {
                     .when(!folded, |d| d.flex_1())
                     .min_w_0()
                     .overflow_hidden()
-                    .child(self.select.piece_at(line, text, highlights)),
+                    .child(self.select.piece_at(key, text, highlights)),
             );
         if let FoldMark::Folded(closer, hidden) = mark {
             row = row.child(
@@ -510,6 +715,46 @@ impl BodyView {
     /// The body's size and lines, as shown.
     pub fn summary(&self) -> String {
         summary_in(self.shown(), self.hex())
+    }
+
+    /// Wrapped text's rows from the top of the view, read a run of lines at
+    /// a time.
+    fn wrapped_rows_in_view(&self, in_view: u64, cx: &mut Context<Self>) -> Vec<gpui::AnyElement> {
+        let lines = self.lines();
+        let mut shown = Vec::new();
+        let mut line = self.place.line;
+        let mut first_row = self.place.row;
+        while line < lines && (shown.len() as u64) < in_view {
+            let run = (in_view - shown.len() as u64).min(lines - line);
+            for text in self.shown().read_whole(line..line + run) {
+                let starts = wrap::row_starts(&text, self.cols);
+                for (row, from) in starts.iter().copied().enumerate().skip(first_row) {
+                    if shown.len() as u64 >= in_view {
+                        break;
+                    }
+                    let to = starts.get(row + 1).copied().unwrap_or(text.len());
+                    let part = Line {
+                        text: text[from..to].to_owned(),
+                        depth: 0,
+                        cut: 0,
+                    };
+                    shown.push(
+                        self.render_line(
+                            line,
+                            wrap::key(line, row),
+                            row == 0,
+                            part,
+                            FoldMark::None,
+                            cx,
+                        )
+                        .into_any_element(),
+                    );
+                }
+                first_row = 0;
+                line += 1;
+            }
+        }
+        shown
     }
 
     /// The rows from the top of the view, read a run of lines at a time: a
@@ -556,7 +801,10 @@ impl BodyView {
                     None if next_depths[i] == Some(text.depth + 1) => FoldMark::Opens,
                     None => FoldMark::None,
                 };
-                shown.push(self.render_line(at, text, mark, cx).into_any_element());
+                shown.push(
+                    self.render_line(at, at, true, text, mark, cx)
+                        .into_any_element(),
+                );
             }
             line = self.folds.next_line(end);
         }
@@ -571,15 +819,28 @@ impl Render for BodyView {
         let in_view = (f32::from(window.viewport_size().height) / LINE_HEIGHT).ceil() as u64 + 1;
         let list_height = self.height();
         let lines = self.lines();
-        let rows = self.rows_in_view(in_view, cx);
-
-        let max = self.max_position();
-        let thumb = thumb_size(list_height, self.folds.rows(lines));
-        let thumb_top = if max > 0. {
-            (self.position() / max) as f32 * (list_height - thumb)
+        let wrapping = self.wrapping();
+        if wrapping {
+            self.fit_cols(window);
+        }
+        let (rows, thumb, share) = if wrapping {
+            // Every line's rows are not known: as many as the line in view
+            // has, for each.
+            let rows_at_top = self.rows_of(self.place.line) as u64;
+            (
+                self.wrapped_rows_in_view(in_view, cx),
+                thumb_size(list_height, lines.saturating_mul(rows_at_top)),
+                self.wrapped_share(),
+            )
         } else {
-            0.
+            let max = self.max_position();
+            (
+                self.rows_in_view(in_view, cx),
+                thumb_size(list_height, self.folds.rows(lines)),
+                if max > 0. { self.position() / max } else { 0. },
+            )
         };
+        let thumb_top = share as f32 * (list_height - thumb);
         let bounds = Rc::clone(&self.bounds);
         let me = cx.entity().downgrade();
         let follow = select::follow_drag(&self.select, {
