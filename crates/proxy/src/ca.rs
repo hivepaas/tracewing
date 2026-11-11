@@ -301,9 +301,20 @@ fn create_root(
 
     // The key first: whoever sees the certificate can then find it.
     let place = ca_key::save(cert.der(), &key.serialize_pem(), key_path, store, secrets)?;
-    fs::write(cert_path, cert.pem()).with_context(|| format!("write {}", cert_path.display()))?;
+    write_whole(cert_path, cert.pem().as_bytes())?;
 
     Ok((Issuer::new(params, key), place))
+}
+
+/// Writes a file that is either not there or whole: written beside it,
+/// then moved in place. A browser or a test that sees the certificate as it is
+/// made would otherwise read it half written, or empty, and trust nothing.
+fn write_whole(path: &Path, contents: &[u8]) -> Result<()> {
+    let mut part = path.as_os_str().to_owned();
+    part.push(".part");
+    let part = PathBuf::from(part);
+    fs::write(&part, contents).with_context(|| format!("write {}", part.display()))?;
+    fs::rename(&part, path).with_context(|| format!("move {} in place", path.display()))
 }
 
 /// A positive serial that is unique per process and across restarts.
@@ -332,6 +343,22 @@ fn hostname() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_file_written_whole_leaves_nothing_beside_it() {
+        let dir = std::env::temp_dir().join(format!("tracewing-ca-whole-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("ca.pem");
+        write_whole(&path, b"whole").unwrap();
+        assert_eq!(fs::read(&path).unwrap(), b"whole");
+        let names: Vec<_> = fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(names, ["ca.pem"]);
+        fs::remove_dir_all(dir).unwrap();
+    }
 
     #[test]
     fn a_host_no_certificate_can_be_issued_for_gets_a_stand_in() {
