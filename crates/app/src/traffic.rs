@@ -90,17 +90,30 @@ enum Done {
     },
 }
 
+/// The jobs waiting, as one: the latest filter, and the hosts if any job
+/// asked for them. Each job asked for is answered, or the screen that asked
+/// waits for it for good.
+fn take_jobs(
+    first: Job,
+    newer: impl IntoIterator<Item = Job>,
+) -> (Option<(u64, Box<Filter>)>, Option<i64>) {
+    let (mut filter, mut hosts) = (None, None);
+    for job in std::iter::once(first).chain(newer) {
+        match job {
+            Job::Filter {
+                generation,
+                filter: f,
+            } => filter = Some((generation, f)),
+            Job::Hosts { from_id } => hosts = Some(from_id),
+        }
+    }
+    (filter, hosts)
+}
+
 fn work(session_dir: PathBuf, jobs: Receiver<Job>, done: Sender<Done>) {
     let mut conn = None;
-    while let Ok(mut job) = jobs.recv() {
-        // Only the latest filter counts, and it is enough to ask for hosts once.
-        let mut hosts_too = None;
-        while let Ok(newer) = jobs.try_recv() {
-            match (&job, newer) {
-                (_, Job::Hosts { from_id }) => hosts_too = Some(from_id),
-                (_, newer) => job = newer,
-            }
-        }
+    while let Ok(job) = jobs.recv() {
+        let (filter_job, hosts_job) = take_jobs(job, std::iter::from_fn(|| jobs.try_recv().ok()));
         if conn.is_none() {
             conn = Connection::open_with_flags(
                 session::flows_db(&session_dir),
@@ -108,12 +121,24 @@ fn work(session_dir: PathBuf, jobs: Receiver<Job>, done: Sender<Done>) {
             )
             .ok();
         }
+        // No session to read yet: nothing found, said so all the same.
         let Some(conn) = &conn else {
+            if let Some((generation, _)) = filter_job {
+                let _ = done.send(Done::Filter {
+                    generation,
+                    ids: Vec::new(),
+                    took: Duration::ZERO,
+                });
+            }
+            if hosts_job.is_some() {
+                let _ = done.send(Done::Hosts {
+                    hosts: Vec::new(),
+                    apps: Vec::new(),
+                    devices: Vec::new(),
+                    took: Duration::ZERO,
+                });
+            }
             continue;
-        };
-        let (filter_job, hosts_job) = match job {
-            Job::Filter { generation, filter } => (Some((generation, filter)), hosts_too),
-            Job::Hosts { from_id } => (None, Some(hosts_too.unwrap_or(from_id))),
         };
         if let Some((generation, filter)) = filter_job {
             let started = Instant::now();
@@ -2872,4 +2897,38 @@ fn pill_button(id: &'static str) -> Stateful<Div> {
         .flex()
         .items_center()
         .cursor_pointer()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn filter(generation: u64) -> Job {
+        Job::Filter {
+            generation,
+            filter: Box::default(),
+        }
+    }
+
+    /// A filter asked for after the hosts once took their place, and the
+    /// hosts were asked for no more: the sidebar stayed as it was.
+    #[test]
+    fn hosts_asked_for_are_kept_when_a_filter_comes_after() {
+        let (filter_job, hosts) = take_jobs(Job::Hosts { from_id: 3 }, [filter(7)]);
+        assert_eq!(filter_job.map(|(generation, _)| generation), Some(7));
+        assert_eq!(hosts, Some(3));
+
+        let (filter_job, hosts) = take_jobs(
+            filter(1),
+            [
+                Job::Hosts { from_id: 0 },
+                filter(2),
+                Job::Hosts { from_id: 5 },
+            ],
+        );
+        assert_eq!(filter_job.map(|(generation, _)| generation), Some(2));
+        assert_eq!(hosts, Some(5), "the newest");
+
+        assert_eq!(take_jobs(filter(4), []).1, None);
+    }
 }
