@@ -991,8 +991,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = Не пускать приложения на HTTP/3
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3 работает поверх UDP, который не передаёт ни один прокси, поэтому приложение, использующее его, идёт в обход tracewing. Эта настройка убирает из ответов серверов предложения HTTP/3, и приложения остаются на HTTP/2. В потоках предложения по-прежнему видны такими, какими их отправили серверы. Вступает в силу после перезапуска tracewing.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3 работает поверх UDP, который не передаёт ни один прокси, поэтому приложение, использующее его, идёт в обход tracewing. Эта настройка убирает из ответов серверов предложения HTTP/3, и приложения остаются на HTTP/2. В потоках предложения по-прежнему видны такими, какими их отправили серверы.
 
 # Size of a session
 ta20fa102 = Размер сессии
@@ -1114,8 +1114,8 @@ ta3162a13 = Сбросить настройки
 # Hosts not to decrypt
 tb457f0b3 = Хосты без расшифровки
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = По одному на строку: хост или *.example.com для него и всего, что под ним. Их трафик проходит без чтения. Список применяется сразу после сохранения.
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = По одному на строку: хост или *.example.com для него и всего, что под ним. Их трафик проходит без чтения. Список применяется сразу.
 
 # Language
 t9a73db9b = Язык
@@ -1638,6 +1638,9 @@ t4b34beb2 = HTTPS не будет работать, пока сертифика�
 
 # settings.toml was not used: {problem}
 tc3e1f9c8 = settings.toml не применён: { $problem }
+
+# A setting was not saved: {problem}
+tff1a5018 = Настройка не сохранена: { $problem }
 
 # The proxy stopped: {failure}
 t04dcff11 = Прокси остановлен: { $failure }

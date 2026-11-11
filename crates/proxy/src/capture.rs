@@ -40,6 +40,7 @@ use std::{
 use tracewing_store::app::AppAnswer;
 use tracewing_store::decode::{Encoding, Unpacker};
 use tracewing_store::graphql;
+use tracewing_store::settings::Live;
 use tracewing_store::spool::{Spool, SpoolFile};
 use tracewing_store::store::{BodyRecord, FlowRecord, Recorder, StreamHandle};
 
@@ -185,7 +186,7 @@ pub struct FlowHandler {
     /// Which program each connection is from, when that is looked for.
     apps: Option<Apps>,
     /// See `StorageSettings::hide_http3`.
-    hide_http3: bool,
+    live: Arc<Live>,
     /// The network traffic goes through, slow on purpose or not.
     network: Arc<Network>,
     /// What slowed the request this clone is handling, to slow its response too.
@@ -215,8 +216,8 @@ pub struct Controls {
     pub check: Arc<Check>,
     pub pauses: Arc<Pauses>,
     pub apps: Option<Apps>,
-    /// Read when the proxy starts.
-    pub hide_http3: bool,
+    /// The settings that apply as they change.
+    pub live: Arc<Live>,
     /// Changes apply to the next request.
     pub network: Arc<Network>,
 }
@@ -240,7 +241,7 @@ impl FlowHandler {
             check: controls.check,
             pauses: controls.pauses,
             apps: controls.apps,
-            hide_http3: controls.hide_http3,
+            live: controls.live,
             network: controls.network,
             slowed: None,
             response_headers: Vec::new(),
@@ -339,7 +340,8 @@ impl FlowHandler {
     fn answer(&mut self, flow: Option<Arc<Flow>>, mut res: Response<Body>) -> Response<Body> {
         let set = std::mem::take(&mut self.response_headers);
         // A rule that says what `Alt-Svc` is means it.
-        let hide_http3 = self.hide_http3 && !set.iter().any(|(name, _)| name == header::ALT_SVC);
+        let hide_http3 =
+            self.live.hide_http3() && !set.iter().any(|(name, _)| name == header::ALT_SVC);
         for (name, value) in set {
             match value {
                 Some(value) => res.headers_mut().insert(name, value),

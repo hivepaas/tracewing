@@ -962,8 +962,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = Tenir les apps à l'écart de HTTP/3
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3 passe par UDP, qu'aucun proxy ne transporte, donc une app qui l'utilise contourne tracewing. Cette option retire des réponses les offres HTTP/3 des serveurs, et les apps restent en HTTP/2. Les flows montrent toujours les offres telles que les serveurs les ont envoyées. Prend effet au prochain démarrage de tracewing.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3 passe par UDP, qu'aucun proxy ne transporte, donc une app qui l'utilise contourne tracewing. Cette option retire des réponses les offres HTTP/3 des serveurs, et les apps restent en HTTP/2. Les flows montrent toujours les offres telles que les serveurs les ont envoyées.
 
 # Size of a session
 ta20fa102 = Taille d'une session
@@ -1084,8 +1084,8 @@ ta3162a13 = Rétablir les valeurs par défaut
 # Hosts not to decrypt
 tb457f0b3 = Hôtes à ne pas déchiffrer
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = Un par ligne : un hôte, ou *.example.com pour lui et tout ce qui est en dessous. Leur trafic passe sans être lu. Cette liste s'applique dès qu'elle est enregistrée.
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = Un par ligne : un hôte, ou *.example.com pour lui et tout ce qui est en dessous. Leur trafic passe sans être lu. Cette liste s'applique immédiatement.
 
 # Language
 t9a73db9b = Langue
@@ -1606,6 +1606,9 @@ t4b34beb2 = HTTPS échouera tant que le certificat n'est pas approuvé : configu
 
 # settings.toml was not used: {problem}
 tc3e1f9c8 = settings.toml n'a pas été utilisé : { $problem }
+
+# A setting was not saved: {problem}
+tff1a5018 = Un paramètre n'a pas été enregistré : { $problem }
 
 # The proxy stopped: {failure}
 t04dcff11 = Le proxy s'est arrêté : { $failure }

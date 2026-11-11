@@ -747,7 +747,11 @@ impl Writer {
             );
             self.keep_headers(record);
             self.keep_connection(record);
-            let in_files = file_bytes(record, self.settings.body_max());
+            let body_max = self
+                .spool
+                .as_ref()
+                .map_or_else(|| self.settings.body_max(), Spool::body_max);
+            let in_files = file_bytes(record, body_max);
             let segment = self.segments.back_mut().expect("never empty");
             segment.bytes += in_files;
             let full = segment.bytes + self.log.pending() as u64 >= self.segment_target;

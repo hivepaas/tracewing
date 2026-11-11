@@ -393,13 +393,15 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             assert_eq!(problem(&view.settings_page), None);
             view.toggle_setting("hide_http3", cx);
             view.toggle_setting("other_devices", cx);
+            view.toggle_setting("os_roots", cx);
             let page = view.settings_page.as_ref().unwrap();
             assert_eq!(
                 page.waiting(&view.engine.settings),
-                ["hide_http3", "session_max_mib"],
-                "the other devices are let in at once"
+                ["os_roots", "session_max_mib"],
+                "the others apply at once"
             );
             assert!(view.engine.other_devices.is_on());
+            assert!(!view.engine.live.hide_http3());
         })
         .unwrap();
     let written = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();
@@ -417,13 +419,67 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             );
             assert!(!view.engine.other_devices.is_on());
             view.undo_reset_settings(cx);
+            assert!(!view.engine.live.hide_http3(), "undone at once too");
             view.toggle_setting("hide_http3", cx);
             view.toggle_setting("other_devices", cx);
+            view.toggle_setting("os_roots", cx);
         })
         .unwrap();
     let written = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();
     assert_eq!(written.session_max_mib, 512, "undone");
     assert_eq!(written.hide_http3, StorageSettings::default().hide_http3);
+    // Left with a value that cannot work, the field goes back to what is
+    // written, and the footer says why.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_setting("session_max_mib", "1", cx);
+            view.set_screen(Screen::Traffic, cx);
+            let left = view.settings_left.clone().expect("said");
+            assert!(left.contains("at least 64"), "{left}");
+            let page = view.settings_page.as_ref().unwrap();
+            assert_eq!(page.problem, None);
+            assert_eq!(page.waiting(&view.engine.settings), ["session_max_mib"]);
+            view.set_screen(Screen::Settings, cx);
+            assert_eq!(view.settings_left, None);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    // A field is written when it is left, not as it is typed in. Focus only
+    // moves in a window that is active, as the user's is.
+    cx.update_window(window.into(), |_, window, _| window.activate_window())
+        .unwrap();
+    cx.run_until_parked();
+    let body_max = || {
+        StorageSettings::load(&data_dir.join("settings.toml"))
+            .unwrap()
+            .body_max_mib
+    };
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.focus_setting("body_max_mib", window, cx);
+            view.set_setting("body_max_mib", "8", cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    assert_eq!(body_max(), StorageSettings::default().body_max_mib);
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.focus_setting("view_max_mib", window, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
+    assert_eq!(body_max(), 8);
+    window
+        .update(&mut cx, |view, _, _| {
+            assert_eq!(view.engine.live.body_max(), 8 << 20, "applied at once")
+        })
+        .unwrap();
+    assert_eq!(
+        StorageSettings::load(&data_dir.join("settings.toml"))
+            .unwrap()
+            .session_max_mib,
+        512
+    );
     // A language chosen is used at once and kept; the system's is the default.
     window
         .update(&mut cx, |view, window, cx| {

@@ -961,8 +961,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = Uygulamaları HTTP/3'ten uzak tut
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3, hiçbir proxy'nin taşımadığı UDP üzerinden gider, bu yüzden onu kullanan bir uygulama tracewing'i atlar. Bu ayar, sunucuların HTTP/3 tekliflerini yanıtlarından çıkarır ve uygulamalar HTTP/2'de kalır. Akışlar teklifleri yine sunucuların gönderdiği gibi gösterir. tracewing yeniden başladığında etkili olur.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3, hiçbir proxy'nin taşımadığı UDP üzerinden gider, bu yüzden onu kullanan bir uygulama tracewing'i atlar. Bu ayar, sunucuların HTTP/3 tekliflerini yanıtlarından çıkarır ve uygulamalar HTTP/2'de kalır. Akışlar teklifleri yine sunucuların gönderdiği gibi gösterir.
 
 # Size of a session
 ta20fa102 = Oturum boyutu
@@ -1082,8 +1082,8 @@ ta3162a13 = Varsayılanlara dön
 # Hosts not to decrypt
 tb457f0b3 = Şifresi çözülmeyecek host'lar
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = Satır başına bir tane: bir host, ya da kendisi ve altındaki her şey için *.example.com. Bunların trafiği okunmadan geçer. Bu liste kaydedildiği anda uygulanır.
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = Satır başına bir tane: bir host, ya da kendisi ve altındaki her şey için *.example.com. Bunların trafiği okunmadan geçer. Bu liste hemen uygulanır.
 
 # Language
 t9a73db9b = Dil
@@ -1602,6 +1602,9 @@ t4b34beb2 = Sertifikaya güvenilene kadar HTTPS başarısız olur: kurulum
 
 # settings.toml was not used: {problem}
 tc3e1f9c8 = settings.toml kullanılmadı: { $problem }
+
+# A setting was not saved: {problem}
+tff1a5018 = Bir ayar kaydedilmedi: { $problem }
 
 # The proxy stopped: {failure}
 t04dcff11 = Proxy durdu: { $failure }

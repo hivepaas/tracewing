@@ -234,6 +234,8 @@ pub struct Traffic {
     pub settings_page: Option<SettingsPage>,
     /// Why the settings file was not used, if it was not.
     pub settings_problem: Option<String>,
+    /// Why a setting was not written when Settings was left.
+    pub settings_left: Option<String>,
     layout_path: PathBuf,
     pub(crate) layout: Layout,
     flows: Option<Flows>,
@@ -329,7 +331,9 @@ impl Traffic {
         cx.observe_window_bounds(window, Self::bounds_changed)
             .detach();
         cx.defer_in(window, Self::bounds_changed);
-        cx.on_app_quit(|this, _| {
+        cx.on_app_quit(|this, cx| {
+            // What was typed last in Settings, if the field was never left.
+            this.save_settings(cx);
             this.save_layout();
             if let Some(indexer) = this.catching_up.take() {
                 let _ = indexer.leave();
@@ -382,6 +386,7 @@ impl Traffic {
             system: SystemState::default(),
             settings_page: None,
             settings_problem: None,
+            settings_left: None,
             layout,
             layout_path,
             flows: None,
@@ -475,9 +480,11 @@ impl Traffic {
     }
 
     pub fn set_screen(&mut self, screen: Screen, cx: &mut Context<Self>) {
-        // What was typed last is not left waiting for typing to stop.
         if self.screen == Screen::Settings && screen != Screen::Settings {
-            self.save_settings(cx);
+            self.leave_settings(cx);
+        }
+        if screen == Screen::Settings {
+            self.settings_left = None;
         }
         // Once left, it does not open by itself again.
         if self.screen == Screen::Setup && !self.layout.setup_seen {
@@ -2168,6 +2175,12 @@ impl Traffic {
             notes.push((
                 tr!("settings.toml was not used: {problem}", problem = problem),
                 c.error,
+            ));
+        }
+        if let Some(problem) = &self.settings_left {
+            notes.push((
+                tr!("A setting was not saved: {problem}", problem = problem),
+                c.warn,
             ));
         }
         if let Some(failure) = self.engine.failure() {

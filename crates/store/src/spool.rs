@@ -7,7 +7,7 @@
 //! keep, and so does any body when the disk is nearly full. Traffic is never held
 //! back, and a body with a hole in it is never presented as whole.
 
-use crate::session::Shared;
+use crate::{session::Shared, settings::Live};
 use anyhow::{Context, Result};
 use bytes::Bytes;
 use std::{
@@ -60,7 +60,7 @@ pub struct Spool {
     next: Arc<AtomicU64>,
     queued: Arc<AtomicU64>,
     budget: u64,
-    body_max: u64,
+    live: Arc<Live>,
     shared: Arc<Shared>,
     stats: Arc<SpoolStats>,
 }
@@ -69,7 +69,7 @@ impl Spool {
     pub fn spawn(
         dir: &Path,
         budget: u64,
-        body_max: u64,
+        live: Arc<Live>,
         shared: Arc<Shared>,
     ) -> Result<(Self, SpoolThread)> {
         std::fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
@@ -94,7 +94,7 @@ impl Spool {
                 next: Arc::new(AtomicU64::new(0)),
                 queued,
                 budget,
-                body_max,
+                live,
                 shared,
                 stats,
             },
@@ -122,6 +122,11 @@ impl Spool {
         if self.tx.send(Message::Barrier(done)).is_ok() {
             let _ = wait.recv();
         }
+    }
+
+    /// The most kept of one body, as it is now.
+    pub fn body_max(&self) -> u64 {
+        self.live.body_max()
     }
 
     pub fn begin(&self) -> SpoolFile {
@@ -163,7 +168,7 @@ impl SpoolFile {
         let len = data.len() as u64;
         let queued = self.spool.queued.fetch_add(len, Ordering::Relaxed) + len;
         if queued > self.spool.budget
-            || self.kept + len > self.spool.body_max
+            || self.kept + len > self.spool.live.body_max()
             || self.spool.shared.low_disk.load(Ordering::Relaxed)
         {
             self.spool.queued.fetch_sub(len, Ordering::Relaxed);
@@ -271,8 +276,13 @@ mod tests {
     fn a_file_removed_right_after_its_body_stays_removed() {
         let dir = std::env::temp_dir().join(format!("spool-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
-        let (spool, thread) =
-            Spool::spawn(&dir, u64::MAX, u64::MAX, Arc::new(Shared::default())).unwrap();
+        let (spool, thread) = Spool::spawn(
+            &dir,
+            u64::MAX,
+            Arc::new(Live::new(&Default::default())),
+            Arc::new(Shared::default()),
+        )
+        .unwrap();
         // However far behind the thread is, these are done in this order.
         let mut names = Vec::new();
         for _ in 0..100 {
@@ -293,8 +303,13 @@ mod tests {
     fn the_barrier_comes_after_what_has_ended() {
         let dir = std::env::temp_dir().join(format!("spool-b-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
-        let (spool, thread) =
-            Spool::spawn(&dir, u64::MAX, u64::MAX, Arc::new(Shared::default())).unwrap();
+        let (spool, thread) = Spool::spawn(
+            &dir,
+            u64::MAX,
+            Arc::new(Live::new(&Default::default())),
+            Arc::new(Shared::default()),
+        )
+        .unwrap();
         let mut file = spool.begin();
         let name = file.name();
         file.write(Bytes::from_static(b"a whole body"));

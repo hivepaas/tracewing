@@ -28,7 +28,7 @@ use tracewing_proxy::{
 use tracewing_store::{
     search,
     session::{self, BodyReader, stored_body},
-    settings::StorageSettings,
+    settings::{Live, StorageSettings},
 };
 
 struct Harness {
@@ -40,6 +40,7 @@ struct Harness {
     pauses: Arc<Pauses>,
     network: Arc<Network>,
     other_devices: Arc<OtherDevices>,
+    live: Arc<Live>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -99,6 +100,7 @@ impl Harness {
         let pauses = Arc::new(Pauses::default());
         let network = Arc::new(Network::default());
         let other_devices = Arc::new(OtherDevices::new(false));
+        let live = Arc::new(Live::default());
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -121,6 +123,7 @@ impl Harness {
                 leave_index: false,
                 find_apps: true,
                 stop_limit: Duration::from_secs(1),
+                live: Arc::clone(&live),
                 other_devices: Some(Arc::clone(&other_devices)),
             },
             async {
@@ -140,6 +143,7 @@ impl Harness {
             pauses,
             network,
             other_devices,
+            live,
             dir,
             proxy_url,
             origin: format!("https://localhost:{origin_port}"),
@@ -921,6 +925,60 @@ async fn offers_of_http3_can_be_let_through() {
     );
     res.bytes().await.unwrap();
     let (_, conn, dir) = h.finish(1).await;
+    clean_up(conn, dir);
+}
+
+/// Some settings apply to the next request, with no restart: whether offers
+/// of HTTP/3 are hidden, and how much of a body is kept.
+#[tokio::test(flavor = "multi_thread")]
+async fn some_settings_apply_while_it_runs() {
+    let h = Harness::start("live").await;
+    const SIZE: usize = 2 * 1024 * 1024;
+    let client = h.client(false);
+    let offer = || async {
+        let res = client
+            .get(format!("{}/alt-svc?only=h3", h.origin))
+            .send()
+            .await
+            .unwrap();
+        let offer = res.headers()["alt-svc"].to_str().unwrap().to_owned();
+        res.bytes().await.unwrap();
+        offer
+    };
+    let large = || async {
+        let res = client
+            .get(format!("{}/json?size={SIZE}", h.origin))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(
+            res.bytes().await.unwrap().len(),
+            SIZE,
+            "the client gets it all"
+        );
+    };
+    assert_eq!(offer().await, "clear");
+    large().await;
+
+    h.live.apply(&StorageSettings {
+        hide_http3: false,
+        body_max_mib: 1,
+        ..StorageSettings::default()
+    });
+    assert!(offer().await.starts_with(r#"h3=":443""#));
+    large().await;
+
+    let (_, conn, dir) = h.finish(4).await;
+    let lost: Vec<i64> = conn
+        .prepare(&format!(
+            "SELECT resp_spool_lost FROM flows WHERE resp_bytes = {SIZE} ORDER BY id"
+        ))
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(lost, [0, 1], "kept whole, then past the new limit");
     clean_up(conn, dir);
 }
 

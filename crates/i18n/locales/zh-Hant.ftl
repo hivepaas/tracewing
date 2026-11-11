@@ -943,8 +943,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = 避免 App 使用 HTTP/3
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3 走 UDP，而代理伺服器無法轉送 UDP，因此使用 HTTP/3 的 App 會繞過 tracewing。此選項會從伺服器回應中移除 HTTP/3 宣告，讓 App 繼續使用 HTTP/2。流量紀錄中仍會顯示伺服器送出的原始宣告。重新啟動 tracewing 後生效。
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3 走 UDP，而代理伺服器無法轉送 UDP，因此使用 HTTP/3 的 App 會繞過 tracewing。此選項會從伺服器回應中移除 HTTP/3 宣告，讓 App 繼續使用 HTTP/2。流量紀錄中仍會顯示伺服器送出的原始宣告。
 
 # Size of a session
 ta20fa102 = 工作階段大小
@@ -1060,8 +1060,8 @@ ta3162a13 = 還原為預設值
 # Hosts not to decrypt
 tb457f0b3 = 不解密的主機
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = 每行一個：主機名稱，或 *.example.com（符合該網域及其所有子網域）。這些主機的流量將直接通過，不會被讀取。此清單儲存後立即生效。
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = 每行一個：主機名稱，或 *.example.com（符合該網域及其所有子網域）。這些主機的流量將直接通過，不會被讀取。此清單立即生效。
 
 # Language
 t9a73db9b = 語言
@@ -1572,6 +1572,9 @@ t4b34beb2 = 憑證受信任前，HTTPS 將無法使用：前往初始設定
 
 # settings.toml was not used: {problem}
 tc3e1f9c8 = 未使用 settings.toml：{ $problem }
+
+# A setting was not saved: {problem}
+tff1a5018 = 有一項設定未儲存：{ $problem }
 
 # The proxy stopped: {failure}
 t04dcff11 = 代理伺服器已停止：{ $failure }

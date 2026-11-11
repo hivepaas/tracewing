@@ -289,6 +289,7 @@ async fn main() -> Result<()> {
                     leave_index: false,
                     find_apps: !no_apps,
                     stop_limit: Duration::from_secs(5),
+                    live: Default::default(),
                     other_devices: None,
                 },
                 async move {
