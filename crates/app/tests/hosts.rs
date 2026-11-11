@@ -172,6 +172,20 @@ fn hosts_are_pinned_hidden_and_shown_again() {
         .unwrap();
     cx.run_until_parked();
     shot(&mut cx, window.into(), "60-hosts");
+    // Narrowed by name: a part of it, in any case, then nothing.
+    window
+        .update(&mut cx, |view, _, cx| view.filter_hosts("LOCAL", cx))
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "61-hosts-filtered");
+    window
+        .update(&mut cx, |view, _, cx| view.filter_hosts("nowhere", cx))
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "62-hosts-none");
+    window
+        .update(&mut cx, |view, _, cx| view.filter_hosts("", cx))
+        .unwrap();
 
     let kept = Layout::load(&dir.join("layout.toml")).hosts;
     assert!(kept.is_pinned(&quiet) && kept.is_hidden(&busy));

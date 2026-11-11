@@ -1522,14 +1522,17 @@ t53d91aad = Aplikasi
 # Devices
 t27acf320 = Perangkat
 
-# Hosts
-tcf9aefb4 = Host
-
 # All hosts
 tfc7bfe37 = Semua host
 
+# No host has this in its name
+t838c1d44 = Tidak ada host yang namanya memuat ini
+
 # Hidden
 t3c2dfe59 = Tersembunyi
+
+# Hosts
+tcf9aefb4 = Host
 
 # Newest
 t324b6d0b = Terbaru

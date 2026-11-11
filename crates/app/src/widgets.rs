@@ -23,6 +23,22 @@ pub fn eyebrow(text: impl AsRef<str>) -> Div {
         .child(text.as_ref().to_uppercase())
 }
 
+/// The name of a part of the sidebar, in a pill of the accent's colour, so
+/// that it stands out from the long list under it.
+pub fn section_badge(text: impl AsRef<str>) -> Div {
+    let c = colors();
+    div()
+        .flex_shrink_0()
+        .px(px(8.))
+        .py(px(2.))
+        .rounded(px(8.))
+        .bg(rgb(c.accent))
+        .text_color(rgb(c.on_accent))
+        .text_size(px(11.))
+        .font_weight(FontWeight::BOLD)
+        .child(text.as_ref().to_uppercase())
+}
+
 /// The status of a flow in a pill: its ground and its letters.
 pub fn status_colors(status: Option<u16>) -> (u32, u32) {
     let c = colors();
