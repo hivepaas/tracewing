@@ -260,7 +260,11 @@ impl Traffic {
                                     Some(json) => {
                                         let mut view =
                                             BodyView::new(json, Some("application/json"), focus, cx);
-                                        view.set_original(body, cx);
+                                        let name = tracewing_store::binjson::format_of(
+                                            content_type.as_deref(),
+                                        )
+                                        .map_or("", |format| format.name());
+                                        view.set_original(body, name, cx);
                                         view
                                     }
                                     None => BodyView::new(body, content_type.as_deref(), focus, cx),

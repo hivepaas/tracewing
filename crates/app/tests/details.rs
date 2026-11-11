@@ -503,8 +503,22 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
         } else {
             benchkit::order_cbor()
         };
+        let name = if path.ends_with("msgpack") {
+            "MessagePack"
+        } else {
+            "CBOR"
+        };
         window
             .update(&mut cx, |view, _, cx| {
+                let BodyState::Shown(body) = &view.inspector.body else {
+                    unreachable!()
+                };
+                let summary = body.read(cx).summary();
+                let size = tracewing::flows::size_text(sent.len() as u64);
+                assert!(
+                    summary.starts_with(&format!("{size} {name} · ")),
+                    "{summary}: the bytes sent, and what they are"
+                );
                 view.set_body_mode(BodyMode::Hex, cx);
                 let BodyState::Shown(body) = &view.inspector.body else {
                     unreachable!()

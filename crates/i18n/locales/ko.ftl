@@ -7,6 +7,9 @@ t2ba67348 = … { $count }줄 { $closer }
 # … {size} more
 ta8dc6eab = … { $size } 더 있음
 
+# {size} {format} · {count} line of JSON | {size} {format} · {count} lines of JSON
+t0a4220dc = { $size } { $format } · JSON { $count }줄
+
 # Unfold all
 t3849d44e = 모두 펼치기
 

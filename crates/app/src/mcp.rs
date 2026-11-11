@@ -20,6 +20,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tracewing_store::{
+    binjson,
     session::{self, BodyReader},
     settings::StorageSettings,
 };
@@ -259,7 +260,7 @@ impl Server {
                 Side::Response => detail.content_type.clone(),
             };
             let (body, note) = if bodies {
-                body_text(&mut reader, facts, max)
+                body_text(&mut reader, facts, max, content_type.as_deref())
             } else {
                 (None, None)
             };
@@ -430,17 +431,46 @@ fn rows(conn: &Connection, ids: &[i64], devices: &Devices) -> Result<Vec<Value>>
     Ok(out)
 }
 
+/// MessagePack or CBOR as the JSON it holds, cut at `max`, and a note that
+/// says what it was. `None` for any other body, or one that cannot be read.
+fn as_json(
+    bytes: &[u8],
+    content_type: Option<&str>,
+    sent: u64,
+    max: u64,
+) -> Option<(String, String)> {
+    let format = binjson::format_of(content_type)?;
+    let json = binjson::to_json(bytes, format)?;
+    let mut end = json.len().min(max as usize);
+    while !json.is_char_boundary(end) {
+        end -= 1;
+    }
+    let mut note = format!("{}, {sent} bytes sent, given as JSON", format.name());
+    if end < json.len() {
+        note.push_str(&format!("; only the first {end} bytes of {}", json.len()));
+    }
+    Some((json[..end].to_owned(), note))
+}
+
 /// A body as text, cut at `max`, and what was left out of it, if anything.
+/// MessagePack and CBOR are given as the JSON they hold, and say so.
 fn body_text(
     reader: &mut BodyReader,
     facts: &BodyFacts,
     max: u64,
+    content_type: Option<&str>,
 ) -> (Option<String>, Option<String>) {
     if facts.bytes == 0 {
         return (None, None);
     }
     if !facts.stored.exists() {
         return (None, Some("not kept".to_owned()));
+    }
+    if binjson::format_of(content_type).is_some()
+        && let Some(bytes) = reader.unpacked(&facts.stored, binjson::DECODE_MAX as usize)
+        && let Some((json, note)) = as_json(&bytes, content_type, facts.bytes, max)
+    {
+        return (Some(json), Some(note));
     }
     let Some(bytes) = reader.unpacked(&facts.stored, max as usize + 1) else {
         return (None, Some("cannot be read".to_owned()));
@@ -470,6 +500,22 @@ fn body_text(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn messagepack_is_given_as_json_and_says_so() {
+        let mut bytes = Vec::new();
+        let value = rmpv::Value::Map(vec![("city".into(), "Hà Nội".into())]);
+        rmpv::encode::write_value(&mut bytes, &value).unwrap();
+        let ct = Some("application/msgpack");
+        let (json, note) = as_json(&bytes, ct, 99, 1000).unwrap();
+        assert_eq!(json, r#"{"city":"Hà Nội"}"#);
+        assert_eq!(note, "MessagePack, 99 bytes sent, given as JSON");
+        // Cut on a character's edge: "à" is two bytes, at 10 and 11.
+        let (cut, note) = as_json(&bytes, ct, 99, 11).unwrap();
+        assert_eq!(cut, r#"{"city":"H"#);
+        assert!(note.ends_with("only the first 10 bytes of 20"), "{note}");
+        assert_eq!(as_json(&bytes, Some("application/json"), 99, 1000), None);
+    }
 
     fn ask(server: &Server, message: Value) -> Value {
         let mut replies = server.handle_line(&message.to_string());
