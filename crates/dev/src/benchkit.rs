@@ -110,6 +110,54 @@ pub fn order_cbor() -> Vec<u8> {
     out
 }
 
+/// The order as Protobuf, with no `.proto`: an id, a customer, its items as
+/// messages, a price as a double and a signature as bytes.
+pub fn order_protobuf() -> Vec<u8> {
+    fn varint(out: &mut Vec<u8>, mut n: u64) {
+        while n >= 0x80 {
+            out.push(n as u8 | 0x80);
+            n >>= 7;
+        }
+        out.push(n as u8);
+    }
+    fn bytes(out: &mut Vec<u8>, number: u64, data: &[u8]) {
+        varint(out, number << 3 | 2);
+        varint(out, data.len() as u64);
+        out.extend_from_slice(data);
+    }
+    let item = |sku: &str, qty: u64| {
+        let mut out = Vec::new();
+        bytes(&mut out, 1, sku.as_bytes());
+        varint(&mut out, 2 << 3);
+        varint(&mut out, qty);
+        out
+    };
+    let mut out = Vec::new();
+    varint(&mut out, 1 << 3);
+    varint(&mut out, 42);
+    bytes(&mut out, 2, "Nguyễn Văn A".as_bytes());
+    bytes(&mut out, 3, &item("A-1", 2));
+    bytes(&mut out, 3, &item("B-7", 1));
+    varint(&mut out, 4 << 3 | 1);
+    out.extend_from_slice(&350_000.5f64.to_le_bytes());
+    bytes(&mut out, 5, &[0xca, 0xfe, 0xba, 0xbe]);
+    out
+}
+
+/// The order as a gRPC-Web answer: its frame, then a frame of trailers.
+pub fn order_grpc_web() -> Vec<u8> {
+    let mut out = Vec::new();
+    for (flags, data) in [
+        (0u8, order_protobuf()),
+        (0x80, b"grpc-status: 0\r\ngrpc-message: OK\r\n".to_vec()),
+    ] {
+        out.push(flags);
+        out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+        out.extend_from_slice(&data);
+    }
+    out
+}
+
 /// A SOAP answer, all on one line as servers send it.
 pub const SOAP_XML: &str = r#"<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetOrderResponse xmlns="urn:shop"><Order id="42" status="paid"><Customer>Nguyễn Văn A</Customer><Items><Item sku="A-1" qty="2">Áo thun</Item><Item sku="B-7" qty="1"/></Items><!-- totals in VND --><Total currency="VND">350000</Total><Note><![CDATA[Giao trước <5pm>]]></Note></Order></GetOrderResponse></soap:Body></soap:Envelope>"#;
 
@@ -285,6 +333,12 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
         "/order.cbor" => Response::builder()
             .header(header::CONTENT_TYPE, "application/cbor")
             .body(Full::new(Bytes::from(order_cbor())).boxed()),
+        "/order.pb" => Response::builder()
+            .header(header::CONTENT_TYPE, "application/x-protobuf")
+            .body(Full::new(Bytes::from(order_protobuf())).boxed()),
+        "/order.grpc-web" => Response::builder()
+            .header(header::CONTENT_TYPE, "application/grpc-web+proto")
+            .body(Full::new(Bytes::from(order_grpc_web())).boxed()),
         "/soap.xml" => Response::builder()
             .header(header::CONTENT_TYPE, "text/xml; charset=utf-8")
             .body(Full::new(Bytes::from_static(SOAP_XML.as_bytes())).boxed()),

@@ -436,8 +436,14 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "68-xml");
 
-    // MessagePack and CBOR read as the JSON they hold; Hex is their bytes.
-    for (n, path) in [(8, "order.msgpack"), (9, "order.cbor")] {
+    // MessagePack, CBOR and Protobuf read as the JSON they hold; Hex is
+    // their bytes.
+    for (n, path) in [
+        (8, "order.msgpack"),
+        (9, "order.cbor"),
+        (10, "order.pb"),
+        (11, "order.grpc-web"),
+    ] {
         let status = send(
             &mut cx,
             window,
@@ -488,25 +494,40 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
             std::thread::sleep(Duration::from_millis(20));
         };
         let json: serde_json::Value = serde_json::from_str(&text).expect("laid-out JSON");
-        assert_eq!(json["id"], 42, "{text}");
-        assert_eq!(json["customer"], "Nguyễn Văn A");
-        if path.ends_with("msgpack") {
-            assert_eq!(json["items"][1]["sku"], "B-7");
-            assert_eq!(json["signature"], "<4 bytes: cafebabe>");
-            cx.run_until_parked();
-            shot(&mut cx, window.into(), "69-msgpack");
-        } else {
-            assert_eq!(json["paid_at"]["$tag"], 1);
-        }
-        let sent = if path.ends_with("msgpack") {
-            benchkit::order_msgpack()
-        } else {
-            benchkit::order_cbor()
-        };
-        let name = if path.ends_with("msgpack") {
-            "MessagePack"
-        } else {
-            "CBOR"
+        let (sent, name) = match path {
+            "order.msgpack" => {
+                assert_eq!(json["id"], 42, "{text}");
+                assert_eq!(json["customer"], "Nguyễn Văn A");
+                assert_eq!(json["items"][1]["sku"], "B-7");
+                assert_eq!(json["signature"], "<4 bytes: cafebabe>");
+                cx.run_until_parked();
+                shot(&mut cx, window.into(), "69-msgpack");
+                (benchkit::order_msgpack(), "MessagePack")
+            }
+            "order.cbor" => {
+                assert_eq!(json["id"], 42, "{text}");
+                assert_eq!(json["customer"], "Nguyễn Văn A");
+                assert_eq!(json["paid_at"]["$tag"], 1);
+                (benchkit::order_cbor(), "CBOR")
+            }
+            _ => {
+                // With no .proto, fields go by number.
+                let grpc = path.ends_with("grpc-web");
+                let order = if grpc { &json[0] } else { &json };
+                assert_eq!(order["1"], 42, "{text}");
+                assert_eq!(order["2"], "Nguyễn Văn A");
+                assert_eq!(order["3"][1]["1"], "B-7");
+                assert_eq!(order["4"], 350_000.5);
+                assert_eq!(order["5"], "<4 bytes: cafebabe>");
+                if grpc {
+                    assert_eq!(json[1]["$trailers"]["grpc-status"], "0");
+                    cx.run_until_parked();
+                    shot(&mut cx, window.into(), "70-grpc-web");
+                    (benchkit::order_grpc_web(), "gRPC-Web")
+                } else {
+                    (benchkit::order_protobuf(), "Protobuf")
+                }
+            }
         };
         window
             .update(&mut cx, |view, _, cx| {

@@ -431,7 +431,7 @@ fn rows(conn: &Connection, ids: &[i64], devices: &Devices) -> Result<Vec<Value>>
     Ok(out)
 }
 
-/// MessagePack or CBOR as the JSON it holds, cut at `max`, and a note that
+/// MessagePack, CBOR or Protobuf as the JSON it holds, cut at `max`, and a note that
 /// says what it was. `None` for any other body, or one that cannot be read.
 fn as_json(
     bytes: &[u8],
@@ -446,6 +446,9 @@ fn as_json(
         end -= 1;
     }
     let mut note = format!("{}, {sent} bytes sent, given as JSON", format.name());
+    if format.numbered() {
+        note.push_str(" with fields by number");
+    }
     if end < json.len() {
         note.push_str(&format!("; only the first {end} bytes of {}", json.len()));
     }
@@ -453,7 +456,7 @@ fn as_json(
 }
 
 /// A body as text, cut at `max`, and what was left out of it, if anything.
-/// MessagePack and CBOR are given as the JSON they hold, and say so.
+/// MessagePack, CBOR and Protobuf are given as the JSON they hold, and say so.
 fn body_text(
     reader: &mut BodyReader,
     facts: &BodyFacts,
@@ -515,6 +518,13 @@ mod tests {
         assert_eq!(cut, r#"{"city":"H"#);
         assert!(note.ends_with("only the first 10 bytes of 20"), "{note}");
         assert_eq!(as_json(&bytes, Some("application/json"), 99, 1000), None);
+        // Protobuf has no names for its fields with no schema.
+        let (json, note) = as_json(b"\x08\x2a", Some("application/x-protobuf"), 2, 1000).unwrap();
+        assert_eq!(json, r#"{"1":42}"#);
+        assert_eq!(
+            note,
+            "Protobuf, 2 bytes sent, given as JSON with fields by number"
+        );
     }
 
     fn ask(server: &Server, message: Value) -> Value {
