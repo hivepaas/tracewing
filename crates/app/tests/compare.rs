@@ -234,6 +234,69 @@ fn two_flows_are_compared() {
         .unwrap();
     shot(&mut cx, window.into(), "77-compare");
 
+    // By field: the JSON's fields that differ, under what holds them.
+    window
+        .update(&mut cx, |view, _, cx| {
+            let page = view.compare_page.as_ref().unwrap();
+            assert!(page.tree && page.shows_tree(Side::Response));
+            let BodyLoad::Ready(response) = page.body(Side::Response) else {
+                panic!("the responses' bodies");
+            };
+            let response = Arc::clone(response);
+            let tree = response.tree.as_ref().expect("both are JSON");
+            assert!(response.fields > 0);
+            assert_eq!(
+                page.differences(Side::Response, ComparePart::Body),
+                Some(response.fields)
+            );
+            let shown = page.nodes(Side::Response).len();
+            assert_eq!(shown, tree.len(), "all open at first");
+            // Closing an object or array hides what is under it.
+            let holder = tree
+                .iter()
+                .position(|n| n.inside.is_some_and(|n| n > 0))
+                .expect("an object or array that differs");
+            view.toggle_compare_node(holder, cx);
+            let page = view.compare_page.as_ref().unwrap();
+            assert!(page.nodes(Side::Response).len() < shown);
+            view.toggle_compare_node(holder, cx);
+            assert_eq!(
+                view.compare_page
+                    .as_ref()
+                    .unwrap()
+                    .nodes(Side::Response)
+                    .len(),
+                shown
+            );
+
+            // The request: only the note differs, by field as by line.
+            let page = view.compare_page.as_ref().unwrap();
+            let BodyLoad::Ready(request) = page.body(Side::Request) else {
+                panic!("the requests' bodies");
+            };
+            let fields: Vec<(&str, Option<&str>, Option<&str>)> = request
+                .tree
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|n| (n.key.as_str(), n.a.as_deref(), n.b.as_deref()))
+                .collect();
+            assert_eq!(fields, [("note", Some("\"first\""), Some("\"second\""))]);
+
+            view.set_compare_tree(false, cx);
+            let page = view.compare_page.as_ref().unwrap();
+            assert!(!page.shows_tree(Side::Response));
+            assert_eq!(
+                page.differences(Side::Response, ComparePart::Body),
+                Some(response.changed)
+            );
+        })
+        .unwrap();
+    shot(&mut cx, window.into(), "80-compare-lines");
+    window
+        .update(&mut cx, |view, _, cx| view.set_compare_tree(true, cx))
+        .unwrap();
+
     // A fold of the same lines opens.
     window
         .update(&mut cx, |view, _, cx| {

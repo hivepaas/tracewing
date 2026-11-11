@@ -55,6 +55,9 @@ t61e9eac0 = Nomor
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Sebuah body tidak disimpan, jadi keduanya tidak bisa dibandingkan.
 
+# {count} field differs | {count} fields differ
+t6a8fff7f = { $count } field berbeda
+
 # … {count} line the same | … {count} lines the same
 tcc37e7ea = … { $count } baris sama
 
@@ -112,8 +115,20 @@ tf2c47725 = Keduanya tidak punya body.
 # The bodies are the same.
 t85152e01 = Body-nya sama.
 
+# {count} field differs. | {count} fields differ.
+t0f651f77 = { $count } field berbeda.
+
+# The first {count} are listed.
+taae62a3e = Hanya { $count } pertama yang dicantumkan.
+
 # {count} line differs. | {count} lines differ.
 tf57a3157 = { $count } baris berbeda.
+
+# Fields
+t3308bd9c = Field
+
+# Lines
+t8a1a00dc = Baris
 
 # Compare
 td57a0a54 = Bandingkan

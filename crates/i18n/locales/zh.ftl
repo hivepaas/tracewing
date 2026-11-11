@@ -55,6 +55,9 @@ t61e9eac0 = 序号
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = 有一个 body 未保存，因此无法比较两者。
 
+# {count} field differs | {count} fields differ
+t6a8fff7f = { $count } 个字段不同
+
 # … {count} line the same | … {count} lines the same
 tcc37e7ea = … { $count } 行相同
 
@@ -112,8 +115,20 @@ tf2c47725 = 两者都没有 body。
 # The bodies are the same.
 t85152e01 = 两个 body 相同。
 
+# {count} field differs. | {count} fields differ.
+t0f651f77 = { $count } 个字段不同。
+
+# The first {count} are listed.
+taae62a3e = 只列出前 { $count } 个。
+
 # {count} line differs. | {count} lines differ.
 tf57a3157 = { $count } 行不同。
+
+# Fields
+t3308bd9c = 字段
+
+# Lines
+t8a1a00dc = 行
 
 # Compare
 td57a0a54 = 比较

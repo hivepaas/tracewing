@@ -66,6 +66,14 @@ t61e9eac0 = Número
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = No se guardó un body, así que no se pueden comparar.
 
+# {count} field differs | {count} fields differ
+t6a8fff7f =
+    { $n ->
+        [one] { $count } campo es distinto
+        [many] { $count } campos son distintos
+       *[other] { $count } campos son distintos
+    }
+
 # … {count} line the same | … {count} lines the same
 tcc37e7ea =
     { $n ->
@@ -128,6 +136,17 @@ tf2c47725 = Ninguno tiene body.
 # The bodies are the same.
 t85152e01 = Los bodies son iguales.
 
+# {count} field differs. | {count} fields differ.
+t0f651f77 =
+    { $n ->
+        [one] { $count } campo es distinto.
+        [many] { $count } campos son distintos.
+       *[other] { $count } campos son distintos.
+    }
+
+# The first {count} are listed.
+taae62a3e = Solo se listan los primeros { $count }.
+
 # {count} line differs. | {count} lines differ.
 tf57a3157 =
     { $n ->
@@ -135,6 +154,12 @@ tf57a3157 =
         [many] { $count } líneas son distintas.
        *[other] { $count } líneas son distintas.
     }
+
+# Fields
+t3308bd9c = Campos
+
+# Lines
+t8a1a00dc = Líneas
 
 # Compare
 td57a0a54 = Comparar

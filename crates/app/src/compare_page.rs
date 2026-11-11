@@ -4,7 +4,7 @@
 
 use crate::{
     colors::colors,
-    compare::{self, BodyText, Change, Line, Pair, Row},
+    compare::{self, BodyText, Change, Line, Node, Pair, Row},
     detail::{Detail, Side, message_of},
     flows::{size_text, time_text},
     traffic::{Screen, Traffic},
@@ -37,6 +37,9 @@ pub struct BodyDiff {
     pub b: BodyText,
     pub lines: Vec<Line>,
     pub changed: usize,
+    /// The fields that differ, when both are JSON or read as JSON.
+    pub tree: Option<Vec<Node>>,
+    pub fields: usize,
 }
 
 #[derive(Debug)]
@@ -57,6 +60,12 @@ pub struct ComparePage {
     /// The folds opened on each side, by where they start.
     open: [HashSet<usize>; 2],
     rows: [Vec<Row>; 2],
+    /// Fields rather than lines, where both bodies are JSON.
+    pub tree: bool,
+    /// The objects and arrays closed in each tree, by place.
+    closed: [HashSet<usize>; 2],
+    /// The nodes each tree draws.
+    nodes: [Vec<usize>; 2],
     scroll: UniformListScrollHandle,
 }
 
@@ -77,11 +86,27 @@ impl ComparePage {
         &self.rows[at(side)]
     }
 
+    /// The nodes the tree of `side` draws, by place in its tree.
+    pub fn nodes(&self, side: Side) -> &[usize] {
+        &self.nodes[at(side)]
+    }
+
+    /// Whether `side`'s bodies are shown by field.
+    pub fn shows_tree(&self, side: Side) -> bool {
+        self.tree && matches!(self.body(side), BodyLoad::Ready(diff) if diff.tree.is_some())
+    }
+
     fn fill_rows(&mut self, side: Side) {
         let i = at(side);
-        self.rows[i] = match &self.bodies[i] {
-            BodyLoad::Ready(diff) => compare::rows(&diff.lines, &self.open[i]),
-            _ => Vec::new(),
+        (self.rows[i], self.nodes[i]) = match &self.bodies[i] {
+            BodyLoad::Ready(diff) => (
+                compare::rows(&diff.lines, &self.open[i]),
+                diff.tree
+                    .as_deref()
+                    .map(|tree| compare::shown_nodes(tree, &self.closed[i]))
+                    .unwrap_or_default(),
+            ),
+            _ => Default::default(),
         };
     }
 
@@ -120,6 +145,7 @@ impl ComparePage {
             }
             ComparePart::Query => Some(differ(self.query())),
             ComparePart::Body => match self.body(side) {
+                BodyLoad::Ready(diff) if self.shows_tree(side) => Some(diff.fields),
                 BodyLoad::Ready(diff) => Some(diff.changed),
                 _ => None,
             },
@@ -154,14 +180,22 @@ fn body_diff(session_dir: &Path, protos: &Library, a: &Detail, b: &Detail, side:
         read_body(session_dir, protos, a, side),
         read_body(session_dir, protos, b, side),
     ) {
-        (Some(a), Some(b)) => {
+        (Some(mut a), Some(mut b)) => {
             let lines = compare::diff_lines(&a.lines, &b.lines);
             let changed = compare::changed_count(&lines);
+            // What the bodies hold is needed no longer once compared.
+            let tree = match (a.json.take(), b.json.take()) {
+                (Some(ja), Some(jb)) => Some(compare::diff_tree(&ja, &jb)),
+                _ => None,
+            };
+            let fields = tree.as_deref().map_or(0, compare::fields_changed);
             BodyLoad::Ready(Arc::new(BodyDiff {
                 a,
                 b,
                 lines,
                 changed,
+                tree,
+                fields,
             }))
         }
         _ => BodyLoad::Not(tr!("A body was not kept, so the two cannot be compared.").into()),
@@ -200,6 +234,9 @@ impl Traffic {
             bodies: [BodyLoad::Loading, BodyLoad::Loading],
             open: Default::default(),
             rows: Default::default(),
+            tree: self.compare_page.as_ref().is_none_or(|page| page.tree),
+            closed: Default::default(),
+            nodes: Default::default(),
             scroll: UniformListScrollHandle::new(),
         });
         self.set_screen(Screen::Compare, cx);
@@ -277,6 +314,140 @@ impl Traffic {
             page.part = part;
         }
         cx.notify();
+    }
+
+    /// Fields, or lines.
+    pub fn set_compare_tree(&mut self, tree: bool, cx: &mut Context<Self>) {
+        if let Some(page) = &mut self.compare_page {
+            page.tree = tree;
+            page.scroll = UniformListScrollHandle::new();
+        }
+        cx.notify();
+    }
+
+    /// Closes the object or array at `node` in the tree shown, or opens it.
+    pub fn toggle_compare_node(&mut self, node: usize, cx: &mut Context<Self>) {
+        if let Some(page) = &mut self.compare_page {
+            let side = page.side;
+            let closed = &mut page.closed[self::at(side)];
+            if !closed.remove(&node) {
+                closed.insert(node);
+            }
+            page.fill_rows(side);
+        }
+        cx.notify();
+    }
+
+    fn render_compare_nodes(
+        &mut self,
+        range: Range<usize>,
+        cx: &mut Context<Self>,
+    ) -> Vec<AnyElement> {
+        let c = colors();
+        let Some(page) = &self.compare_page else {
+            return Vec::new();
+        };
+        let side = page.side;
+        let BodyLoad::Ready(diff) = page.body(side) else {
+            return Vec::new();
+        };
+        let Some(tree) = diff.tree.as_deref() else {
+            return Vec::new();
+        };
+        let closed = &page.closed[at(side)];
+        let value = |text: Option<&String>, ground: Option<u32>| {
+            div()
+                .flex_1()
+                .min_w_0()
+                .h_full()
+                .px(px(8.))
+                .flex()
+                .items_center()
+                .overflow_hidden()
+                .whitespace_nowrap()
+                .when_some(ground, |d, ground| d.bg(rgb(ground)))
+                .when(text.is_none(), |d| d.bg(rgb(c.track)))
+                .children(text.cloned())
+        };
+        page.nodes(side)
+            [range.start.min(page.nodes(side).len())..range.end.min(page.nodes(side).len())]
+            .iter()
+            .map(|&i| {
+                let node = &tree[i];
+                // The indent inside, so that it does not widen the column.
+                let key = div()
+                    .h_full()
+                    .pl(px(8. + node.depth as f32 * 16.))
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap(px(4.))
+                    .overflow_hidden()
+                    .whitespace_nowrap()
+                    .child(
+                        div()
+                            .w(px(16.))
+                            .flex_shrink_0()
+                            .flex()
+                            .justify_center()
+                            .text_size(px(20.))
+                            .line_height(px(LINE_H))
+                            .text_color(rgb(c.faint))
+                            .when(node.inside.is_some(), |d| {
+                                d.child(if closed.contains(&i) { "▸" } else { "▾" })
+                            }),
+                    )
+                    .child(div().text_color(rgb(c.json_key)).child(node.key.clone()));
+                let key = div()
+                    .flex_1()
+                    .min_w_0()
+                    .h_full()
+                    .overflow_hidden()
+                    .child(key);
+                let row = div()
+                    .id(("compare-node", i))
+                    .h(px(LINE_H))
+                    .w_full()
+                    .flex()
+                    .flex_row()
+                    .gap(px(2.))
+                    .child(key);
+                match node.inside {
+                    Some(count) => row
+                        .cursor_pointer()
+                        .hover(|d| d.bg(rgb(c.hover)))
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .px(px(8.))
+                                .flex()
+                                .items_center()
+                                .text_color(rgb(c.muted))
+                                .child(tr_n!(
+                                    count,
+                                    "{count} field differs",
+                                    "{count} fields differ",
+                                    count = crate::flows::group_digits(count as u64)
+                                )),
+                        )
+                        .child(div().flex_1())
+                        .on_click(
+                            cx.listener(move |this, _, _, cx| this.toggle_compare_node(i, cx)),
+                        )
+                        .into_any_element(),
+                    None => {
+                        let left = matches!(node.change, Change::Removed | Change::Changed)
+                            .then_some(c.error_ground);
+                        let right = matches!(node.change, Change::Added | Change::Changed)
+                            .then_some(c.ok_ground);
+                        row.child(value(node.a.as_ref(), left))
+                            .child(value(node.b.as_ref(), right))
+                            .into_any_element()
+                    }
+                }
+            })
+            .collect()
     }
 
     /// Unfolds the same lines from `at` in the body shown.
@@ -646,10 +817,30 @@ impl Traffic {
                             text.kind.clone()
                         }
                     };
+                    let tree = page.shows_tree(side);
                     let said = if diff.a.kind.is_empty() && diff.b.kind.is_empty() {
                         tr!("Neither has a body.")
                     } else if diff.changed == 0 {
                         tr!("The bodies are the same.")
+                    } else if tree {
+                        let mut said = tr_n!(
+                            diff.fields,
+                            "{count} field differs.",
+                            "{count} fields differ.",
+                            count = crate::flows::group_digits(diff.fields as u64)
+                        );
+                        if diff
+                            .tree
+                            .as_ref()
+                            .is_some_and(|t| t.len() >= compare::TREE_MAX)
+                        {
+                            said.push(' ');
+                            said.push_str(&tr!(
+                                "The first {count} are listed.",
+                                count = crate::flows::group_digits(compare::TREE_MAX as u64)
+                            ));
+                        }
+                        said
                     } else {
                         tr_n!(
                             diff.changed,
@@ -658,8 +849,34 @@ impl Traffic {
                             count = crate::flows::group_digits(diff.changed as u64)
                         )
                     };
-                    let count = page.rows(side).len();
+                    let count = if tree {
+                        page.nodes(side).len()
+                    } else {
+                        page.rows(side).len()
+                    };
                     let scroll = page.scroll.clone();
+                    let views = diff.tree.is_some().then(|| {
+                        div()
+                            .flex()
+                            .flex_row()
+                            .gap(px(4.))
+                            .child(
+                                chip("compare-tree", tr!("Fields"), tree)
+                                    .h(px(26.))
+                                    .text_size(px(12.))
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.set_compare_tree(true, cx)
+                                    })),
+                            )
+                            .child(
+                                chip("compare-lines-view", tr!("Lines"), !tree)
+                                    .h(px(26.))
+                                    .text_size(px(12.))
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.set_compare_tree(false, cx)
+                                    })),
+                            )
+                    });
                     div()
                         .flex_1()
                         .min_h_0()
@@ -676,7 +893,15 @@ impl Traffic {
                                 .child(div().flex_1().child(kind(&diff.a)))
                                 .child(div().flex_1().child(kind(&diff.b))),
                         )
-                        .child(div().font_weight(FontWeight::BOLD).child(said))
+                        .child(
+                            div()
+                                .flex()
+                                .flex_row()
+                                .items_center()
+                                .gap(px(10.))
+                                .child(div().flex_1().font_weight(FontWeight::BOLD).child(said))
+                                .children(views),
+                        )
                         .child(
                             div()
                                 .flex_1()
@@ -688,7 +913,17 @@ impl Traffic {
                                 .font_family(crate::MONO_FONT)
                                 .font_features(gpui::FontFeatures::disable_ligatures())
                                 .text_size(px(12.))
-                                .child(
+                                .child(if tree {
+                                    uniform_list(
+                                        "compare-fields",
+                                        count,
+                                        cx.processor(|this, range: Range<usize>, _, cx| {
+                                            this.render_compare_nodes(range, cx)
+                                        }),
+                                    )
+                                    .flex_1()
+                                    .track_scroll(&scroll)
+                                } else {
                                     uniform_list(
                                         "compare-lines",
                                         count,
@@ -697,8 +932,8 @@ impl Traffic {
                                         }),
                                     )
                                     .flex_1()
-                                    .track_scroll(&scroll),
-                                ),
+                                    .track_scroll(&scroll)
+                                }),
                         )
                         .into_any_element()
                 }

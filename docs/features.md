@@ -115,7 +115,7 @@ keyboard.
 |---|---|---|
 | Breakpoints on requests and responses: edit, then send on | Beta | Free |
 | Compose a request; replay one, edited or not | Beta | Free |
-| Compare two flows side by side (Ctrl/⌘-click a second row, or "Compare with…"): method, URL, status, sizes and time; query and headers matched by name; bodies line by line, JSON (and what MessagePack, CBOR and Protobuf hold) written with its keys in order first, the same lines folded | Beta | Free |
+| Compare two flows side by side (Ctrl/⌘-click a second row, or "Compare with…"): method, URL, status, sizes and time; query and headers matched by name; bodies line by line, JSON (and what MessagePack, CBOR and Protobuf hold) written with its keys in order first, the same lines folded; or JSON by field, only the fields that differ under the objects and arrays that hold them, items with an id matched by it | Beta | Free |
 | Rules: map to a local file or folder, map to another host, set or remove headers, change the body (find and replace, or all of it), the status or the query, block | Beta | Free: 3 on at once; Pro: no limit |
 | Slow network: bandwidth, latency, packet loss | 1.0 | Pro |
 | Scripts in JavaScript, run on requests and responses | 1.x | Pro |

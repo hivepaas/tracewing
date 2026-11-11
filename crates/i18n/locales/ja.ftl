@@ -55,6 +55,9 @@ t61e9eac0 = 番号
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = ボディが保存されていないため、比較できません。
 
+# {count} field differs | {count} fields differ
+t6a8fff7f = { $count } 個のフィールドが異なる
+
 # … {count} line the same | … {count} lines the same
 tcc37e7ea = … 同じ行 { $count } 行
 
@@ -112,8 +115,20 @@ tf2c47725 = どちらにもボディがありません。
 # The bodies are the same.
 t85152e01 = ボディは同じです。
 
+# {count} field differs. | {count} fields differ.
+t0f651f77 = { $count } 個のフィールドが異なります。
+
+# The first {count} are listed.
+taae62a3e = 最初の { $count } 個のみ表示しています。
+
 # {count} line differs. | {count} lines differ.
 tf57a3157 = { $count } 行が異なります。
+
+# Fields
+t3308bd9c = フィールド
+
+# Lines
+t8a1a00dc = 行
 
 # Compare
 td57a0a54 = 比較
