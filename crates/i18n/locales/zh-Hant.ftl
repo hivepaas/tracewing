@@ -457,6 +457,9 @@ tb8739fec = 這些標頭未保留。
 # No headers.
 tf3dacb5e = 沒有標頭。
 
+# Trailers, sent after the body
+t3447e9de = Trailer（在本文之後傳送）
+
 # File {filename} · {kind} · {size}
 t6dbd239f = 檔案 { $filename } · { $kind } · { $size }
 

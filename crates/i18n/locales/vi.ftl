@@ -457,6 +457,9 @@ tb8739fec = Các header này không được giữ.
 # No headers.
 tf3dacb5e = Không có header.
 
+# Trailers, sent after the body
+t3447e9de = Trailers, gửi sau body
+
 # File {filename} · {kind} · {size}
 t6dbd239f = File { $filename } · { $kind } · { $size }
 

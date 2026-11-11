@@ -457,6 +457,9 @@ tb8739fec = Header ini tidak disimpan.
 # No headers.
 tf3dacb5e = Tidak ada header.
 
+# Trailers, sent after the body
+t3447e9de = Trailer, dikirim setelah body
+
 # File {filename} · {kind} · {size}
 t6dbd239f = File { $filename } · { $kind } · { $size }
 

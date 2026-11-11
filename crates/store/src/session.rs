@@ -105,7 +105,23 @@ pub struct SessionInfo {
 }
 
 /// Rows of the format this version writes.
-const VERSION: i64 = 6;
+pub const VERSION: i64 = 7;
+
+/// Brings rows an earlier version wrote up to this one, where that is only
+/// a column more. Anything older stays as it is, and is not read.
+pub fn upgrade(flows: &Connection) -> rusqlite::Result<()> {
+    let version: i64 = flows.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+    if version == 6 {
+        // Adding a column rewrites nothing: rows without it read as NULL.
+        flows.execute_batch(
+            "BEGIN IMMEDIATE;
+             ALTER TABLE flows ADD COLUMN grpc_status INTEGER;
+             PRAGMA user_version = 7;
+             COMMIT;",
+        )?;
+    }
+    Ok(())
+}
 
 fn dir_bytes(dir: &Path) -> u64 {
     let Ok(entries) = fs::read_dir(dir) else {
@@ -125,7 +141,13 @@ fn dir_bytes(dir: &Path) -> u64 {
 type Rows = (u64, Option<i64>, Option<i64>);
 
 fn read_rows(session: &Path) -> rusqlite::Result<Option<Rows>> {
-    let flows = Connection::open_with_flags(flows_db(session), OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    // Every earlier session is listed through here before it is opened.
+    let path = flows_db(session);
+    if path.exists() {
+        let _ = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_WRITE)
+            .and_then(|flows| upgrade(&flows));
+    }
+    let flows = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let version: i64 = flows.query_row("PRAGMA user_version", [], |r| r.get(0))?;
     if version != VERSION {
         return Ok(None);
@@ -463,8 +485,12 @@ impl BodyReader {
 
 /// A flow's headers as one string: the two parts can hold anything but a NUL,
 /// which HTTP does not allow in a header.
-pub fn join_headers(request: &str, response: &str) -> String {
-    format!("{request}\0{response}")
+pub fn join_headers(request: &str, response: &str, trailers: &str) -> String {
+    if trailers.is_empty() {
+        format!("{request}\0{response}")
+    } else {
+        format!("{request}\0{response}\0{trailers}")
+    }
 }
 
 pub type Headers = Vec<(String, String)>;
@@ -484,6 +510,19 @@ pub fn stored_headers(
     reader: &mut BodyReader,
     id: i64,
 ) -> Result<Option<(Headers, Headers)>> {
+    Ok(stored_head(flows, reader, id)?.map(|head| (head.request, head.response)))
+}
+
+/// What came before and after the bodies.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Head {
+    pub request: Headers,
+    pub response: Headers,
+    pub trailers: Headers,
+}
+
+/// A flow's headers and trailers, if they were kept.
+pub fn stored_head(flows: &Connection, reader: &mut BodyReader, id: i64) -> Result<Option<Head>> {
     let place: Option<LogPlace> = flows.query_row(
         "SELECT head_segment, head_offset, head_len FROM flows WHERE id = ?1",
         params![id],
@@ -506,8 +545,13 @@ pub fn stored_headers(
         return Ok(None);
     };
     let both = String::from_utf8_lossy(&both);
-    let (request, response) = both.split_once('\0').unwrap_or((&both, ""));
-    Ok(Some((parse_headers(request), parse_headers(response))))
+    let mut parts = both.split('\0');
+    let mut next = || parse_headers(parts.next().unwrap_or_default());
+    Ok(Some(Head {
+        request: next(),
+        response: next(),
+        trailers: next(),
+    }))
 }
 
 /// One message of a stream, as kept.
@@ -638,7 +682,7 @@ mod tests {
         create(&dir).unwrap();
         let db = Connection::open(flows_db(&dir)).unwrap();
         db.execute_batch(
-            "PRAGMA user_version = 6; CREATE TABLE flows (id INTEGER PRIMARY KEY, started_us INTEGER);",
+            "PRAGMA user_version = 7; CREATE TABLE flows (id INTEGER PRIMARY KEY, started_us INTEGER);",
         )
         .unwrap();
         for id in 1..=flows {
@@ -676,6 +720,31 @@ mod tests {
             dir.exists(),
             "it has flows, so it counts as one of those kept"
         );
+        fs::remove_dir_all(&sessions).unwrap();
+    }
+
+    #[test]
+    fn the_last_format_is_brought_up_to_this_one() {
+        let sessions = temp("upgrade");
+        let dir = make(&sessions, "100", 3);
+        Connection::open(flows_db(&dir))
+            .unwrap()
+            .execute_batch("PRAGMA user_version = 6;")
+            .unwrap();
+        let about = info(&dir);
+        assert!(about.readable);
+        assert_eq!(about.flows, 3);
+        let flows = Connection::open(flows_db(&dir)).unwrap();
+        let status: Option<i64> = flows
+            .query_row("SELECT grpc_status FROM flows WHERE id = 1", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(status, None);
+        let version: i64 = flows
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, VERSION);
         fs::remove_dir_all(&sessions).unwrap();
     }
 

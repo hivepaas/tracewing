@@ -68,6 +68,38 @@ pub fn grpc_to_json(data: &[u8], text: bool) -> Option<String> {
     }
 }
 
+/// The `grpc-status` in gRPC-Web's frame of trailers, if the body holds one.
+pub fn grpc_web_status(data: &[u8], text: bool) -> Option<u16> {
+    let decoded;
+    let mut rest = if text {
+        decoded = from_base64(data)?;
+        &decoded[..]
+    } else {
+        data
+    };
+    while let Some((flags, payload, after)) = frame(rest) {
+        if flags & 0x80 != 0 {
+            return trailer_lines(payload)
+                .find(|(name, _)| name == "grpc-status")
+                .and_then(|(_, value)| value.parse().ok());
+        }
+        rest = after;
+    }
+    None
+}
+
+/// Trailers sent as a frame: header lines, names in lower case.
+fn trailer_lines(payload: &[u8]) -> impl Iterator<Item = (String, String)> + '_ {
+    std::str::from_utf8(payload)
+        .unwrap_or_default()
+        .split("\r\n")
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            let (name, value) = line.split_once(':').unwrap_or((line, ""));
+            (name.trim().to_ascii_lowercase(), value.trim().to_owned())
+        })
+}
+
 /// A frame's flags, its payload, and what is after it.
 fn frame(data: &[u8]) -> Option<(u8, &[u8], &[u8])> {
     let (head, rest) = data.split_at_checked(5)?;
@@ -79,15 +111,9 @@ fn frame(data: &[u8]) -> Option<(u8, &[u8], &[u8])> {
 fn frame_json(flags: u8, payload: &[u8]) -> String {
     // Trailers, as header lines.
     if flags & 0x80 != 0 {
-        let text = String::from_utf8_lossy(payload);
-        let mut trailers = serde_json::Map::new();
-        for line in text.split("\r\n").filter(|line| !line.is_empty()) {
-            let (name, value) = line.split_once(':').unwrap_or((line, ""));
-            trailers.insert(
-                name.trim().to_ascii_lowercase(),
-                Value::String(value.trim().to_owned()),
-            );
-        }
+        let trailers: serde_json::Map<_, _> = trailer_lines(payload)
+            .map(|(name, value)| (name, Value::String(value)))
+            .collect();
         let mut out = serde_json::Map::new();
         out.insert("$trailers".to_owned(), Value::Object(trailers));
         return Value::Object(out).to_string();
@@ -438,6 +464,10 @@ mod tests {
             )
         );
         assert_eq!(grpc_to_json(b"\x00\x00\x00\x00\x09ab", false), None);
+        assert_eq!(grpc_web_status(&body, false), Some(0));
+        assert_eq!(grpc_web_status(&one, false), None);
+        let failed = [one, framed(0x80, b"grpc-status: 5\r\n")].concat();
+        assert_eq!(grpc_web_status(&failed, false), Some(5));
     }
 
     #[test]

@@ -823,6 +823,47 @@ async fn a_full_queue_sheds_bodies_and_keeps_the_rows() {
     clean_up(conn, dir);
 }
 
+/// gRPC's trailers come after the body over HTTP/2: they are kept with the
+/// headers, and the status they hold goes in the row.
+#[tokio::test(flavor = "multi_thread")]
+async fn grpc_trailers_and_status_are_kept() {
+    let h = Harness::start("grpc").await;
+    let res = h
+        .client(false)
+        .post(format!("{}/shop.Orders/Get", h.origin))
+        .header("content-type", "application/grpc")
+        .header("te", "trailers")
+        .body(vec![0u8, 0, 0, 0, 0])
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.version(), reqwest::Version::HTTP_2);
+    res.bytes().await.unwrap();
+    let (_, conn, dir) = h.finish(1).await;
+    let status: Option<u16> = conn
+        .query_row("SELECT grpc_status FROM flows WHERE id = 1", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(status, Some(5));
+    let mut reader = BodyReader::new(&dir.join("session"));
+    let head = session::stored_head(&conn, &mut reader, 1)
+        .unwrap()
+        .expect("kept");
+    drop(reader);
+    assert!(
+        head.trailers
+            .iter()
+            .any(|(n, v)| n == "grpc-message" && v == "order%2042%20is%20gone"),
+        "{head:?}"
+    );
+    assert!(
+        head.response.iter().all(|(n, _)| n != "grpc-status"),
+        "trailers are not headers: {head:?}"
+    );
+    clean_up(conn, dir);
+}
+
 /// Headers come back in the inspector, from the log rather than the row.
 #[tokio::test(flavor = "multi_thread")]
 async fn headers_are_kept() {

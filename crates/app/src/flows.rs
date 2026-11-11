@@ -18,6 +18,8 @@ pub struct Row {
     pub number: SharedString,
     pub method: SharedString,
     pub status: Option<u16>,
+    /// gRPC's status, when the call failed.
+    pub grpc_failed: Option<u16>,
     pub host: SharedString,
     pub path: SharedString,
     /// The program on this machine that sent it, when it was found.
@@ -118,7 +120,8 @@ impl Flows {
                 end += 1;
             }
             let mut stmt = self.conn.prepare_cached(
-                "SELECT id, method, status, host, path, resp_bytes, duration_us, error, kind, open, rule, graphql, app, client
+                "SELECT id, method, status, host, path, resp_bytes, duration_us, error, kind, open, rule, graphql, app, client,
+                        grpc_status
                  FROM flows WHERE id >= ?1 AND id <= ?2",
             )?;
             let rows = stmt.query_map(params![ids[at], ids[end - 1]], |r| {
@@ -129,11 +132,13 @@ impl Flows {
                 let open: bool = r.get(9)?;
                 let going = open && live;
                 let rule: Option<String> = r.get(10)?;
+                let grpc_failed = r.get::<_, Option<u16>>(14)?.filter(|code| *code != 0);
                 Ok(Row {
                     id,
                     number: group_digits(id as u64).into(),
                     method: r.get::<_, String>(1)?.into(),
                     status: r.get(2)?,
+                    grpc_failed,
                     host: r.get::<_, String>(3)?.into(),
                     path: r.get::<_, String>(4)?.into(),
                     app: r.get::<_, Option<String>>(12)?.map(SharedString::from),
@@ -143,6 +148,12 @@ impl Flows {
                         .map(|operation| short_operation(&operation).into()),
                     note: error
                         .map(SharedString::from)
+                        .or_else(|| {
+                            grpc_failed.map(|code| {
+                                format!("gRPC {}", crate::grpc::code_name(code).unwrap_or("error"))
+                                    .into()
+                            })
+                        })
                         .or_else(|| rule.map(|rule| tr!("Rule: {rule}", rule = rule).into()))
                         .or_else(|| match kind.as_str() {
                             "websocket" => Some("WebSocket".into()),

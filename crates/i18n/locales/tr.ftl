@@ -471,6 +471,9 @@ tb8739fec = Bu başlıklar saklanmadı.
 # No headers.
 tf3dacb5e = Başlık yok.
 
+# Trailers, sent after the body
+t3447e9de = Gövdeden sonra gönderilen trailer'lar
+
 # File {filename} · {kind} · {size}
 t6dbd239f = Dosya { $filename } · { $kind } · { $size }
 

@@ -1,7 +1,7 @@
 //! What the filter box means, and finding the flows that fit.
 //!
 //! `host:myapp method:post status:4xx type:json graphql:GetUser app:curl
-//! device:iphone` narrow by column;
+//! device:iphone grpc:error` narrow by column;
 //! anything else
 //! is text to find in URLs and in bodies. The chips and the host chosen in
 //! the sidebar narrow further.
@@ -54,7 +54,7 @@ impl Kind {
             Self::All => None,
             Self::Json => Some("content_type LIKE '%json%'"),
             Self::GraphQl => Some("graphql IS NOT NULL"),
-            Self::Errors => Some("(status >= 400 OR status IS NULL)"),
+            Self::Errors => Some("(status >= 400 OR status IS NULL OR grpc_status > 0)"),
             Self::WebSocket => Some("kind = 'websocket'"),
             Self::Media => Some(
                 "(content_type LIKE 'image/%' OR content_type LIKE 'video/%' \
@@ -75,6 +75,8 @@ pub struct Filter {
     pub method: Option<String>,
     /// From, up to and not including.
     pub status: Option<(u16, u16)>,
+    /// gRPC statuses, from the first up to the second.
+    pub grpc: Option<(u16, u16)>,
     pub content_type: Option<String>,
     /// A part of the GraphQL operation, as `GetUser` or `mutation`.
     pub graphql: Option<String>,
@@ -124,6 +126,9 @@ impl Filter {
                 Some(("status", value)) if status_range(value).is_some() => {
                     filter.status = status_range(value);
                 }
+                Some(("grpc", value)) if grpc_range(value).is_some() => {
+                    filter.grpc = grpc_range(value);
+                }
                 _ => words.push(word),
             }
         }
@@ -156,6 +161,7 @@ impl Filter {
             && self.hidden_hosts.is_empty()
             && self.method.is_none()
             && self.status.is_none()
+            && self.grpc.is_none()
             && self.content_type.is_none()
             && self.graphql.is_none()
             && self.app.is_none()
@@ -228,6 +234,11 @@ impl Filter {
         }
         if let Some((from, to)) = self.status {
             clauses.push("status >= ? AND status < ?".to_owned());
+            values.push(Box::new(from));
+            values.push(Box::new(to));
+        }
+        if let Some((from, to)) = self.grpc {
+            clauses.push("grpc_status >= ? AND grpc_status < ?".to_owned());
             values.push(Box::new(from));
             values.push(Box::new(to));
         }
@@ -311,6 +322,15 @@ fn status_range(value: &str) -> Option<(u16, u16)> {
     }
     let status: u16 = value.parse().ok()?;
     Some((status, status + 1))
+}
+
+/// `error` for any failed call, `ok`, a code, or a code's name.
+fn grpc_range(value: &str) -> Option<(u16, u16)> {
+    if value.eq_ignore_ascii_case("error") {
+        return Some((1, u16::MAX));
+    }
+    let code = value.parse().ok().or_else(|| crate::grpc::code_of(value))?;
+    Some((code, code + 1))
 }
 
 fn escape_like(text: &str) -> String {
@@ -397,6 +417,16 @@ mod tests {
         assert_eq!(status_range("5xx"), Some((500, 600)));
         assert_eq!(status_range("9xx"), None);
         assert_eq!(status_range("abc"), None);
+    }
+
+    #[test]
+    fn grpc_statuses() {
+        assert_eq!(grpc_range("error"), Some((1, u16::MAX)));
+        assert_eq!(grpc_range("ok"), Some((0, 1)));
+        assert_eq!(grpc_range("5"), Some((5, 6)));
+        assert_eq!(grpc_range("not_found"), Some((5, 6)));
+        assert_eq!(grpc_range("nope"), None);
+        assert_eq!(Filter::parse("grpc:Unavailable").grpc, Some((14, 15)));
     }
 
     #[test]

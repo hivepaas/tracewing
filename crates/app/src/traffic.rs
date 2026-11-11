@@ -2716,7 +2716,8 @@ fn render_row(
     selected: bool,
 ) -> Stateful<Div> {
     let c = colors();
-    let (ground, ink) = status_colors(row.status);
+    // A gRPC call that failed is colored as the HTTP status that says so.
+    let (ground, ink) = status_colors(row.grpc_failed.map(crate::grpc::as_http).or(row.status));
     let Row {
         id,
         number,

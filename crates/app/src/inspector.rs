@@ -1032,9 +1032,11 @@ impl Traffic {
             Part::GraphQl => self
                 .selectable(well, &sel, cx)
                 .child(self.render_graphql(&sel)),
-            Part::Headers => self
-                .selectable(well, &sel, cx)
-                .child(render_headers(detail.headers(self.inspector.side), &sel)),
+            Part::Headers => self.selectable(well, &sel, cx).child(render_headers(
+                detail.headers(self.inspector.side),
+                detail.trailers(self.inspector.side),
+                &sel,
+            )),
             Part::Connection => {
                 let naming = (detail.app.is_none() && device_of(&detail.client).is_some())
                     .then(|| self.device_name_input().clone());
@@ -1074,9 +1076,11 @@ impl Traffic {
                 .border_1()
                 .border_color(rgb(if side == chosen { c.link } else { c.code }));
             let content = match part {
-                Part::Headers => self
-                    .selectable(well, sel, cx)
-                    .child(render_headers(detail.headers(side), sel)),
+                Part::Headers => self.selectable(well, sel, cx).child(render_headers(
+                    detail.headers(side),
+                    detail.trailers(side),
+                    sel,
+                )),
                 Part::Cookies => self.selectable(well, sel, cx).child(render_cookies(
                     detail.headers(side),
                     side,
@@ -1426,6 +1430,16 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
         .flex_shrink_0()
         .gap(px(6.))
         .child(chip(status_text(detail.status), ground, ink))
+        .children(detail.grpc_status.map(|code| {
+            let (ground, ink) = status_colors(Some(crate::grpc::as_http(code)));
+            let mut text = format!("gRPC {}", crate::grpc::code_text(code));
+            if let Some(message) = detail.grpc_message().filter(|_| code != 0) {
+                text.push_str(" · ");
+                text.push_str(&message);
+            }
+            // A message can be long: it wraps, as an error does.
+            chip(text, ground, ink).max_w_full().rounded(px(12.))
+        }))
         .children(
             detail
                 .rule
@@ -1812,14 +1826,41 @@ fn render_certificate(cert: Certificate, now: i64, sel: &Selection) -> impl Into
         )
 }
 
-fn render_headers(headers: Option<&[(String, String)]>, sel: &Selection) -> impl IntoElement {
+/// Headers, and the trailers after the body under a heading of their own.
+fn render_headers(
+    headers: Option<&[(String, String)]>,
+    trailers: &[(String, String)],
+    sel: &Selection,
+) -> impl IntoElement {
     let c = colors();
     let Some(headers) = headers else {
         return note(tr!("These headers were not kept.")).into_any_element();
     };
-    if headers.is_empty() {
+    if headers.is_empty() && trailers.is_empty() {
         return note(tr!("No headers.")).into_any_element();
     }
+    let row = |(name, value): &(String, String)| {
+        div()
+            .flex()
+            .flex_row()
+            .gap(px(10.))
+            .child(
+                div()
+                    .w(relative(0.34))
+                    .flex_shrink_0()
+                    .text_color(rgb(c.json_key))
+                    .child(sel.piece(name.clone(), "\n", Vec::new())),
+            )
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .flex()
+                    .flex_col()
+                    .child(sel.piece(value.clone(), ": ", Vec::new()))
+                    .children(Jwt::find(value).map(|jwt| render_jwt(jwt, sel))),
+            )
+    };
     div()
         .id("headers")
         .size_full()
@@ -1831,28 +1872,19 @@ fn render_headers(headers: Option<&[(String, String)]>, sel: &Selection) -> impl
         .font_family(crate::MONO_FONT)
         .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(px(12.))
-        .children(headers.iter().map(|(name, value)| {
-            div()
-                .flex()
-                .flex_row()
-                .gap(px(10.))
-                .child(
-                    div()
-                        .w(relative(0.34))
-                        .flex_shrink_0()
-                        .text_color(rgb(c.json_key))
-                        .child(sel.piece(name.clone(), "\n", Vec::new())),
-                )
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w_0()
-                        .flex()
-                        .flex_col()
-                        .child(sel.piece(value.clone(), ": ", Vec::new()))
-                        .children(Jwt::find(value).map(|jwt| render_jwt(jwt, sel))),
-                )
-        }))
+        .children(headers.iter().map(row))
+        .when(!trailers.is_empty(), |d| {
+            d.child(
+                div()
+                    .pt(px(10.))
+                    .font_family(crate::FONT)
+                    .text_size(px(11.5))
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(rgb(c.muted))
+                    .child(sel.piece(tr!("Trailers, sent after the body"), "\n", Vec::new())),
+            )
+            .children(trailers.iter().map(row))
+        })
         .into_any_element()
 }
 

@@ -471,6 +471,9 @@ tb8739fec = Diese Header wurden nicht gespeichert.
 # No headers.
 tf3dacb5e = Keine Header.
 
+# Trailers, sent after the body
+t3447e9de = Trailer, nach dem Body gesendet
+
 # File {filename} · {kind} · {size}
 t6dbd239f = Datei { $filename } · { $kind } · { $size }
 

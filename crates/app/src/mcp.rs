@@ -248,6 +248,7 @@ impl Server {
             let headers = detail.headers(side).map(|headers| {
                 headers
                     .iter()
+                    .chain(detail.trailers(side))
                     .map(|(name, value)| {
                         let secret = SECRET_HEADERS.contains(&name.to_ascii_lowercase().as_str());
                         let value = if secret && !secrets { REMOVED } else { value };
@@ -282,6 +283,8 @@ impl Server {
             "url": detail.url,
             "kind": detail.kind,
             "status": detail.status,
+            "grpc_status": detail.grpc_status,
+            "grpc_message": detail.grpc_message(),
             "error": detail.error,
             "still_open": detail.open,
             "client_version": detail.client_version,
@@ -331,8 +334,8 @@ fn tools() -> Value {
             "name": "list_flows",
             "description": "Requests in a session, the newest first. `filter` is tracewing's \
                 search box: host:api.example.com, method:POST, status:404, status:5xx, \
-                type:json, app:chrome, device:phone, graphql:GetUser, and plain words to find \
-                in URLs and bodies. Page back with `before` set to `next_before`.",
+                type:json, app:chrome, device:phone, graphql:GetUser, grpc:error, grpc:NOT_FOUND, \
+                and plain words to find in URLs and bodies. Page back with `before` set to `next_before`.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -388,7 +391,7 @@ fn time_text(us: i64) -> String {
 fn rows(conn: &Connection, ids: &[i64], devices: &Devices) -> Result<Vec<Value>> {
     let mut stmt = conn.prepare_cached(
         "SELECT id, started_us, method, scheme, host, path, status, kind, resp_bytes,
-                duration_us, app, client, error, graphql, rule, open
+                duration_us, app, client, error, graphql, rule, open, grpc_status
          FROM flows WHERE id = ?1",
     )?;
     let mut out = Vec::with_capacity(ids.len());
@@ -410,6 +413,7 @@ fn rows(conn: &Connection, ids: &[i64], devices: &Devices) -> Result<Vec<Value>>
                 "method": r.get::<_, String>(2)?,
                 "url": format!("{scheme}://{host}{path}"),
                 "status": r.get::<_, Option<u16>>(6)?,
+                "grpc_status": r.get::<_, Option<u16>>(16)?,
                 "kind": r.get::<_, String>(7)?,
                 "response_bytes": r.get::<_, i64>(8)?,
                 "duration_ms": r.get::<_, Option<i64>>(9)?.map(|us| us as f64 / 1000.0),
