@@ -962,8 +962,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = Manter os apps fora do HTTP/3
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = O HTTP/3 usa UDP, que nenhum proxy transporta, então um app que o usa contorna o tracewing. Isto tira das respostas as ofertas de HTTP/3 dos servidores, e os apps ficam no HTTP/2. Os fluxos ainda mostram as ofertas como os servidores as enviaram. Vale quando o tracewing for reiniciado.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = O HTTP/3 usa UDP, que nenhum proxy transporta, então um app que o usa contorna o tracewing. Isto tira das respostas as ofertas de HTTP/3 dos servidores, e os apps ficam no HTTP/2. Os fluxos ainda mostram as ofertas como os servidores as enviaram.
 
 # Size of a session
 ta20fa102 = Tamanho de uma sessão
@@ -1084,8 +1084,8 @@ ta3162a13 = Restaurar padrões
 # Hosts not to decrypt
 tb457f0b3 = Hosts a não descriptografar
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = Um por linha: um host, ou *.example.com para ele e tudo abaixo dele. O tráfego deles passa sem ser lido. Esta lista vale assim que é salva.
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = Um por linha: um host, ou *.example.com para ele e tudo abaixo dele. O tráfego deles passa sem ser lido. Esta lista vale na hora.
 
 # Language
 t9a73db9b = Idioma

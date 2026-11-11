@@ -393,13 +393,15 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             assert_eq!(problem(&view.settings_page), None);
             view.toggle_setting("hide_http3", cx);
             view.toggle_setting("other_devices", cx);
+            view.toggle_setting("os_roots", cx);
             let page = view.settings_page.as_ref().unwrap();
             assert_eq!(
                 page.waiting(&view.engine.settings),
-                ["hide_http3", "session_max_mib"],
-                "the other devices are let in at once"
+                ["os_roots", "session_max_mib"],
+                "the others apply at once"
             );
             assert!(view.engine.other_devices.is_on());
+            assert!(!view.engine.live.hide_http3());
         })
         .unwrap();
     let written = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();
@@ -417,8 +419,10 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             );
             assert!(!view.engine.other_devices.is_on());
             view.undo_reset_settings(cx);
+            assert!(!view.engine.live.hide_http3(), "undone at once too");
             view.toggle_setting("hide_http3", cx);
             view.toggle_setting("other_devices", cx);
+            view.toggle_setting("os_roots", cx);
         })
         .unwrap();
     let written = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();

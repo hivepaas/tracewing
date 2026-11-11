@@ -943,8 +943,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = Jauhkan aplikasi dari HTTP/3
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3 berjalan di atas UDP, yang tidak dibawa proxy mana pun, jadi aplikasi yang memakainya melewati tracewing. Ini menghapus tawaran HTTP/3 dari respons server, sehingga aplikasi tetap di HTTP/2. Flow tetap menampilkan tawaran itu seperti yang dikirim server. Berlaku saat tracewing dimulai ulang.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3 berjalan di atas UDP, yang tidak dibawa proxy mana pun, jadi aplikasi yang memakainya melewati tracewing. Ini menghapus tawaran HTTP/3 dari respons server, sehingga aplikasi tetap di HTTP/2. Flow tetap menampilkan tawaran itu seperti yang dikirim server.
 
 # Size of a session
 ta20fa102 = Ukuran sesi
@@ -1060,8 +1060,8 @@ ta3162a13 = Kembalikan ke default
 # Hosts not to decrypt
 tb457f0b3 = Host yang tidak didekripsi
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = Satu per baris: host, atau *.example.com untuk host itu dan semua di bawahnya. Lalu lintasnya lewat tanpa dibaca. Daftar ini berlaku begitu disimpan.
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = Satu per baris: host, atau *.example.com untuk host itu dan semua di bawahnya. Lalu lintasnya lewat tanpa dibaca. Daftar ini langsung berlaku.
 
 # Language
 t9a73db9b = Bahasa

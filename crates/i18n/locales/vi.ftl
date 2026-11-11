@@ -943,8 +943,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = Giữ app không dùng HTTP/3
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3 chạy trên UDP, thứ không proxy nào chuyển được, nên app dùng nó sẽ đi vòng qua tracewing. Tuỳ chọn này bỏ lời mời dùng HTTP/3 khỏi response của server, để app ở lại HTTP/2. Flow vẫn hiện lời mời đúng như server gửi. Có hiệu lực khi tracewing khởi động lại.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3 chạy trên UDP, thứ không proxy nào chuyển được, nên app dùng nó sẽ đi vòng qua tracewing. Tuỳ chọn này bỏ lời mời dùng HTTP/3 khỏi response của server, để app ở lại HTTP/2. Flow vẫn hiện lời mời đúng như server gửi.
 
 # Size of a session
 ta20fa102 = Kích thước một phiên
@@ -1060,8 +1060,8 @@ ta3162a13 = Trở về mặc định
 # Hosts not to decrypt
 tb457f0b3 = Host không giải mã
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = Mỗi dòng một mục: một host, hoặc *.example.com cho host đó và mọi host bên dưới. Traffic của chúng đi qua mà không bị đọc. Danh sách này áp dụng ngay khi được lưu.
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = Mỗi dòng một mục: một host, hoặc *.example.com cho host đó và mọi host bên dưới. Traffic của chúng đi qua mà không bị đọc. Danh sách này áp dụng ngay.
 
 # Language
 t9a73db9b = Ngôn ngữ

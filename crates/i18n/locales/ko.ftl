@@ -943,8 +943,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = 앱이 HTTP/3를 쓰지 않게 하기
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3는 UDP를 사용하는데 UDP를 전달하는 프록시는 없으므로, HTTP/3를 쓰는 앱은 tracewing을 우회합니다. 이 설정은 서버 응답에서 HTTP/3 제안을 제거하므로 앱은 HTTP/2를 계속 사용합니다. 플로우에는 서버가 보낸 그대로의 제안이 표시됩니다. tracewing을 다시 시작하면 적용됩니다.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3는 UDP를 사용하는데 UDP를 전달하는 프록시는 없으므로, HTTP/3를 쓰는 앱은 tracewing을 우회합니다. 이 설정은 서버 응답에서 HTTP/3 제안을 제거하므로 앱은 HTTP/2를 계속 사용합니다. 플로우에는 서버가 보낸 그대로의 제안이 표시됩니다.
 
 # Size of a session
 ta20fa102 = 세션 크기
@@ -1060,8 +1060,8 @@ ta3162a13 = 기본값으로 되돌리기
 # Hosts not to decrypt
 tb457f0b3 = 복호화하지 않을 호스트
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = 한 줄에 하나씩: 호스트, 또는 그 호스트와 모든 하위 호스트를 뜻하는 *.example.com. 이 호스트들의 트래픽은 내용을 읽지 않고 통과합니다. 이 목록은 저장하는 즉시 적용됩니다.
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = 한 줄에 하나씩: 호스트, 또는 그 호스트와 모든 하위 호스트를 뜻하는 *.example.com. 이 호스트들의 트래픽은 내용을 읽지 않고 통과합니다. 이 목록은 바로 적용됩니다.
 
 # Language
 t9a73db9b = 언어

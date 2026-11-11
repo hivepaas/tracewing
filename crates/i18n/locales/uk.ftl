@@ -991,8 +991,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = Не пускати застосунки на HTTP/3
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3 працює поверх UDP, який жоден проксі не передає, тож застосунок, що використовує його, обходить tracewing. Це налаштування прибирає з відповідей серверів пропозиції HTTP/3, і застосунки залишаються на HTTP/2. Потоки все одно показують пропозиції так, як їх надіслали сервери. Набуває чинності після перезапуску tracewing.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3 працює поверх UDP, який жоден проксі не передає, тож застосунок, що використовує його, обходить tracewing. Це налаштування прибирає з відповідей серверів пропозиції HTTP/3, і застосунки залишаються на HTTP/2. Потоки все одно показують пропозиції так, як їх надіслали сервери.
 
 # Size of a session
 ta20fa102 = Розмір сеансу
@@ -1114,8 +1114,8 @@ ta3162a13 = Відновити типові
 # Hosts not to decrypt
 tb457f0b3 = Хости, які не розшифровувати
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = По одному в рядку: хост або *.example.com для нього й усього під ним. Їхній трафік проходить непрочитаним. Список діє одразу після збереження.
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = По одному в рядку: хост або *.example.com для нього й усього під ним. Їхній трафік проходить непрочитаним. Список застосовується одразу.
 
 # Language
 t9a73db9b = Мова

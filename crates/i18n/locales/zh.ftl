@@ -943,8 +943,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = 阻止应用使用 HTTP/3
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3 基于 UDP，而代理无法转发 UDP，因此使用 HTTP/3 的应用会绕过 tracewing。此选项会从服务器响应中移除 HTTP/3 通告，让应用继续使用 HTTP/2。流量记录中仍会显示服务器发送的原始通告。重新启动 tracewing 后生效。
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3 基于 UDP，而代理无法转发 UDP，因此使用 HTTP/3 的应用会绕过 tracewing。此选项会从服务器响应中移除 HTTP/3 通告，让应用继续使用 HTTP/2。流量记录中仍会显示服务器发送的原始通告。
 
 # Size of a session
 ta20fa102 = 会话大小
@@ -1060,8 +1060,8 @@ ta3162a13 = 恢复默认值
 # Hosts not to decrypt
 tb457f0b3 = 不解密的主机
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = 每行一个：主机名，或 *.example.com（匹配该域名及其所有子域名）。这些主机的流量将直接通过，不被读取。此列表保存后立即生效。
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = 每行一个：主机名，或 *.example.com（匹配该域名及其所有子域名）。这些主机的流量将直接通过，不被读取。此列表立即生效。
 
 # Language
 t9a73db9b = 语言

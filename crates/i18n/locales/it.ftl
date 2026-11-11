@@ -962,8 +962,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = Tieni le app lontane da HTTP/3
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3 viaggia su UDP, che nessun proxy trasporta, quindi un'app che lo usa aggira tracewing. Questa opzione rimuove dalle risposte dei server le loro offerte di HTTP/3, e le app restano su HTTP/2. I flow mostrano comunque le offerte come le hanno inviate i server. Ha effetto al prossimo avvio di tracewing.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3 viaggia su UDP, che nessun proxy trasporta, quindi un'app che lo usa aggira tracewing. Questa opzione rimuove dalle risposte dei server le loro offerte di HTTP/3, e le app restano su HTTP/2. I flow mostrano comunque le offerte come le hanno inviate i server.
 
 # Size of a session
 ta20fa102 = Dimensione di una sessione
@@ -1084,8 +1084,8 @@ ta3162a13 = Ripristina i valori predefiniti
 # Hosts not to decrypt
 tb457f0b3 = Host da non decifrare
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = Uno per riga: un host, oppure *.example.com per quell'host e tutto ciò che sta sotto. Il loro traffico passa senza essere letto. Questo elenco si applica appena viene salvato.
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = Uno per riga: un host, oppure *.example.com per quell'host e tutto ciò che sta sotto. Il loro traffico passa senza essere letto. Questo elenco si applica subito.
 
 # Language
 t9a73db9b = Lingua

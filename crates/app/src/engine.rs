@@ -24,7 +24,7 @@ use tracewing_proxy::{
 };
 use tracewing_store::{
     session::{self, Shared},
-    settings::StorageSettings,
+    settings::{Live, StorageSettings},
 };
 
 /// Where the proxy tries to listen, in this order.
@@ -68,6 +68,8 @@ pub struct Engine {
     pub failure: Arc<Mutex<Option<String>>>,
     /// Whether other devices may use the proxy, and where it listens for them.
     pub other_devices: Arc<OtherDevices>,
+    /// The other settings that apply as they change.
+    pub live: Arc<Live>,
     stop: Option<oneshot::Sender<()>>,
     thread: Option<JoinHandle<()>>,
 }
@@ -79,6 +81,7 @@ impl Engine {
         let session = sessions.join(next_session_name(&sessions));
         let (listener, addr) = bind(opts.ports)?;
         let other_devices = Arc::new(OtherDevices::new(opts.settings.other_devices));
+        let live = Arc::new(Live::new(&opts.settings));
 
         let shared = Arc::new(Shared::default());
         let recording = Arc::new(AtomicBool::new(true));
@@ -113,6 +116,7 @@ impl Engine {
             leave_index: true,
             find_apps: opts.find_apps,
             stop_limit: std::time::Duration::from_secs(2),
+            live: Arc::clone(&live),
             other_devices: Some(Arc::clone(&other_devices)),
         };
         let thread = {
@@ -150,6 +154,7 @@ impl Engine {
             pauses,
             failure,
             other_devices,
+            live,
             stop: Some(stop),
             thread: Some(thread),
         })
@@ -163,11 +168,12 @@ impl Engine {
         self.recording.store(on, Ordering::Relaxed);
     }
 
-    /// Lets other devices on the network use the proxy, or stops letting them,
-    /// at once.
-    pub fn set_other_devices(&mut self, on: bool) {
-        self.settings.other_devices = on;
-        self.other_devices.set(on);
+    /// Takes what applies at once from settings just written; the rest wait
+    /// for the next start.
+    pub fn apply_settings(&mut self, written: &StorageSettings) {
+        self.settings.take_live(written);
+        self.other_devices.set(written.other_devices);
+        self.live.apply(written);
     }
 
     pub fn failure(&self) -> Option<String> {

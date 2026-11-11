@@ -80,8 +80,7 @@ fn groups() -> Vec<(String, Vec<Row>)> {
                 tr!(
                     "HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around \
                      tracewing. This takes servers' offers of it out of their responses, and apps stay \
-                     on HTTP/2. Flows still show the offers as servers sent them. \
-                     Takes effect when tracewing starts again."
+                     on HTTP/2. Flows still show the offers as servers sent them."
                 ),
                 "",
             )],
@@ -195,10 +194,6 @@ fn groups() -> Vec<(String, Vec<Row>)> {
     ]
 }
 
-/// The settings that apply as soon as they are written. The rest wait for
-/// tracewing to start again.
-const LIVE: &[&str] = &["other_devices", "ai_secrets"];
-
 /// How long typing has to stop before what was typed is written.
 const SAVE_AFTER: Duration = Duration::from_millis(400);
 
@@ -281,7 +276,7 @@ impl SettingsPage {
         self.fields
             .iter()
             .map(|(key, _)| *key)
-            .filter(|key| !LIVE.contains(key) && stored.get(key) != running.get(key))
+            .filter(|key| stored.get(key) != running.get(key))
             .collect()
     }
 
@@ -405,7 +400,7 @@ impl Traffic {
             Err(problem) => page.problem = Some(problem),
         }
         if let Some(settings) = written {
-            self.engine.set_other_devices(settings.other_devices);
+            self.engine.apply_settings(&settings);
         }
         let now = self
             .engine
@@ -709,7 +704,7 @@ impl Traffic {
                             .px(px(6.))
                             .text_size(px(12.))
                             .text_color(rgb(c.muted))
-                            .child(tr!("One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.")),
+                            .child(tr!("One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.")),
                     )
                     .child(
                         div()

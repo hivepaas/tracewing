@@ -42,7 +42,7 @@ use tokio::net::TcpListener;
 use tracewing_store::{
     search,
     session::{self, Shared},
-    settings::StorageSettings,
+    settings::{Live, StorageSettings},
     spool::{Spool, SpoolStats},
     store::{Recorder, Stats},
 };
@@ -98,6 +98,8 @@ pub struct ProxyOptions {
     /// How long a stop waits for connections to end. A stream or a WebSocket that
     /// is still open would otherwise hold it up for as long as it stays open.
     pub stop_limit: Duration,
+    /// The settings that apply as they change. They start as `settings` has them.
+    pub live: Arc<Live>,
     /// Whether other devices on the network may use the proxy, switched while
     /// it runs. `None` keeps them out.
     pub other_devices: Option<Arc<lan::OtherDevices>>,
@@ -160,12 +162,13 @@ pub async fn run_proxy(
         ca_der: ca.cert_der()?.into(),
     };
     opts.settings.check()?;
+    opts.live.apply(&opts.settings);
     session::create(&opts.session)?;
     let shared = opts.shared;
     let (spool, spool_thread) = Spool::spawn(
         &session::files_dir(&opts.session),
         opts.settings.spool_budget(),
-        opts.settings.body_max(),
+        Arc::clone(&opts.live),
         Arc::clone(&shared),
     )?;
     let spool_stats = spool.stats();
@@ -202,7 +205,7 @@ pub async fn run_proxy(
                 .find_apps
                 .then(|| apps::Apps::spawn(listen_addr.port()))
                 .transpose()?,
-            hide_http3: opts.settings.hide_http3,
+            live: Arc::clone(&opts.live),
             network: opts.network,
         },
     );

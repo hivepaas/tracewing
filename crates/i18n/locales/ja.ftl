@@ -943,8 +943,8 @@ tfec0f477 = HTTP/3
 # Keep apps off HTTP/3
 te42733a9 = アプリに HTTP/3 を使わせない
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them. Takes effect when tracewing starts again.
-t2aa7be0d = HTTP/3 は UDP 上で動作し、UDP を中継するプロキシはないため、HTTP/3 を使うアプリは tracewing を迂回します。この設定はサーバーのレスポンスから HTTP/3 の提示を取り除くため、アプリは HTTP/2 のままになります。フローには、サーバーが送ったとおりの提示が表示されます。tracewing の再起動後に有効になります。
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
+t2ff32f01 = HTTP/3 は UDP 上で動作し、UDP を中継するプロキシはないため、HTTP/3 を使うアプリは tracewing を迂回します。この設定はサーバーのレスポンスから HTTP/3 の提示を取り除くため、アプリは HTTP/2 のままになります。フローには、サーバーが送ったとおりの提示が表示されます。
 
 # Size of a session
 ta20fa102 = セッションのサイズ
@@ -1060,8 +1060,8 @@ ta3162a13 = デフォルトに戻す
 # Hosts not to decrypt
 tb457f0b3 = 復号しないホスト
 
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
-t7647c310 = 1 行に 1 つ: ホスト、またはそのホストと配下すべてを表す *.example.com。これらのトラフィックは中身を読まずに通過します。このリストは保存するとすぐに適用されます。
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = 1 行に 1 つ: ホスト、またはそのホストと配下すべてを表す *.example.com。これらのトラフィックは中身を読まずに通過します。このリストはすぐに適用されます。
 
 # Language
 t9a73db9b = 言語

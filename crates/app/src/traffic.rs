@@ -329,7 +329,9 @@ impl Traffic {
         cx.observe_window_bounds(window, Self::bounds_changed)
             .detach();
         cx.defer_in(window, Self::bounds_changed);
-        cx.on_app_quit(|this, _| {
+        cx.on_app_quit(|this, cx| {
+            // What was typed last in Settings, not yet written.
+            this.save_settings(cx);
             this.save_layout();
             if let Some(indexer) = this.catching_up.take() {
                 let _ = indexer.leave();

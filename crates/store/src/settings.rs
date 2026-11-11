@@ -4,7 +4,10 @@
 
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::{
+    path::Path,
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
+};
 
 const MIB: u64 = 1024 * 1024;
 
@@ -41,11 +44,12 @@ pub struct StorageSettings {
     /// How many earlier sessions to leave on the disk when a new one starts.
     pub sessions_kept: u64,
     /// Listen on every network, not only on this machine, so that phones and
-    /// other computers can send their traffic here. Read when the app starts.
+    /// other computers can send their traffic here. Applies at once.
     pub other_devices: bool,
     /// Take servers' offers of HTTP/3 out of `Alt-Svc` on the way to the client.
     /// HTTP/3 goes over UDP, which a proxy does not carry, so a client that takes
     /// the offer goes around tracewing. The flow keeps the header as it came.
+    /// Applies at once, through [`Live`].
     pub hide_http3: bool,
     /// Trust servers whose certificates come from an authority this computer
     /// trusts, not only from the public ones. Read when the app starts.
@@ -79,7 +83,49 @@ impl Default for StorageSettings {
     }
 }
 
+/// The settings a running session follows as they change, from any thread.
+/// The rest are read when it starts.
+#[derive(Debug, Default)]
+pub struct Live {
+    hide_http3: AtomicBool,
+    body_max: AtomicU64,
+}
+
+impl Live {
+    pub fn new(settings: &StorageSettings) -> Self {
+        let live = Self::default();
+        live.apply(settings);
+        live
+    }
+
+    pub fn apply(&self, settings: &StorageSettings) {
+        self.hide_http3
+            .store(settings.hide_http3, Ordering::Relaxed);
+        self.body_max.store(settings.body_max(), Ordering::Relaxed);
+    }
+
+    pub fn hide_http3(&self) -> bool {
+        self.hide_http3.load(Ordering::Relaxed)
+    }
+
+    /// See [`StorageSettings::body_max`]. A body on its way is held to the
+    /// limit as it is at each piece.
+    pub fn body_max(&self) -> u64 {
+        self.body_max.load(Ordering::Relaxed)
+    }
+}
+
 impl StorageSettings {
+    /// What applies at once from `other`, taken into these: the rest wait for
+    /// the next start.
+    pub fn take_live(&mut self, other: &StorageSettings) {
+        self.other_devices = other.other_devices;
+        self.hide_http3 = other.hide_http3;
+        self.ai_secrets = other.ai_secrets;
+        self.body_max_mib = other.body_max_mib;
+        self.view_max_mib = other.view_max_mib;
+    }
+
     pub fn load(path: &Path) -> Result<Self> {
         let text =
             std::fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
