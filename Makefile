@@ -47,7 +47,7 @@ fmt: ## Format the code
 	$(CARGO) fmt --all
 
 playground: ## Run a server to try tracewing on: http://localhost:10000 lists its paths
-	$(CARGO) run --release -p tracewing-dev -- playground
+	$(CARGO) run --release -p tracewing-dev --bin tracewing-dev -- playground
 
 clean: ## Remove what was built
 	$(CARGO) clean
