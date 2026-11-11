@@ -1272,8 +1272,14 @@ async fn other_devices_come_and_go_without_a_restart() {
         .map(Result::unwrap)
         .collect();
     assert_eq!(from.len(), 2, "{from:?}");
+    // From this machine, though not always from the address it went to: the
+    // system picks the one it sends from.
+    let ours = lan::addresses();
     for addr in &from {
-        assert!(addr.starts_with(&format!("{ip}:")), "{addr}");
+        assert!(
+            ours.iter().any(|ip| addr.starts_with(&format!("{ip}:"))),
+            "{addr} is not one of {ours:?}"
+        );
     }
     clean_up(conn, dir);
 }
