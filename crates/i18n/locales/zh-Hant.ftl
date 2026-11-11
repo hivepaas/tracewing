@@ -280,8 +280,11 @@ t3d35ce69 = 請求和回應並排顯示
 # Request above the response
 t83c63123 = 請求在回應上方
 
-# Text
-t3e142d5e = 文字
+# Pretty
+t7e09470d = 格式化
+
+# Raw
+ta689aa91 = 原始
 
 # Picture · {size}
 te97ed633 = 圖片 · { $size }

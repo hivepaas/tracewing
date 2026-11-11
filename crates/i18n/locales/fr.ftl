@@ -289,8 +289,11 @@ t3d35ce69 = Requête et réponse côte à côte
 # Request above the response
 t83c63123 = Requête au-dessus de la réponse
 
-# Text
-t3e142d5e = Texte
+# Pretty
+t7e09470d = Formaté
+
+# Raw
+ta689aa91 = Brut
 
 # Picture · {size}
 te97ed633 = Image · { $size }

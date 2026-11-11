@@ -4,7 +4,7 @@
 //! 6 million lines of 20 px.
 
 use crate::{
-    body::{Body, Line, Token},
+    body::{Body, Kind, Line, Token},
     colors::colors,
     flows::size_text,
     select::{self, COPY_MAX, Copied, Selection, Spot},
@@ -96,6 +96,22 @@ impl Folds {
     }
 }
 
+/// Draws again while `body` is scanned, a frame only when there is something
+/// new to show and none after. The scan stops if the view goes first.
+fn watch_scan(body: Arc<Body>, cx: &mut Context<BodyView>) {
+    cx.spawn(async move |this, cx| {
+        while !body.is_scanned() {
+            cx.background_executor().timer(SCAN_POLL).await;
+            if this.update(cx, |_, cx| cx.notify()).is_err() {
+                body.stop();
+                return;
+            }
+        }
+        let _ = this.update(cx, |_, cx| cx.notify());
+    })
+    .detach();
+}
+
 /// What the gutter says of a line: nothing, that it opens an object or an
 /// array, or that it is folded, with the closer's text and how many lines.
 enum FoldMark {
@@ -104,14 +120,25 @@ enum FoldMark {
     Folded(String, u64),
 }
 
+/// How a body is shown: laid out, as it was sent, or as its bytes. Only JSON
+/// is laid out; any other text is shown as sent either way.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum BodyMode {
+    #[default]
+    Pretty,
+    Raw,
+    Hex,
+}
+
 pub struct BodyView {
     body: Arc<Body>,
+    /// The body read again as it was sent, once it is asked for.
+    raw: Option<Arc<Body>>,
     syntax: Syntax,
     /// The row at the top of the view, and how far it has scrolled out of it.
     top: u64,
     folds: Folds,
-    /// The bytes as a dump, whatever the body is.
-    hex: bool,
+    mode: BodyMode,
     sub: f32,
     dragging: bool,
     /// Where the view was last drawn: the height sets the scroll range, and a drag
@@ -132,25 +159,14 @@ impl BodyView {
         cx: &mut Context<Self>,
     ) -> Self {
         let syntax = Syntax::of(body.kind(), content_type, body.head());
-        // A frame only when there is something new to show, and none after.
-        let poll = Arc::clone(&body);
-        cx.spawn(async move |this, cx| {
-            while !poll.is_scanned() {
-                cx.background_executor().timer(SCAN_POLL).await;
-                if this.update(cx, |_, cx| cx.notify()).is_err() {
-                    poll.stop();
-                    return;
-                }
-            }
-            let _ = this.update(cx, |_, cx| cx.notify());
-        })
-        .detach();
+        watch_scan(Arc::clone(&body), cx);
         Self {
             body,
+            raw: None,
             syntax,
             top: 0,
             folds: Folds::default(),
-            hex: false,
+            mode: BodyMode::Pretty,
             sub: 0.,
             dragging: false,
             bounds: Rc::new(Cell::new(Bounds::default())),
@@ -172,11 +188,11 @@ impl BodyView {
     }
 
     fn copy(&self, start: Spot, end: Spot) -> Copied {
-        match self.body.text_in(
+        match self.shown().text_in(
             (start.piece, start.at),
             (end.piece, end.at),
             COPY_MAX,
-            self.hex,
+            self.hex(),
         ) {
             Some(text) if text.is_empty() => Copied::Nothing,
             Some(text) => Copied::Text(text),
@@ -259,7 +275,7 @@ impl BodyView {
         let top_line = self.folds.line_of(self.top);
         if !self.folds.unfold(line) {
             // Not found yet when the scan has not reached it.
-            let Some(end) = self.body.closer(line) else {
+            let Some(end) = self.shown().closer(line) else {
                 return;
             };
             self.folds.fold(line, end);
@@ -279,20 +295,62 @@ impl BodyView {
 
     /// Lines as shown: the body's, or its dump's.
     fn lines(&self) -> u64 {
-        self.body.lines_in(self.hex)
+        self.shown().lines_in(self.hex())
+    }
+
+    /// The body as read for the mode: as sent, or as it was told to be.
+    fn shown(&self) -> &Arc<Body> {
+        match (&self.raw, self.mode) {
+            (Some(raw), BodyMode::Raw) => raw,
+            _ => &self.body,
+        }
+    }
+
+    fn hex(&self) -> bool {
+        self.mode == BodyMode::Hex
+    }
+
+    /// Whether the body as shown is read to its end.
+    pub fn is_scanned(&self) -> bool {
+        self.shown().is_scanned()
     }
 
     pub fn is_hex(&self) -> bool {
-        self.hex
+        self.hex()
     }
 
-    /// Shows the bytes as a dump, or the body as it was told to be. Folds,
+    /// Whether the body can be laid out, as JSON can.
+    pub fn has_pretty(&self) -> bool {
+        self.body.kind() == Kind::Json
+    }
+
+    /// The mode in use. Text that cannot be laid out is as sent.
+    pub fn mode(&self) -> BodyMode {
+        match self.mode {
+            BodyMode::Pretty if !self.has_pretty() => BodyMode::Raw,
+            mode => mode,
+        }
+    }
+
+    /// Shows the body laid out, as sent, or as a dump of its bytes. Folds,
     /// what is selected and the place in it belong to the other, so they go.
-    pub fn set_hex(&mut self, hex: bool, cx: &mut Context<Self>) {
-        if self.hex == hex {
+    pub fn set_mode(&mut self, mode: BodyMode, cx: &mut Context<Self>) {
+        let mode = match mode {
+            BodyMode::Pretty if !self.has_pretty() => BodyMode::Raw,
+            mode => mode,
+        };
+        if self.mode() == mode {
             return;
         }
-        self.hex = hex;
+        if mode == BodyMode::Raw && self.has_pretty() && self.raw.is_none() {
+            // Read again on its own, as the body was the first time.
+            let Ok(raw) = self.body.as_sent() else {
+                return;
+            };
+            watch_scan(Arc::clone(&raw), cx);
+            self.raw = Some(raw);
+        }
+        self.mode = mode;
         self.folds = Folds::default();
         self.select.clear();
         self.top = 0;
@@ -352,7 +410,7 @@ impl BodyView {
             shown.depth as f32 * INDENT_W
         };
         let number = (line + 1).to_string();
-        let highlights: Vec<_> = if self.hex {
+        let highlights: Vec<_> = if self.hex() {
             Vec::new()
         } else {
             self.syntax
@@ -451,7 +509,7 @@ impl BodyView {
 impl BodyView {
     /// The body's size and lines, as shown.
     pub fn summary(&self) -> String {
-        summary_in(&self.body, self.hex)
+        summary_in(self.shown(), self.hex())
     }
 
     /// The rows from the top of the view, read a run of lines at a time: a
@@ -470,7 +528,9 @@ impl BodyView {
                 end += 1;
             }
             // One more, to tell whether the run's last line opens something.
-            let read = self.body.read_in(start..(end + 2).min(lines), self.hex);
+            let read = self
+                .shown()
+                .read_in(start..(end + 2).min(lines), self.hex());
             let next_depths: Vec<Option<u32>> = read
                 .iter()
                 .skip(1)
@@ -486,7 +546,7 @@ impl BodyView {
                 let mark = match self.folds.end_of(at) {
                     Some(closer) => {
                         let closed = self
-                            .body
+                            .shown()
                             .read(closer..closer + 1)
                             .pop()
                             .map(|l| l.text)

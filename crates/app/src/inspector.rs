@@ -3,7 +3,7 @@
 
 use crate::{
     body::Body,
-    bodyview::BodyView,
+    bodyview::{BodyMode, BodyView},
     colors::colors,
     connection::Certificate,
     cookies,
@@ -95,6 +95,8 @@ pub struct InspectorState {
     pub graphql: Option<Vec<tracewing_store::graphql::Sent>>,
     /// What is selected of the part shown, when it is not a body.
     pub select: Selection,
+    /// How bodies are shown, kept from one flow to the next.
+    pub body_mode: BodyMode,
 }
 
 impl InspectorState {
@@ -238,14 +240,16 @@ impl Traffic {
                         BodyState::Image(path, size)
                     }
                     Some((path, _)) => match Body::open(&path) {
-                        Ok(body) => BodyState::Shown(
-                            {
-                                let focus = this.focus.clone();
-                                cx.new(|cx| {
-                                    BodyView::new(body, content_type.as_deref(), focus, cx)
-                                })
-                            },
-                        ),
+                        Ok(body) => BodyState::Shown({
+                            let focus = this.focus.clone();
+                            let mode = this.inspector.body_mode;
+                            cx.new(|cx| {
+                                let mut view =
+                                    BodyView::new(body, content_type.as_deref(), focus, cx);
+                                view.set_mode(mode, cx);
+                                view
+                            })
+                        }),
                         Err(e) => BodyState::Note(
                             tr!("Cannot open this body: {e}", e = format!("{e:#}")).into(),
                         ),
@@ -618,17 +622,21 @@ impl Traffic {
             ))
     }
 
-    /// Shows the chosen side's body as a dump of its bytes, or as it was told
-    /// to be.
-    pub fn set_body_hex(&mut self, hex: bool, cx: &mut Context<Self>) {
-        if let BodyState::Shown(view) = &self.inspector.body {
-            view.update(cx, |view, cx| view.set_hex(hex, cx));
-            cx.notify();
+    /// Shows bodies laid out, as they were sent, or as dumps of their bytes:
+    /// both sides' when both are shown, and the next flows' too.
+    pub fn set_body_mode(&mut self, mode: BodyMode, cx: &mut Context<Self>) {
+        self.inspector.body_mode = mode;
+        for slot in [&self.inspector.body, &self.inspector.other] {
+            if let BodyState::Shown(view) = slot {
+                view.update(cx, |view, cx| view.set_mode(mode, cx));
+            }
         }
+        cx.notify();
     }
 
-    /// The body as it reads, or its bytes: two halves of one switch. A body
-    /// that is bytes already has only the one.
+    /// The body laid out, as it was sent, or its bytes: the halves of one
+    /// switch. Only JSON is laid out, and a body that is bytes already has no
+    /// switch.
     fn render_hex_switch(&self, part: Part, cx: &mut Context<Self>) -> Option<Div> {
         let BodyState::Shown(view) = &self.inspector.body else {
             return None;
@@ -639,8 +647,9 @@ impl Traffic {
             return None;
         }
         let c = colors();
-        let hex = view.is_hex();
-        let half = |id: &'static str, label: String, on: bool, to_hex: bool| {
+        let (mode, pretty) = (view.mode(), view.has_pretty());
+        let half = |id: &'static str, label: String, to: BodyMode| {
+            let on = mode == to;
             div()
                 .id(id)
                 .h(px(24.))
@@ -655,11 +664,7 @@ impl Traffic {
                 .when(on, |d| d.bg(rgb(c.tab_on)).text_color(rgb(c.text)))
                 .when(!on, |d| d.text_color(rgb(c.muted)))
                 .child(label)
-                .on_click(cx.listener(move |view, _, _, cx| view.set_body_hex(to_hex, cx)))
-        };
-        let read = match kind {
-            crate::body::Kind::Json => "JSON".to_owned(),
-            _ => tr!("Text"),
+                .on_click(cx.listener(move |view, _, _, cx| view.set_body_mode(to, cx)))
         };
         Some(
             div()
@@ -668,8 +673,11 @@ impl Traffic {
                 .p(px(2.))
                 .rounded(px(14.))
                 .bg(rgb(c.chip))
-                .child(half("body-as-read", read, !hex, false))
-                .child(half("body-as-hex", "Hex".to_owned(), hex, true)),
+                .when(pretty, |d| {
+                    d.child(half("body-as-pretty", tr!("Pretty"), BodyMode::Pretty))
+                })
+                .child(half("body-as-raw", tr!("Raw"), BodyMode::Raw))
+                .child(half("body-as-hex", "Hex".to_owned(), BodyMode::Hex)),
         )
     }
 
