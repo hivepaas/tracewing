@@ -1039,11 +1039,20 @@ ta8606963 = { $key }：“{ $text }” 不是整数
 # {key}: must not be negative
 t9c4debaa = { $key }：不能为负数
 
-# Saved. The limits apply the next time tracewing starts.
-tc8bd2065 = 已保存。这些限制将在下次启动 tracewing 时生效。
+# After a restart
+t58dcea2d = 重启后生效
+
+# Every setting is back to its default.
+t763785e7 = 所有设置已恢复为默认值。
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = { $n } 项更改将在重新启动 tracewing 后生效。
 
 # Settings
 t4b058728 = 设置
+
+# Undo
+t71fd4acf = 撤销
 
 # Back to defaults
 ta3162a13 = 恢复默认值
@@ -1353,9 +1362,6 @@ tc65b7cf7 = 未连接任何设备。请启动模拟器，或连接已开启 USB 
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
 t9144d1fc = 设置设备，将其流量发送到这里。点击“撤销”或关闭 tracewing，即可移除设备上的代理设置。
-
-# Undo
-t71fd4acf = 撤销
 
 # Android emulators and USB devices
 t379e433c = Android 模拟器和 USB 设备

@@ -1039,11 +1039,20 @@ ta8606963 = { $key }: "{ $text }" は整数ではありません
 # {key}: must not be negative
 t9c4debaa = { $key }: 負の値は指定できません
 
-# Saved. The limits apply the next time tracewing starts.
-tc8bd2065 = 保存しました。上限は次回 tracewing を起動したときに適用されます。
+# After a restart
+t58dcea2d = 再起動後
+
+# Every setting is back to its default.
+t763785e7 = すべての設定を既定値に戻しました。
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = { $n } 件の変更は tracewing の再起動後に有効になります。
 
 # Settings
 t4b058728 = 設定
+
+# Undo
+t71fd4acf = 元に戻す
 
 # Back to defaults
 ta3162a13 = デフォルトに戻す
@@ -1353,9 +1362,6 @@ tc65b7cf7 = デバイスが接続されていません。エミュレータを�
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
 t9144d1fc = デバイスを設定して、トラフィックをここに送らせます。元に戻すか tracewing を閉じると、デバイスのプロキシ設定は解除されます。
-
-# Undo
-t71fd4acf = 元に戻す
 
 # Android emulators and USB devices
 t379e433c = Android エミュレータと USB デバイス

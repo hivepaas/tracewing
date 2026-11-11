@@ -1087,11 +1087,26 @@ ta8606963 = { $key }: "{ $text }" не є цілим числом
 # {key}: must not be negative
 t9c4debaa = { $key }: не може бути від’ємним
 
-# Saved. The limits apply the next time tracewing starts.
-tc8bd2065 = Збережено. Обмеження почнуть діяти після наступного запуску tracewing.
+# After a restart
+t58dcea2d = Після перезапуску
+
+# Every setting is back to its default.
+t763785e7 = Усі налаштування повернуто до типових значень.
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d =
+    { $n ->
+        [one] { $n } зміна набуде чинності після перезапуску tracewing.
+        [few] { $n } зміни наберуть чинності після перезапуску tracewing.
+        [many] { $n } змін наберуть чинності після перезапуску tracewing.
+       *[other] { $n } зміни наберуть чинності після перезапуску tracewing.
+    }
 
 # Settings
 t4b058728 = Налаштування
+
+# Undo
+t71fd4acf = Відмінити
 
 # Back to defaults
 ta3162a13 = Відновити типові
@@ -1413,9 +1428,6 @@ tc65b7cf7 = Жоден пристрій не підключено. Запуст�
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
 t9144d1fc = Налаштуйте пристрій, щоб він надсилав сюди свій трафік. Відміна або закриття tracewing знову прибирає з нього проксі.
-
-# Undo
-t71fd4acf = Відмінити
 
 # Android emulators and USB devices
 t379e433c = Емулятори Android і USB-пристрої

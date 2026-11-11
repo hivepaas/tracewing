@@ -356,7 +356,8 @@ fn the_system_proxy_and_the_settings_from_the_window() {
     });
     assert_eq!(mode(&store), "'auto'", "as the user had it");
 
-    // The settings screen: refuses what cannot work, writes what can.
+    // The settings screen: refuses what cannot work, and writes what can as
+    // it is changed.
     window
         .update(&mut cx, |view, _, cx| {
             view.set_screen(Screen::Settings, cx);
@@ -376,7 +377,8 @@ fn the_system_proxy_and_the_settings_from_the_window() {
                 view.save_settings(cx);
                 let problem = problem(&view.settings_page).expect("refused");
                 assert!(problem.contains(says), "{problem}");
-                view.reset_settings(cx);
+                view.settings_page = None;
+                view.open_settings(cx);
             })
             .unwrap();
     }
@@ -389,11 +391,39 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             view.set_setting("session_max_mib", "512", cx);
             view.save_settings(cx);
             assert_eq!(problem(&view.settings_page), None);
-            assert!(view.settings_page.as_ref().unwrap().saved);
+            view.toggle_setting("hide_http3", cx);
+            view.toggle_setting("other_devices", cx);
+            let page = view.settings_page.as_ref().unwrap();
+            assert_eq!(
+                page.waiting(&view.engine.settings),
+                ["hide_http3", "session_max_mib"],
+                "the other devices are let in at once"
+            );
+            assert!(view.engine.other_devices.is_on());
         })
         .unwrap();
+    let written = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();
+    assert_eq!(written.session_max_mib, 512);
+    assert!(written.other_devices);
     cx.run_until_parked();
     save_shot(&mut cx, window.into(), "12-settings-saved");
+    // Back to defaults is written at once, and can be undone.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.reset_settings(cx);
+            assert_eq!(
+                StorageSettings::load(&data_dir.join("settings.toml")).unwrap(),
+                StorageSettings::default()
+            );
+            assert!(!view.engine.other_devices.is_on());
+            view.undo_reset_settings(cx);
+            view.toggle_setting("hide_http3", cx);
+            view.toggle_setting("other_devices", cx);
+        })
+        .unwrap();
+    let written = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();
+    assert_eq!(written.session_max_mib, 512, "undone");
+    assert_eq!(written.hide_http3, StorageSettings::default().hide_http3);
     // A language chosen is used at once and kept; the system's is the default.
     window
         .update(&mut cx, |view, window, cx| {

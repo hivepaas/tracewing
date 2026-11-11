@@ -1057,11 +1057,24 @@ ta8606963 = { $key }: "{ $text }" bir tam sayı değil
 # {key}: must not be negative
 t9c4debaa = { $key }: negatif olamaz
 
-# Saved. The limits apply the next time tracewing starts.
-tc8bd2065 = Kaydedildi. Sınırlar tracewing bir sonraki başlatıldığında uygulanır.
+# After a restart
+t58dcea2d = Yeniden başlatınca
+
+# Every setting is back to its default.
+t763785e7 = Tüm ayarlar varsayılanlarına döndü.
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d =
+    { $n ->
+        [one] { $n } değişiklik tracewing yeniden başladığında etkili olur.
+       *[other] { $n } değişiklik tracewing yeniden başladığında etkili olur.
+    }
 
 # Settings
 t4b058728 = Ayarlar
+
+# Undo
+t71fd4acf = Geri al
 
 # Back to defaults
 ta3162a13 = Varsayılanlara dön
@@ -1379,9 +1392,6 @@ tc65b7cf7 = Bağlı cihaz yok. Bir emülatör başlatın ya da USB hata ayıklam
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
 t9144d1fc = Bir cihazı, trafiğini buraya gönderecek şekilde ayarlayın. Geri al ya da tracewing'i kapatmak proxy'yi yeniden kaldırır.
-
-# Undo
-t71fd4acf = Geri al
 
 # Android emulators and USB devices
 t379e433c = Android emülatörleri ve USB cihazları

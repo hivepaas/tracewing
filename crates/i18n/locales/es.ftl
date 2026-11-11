@@ -1058,11 +1058,25 @@ ta8606963 = { $key }: "{ $text }" no es un número entero
 # {key}: must not be negative
 t9c4debaa = { $key }: no debe ser negativo
 
-# Saved. The limits apply the next time tracewing starts.
-tc8bd2065 = Guardado. Los límites se aplican la próxima vez que se inicie tracewing.
+# After a restart
+t58dcea2d = Tras reiniciar
+
+# Every setting is back to its default.
+t763785e7 = Todos los ajustes han vuelto a su valor predeterminado.
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d =
+    { $n ->
+        [one] { $n } cambio se aplica al reiniciar tracewing.
+        [many] { $n } cambios se aplican al reiniciar tracewing.
+       *[other] { $n } cambios se aplican al reiniciar tracewing.
+    }
 
 # Settings
 t4b058728 = Ajustes
+
+# Undo
+t71fd4acf = Deshacer
 
 # Back to defaults
 ta3162a13 = Restablecer valores predeterminados
@@ -1382,9 +1396,6 @@ tc65b7cf7 = No hay ningún dispositivo conectado. Inicia un emulador, o conecta 
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
 t9144d1fc = Configura un dispositivo para que envíe su tráfico aquí. Deshacer, o cerrar tracewing, le vuelve a quitar el proxy.
-
-# Undo
-t71fd4acf = Deshacer
 
 # Android emulators and USB devices
 t379e433c = Emuladores de Android y dispositivos USB
