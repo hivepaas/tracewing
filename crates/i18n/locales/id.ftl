@@ -718,6 +718,27 @@ ted08dbe5 = Tambah file…
 # Read again
 t2f0dcc5d = Baca ulang
 
+# Find a message
+te6f78626 = Cari message
+
+# Read as {message}
+t87b6a380 = Baca sebagai { $message }
+
+# Read as…
+t1b90af95 = Baca sebagai…
+
+# Requests to {path} on {host} are read as the message chosen.
+t8826d766 = Request ke { $path } di { $host } dibaca sebagai message yang dipilih.
+
+# Answers from {path} on {host} are read as the message chosen.
+tbbe012da = Jawaban dari { $path } di { $host } dibaca sebagai message yang dipilih.
+
+# Automatic (gRPC path or messageType)
+t134c9a06 = Otomatis (path gRPC atau messageType)
+
+# and {count} more: type to narrow them | and {count} more: type to narrow them
+t70ff68f9 = dan { $count } lagi: ketik untuk mempersempit
+
 # Block
 tbd074002 = Blokir
 

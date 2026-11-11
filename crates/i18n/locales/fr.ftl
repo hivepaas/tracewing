@@ -758,6 +758,32 @@ ted08dbe5 = Ajouter des fichiers…
 # Read again
 t2f0dcc5d = Relire
 
+# Find a message
+te6f78626 = Chercher un message
+
+# Read as {message}
+t87b6a380 = Lire comme { $message }
+
+# Read as…
+t1b90af95 = Lire comme…
+
+# Requests to {path} on {host} are read as the message chosen.
+t8826d766 = Les requêtes vers { $path } sur { $host } sont lues comme le message choisi.
+
+# Answers from {path} on {host} are read as the message chosen.
+tbbe012da = Les réponses de { $path } sur { $host } sont lues comme le message choisi.
+
+# Automatic (gRPC path or messageType)
+t134c9a06 = Automatique (chemin gRPC ou messageType)
+
+# and {count} more: type to narrow them | and {count} more: type to narrow them
+t70ff68f9 =
+    { $n ->
+        [one] et { $count } autre : tapez pour filtrer
+        [many] et { $count } autres : tapez pour filtrer
+       *[other] et { $count } autres : tapez pour filtrer
+    }
+
 # Block
 tbd074002 = Bloquer
 

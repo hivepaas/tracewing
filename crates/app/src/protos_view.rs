@@ -3,6 +3,8 @@
 
 use crate::{
     colors::colors,
+    detail::{Side, host_and_path},
+    input::{Changed, TextInput},
     traffic::Traffic,
     widgets::{Reachable, eyebrow},
 };
@@ -15,6 +17,9 @@ use tracewing_store::schema::Schema;
 
 /// How many problems a source shows; the rest are counted.
 const PROBLEMS_SHOWN: usize = 5;
+
+/// How many messages the list to read a body as shows at once.
+const MESSAGES_SHOWN: usize = 200;
 
 impl Traffic {
     /// Whether the `.proto` files are being read.
@@ -281,4 +286,217 @@ impl Traffic {
                     }),
             )
     }
+
+    /// The host, path and side of the body shown, if it is Protobuf that
+    /// can be read as a message: there are `.proto` files to choose from.
+    fn read_as_target(&self) -> Option<(String, String, Side)> {
+        use crate::inspector::{BodyState, Part};
+        use tracewing_store::binjson;
+        let detail = self.inspector.detail.as_ref()?;
+        if self.inspector.part != Part::Body
+            || !matches!(self.inspector.body, BodyState::Shown(..))
+            || self.protos.sources().is_empty()
+        {
+            return None;
+        }
+        let side = self.inspector.side;
+        let content_type = match side {
+            Side::Request => detail.req_content_type.as_deref(),
+            Side::Response => detail.content_type.as_deref(),
+        };
+        binjson::format_of(content_type).filter(|f| f.numbered())?;
+        let (host, path) = host_and_path(&detail.url);
+        Some((host.to_owned(), path.to_owned(), side))
+    }
+
+    /// Opens or closes the list of messages to read the body as.
+    pub fn toggle_read_as(&mut self, window: &mut gpui::Window, cx: &mut Context<Self>) {
+        if self.inspector.read_as.take().is_some() {
+            cx.notify();
+            return;
+        }
+        let input = cx.new(|cx| TextInput::said(|| tr!("Find a message"), cx));
+        cx.subscribe(&input, |_, _, _: &Changed, cx| cx.notify())
+            .detach();
+        gpui::Focusable::focus_handle(input.read(cx), cx).focus(window, cx);
+        self.inspector.read_as = Some(input);
+        cx.notify();
+    }
+
+    /// Reads the body shown as `message`, and every body that side of its
+    /// path sends after; with `None`, as the `.proto` files say by
+    /// themselves.
+    pub fn read_body_as(&mut self, message: Option<String>, cx: &mut Context<Self>) {
+        let Some((host, path, side)) = self.read_as_target() else {
+            return;
+        };
+        if let Err(e) = self
+            .protos
+            .choose(&host, &path, side == Side::Request, message.as_deref())
+        {
+            self.protos_problem = Some(tr!("The list was not saved: {e}", e = e.to_string()));
+        }
+        self.load_body(cx);
+        cx.notify();
+    }
+
+    pub(crate) fn render_read_as_button(
+        &self,
+        cx: &mut Context<Self>,
+    ) -> Option<gpui::Stateful<gpui::Div>> {
+        let c = colors();
+        let (host, path, side) = self.read_as_target()?;
+        let label = match self.protos.chosen(&host, &path, side == Side::Request) {
+            Some(name) => tr!("Read as {message}", message = short_name(&name).to_owned()),
+            None => tr!("Read as…"),
+        };
+        let open = self.inspector.read_as.is_some();
+        Some(
+            div()
+                .id("read-as")
+                .h(px(28.))
+                .px(px(10.))
+                .rounded(px(14.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .reachable()
+                .when(open, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
+                .when(!open, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
+                .text_size(px(12.))
+                .font_weight(FontWeight::BOLD)
+                .child(label)
+                .on_click(cx.listener(|this, _, window, cx| this.toggle_read_as(window, cx))),
+        )
+    }
+
+    /// The list of messages, narrowed by what is typed, in place of the body.
+    pub(crate) fn render_read_as(&self, cx: &mut Context<Self>) -> Option<gpui::Div> {
+        let c = colors();
+        let input = self.inspector.read_as.clone()?;
+        let (host, path, side) = self.read_as_target()?;
+        let chosen = self.protos.chosen(&host, &path, side == Side::Request);
+        let wanted = input.read(cx).text().to_lowercase();
+        let names = self.protos.last_schema().message_names();
+        let matching: Vec<String> = names
+            .into_iter()
+            .filter(|name| wanted.is_empty() || name.to_lowercase().contains(&wanted))
+            .collect();
+        let more = matching.len().saturating_sub(MESSAGES_SHOWN);
+        let line = |id: ElementId, label: SharedString, on: bool| {
+            div()
+                .id(id)
+                .px(px(10.))
+                .py(px(5.))
+                .rounded(px(8.))
+                .cursor_pointer()
+                .reachable()
+                .font_family(crate::MONO_FONT)
+                .font_features(gpui::FontFeatures::disable_ligatures())
+                .text_size(px(12.))
+                .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
+                .hover(|d| d.bg(rgb(c.chip)))
+                .child(label)
+        };
+        let where_ = match side {
+            Side::Request => tr!(
+                "Requests to {path} on {host} are read as the message chosen.",
+                path = path.split('?').next().unwrap_or(&path).to_owned(),
+                host = host.clone()
+            ),
+            Side::Response => tr!(
+                "Answers from {path} on {host} are read as the message chosen.",
+                path = path.split('?').next().unwrap_or(&path).to_owned(),
+                host = host.clone()
+            ),
+        };
+        Some(
+            div()
+                .size_full()
+                .flex()
+                .flex_col()
+                .gap(px(8.))
+                .p(px(12.))
+                .on_key_down(cx.listener(|this, ev: &gpui::KeyDownEvent, _, cx| {
+                    if ev.keystroke.key == "escape" {
+                        this.inspector.read_as = None;
+                        cx.stop_propagation();
+                        cx.notify();
+                    }
+                }))
+                .child(
+                    div()
+                        .h(px(30.))
+                        .px(px(10.))
+                        .rounded(px(15.))
+                        .flex()
+                        .items_center()
+                        .bg(rgb(c.input))
+                        .text_size(px(12.5))
+                        .child(div().flex_1().min_w_0().child(input)),
+                )
+                .child(
+                    div()
+                        .px(px(4.))
+                        .text_size(px(12.))
+                        .text_color(rgb(c.muted))
+                        .child(where_),
+                )
+                .child(
+                    div()
+                        .id("read-as-list")
+                        .flex_1()
+                        .min_h_0()
+                        .overflow_y_scroll()
+                        .flex()
+                        .flex_col()
+                        .gap(px(1.))
+                        .child(
+                            line(
+                                "read-as-found".into(),
+                                tr!("Automatic (gRPC path or messageType)").into(),
+                                chosen.is_none(),
+                            )
+                            .font_family(crate::FONT)
+                            .on_click(cx.listener(|this, _, _, cx| this.read_body_as(None, cx))),
+                        )
+                        .children(matching.into_iter().take(MESSAGES_SHOWN).enumerate().map(
+                            |(i, name)| {
+                                let on = chosen.as_deref() == Some(name.as_str());
+                                let picked = name.clone();
+                                line(
+                                    ElementId::NamedInteger("read-as-message".into(), i as u64),
+                                    name.into(),
+                                    on,
+                                )
+                                .on_click(cx.listener(
+                                    move |this, _, _, cx| {
+                                        this.read_body_as(Some(picked.clone()), cx)
+                                    },
+                                ))
+                            },
+                        ))
+                        .when(more > 0, |d| {
+                            d.child(
+                                div()
+                                    .px(px(10.))
+                                    .py(px(5.))
+                                    .text_size(px(12.))
+                                    .text_color(rgb(c.muted))
+                                    .child(tr_n!(
+                                        more,
+                                        "and {count} more: type to narrow them",
+                                        "and {count} more: type to narrow them",
+                                        count = more
+                                    )),
+                            )
+                        }),
+                ),
+        )
+    }
+}
+
+/// `Order` of `shop.v1.Order`: the button is small.
+fn short_name(full: &str) -> &str {
+    full.rsplit('.').next().unwrap_or(full)
 }

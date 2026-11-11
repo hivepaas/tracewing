@@ -718,6 +718,27 @@ ted08dbe5 = ファイルを追加…
 # Read again
 t2f0dcc5d = 読み直す
 
+# Find a message
+te6f78626 = メッセージを検索
+
+# Read as {message}
+t87b6a380 = { $message } として読む
+
+# Read as…
+t1b90af95 = 読み方を選ぶ…
+
+# Requests to {path} on {host} are read as the message chosen.
+t8826d766 = { $host } の { $path } へのリクエストは、選んだメッセージとして読みます。
+
+# Answers from {path} on {host} are read as the message chosen.
+tbbe012da = { $host } の { $path } からの応答は、選んだメッセージとして読みます。
+
+# Automatic (gRPC path or messageType)
+t134c9a06 = 自動（gRPC のパスまたは messageType）
+
+# and {count} more: type to narrow them | and {count} more: type to narrow them
+t70ff68f9 = ほかに { $count } 件: 入力して絞り込み
+
 # Block
 tbd074002 = ブロック
 

@@ -784,6 +784,33 @@ ted08dbe5 = Добавить файлы…
 # Read again
 t2f0dcc5d = Перечитать
 
+# Find a message
+te6f78626 = Найти сообщение
+
+# Read as {message}
+t87b6a380 = Читать как { $message }
+
+# Read as…
+t1b90af95 = Читать как…
+
+# Requests to {path} on {host} are read as the message chosen.
+t8826d766 = Запросы к { $path } на { $host } читаются как выбранное сообщение.
+
+# Answers from {path} on {host} are read as the message chosen.
+tbbe012da = Ответы от { $path } на { $host } читаются как выбранное сообщение.
+
+# Automatic (gRPC path or messageType)
+t134c9a06 = Автоматически (путь gRPC или messageType)
+
+# and {count} more: type to narrow them | and {count} more: type to narrow them
+t70ff68f9 =
+    { $n ->
+        [one] и ещё { $count }: введите, чтобы сузить
+        [few] и ещё { $count }: введите, чтобы сузить
+        [many] и ещё { $count }: введите, чтобы сузить
+       *[other] и ещё { $count }: введите, чтобы сузить
+    }
+
 # Block
 tbd074002 = Блокировать
 

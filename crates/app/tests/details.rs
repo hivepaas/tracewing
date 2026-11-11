@@ -694,5 +694,75 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
         .unwrap();
     shot(&mut cx, window.into(), "73-protos");
 
+    // Protobuf that names no message is read as one chosen by hand, and
+    // the choice holds for that path.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Traffic, cx);
+            view.select_place(9, cx);
+            view.set_side(Side::Response, cx);
+            view.set_part(Part::Body, cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "order.pb", |view| {
+        view.inspector
+            .detail
+            .as_ref()
+            .is_some_and(|d| d.url.ends_with("/order.pb"))
+            && matches!(view.inspector.body, BodyState::Shown(..))
+    });
+    window
+        .update(&mut cx, |view, window, cx| view.toggle_read_as(window, cx))
+        .unwrap();
+    let input = window
+        .update(&mut cx, |view, _, _| view.inspector.read_as.clone())
+        .unwrap()
+        .expect("the list is open");
+    window
+        .update(&mut cx, |_, _, cx| type_in(&input, "order", cx))
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "74-read-as");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.read_body_as(Some("shop.Order".to_owned()), cx)
+        })
+        .unwrap();
+    let named = |view: &Traffic, cx: &mut gpui::App| match &view.inspector.body {
+        BodyState::Shown(body) => {
+            let body = body.read(cx);
+            body.is_scanned() && body.summary().contains("Protobuf · shop.Order")
+        }
+        _ => false,
+    };
+    let deadline = Instant::now() + Duration::from_secs(20);
+    while !window
+        .update(&mut cx, |view, _, cx| named(view, cx))
+        .unwrap()
+    {
+        assert!(
+            Instant::now() < deadline,
+            "waiting for order.pb as shop.Order"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+        cx.run_until_parked();
+    }
+    window
+        .update(&mut cx, |view, _, cx| {
+            assert!(view.inspector.read_as.is_none(), "the list closes");
+            view.select_place(8, cx);
+            view.select_place(9, cx);
+        })
+        .unwrap();
+    let deadline = Instant::now() + Duration::from_secs(20);
+    while !window
+        .update(&mut cx, |view, _, cx| named(view, cx))
+        .unwrap()
+    {
+        assert!(Instant::now() < deadline, "the choice holds");
+        std::thread::sleep(Duration::from_millis(20));
+        cx.run_until_parked();
+    }
+
     std::fs::remove_dir_all(&dir).ok();
 }

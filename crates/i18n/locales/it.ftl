@@ -758,6 +758,32 @@ ted08dbe5 = Aggiungi file…
 # Read again
 t2f0dcc5d = Rileggi
 
+# Find a message
+te6f78626 = Cerca un messaggio
+
+# Read as {message}
+t87b6a380 = Leggi come { $message }
+
+# Read as…
+t1b90af95 = Leggi come…
+
+# Requests to {path} on {host} are read as the message chosen.
+t8826d766 = Le richieste a { $path } su { $host } sono lette come il messaggio scelto.
+
+# Answers from {path} on {host} are read as the message chosen.
+tbbe012da = Le risposte da { $path } su { $host } sono lette come il messaggio scelto.
+
+# Automatic (gRPC path or messageType)
+t134c9a06 = Automatico (percorso gRPC o messageType)
+
+# and {count} more: type to narrow them | and {count} more: type to narrow them
+t70ff68f9 =
+    { $n ->
+        [one] e { $count } altro: scrivi per restringere
+        [many] e altri { $count }: scrivi per restringere
+       *[other] e altri { $count }: scrivi per restringere
+    }
+
 # Block
 tbd074002 = Blocca
 

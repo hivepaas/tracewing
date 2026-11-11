@@ -152,6 +152,19 @@ impl Schema {
             .find(|m| m.name() == method)
     }
 
+    /// Every message's full name, but for maps' entries and Google's own
+    /// types, in order.
+    pub fn message_names(&self) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .pool
+            .all_messages()
+            .filter(|m| !m.is_map_entry() && m.package_name() != "google.protobuf")
+            .map(|m| m.full_name().to_owned())
+            .collect();
+        names.sort();
+        names
+    }
+
     /// A message by its full name, with or without a leading dot.
     pub fn message(&self, name: &str) -> Option<MessageDescriptor> {
         self.pool.get_message_by_name(name.trim_start_matches('.'))
@@ -223,6 +236,10 @@ fn describe(error: &protox::Error, opened: &Path) -> String {
         Some(at) => format!("{file}:{at}: {text}"),
         None => format!("{file}: {text}"),
     }
+}
+
+fn without_query(path: &str) -> &str {
+    path.split(['?', '#']).next().unwrap_or(path)
 }
 
 fn count_messages(messages: impl Iterator<Item = MessageDescriptor>) -> usize {
@@ -307,10 +324,23 @@ fn stamp(sources: &[PathBuf]) -> u64 {
 struct Kept {
     #[serde(default)]
     sources: Vec<PathBuf>,
+    #[serde(default)]
+    chosen: Vec<Chosen>,
+}
+
+/// A message chosen by hand for the bodies one side of a path sends.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct Chosen {
+    pub host: String,
+    /// Without its query.
+    pub path: String,
+    pub request: bool,
+    pub message: String,
 }
 
 struct State {
     sources: Vec<PathBuf>,
+    chosen: Vec<Chosen>,
     schema: Arc<Schema>,
     stamp: Option<u64>,
     looked: Option<Instant>,
@@ -336,6 +366,7 @@ impl Library {
             file,
             state: Mutex::new(State {
                 sources: kept.sources,
+                chosen: kept.chosen,
                 schema: Arc::new(Schema::default()),
                 stamp: None,
                 looked: None,
@@ -397,14 +428,54 @@ impl Library {
         self.changed(&mut state)
     }
 
-    fn changed(&self, state: &mut State) -> std::io::Result<Arc<Schema>> {
+    /// The message chosen for one side of a path, if one was.
+    pub fn chosen(&self, host: &str, path: &str, request: bool) -> Option<String> {
+        let path = without_query(path);
+        self.lock()
+            .chosen
+            .iter()
+            .find(|c| c.host == host && c.path == path && c.request == request)
+            .map(|c| c.message.clone())
+    }
+
+    /// Chooses the message one side of a path sends, or with `None` lets it
+    /// be found again as it would be. Kept with the sources.
+    pub fn choose(
+        &self,
+        host: &str,
+        path: &str,
+        request: bool,
+        message: Option<&str>,
+    ) -> std::io::Result<()> {
+        let path = without_query(path);
+        let mut state = self.lock();
+        state
+            .chosen
+            .retain(|c| !(c.host == host && c.path == path && c.request == request));
+        if let Some(message) = message {
+            state.chosen.push(Chosen {
+                host: host.to_owned(),
+                path: path.to_owned(),
+                request,
+                message: message.to_owned(),
+            });
+        }
+        self.save(&state)
+    }
+
+    fn save(&self, state: &State) -> std::io::Result<()> {
         let kept = Kept {
             sources: state.sources.clone(),
+            chosen: state.chosen.clone(),
         };
         let text = toml::to_string(&kept).map_err(std::io::Error::other)?;
         let part = self.file.with_extension("toml.part");
         std::fs::write(&part, text)?;
-        std::fs::rename(&part, &self.file)?;
+        std::fs::rename(&part, &self.file)
+    }
+
+    fn changed(&self, state: &mut State) -> std::io::Result<Arc<Schema>> {
+        self.save(state)?;
         state.schema = Arc::new(Schema::load(&state.sources));
         state.stamp = Some(stamp(&state.sources));
         state.looked = Some(Instant::now());
@@ -574,6 +645,28 @@ message Money { string currency = 1; int64 units = 2; }
         assert!(
             library.schema().message("common.Tag").is_some(),
             "read again"
+        );
+
+        library
+            .choose("api.shop.vn", "/orders/42?x=1", false, Some("common.Money"))
+            .unwrap();
+        let again = Library::open(&data);
+        assert_eq!(
+            again.chosen("api.shop.vn", "/orders/42", false).as_deref(),
+            Some("common.Money")
+        );
+        assert_eq!(again.chosen("api.shop.vn", "/orders/42", true), None);
+        assert_eq!(again.sources(), [dir.join("common")], "kept beside");
+        library
+            .choose("api.shop.vn", "/orders/42", false, None)
+            .unwrap();
+        assert_eq!(
+            Library::open(&data).chosen("api.shop.vn", "/orders/42", false),
+            None
+        );
+        assert_eq!(
+            library.last_schema().message_names(),
+            ["common.Money", "common.Tag"]
         );
 
         library.remove(&dir.join("common")).unwrap();

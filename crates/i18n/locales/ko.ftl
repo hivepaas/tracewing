@@ -718,6 +718,27 @@ ted08dbe5 = 파일 추가…
 # Read again
 t2f0dcc5d = 다시 읽기
 
+# Find a message
+te6f78626 = 메시지 찾기
+
+# Read as {message}
+t87b6a380 = { $message }(으)로 읽기
+
+# Read as…
+t1b90af95 = 다음으로 읽기…
+
+# Requests to {path} on {host} are read as the message chosen.
+t8826d766 = { $host }의 { $path }(으)로 가는 요청은 고른 메시지로 읽습니다.
+
+# Answers from {path} on {host} are read as the message chosen.
+tbbe012da = { $host }의 { $path }에서 온 응답은 고른 메시지로 읽습니다.
+
+# Automatic (gRPC path or messageType)
+t134c9a06 = 자동 (gRPC 경로 또는 messageType)
+
+# and {count} more: type to narrow them | and {count} more: type to narrow them
+t70ff68f9 = { $count }개 더 있음: 입력해서 좁히기
+
 # Block
 tbd074002 = 차단
 
