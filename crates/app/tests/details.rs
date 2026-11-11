@@ -302,7 +302,9 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
                 unreachable!()
             };
             let sel = body.read(cx).selection();
-            (sel.drawn_at(0).unwrap(), sel.drawn_at(1).unwrap())
+            // Text is wrapped: each line's first row.
+            let row = |line| sel.drawn_at(tracewing::wrap::key(line, 0)).unwrap();
+            (row(0), row(1))
         })
         .unwrap();
     drag(
