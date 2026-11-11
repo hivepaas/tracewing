@@ -280,8 +280,11 @@ t3d35ce69 = Permintaan dan respons berdampingan
 # Request above the response
 t83c63123 = Permintaan di atas respons
 
-# Text
-t3e142d5e = Teks
+# Pretty
+t7e09470d = Rapi
+
+# Raw
+ta689aa91 = Mentah
 
 # Picture · {size}
 te97ed633 = Gambar · { $size }

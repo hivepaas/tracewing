@@ -280,8 +280,11 @@ t3d35ce69 = Request và response cạnh nhau
 # Request above the response
 t83c63123 = Request ở trên response
 
-# Text
-t3e142d5e = Văn bản
+# Pretty
+t7e09470d = Định dạng
+
+# Raw
+ta689aa91 = Nguyên bản
 
 # Picture · {size}
 te97ed633 = Hình ảnh · { $size }

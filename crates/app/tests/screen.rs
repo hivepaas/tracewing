@@ -12,7 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tracewing::{
-    bodyview::BodyView,
+    bodyview::{BodyMode, BodyView},
     colors,
     detail::Side,
     engine::{Engine, EngineOptions},
@@ -258,10 +258,51 @@ fn the_window_shows_real_traffic() {
         })
         .unwrap();
 
+    // As sent: the bytes as they came, which laid out are longer.
+    let copied_len = |view: &mut Traffic, cx: &mut gpui::Context<Traffic>| {
+        let BodyState::Shown(body) = &view.inspector.body else {
+            panic!()
+        };
+        body.update(cx, |body, cx| {
+            body.select_all(cx);
+            match body.selected_text() {
+                tracewing::select::Copied::Text(text) => text.len() as u64,
+                _ => panic!("copied"),
+            }
+        })
+    };
+    let pretty_len = window
+        .update(&mut cx, |view, _, cx| copied_len(view, cx))
+        .unwrap();
+    window
+        .update(&mut cx, |view, _, cx| view.set_body_mode(BodyMode::Raw, cx))
+        .unwrap();
+    let raw_read = |view: &Traffic, cx: &gpui::App| match &view.inspector.body {
+        BodyState::Shown(body) => body.read(cx).is_scanned(),
+        _ => false,
+    };
+    wait_for(&mut cx, window, "the body read as sent", raw_read);
+    window
+        .update(&mut cx, |view, _, cx| {
+            let size = match &view.inspector.body {
+                BodyState::Shown(body) => {
+                    let body = body.read(cx);
+                    assert_eq!(body.mode(), BodyMode::Raw);
+                    body.body().size()
+                }
+                _ => panic!(),
+            };
+            let raw_len = copied_len(view, cx);
+            assert_eq!(raw_len, size, "as sent, byte for byte");
+            assert!(pretty_len > raw_len, "laid out, it is longer");
+        })
+        .unwrap();
+    save(&mut cx, window.into(), "93-body-raw");
+
     // The same body as its bytes, and back.
     window
         .update(&mut cx, |view, _, cx| {
-            view.set_body_hex(true, cx);
+            view.set_body_mode(BodyMode::Hex, cx);
             let BodyState::Shown(body) = &view.inspector.body else {
                 panic!()
             };
@@ -272,7 +313,9 @@ fn the_window_shows_real_traffic() {
         .unwrap();
     save(&mut cx, window.into(), "92-body-hex");
     window
-        .update(&mut cx, |view, _, cx| view.set_body_hex(false, cx))
+        .update(&mut cx, |view, _, cx| {
+            view.set_body_mode(BodyMode::Pretty, cx)
+        })
         .unwrap();
 
     window

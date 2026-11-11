@@ -288,8 +288,11 @@ t3d35ce69 = Anfrage und Antwort nebeneinander
 # Request above the response
 t83c63123 = Anfrage über der Antwort
 
-# Text
-t3e142d5e = Text
+# Pretty
+t7e09470d = Formatiert
+
+# Raw
+ta689aa91 = Roh
 
 # Picture · {size}
 te97ed633 = Bild · { $size }

@@ -289,8 +289,11 @@ t3d35ce69 = Requisição e resposta lado a lado
 # Request above the response
 t83c63123 = Requisição acima da resposta
 
-# Text
-t3e142d5e = Texto
+# Pretty
+t7e09470d = Formatado
+
+# Raw
+ta689aa91 = Bruto
 
 # Picture · {size}
 te97ed633 = Imagem · { $size }

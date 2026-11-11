@@ -291,7 +291,8 @@ struct Progress {
 }
 
 pub struct Body {
-    map: Mmap,
+    /// Shared with the same body read another way.
+    map: Arc<Mmap>,
     kind: Kind,
     index: LineIndex,
     progress: Progress,
@@ -313,6 +314,16 @@ impl Body {
         // SAFETY: bodies are spooled once and never change while they are shown.
         let map = unsafe { Mmap::map(&file) }.with_context(|| format!("map {}", path.display()))?;
         let kind = sniff(&map);
+        Self::start(Arc::new(map), kind)
+    }
+
+    /// The same bytes as text, line by line as they were sent: JSON as it
+    /// came, not laid out. Scanned again, on its own.
+    pub fn as_sent(&self) -> Result<Arc<Self>> {
+        Self::start(Arc::clone(&self.map), Kind::Text)
+    }
+
+    fn start(map: Arc<Mmap>, kind: Kind) -> Result<Arc<Self>> {
         let body = Arc::new(Self {
             map,
             kind,
@@ -1074,5 +1085,23 @@ mod tests {
     #[test]
     fn a_cut_escape_stays_inside_the_text() {
         assert_eq!(tokens(r#""a\"#)[0].0, 0..3);
+    }
+
+    #[test]
+    fn json_as_sent_is_its_own_lines() {
+        let path = std::env::temp_dir().join(format!("as-sent-{}", std::process::id()));
+        std::fs::write(&path, "{\"a\":[1,2],\"b\":{\"c\":true}}\n{}").unwrap();
+        let body = Body::open(&path).unwrap();
+        let sent = body.as_sent().unwrap();
+        while !body.is_scanned() || !sent.is_scanned() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        assert_eq!(body.kind(), Kind::Json);
+        assert!(body.lines() > 2, "laid out");
+        assert_eq!(sent.kind(), Kind::Text);
+        assert_eq!(sent.lines(), 2, "as it came");
+        assert_eq!(sent.size(), body.size());
+        assert_eq!(sent.closer(0), None, "nothing folds");
+        std::fs::remove_file(path).ok();
     }
 }
