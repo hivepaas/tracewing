@@ -55,6 +55,9 @@ t61e9eac0 = 번호
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = 본문이 보관되지 않아 둘을 비교할 수 없습니다.
 
+# {count} field differs | {count} fields differ
+t6a8fff7f = 필드 { $count }개가 다름
+
 # … {count} line the same | … {count} lines the same
 tcc37e7ea = … 같은 줄 { $count }개
 
@@ -112,8 +115,20 @@ tf2c47725 = 둘 다 본문이 없습니다.
 # The bodies are the same.
 t85152e01 = 본문이 같습니다.
 
+# {count} field differs. | {count} fields differ.
+t0f651f77 = 필드 { $count }개가 다릅니다.
+
+# The first {count} are listed.
+taae62a3e = 처음 { $count }개만 표시합니다.
+
 # {count} line differs. | {count} lines differ.
 tf57a3157 = { $count }줄이 다릅니다.
+
+# Fields
+t3308bd9c = 필드
+
+# Lines
+t8a1a00dc = 줄
 
 # Compare
 td57a0a54 = 비교

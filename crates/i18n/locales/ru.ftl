@@ -70,6 +70,15 @@ t61e9eac0 = Номер
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Одно из тел не сохранено, поэтому сравнить их нельзя.
 
+# {count} field differs | {count} fields differ
+t6a8fff7f =
+    { $n ->
+        [one] Отличается { $count } поле
+        [few] Отличаются { $count } поля
+        [many] Отличаются { $count } полей
+       *[other] Отличается { $count } поля
+    }
+
 # … {count} line the same | … {count} lines the same
 tcc37e7ea =
     { $n ->
@@ -133,6 +142,18 @@ tf2c47725 = Ни у одного нет тела.
 # The bodies are the same.
 t85152e01 = Тела одинаковые.
 
+# {count} field differs. | {count} fields differ.
+t0f651f77 =
+    { $n ->
+        [one] Отличается { $count } поле.
+        [few] Отличаются { $count } поля.
+        [many] Отличаются { $count } полей.
+       *[other] Отличается { $count } поля.
+    }
+
+# The first {count} are listed.
+taae62a3e = Показаны только первые { $count }.
+
 # {count} line differs. | {count} lines differ.
 tf57a3157 =
     { $n ->
@@ -141,6 +162,12 @@ tf57a3157 =
         [many] Отличаются { $count } строк.
        *[other] Отличается { $count } строки.
     }
+
+# Fields
+t3308bd9c = Поля
+
+# Lines
+t8a1a00dc = Строки
 
 # Compare
 td57a0a54 = Сравнение

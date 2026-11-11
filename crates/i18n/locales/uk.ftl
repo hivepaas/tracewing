@@ -70,6 +70,15 @@ t61e9eac0 = Номер
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Одне з тіл не збережено, тож порівняти їх не можна.
 
+# {count} field differs | {count} fields differ
+t6a8fff7f =
+    { $n ->
+        [one] Відрізняється { $count } поле
+        [few] Відрізняються { $count } поля
+        [many] Відрізняються { $count } полів
+       *[other] Відрізняється { $count } поля
+    }
+
 # … {count} line the same | … {count} lines the same
 tcc37e7ea =
     { $n ->
@@ -133,6 +142,18 @@ tf2c47725 = Жоден не має тіла.
 # The bodies are the same.
 t85152e01 = Тіла однакові.
 
+# {count} field differs. | {count} fields differ.
+t0f651f77 =
+    { $n ->
+        [one] Відрізняється { $count } поле.
+        [few] Відрізняються { $count } поля.
+        [many] Відрізняються { $count } полів.
+       *[other] Відрізняється { $count } поля.
+    }
+
+# The first {count} are listed.
+taae62a3e = Показано лише перші { $count }.
+
 # {count} line differs. | {count} lines differ.
 tf57a3157 =
     { $n ->
@@ -141,6 +162,12 @@ tf57a3157 =
         [many] Відрізняються { $count } рядків.
        *[other] Відрізняється { $count } рядка.
     }
+
+# Fields
+t3308bd9c = Поля
+
+# Lines
+t8a1a00dc = Рядки
 
 # Compare
 td57a0a54 = Порівняння

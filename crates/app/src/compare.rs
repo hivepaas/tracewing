@@ -105,13 +105,15 @@ pub fn query_of(url: &str) -> Vec<(String, String)> {
 }
 
 /// A body as lines to compare, and what it was read as.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct BodyText {
     /// `JSON`, `MessagePack`, `Text`, `Bytes`…; empty for no body.
     pub kind: String,
     pub lines: Vec<String>,
     /// Only its first [`BODY_MAX`] bytes were compared.
     pub cut: bool,
+    /// What it holds, when it is JSON or reads as JSON: compared by field.
+    pub json: Option<serde_json::Value>,
 }
 
 /// `data` as lines: JSON, and what MessagePack, CBOR and Protobuf read as,
@@ -127,6 +129,7 @@ pub fn body_text(
         kind: kind.to_owned(),
         lines: text.lines().map(str::to_owned).collect(),
         cut,
+        json: None,
     };
     if data.is_empty() {
         return BodyText::default();
@@ -134,17 +137,17 @@ pub fn body_text(
     if let Some(format) = binjson::format_of(content_type)
         && let Some(json) = binjson::to_json_as(data, format, message)
     {
-        let pretty = serde_json::from_str(&json)
-            .map(|value| pretty_json(&value))
-            .unwrap_or(json);
-        return text(format.name(), &pretty);
+        return match serde_json::from_str::<serde_json::Value>(&json) {
+            Ok(value) => text(format.name(), &pretty_json(&value)).with_json(value),
+            Err(_) => text(format.name(), &json),
+        };
     }
     let starts_like_json = data
         .iter()
         .find(|b| !b.is_ascii_whitespace())
         .is_some_and(|b| matches!(b, b'{' | b'['));
-    if starts_like_json && let Ok(value) = serde_json::from_slice(data) {
-        return text("JSON", &pretty_json(&value));
+    if starts_like_json && let Ok(value) = serde_json::from_slice::<serde_json::Value>(data) {
+        return text("JSON", &pretty_json(&value)).with_json(value);
     }
     // A body cut short may end inside a character.
     let utf8 = match std::str::from_utf8(data) {
@@ -161,6 +164,14 @@ pub fn body_text(
         kind: "Bytes".to_owned(),
         lines: data.chunks(HEX_LINE).enumerate().map(hex_line).collect(),
         cut,
+        json: None,
+    }
+}
+
+impl BodyText {
+    fn with_json(mut self, value: serde_json::Value) -> Self {
+        self.json = Some(value);
+        self
     }
 }
 
@@ -336,9 +347,297 @@ pub fn changed_count(lines: &[Line]) -> usize {
     lines.iter().filter(|l| l.change != Change::Same).count()
 }
 
+/// The most fields a tree lists; the rest are left out, and that is said.
+pub const TREE_MAX: usize = 20_000;
+/// The most of a value written in a tree.
+const VALUE_SHOWN: usize = 200;
+/// Fields an array's objects are matched by, when each has one of its own.
+const ID_FIELDS: [&str; 2] = ["id", "_id"];
+
+/// A field that differs, or an object or array that holds some that do.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Node {
+    pub depth: usize,
+    /// `user`, `[3]`, or `[id: 7]` for an item matched by its id.
+    pub key: String,
+    /// Its value in each flow, written short; `None` where it is not.
+    pub a: Option<String>,
+    pub b: Option<String>,
+    pub change: Change,
+    /// For an object or an array in both: how many fields under it differ.
+    pub inside: Option<usize>,
+}
+
+/// The fields of `a` and `b` that differ, a node each, under the objects
+/// and arrays that hold them, in the order of their keys. Arrays of objects
+/// with ids are matched by id; others by place.
+pub fn diff_tree(a: &serde_json::Value, b: &serde_json::Value) -> Vec<Node> {
+    let mut out = Vec::new();
+    if same_kind(a, b) {
+        children(a, b, 0, &mut out);
+    } else {
+        walk("$".to_owned(), Some(a), Some(b), 0, &mut out);
+    }
+    out
+}
+
+/// How many fields differ: the nodes that are not objects or arrays.
+pub fn fields_changed(nodes: &[Node]) -> usize {
+    nodes.iter().filter(|n| n.inside.is_none()).count()
+}
+
+fn same_kind(a: &serde_json::Value, b: &serde_json::Value) -> bool {
+    use serde_json::Value;
+    matches!(
+        (a, b),
+        (Value::Object(_), Value::Object(_)) | (Value::Array(_), Value::Array(_))
+    )
+}
+
+fn short(value: &serde_json::Value) -> String {
+    let text = value.to_string();
+    match text.char_indices().nth(VALUE_SHOWN) {
+        Some((cut, _)) => format!("{}…", &text[..cut]),
+        None => text,
+    }
+}
+
+fn walk(
+    key: String,
+    a: Option<&serde_json::Value>,
+    b: Option<&serde_json::Value>,
+    depth: usize,
+    out: &mut Vec<Node>,
+) {
+    if out.len() >= TREE_MAX {
+        return;
+    }
+    let change = match (a, b) {
+        (Some(a), Some(b)) if a == b => return,
+        (Some(a), Some(b)) if same_kind(a, b) => {
+            let at = out.len();
+            out.push(Node {
+                depth,
+                key,
+                a: None,
+                b: None,
+                change: Change::Changed,
+                inside: Some(0),
+            });
+            children(a, b, depth + 1, out);
+            out[at].inside = Some(fields_changed(&out[at + 1..]));
+            return;
+        }
+        (Some(_), Some(_)) => Change::Changed,
+        (Some(_), None) => Change::Removed,
+        (None, Some(_)) => Change::Added,
+        (None, None) => return,
+    };
+    out.push(Node {
+        depth,
+        key,
+        a: a.map(short),
+        b: b.map(short),
+        change,
+        inside: None,
+    });
+}
+
+fn children(a: &serde_json::Value, b: &serde_json::Value, depth: usize, out: &mut Vec<Node>) {
+    use serde_json::Value;
+    match (a, b) {
+        (Value::Object(a), Value::Object(b)) => {
+            let mut keys: Vec<&String> = a
+                .keys()
+                .chain(b.keys().filter(|k| !a.contains_key(*k)))
+                .collect();
+            keys.sort();
+            for key in keys {
+                walk(key.clone(), a.get(key), b.get(key), depth, out);
+            }
+        }
+        (Value::Array(a), Value::Array(b)) => match id_field(a, b) {
+            Some(field) => {
+                let label = |item: &Value| format!("[{field}: {}]", item[field]);
+                let ids_b: std::collections::HashMap<String, &Value> = b
+                    .iter()
+                    .map(|item| (item[field].to_string(), item))
+                    .collect();
+                let ids_a: HashSet<String> = a.iter().map(|item| item[field].to_string()).collect();
+                for item in a {
+                    let other = ids_b.get(&item[field].to_string()).copied();
+                    walk(label(item), Some(item), other, depth, out);
+                }
+                for item in b
+                    .iter()
+                    .filter(|item| !ids_a.contains(&item[field].to_string()))
+                {
+                    walk(label(item), None, Some(item), depth, out);
+                }
+            }
+            None => {
+                for i in 0..a.len().max(b.len()) {
+                    walk(format!("[{i}]"), a.get(i), b.get(i), depth, out);
+                }
+            }
+        },
+        _ => {}
+    }
+}
+
+/// The field both arrays' items are matched by: one every item has, a
+/// number or text, no two items in an array alike.
+fn id_field(a: &[serde_json::Value], b: &[serde_json::Value]) -> Option<&'static str> {
+    ID_FIELDS.into_iter().find(|field| {
+        [a, b].iter().all(|items| {
+            let mut seen = HashSet::new();
+            items.iter().all(|item| match item.get(*field) {
+                Some(id @ (serde_json::Value::Number(_) | serde_json::Value::String(_))) => {
+                    seen.insert(id.to_string())
+                }
+                _ => false,
+            })
+        }) && !(a.is_empty() && b.is_empty())
+    })
+}
+
+/// The nodes shown: all but those under a node in `closed`.
+pub fn shown_nodes(nodes: &[Node], closed: &HashSet<usize>) -> Vec<usize> {
+    let mut out = Vec::with_capacity(nodes.len());
+    let mut skip_deeper_than = None;
+    for (i, node) in nodes.iter().enumerate() {
+        if let Some(depth) = skip_deeper_than {
+            if node.depth > depth {
+                continue;
+            }
+            skip_deeper_than = None;
+        }
+        out.push(i);
+        if closed.contains(&i) {
+            skip_deeper_than = Some(node.depth);
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn node(depth: usize, key: &str, a: Option<&str>, b: Option<&str>, change: Change) -> Node {
+        Node {
+            depth,
+            key: key.to_owned(),
+            a: a.map(str::to_owned),
+            b: b.map(str::to_owned),
+            change,
+            inside: None,
+        }
+    }
+
+    #[test]
+    fn fields_that_differ_are_listed_under_what_holds_them() {
+        let a = serde_json::json!({
+            "user": {"id": 42, "name": "An", "tags": ["a", "b"]},
+            "note": "first",
+            "old": true,
+            "same": [1, 2, 3]
+        });
+        let b = serde_json::json!({
+            "user": {"id": 42, "name": "Bình", "tags": ["a", "b", "c"]},
+            "note": 7,
+            "new": null,
+            "same": [1, 2, 3]
+        });
+        let tree = diff_tree(&a, &b);
+        let mut user = node(0, "user", None, None, Change::Changed);
+        user.inside = Some(2);
+        let mut tags = node(1, "tags", None, None, Change::Changed);
+        tags.inside = Some(1);
+        assert_eq!(
+            tree,
+            [
+                node(0, "new", None, Some("null"), Change::Added),
+                node(0, "note", Some("\"first\""), Some("7"), Change::Changed),
+                node(0, "old", Some("true"), None, Change::Removed),
+                user,
+                node(1, "name", Some("\"An\""), Some("\"Bình\""), Change::Changed),
+                tags,
+                node(2, "[2]", None, Some("\"c\""), Change::Added),
+            ]
+        );
+        assert_eq!(fields_changed(&tree), 5);
+        assert!(diff_tree(&a, &a).is_empty());
+        // Not the same kind at the top: one node.
+        assert_eq!(
+            diff_tree(&serde_json::json!([1]), &serde_json::json!({"a": 1})),
+            [node(
+                0,
+                "$",
+                Some("[1]"),
+                Some("{\"a\":1}"),
+                Change::Changed
+            )]
+        );
+    }
+
+    #[test]
+    fn items_with_ids_are_matched_by_id() {
+        let a = serde_json::json!([{"id": 1, "n": "a"}, {"id": 2, "n": "b"}]);
+        // One put in front, and one changed.
+        let b = serde_json::json!([{"id": 9, "n": "z"}, {"id": 1, "n": "a"}, {"id": 2, "n": "B"}]);
+        let keys: Vec<(String, Change)> = diff_tree(&a, &b)
+            .into_iter()
+            .map(|n| (n.key, n.change))
+            .collect();
+        assert_eq!(
+            keys,
+            [
+                ("[id: 2]".to_owned(), Change::Changed),
+                ("n".to_owned(), Change::Changed),
+                ("[id: 9]".to_owned(), Change::Added),
+            ]
+        );
+        // Ids that repeat cannot match: by place then.
+        let twice = serde_json::json!([{"id": 1}, {"id": 1}]);
+        assert_eq!(
+            diff_tree(&twice, &serde_json::json!([{"id": 1}]))[0].key,
+            "[1]"
+        );
+    }
+
+    #[test]
+    fn a_closed_node_hides_what_is_under_it() {
+        let a = serde_json::json!({"x": {"y": {"z": 1}, "w": 1}, "v": 1});
+        let b = serde_json::json!({"x": {"y": {"z": 2}, "w": 2}, "v": 2});
+        let tree = diff_tree(&a, &b);
+        let keys = |shown: Vec<usize>| -> Vec<&str> {
+            shown.iter().map(|&i| tree[i].key.as_str()).collect()
+        };
+        assert_eq!(
+            keys(shown_nodes(&tree, &HashSet::new())),
+            ["v", "x", "w", "y", "z"]
+        );
+        assert_eq!(keys(shown_nodes(&tree, &HashSet::from([1]))), ["v", "x"]);
+        assert_eq!(
+            keys(shown_nodes(&tree, &HashSet::from([3]))),
+            ["v", "x", "w", "y"]
+        );
+    }
+
+    #[test]
+    fn json_bodies_keep_what_they_hold() {
+        let json = body_text(br#"{"a":1}"#, None, None, false);
+        assert_eq!(json.json, Some(serde_json::json!({"a": 1})));
+        assert_eq!(body_text(b"plain", None, None, false).json, None);
+        let packed = body_text(
+            &[0x81, 0xa1, b'a', 0x01],
+            Some("application/msgpack"),
+            None,
+            false,
+        );
+        assert_eq!(packed.json, Some(serde_json::json!({"a": 1})));
+    }
 
     fn list(items: &[(&str, &str)]) -> Vec<(String, String)> {
         items

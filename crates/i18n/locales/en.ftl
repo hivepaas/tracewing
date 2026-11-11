@@ -30,6 +30,11 @@ ta6478e7c = Size
 tdfe4e404 = Time
 t61e9eac0 = Number
 t9d6abb2a = A body was not kept, so the two cannot be compared.
+t6a8fff7f =
+    { $n ->
+        [one] { $count } field differs
+       *[other] { $count } fields differ
+    }
 tcc37e7ea =
     { $n ->
         [one] … { $count } line the same
@@ -53,11 +58,19 @@ tfa4c2902 = No body
 t1d894c39 = { $kind }, its first { $size } compared
 tf2c47725 = Neither has a body.
 t85152e01 = The bodies are the same.
+t0f651f77 =
+    { $n ->
+        [one] { $count } field differs.
+       *[other] { $count } fields differ.
+    }
+taae62a3e = The first { $count } are listed.
 tf57a3157 =
     { $n ->
         [one] { $count } line differs.
        *[other] { $count } lines differ.
     }
+t3308bd9c = Fields
+t8a1a00dc = Lines
 td57a0a54 = Compare
 t71ce2de9 = #{ $a } beside #{ $b }: what only #{ $a } has is red, what only #{ $b } has is green.
 te519d36e = Swap
