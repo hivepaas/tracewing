@@ -53,10 +53,12 @@ pub struct LineIndex {
     len: AtomicU64,
 }
 
-/// `CHUNK_LEN` marks, and the least depth of each one's lines.
+/// `CHUNK_LEN` marks, the least depth of each one's lines, and how many
+/// lines before each go on from the line before them.
 struct Chunk {
     marks: Box<[AtomicU64]>,
     shallowest: Box<[AtomicU16]>,
+    going_on: Box<[AtomicU64]>,
 }
 
 impl Chunk {
@@ -64,6 +66,7 @@ impl Chunk {
         Box::new(Self {
             marks: (0..CHUNK_LEN).map(|_| AtomicU64::new(0)).collect(),
             shallowest: (0..CHUNK_LEN).map(|_| AtomicU16::new(0)).collect(),
+            going_on: (0..CHUNK_LEN).map(|_| AtomicU64::new(0)).collect(),
         })
     }
 }
@@ -85,7 +88,9 @@ impl LineIndex {
     }
 
     /// False when the marks are full, which takes over 4 billion lines.
-    fn push(&self, offset: u64, depth: u32) -> bool {
+    /// `going_on` counts the lines before this one that go on from the line
+    /// before them: text cut at [`TEXT_LINE_MAX`] with no line break.
+    fn push(&self, offset: u64, depth: u32, going_on: u64) -> bool {
         let line = self.len.load(Ordering::Relaxed);
         let mark = line / MARK_EVERY;
         let depth16 = depth.min(u16::MAX as u32) as u16;
@@ -98,6 +103,7 @@ impl LineIndex {
             let entry = offset << DEPTH_BITS | u64::from(depth16);
             chunk.marks[at].store(entry, Ordering::Relaxed);
             chunk.shallowest[at].store(depth16, Ordering::Relaxed);
+            chunk.going_on[at].store(going_on, Ordering::Relaxed);
         } else if let Some(chunk) = self.chunks[(mark >> CHUNK_BITS) as usize].get() {
             chunk.shallowest[at].fetch_min(depth16, Ordering::Relaxed);
         }
@@ -117,6 +123,15 @@ impl LineIndex {
             entry >> DEPTH_BITS,
             (entry & ((1 << DEPTH_BITS) - 1)) as u32,
         )
+    }
+
+    /// How many lines before the mark at `mark * MARK_EVERY` go on from the
+    /// line before them.
+    fn going_on_before(&self, mark: u64) -> u64 {
+        let chunk = self.chunks[(mark >> CHUNK_BITS) as usize]
+            .get()
+            .expect("asked for a mark that was not written");
+        chunk.going_on[(mark & (CHUNK_LEN - 1)) as usize].load(Ordering::Relaxed)
     }
 
     /// The least depth of the lines from the mark at `mark * MARK_EVERY`, as far
@@ -366,6 +381,8 @@ impl Kind {
 #[derive(Default)]
 struct Progress {
     scanned: AtomicU64,
+    /// Lines so far that go on from the line before them.
+    going_on: AtomicU64,
     done: AtomicBool,
     took_us: AtomicU64,
     stop: AtomicBool,
@@ -533,6 +550,45 @@ impl Body {
             out.push(String::from_utf8_lossy(line).replace(['\n', '\r', '\t'], " "));
         }
         out
+    }
+
+    /// Whether the line at `start` goes on from the line before it: text cut
+    /// where it had no line break, not a line of its own.
+    fn goes_on(&self, start: usize) -> bool {
+        self.kind == Kind::Text && start > 0 && self.map[start - 1] != b'\n'
+    }
+
+    /// The line each line in `range` is in the text as sent, from 1, or
+    /// `None` for one that goes on from the line before it. Laid out JSON
+    /// and XML have no other lines than their own.
+    pub fn numbers(&self, range: Range<u64>) -> Vec<Option<u64>> {
+        if range.is_empty() {
+            return Vec::new();
+        }
+        if self.kind != Kind::Text {
+            return range.map(|line| Some(line + 1)).collect();
+        }
+        let mark = range.start / MARK_EVERY;
+        let (offset, depth) = self.index.mark_before(range.start);
+        let mut going_on = self.index.going_on_before(mark);
+        let mut out = Vec::with_capacity((range.end - range.start) as usize);
+        let lines = Lines::resume(&self.map, self.kind, offset as usize, depth);
+        for (line, (start, _)) in (mark * MARK_EVERY..range.end).zip(lines) {
+            let goes_on = self.goes_on(start);
+            if goes_on {
+                going_on += 1;
+            }
+            if line >= range.start {
+                out.push((!goes_on).then(|| line + 1 - going_on));
+            }
+        }
+        out
+    }
+
+    /// Lines of the text as sent, not counting those cut from a longer one.
+    pub fn sent_lines(&self) -> u64 {
+        self.lines()
+            .saturating_sub(self.progress.going_on.load(Ordering::Relaxed))
     }
 
     /// The depths of the lines from `from`, in order, as far as they are ready.
@@ -750,9 +806,14 @@ impl Body {
     fn scan_lines(&self) {
         let mut lines = Lines::new(&self.map, self.kind);
         let mut next_report = PROGRESS_EVERY;
+        let mut going_on = 0;
         while let Some((start, depth)) = lines.next() {
-            if !self.index.push(start as u64, depth) {
+            if !self.index.push(start as u64, depth, going_on) {
                 return;
+            }
+            if self.goes_on(start) {
+                going_on += 1;
+                self.progress.going_on.store(going_on, Ordering::Relaxed);
             }
             if lines.position() >= next_report {
                 self.progress
@@ -1351,5 +1412,40 @@ mod tests {
         assert!(!looks_like_xml(b"<!DOCTYPE html><html>", Some("text/xml")));
         assert!(!looks_like_xml(b"<html/>", Some("application/xhtml+xml")));
         assert!(!looks_like_xml(b"plain", Some("application/xml")));
+    }
+
+    #[test]
+    fn lines_cut_from_a_long_one_have_no_number_of_their_own() {
+        // A line of 10 000 bytes, cut in three, then short ones past a mark,
+        // then another long one.
+        let mut text = "x".repeat(10_000);
+        text.push('\n');
+        for n in 0..300 {
+            text.push_str(&format!("line {n}\n"));
+        }
+        text.push_str(&"y".repeat(9_000));
+        let path = std::env::temp_dir().join(format!("numbers-{}", std::process::id()));
+        std::fs::write(&path, &text).unwrap();
+        let body = Body::open(&path).unwrap();
+        while !body.is_scanned() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        std::fs::remove_file(path).ok();
+        assert_eq!(body.kind(), Kind::Text);
+        let lines = body.lines();
+        assert_eq!(lines, 3 + 300 + 3, "cut at {TEXT_LINE_MAX} bytes");
+        assert_eq!(body.sent_lines(), 302);
+        let all = body.numbers(0..lines);
+        assert_eq!(&all[..4], &[Some(1), None, None, Some(2)]);
+        assert_eq!(all[302], Some(301), "past the first mark");
+        assert_eq!(&all[303..], &[Some(302), None, None]);
+        // From any line, as from the start.
+        for from in [1, 2, 255, 256, 257, 303, 304] {
+            assert_eq!(
+                body.numbers(from..lines),
+                all[from as usize..],
+                "from {from}"
+            );
+        }
     }
 }

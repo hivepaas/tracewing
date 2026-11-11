@@ -13,6 +13,15 @@ t2ba67348 =
 # … {size} more
 ta8dc6eab = … ще { $size }
 
+# {size} {format} · {count} line of JSON | {size} {format} · {count} lines of JSON
+t0a4220dc =
+    { $n ->
+        [one] { $size } { $format } · { $count } рядок JSON
+        [few] { $size } { $format } · { $count } рядки JSON
+        [many] { $size } { $format } · { $count } рядків JSON
+       *[other] { $size } { $format } · { $count } рядка JSON
+    }
+
 # Unfold all
 t3849d44e = Розгорнути все
 

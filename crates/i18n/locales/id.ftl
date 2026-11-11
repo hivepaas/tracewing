@@ -7,6 +7,9 @@ t2ba67348 = … { $count } baris { $closer }
 # … {size} more
 ta8dc6eab = … { $size } lagi
 
+# {size} {format} · {count} line of JSON | {size} {format} · {count} lines of JSON
+t0a4220dc = { $size } { $format } · { $count } baris JSON
+
 # Unfold all
 t3849d44e = Buka semua
 

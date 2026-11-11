@@ -7,6 +7,11 @@ t2ba67348 =
        *[other] … { $count } lines { $closer }
     }
 ta8dc6eab = … { $size } more
+t0a4220dc =
+    { $n ->
+        [one] { $size } { $format } · { $count } line of JSON
+       *[other] { $size } { $format } · { $count } lines of JSON
+    }
 t3849d44e = Unfold all
 t51332550 =
     { $n ->

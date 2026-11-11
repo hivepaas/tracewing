@@ -12,6 +12,14 @@ t2ba67348 =
 # … {size} more
 ta8dc6eab = … mais { $size }
 
+# {size} {format} · {count} line of JSON | {size} {format} · {count} lines of JSON
+t0a4220dc =
+    { $n ->
+        [one] { $size } { $format } · { $count } linha de JSON
+        [many] { $size } { $format } · { $count } linhas de JSON
+       *[other] { $size } { $format } · { $count } linhas de JSON
+    }
+
 # Unfold all
 t3849d44e = Expandir tudo
 

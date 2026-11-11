@@ -146,8 +146,9 @@ pub struct BodyView {
     /// The body read again as it was sent, once it is asked for.
     raw: Option<Arc<Body>>,
     /// The bytes as they came, when what is shown was made from them, as
-    /// JSON is from MessagePack. Its dump is what Hex shows.
-    original: Option<Arc<Body>>,
+    /// JSON is from MessagePack, and what they are called. Its dump is what
+    /// Hex shows.
+    original: Option<(Arc<Body>, &'static str)>,
     syntax: Syntax,
     /// The row at the top of the view, and how far it has scrolled out of it.
     top: u64,
@@ -470,16 +471,21 @@ impl BodyView {
     fn shown(&self) -> &Arc<Body> {
         match (self.mode, &self.raw, &self.original) {
             (BodyMode::Raw, Some(raw), _) => raw,
-            (BodyMode::Hex, _, Some(original)) => original,
+            (BodyMode::Hex, _, Some((original, _))) => original,
             _ => &self.body,
         }
     }
 
-    /// Shows JSON made from `original`, whose bytes Hex shows. Bytes as
-    /// text would say nothing, so there is no Raw.
-    pub fn set_original(&mut self, original: Arc<Body>, cx: &mut Context<Self>) {
+    /// Shows JSON made from `original`, whose bytes Hex shows, and which is
+    /// called `name`. Bytes as text would say nothing, so there is no Raw.
+    pub fn set_original(
+        &mut self,
+        original: Arc<Body>,
+        name: &'static str,
+        cx: &mut Context<Self>,
+    ) {
         watch_scan(Arc::clone(&original), cx);
-        self.original = Some(original);
+        self.original = Some((original, name));
         self.mode = self.fit(self.mode);
         cx.notify();
     }
@@ -623,7 +629,7 @@ impl BodyView {
         &self,
         line: u64,
         key: u64,
-        numbered: bool,
+        number: Option<u64>,
         shown: Line,
         mark: FoldMark,
         cx: &mut Context<Self>,
@@ -633,11 +639,7 @@ impl BodyView {
         } else {
             shown.depth as f32 * INDENT_W
         };
-        let number = if numbered {
-            (line + 1).to_string()
-        } else {
-            String::new()
-        };
+        let number = number.map(|n| n.to_string()).unwrap_or_default();
         let highlights: Vec<_> = if self.hex() {
             Vec::new()
         } else {
@@ -737,7 +739,21 @@ impl BodyView {
 impl BodyView {
     /// The body's size and lines, as shown.
     pub fn summary(&self) -> String {
-        summary_in(self.shown(), self.hex())
+        match &self.original {
+            // The size is what was sent; the lines are the JSON's.
+            Some((original, name)) if !self.hex() && self.body.is_scanned() => {
+                let lines = self.body.lines();
+                tr_n!(
+                    lines,
+                    "{size} {format} · {count} line of JSON",
+                    "{size} {format} · {count} lines of JSON",
+                    size = size_text(original.size()),
+                    format = *name,
+                    count = crate::flows::group_digits(lines)
+                )
+            }
+            _ => summary_in(self.shown(), self.hex()),
+        }
     }
 
     /// Wrapped text's rows from the top of the view, read a run of lines at
@@ -749,7 +765,14 @@ impl BodyView {
         let mut first_row = self.place.row;
         while line < lines && (shown.len() as u64) < in_view {
             let run = (in_view - shown.len() as u64).min(lines - line);
-            for text in self.shown().read_whole(line..line + run) {
+            // Lines cut from a longer one go on without a number of their own.
+            let numbers = self.shown().numbers(line..line + run);
+            for (text, number) in self
+                .shown()
+                .read_whole(line..line + run)
+                .into_iter()
+                .zip(numbers)
+            {
                 let starts = wrap::row_starts(&text, self.cols);
                 for (row, from) in starts.iter().copied().enumerate().skip(first_row) {
                     if shown.len() as u64 >= in_view {
@@ -765,7 +788,7 @@ impl BodyView {
                         self.render_line(
                             line,
                             wrap::key(line, row),
-                            row == 0,
+                            number.filter(|_| row == 0),
                             part,
                             FoldMark::None,
                             cx,
@@ -825,7 +848,7 @@ impl BodyView {
                     None => FoldMark::None,
                 };
                 shown.push(
-                    self.render_line(at, at, true, text, mark, cx)
+                    self.render_line(at, at, Some(at + 1), text, mark, cx)
                         .into_any_element(),
                 );
             }
@@ -1031,7 +1054,12 @@ pub fn summary(body: &Body) -> String {
 
 /// As [`summary`], counting the lines of a dump with `hex`.
 pub fn summary_in(body: &Body, hex: bool) -> String {
-    let lines = body.lines_in(hex);
+    // The text's own lines, not those it was cut into.
+    let lines = if hex {
+        body.lines_in(true)
+    } else {
+        body.sent_lines()
+    };
     if hex || body.is_scanned() {
         tr_n!(
             lines,

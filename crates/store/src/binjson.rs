@@ -19,6 +19,16 @@ pub enum Format {
     Cbor,
 }
 
+impl Format {
+    /// What it is called.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::MessagePack => "MessagePack",
+            Self::Cbor => "CBOR",
+        }
+    }
+}
+
 /// The format a body's type names, if it is one of these.
 pub fn format_of(content_type: Option<&str>) -> Option<Format> {
     let essence = content_type?.split(';').next()?.trim().to_ascii_lowercase();

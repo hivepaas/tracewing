@@ -7,6 +7,9 @@ t2ba67348 = … { $count } 行 { $closer }
 # … {size} more
 ta8dc6eab = … あと { $size }
 
+# {size} {format} · {count} line of JSON | {size} {format} · {count} lines of JSON
+t0a4220dc = { $size } { $format } · JSON { $count } 行
+
 # Unfold all
 t3849d44e = すべて展開
 
