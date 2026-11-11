@@ -52,6 +52,81 @@ tdfe4e404 = 时间
 # Number
 t61e9eac0 = 序号
 
+# A body was not kept, so the two cannot be compared.
+t9d6abb2a = 有一个 body 未保存，因此无法比较两者。
+
+# … {count} line the same | … {count} lines the same
+tcc37e7ea = … { $count } 行相同
+
+# Nothing to compare.
+t9f32d942 = 没有可比较的内容。
+
+# URL
+t7569633e = URL
+
+# Protocol
+t4a57ebd5 = 协议
+
+# Type
+td155d06d = 类型
+
+# Sizes
+td1a4a19d = 大小
+
+# Body
+t428a1095 = 正文
+
+# Headers
+t334f5989 = 标头
+
+# Query
+t9e89e783 = 查询
+
+# Request
+t82454152 = 请求
+
+# Response
+t55a982fe = 响应
+
+# Neither has headers kept.
+tb43ef094 = 两者都没有保存 header。
+
+# Trailers
+t7c44fa89 = Trailer
+
+# Neither URL has a query.
+t4d8203e0 = 两个 URL 都没有查询参数。
+
+# Comparing…
+ta8565d31 = 正在比较…
+
+# No body
+tfa4c2902 = 无正文
+
+# {kind}, its first {size} compared
+t1d894c39 = { $kind }，比较了前 { $size }
+
+# Neither has a body.
+tf2c47725 = 两者都没有 body。
+
+# The bodies are the same.
+t85152e01 = 两个 body 相同。
+
+# {count} line differs. | {count} lines differ.
+tf57a3157 = { $count } 行不同。
+
+# Compare
+td57a0a54 = 比较
+
+# #{a} beside #{b}: what only #{a} has is red, what only #{b} has is green.
+t71ce2de9 = #{ $a } 与 #{ $b } 并排：只有 #{ $a } 有的标红，只有 #{ $b } 有的标绿。
+
+# Swap
+te519d36e = 交换
+
+# Back to Traffic
+t644042d2 = 返回 Traffic
+
 # "{method}" is not a method
 tacdcf5cb = “{ $method }” 不是有效的方法
 
@@ -61,9 +136,6 @@ t1f9e5368 = 其请求正文未完整保留，因此无法重新发送
 # name: value, one a line
 t4df37bea = 名称: 值，每行一个
 
-# No body
-tfa4c2902 = 无正文
-
 # No flow is chosen
 t550b0a98 = 未选择流量记录
 
@@ -72,15 +144,6 @@ t296762f8 = 此流量记录：{ $e }
 
 # The body is not a {message}: {e}
 t3220a10a = 正文不是 { $message }：{ $e }
-
-# Request
-t82454152 = 请求
-
-# Headers
-t334f5989 = 标头
-
-# Body
-t428a1095 = 正文
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }，以 JSON 编写：发送时为 Protobuf。
@@ -96,9 +159,6 @@ t8b242db1 = 新建
 
 # … {count} more bytes: the flow in Traffic has them all.
 tf43ea06c = … 还有 { $count } 字节：“流量”中的该流量记录包含完整内容。
-
-# Response
-t55a982fe = 响应
 
 # Body · {message}
 taa3cc3ff = 正文 · { $message }
@@ -213,9 +273,6 @@ t38c4d30b = 未命名的操作
 
 # {n} of {count}: {name}
 t53045460 = 第 { $n }/{ $count } 个：{ $name }
-
-# Query
-t9e89e783 = 查询
 
 # A persisted query: the server keeps its text, and the request sends only its hash.
 tf23e3c2a = 持久化查询：服务器保存其文本，请求只发送其哈希。
@@ -333,6 +390,12 @@ t8dc21305 = 已复制
 
 # Copy as cURL
 t866d1e3e = 复制为 cURL
+
+# Click another flow…
+t59253578 = 点击另一个流…
+
+# Compare with…
+t58dfe040 = 与…比较
 
 # Copy as…
 t9c1ad448 = 复制为…
@@ -633,9 +696,6 @@ t891b076d = 标头第 { $line } 行缺少 “:”
 
 # Header line {line} has no name
 te3247b96 = 标头第 { $line } 行缺少名称
-
-# URL
-t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
 td6aec821 =
@@ -1507,6 +1567,9 @@ t6e21519a = 暂停或继续录制
 # Clear the list
 tf2a55d1f = 清空列表
 
+# Compare the flow clicked with the chosen one
+te42cd067 = 将点击的流与选中的流比较
+
 # The chosen flow
 te0a729de = 所选流量记录
 
@@ -1596,6 +1659,9 @@ t19f89214 = 名称，如：测试用 iPhone
 
 # The search index: {e}
 te3c971c9 = 搜索索引：{ $e }
+
+# Click the flow to compare #{id} with.
+tac1ec1d2 = 点击要与 #{ $id } 比较的流。
 
 # An earlier session: {name}
 t73446a1d = 历史会话：{ $name }

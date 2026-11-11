@@ -24,6 +24,7 @@ use crate::{
     widgets::{Reachable, eyebrow, icon, section_badge, status_colors},
 };
 use crate::{
+    compare_page::ComparePage,
     compose_page::ComposePage,
     paused_page::PausedPage,
     rules_page::RulesPage,
@@ -230,6 +231,8 @@ pub enum Screen {
     Compose,
     Sessions,
     Settings,
+    /// Two flows side by side; reached from Traffic, not the rail.
+    Compare,
 }
 
 fn looks_dark(window: &Window) -> bool {
@@ -251,6 +254,9 @@ pub struct Traffic {
     pub rules_page: Option<RulesPage>,
     pub paused_page: Option<PausedPage>,
     pub compose_page: Option<ComposePage>,
+    pub compare_page: Option<ComparePage>,
+    /// A flow chosen to be compared, waiting for the other to be clicked.
+    pub compare_pick: Option<i64>,
     /// The system's own appearance is dark.
     system_dark: bool,
     pub(crate) data_dir: PathBuf,
@@ -424,6 +430,8 @@ impl Traffic {
             rules_page: None,
             paused_page: None,
             compose_page: None,
+            compare_page: None,
+            compare_pick: None,
             system_dark,
             data_dir: data_dir.to_owned(),
             screen: Screen::Traffic,
@@ -636,6 +644,45 @@ impl Traffic {
             })
             .detach();
         }
+    }
+
+    /// What to do while a flow waits to be compared with another.
+    fn render_compare_pick(&self, cx: &mut Context<Self>) -> Option<impl IntoElement + use<>> {
+        let pick = self.compare_pick?;
+        let c = colors();
+        Some(
+            div()
+                .flex()
+                .flex_row()
+                .items_center()
+                .gap(px(10.))
+                .px(px(14.))
+                .py(px(8.))
+                .rounded(px(16.))
+                .bg(rgb(c.tonal))
+                .text_color(rgb(c.on_tonal))
+                .child(
+                    div()
+                        .flex_1()
+                        .child(tr!("Click the flow to compare #{id} with.", id = pick)),
+                )
+                .child(
+                    div()
+                        .id("compare-cancel")
+                        .h(px(30.))
+                        .px(px(14.))
+                        .rounded(px(15.))
+                        .flex()
+                        .items_center()
+                        .cursor_pointer()
+                        .reachable()
+                        .bg(rgb(c.chip))
+                        .text_color(rgb(c.on_chip))
+                        .font_weight(FontWeight::BOLD)
+                        .child(tr!("Cancel"))
+                        .on_click(cx.listener(|this, _, _, cx| this.cancel_compare(cx))),
+                ),
+        )
     }
 
     fn render_viewing_banner(&self, cx: &mut Context<Self>) -> Option<impl IntoElement + use<>> {
@@ -1355,6 +1402,8 @@ impl Traffic {
             }
             Action::Close if self.shortcuts_open => self.set_shortcuts(false, cx),
             Action::Close if self.close_copy_menu(cx) => {}
+            Action::Close if self.compare_pick.is_some() => self.cancel_compare(cx),
+            Action::Close if self.screen == Screen::Compare => self.set_screen(Screen::Traffic, cx),
             Action::Close => return false,
             Action::Shortcuts => self.set_shortcuts(!self.shortcuts_open, cx),
             Action::Filter => {
@@ -1452,8 +1501,10 @@ impl Traffic {
                     let id = row.id;
                     let sender = self.sender(&row);
                     render_row(row, sender, &columns, selected == Some(id)).on_click(cx.listener(
-                        move |this, _: &ClickEvent, _, cx| {
-                            this.select(id, cx);
+                        move |this, event: &ClickEvent, _, cx| {
+                            if !this.compare_on_click(id, event.modifiers().secondary(), cx) {
+                                this.select(id, cx);
+                            }
                         },
                     ))
                 }
@@ -2154,7 +2205,8 @@ impl Traffic {
         let current = self.screen;
         let waiting = self.paused_count();
         let item = |id: &'static str, label: String, name: &'static str, screen: Screen| {
-            let on = current == screen;
+            // Compare is a part of Traffic.
+            let on = current == screen || (screen == Screen::Traffic && current == Screen::Compare);
             let ink = if on { c.on_tonal } else { c.muted };
             div()
                 .id(id)
@@ -2429,6 +2481,9 @@ impl Render for Traffic {
             (self.screen == Screen::Paused).then(|| self.render_paused(cx).into_any_element());
         let compose =
             (self.screen == Screen::Compose).then(|| self.render_compose(cx).into_any_element());
+        let compare =
+            (self.screen == Screen::Compare).then(|| self.render_compare(cx).into_any_element());
+        let picking = self.render_compare_pick(cx);
         let settings = (self.screen == Screen::Settings)
             .then(|| self.render_settings(window, cx).into_any_element());
         let content_bounds = Rc::clone(&self.content);
@@ -2510,32 +2565,39 @@ impl Render for Traffic {
                     .when_some(rules, |d, rules| d.child(rules))
                     .when_some(paused, |d, paused| d.child(paused))
                     .when_some(compose, |d, compose| d.child(compose))
+                    .when_some(compare, |d, compare| d.child(compare))
                     .when_some(sessions, |d, sessions| d.child(sessions))
                     .when_some(settings, |d, settings| d.child(settings))
                     .when(self.screen == Screen::Traffic, |d| {
-                        d.child(self.render_toolbar(cx)).children(banner).child(
-                            div()
-                                .flex_1()
-                                .min_h_0()
-                                .relative()
-                                .flex()
-                                .flex_row()
-                                .child(
-                                    canvas(move |b, _, _| content_bounds.set(b), |_, _, _, _| {})
+                        d.child(self.render_toolbar(cx))
+                            .children(banner)
+                            .children(picking)
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .min_h_0()
+                                    .relative()
+                                    .flex()
+                                    .flex_row()
+                                    .child(
+                                        canvas(
+                                            move |b, _, _| content_bounds.set(b),
+                                            |_, _, _, _| {},
+                                        )
                                         .absolute()
                                         .size_full(),
-                                )
-                                .when(self.layout.sidebar_shown, |d| {
-                                    d.child(self.render_sidebar(cx)).child(self.splitter(
-                                        "split-sidebar",
-                                        Drag::Sidebar,
-                                        true,
-                                        cx,
-                                    ))
-                                })
-                                .child(center)
-                                .children(drop_zones),
-                        )
+                                    )
+                                    .when(self.layout.sidebar_shown, |d| {
+                                        d.child(self.render_sidebar(cx)).child(self.splitter(
+                                            "split-sidebar",
+                                            Drag::Sidebar,
+                                            true,
+                                            cx,
+                                        ))
+                                    })
+                                    .child(center)
+                                    .children(drop_zones),
+                            )
                     })
                     .child(self.render_footer(cx)),
             )

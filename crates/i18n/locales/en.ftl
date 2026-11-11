@@ -29,22 +29,50 @@ t218e02a6 = Operation
 ta6478e7c = Size
 tdfe4e404 = Time
 t61e9eac0 = Number
+t9d6abb2a = A body was not kept, so the two cannot be compared.
+tcc37e7ea =
+    { $n ->
+        [one] … { $count } line the same
+       *[other] … { $count } lines the same
+    }
+t9f32d942 = Nothing to compare.
+t7569633e = URL
+t4a57ebd5 = Protocol
+td155d06d = Type
+td1a4a19d = Sizes
+t428a1095 = Body
+t334f5989 = Headers
+t9e89e783 = Query
+t82454152 = Request
+t55a982fe = Response
+tb43ef094 = Neither has headers kept.
+t7c44fa89 = Trailers
+t4d8203e0 = Neither URL has a query.
+ta8565d31 = Comparing…
+tfa4c2902 = No body
+t1d894c39 = { $kind }, its first { $size } compared
+tf2c47725 = Neither has a body.
+t85152e01 = The bodies are the same.
+tf57a3157 =
+    { $n ->
+        [one] { $count } line differs.
+       *[other] { $count } lines differ.
+    }
+td57a0a54 = Compare
+t71ce2de9 = #{ $a } beside #{ $b }: what only #{ $a } has is red, what only #{ $b } has is green.
+te519d36e = Swap
+t644042d2 = Back to Traffic
 tacdcf5cb = "{ $method }" is not a method
 t1f9e5368 = its request body was not kept whole, so it cannot be sent again
 t4df37bea = name: value, one a line
-tfa4c2902 = No body
 t550b0a98 = No flow is chosen
 t296762f8 = This flow: { $e }
 t3220a10a = The body is not a { $message }: { $e }
-t82454152 = Request
-t334f5989 = Headers
-t428a1095 = Body
 t83b6cd6e = Protobuf { $message }, written as JSON: it is sent as Protobuf.
 te946e7bf = Sending…
 tf28e14cf = Send
 t8b242db1 = New
 tf43ea06c = … { $count } more bytes: the flow in Traffic has them all.
-t55a982fe = Response
 taa3cc3ff = Body · { $message }
 t18049f93 = Compose
 t7a9cf113 = A request of your own, or one sent again. It goes through tracewing, so rules apply and it shows in Traffic too.
@@ -92,7 +120,6 @@ t51c96267 = Reading the request…
 tba9e5628 = The request's body was not kept, so its query cannot be shown.
 t38c4d30b = An operation without a name
 t53045460 = { $n } of { $count }: { $name }
-t9e89e783 = Query
 tf23e3c2a = A persisted query: the server keeps its text, and the request sends only its hash.
 t7996f062 = Variables
 t58e25863 = Cut
@@ -132,6 +159,8 @@ tf5910557 = Send again
 tf837e542 = Edit and send
 t8dc21305 = Copied
 t866d1e3e = Copy as cURL
+t59253578 = Click another flow…
+t58dfe040 = Compare with…
 t9c1ad448 = Copy as…
 t1e92fb27 = This picture cannot be drawn. Save the body to look at it.
 tc40f2321 = Opening…
@@ -244,7 +273,6 @@ tca77bbdb = Apply
 t5ee4034d = Applies from the next request. Latency is added to each round trip; the speed is a link that every slowed flow shares; a lost piece waits to be sent again, as TCP does. Hosts left alone are not slowed.
 t891b076d = Header line { $line } has no ":"
 te3247b96 = Header line { $line } has no name
-t7569633e = URL
 td6aec821 =
     { $n ->
         [one] { $n } bytes that are not text: they go on as they came.
@@ -589,6 +617,7 @@ t23b1814b = A page up or down
 tf4a9c097 = Filter
 t6e21519a = Pause or resume recording
 tf2a55d1f = Clear the list
+te42cd067 = Compare the flow clicked with the chosen one
 te0a729de = The chosen flow
 tb3970784 = Its request
 t221fc168 = Its response
@@ -619,6 +648,7 @@ t024ec871 = Blocking HTTP/3: { $e }
 t00d0cf30 = host:, status:4xx, or text in bodies
 t19f89214 = A name, as iPhone test
 te3c971c9 = The search index: { $e }
+tac1ec1d2 = Click the flow to compare #{ $id } with.
 t73446a1d = An earlier session: { $name }
 td8659d5b = Read-only. Search covers more as its index is finished. Recording goes on.
 te2f35d9e = Read-only. Recording goes on.

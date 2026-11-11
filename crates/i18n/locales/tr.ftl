@@ -61,6 +61,89 @@ tdfe4e404 = Süre
 # Number
 t61e9eac0 = Numara
 
+# A body was not kept, so the two cannot be compared.
+t9d6abb2a = Bir gövde saklanmadığı için ikisi karşılaştırılamıyor.
+
+# … {count} line the same | … {count} lines the same
+tcc37e7ea =
+    { $n ->
+        [one] … { $count } aynı satır
+       *[other] … { $count } aynı satır
+    }
+
+# Nothing to compare.
+t9f32d942 = Karşılaştırılacak bir şey yok.
+
+# URL
+t7569633e = URL
+
+# Protocol
+t4a57ebd5 = Protokol
+
+# Type
+td155d06d = Tür
+
+# Sizes
+td1a4a19d = Boyutlar
+
+# Body
+t428a1095 = Gövde
+
+# Headers
+t334f5989 = Başlıklar
+
+# Query
+t9e89e783 = Sorgu
+
+# Request
+t82454152 = İstek
+
+# Response
+t55a982fe = Yanıt
+
+# Neither has headers kept.
+tb43ef094 = İkisinde de saklanan başlık yok.
+
+# Trailers
+t7c44fa89 = Trailer'lar
+
+# Neither URL has a query.
+t4d8203e0 = İki URL'de de sorgu yok.
+
+# Comparing…
+ta8565d31 = Karşılaştırılıyor…
+
+# No body
+tfa4c2902 = Gövde yok
+
+# {kind}, its first {size} compared
+t1d894c39 = { $kind }, ilk { $size } karşılaştırıldı
+
+# Neither has a body.
+tf2c47725 = İkisinde de gövde yok.
+
+# The bodies are the same.
+t85152e01 = Gövdeler aynı.
+
+# {count} line differs. | {count} lines differ.
+tf57a3157 =
+    { $n ->
+        [one] { $count } satır farklı.
+       *[other] { $count } satır farklı.
+    }
+
+# Compare
+td57a0a54 = Karşılaştır
+
+# #{a} beside #{b}: what only #{a} has is red, what only #{b} has is green.
+t71ce2de9 = #{ $a } ile #{ $b } yan yana: yalnızca #{ $a }'da olan kırmızı, yalnızca #{ $b }'de olan yeşil.
+
+# Swap
+te519d36e = Yer değiştir
+
+# Back to Traffic
+t644042d2 = Traffic'e dön
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" bir metot değil
 
@@ -70,9 +153,6 @@ t1f9e5368 = istek gövdesi bütün olarak saklanmadı, bu yüzden yeniden gönde
 # name: value, one a line
 t4df37bea = ad: değer, satır başına bir tane
 
-# No body
-tfa4c2902 = Gövde yok
-
 # No flow is chosen
 t550b0a98 = Seçili akış yok
 
@@ -81,15 +161,6 @@ t296762f8 = Bu akış: { $e }
 
 # The body is not a {message}: {e}
 t3220a10a = Gövde bir { $message } değil: { $e }
-
-# Request
-t82454152 = İstek
-
-# Headers
-t334f5989 = Başlıklar
-
-# Body
-t428a1095 = Gövde
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, JSON olarak yazılır: Protobuf olarak gönderilir.
@@ -105,9 +176,6 @@ t8b242db1 = Yeni
 
 # … {count} more bytes: the flow in Traffic has them all.
 tf43ea06c = … { $count } bayt daha: Trafik'teki akışta hepsi var.
-
-# Response
-t55a982fe = Yanıt
 
 # Body · {message}
 taa3cc3ff = Gövde · { $message }
@@ -226,9 +294,6 @@ t38c4d30b = Adı olmayan bir işlem
 # {n} of {count}: {name}
 t53045460 = { $count } içinden { $n }: { $name }
 
-# Query
-t9e89e783 = Sorgu
-
 # A persisted query: the server keeps its text, and the request sends only its hash.
 tf23e3c2a = Persisted query: metnini sunucu tutar, istek yalnızca hash'ini gönderir.
 
@@ -345,6 +410,12 @@ t8dc21305 = Kopyalandı
 
 # Copy as cURL
 t866d1e3e = cURL olarak kopyala
+
+# Click another flow…
+t59253578 = Başka bir akışa tıklayın…
+
+# Compare with…
+t58dfe040 = Şununla karşılaştır…
 
 # Copy as…
 t9c1ad448 = Şu olarak kopyala…
@@ -649,9 +720,6 @@ t891b076d = Başlık satırı { $line }: ":" yok
 
 # Header line {line} has no name
 te3247b96 = Başlık satırı { $line }: ad yok
-
-# URL
-t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
 td6aec821 =
@@ -1565,6 +1633,9 @@ t6e21519a = Kaydı duraklat ya da sürdür
 # Clear the list
 tf2a55d1f = Listeyi temizle
 
+# Compare the flow clicked with the chosen one
+te42cd067 = Tıklanan akışı seçili olanla karşılaştır
+
 # The chosen flow
 te0a729de = Seçili akış
 
@@ -1654,6 +1725,9 @@ t19f89214 = Bir ad, örneğin iPhone test
 
 # The search index: {e}
 te3c971c9 = Arama dizini: { $e }
+
+# Click the flow to compare #{id} with.
+tac1ec1d2 = #{ $id } ile karşılaştırılacak akışa tıklayın.
 
 # An earlier session: {name}
 t73446a1d = Önceki bir oturum: { $name }

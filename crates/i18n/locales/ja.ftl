@@ -52,6 +52,81 @@ tdfe4e404 = 時間
 # Number
 t61e9eac0 = 番号
 
+# A body was not kept, so the two cannot be compared.
+t9d6abb2a = ボディが保存されていないため、比較できません。
+
+# … {count} line the same | … {count} lines the same
+tcc37e7ea = … 同じ行 { $count } 行
+
+# Nothing to compare.
+t9f32d942 = 比較するものがありません。
+
+# URL
+t7569633e = URL
+
+# Protocol
+t4a57ebd5 = プロトコル
+
+# Type
+td155d06d = タイプ
+
+# Sizes
+td1a4a19d = サイズ
+
+# Body
+t428a1095 = ボディ
+
+# Headers
+t334f5989 = ヘッダー
+
+# Query
+t9e89e783 = クエリ
+
+# Request
+t82454152 = リクエスト
+
+# Response
+t55a982fe = レスポンス
+
+# Neither has headers kept.
+tb43ef094 = どちらもヘッダーが保存されていません。
+
+# Trailers
+t7c44fa89 = トレーラー
+
+# Neither URL has a query.
+t4d8203e0 = どちらの URL にもクエリがありません。
+
+# Comparing…
+ta8565d31 = 比較中…
+
+# No body
+tfa4c2902 = ボディなし
+
+# {kind}, its first {size} compared
+t1d894c39 = { $kind }、先頭 { $size } を比較
+
+# Neither has a body.
+tf2c47725 = どちらにもボディがありません。
+
+# The bodies are the same.
+t85152e01 = ボディは同じです。
+
+# {count} line differs. | {count} lines differ.
+tf57a3157 = { $count } 行が異なります。
+
+# Compare
+td57a0a54 = 比較
+
+# #{a} beside #{b}: what only #{a} has is red, what only #{b} has is green.
+t71ce2de9 = #{ $a } と #{ $b } を並べて表示：#{ $a } だけにあるものは赤、#{ $b } だけにあるものは緑。
+
+# Swap
+te519d36e = 入れ替え
+
+# Back to Traffic
+t644042d2 = Traffic に戻る
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" はメソッドではありません
 
@@ -61,9 +136,6 @@ t1f9e5368 = リクエストボディが完全には保持されていないた�
 # name: value, one a line
 t4df37bea = 名前: 値（1 行に 1 つ）
 
-# No body
-tfa4c2902 = ボディなし
-
 # No flow is chosen
 t550b0a98 = フローが選択されていません
 
@@ -72,15 +144,6 @@ t296762f8 = このフロー: { $e }
 
 # The body is not a {message}: {e}
 t3220a10a = 本文が { $message } ではありません: { $e }
-
-# Request
-t82454152 = リクエスト
-
-# Headers
-t334f5989 = ヘッダー
-
-# Body
-t428a1095 = ボディ
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message } を JSON で書きます。送信時は Protobuf になります。
@@ -96,9 +159,6 @@ t8b242db1 = 新規
 
 # … {count} more bytes: the flow in Traffic has them all.
 tf43ea06c = … 残り { $count } バイト: トラフィックのフローにすべて含まれています。
-
-# Response
-t55a982fe = レスポンス
 
 # Body · {message}
 taa3cc3ff = 本文 · { $message }
@@ -213,9 +273,6 @@ t38c4d30b = 名前のないオペレーション
 
 # {n} of {count}: {name}
 t53045460 = { $count } 件中 { $n }: { $name }
-
-# Query
-t9e89e783 = クエリ
 
 # A persisted query: the server keeps its text, and the request sends only its hash.
 tf23e3c2a = Persisted Query です。テキストはサーバーが保持し、リクエストはハッシュだけを送ります。
@@ -333,6 +390,12 @@ t8dc21305 = コピーしました
 
 # Copy as cURL
 t866d1e3e = cURL としてコピー
+
+# Click another flow…
+t59253578 = 別のフローをクリック…
+
+# Compare with…
+t58dfe040 = 比較…
 
 # Copy as…
 t9c1ad448 = 形式を指定してコピー…
@@ -633,9 +696,6 @@ t891b076d = ヘッダーの { $line } 行目に ":" がありません
 
 # Header line {line} has no name
 te3247b96 = ヘッダーの { $line } 行目に名前がありません
-
-# URL
-t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
 td6aec821 =
@@ -1507,6 +1567,9 @@ t6e21519a = 記録を一時停止または再開
 # Clear the list
 tf2a55d1f = リストをクリア
 
+# Compare the flow clicked with the chosen one
+te42cd067 = クリックしたフローを選択中のフローと比較
+
 # The chosen flow
 te0a729de = 選択中のフロー
 
@@ -1596,6 +1659,9 @@ t19f89214 = 名前（例: iPhone テスト）
 
 # The search index: {e}
 te3c971c9 = 検索インデックス: { $e }
+
+# Click the flow to compare #{id} with.
+tac1ec1d2 = #{ $id } と比較するフローをクリックしてください。
 
 # An earlier session: {name}
 t73446a1d = 過去のセッション: { $name }

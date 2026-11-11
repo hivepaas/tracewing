@@ -52,6 +52,81 @@ tdfe4e404 = 시간
 # Number
 t61e9eac0 = 번호
 
+# A body was not kept, so the two cannot be compared.
+t9d6abb2a = 본문이 보관되지 않아 둘을 비교할 수 없습니다.
+
+# … {count} line the same | … {count} lines the same
+tcc37e7ea = … 같은 줄 { $count }개
+
+# Nothing to compare.
+t9f32d942 = 비교할 것이 없습니다.
+
+# URL
+t7569633e = URL
+
+# Protocol
+t4a57ebd5 = 프로토콜
+
+# Type
+td155d06d = 유형
+
+# Sizes
+td1a4a19d = 크기
+
+# Body
+t428a1095 = 본문
+
+# Headers
+t334f5989 = 헤더
+
+# Query
+t9e89e783 = 쿼리
+
+# Request
+t82454152 = 요청
+
+# Response
+t55a982fe = 응답
+
+# Neither has headers kept.
+tb43ef094 = 둘 다 보관된 헤더가 없습니다.
+
+# Trailers
+t7c44fa89 = 트레일러
+
+# Neither URL has a query.
+t4d8203e0 = 두 URL 모두 쿼리가 없습니다.
+
+# Comparing…
+ta8565d31 = 비교 중…
+
+# No body
+tfa4c2902 = 본문 없음
+
+# {kind}, its first {size} compared
+t1d894c39 = { $kind }, 앞의 { $size }만 비교
+
+# Neither has a body.
+tf2c47725 = 둘 다 본문이 없습니다.
+
+# The bodies are the same.
+t85152e01 = 본문이 같습니다.
+
+# {count} line differs. | {count} lines differ.
+tf57a3157 = { $count }줄이 다릅니다.
+
+# Compare
+td57a0a54 = 비교
+
+# #{a} beside #{b}: what only #{a} has is red, what only #{b} has is green.
+t71ce2de9 = #{ $a } 옆에 #{ $b }: #{ $a }에만 있는 것은 빨간색, #{ $b }에만 있는 것은 초록색입니다.
+
+# Swap
+te519d36e = 바꾸기
+
+# Back to Traffic
+t644042d2 = Traffic으로 돌아가기
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }"은(는) 메서드가 아닙니다
 
@@ -61,9 +136,6 @@ t1f9e5368 = 요청 본문이 온전히 보관되지 않아 다시 보낼 수 없
 # name: value, one a line
 t4df37bea = 이름: 값, 한 줄에 하나씩
 
-# No body
-tfa4c2902 = 본문 없음
-
 # No flow is chosen
 t550b0a98 = 선택한 플로우가 없습니다
 
@@ -72,15 +144,6 @@ t296762f8 = 이 플로우: { $e }
 
 # The body is not a {message}: {e}
 t3220a10a = 본문이 { $message }이(가) 아닙니다: { $e }
-
-# Request
-t82454152 = 요청
-
-# Headers
-t334f5989 = 헤더
-
-# Body
-t428a1095 = 본문
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }을(를) JSON으로 씁니다. 보낼 때는 Protobuf로 갑니다.
@@ -96,9 +159,6 @@ t8b242db1 = 새로 만들기
 
 # … {count} more bytes: the flow in Traffic has them all.
 tf43ea06c = … { $count }바이트 더 있음: 트래픽의 플로우에 전부 있습니다.
-
-# Response
-t55a982fe = 응답
 
 # Body · {message}
 taa3cc3ff = 본문 · { $message }
@@ -213,9 +273,6 @@ t38c4d30b = 이름 없는 오퍼레이션
 
 # {n} of {count}: {name}
 t53045460 = { $count }개 중 { $n }: { $name }
-
-# Query
-t9e89e783 = 쿼리
 
 # A persisted query: the server keeps its text, and the request sends only its hash.
 tf23e3c2a = Persisted query: 텍스트는 서버가 가지고 있고, 요청은 해시만 보냅니다.
@@ -333,6 +390,12 @@ t8dc21305 = 복사됨
 
 # Copy as cURL
 t866d1e3e = cURL로 복사
+
+# Click another flow…
+t59253578 = 다른 플로를 클릭…
+
+# Compare with…
+t58dfe040 = 비교 대상 선택…
 
 # Copy as…
 t9c1ad448 = 다른 형식으로 복사…
@@ -633,9 +696,6 @@ t891b076d = 헤더 { $line }번째 줄에 ":"이 없습니다
 
 # Header line {line} has no name
 te3247b96 = 헤더 { $line }번째 줄에 이름이 없습니다
-
-# URL
-t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
 td6aec821 =
@@ -1507,6 +1567,9 @@ t6e21519a = 기록 일시 정지 또는 재개
 # Clear the list
 tf2a55d1f = 목록 지우기
 
+# Compare the flow clicked with the chosen one
+te42cd067 = 클릭한 플로를 선택한 플로와 비교
+
 # The chosen flow
 te0a729de = 선택한 플로우
 
@@ -1596,6 +1659,9 @@ t19f89214 = 이름(예: iPhone 테스트)
 
 # The search index: {e}
 te3c971c9 = 검색 색인: { $e }
+
+# Click the flow to compare #{id} with.
+tac1ec1d2 = #{ $id }와 비교할 플로를 클릭하세요.
 
 # An earlier session: {name}
 t73446a1d = 이전 세션: { $name }

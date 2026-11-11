@@ -52,6 +52,81 @@ tdfe4e404 = 時間
 # Number
 t61e9eac0 = 序號
 
+# A body was not kept, so the two cannot be compared.
+t9d6abb2a = 有一個 body 未保存，因此無法比較兩者。
+
+# … {count} line the same | … {count} lines the same
+tcc37e7ea = … { $count } 行相同
+
+# Nothing to compare.
+t9f32d942 = 沒有可比較的內容。
+
+# URL
+t7569633e = URL
+
+# Protocol
+t4a57ebd5 = 協定
+
+# Type
+td155d06d = 類型
+
+# Sizes
+td1a4a19d = 大小
+
+# Body
+t428a1095 = 本文
+
+# Headers
+t334f5989 = 標頭
+
+# Query
+t9e89e783 = 查詢
+
+# Request
+t82454152 = 請求
+
+# Response
+t55a982fe = 回應
+
+# Neither has headers kept.
+tb43ef094 = 兩者都沒有保存 header。
+
+# Trailers
+t7c44fa89 = Trailer
+
+# Neither URL has a query.
+t4d8203e0 = 兩個 URL 都沒有查詢參數。
+
+# Comparing…
+ta8565d31 = 正在比較…
+
+# No body
+tfa4c2902 = 無本文
+
+# {kind}, its first {size} compared
+t1d894c39 = { $kind }，比較了前 { $size }
+
+# Neither has a body.
+tf2c47725 = 兩者都沒有 body。
+
+# The bodies are the same.
+t85152e01 = 兩個 body 相同。
+
+# {count} line differs. | {count} lines differ.
+tf57a3157 = { $count } 行不同。
+
+# Compare
+td57a0a54 = 比較
+
+# #{a} beside #{b}: what only #{a} has is red, what only #{b} has is green.
+t71ce2de9 = #{ $a } 與 #{ $b } 並排：只有 #{ $a } 有的標紅，只有 #{ $b } 有的標綠。
+
+# Swap
+te519d36e = 交換
+
+# Back to Traffic
+t644042d2 = 返回 Traffic
+
 # "{method}" is not a method
 tacdcf5cb = 「{ $method }」不是有效的方法
 
@@ -61,9 +136,6 @@ t1f9e5368 = 其請求本文未完整保留，因此無法重新傳送
 # name: value, one a line
 t4df37bea = 名稱: 值，每行一個
 
-# No body
-tfa4c2902 = 無本文
-
 # No flow is chosen
 t550b0a98 = 未選取流量紀錄
 
@@ -72,15 +144,6 @@ t296762f8 = 此流量紀錄：{ $e }
 
 # The body is not a {message}: {e}
 t3220a10a = 本文不是 { $message }：{ $e }
-
-# Request
-t82454152 = 請求
-
-# Headers
-t334f5989 = 標頭
-
-# Body
-t428a1095 = 本文
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }，以 JSON 撰寫：傳送時為 Protobuf。
@@ -96,9 +159,6 @@ t8b242db1 = 新增
 
 # … {count} more bytes: the flow in Traffic has them all.
 tf43ea06c = … 還有 { $count } 位元組：「流量」中的該筆流量紀錄包含完整內容。
-
-# Response
-t55a982fe = 回應
 
 # Body · {message}
 taa3cc3ff = 本文 · { $message }
@@ -213,9 +273,6 @@ t38c4d30b = 未命名的操作
 
 # {n} of {count}: {name}
 t53045460 = 第 { $n }/{ $count } 個：{ $name }
-
-# Query
-t9e89e783 = 查詢
 
 # A persisted query: the server keeps its text, and the request sends only its hash.
 tf23e3c2a = 持久化查詢：伺服器保存其文字，請求只傳送其雜湊。
@@ -333,6 +390,12 @@ t8dc21305 = 已複製
 
 # Copy as cURL
 t866d1e3e = 複製為 cURL
+
+# Click another flow…
+t59253578 = 點擊另一個流…
+
+# Compare with…
+t58dfe040 = 與…比較
 
 # Copy as…
 t9c1ad448 = 複製為…
@@ -633,9 +696,6 @@ t891b076d = 標頭第 { $line } 行缺少「:」
 
 # Header line {line} has no name
 te3247b96 = 標頭第 { $line } 行缺少名稱
-
-# URL
-t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
 td6aec821 =
@@ -1507,6 +1567,9 @@ t6e21519a = 暫停或繼續錄製
 # Clear the list
 tf2a55d1f = 清除清單
 
+# Compare the flow clicked with the chosen one
+te42cd067 = 將點擊的流與選取的流比較
+
 # The chosen flow
 te0a729de = 選取的流量紀錄
 
@@ -1596,6 +1659,9 @@ t19f89214 = 名稱，例如：測試用 iPhone
 
 # The search index: {e}
 te3c971c9 = 搜尋索引：{ $e }
+
+# Click the flow to compare #{id} with.
+tac1ec1d2 = 點擊要與 #{ $id } 比較的流。
 
 # An earlier session: {name}
 t73446a1d = 先前的工作階段：{ $name }

@@ -52,6 +52,81 @@ tdfe4e404 = Waktu
 # Number
 t61e9eac0 = Nomor
 
+# A body was not kept, so the two cannot be compared.
+t9d6abb2a = Sebuah body tidak disimpan, jadi keduanya tidak bisa dibandingkan.
+
+# … {count} line the same | … {count} lines the same
+tcc37e7ea = … { $count } baris sama
+
+# Nothing to compare.
+t9f32d942 = Tidak ada yang dibandingkan.
+
+# URL
+t7569633e = URL
+
+# Protocol
+t4a57ebd5 = Protokol
+
+# Type
+td155d06d = Tipe
+
+# Sizes
+td1a4a19d = Ukuran
+
+# Body
+t428a1095 = Body
+
+# Headers
+t334f5989 = Header
+
+# Query
+t9e89e783 = Query
+
+# Request
+t82454152 = Permintaan
+
+# Response
+t55a982fe = Respons
+
+# Neither has headers kept.
+tb43ef094 = Keduanya tidak menyimpan header.
+
+# Trailers
+t7c44fa89 = Trailer
+
+# Neither URL has a query.
+t4d8203e0 = Kedua URL tidak punya query.
+
+# Comparing…
+ta8565d31 = Membandingkan…
+
+# No body
+tfa4c2902 = Tanpa body
+
+# {kind}, its first {size} compared
+t1d894c39 = { $kind }, { $size } pertamanya dibandingkan
+
+# Neither has a body.
+tf2c47725 = Keduanya tidak punya body.
+
+# The bodies are the same.
+t85152e01 = Body-nya sama.
+
+# {count} line differs. | {count} lines differ.
+tf57a3157 = { $count } baris berbeda.
+
+# Compare
+td57a0a54 = Bandingkan
+
+# #{a} beside #{b}: what only #{a} has is red, what only #{b} has is green.
+t71ce2de9 = #{ $a } di samping #{ $b }: yang hanya ada di #{ $a } merah, yang hanya ada di #{ $b } hijau.
+
+# Swap
+te519d36e = Tukar
+
+# Back to Traffic
+t644042d2 = Kembali ke Traffic
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" bukan metode
 
@@ -61,9 +136,6 @@ t1f9e5368 = body permintaannya tidak disimpan utuh, jadi tidak bisa dikirim ulan
 # name: value, one a line
 t4df37bea = nama: nilai, satu per baris
 
-# No body
-tfa4c2902 = Tanpa body
-
 # No flow is chosen
 t550b0a98 = Belum ada flow yang dipilih
 
@@ -72,15 +144,6 @@ t296762f8 = Flow ini: { $e }
 
 # The body is not a {message}: {e}
 t3220a10a = Body bukan { $message }: { $e }
-
-# Request
-t82454152 = Permintaan
-
-# Headers
-t334f5989 = Header
-
-# Body
-t428a1095 = Body
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, ditulis sebagai JSON: dikirim sebagai Protobuf.
@@ -96,9 +159,6 @@ t8b242db1 = Baru
 
 # … {count} more bytes: the flow in Traffic has them all.
 tf43ea06c = … { $count } byte lagi: flow di Lalu Lintas memuat semuanya.
-
-# Response
-t55a982fe = Respons
 
 # Body · {message}
 taa3cc3ff = Body · { $message }
@@ -213,9 +273,6 @@ t38c4d30b = Operasi tanpa nama
 
 # {n} of {count}: {name}
 t53045460 = { $n } dari { $count }: { $name }
-
-# Query
-t9e89e783 = Query
 
 # A persisted query: the server keeps its text, and the request sends only its hash.
 tf23e3c2a = Persisted query: server menyimpan teksnya, dan permintaan hanya mengirim hash-nya.
@@ -333,6 +390,12 @@ t8dc21305 = Disalin
 
 # Copy as cURL
 t866d1e3e = Salin sebagai cURL
+
+# Click another flow…
+t59253578 = Klik flow lain…
+
+# Compare with…
+t58dfe040 = Bandingkan dengan…
 
 # Copy as…
 t9c1ad448 = Salin sebagai…
@@ -633,9 +696,6 @@ t891b076d = Baris header { $line } tidak punya ":"
 
 # Header line {line} has no name
 te3247b96 = Baris header { $line } tidak punya nama
-
-# URL
-t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
 td6aec821 =
@@ -1507,6 +1567,9 @@ t6e21519a = Jeda atau lanjutkan perekaman
 # Clear the list
 tf2a55d1f = Kosongkan daftar
 
+# Compare the flow clicked with the chosen one
+te42cd067 = Bandingkan flow yang diklik dengan yang dipilih
+
 # The chosen flow
 te0a729de = Flow yang dipilih
 
@@ -1596,6 +1659,9 @@ t19f89214 = Nama, misalnya Tes iPhone
 
 # The search index: {e}
 te3c971c9 = Indeks pencarian: { $e }
+
+# Click the flow to compare #{id} with.
+tac1ec1d2 = Klik flow untuk dibandingkan dengan #{ $id }.
 
 # An earlier session: {name}
 t73446a1d = Sesi sebelumnya: { $name }

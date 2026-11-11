@@ -926,6 +926,7 @@ impl Traffic {
                         div()
                             .flex()
                             .flex_row()
+                            .flex_wrap()
                             .gap(px(6.))
                             .child(
                                 small("send-again", tr!("Send again")).on_click(
@@ -947,7 +948,18 @@ impl Traffic {
                                 )
                                 .on_click(cx.listener(|view, _, _, cx| view.copy_as_curl(cx))),
                             )
-                            .child(self.render_copy_as(cx)),
+                            .child(self.render_copy_as(cx))
+                            .child(
+                                small(
+                                    "compare-with",
+                                    if self.compare_pick == Some(detail.id) {
+                                        tr!("Click another flow…")
+                                    } else {
+                                        tr!("Compare with…")
+                                    },
+                                )
+                                .on_click(cx.listener(|view, _, _, cx| view.start_compare(cx))),
+                            ),
                     )
                 },
             )

@@ -67,6 +67,93 @@ tdfe4e404 = Время
 # Number
 t61e9eac0 = Номер
 
+# A body was not kept, so the two cannot be compared.
+t9d6abb2a = Одно из тел не сохранено, поэтому сравнить их нельзя.
+
+# … {count} line the same | … {count} lines the same
+tcc37e7ea =
+    { $n ->
+        [one] … { $count } одинаковая строка
+        [few] … { $count } одинаковые строки
+        [many] … { $count } одинаковых строк
+       *[other] … { $count } одинаковой строки
+    }
+
+# Nothing to compare.
+t9f32d942 = Нечего сравнивать.
+
+# URL
+t7569633e = URL
+
+# Protocol
+t4a57ebd5 = Протокол
+
+# Type
+td155d06d = Тип
+
+# Sizes
+td1a4a19d = Размеры
+
+# Body
+t428a1095 = Тело
+
+# Headers
+t334f5989 = Заголовки
+
+# Query
+t9e89e783 = Запрос
+
+# Request
+t82454152 = Запрос
+
+# Response
+t55a982fe = Ответ
+
+# Neither has headers kept.
+tb43ef094 = Ни у одного нет сохранённых заголовков.
+
+# Trailers
+t7c44fa89 = Трейлеры
+
+# Neither URL has a query.
+t4d8203e0 = Ни в одном URL нет query.
+
+# Comparing…
+ta8565d31 = Сравнение…
+
+# No body
+tfa4c2902 = Без тела
+
+# {kind}, its first {size} compared
+t1d894c39 = { $kind }, сравнены первые { $size }
+
+# Neither has a body.
+tf2c47725 = Ни у одного нет тела.
+
+# The bodies are the same.
+t85152e01 = Тела одинаковые.
+
+# {count} line differs. | {count} lines differ.
+tf57a3157 =
+    { $n ->
+        [one] Отличается { $count } строка.
+        [few] Отличаются { $count } строки.
+        [many] Отличаются { $count } строк.
+       *[other] Отличается { $count } строки.
+    }
+
+# Compare
+td57a0a54 = Сравнение
+
+# #{a} beside #{b}: what only #{a} has is red, what only #{b} has is green.
+t71ce2de9 = #{ $a } рядом с #{ $b }: то, что есть только в #{ $a }, — красным, то, что есть только в #{ $b }, — зелёным.
+
+# Swap
+te519d36e = Поменять местами
+
+# Back to Traffic
+t644042d2 = Назад в Traffic
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" — не метод
 
@@ -76,9 +163,6 @@ t1f9e5368 = тело запроса сохранено не целиком, по
 # name: value, one a line
 t4df37bea = имя: значение, по одному на строку
 
-# No body
-tfa4c2902 = Без тела
-
 # No flow is chosen
 t550b0a98 = Поток не выбран
 
@@ -87,15 +171,6 @@ t296762f8 = Этот поток: { $e }
 
 # The body is not a {message}: {e}
 t3220a10a = Тело не является { $message }: { $e }
-
-# Request
-t82454152 = Запрос
-
-# Headers
-t334f5989 = Заголовки
-
-# Body
-t428a1095 = Тело
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, записанный как JSON: отправляется как Protobuf.
@@ -111,9 +186,6 @@ t8b242db1 = Новый
 
 # … {count} more bytes: the flow in Traffic has them all.
 tf43ea06c = … ещё { $count } байт: в потоке в разделе Трафик есть всё.
-
-# Response
-t55a982fe = Ответ
 
 # Body · {message}
 taa3cc3ff = Тело · { $message }
@@ -238,9 +310,6 @@ t38c4d30b = Операция без имени
 # {n} of {count}: {name}
 t53045460 = { $n } из { $count }: { $name }
 
-# Query
-t9e89e783 = Запрос
-
 # A persisted query: the server keeps its text, and the request sends only its hash.
 tf23e3c2a = Persisted query: текст хранит сервер, а запрос отправляет только его хеш.
 
@@ -357,6 +426,12 @@ t8dc21305 = Скопировано
 
 # Copy as cURL
 t866d1e3e = Копировать как cURL
+
+# Click another flow…
+t59253578 = Нажмите на другой поток…
+
+# Compare with…
+t58dfe040 = Сравнить с…
 
 # Copy as…
 t9c1ad448 = Копировать как…
@@ -669,9 +744,6 @@ t891b076d = В строке заголовка { $line } нет ":"
 
 # Header line {line} has no name
 te3247b96 = В строке заголовка { $line } нет имени
-
-# URL
-t7569633e = URL
 
 # {n} bytes that are not text: they go on as they came. | {n} bytes that are not text: they go on as they came.
 td6aec821 =
@@ -1615,6 +1687,9 @@ t6e21519a = Приостановить или продолжить запись
 # Clear the list
 tf2a55d1f = Очистить список
 
+# Compare the flow clicked with the chosen one
+te42cd067 = Сравнить нажатый поток с выбранным
+
 # The chosen flow
 te0a729de = Выбранный поток
 
@@ -1704,6 +1779,9 @@ t19f89214 = Имя, например iPhone тест
 
 # The search index: {e}
 te3c971c9 = Поисковый индекс: { $e }
+
+# Click the flow to compare #{id} with.
+tac1ec1d2 = Нажмите на поток, чтобы сравнить его с #{ $id }.
 
 # An earlier session: {name}
 t73446a1d = Прошлая сессия: { $name }
