@@ -1935,6 +1935,60 @@ async fn a_plain_websocket_asked_for_by_its_url_goes_through() {
     clean_up(conn, dir);
 }
 
+/// What a client says to the proxy alone goes no further: the server never
+/// sees the password for the proxy. The flow still shows what was sent.
+#[tokio::test(flavor = "multi_thread")]
+async fn what_is_for_the_proxy_alone_goes_no_further() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let h = Harness::start("hop-by-hop").await;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(tracewing_dev::playground::serve(listener));
+    let proxy = h.proxy_url.trim_start_matches("http://");
+    let mut tcp = tokio::net::TcpStream::connect(proxy).await.unwrap();
+    let ask = format!(
+        "GET http://localhost:{port}/echo HTTP/1.1\r\nHost: localhost:{port}\r\n\
+         Proxy-Connection: Keep-Alive\r\nProxy-Authorization: Basic dXNlcjpwYXNz\r\n\
+         Connection: close, X-Hop\r\nX-Hop: 1\r\nKeep-Alive: timeout=5\r\n\
+         TE: trailers\r\nX-End: 1\r\n\r\n"
+    );
+    tcp.write_all(ask.as_bytes()).await.unwrap();
+    let mut reply = Vec::new();
+    tcp.read_to_end(&mut reply).await.unwrap();
+    let reply = String::from_utf8_lossy(&reply);
+    let body = reply.split_once("\r\n\r\n").expect("an answer").1;
+    let echo: serde_json::Value = serde_json::from_str(body).unwrap();
+    let seen: Vec<&str> = echo["headers"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
+    for gone in [
+        "proxy-connection",
+        "proxy-authorization",
+        "connection",
+        "x-hop",
+        "keep-alive",
+    ] {
+        assert!(!seen.contains(&gone), "{gone} reached the server: {seen:?}");
+    }
+    assert_eq!(echo["headers"]["x-end"], "1");
+    assert_eq!(echo["headers"]["te"], "trailers");
+
+    let (_, conn, dir) = h.finish(1).await;
+    let mut reader = BodyReader::new(&dir.join("session"));
+    let (request, _) = session::stored_headers(&conn, &mut reader, 1)
+        .unwrap()
+        .expect("kept");
+    drop(reader);
+    assert!(
+        request.iter().any(|(n, _)| n == "proxy-connection"),
+        "the flow shows what the client sent: {request:?}"
+    );
+    clean_up(conn, dir);
+}
+
 /// Dropping the oldest flows takes their messages along.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_full_session_drops_messages_with_their_flows() {

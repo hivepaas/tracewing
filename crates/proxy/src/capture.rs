@@ -718,6 +718,9 @@ impl HttpHandler for FlowHandler {
                 None => req.headers_mut().remove(name),
             };
         }
+        // After the flow has them, so that it shows what the client sent.
+        let upgrade = is_websocket(&req);
+        drop_hop_by_hop(req.headers_mut(), upgrade);
         match plan.end {
             Some(End::Block(status)) => {
                 let res = Response::builder()
@@ -929,6 +932,47 @@ impl WsKey {
 
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// What a client says to the proxy alone, which a proxy must not pass on
+/// (RFC 9110, 7.6.1): `Connection` and the headers it names, and the
+/// `Proxy-` and `Keep-Alive` ones. `Proxy-Authorization` would hand the
+/// server the password for the proxy. `TE` goes on only as `trailers`, which
+/// gRPC needs. A WebSocket's upgrade keeps `Connection` and `Upgrade`.
+fn drop_hop_by_hop(headers: &mut http::HeaderMap, upgrade: bool) {
+    let named: Vec<HeaderName> = headers
+        .get_all(header::CONNECTION)
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .flat_map(|v| v.split(','))
+        .filter_map(|name| HeaderName::from_bytes(name.trim().as_bytes()).ok())
+        .collect();
+    for name in named {
+        if !(upgrade && name == header::UPGRADE) {
+            headers.remove(name);
+        }
+    }
+    if !upgrade {
+        headers.remove(header::CONNECTION);
+        headers.remove(header::UPGRADE);
+    }
+    for name in [
+        HeaderName::from_static("proxy-connection"),
+        header::PROXY_AUTHORIZATION,
+        HeaderName::from_static("keep-alive"),
+    ] {
+        headers.remove(name);
+    }
+    let trailers = headers.get_all(header::TE).iter().any(|v| {
+        v.to_str().is_ok_and(|v| {
+            v.split(',')
+                .any(|t| t.trim().eq_ignore_ascii_case("trailers"))
+        })
+    });
+    headers.remove(header::TE);
+    if trailers {
+        headers.insert(header::TE, HeaderValue::from_static("trailers"));
+    }
 }
 
 fn is_websocket<T>(req: &Request<T>) -> bool {
@@ -1497,6 +1541,63 @@ fn unix_micros() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn header_map(pairs: &[(&str, &str)]) -> http::HeaderMap {
+        let mut map = http::HeaderMap::new();
+        for (name, value) in pairs {
+            map.append(
+                HeaderName::from_bytes(name.as_bytes()).unwrap(),
+                HeaderValue::from_str(value).unwrap(),
+            );
+        }
+        map
+    }
+
+    fn names(map: &http::HeaderMap) -> Vec<String> {
+        let mut names: Vec<String> = map
+            .iter()
+            .map(|(n, v)| format!("{n}: {}", v.to_str().unwrap()))
+            .collect();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn what_is_for_the_proxy_alone_goes_no_further() {
+        let mut map = header_map(&[
+            ("connection", "keep-alive, X-Hop"),
+            ("x-hop", "1"),
+            ("proxy-connection", "Keep-Alive"),
+            ("proxy-authorization", "Basic dXNlcjpwYXNz"),
+            ("keep-alive", "timeout=5"),
+            ("te", "gzip, trailers"),
+            ("upgrade", "h2c"),
+            ("x-end", "1"),
+        ]);
+        drop_hop_by_hop(&mut map, false);
+        assert_eq!(names(&map), ["te: trailers", "x-end: 1"]);
+
+        let mut map = header_map(&[("te", "gzip")]);
+        drop_hop_by_hop(&mut map, false);
+        assert!(map.is_empty());
+
+        // A WebSocket's upgrade keeps what makes it one.
+        let mut map = header_map(&[
+            ("connection", "Upgrade"),
+            ("upgrade", "websocket"),
+            ("proxy-connection", "Keep-Alive"),
+            ("sec-websocket-key", "abc"),
+        ]);
+        drop_hop_by_hop(&mut map, true);
+        assert_eq!(
+            names(&map),
+            [
+                "connection: Upgrade",
+                "sec-websocket-key: abc",
+                "upgrade: websocket"
+            ]
+        );
+    }
 
     #[test]
     fn the_check_keeps_each_browsers_latest_visit() {
