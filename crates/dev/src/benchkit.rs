@@ -144,6 +144,32 @@ pub fn order_protobuf() -> Vec<u8> {
     out
 }
 
+/// The `.proto` the order is made by: with it, its fields have names.
+pub const SHOP_PROTO: &str = r#"syntax = "proto3";
+package shop;
+
+message Item {
+  string sku = 1;
+  uint32 qty = 2;
+}
+
+message Order {
+  uint64 id = 1;
+  string customer = 2;
+  repeated Item items = 3;
+  double total = 4;
+  bytes signature = 5;
+}
+
+message GetOrder {
+  uint64 id = 1;
+}
+
+service Orders {
+  rpc Get(GetOrder) returns (Order);
+}
+"#;
+
 /// The order as a gRPC-Web answer: its frame, then a frame of trailers.
 pub fn order_grpc_web() -> Vec<u8> {
     let mut out = Vec::new();

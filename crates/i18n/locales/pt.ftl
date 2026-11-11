@@ -699,6 +699,65 @@ t745634c6 =
 # Send all as they came
 tdce25640 = Enviar todos como chegaram
 
+# The list was not saved: {e}
+tfceba380 = A lista não foi salva: { $e }
+
+# Add
+t9dc3aa14 = Adicionar
+
+# Reading…
+t6aad8485 = Lendo…
+
+# {count} file | {count} files
+tde674bd8 =
+    { $n ->
+        [one] { $count } arquivo
+        [many] { $count } arquivos
+       *[other] { $count } arquivos
+    }
+
+# {count} message | {count} messages
+t8a1cd2f6 =
+    { $n ->
+        [one] { $count } mensagem
+        [many] { $count } mensagens
+       *[other] { $count } mensagens
+    }
+
+# {count} service | {count} services
+t51f71902 =
+    { $n ->
+        [one] { $count } serviço
+        [many] { $count } serviços
+       *[other] { $count } serviços
+    }
+
+# and {count} more problem | and {count} more problems
+t591ce5ea =
+    { $n ->
+        [one] e mais { $count } problema
+        [many] e mais { $count } problemas
+       *[other] e mais { $count } problemas
+    }
+
+# Remove
+t21a5901d = Remover
+
+# Protobuf schemas
+ta4401d1a = Esquemas Protobuf
+
+# Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+te5f4f07c = Pastas de arquivos .proto, ou descriptor sets feitos com protoc -o, para mostrar corpos Protobuf e gRPC com os nomes dos campos. Uma chamada gRPC encontra suas mensagens pelo caminho; os demais Protobuf, pelo messageType que o tipo indica. São lidos de novo quando mudam.
+
+# Add a folder…
+tb5930e43 = Adicionar uma pasta…
+
+# Add files…
+ted08dbe5 = Adicionar arquivos…
+
+# Read again
+t2f0dcc5d = Ler de novo
+
 # Block
 tbd074002 = Bloquear
 
@@ -858,9 +917,6 @@ tca566a57 = Ela espera em Pausados até você enviá-la, alterada ou não.
 
 # Save
 t4d2d5d68 = Salvar
-
-# Add
-t9dc3aa14 = Adicionar
 
 # Cancel
 t35afca3b = Cancelar
@@ -1169,9 +1225,6 @@ tb50cbd40 = Instalar
 
 # Also for command-line tools
 t0db8faea = Também para ferramentas de linha de comando
-
-# Remove
-t21a5901d = Remover
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Remover o certificado de todos os repositórios deste computador? HTTPS pelo tracewing vai falhar até ele ser instalado de novo. O tracewing o guarda para instalar de novo depois.

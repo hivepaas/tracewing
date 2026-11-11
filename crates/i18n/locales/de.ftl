@@ -697,6 +697,61 @@ t745634c6 =
 # Send all as they came
 tdce25640 = Alle unverändert senden
 
+# The list was not saved: {e}
+tfceba380 = Die Liste wurde nicht gespeichert: { $e }
+
+# Add
+t9dc3aa14 = Hinzufügen
+
+# Reading…
+t6aad8485 = Wird gelesen…
+
+# {count} file | {count} files
+tde674bd8 =
+    { $n ->
+        [one] { $count } Datei
+       *[other] { $count } Dateien
+    }
+
+# {count} message | {count} messages
+t8a1cd2f6 =
+    { $n ->
+        [one] { $count } Nachricht
+       *[other] { $count } Nachrichten
+    }
+
+# {count} service | {count} services
+t51f71902 =
+    { $n ->
+        [one] { $count } Dienst
+       *[other] { $count } Dienste
+    }
+
+# and {count} more problem | and {count} more problems
+t591ce5ea =
+    { $n ->
+        [one] und { $count } weiteres Problem
+       *[other] und { $count } weitere Probleme
+    }
+
+# Remove
+t21a5901d = Entfernen
+
+# Protobuf schemas
+ta4401d1a = Protobuf-Schemas
+
+# Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+te5f4f07c = Ordner mit .proto-Dateien oder mit protoc -o erstellte Descriptor-Sets, um Protobuf- und gRPC-Bodys mit Feldnamen zu zeigen. Ein gRPC-Aufruf findet seine Nachrichten über seinen Pfad, anderes Protobuf über den messageType in seinem Typ. Sie werden neu gelesen, wenn sie sich ändern.
+
+# Add a folder…
+tb5930e43 = Ordner hinzufügen…
+
+# Add files…
+ted08dbe5 = Dateien hinzufügen…
+
+# Read again
+t2f0dcc5d = Neu lesen
+
 # Block
 tbd074002 = Blockieren
 
@@ -856,9 +911,6 @@ tca566a57 = Sie wartet unter Angehalten, bis Sie sie weitersenden, geändert ode
 
 # Save
 t4d2d5d68 = Speichern
-
-# Add
-t9dc3aa14 = Hinzufügen
 
 # Cancel
 t35afca3b = Abbrechen
@@ -1166,9 +1218,6 @@ tb50cbd40 = Installieren
 
 # Also for command-line tools
 t0db8faea = Auch für Kommandozeilen-Tools
-
-# Remove
-t21a5901d = Entfernen
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Das Zertifikat aus allen Speichern dieses Computers entfernen? HTTPS über tracewing schlägt dann fehl, bis es wieder installiert ist. tracewing behält es, um es später wieder zu installieren.

@@ -8,6 +8,7 @@
 //! - Bytes with a length are text if they are printable UTF-8, else a message
 //!   if they read as one, else bytes.
 
+use prost_reflect::MessageDescriptor;
 use serde_json::Value;
 use std::io::Read;
 
@@ -25,8 +26,18 @@ enum Field {
     Message(Fields),
 }
 
-/// One message as JSON, or `None` if it cannot be read as one.
-pub fn message_to_json(data: &[u8]) -> Option<String> {
+/// One message as JSON, or `None` if it cannot be read as one. With a
+/// schema, its fields are named; if the bytes do not fit it, they are read
+/// without it.
+pub fn message_to_json(data: &[u8], schema: Option<&MessageDescriptor>) -> Option<String> {
+    if let Some(json) = schema.and_then(|schema| crate::protojson::to_json(data, schema)) {
+        return Some(json);
+    }
+    numbered_json(data)
+}
+
+/// A message with its fields named by number.
+pub(crate) fn numbered_json(data: &[u8]) -> Option<String> {
     let fields = message(data, 0)?;
     let mut out = String::new();
     write_fields(&fields, &mut out);
@@ -37,7 +48,7 @@ pub fn message_to_json(data: &[u8]) -> Option<String> {
 /// in the body, as gRPC-Web does, are an object under `$trailers`. `None` if
 /// not even the first frame can be read. With `text`, the frames are base64,
 /// as `grpc-web-text` sends them.
-pub fn grpc_to_json(data: &[u8], text: bool) -> Option<String> {
+pub fn grpc_to_json(data: &[u8], text: bool, schema: Option<&MessageDescriptor>) -> Option<String> {
     let decoded;
     let data = if text {
         decoded = from_base64(data)?;
@@ -58,7 +69,7 @@ pub fn grpc_to_json(data: &[u8], text: bool) -> Option<String> {
             )));
             break;
         };
-        parts.push(frame_json(flags, payload));
+        parts.push(frame_json(flags, payload, schema));
         rest = after;
     }
     match parts.len() {
@@ -108,7 +119,7 @@ fn frame(data: &[u8]) -> Option<(u8, &[u8], &[u8])> {
     Some((head[0], payload, after))
 }
 
-fn frame_json(flags: u8, payload: &[u8]) -> String {
+fn frame_json(flags: u8, payload: &[u8], schema: Option<&MessageDescriptor>) -> String {
     // Trailers, as header lines.
     if flags & 0x80 != 0 {
         let trailers: serde_json::Map<_, _> = trailer_lines(payload)
@@ -134,7 +145,7 @@ fn frame_json(flags: u8, payload: &[u8]) -> String {
     } else {
         payload
     };
-    message_to_json(payload).unwrap_or_else(|| crate::binjson::bytes(payload).to_string())
+    message_to_json(payload, schema).unwrap_or_else(|| crate::binjson::bytes(payload).to_string())
 }
 
 /// A compressed message, unpacked by what its first bytes say it is.
@@ -396,7 +407,7 @@ mod tests {
 
     #[test]
     fn a_message_reads_by_field_number() {
-        let read = message_to_json(&order()).unwrap();
+        let read = message_to_json(&order(), None).unwrap();
         assert!(read.starts_with(r#"{"1":42,"2":"#), "{read}");
         assert_eq!(
             json(&read),
@@ -410,12 +421,16 @@ mod tests {
 
     #[test]
     fn what_is_not_a_message_is_none() {
-        assert_eq!(message_to_json(b"\x08"), None, "a varint cut short");
-        assert_eq!(message_to_json(b"\x00\x01"), None, "field zero");
-        assert_eq!(message_to_json(b"\x0f"), None, "wire type 7");
-        assert_eq!(message_to_json(b"\x12\x05ab"), None, "bytes cut short");
+        assert_eq!(message_to_json(b"\x08", None), None, "a varint cut short");
+        assert_eq!(message_to_json(b"\x00\x01", None), None, "field zero");
+        assert_eq!(message_to_json(b"\x0f", None), None, "wire type 7");
         assert_eq!(
-            message_to_json(b"\x0b\x08\x01"),
+            message_to_json(b"\x12\x05ab", None),
+            None,
+            "bytes cut short"
+        );
+        assert_eq!(
+            message_to_json(b"\x0b\x08\x01", None),
             None,
             "a group with no end"
         );
@@ -424,7 +439,7 @@ mod tests {
     #[test]
     fn groups_are_messages() {
         // Field 1 a group holding field 2 = 7.
-        let read = message_to_json(b"\x0b\x10\x07\x0c\x18\x01").unwrap();
+        let read = message_to_json(b"\x0b\x10\x07\x0c\x18\x01", None).unwrap();
         assert_eq!(json(&read), json(r#"{"1":{"2":7},"3":1}"#));
     }
 
@@ -439,7 +454,7 @@ mod tests {
     fn grpc_frames_are_messages_and_trailers() {
         let one = framed(0, &item("A-1", 2));
         assert_eq!(
-            json(&grpc_to_json(&one, false).unwrap()),
+            json(&grpc_to_json(&one, false, None).unwrap()),
             json(r#"{"1":"A-1","2":2}"#)
         );
 
@@ -455,7 +470,7 @@ mod tests {
         ));
         body.extend_from_slice(b"\x00\x00");
         assert_eq!(
-            json(&grpc_to_json(&body, false).unwrap()),
+            json(&grpc_to_json(&body, false, None).unwrap()),
             json(
                 r#"[{"1":"A-1","2":2},{"1":"B-7","2":1},
                     {"$compressed":"<2 bytes: 0102>"},{},
@@ -463,7 +478,7 @@ mod tests {
                     "<2 bytes after this could not be read>"]"#
             )
         );
-        assert_eq!(grpc_to_json(b"\x00\x00\x00\x00\x09ab", false), None);
+        assert_eq!(grpc_to_json(b"\x00\x00\x00\x00\x09ab", false, None), None);
         assert_eq!(grpc_web_status(&body, false), Some(0));
         assert_eq!(grpc_web_status(&one, false), None);
         let failed = [one, framed(0x80, b"grpc-status: 5\r\n")].concat();
@@ -478,9 +493,9 @@ mod tests {
         body.push_str(&b64(&framed(0x80, b"grpc-status: 0\r\n")));
         assert!(body[..body.len() - 1].contains('='), "padding mid-way");
         assert_eq!(
-            json(&grpc_to_json(body.as_bytes(), true).unwrap()),
+            json(&grpc_to_json(body.as_bytes(), true, None).unwrap()),
             json(r#"[{"1":"A-12","2":2},{"$trailers":{"grpc-status":"0"}}]"#)
         );
-        assert_eq!(grpc_to_json(b"!!!!", true), None);
+        assert_eq!(grpc_to_json(b"!!!!", true, None), None);
     }
 }

@@ -679,6 +679,45 @@ t745634c6 =
 # Send all as they came
 tdce25640 = Gửi tất cả nguyên như khi đến
 
+# The list was not saved: {e}
+tfceba380 = Danh sách chưa được lưu: { $e }
+
+# Add
+t9dc3aa14 = Thêm
+
+# Reading…
+t6aad8485 = Đang đọc…
+
+# {count} file | {count} files
+tde674bd8 = { $count } file
+
+# {count} message | {count} messages
+t8a1cd2f6 = { $count } message
+
+# {count} service | {count} services
+t51f71902 = { $count } service
+
+# and {count} more problem | and {count} more problems
+t591ce5ea = và { $count } lỗi khác
+
+# Remove
+t21a5901d = Gỡ
+
+# Protobuf schemas
+ta4401d1a = Schema Protobuf
+
+# Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+te5f4f07c = Thư mục chứa file .proto, hoặc descriptor set tạo bằng protoc -o, để hiện body Protobuf và gRPC với tên field. Lời gọi gRPC tìm message theo path; Protobuf khác theo messageType trong content type. Chúng được đọc lại khi thay đổi.
+
+# Add a folder…
+tb5930e43 = Thêm thư mục…
+
+# Add files…
+ted08dbe5 = Thêm file…
+
+# Read again
+t2f0dcc5d = Đọc lại
+
 # Block
 tbd074002 = Chặn
 
@@ -837,9 +876,6 @@ tca566a57 = Nó chờ ở trang Tạm dừng cho tới khi bạn gửi tiếp, c
 
 # Save
 t4d2d5d68 = Lưu
-
-# Add
-t9dc3aa14 = Thêm
 
 # Cancel
 t35afca3b = Huỷ
@@ -1140,9 +1176,6 @@ tb50cbd40 = Cài
 
 # Also for command-line tools
 t0db8faea = Cả cho công cụ dòng lệnh
-
-# Remove
-t21a5901d = Gỡ
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Gỡ chứng chỉ khỏi mọi kho trên máy này? Sau đó HTTPS qua tracewing sẽ lỗi cho tới khi cài lại. tracewing vẫn giữ chứng chỉ để cài lại sau.

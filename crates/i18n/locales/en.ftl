@@ -265,6 +265,35 @@ t745634c6 =
        *[other] { $n } wait to be sent on.
     }
 tdce25640 = Send all as they came
+tfceba380 = The list was not saved: { $e }
+t9dc3aa14 = Add
+t6aad8485 = Reading…
+tde674bd8 =
+    { $n ->
+        [one] { $count } file
+       *[other] { $count } files
+    }
+t8a1cd2f6 =
+    { $n ->
+        [one] { $count } message
+       *[other] { $count } messages
+    }
+t51f71902 =
+    { $n ->
+        [one] { $count } service
+       *[other] { $count } services
+    }
+t591ce5ea =
+    { $n ->
+        [one] and { $count } more problem
+       *[other] and { $count } more problems
+    }
+t21a5901d = Remove
+ta4401d1a = Protobuf schemas
+te5f4f07c = Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+tb5930e43 = Add a folder…
+ted08dbe5 = Add files…
+t2f0dcc5d = Read again
 tbd074002 = Block
 td8edab50 = Answer from a file
 te3cd85d7 = Send to another host
@@ -321,7 +350,6 @@ t9160f393 = Change this rule
 t55a722a0 = A new rule
 tca566a57 = It waits under Paused until you send it on, changed or not.
 t4d2d5d68 = Save
-t9dc3aa14 = Add
 t35afca3b = Cancel
 t428b2d80 = Rules
 tbe44b31e = They apply from the next request, while recording is paused too. Top to bottom: the first block, file or host wins, and every other rule that fits applies, in order. A rule that changes a body or a status changes what the server sent.
@@ -435,7 +463,6 @@ tafd8dae2 = tracewing reads HTTPS with a certificate made for this computer alon
 t26618699 = Trust the certificate
 tb50cbd40 = Install
 t0db8faea = Also for command-line tools
-t21a5901d = Remove
 t3c9fc304 = Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t76cf4bfa = Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
 td2606dbb = Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.

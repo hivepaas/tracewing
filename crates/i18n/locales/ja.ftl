@@ -679,6 +679,45 @@ t745634c6 =
 # Send all as they came
 tdce25640 = すべてそのまま送信
 
+# The list was not saved: {e}
+tfceba380 = 一覧を保存できませんでした: { $e }
+
+# Add
+t9dc3aa14 = 追加
+
+# Reading…
+t6aad8485 = 読み込み中…
+
+# {count} file | {count} files
+tde674bd8 = { $count } ファイル
+
+# {count} message | {count} messages
+t8a1cd2f6 = { $count } メッセージ
+
+# {count} service | {count} services
+t51f71902 = { $count } サービス
+
+# and {count} more problem | and {count} more problems
+t591ce5ea = ほかに { $count } 件の問題
+
+# Remove
+t21a5901d = 削除
+
+# Protobuf schemas
+ta4401d1a = Protobuf スキーマ
+
+# Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+te5f4f07c = .proto ファイルのフォルダー、または protoc -o で作った descriptor set。Protobuf と gRPC の本文をフィールド名つきで表示します。gRPC の呼び出しはパスからメッセージを見つけ、そのほかの Protobuf は型に書かれた messageType から見つけます。変更されると読み直します。
+
+# Add a folder…
+tb5930e43 = フォルダーを追加…
+
+# Add files…
+ted08dbe5 = ファイルを追加…
+
+# Read again
+t2f0dcc5d = 読み直す
+
 # Block
 tbd074002 = ブロック
 
@@ -837,9 +876,6 @@ tca566a57 = 送信するまで「一時停止中」で待機します。変更�
 
 # Save
 t4d2d5d68 = 保存
-
-# Add
-t9dc3aa14 = 追加
 
 # Cancel
 t35afca3b = キャンセル
@@ -1140,9 +1176,6 @@ tb50cbd40 = インストール
 
 # Also for command-line tools
 t0db8faea = コマンドラインツールにも
-
-# Remove
-t21a5901d = 削除
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = このコンピューターのすべてのストアから証明書を削除しますか？ 再びインストールするまで、tracewing 経由の HTTPS は失敗します。証明書は tracewing が保持し、後で再びインストールできます。

@@ -9,10 +9,16 @@ pub mod graphql;
 pub mod har;
 pub mod import;
 pub mod protobuf;
+pub mod protojson;
 pub mod saz;
+pub mod schema;
 pub mod search;
 pub mod secrets;
 pub mod session;
 pub mod settings;
 pub mod spool;
 pub mod store;
+
+/// Re-exported so that what holds a schema's messages names them as the
+/// store does.
+pub use prost_reflect;
