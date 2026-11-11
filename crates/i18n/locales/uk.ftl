@@ -721,6 +721,69 @@ t745634c6 =
 # Send all as they came
 tdce25640 = Надіслати всі без змін
 
+# The list was not saved: {e}
+tfceba380 = Список не збережено: { $e }
+
+# Add
+t9dc3aa14 = Додати
+
+# Reading…
+t6aad8485 = Читання…
+
+# {count} file | {count} files
+tde674bd8 =
+    { $n ->
+        [one] { $count } файл
+        [few] { $count } файли
+        [many] { $count } файлів
+       *[other] { $count } файлу
+    }
+
+# {count} message | {count} messages
+t8a1cd2f6 =
+    { $n ->
+        [one] { $count } повідомлення
+        [few] { $count } повідомлення
+        [many] { $count } повідомлень
+       *[other] { $count } повідомлення
+    }
+
+# {count} service | {count} services
+t51f71902 =
+    { $n ->
+        [one] { $count } сервіс
+        [few] { $count } сервіси
+        [many] { $count } сервісів
+       *[other] { $count } сервісу
+    }
+
+# and {count} more problem | and {count} more problems
+t591ce5ea =
+    { $n ->
+        [one] і ще { $count } проблема
+        [few] і ще { $count } проблеми
+        [many] і ще { $count } проблем
+       *[other] і ще { $count } проблеми
+    }
+
+# Remove
+t21a5901d = Видалити
+
+# Protobuf schemas
+ta4401d1a = Схеми Protobuf
+
+# Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+te5f4f07c = Теки з файлами .proto або descriptor set, створені через protoc -o, щоб показувати тіла Protobuf і gRPC з назвами полів. Виклик gRPC знаходить свої повідомлення за шляхом, інший Protobuf — за messageType у його типі. Їх перечитують, коли вони змінюються.
+
+# Add a folder…
+tb5930e43 = Додати теку…
+
+# Add files…
+ted08dbe5 = Додати файли…
+
+# Read again
+t2f0dcc5d = Перечитати
+
 # Block
 tbd074002 = Заблокувати
 
@@ -882,9 +945,6 @@ tca566a57 = Він чекає в «Призупинених», доки ви н�
 
 # Save
 t4d2d5d68 = Зберегти
-
-# Add
-t9dc3aa14 = Додати
 
 # Cancel
 t35afca3b = Скасувати
@@ -1200,9 +1260,6 @@ tb50cbd40 = Встановити
 
 # Also for command-line tools
 t0db8faea = Також для інструментів командного рядка
-
-# Remove
-t21a5901d = Видалити
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Видалити сертифікат з усіх сховищ цього комп’ютера? HTTPS через tracewing не працюватиме, доки його не встановлять знову. tracewing збереже його, щоб установити пізніше.

@@ -8,7 +8,11 @@ use anyhow::Result;
 use rusqlite::{Connection, OptionalExtension, params};
 use std::path::Path;
 use tracewing_i18n::tr;
-use tracewing_store::session::{self, BodyReader, Headers, LogPlace, StoredBody};
+use tracewing_store::{
+    prost_reflect::MessageDescriptor,
+    schema::Library,
+    session::{self, BodyReader, Headers, LogPlace, StoredBody},
+};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Side {
@@ -337,23 +341,51 @@ pub fn body_file(
     Some((path, size))
 }
 
-/// A MessagePack, CBOR or Protobuf body beside its file as JSON, to be shown as JSON
-/// is. `None` for any other body, one too large to hold, or one that cannot
-/// be read.
+/// A MessagePack, CBOR or Protobuf body beside its file as JSON, to be shown
+/// as JSON is, and what it was: `MessagePack`, or `gRPC · shop.Order` when a
+/// `.proto` names its fields. `None` for any other body, one too large to
+/// hold, or one that cannot be read.
 pub fn json_file(
     path: &std::path::Path,
     size: u64,
     content_type: Option<&str>,
-) -> Option<std::path::PathBuf> {
+    message: Option<&MessageDescriptor>,
+) -> Option<(std::path::PathBuf, String)> {
     use tracewing_store::binjson;
     let format = binjson::format_of(content_type)?;
     if size > binjson::DECODE_MAX {
         return None;
     }
-    let json = binjson::to_json(&std::fs::read(path).ok()?, format)?;
+    let json = binjson::to_json_as(&std::fs::read(path).ok()?, format, message)?;
     let out = path.with_extension("json");
     std::fs::write(&out, json).ok()?;
-    Some(out)
+    let name = match message {
+        Some(message) => format!("{} · {}", format.name(), message.full_name()),
+        None => format.name().to_owned(),
+    };
+    Some((out, name))
+}
+
+/// The message a Protobuf or gRPC body holds, if the `.proto` files chosen
+/// say: by the call's path, or as its type names it. Reads the files again
+/// if they changed, so not on the UI thread.
+pub fn message_of(
+    protos: &Library,
+    url: &str,
+    content_type: Option<&str>,
+    side: Side,
+) -> Option<MessageDescriptor> {
+    use tracewing_store::binjson;
+    let format = binjson::format_of(content_type).filter(|f| f.numbered())?;
+    protos
+        .schema()
+        .message_for(path_of(url), content_type, side == Side::Request, format)
+}
+
+/// The path of a URL, with its query.
+pub fn path_of(url: &str) -> &str {
+    let after = url.split_once("://").map_or(url, |(_, rest)| rest);
+    after.find('/').map_or("/", |at| &after[at..])
 }
 
 #[cfg(test)]

@@ -679,6 +679,45 @@ t745634c6 =
 # Send all as they came
 tdce25640 = 全部按原样发送
 
+# The list was not saved: {e}
+tfceba380 = 列表未保存：{ $e }
+
+# Add
+t9dc3aa14 = 添加
+
+# Reading…
+t6aad8485 = 正在读取…
+
+# {count} file | {count} files
+tde674bd8 = { $count } 个文件
+
+# {count} message | {count} messages
+t8a1cd2f6 = { $count } 个消息
+
+# {count} service | {count} services
+t51f71902 = { $count } 个服务
+
+# and {count} more problem | and {count} more problems
+t591ce5ea = 还有 { $count } 个问题
+
+# Remove
+t21a5901d = 移除
+
+# Protobuf schemas
+ta4401d1a = Protobuf 架构
+
+# Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+te5f4f07c = 包含 .proto 文件的文件夹，或用 protoc -o 生成的描述符集，用于按字段名显示 Protobuf 和 gRPC 正文。gRPC 调用按路径找到其消息；其他 Protobuf 按其类型中的 messageType 查找。文件变化时会重新读取。
+
+# Add a folder…
+tb5930e43 = 添加文件夹…
+
+# Add files…
+ted08dbe5 = 添加文件…
+
+# Read again
+t2f0dcc5d = 重新读取
+
 # Block
 tbd074002 = 拦截
 
@@ -837,9 +876,6 @@ tca566a57 = 它会在“已暂停”中等待，直到你继续发送（修改�
 
 # Save
 t4d2d5d68 = 保存
-
-# Add
-t9dc3aa14 = 添加
 
 # Cancel
 t35afca3b = 取消
@@ -1140,9 +1176,6 @@ tb50cbd40 = 安装
 
 # Also for command-line tools
 t0db8faea = 同时用于命令行工具
-
-# Remove
-t21a5901d = 移除
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = 要从这台电脑的所有证书库中移除该证书吗？重新安装之前，经过 tracewing 的 HTTPS 都会失败。tracewing 会保留它，以便以后重新安装。

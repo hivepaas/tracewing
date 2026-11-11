@@ -148,7 +148,7 @@ pub struct BodyView {
     /// The bytes as they came, when what is shown was made from them, as
     /// JSON is from MessagePack, and what they are called. Its dump is what
     /// Hex shows.
-    original: Option<(Arc<Body>, &'static str)>,
+    original: Option<(Arc<Body>, SharedString)>,
     syntax: Syntax,
     /// The row at the top of the view, and how far it has scrolled out of it.
     top: u64,
@@ -481,9 +481,10 @@ impl BodyView {
     pub fn set_original(
         &mut self,
         original: Arc<Body>,
-        name: &'static str,
+        name: impl Into<SharedString>,
         cx: &mut Context<Self>,
     ) {
+        let name = name.into();
         watch_scan(Arc::clone(&original), cx);
         self.original = Some((original, name));
         self.mode = self.fit(self.mode);
@@ -748,7 +749,7 @@ impl BodyView {
                     "{size} {format} · {count} line of JSON",
                     "{size} {format} · {count} lines of JSON",
                     size = size_text(original.size()),
-                    format = *name,
+                    format = name.to_string(),
                     count = crate::flows::group_digits(lines)
                 )
             }

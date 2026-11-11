@@ -259,6 +259,14 @@ pub struct Traffic {
     device_counts: Vec<(SharedString, u64)>,
     /// The names given to devices.
     devices: Devices,
+    /// The `.proto` files that name Protobuf's fields.
+    pub(crate) protos: Arc<tracewing_store::schema::Library>,
+    /// What was read from them, as Settings shows it, and whether they are
+    /// being read now.
+    pub protos_read: Option<Arc<tracewing_store::schema::Schema>>,
+    pub(crate) protos_busy: bool,
+    /// Why the list of them could not be saved.
+    pub(crate) protos_problem: Option<String>,
     /// The name of the device the chosen flow came from.
     device_name: Entity<TextInput>,
     hosts_due: Instant,
@@ -413,6 +421,10 @@ impl Traffic {
             apps: Vec::new(),
             device_counts: Vec::new(),
             devices: Devices::load(&data_dir.join("devices.toml")),
+            protos: tracewing_store::schema::Library::open(data_dir),
+            protos_read: None,
+            protos_busy: false,
+            protos_problem: None,
             device_name,
             hosts_due: now,
             hosts_seen: 0,

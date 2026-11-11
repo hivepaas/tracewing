@@ -74,10 +74,20 @@ pub fn format_of(content_type: Option<&str>) -> Option<Format> {
 /// one after another make an array; bytes after the last that can be read
 /// are said at its end.
 pub fn to_json(data: &[u8], format: Format) -> Option<String> {
+    to_json_as(data, format, None)
+}
+
+/// As [`to_json`], with Protobuf's fields named by a message from a schema.
+pub fn to_json_as(
+    data: &[u8],
+    format: Format,
+    schema: Option<&prost_reflect::MessageDescriptor>,
+) -> Option<String> {
+    use crate::protobuf::{grpc_to_json, message_to_json};
     match format {
-        Format::Protobuf => return crate::protobuf::message_to_json(data),
-        Format::Grpc | Format::GrpcWeb => return crate::protobuf::grpc_to_json(data, false),
-        Format::GrpcWebText => return crate::protobuf::grpc_to_json(data, true),
+        Format::Protobuf => return message_to_json(data, schema),
+        Format::Grpc | Format::GrpcWeb => return grpc_to_json(data, false, schema),
+        Format::GrpcWebText => return grpc_to_json(data, true, schema),
         Format::MessagePack | Format::Cbor => {}
     }
     let mut rest = data;

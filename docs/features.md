@@ -101,7 +101,7 @@ keyboard.
 |---|---|---|
 | Overview: timing (DNS, connect, TLS, waiting, download), the size each way, protocol on each side, the client app | Beta | Free |
 | Headers, cookies, query and form fields | Beta | Free |
-| Bodies: JSON laid out and folded by object and array, XML a tag a line and folded by element, MessagePack, CBOR, Protobuf and gRPC (with gRPC-Web) shown as the JSON they hold, Protobuf fields by number (bodies of any size); gRPC status and trailers kept, a failed call counted as an error; Pretty, Raw as sent and Hex for any body; long lines of text wrapped; HTML, JavaScript and CSS highlighted; images; gzip, Brotli, zstd and deflate decoded for display | Beta | Free |
+| Bodies: JSON laid out and folded by object and array, XML a tag a line and folded by element, MessagePack, CBOR, Protobuf and gRPC (with gRPC-Web) shown as the JSON they hold, Protobuf fields named by .proto files or descriptor sets chosen in Settings, else by number (bodies of any size); gRPC status and trailers kept, a failed call counted as an error; Pretty, Raw as sent and Hex for any body; long lines of text wrapped; HTML, JavaScript and CSS highlighted; images; gzip, Brotli, zstd and deflate decoded for display | Beta | Free |
 | JWTs decoded | Beta | Free |
 | Bodies of 50 MB and more open without freezing the window | Beta | Free |
 | Copy as cURL; save a body to a file | Beta | Free |

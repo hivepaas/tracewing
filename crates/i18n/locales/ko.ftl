@@ -679,6 +679,45 @@ t745634c6 =
 # Send all as they came
 tdce25640 = 모두 그대로 보내기
 
+# The list was not saved: {e}
+tfceba380 = 목록을 저장하지 못했습니다: { $e }
+
+# Add
+t9dc3aa14 = 추가
+
+# Reading…
+t6aad8485 = 읽는 중…
+
+# {count} file | {count} files
+tde674bd8 = 파일 { $count }개
+
+# {count} message | {count} messages
+t8a1cd2f6 = 메시지 { $count }개
+
+# {count} service | {count} services
+t51f71902 = 서비스 { $count }개
+
+# and {count} more problem | and {count} more problems
+t591ce5ea = 그 밖의 문제 { $count }개
+
+# Remove
+t21a5901d = 제거
+
+# Protobuf schemas
+ta4401d1a = Protobuf 스키마
+
+# Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+te5f4f07c = .proto 파일이 있는 폴더 또는 protoc -o로 만든 descriptor set으로, Protobuf와 gRPC 본문을 필드 이름과 함께 보여 줍니다. gRPC 호출은 경로로 메시지를 찾고, 그 밖의 Protobuf는 타입에 적힌 messageType으로 찾습니다. 바뀌면 다시 읽습니다.
+
+# Add a folder…
+tb5930e43 = 폴더 추가…
+
+# Add files…
+ted08dbe5 = 파일 추가…
+
+# Read again
+t2f0dcc5d = 다시 읽기
+
 # Block
 tbd074002 = 차단
 
@@ -837,9 +876,6 @@ tca566a57 = 변경 여부와 관계없이, 보낼 때까지 일시 정지됨 화
 
 # Save
 t4d2d5d68 = 저장
-
-# Add
-t9dc3aa14 = 추가
 
 # Cancel
 t35afca3b = 취소
@@ -1140,9 +1176,6 @@ tb50cbd40 = 설치
 
 # Also for command-line tools
 t0db8faea = 명령줄 도구에도 적용
-
-# Remove
-t21a5901d = 제거
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = 이 컴퓨터의 모든 저장소에서 인증서를 제거할까요? 다시 설치할 때까지 tracewing을 거치는 HTTPS는 실패합니다. 인증서는 tracewing이 보관하므로 나중에 다시 설치할 수 있습니다.

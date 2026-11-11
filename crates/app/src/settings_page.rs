@@ -528,6 +528,7 @@ impl Traffic {
         }
         self.watch_fields(window, cx);
         let language = self.render_language(cx);
+        let protos = self.render_protos(cx);
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);
         // A problem shows under the setting being changed, or else at the top.
@@ -756,6 +757,7 @@ impl Traffic {
                             .child(page.no_decrypt.clone()),
                     ),
             )
+            .child(protos)
             .children(groups)
     }
 }

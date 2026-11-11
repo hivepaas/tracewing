@@ -697,6 +697,61 @@ t745634c6 =
 # Send all as they came
 tdce25640 = Tümünü geldiği gibi gönder
 
+# The list was not saved: {e}
+tfceba380 = Liste kaydedilmedi: { $e }
+
+# Add
+t9dc3aa14 = Ekle
+
+# Reading…
+t6aad8485 = Okunuyor…
+
+# {count} file | {count} files
+tde674bd8 =
+    { $n ->
+        [one] { $count } dosya
+       *[other] { $count } dosya
+    }
+
+# {count} message | {count} messages
+t8a1cd2f6 =
+    { $n ->
+        [one] { $count } mesaj
+       *[other] { $count } mesaj
+    }
+
+# {count} service | {count} services
+t51f71902 =
+    { $n ->
+        [one] { $count } servis
+       *[other] { $count } servis
+    }
+
+# and {count} more problem | and {count} more problems
+t591ce5ea =
+    { $n ->
+        [one] ve { $count } sorun daha
+       *[other] ve { $count } sorun daha
+    }
+
+# Remove
+t21a5901d = Kaldır
+
+# Protobuf schemas
+ta4401d1a = Protobuf şemaları
+
+# Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+te5f4f07c = .proto dosyalarının olduğu klasörler ya da protoc -o ile yapılmış descriptor set'ler; Protobuf ve gRPC gövdelerini alan adlarıyla göstermek için. Bir gRPC çağrısı mesajlarını yolundan, diğer Protobuf türündeki messageType'tan bulur. Değiştiklerinde yeniden okunur.
+
+# Add a folder…
+tb5930e43 = Klasör ekle…
+
+# Add files…
+ted08dbe5 = Dosya ekle…
+
+# Read again
+t2f0dcc5d = Yeniden oku
+
 # Block
 tbd074002 = Engelle
 
@@ -856,9 +911,6 @@ tca566a57 = Siz iletene kadar, değiştirilmiş ya da değiştirilmemiş, Durakl
 
 # Save
 t4d2d5d68 = Kaydet
-
-# Add
-t9dc3aa14 = Ekle
 
 # Cancel
 t35afca3b = İptal
@@ -1166,9 +1218,6 @@ tb50cbd40 = Yükle
 
 # Also for command-line tools
 t0db8faea = Komut satırı araçları için de
-
-# Remove
-t21a5901d = Kaldır
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Sertifika bu bilgisayardaki tüm depolardan kaldırılsın mı? Yeniden yüklenene kadar tracewing üzerinden HTTPS başarısız olur. tracewing sertifikayı daha sonra yeniden yüklemek için saklar.

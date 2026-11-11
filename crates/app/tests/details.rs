@@ -619,5 +619,80 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
         .update(&mut cx, |view, _, cx| view.set_filter_text("", cx))
         .unwrap();
 
+    // With its .proto, the gRPC answer's fields have names. A broken file
+    // beside it is told of, and the rest still read.
+    let protos = dir.join("protos");
+    std::fs::create_dir_all(&protos).unwrap();
+    std::fs::write(protos.join("shop.proto"), benchkit::SHOP_PROTO).unwrap();
+    std::fs::write(
+        protos.join("broken.proto"),
+        "syntax = \"proto3\";\nmessage {",
+    )
+    .unwrap();
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(11, cx);
+            view.set_part(Part::Body, cx);
+            view.add_protos(vec![protos.clone()], cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the .proto files read", |view| {
+        !view.protos_busy() && matches!(view.inspector.body, BodyState::Shown(..))
+    });
+    let deadline = Instant::now() + Duration::from_secs(20);
+    let text = loop {
+        let text = window
+            .update(&mut cx, |view, _, cx| {
+                let BodyState::Shown(body) = &view.inspector.body else {
+                    return None;
+                };
+                body.update(cx, |body, cx| {
+                    if !body.is_scanned() || !body.summary().contains("shop.Order") {
+                        return None;
+                    }
+                    body.select_all(cx);
+                    match body.selected_text() {
+                        tracewing::select::Copied::Text(text) => Some(text),
+                        _ => None,
+                    }
+                })
+            })
+            .unwrap();
+        if let Some(text) = text {
+            break text;
+        }
+        assert!(Instant::now() < deadline, "waiting for the named fields");
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    let json: serde_json::Value = serde_json::from_str(&text).expect("laid-out JSON");
+    assert_eq!(json["customer"], "Nguyễn Văn A", "{text}");
+    assert_eq!(json["items"][1]["sku"], "B-7");
+    assert_eq!(json["total"], 350_000.5);
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            let summary = body.read(cx).summary();
+            assert!(summary.contains("gRPC · shop.Order · "), "{summary}");
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "72-grpc-named");
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Settings, cx))
+        .unwrap();
+    cx.run_until_parked();
+    window
+        .update(&mut cx, |view, _, _| {
+            let read = view.protos_read.as_ref().expect("read");
+            let source = &read.sources[0];
+            assert_eq!((source.files, source.messages, source.services), (1, 3, 1));
+            assert_eq!(source.problems.len(), 1, "{:?}", source.problems);
+            assert!(source.problems[0].starts_with("broken.proto:2:9: "));
+        })
+        .unwrap();
+    shot(&mut cx, window.into(), "73-protos");
+
     std::fs::remove_dir_all(&dir).ok();
 }

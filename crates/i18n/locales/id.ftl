@@ -679,6 +679,45 @@ t745634c6 =
 # Send all as they came
 tdce25640 = Kirim semua apa adanya
 
+# The list was not saved: {e}
+tfceba380 = Daftar tidak tersimpan: { $e }
+
+# Add
+t9dc3aa14 = Tambah
+
+# Reading…
+t6aad8485 = Membaca…
+
+# {count} file | {count} files
+tde674bd8 = { $count } file
+
+# {count} message | {count} messages
+t8a1cd2f6 = { $count } message
+
+# {count} service | {count} services
+t51f71902 = { $count } service
+
+# and {count} more problem | and {count} more problems
+t591ce5ea = dan { $count } masalah lain
+
+# Remove
+t21a5901d = Hapus
+
+# Protobuf schemas
+ta4401d1a = Skema Protobuf
+
+# Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+te5f4f07c = Folder berisi file .proto, atau descriptor set yang dibuat dengan protoc -o, untuk menampilkan body Protobuf dan gRPC dengan nama field-nya. Panggilan gRPC menemukan message-nya dari path; Protobuf lain dari messageType yang disebut tipenya. Dibaca ulang saat berubah.
+
+# Add a folder…
+tb5930e43 = Tambah folder…
+
+# Add files…
+ted08dbe5 = Tambah file…
+
+# Read again
+t2f0dcc5d = Baca ulang
+
 # Block
 tbd074002 = Blokir
 
@@ -837,9 +876,6 @@ tca566a57 = Permintaan menunggu di Dijeda sampai Anda meneruskannya, diubah atau
 
 # Save
 t4d2d5d68 = Simpan
-
-# Add
-t9dc3aa14 = Tambah
 
 # Cancel
 t35afca3b = Batal
@@ -1140,9 +1176,6 @@ tb50cbd40 = Pasang
 
 # Also for command-line tools
 t0db8faea = Juga untuk alat baris perintah
-
-# Remove
-t21a5901d = Hapus
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Hapus sertifikat dari semua penyimpanan di komputer ini? HTTPS melalui tracewing akan gagal sampai dipasang lagi. tracewing tetap menyimpannya untuk dipasang lagi nanti.

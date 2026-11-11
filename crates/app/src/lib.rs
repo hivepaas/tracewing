@@ -31,6 +31,7 @@ pub mod messages;
 pub mod network;
 pub mod paused_page;
 pub mod placement;
+pub mod protos_view;
 pub mod qr;
 pub mod rules_page;
 pub mod select;

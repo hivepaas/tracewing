@@ -25,7 +25,10 @@ use gpui::{
     MouseDownEvent, ObjectFit, SharedString, StyledImage, anchored, deferred, div, img, prelude::*,
     px, relative, rgb,
 };
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 use tracewing_i18n::{tr, tr_n};
 use tracewing_store::session::BodyReader;
 
@@ -161,7 +164,7 @@ impl Traffic {
         }
     }
 
-    fn load_body(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn load_body(&mut self, cx: &mut Context<Self>) {
         self.load_side(false, cx);
         if self.layout.sides != Sides::Tabs {
             self.load_side(true, cx);
@@ -183,6 +186,7 @@ impl Traffic {
         };
         let facts = detail.body(side).clone();
         let id = detail.id;
+        let url = detail.url.clone();
         let counter = if other {
             &mut self.inspector.other_load
         } else {
@@ -217,6 +221,7 @@ impl Traffic {
         *self.inspector.slot(other) = BodyState::Loading;
         let session = self.session_dir().to_owned();
         let max = self.engine.settings.view_max();
+        let protos = Arc::clone(&self.protos);
         cx.spawn(async move |this, cx| {
             let file = cx
                 .background_spawn({
@@ -224,7 +229,10 @@ impl Traffic {
                     async move {
                         let file = body_file(&session, &facts, id, side, max);
                         let json = file.as_ref().and_then(|(path, size)| {
-                            crate::detail::json_file(path, *size, content_type.as_deref())
+                            let content_type = content_type.as_deref();
+                            let message =
+                                crate::detail::message_of(&protos, &url, content_type, side);
+                            crate::detail::json_file(path, *size, content_type, message.as_ref())
                         });
                         (file, json)
                     }
@@ -254,16 +262,14 @@ impl Traffic {
                             let focus = this.focus.clone();
                             let mode = this.inspector.body_mode;
                             // MessagePack, CBOR or Protobuf, shown as the JSON made of it.
-                            let json = json.and_then(|json| Body::open(&json).ok());
+                            let json = json.and_then(|(json, name)| {
+                                Some((Body::open(&json).ok()?, name))
+                            });
                             cx.new(|cx| {
                                 let mut view = match json {
-                                    Some(json) => {
+                                    Some((json, name)) => {
                                         let mut view =
                                             BodyView::new(json, Some("application/json"), focus, cx);
-                                        let name = tracewing_store::binjson::format_of(
-                                            content_type.as_deref(),
-                                        )
-                                        .map_or("", |format| format.name());
                                         view.set_original(body, name, cx);
                                         view
                                     }

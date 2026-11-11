@@ -699,6 +699,65 @@ t745634c6 =
 # Send all as they came
 tdce25640 = Enviar todo tal como llegó
 
+# The list was not saved: {e}
+tfceba380 = La lista no se guardó: { $e }
+
+# Add
+t9dc3aa14 = Añadir
+
+# Reading…
+t6aad8485 = Leyendo…
+
+# {count} file | {count} files
+tde674bd8 =
+    { $n ->
+        [one] { $count } archivo
+        [many] { $count } archivos
+       *[other] { $count } archivos
+    }
+
+# {count} message | {count} messages
+t8a1cd2f6 =
+    { $n ->
+        [one] { $count } mensaje
+        [many] { $count } mensajes
+       *[other] { $count } mensajes
+    }
+
+# {count} service | {count} services
+t51f71902 =
+    { $n ->
+        [one] { $count } servicio
+        [many] { $count } servicios
+       *[other] { $count } servicios
+    }
+
+# and {count} more problem | and {count} more problems
+t591ce5ea =
+    { $n ->
+        [one] y { $count } problema más
+        [many] y { $count } problemas más
+       *[other] y { $count } problemas más
+    }
+
+# Remove
+t21a5901d = Quitar
+
+# Protobuf schemas
+ta4401d1a = Esquemas Protobuf
+
+# Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
+te5f4f07c = Carpetas de archivos .proto, o descriptor sets hechos con protoc -o, para mostrar los cuerpos Protobuf y gRPC con el nombre de sus campos. Una llamada gRPC encuentra sus mensajes por su ruta; el resto de Protobuf, por el messageType que nombra su tipo. Se vuelven a leer cuando cambian.
+
+# Add a folder…
+tb5930e43 = Añadir una carpeta…
+
+# Add files…
+ted08dbe5 = Añadir archivos…
+
+# Read again
+t2f0dcc5d = Volver a leer
+
 # Block
 tbd074002 = Bloquear
 
@@ -858,9 +917,6 @@ tca566a57 = Espera en la pantalla En pausa hasta que la reenvíes, con cambios o
 
 # Save
 t4d2d5d68 = Guardar
-
-# Add
-t9dc3aa14 = Añadir
 
 # Cancel
 t35afca3b = Cancelar
@@ -1169,9 +1225,6 @@ tb50cbd40 = Instalar
 
 # Also for command-line tools
 t0db8faea = También para herramientas de línea de comandos
-
-# Remove
-t21a5901d = Quitar
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = ¿Quitar el certificado de todos los almacenes de este ordenador? HTTPS a través de tracewing fallará hasta que se instale de nuevo. tracewing lo conserva para volver a instalarlo más tarde.

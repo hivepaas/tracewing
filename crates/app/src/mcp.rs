@@ -21,6 +21,7 @@ use std::{
 };
 use tracewing_store::{
     binjson,
+    prost_reflect::MessageDescriptor,
     session::{self, BodyReader},
     settings::StorageSettings,
 };
@@ -67,12 +68,15 @@ pub fn serve(data_dir: &Path) -> Result<()> {
 
 pub struct Server {
     data_dir: PathBuf,
+    /// The `.proto` files chosen in the app, which name Protobuf's fields.
+    protos: std::sync::Arc<tracewing_store::schema::Library>,
 }
 
 impl Server {
     pub fn new(data_dir: &Path) -> Self {
         Self {
             data_dir: data_dir.to_owned(),
+            protos: tracewing_store::schema::Library::open(data_dir),
         }
     }
 
@@ -261,7 +265,19 @@ impl Server {
                 Side::Response => detail.content_type.clone(),
             };
             let (body, note) = if bodies {
-                body_text(&mut reader, facts, max, content_type.as_deref())
+                let message = crate::detail::message_of(
+                    &self.protos,
+                    &detail.url,
+                    content_type.as_deref(),
+                    side,
+                );
+                body_text(
+                    &mut reader,
+                    facts,
+                    max,
+                    content_type.as_deref(),
+                    message.as_ref(),
+                )
             } else {
                 (None, None)
             };
@@ -442,16 +458,24 @@ fn as_json(
     content_type: Option<&str>,
     sent: u64,
     max: u64,
+    message: Option<&MessageDescriptor>,
 ) -> Option<(String, String)> {
     let format = binjson::format_of(content_type)?;
-    let json = binjson::to_json(bytes, format)?;
+    let json = binjson::to_json_as(bytes, format, message)?;
     let mut end = json.len().min(max as usize);
     while !json.is_char_boundary(end) {
         end -= 1;
     }
     let mut note = format!("{}, {sent} bytes sent, given as JSON", format.name());
-    if format.numbered() {
-        note.push_str(" with fields by number");
+    match message {
+        Some(message) => {
+            note.push_str(&format!(
+                " as {} from the .proto files",
+                message.full_name()
+            ));
+        }
+        None if format.numbered() => note.push_str(" with fields by number"),
+        None => {}
     }
     if end < json.len() {
         note.push_str(&format!("; only the first {end} bytes of {}", json.len()));
@@ -466,6 +490,7 @@ fn body_text(
     facts: &BodyFacts,
     max: u64,
     content_type: Option<&str>,
+    message: Option<&MessageDescriptor>,
 ) -> (Option<String>, Option<String>) {
     if facts.bytes == 0 {
         return (None, None);
@@ -475,7 +500,7 @@ fn body_text(
     }
     if binjson::format_of(content_type).is_some()
         && let Some(bytes) = reader.unpacked(&facts.stored, binjson::DECODE_MAX as usize)
-        && let Some((json, note)) = as_json(&bytes, content_type, facts.bytes, max)
+        && let Some((json, note)) = as_json(&bytes, content_type, facts.bytes, max, message)
     {
         return (Some(json), Some(note));
     }
@@ -514,16 +539,20 @@ mod tests {
         let value = rmpv::Value::Map(vec![("city".into(), "Hà Nội".into())]);
         rmpv::encode::write_value(&mut bytes, &value).unwrap();
         let ct = Some("application/msgpack");
-        let (json, note) = as_json(&bytes, ct, 99, 1000).unwrap();
+        let (json, note) = as_json(&bytes, ct, 99, 1000, None).unwrap();
         assert_eq!(json, r#"{"city":"Hà Nội"}"#);
         assert_eq!(note, "MessagePack, 99 bytes sent, given as JSON");
         // Cut on a character's edge: "à" is two bytes, at 10 and 11.
-        let (cut, note) = as_json(&bytes, ct, 99, 11).unwrap();
+        let (cut, note) = as_json(&bytes, ct, 99, 11, None).unwrap();
         assert_eq!(cut, r#"{"city":"H"#);
         assert!(note.ends_with("only the first 10 bytes of 20"), "{note}");
-        assert_eq!(as_json(&bytes, Some("application/json"), 99, 1000), None);
+        assert_eq!(
+            as_json(&bytes, Some("application/json"), 99, 1000, None),
+            None
+        );
         // Protobuf has no names for its fields with no schema.
-        let (json, note) = as_json(b"\x08\x2a", Some("application/x-protobuf"), 2, 1000).unwrap();
+        let (json, note) =
+            as_json(b"\x08\x2a", Some("application/x-protobuf"), 2, 1000, None).unwrap();
         assert_eq!(json, r#"{"1":42}"#);
         assert_eq!(
             note,
