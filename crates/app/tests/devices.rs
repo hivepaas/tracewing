@@ -235,6 +235,30 @@ fn other_devices_are_counted_found_and_named() {
         .unwrap();
     cx.run_until_parked();
     shot(&mut cx, window.into(), "61-setup-phones");
+    // Down to the devices and what to undo on them, which tracewing cannot.
+    window
+        .update(&mut cx, |view, _, _| {
+            assert!(!view.device_counts().is_empty(), "a device went through");
+        })
+        .unwrap();
+    let scroll = |cx: &mut HeadlessAppContext, by: f32| {
+        cx.update_window(window.into(), |_, window, cx| {
+            window.dispatch_event(
+                gpui::PlatformInput::ScrollWheel(gpui::ScrollWheelEvent {
+                    position: gpui::point(px(900.), px(500.)),
+                    delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(-by))),
+                    ..Default::default()
+                }),
+                cx,
+            );
+        })
+        .unwrap();
+        cx.run_until_parked();
+    };
+    scroll(&mut cx, 820.);
+    shot(&mut cx, window.into(), "95-setup-devices-to-undo");
+    scroll(&mut cx, 1400.);
+    shot(&mut cx, window.into(), "96-setup-when-done");
     window
         .update(&mut cx, |view, _, cx| view.set_guide(Guide::Android, cx))
         .unwrap();

@@ -1261,6 +1261,15 @@ t1b22723c = 4. 「設定」>「一般」>「情報」>「証明書信頼設定�
 # 5. Open https://{host} in Safari. If it says it works, apps that use the system's settings go through tracewing.
 t4adfec01 = 5. Safari で https://{ $host } を開きます。動作していると表示されれば、システムの設定を使うアプリは tracewing を経由します。
 
+# When you are done
+t62466f08 = 終わったら
+
+# 1. In Settings, Wi-Fi, choose the network, then Configure Proxy: Off. Left on, the device has no Internet on this network once tracewing closes.
+t21a2fdae = 1. 設定、Wi-Fi でネットワークを選び、プロキシを構成：オフ。そのままにすると、tracewing を閉じたあと、このネットワークでインターネットが使えなくなります。
+
+# 2. In Settings, General, VPN & Device Management, choose tracewing CA and remove the profile. Its full trust goes with it.
+t2090b614 = 2. 設定、一般、VPN とデバイス管理で tracewing CA を選び、プロファイルを削除します。完全な信頼も一緒に外れます。
+
 # 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host {host}, port {port}.
 t4f837b10 = 1. 「設定」>「Wi-Fi」でネットワークを編集し、「詳細設定」でプロキシを「手動」にして、ホストを { $host }、ポートを { $port } に設定します。
 
@@ -1279,11 +1288,20 @@ t02ad844b = そして AndroidManifest.xml からそれを参照します:
 # Other apps keep refusing the certificate: their traffic shows as failed flows.
 t02e57826 = 他のアプリは引き続き証明書を拒否します。そのトラフィックは失敗したフローとして表示されます。
 
+# 1. In Settings, Wi-Fi, edit the network, and set the proxy back to None. Left on, the device has no Internet on this network once tracewing closes.
+t76754f49 = 1. 設定、Wi-Fi でネットワークを編集し、プロキシを「なし」に戻します。そのままにすると、tracewing を閉じたあと、このネットワークでインターネットが使えなくなります。
+
+# 2. In Settings, Security, Encryption & credentials, User credentials, choose tracewing and remove it. Delete tracewing.crt from Downloads too.
+tf08245e1 = 2. 設定、セキュリティ、暗号化と認証情報、ユーザー認証情報で tracewing を選んで削除します。ダウンロードの tracewing.crt も削除してください。
+
 # Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
 t4ffc0abf = Flutter の http や Dio が使う Dart の HttpClient は、端末のプロキシ設定に従わず、Android ではユーザーが追加した証明書を信頼しません。デバッグビルドで、次のようにここへ送るようにします:
 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback はどんな証明書でも通すため、デバッグビルド専用です。
+
+# Take TracewingProxy and its line in main() out before a release, though they do nothing outside debug builds. Nothing on the phone was changed.
+t12aba34f = リリースの前に TracewingProxy と main() 内のその行を取り除いてください。デバッグビルド以外では何もしませんが。電話の設定は何も変わっていません。
 
 # Open settings
 t1336b4d6 = 設定を開く
@@ -1293,6 +1311,9 @@ t2e3c591c = スマートフォンと他のデバイス
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = このネットワーク上のスマートフォン、タブレット、別のコンピュータは、{ $proxy } で tracewing を経由できます。コードを読み取ると、証明書のページが開きます。そのデバイスのフローにはアドレスが表示され、device: で絞り込めます。デバイス名は、そのフローのいずれかの「接続」で付けられます。
+
+# {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
+t864ac93f = { $n } 台のデバイスが tracewing を通りました（{ $names }）。終わったら、下の手順でその Wi-Fi プロキシをオフにしてください。そのままにすると、tracewing を閉じたあと、このネットワークでインターネットが使えなくなります。
 
 # Set up. The certificate is among the system's until the device restarts.
 t84db6961 = セットアップが完了しました。デバイスを再起動するまで、証明書はシステムの証明書に含まれます。
@@ -1338,6 +1359,9 @@ t379e433c = Android エミュレータと USB デバイス
 
 # Find devices
 t54d4af39 = デバイスを探す
+
+# The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
+tf4b6cd8a = システムプロキシと HTTP/3 のブロックは、tracewing を閉じたときやクラッシュしたときに元に戻ります。USB で設定した Android デバイスも同じです。証明書は、ステップ 1 の「削除」で外すまで信頼されたままです。手動で設定した電話は、その端末で外すまで Wi-Fi プロキシと証明書が残ります。方法は各デバイスのガイドにあります。他のデバイスは、設定でオフにするまでこのコンピューターのプロキシに接続できます。
 
 # Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
 t2dc39047 = Claude Code、Cursor、VS Code などの AI ツールは、tracewing の MCP サーバーを通じて、tracewing が記録したフローを一覧表示して読み取れます。設定で許可しない限り、トークンと Cookie は含まれません。Claude Code では:

@@ -1285,6 +1285,15 @@ t1b22723c = 4. Dans Réglages, Général, Informations, Réglages de confiance d
 # 5. Open https://{host} in Safari. If it says it works, apps that use the system's settings go through tracewing.
 t4adfec01 = 5. Ouvrez https://{ $host } dans Safari. S'il indique que cela fonctionne, les apps qui utilisent les réglages du système passent par tracewing.
 
+# When you are done
+t62466f08 = Quand vous avez fini
+
+# 1. In Settings, Wi-Fi, choose the network, then Configure Proxy: Off. Left on, the device has no Internet on this network once tracewing closes.
+t21a2fdae = 1. Dans Réglages, Wi-Fi, choisissez le réseau, puis Configurer le proxy : Désactivé. Laissé actif, l’appareil n’a plus Internet sur ce réseau dès que tracewing se ferme.
+
+# 2. In Settings, General, VPN & Device Management, choose tracewing CA and remove the profile. Its full trust goes with it.
+t2090b614 = 2. Dans Réglages, Général, VPN et gestion de l’appareil, choisissez tracewing CA et supprimez le profil. Sa confiance totale part avec lui.
+
 # 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host {host}, port {port}.
 t4f837b10 = 1. Dans Paramètres, Wi-Fi, modifiez le réseau, puis sous Options avancées réglez le proxy sur Manuel : hôte { $host }, port { $port }.
 
@@ -1303,11 +1312,20 @@ t02ad844b = et référencez-le depuis AndroidManifest.xml :
 # Other apps keep refusing the certificate: their traffic shows as failed flows.
 t02e57826 = Les autres apps continuent de refuser le certificat : leur trafic apparaît comme des flows en échec.
 
+# 1. In Settings, Wi-Fi, edit the network, and set the proxy back to None. Left on, the device has no Internet on this network once tracewing closes.
+t76754f49 = 1. Dans Paramètres, Wi-Fi, modifiez le réseau et remettez le proxy sur Aucun. Laissé actif, l’appareil n’a plus Internet sur ce réseau dès que tracewing se ferme.
+
+# 2. In Settings, Security, Encryption & credentials, User credentials, choose tracewing and remove it. Delete tracewing.crt from Downloads too.
+tf08245e1 = 2. Dans Paramètres, Sécurité, Chiffrement et identifiants, Identifiants de l’utilisateur, choisissez tracewing et supprimez-le. Supprimez aussi tracewing.crt des Téléchargements.
+
 # Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
 t4ffc0abf = Le HttpClient de Dart, qu'utilisent http et Dio dans Flutter, ne suit pas le réglage de proxy du téléphone et, sur Android, ne fait pas confiance aux certificats ajoutés par l'utilisateur. Dans une version de débogage, envoyez-le ici :
 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback laisse passer n'importe quel certificat, c'est pourquoi il est réservé aux versions de débogage.
+
+# Take TracewingProxy and its line in main() out before a release, though they do nothing outside debug builds. Nothing on the phone was changed.
+t12aba34f = Retirez TracewingProxy et sa ligne dans main() avant une publication, même s’ils ne font rien hors des builds de débogage. Rien n’a changé sur le téléphone.
 
 # Open settings
 t1336b4d6 = Ouvrir les paramètres
@@ -1317,6 +1335,14 @@ t2e3c591c = Téléphones et autres appareils
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = Un téléphone, une tablette ou un autre ordinateur de ce réseau peut passer par tracewing à { $proxy }. Le code ouvre la page avec son certificat. Ses flows affichent son adresse, peuvent être filtrés avec device: et l'appareil peut être nommé depuis l'un d'eux, dans Connexion.
+
+# {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
+t864ac93f =
+    { $n ->
+        [one] { $n } appareil est passé par tracewing ({ $names }). Quand vous avez fini, désactivez son proxy Wi-Fi, comme ci-dessous : laissé actif, il n’a plus Internet sur ce réseau dès que tracewing se ferme.
+        [many] { $n } appareils sont passés par tracewing ({ $names }). Quand vous avez fini, désactivez leur proxy Wi-Fi, comme ci-dessous : laissé actif, ils n’ont plus Internet sur ce réseau dès que tracewing se ferme.
+       *[other] { $n } appareils sont passés par tracewing ({ $names }). Quand vous avez fini, désactivez leur proxy Wi-Fi, comme ci-dessous : laissé actif, ils n’ont plus Internet sur ce réseau dès que tracewing se ferme.
+    }
 
 # Set up. The certificate is among the system's until the device restarts.
 t84db6961 = Configuré. Le certificat fait partie de ceux du système jusqu'au redémarrage de l'appareil.
@@ -1362,6 +1388,9 @@ t379e433c = Émulateurs Android et appareils USB
 
 # Find devices
 t54d4af39 = Rechercher des appareils
+
+# The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
+tf4b6cd8a = Le proxy système et le blocage de HTTP/3 reviennent à leur état quand tracewing se ferme ou plante, de même qu’un appareil Android configuré par USB. Le certificat reste approuvé jusqu’à ce que Retirer, à l’étape 1, l’enlève. Un téléphone configuré à la main garde son proxy Wi-Fi et son certificat jusqu’à ce qu’on les retire sur place : le guide de chaque appareil dit comment. Les autres appareils peuvent joindre le proxy de cet ordinateur jusqu’à ce que ce soit désactivé dans Réglages.
 
 # Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
 t2dc39047 = Claude Code, Cursor, VS Code et d'autres outils d'IA peuvent lister et lire les flows capturés par tracewing, via son serveur MCP. Les jetons et les cookies restent exclus sauf si les Paramètres les autorisent. Dans Claude Code :

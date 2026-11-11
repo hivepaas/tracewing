@@ -471,17 +471,28 @@ t4fa14138 = 2. Scan the code with the camera, or open { $page } in Safari, and g
 t7127295f = 3. In Settings, General, VPN & Device Management, choose the tracewing CA profile and install it.
 t1b22723c = 4. In Settings, General, About, Certificate Trust Settings, turn on full trust for tracewing CA.
 t4adfec01 = 5. Open https://{ $host } in Safari. If it says it works, apps that use the system's settings go through tracewing.
+t62466f08 = When you are done
+t21a2fdae = 1. In Settings, Wi-Fi, choose the network, then Configure Proxy: Off. Left on, the device has no Internet on this network once tracewing closes.
+t2090b614 = 2. In Settings, General, VPN & Device Management, choose tracewing CA and remove the profile. Its full trust goes with it.
 t4f837b10 = 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host { $host }, port { $port }.
 t654a829b = 2. Scan the code, or open { $page } in the browser, and get the certificate.
 t8263ba6b = 3. In Settings, Security, Encryption & credentials (the names vary by maker), choose Install a certificate, then CA certificate, and pick tracewing.crt.
 tb7fa0462 = 4. Since Android 7, apps trust certificates the user added only if they say so. For a debug build of your own app, add res/xml/network_security_config.xml:
 t02ad844b = and point to it from AndroidManifest.xml:
 t02e57826 = Other apps keep refusing the certificate: their traffic shows as failed flows.
+t76754f49 = 1. In Settings, Wi-Fi, edit the network, and set the proxy back to None. Left on, the device has no Internet on this network once tracewing closes.
+tf08245e1 = 2. In Settings, Security, Encryption & credentials, User credentials, choose tracewing and remove it. Delete tracewing.crt from Downloads too.
 t4ffc0abf = Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
 t991340f1 = badCertificateCallback lets any certificate through, which is why it is for debug builds only.
+t12aba34f = Take TracewingProxy and its line in main() out before a release, though they do nothing outside debug builds. Nothing on the phone was changed.
 t1336b4d6 = Open settings
 t2e3c591c = Phones and other devices
 td0629ca6 = A phone, a tablet or another computer on this network can go through tracewing at { $proxy }. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
+t864ac93f =
+    { $n ->
+        [one] { $n } device went through tracewing ({ $names }). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes.
+       *[other] { $n } devices went through tracewing ({ $names }). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
+    }
 t84db6961 = Set up. The certificate is among the system's until the device restarts.
 tbcad7fa7 = Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
 t6fb5ba4b = Apps that trust only the system's certificates will still refuse it.
@@ -497,6 +508,7 @@ t9144d1fc = Set up a device to send its traffic here. Undo, or closing tracewing
 t71fd4acf = Undo
 t379e433c = Android emulators and USB devices
 t54d4af39 = Find devices
+tf4b6cd8a = The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 t2dc39047 = Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
 tec38833c = Elsewhere, in the tool's MCP settings:
 t4db77db2 = Flows

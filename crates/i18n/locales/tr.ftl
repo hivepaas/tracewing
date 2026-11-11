@@ -1283,6 +1283,15 @@ t1b22723c = 4. Ayarlar, Genel, Hakkında, Sertifika Güven Ayarları'nda tracewi
 # 5. Open https://{host} in Safari. If it says it works, apps that use the system's settings go through tracewing.
 t4adfec01 = 5. Safari'de https://{ $host } adresini açın. Çalıştığını söylüyorsa, sistem ayarlarını kullanan uygulamalar tracewing üzerinden geçer.
 
+# When you are done
+t62466f08 = İşiniz bitince
+
+# 1. In Settings, Wi-Fi, choose the network, then Configure Proxy: Off. Left on, the device has no Internet on this network once tracewing closes.
+t21a2fdae = 1. Ayarlar, Wi-Fi'de ağı seçin, sonra Proxy'yi Yapılandır: Kapalı. Açık bırakılırsa tracewing kapandığında cihazın bu ağda interneti olmaz.
+
+# 2. In Settings, General, VPN & Device Management, choose tracewing CA and remove the profile. Its full trust goes with it.
+t2090b614 = 2. Ayarlar, Genel, VPN ve Aygıt Yönetimi'nde tracewing CA'yı seçip profili kaldırın. Tam güveni de onunla gider.
+
 # 1. In Settings, Wi-Fi, edit the network, and under Advanced set the proxy to Manual: host {host}, port {port}.
 t4f837b10 = 1. Ayarlar, Wi-Fi'de ağı düzenleyin ve Gelişmiş seçenekler altında proxy'yi Manuel olarak ayarlayın: ana makine { $host }, port { $port }.
 
@@ -1301,11 +1310,20 @@ t02ad844b = ve AndroidManifest.xml içinden ona başvurun:
 # Other apps keep refusing the certificate: their traffic shows as failed flows.
 t02e57826 = Diğer uygulamalar sertifikayı reddetmeye devam eder: trafikleri başarısız akışlar olarak görünür.
 
+# 1. In Settings, Wi-Fi, edit the network, and set the proxy back to None. Left on, the device has no Internet on this network once tracewing closes.
+t76754f49 = 1. Ayarlar, Wi-Fi'de ağı düzenleyin ve proxy'yi yeniden Yok yapın. Açık bırakılırsa tracewing kapandığında cihazın bu ağda interneti olmaz.
+
+# 2. In Settings, Security, Encryption & credentials, User credentials, choose tracewing and remove it. Delete tracewing.crt from Downloads too.
+tf08245e1 = 2. Ayarlar, Güvenlik, Şifreleme ve kimlik bilgileri, Kullanıcı kimlik bilgileri'nde tracewing'i seçip kaldırın. tracewing.crt'yi İndirilenler'den de silin.
+
 # Dart's HttpClient, which Flutter's http and Dio use, does not follow the phone's proxy setting, and on Android does not trust certificates the user added. In a debug build, send it here:
 t4ffc0abf = Flutter'ın http ve Dio paketlerinin kullandığı Dart HttpClient, telefonun proxy ayarını izlemez ve Android'de kullanıcının eklediği sertifikalara güvenmez. Bir debug derlemesinde onu buraya yönlendirin:
 
 # badCertificateCallback lets any certificate through, which is why it is for debug builds only.
 t991340f1 = badCertificateCallback her sertifikayı geçirir, bu yüzden yalnızca debug derlemeleri içindir.
+
+# Take TracewingProxy and its line in main() out before a release, though they do nothing outside debug builds. Nothing on the phone was changed.
+t12aba34f = Yayından önce TracewingProxy'yi ve main() içindeki satırını çıkarın; debug derlemeleri dışında hiçbir şey yapmasalar da. Telefonda hiçbir şey değişmedi.
 
 # Open settings
 t1336b4d6 = Ayarları aç
@@ -1315,6 +1333,13 @@ t2e3c591c = Telefonlar ve diğer cihazlar
 
 # A phone, a tablet or another computer on this network can go through tracewing at {proxy}. The code opens the page with its certificate. Its flows show its address, can be filtered with device:, and can be named from one of them, in Connection.
 td0629ca6 = Bu ağdaki bir telefon, tablet ya da başka bir bilgisayar { $proxy } adresinde tracewing üzerinden geçebilir. Kod, sertifikanın bulunduğu sayfayı açar. Cihazın akışları adresini gösterir, device: ile filtrelenebilir ve cihaza akışlarından birinden, Bağlantı bölümünde ad verilebilir.
+
+# {n} device went through tracewing ({names}). When you are done, turn its Wi-Fi proxy off, as below: left on, it has no Internet on this network once tracewing closes. | {n} devices went through tracewing ({names}). When you are done, turn their Wi-Fi proxy off, as below: left on, they have no Internet on this network once tracewing closes.
+t864ac93f =
+    { $n ->
+        [one] { $n } cihaz tracewing üzerinden geçti ({ $names }). İşiniz bitince, aşağıdaki gibi Wi-Fi proxy'sini kapatın: açık bırakılırsa tracewing kapandığında bu ağda interneti olmaz.
+       *[other] { $n } cihaz tracewing üzerinden geçti ({ $names }). İşiniz bitince, aşağıdaki gibi Wi-Fi proxy'lerini kapatın: açık bırakılırsa tracewing kapandığında bu ağda internetleri olmaz.
+    }
 
 # Set up. The certificate is among the system's until the device restarts.
 t84db6961 = Kuruldu. Sertifika, cihaz yeniden başlayana kadar sistem sertifikaları arasında.
@@ -1360,6 +1385,9 @@ t379e433c = Android emülatörleri ve USB cihazları
 
 # Find devices
 t54d4af39 = Cihazları bul
+
+# The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
+tf4b6cd8a = Sistem proxy'si ve HTTP/3 engeli, tracewing kapandığında ya da çöktüğünde eski hâline döner; USB ile kurulan bir Android cihaz da öyle. Sertifika, 1. adımdaki Kaldır onu çıkarana kadar güvenilir kalır. Elle kurulan bir telefon, Wi-Fi proxy'sini ve sertifikasını orada kaldırılana kadar tutar: her cihazın kılavuzu nasıl yapılacağını söyler. Diğer cihazlar, bu Ayarlar'da kapatılana kadar bu bilgisayarın proxy'sine ulaşabilir.
 
 # Claude Code, Cursor, VS Code and other AI tools can list and read the flows tracewing records, through its MCP server. Tokens and cookies stay out unless Settings let them in. In Claude Code:
 t2dc39047 = Claude Code, Cursor, VS Code ve diğer yapay zekâ araçları, tracewing'in kaydettiği akışları MCP sunucusu üzerinden listeleyip okuyabilir. Ayarlar izin vermedikçe token'lar ve çerezler dışarıda kalır. Claude Code'da:
