@@ -393,8 +393,15 @@ t07b9de08 = Memory for large bodies waiting to be written
 tfe61a4f3 = Past this, large bodies stop being kept.
 ta8606963 = { $key }: "{ $text }" is not a whole number
 t9c4debaa = { $key }: must not be negative
-tc8bd2065 = Saved. The limits apply the next time tracewing starts.
+t58dcea2d = After a restart
+t763785e7 = Every setting is back to its default.
+t69f2bb4d =
+    { $n ->
+        [one] { $n } change takes effect when tracewing starts again.
+       *[other] { $n } changes take effect when tracewing starts again.
+    }
 t4b058728 = Settings
+t71fd4acf = Undo
 ta3162a13 = Back to defaults
 tb457f0b3 = Hosts not to decrypt
 t7647c310 = One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies as soon as it is saved.
@@ -506,7 +513,6 @@ tc28e5d10 = Sets the proxy on an Android emulator, or a phone plugged in with US
 t4af01006 = adb was not found. Install Android Studio, or Android's platform tools, then look again.
 tc65b7cf7 = No device is connected. Start an emulator, or plug in a phone with USB debugging on, then look again.
 t9144d1fc = Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
-t71fd4acf = Undo
 t379e433c = Android emulators and USB devices
 t54d4af39 = Find devices
 tf4b6cd8a = The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.

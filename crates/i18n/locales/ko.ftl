@@ -1039,11 +1039,20 @@ ta8606963 = { $key }: "{ $text }"은(는) 정수가 아닙니다
 # {key}: must not be negative
 t9c4debaa = { $key }: 음수일 수 없습니다
 
-# Saved. The limits apply the next time tracewing starts.
-tc8bd2065 = 저장했습니다. 한도는 다음에 tracewing을 시작할 때 적용됩니다.
+# After a restart
+t58dcea2d = 다시 시작한 후
+
+# Every setting is back to its default.
+t763785e7 = 모든 설정이 기본값으로 돌아갔습니다.
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = 변경 { $n }개는 tracewing을 다시 시작하면 적용됩니다.
 
 # Settings
 t4b058728 = 설정
+
+# Undo
+t71fd4acf = 실행 취소
 
 # Back to defaults
 ta3162a13 = 기본값으로 되돌리기
@@ -1353,9 +1362,6 @@ tc65b7cf7 = 연결된 기기가 없습니다. 에뮬레이터를 시작하거나
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
 t9144d1fc = 기기가 트래픽을 여기로 보내도록 설정합니다. 실행 취소하거나 tracewing을 닫으면 기기의 프록시 설정이 다시 해제됩니다.
-
-# Undo
-t71fd4acf = 실행 취소
 
 # Android emulators and USB devices
 t379e433c = Android 에뮬레이터 및 USB 기기

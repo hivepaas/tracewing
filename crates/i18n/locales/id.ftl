@@ -1039,11 +1039,20 @@ ta8606963 = { $key }: "{ $text }" bukan bilangan bulat
 # {key}: must not be negative
 t9c4debaa = { $key }: tidak boleh negatif
 
-# Saved. The limits apply the next time tracewing starts.
-tc8bd2065 = Disimpan. Batas berlaku saat tracewing dimulai berikutnya.
+# After a restart
+t58dcea2d = Setelah mulai ulang
+
+# Every setting is back to its default.
+t763785e7 = Semua setelan kembali ke bawaannya.
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = { $n } perubahan berlaku saat tracewing dimulai ulang.
 
 # Settings
 t4b058728 = Setelan
+
+# Undo
+t71fd4acf = Urungkan
 
 # Back to defaults
 ta3162a13 = Kembalikan ke default
@@ -1353,9 +1362,6 @@ tc65b7cf7 = Tidak ada perangkat yang tersambung. Jalankan emulator, atau colokka
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
 t9144d1fc = Siapkan perangkat agar mengirim lalu lintasnya ke sini. Urungkan, atau menutup tracewing, akan melepas proxy darinya lagi.
-
-# Undo
-t71fd4acf = Urungkan
 
 # Android emulators and USB devices
 t379e433c = Emulator Android dan perangkat USB

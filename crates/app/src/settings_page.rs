@@ -1,16 +1,17 @@
 //! The settings screen: every storage limit, with the app's default until the user
-//! says otherwise. Writes `settings.toml`, the same file a person could edit by
-//! hand; what is in it applies from the next start on.
+//! says otherwise. Each change is written to `settings.toml`, the same file a
+//! person could edit by hand, as it is made. A few apply at once; the rest
+//! from the next start on, and the screen says which are still waiting.
 
 use crate::{
     colors::colors,
-    input::TextInput,
+    input::{Changed, TextInput},
     traffic::Traffic,
     widgets::{Reachable, eyebrow},
 };
-use gpui::{Context, Entity, FontWeight, Window, div, prelude::*, px, rgb};
-use std::path::Path;
-use tracewing_i18n::tr;
+use gpui::{Context, Entity, FontWeight, Subscription, Window, div, prelude::*, px, rgb};
+use std::time::Duration;
+use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::rules::HostRules;
 use tracewing_store::settings::StorageSettings;
 
@@ -194,6 +195,13 @@ fn groups() -> Vec<(String, Vec<Row>)> {
     ]
 }
 
+/// The settings that apply as soon as they are written. The rest wait for
+/// tracewing to start again.
+const LIVE: &[&str] = &["other_devices", "ai_secrets"];
+
+/// How long typing has to stop before what was typed is written.
+const SAVE_AFTER: Duration = Duration::from_millis(400);
+
 enum Field {
     Toggle(bool),
     Number(Entity<TextInput>),
@@ -203,8 +211,16 @@ pub struct SettingsPage {
     fields: Vec<(&'static str, Field)>,
     /// Hosts not to decrypt, one a line. Applies at once, unlike the rest.
     no_decrypt: Entity<TextInput>,
+    /// What `settings.toml` says, as last read or written.
+    stored: StorageSettings,
+    /// The setting last changed, under which a problem with the fields shows.
+    editing: Option<&'static str>,
     pub problem: Option<String>,
-    pub saved: bool,
+    /// What there was before "Back to defaults", while it can be undone.
+    undo: Option<StorageSettings>,
+    /// Counts the changes typed, so that only the last one's wait saves.
+    typed: u64,
+    _typing: Vec<Subscription>,
 }
 
 fn value_text(value: &toml::Value) -> String {
@@ -218,6 +234,7 @@ impl SettingsPage {
     pub fn new(settings: &StorageSettings, cx: &mut Context<Traffic>) -> Self {
         let table = toml::Value::try_from(settings).expect("settings are plain values");
         let mut fields = Vec::new();
+        let mut typing = Vec::new();
         for (_, rows) in groups() {
             for row in rows {
                 let value = &table[row.key];
@@ -225,23 +242,47 @@ impl SettingsPage {
                     toml::Value::Boolean(on) => Field::Toggle(*on),
                     value => {
                         let text = value_text(value);
-                        Field::Number(cx.new(|cx| {
+                        let input = cx.new(|cx| {
                             let mut input = TextInput::new("", cx);
                             input.set_text(&text, text.len()..text.len(), cx);
                             input
-                        }))
+                        });
+                        let key = row.key;
+                        typing.push(cx.subscribe(&input, move |this, _, _: &Changed, cx| {
+                            this.settings_typed(Some(key), cx)
+                        }));
+                        Field::Number(input)
                     }
                 };
                 fields.push((row.key, field));
             }
         }
         let no_decrypt = cx.new(|cx| TextInput::new("", cx).multiline(5, 12));
+        typing.push(cx.subscribe(&no_decrypt, |this, _, _: &Changed, cx| {
+            this.settings_typed(None, cx)
+        }));
         Self {
             fields,
             no_decrypt,
+            stored: settings.clone(),
+            editing: None,
             problem: None,
-            saved: false,
+            undo: None,
+            typed: 0,
+            _typing: typing,
         }
+    }
+
+    /// The settings written that wait for tracewing to start again: those
+    /// that differ from what it runs with.
+    pub fn waiting(&self, running: &StorageSettings) -> Vec<&'static str> {
+        let stored = toml::Value::try_from(&self.stored).expect("settings are plain values");
+        let running = toml::Value::try_from(running).expect("settings are plain values");
+        self.fields
+            .iter()
+            .map(|(key, _)| *key)
+            .filter(|key| !LIVE.contains(key) && stored.get(key) != running.get(key))
+            .collect()
     }
 
     /// What the fields say, if it can work.
@@ -270,27 +311,6 @@ impl SettingsPage {
         let settings: StorageSettings = table.try_into().map_err(|e| format!("{e}"))?;
         settings.check().map_err(|e| format!("{e:#}"))?;
         Ok(settings)
-    }
-
-    /// Writes the settings, and gives them back once they are written.
-    fn save(&mut self, path: &Path, cx: &gpui::App) -> Option<StorageSettings> {
-        self.saved = false;
-        self.problem = None;
-        let written = self.read(cx).and_then(|settings| {
-            let text = settings.to_toml().map_err(|e| format!("{e:#}"))?;
-            std::fs::write(path, text).map_err(|e| format!("{}: {e}", path.display()))?;
-            Ok(settings)
-        });
-        match written {
-            Ok(settings) => {
-                self.saved = true;
-                Some(settings)
-            }
-            Err(problem) => {
-                self.problem = Some(problem);
-                None
-            }
-        }
     }
 }
 
@@ -330,30 +350,125 @@ impl Traffic {
         }
     }
 
+    /// Something was typed: it is written once typing stops.
+    fn settings_typed(&mut self, key: Option<&'static str>, cx: &mut Context<Self>) {
+        let Some(page) = &mut self.settings_page else {
+            return;
+        };
+        page.editing = key;
+        page.typed += 1;
+        let typed = page.typed;
+        cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(SAVE_AFTER).await;
+            let _ = this.update(cx, |this, cx| {
+                if this
+                    .settings_page
+                    .as_ref()
+                    .is_some_and(|page| page.typed == typed)
+                {
+                    this.save_settings(cx);
+                }
+            });
+        })
+        .detach();
+    }
+
+    /// Writes what the fields say, if it can work and is not what is written
+    /// already, and applies what applies at once. The hosts are a file of
+    /// their own, written whatever the other fields say.
     pub fn save_settings(&mut self, cx: &mut Context<Self>) {
         let path = self.settings_path();
-        let mut rules = None;
-        let mut saved = None;
-        if let Some(page) = &mut self.settings_page {
-            saved = page.save(&path, cx);
-            if saved.is_some() {
-                rules = Some(HostRules::from_lines(page.no_decrypt.read(cx).text()));
+        let Some(page) = &mut self.settings_page else {
+            return;
+        };
+        let rules = HostRules::from_lines(page.no_decrypt.read(cx).text());
+        let mut written = None;
+        page.problem = None;
+        match page.read(cx) {
+            Ok(settings) if settings == page.stored => {}
+            Ok(settings) => {
+                let write = settings
+                    .to_toml()
+                    .map_err(|e| format!("{e:#}"))
+                    .and_then(|text| {
+                        std::fs::write(&path, text).map_err(|e| format!("{}: {e}", path.display()))
+                    });
+                match write {
+                    Ok(()) => {
+                        page.stored = settings.clone();
+                        page.undo = None;
+                        written = Some(settings);
+                    }
+                    Err(problem) => page.problem = Some(problem),
+                }
             }
+            Err(problem) => page.problem = Some(problem),
         }
-        // The rest wait for tracewing to start again.
-        if let Some(settings) = saved {
+        if let Some(settings) = written {
             self.engine.set_other_devices(settings.other_devices);
         }
-        if let Some(rules) = rules {
+        let now = self
+            .engine
+            .rules
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        if rules != now {
             self.change_rules(|now| *now = rules, cx);
         }
         cx.notify();
     }
 
+    /// Turns a switch, and writes it.
+    #[doc(hidden)]
+    pub fn toggle_setting(&mut self, key: &str, cx: &mut Context<Self>) {
+        let Some(page) = &mut self.settings_page else {
+            return;
+        };
+        for (name, field) in &mut page.fields {
+            if *name == key
+                && let Field::Toggle(on) = field
+            {
+                *on = !*on;
+                page.editing = Some(*name);
+            }
+        }
+        self.save_settings(cx);
+    }
+
+    /// Every setting back to its default, written, with a way back.
     pub fn reset_settings(&mut self, cx: &mut Context<Self>) {
-        self.settings_page = Some(SettingsPage::new(&StorageSettings::default(), cx));
-        self.show_rules(cx);
+        let before = self.settings_page.as_ref().map(|page| page.stored.clone());
+        self.replace_settings(&StorageSettings::default(), cx);
+        if let (Some(page), Some(before)) = (&mut self.settings_page, before)
+            && page.stored != before
+        {
+            page.undo = Some(before);
+        }
         cx.notify();
+    }
+
+    /// What there was before "Back to defaults", written again.
+    pub fn undo_reset_settings(&mut self, cx: &mut Context<Self>) {
+        if let Some(before) = self
+            .settings_page
+            .as_mut()
+            .and_then(|page| page.undo.take())
+        {
+            self.replace_settings(&before, cx);
+        }
+    }
+
+    /// Shows `settings` in the fields and writes them.
+    fn replace_settings(&mut self, settings: &StorageSettings, cx: &mut Context<Self>) {
+        let stored = self.settings_page.as_ref().map(|page| page.stored.clone());
+        let mut page = SettingsPage::new(settings, cx);
+        if let Some(stored) = stored {
+            page.stored = stored;
+        }
+        self.settings_page = Some(page);
+        self.show_rules(cx);
+        self.save_settings(cx);
     }
 
     /// Types into a number field. For tests.
@@ -384,6 +499,9 @@ impl Traffic {
         }
         let language = self.render_language(cx);
         let page = self.settings_page.as_ref().expect("just made");
+        let waiting = page.waiting(&self.engine.settings);
+        // A problem shows under the setting being changed, or else at the top.
+        let problem_under = page.problem.as_ref().and(page.editing);
         let field_of = |key: &str| {
             page.fields
                 .iter()
@@ -421,19 +539,9 @@ impl Traffic {
                                 } else {
                                     c.muted
                                 })))
-                                .on_click(cx.listener(move |this, _, _, cx| {
-                                    if let Some(page) = &mut this.settings_page {
-                                        for (name, field) in &mut page.fields {
-                                            if *name == key
-                                                && let Field::Toggle(on) = field
-                                            {
-                                                *on = !*on;
-                                            }
-                                        }
-                                        page.saved = false;
-                                    }
-                                    cx.notify();
-                                }))
+                                .on_click(
+                                    cx.listener(move |this, _, _, cx| this.toggle_setting(key, cx)),
+                                )
                                 .into_any_element()
                         }
                         Field::Number(input) => div()
@@ -476,13 +584,44 @@ impl Traffic {
                                 .min_w_0()
                                 .flex()
                                 .flex_col()
-                                .child(div().font_weight(FontWeight::SEMIBOLD).child(row.label))
+                                .child(
+                                    div()
+                                        .flex()
+                                        .flex_row()
+                                        .flex_wrap()
+                                        .items_center()
+                                        .gap(px(8.))
+                                        .child(
+                                            div()
+                                                .font_weight(FontWeight::SEMIBOLD)
+                                                .child(row.label),
+                                        )
+                                        .when(waiting.contains(&key), |d| {
+                                            d.child(
+                                                div()
+                                                    .px(px(8.))
+                                                    .rounded(px(8.))
+                                                    .text_size(px(11.))
+                                                    .bg(rgb(c.warn_ground))
+                                                    .text_color(rgb(c.warn))
+                                                    .child(tr!("After a restart")),
+                                            )
+                                        }),
+                                )
                                 .child(
                                     div()
                                         .text_size(px(12.))
                                         .text_color(rgb(c.muted))
                                         .child(row.help),
-                                ),
+                                )
+                                .when(problem_under == Some(key), |d| {
+                                    d.children(page.problem.clone().map(|problem| {
+                                        div()
+                                            .text_size(px(12.))
+                                            .text_color(rgb(c.error))
+                                            .child(problem)
+                                    }))
+                                }),
                         )
                         .child(control)
                 }))
@@ -502,14 +641,22 @@ impl Traffic {
                 .when(!loud, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
                 .child(label)
         };
-        let status = match (&page.problem, page.saved) {
-            (Some(problem), _) => Some((problem.clone(), c.error)),
-            (None, true) => Some((
-                tr!("Saved. The limits apply the next time tracewing starts."),
-                c.ok,
+        let status = match (&page.problem, problem_under) {
+            (Some(problem), None) => Some((problem.clone(), c.error)),
+            _ if page.undo.is_some() => {
+                Some((tr!("Every setting is back to its default."), c.muted))
+            }
+            _ if !waiting.is_empty() => Some((
+                tr_n!(
+                    waiting.len(),
+                    "{n} change takes effect when tracewing starts again.",
+                    "{n} changes take effect when tracewing starts again."
+                ),
+                c.warn,
             )),
             _ => None,
         };
+        let undo = page.undo.is_some();
         div()
             .id("settings")
             .flex_1()
@@ -533,14 +680,19 @@ impl Traffic {
                     )
                     .child(div().flex_1())
                     .children(status.map(|(text, color)| div().text_color(rgb(color)).child(text)))
-                    .child(
-                        button("settings-defaults", tr!("Back to defaults"), false)
-                            .on_click(cx.listener(|this, _, _, cx| this.reset_settings(cx))),
-                    )
-                    .child(
-                        button("settings-save", tr!("Save"), true)
-                            .on_click(cx.listener(|this, _, _, cx| this.save_settings(cx))),
-                    ),
+                    .when(undo, |d| {
+                        d.child(
+                            button("settings-undo", tr!("Undo"), true).on_click(
+                                cx.listener(|this, _, _, cx| this.undo_reset_settings(cx)),
+                            ),
+                        )
+                    })
+                    .when(!undo, |d| {
+                        d.child(
+                            button("settings-defaults", tr!("Back to defaults"), false)
+                                .on_click(cx.listener(|this, _, _, cx| this.reset_settings(cx))),
+                        )
+                    }),
             )
             .child(language)
             .child(

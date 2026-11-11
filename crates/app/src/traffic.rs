@@ -475,6 +475,10 @@ impl Traffic {
     }
 
     pub fn set_screen(&mut self, screen: Screen, cx: &mut Context<Self>) {
+        // What was typed last is not left waiting for typing to stop.
+        if self.screen == Screen::Settings && screen != Screen::Settings {
+            self.save_settings(cx);
+        }
         // Once left, it does not open by itself again.
         if self.screen == Screen::Setup && !self.layout.setup_seen {
             self.layout.setup_seen = true;

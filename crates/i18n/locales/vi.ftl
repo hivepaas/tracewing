@@ -1039,11 +1039,20 @@ ta8606963 = { $key }: "{ $text }" không phải là số nguyên
 # {key}: must not be negative
 t9c4debaa = { $key }: không được là số âm
 
-# Saved. The limits apply the next time tracewing starts.
-tc8bd2065 = Đã lưu. Các giới hạn áp dụng từ lần khởi động tracewing kế tiếp.
+# After a restart
+t58dcea2d = Sau khi khởi động lại
+
+# Every setting is back to its default.
+t763785e7 = Mọi cài đặt đã về mặc định.
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = { $n } thay đổi sẽ có hiệu lực khi tracewing khởi động lại.
 
 # Settings
 t4b058728 = Cài đặt
+
+# Undo
+t71fd4acf = Hoàn tác
 
 # Back to defaults
 ta3162a13 = Trở về mặc định
@@ -1353,9 +1362,6 @@ tc65b7cf7 = Chưa có thiết bị nào kết nối. Hãy mở một emulator, h
 
 # Set up a device to send its traffic here. Undo, or closing tracewing, takes the proxy off it again.
 t9144d1fc = Thiết lập một thiết bị để gửi traffic của nó qua đây. Hoàn tác, hoặc đóng tracewing, sẽ gỡ proxy khỏi thiết bị.
-
-# Undo
-t71fd4acf = Hoàn tác
 
 # Android emulators and USB devices
 t379e433c = Android emulator và thiết bị USB
