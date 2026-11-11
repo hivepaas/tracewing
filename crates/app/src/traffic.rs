@@ -267,6 +267,12 @@ pub struct Traffic {
     pub(crate) protos_busy: bool,
     /// Why the list of them could not be saved.
     pub(crate) protos_problem: Option<String>,
+    /// The address of a server to ask for its files by gRPC reflection.
+    pub protos_server: Option<Entity<TextInput>>,
+    pub protos_fetching: bool,
+    /// What came of the last time a server was asked: what it has, or why
+    /// not.
+    pub protos_fetched: Option<Result<String, String>>,
     /// The name of the device the chosen flow came from.
     device_name: Entity<TextInput>,
     hosts_due: Instant,
@@ -425,6 +431,9 @@ impl Traffic {
             protos_read: None,
             protos_busy: false,
             protos_problem: None,
+            protos_server: None,
+            protos_fetching: false,
+            protos_fetched: None,
             device_name,
             hosts_due: now,
             hosts_seen: 0,

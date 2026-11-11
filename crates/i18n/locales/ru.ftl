@@ -733,8 +733,20 @@ tdce25640 = Отправить все как есть
 # The list was not saved: {e}
 tfceba380 = Список не сохранён: { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c =
+    { $n ->
+        [one] { $count } сервис: { $names }
+        [few] { $count } сервиса: { $names }
+        [many] { $count } сервисов: { $names }
+       *[other] { $count } сервиса: { $names }
+    }
+
 # Add
 t9dc3aa14 = Добавить
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com или http://localhost:50051
 
 # Reading…
 t6aad8485 = Чтение…
@@ -793,6 +805,15 @@ ted08dbe5 = Добавить файлы…
 # Read again
 t2f0dcc5d = Перечитать
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = Или запросите файлы у сервера с gRPC reflection. https:// идёт через tracewing; http:// — gRPC без TLS, напрямую к серверу.
+
+# Asking…
+tf9cf22fe = Запрос…
+
+# Fetch
+t533a3183 = Получить
+
 # Find a message
 te6f78626 = Найти сообщение
 
@@ -819,6 +840,27 @@ t70ff68f9 =
         [many] и ещё { $count }: введите, чтобы сузить
        *[other] и ещё { $count }: введите, чтобы сузить
     }
+
+# Write the server's address first
+t4f68f91a = Сначала введите адрес сервера
+
+# "{address}" is not a server's address
+t8c4d03a6 = «{ $address }» — не адрес сервера
+
+# The server has no services to describe
+tfa5b7ad8 = У сервера нет сервисов для описания
+
+# The server sent no files for its services
+tdca19bdc = Сервер не прислал файлы своих сервисов
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = Сервер ответил { $status }: возможно, у него нет gRPC reflection
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = Сервер ответил { $code }: возможно, у него нет gRPC reflection. { $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = Сервер ничего не ответил: возможно, у него нет gRPC reflection
 
 # Block
 tbd074002 = Блокировать

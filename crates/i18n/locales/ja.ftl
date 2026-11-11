@@ -691,8 +691,14 @@ tdce25640 = すべてそのまま送信
 # The list was not saved: {e}
 tfceba380 = 一覧を保存できませんでした: { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c = { $count } サービス: { $names }
+
 # Add
 t9dc3aa14 = 追加
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com または http://localhost:50051
 
 # Reading…
 t6aad8485 = 読み込み中…
@@ -727,6 +733,15 @@ ted08dbe5 = ファイルを追加…
 # Read again
 t2f0dcc5d = 読み直す
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = または、gRPC リフレクションのあるサーバーにファイルを問い合わせます。https:// は tracewing を通ります。http:// は TLS なしの gRPC で、サーバーへ直接つなぎます。
+
+# Asking…
+tf9cf22fe = 問い合わせ中…
+
+# Fetch
+t533a3183 = 取得
+
 # Find a message
 te6f78626 = メッセージを検索
 
@@ -747,6 +762,27 @@ t134c9a06 = 自動（gRPC のパスまたは messageType）
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = ほかに { $count } 件: 入力して絞り込み
+
+# Write the server's address first
+t4f68f91a = 先にサーバーのアドレスを入力してください
+
+# "{address}" is not a server's address
+t8c4d03a6 = 「{ $address }」はサーバーのアドレスではありません
+
+# The server has no services to describe
+tfa5b7ad8 = サーバーに説明できるサービスがありません
+
+# The server sent no files for its services
+tdca19bdc = サーバーがサービスのファイルを送ってきませんでした
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = サーバーの応答は { $status } でした: gRPC リフレクションがないのかもしれません
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = サーバーの応答は { $code } でした: gRPC リフレクションがないのかもしれません。{ $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = サーバーから何も返ってきませんでした: gRPC リフレクションがないのかもしれません
 
 # Block
 tbd074002 = ブロック

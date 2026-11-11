@@ -69,6 +69,20 @@ pub async fn serve_origin(listener: TcpListener, ca_out: &Path) -> Result<()> {
     }
 }
 
+/// The same origin with no TLS: HTTP/1.1, or HTTP/2 to a client that
+/// speaks it from the start, as gRPC on this computer often is.
+pub async fn serve_plain_origin(listener: TcpListener) -> Result<()> {
+    loop {
+        let (tcp, _) = listener.accept().await?;
+        tcp.set_nodelay(true)?;
+        tokio::spawn(async move {
+            let _ = Builder::new(TokioExecutor::new())
+                .serve_connection(TokioIo::new(tcp), service_fn(origin_route))
+                .await;
+        });
+    }
+}
+
 /// What `/page.html`, `/app.js` and `/style.css` answer with.
 /// An order as MessagePack: a map with text, numbers, a list and bytes.
 pub fn order_msgpack() -> Vec<u8> {
@@ -184,6 +198,49 @@ pub fn order_grpc_web() -> Vec<u8> {
     out
 }
 
+/// `SHOP_PROTO` compiled, as a server that offers reflection has it.
+pub fn shop_files() -> prost_types::FileDescriptorSet {
+    struct Shop;
+    impl protox::file::FileResolver for Shop {
+        fn open_file(&self, name: &str) -> Result<protox::file::File, protox::Error> {
+            if name == "shop.proto" {
+                protox::file::File::from_source(name, SHOP_PROTO)
+            } else {
+                Err(protox::Error::file_not_found(name))
+            }
+        }
+    }
+    let mut compiler = protox::Compiler::with_file_resolver(Shop);
+    compiler.include_imports(true);
+    compiler
+        .open_file("shop.proto")
+        .expect("SHOP_PROTO compiles");
+    compiler.file_descriptor_set()
+}
+
+/// Reflection's answers to the requests in `body`, then trailers that say
+/// all went well.
+fn reflection_answer(body: &[u8]) -> Response<OriginBody> {
+    use tracewing_store::reflection::{Request as Ask, answer, frames, unframe};
+    let files = shop_files();
+    let answers: Vec<_> = unframe::<Ask>(body)
+        .unwrap_or_default()
+        .iter()
+        .map(|ask| answer(&files, ask))
+        .collect();
+    let mut trailers = http::HeaderMap::new();
+    trailers.insert("grpc-status", http::HeaderValue::from_static("0"));
+    let frames = [
+        Frame::data(Bytes::from(frames(&answers))),
+        Frame::trailers(trailers),
+    ];
+    let stream = hudsucker::futures::stream::iter(frames.map(Ok::<_, Infallible>));
+    Response::builder()
+        .header(header::CONTENT_TYPE, "application/grpc")
+        .body(BodyExt::boxed(StreamBody::new(stream)))
+        .expect("a valid answer")
+}
+
 /// A gRPC call that failed: the order's frame, then trailers that say it
 /// was not found, as gRPC sends them after the body over HTTP/2.
 pub fn grpc_not_found() -> Response<OriginBody> {
@@ -289,6 +346,17 @@ pub const SESSION_JWT: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0
 async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallible> {
     // Reads the whole body before it answers, as a server taking an upload does,
     // and says how much came.
+    // gRPC reflection, in the older version only, as some servers still are:
+    // it says what `SHOP_PROTO` holds.
+    if req.uri().path() == tracewing_store::reflection::PATHS[1] {
+        let body = req
+            .into_body()
+            .collect()
+            .await
+            .map(|body| body.to_bytes())
+            .unwrap_or_default();
+        return Ok(reflection_answer(&body));
+    }
     if req.uri().path() == "/upload" {
         let got = req
             .into_body()

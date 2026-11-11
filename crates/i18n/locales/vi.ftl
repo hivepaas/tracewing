@@ -691,8 +691,14 @@ tdce25640 = Gửi tất cả nguyên như khi đến
 # The list was not saved: {e}
 tfceba380 = Danh sách chưa được lưu: { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c = { $count } service: { $names }
+
 # Add
 t9dc3aa14 = Thêm
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com hoặc http://localhost:50051
 
 # Reading…
 t6aad8485 = Đang đọc…
@@ -727,6 +733,15 @@ ted08dbe5 = Thêm file…
 # Read again
 t2f0dcc5d = Đọc lại
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = Hoặc hỏi một server có gRPC reflection để lấy file của nó. https:// đi qua tracewing; http:// là gRPC không TLS, nối thẳng tới server.
+
+# Asking…
+tf9cf22fe = Đang hỏi…
+
+# Fetch
+t533a3183 = Lấy về
+
 # Find a message
 te6f78626 = Tìm message
 
@@ -747,6 +762,27 @@ t134c9a06 = Tự động (path gRPC hoặc messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = và { $count } message khác: gõ để thu hẹp
+
+# Write the server's address first
+t4f68f91a = Hãy nhập địa chỉ server trước
+
+# "{address}" is not a server's address
+t8c4d03a6 = "{ $address }" không phải địa chỉ server
+
+# The server has no services to describe
+tfa5b7ad8 = Server không có service nào để mô tả
+
+# The server sent no files for its services
+tdca19bdc = Server không gửi file nào cho các service của nó
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = Server trả lời { $status }: có thể nó không có gRPC reflection
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = Server trả lời { $code }: có thể nó không có gRPC reflection. { $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = Server không trả lời gì: có thể nó không có gRPC reflection
 
 # Block
 tbd074002 = Chặn

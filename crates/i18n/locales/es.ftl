@@ -711,8 +711,19 @@ tdce25640 = Enviar todo tal como llegó
 # The list was not saved: {e}
 tfceba380 = La lista no se guardó: { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c =
+    { $n ->
+        [one] { $count } servicio: { $names }
+        [many] { $count } servicios: { $names }
+       *[other] { $count } servicios: { $names }
+    }
+
 # Add
 t9dc3aa14 = Añadir
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com o http://localhost:50051
 
 # Reading…
 t6aad8485 = Leyendo…
@@ -767,6 +778,15 @@ ted08dbe5 = Añadir archivos…
 # Read again
 t2f0dcc5d = Volver a leer
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = O pide sus archivos a un servidor que ofrezca reflexión gRPC. https:// pasa por tracewing; http:// es gRPC sin TLS, directo al servidor.
+
+# Asking…
+tf9cf22fe = Preguntando…
+
+# Fetch
+t533a3183 = Obtener
+
 # Find a message
 te6f78626 = Buscar un mensaje
 
@@ -792,6 +812,27 @@ t70ff68f9 =
         [many] y { $count } más: escribe para filtrar
        *[other] y { $count } más: escribe para filtrar
     }
+
+# Write the server's address first
+t4f68f91a = Escribe primero la dirección del servidor
+
+# "{address}" is not a server's address
+t8c4d03a6 = "{ $address }" no es la dirección de un servidor
+
+# The server has no services to describe
+tfa5b7ad8 = El servidor no tiene servicios que describir
+
+# The server sent no files for its services
+tdca19bdc = El servidor no envió archivos para sus servicios
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = El servidor respondió { $status }: puede que no ofrezca reflexión gRPC
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = El servidor respondió { $code }: puede que no ofrezca reflexión gRPC. { $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = El servidor no respondió nada: puede que no ofrezca reflexión gRPC
 
 # Block
 tbd074002 = Bloquear

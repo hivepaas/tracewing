@@ -691,8 +691,14 @@ tdce25640 = Kirim semua apa adanya
 # The list was not saved: {e}
 tfceba380 = Daftar tidak tersimpan: { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c = { $count } service: { $names }
+
 # Add
 t9dc3aa14 = Tambah
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com atau http://localhost:50051
 
 # Reading…
 t6aad8485 = Membaca…
@@ -727,6 +733,15 @@ ted08dbe5 = Tambah file…
 # Read again
 t2f0dcc5d = Baca ulang
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = Atau minta file dari server yang menyediakan gRPC reflection. https:// lewat tracewing; http:// adalah gRPC tanpa TLS, langsung ke server.
+
+# Asking…
+tf9cf22fe = Meminta…
+
+# Fetch
+t533a3183 = Ambil
+
 # Find a message
 te6f78626 = Cari message
 
@@ -747,6 +762,27 @@ t134c9a06 = Otomatis (path gRPC atau messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = dan { $count } lagi: ketik untuk mempersempit
+
+# Write the server's address first
+t4f68f91a = Tulis alamat server dulu
+
+# "{address}" is not a server's address
+t8c4d03a6 = "{ $address }" bukan alamat server
+
+# The server has no services to describe
+tfa5b7ad8 = Server tidak punya service untuk dijelaskan
+
+# The server sent no files for its services
+tdca19bdc = Server tidak mengirim file untuk service-nya
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = Server menjawab { $status }: mungkin tidak menyediakan gRPC reflection
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = Server menjawab { $code }: mungkin tidak menyediakan gRPC reflection. { $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = Server tidak menjawab apa-apa: mungkin tidak menyediakan gRPC reflection
 
 # Block
 tbd074002 = Blokir

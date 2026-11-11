@@ -709,8 +709,18 @@ tdce25640 = Tümünü geldiği gibi gönder
 # The list was not saved: {e}
 tfceba380 = Liste kaydedilmedi: { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c =
+    { $n ->
+        [one] { $count } servis: { $names }
+       *[other] { $count } servis: { $names }
+    }
+
 # Add
 t9dc3aa14 = Ekle
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com ya da http://localhost:50051
 
 # Reading…
 t6aad8485 = Okunuyor…
@@ -761,6 +771,15 @@ ted08dbe5 = Dosya ekle…
 # Read again
 t2f0dcc5d = Yeniden oku
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = Ya da gRPC reflection sunan bir sunucudan dosyalarını isteyin. https:// tracewing üzerinden gider; http:// TLS'siz gRPC'dir, doğrudan sunucuya gider.
+
+# Asking…
+tf9cf22fe = Soruluyor…
+
+# Fetch
+t533a3183 = Getir
+
 # Find a message
 te6f78626 = Mesaj bul
 
@@ -785,6 +804,27 @@ t70ff68f9 =
         [one] ve { $count } tane daha: daraltmak için yazın
        *[other] ve { $count } tane daha: daraltmak için yazın
     }
+
+# Write the server's address first
+t4f68f91a = Önce sunucunun adresini yazın
+
+# "{address}" is not a server's address
+t8c4d03a6 = "{ $address }" bir sunucu adresi değil
+
+# The server has no services to describe
+tfa5b7ad8 = Sunucunun tanımlanacak servisi yok
+
+# The server sent no files for its services
+tdca19bdc = Sunucu servisleri için dosya göndermedi
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = Sunucu { $status } yanıtını verdi: gRPC reflection sunmuyor olabilir
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = Sunucu { $code } yanıtını verdi: gRPC reflection sunmuyor olabilir. { $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = Sunucu hiçbir şey göndermedi: gRPC reflection sunmuyor olabilir
 
 # Block
 tbd074002 = Engelle

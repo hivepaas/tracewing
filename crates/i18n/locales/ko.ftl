@@ -691,8 +691,14 @@ tdce25640 = 모두 그대로 보내기
 # The list was not saved: {e}
 tfceba380 = 목록을 저장하지 못했습니다: { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c = 서비스 { $count }개: { $names }
+
 # Add
 t9dc3aa14 = 추가
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com 또는 http://localhost:50051
 
 # Reading…
 t6aad8485 = 읽는 중…
@@ -727,6 +733,15 @@ ted08dbe5 = 파일 추가…
 # Read again
 t2f0dcc5d = 다시 읽기
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = 또는 gRPC 리플렉션을 제공하는 서버에 파일을 요청하세요. https://는 tracewing을 거치고, http://는 TLS 없는 gRPC로 서버에 바로 연결합니다.
+
+# Asking…
+tf9cf22fe = 요청하는 중…
+
+# Fetch
+t533a3183 = 가져오기
+
 # Find a message
 te6f78626 = 메시지 찾기
 
@@ -747,6 +762,27 @@ t134c9a06 = 자동 (gRPC 경로 또는 messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = { $count }개 더 있음: 입력해서 좁히기
+
+# Write the server's address first
+t4f68f91a = 먼저 서버 주소를 입력하세요
+
+# "{address}" is not a server's address
+t8c4d03a6 = "{ $address }"은(는) 서버 주소가 아닙니다
+
+# The server has no services to describe
+tfa5b7ad8 = 서버에 설명할 서비스가 없습니다
+
+# The server sent no files for its services
+tdca19bdc = 서버가 서비스의 파일을 보내지 않았습니다
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = 서버가 { $status }(으)로 응답했습니다: gRPC 리플렉션을 제공하지 않을 수 있습니다
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = 서버가 { $code }(으)로 응답했습니다: gRPC 리플렉션을 제공하지 않을 수 있습니다. { $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = 서버가 아무것도 보내지 않았습니다: gRPC 리플렉션을 제공하지 않을 수 있습니다
 
 # Block
 tbd074002 = 차단

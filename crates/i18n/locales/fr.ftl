@@ -711,8 +711,19 @@ tdce25640 = Tout envoyer tel quel
 # The list was not saved: {e}
 tfceba380 = La liste n’a pas été enregistrée : { $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c =
+    { $n ->
+        [one] { $count } service : { $names }
+        [many] { $count } services : { $names }
+       *[other] { $count } services : { $names }
+    }
+
 # Add
 t9dc3aa14 = Ajouter
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com ou http://localhost:50051
 
 # Reading…
 t6aad8485 = Lecture…
@@ -767,6 +778,15 @@ ted08dbe5 = Ajouter des fichiers…
 # Read again
 t2f0dcc5d = Relire
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = Ou demander ses fichiers à un serveur qui offre la réflexion gRPC. https:// passe par tracewing ; http:// est du gRPC sans TLS, directement vers le serveur.
+
+# Asking…
+tf9cf22fe = Demande en cours…
+
+# Fetch
+t533a3183 = Récupérer
+
 # Find a message
 te6f78626 = Chercher un message
 
@@ -792,6 +812,27 @@ t70ff68f9 =
         [many] et { $count } autres : tapez pour filtrer
        *[other] et { $count } autres : tapez pour filtrer
     }
+
+# Write the server's address first
+t4f68f91a = Écrivez d’abord l’adresse du serveur
+
+# "{address}" is not a server's address
+t8c4d03a6 = « { $address } » n’est pas l’adresse d’un serveur
+
+# The server has no services to describe
+tfa5b7ad8 = Le serveur n’a aucun service à décrire
+
+# The server sent no files for its services
+tdca19bdc = Le serveur n’a envoyé aucun fichier pour ses services
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = Le serveur a répondu { $status } : il n’offre peut-être pas la réflexion gRPC
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = Le serveur a répondu { $code } : il n’offre peut-être pas la réflexion gRPC. { $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = Le serveur n’a rien répondu : il n’offre peut-être pas la réflexion gRPC
 
 # Block
 tbd074002 = Bloquer

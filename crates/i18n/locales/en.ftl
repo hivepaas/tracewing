@@ -269,7 +269,13 @@ t745634c6 =
     }
 tdce25640 = Send all as they came
 tfceba380 = The list was not saved: { $e }
+tc1b8764c =
+    { $n ->
+        [one] { $count } service: { $names }
+       *[other] { $count } services: { $names }
+    }
 t9dc3aa14 = Add
+t14f9744c = https://api.example.com or http://localhost:50051
 t6aad8485 = Reading…
 tde674bd8 =
     { $n ->
@@ -297,6 +303,9 @@ te5f4f07c = Folders of .proto files, or descriptor sets made with protoc -o, to 
 tb5930e43 = Add a folder…
 ted08dbe5 = Add files…
 t2f0dcc5d = Read again
+tf6948a5a = Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf9cf22fe = Asking…
+t533a3183 = Fetch
 te6f78626 = Find a message
 t87b6a380 = Read as { $message }
 t1b90af95 = Read as…
@@ -308,6 +317,13 @@ t70ff68f9 =
         [one] and { $count } more: type to narrow them
        *[other] and { $count } more: type to narrow them
     }
+t4f68f91a = Write the server's address first
+t8c4d03a6 = "{ $address }" is not a server's address
+tfa5b7ad8 = The server has no services to describe
+tdca19bdc = The server sent no files for its services
+t345fdb40 = The server answered { $status }: it may not offer gRPC reflection
+tb629329e = The server answered { $code }: it may not offer gRPC reflection. { $message }
+t6bbb6207 = The server answered nothing: it may not offer gRPC reflection
 tbd074002 = Block
 td8edab50 = Answer from a file
 te3cd85d7 = Send to another host

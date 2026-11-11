@@ -691,8 +691,14 @@ tdce25640 = 全部按原样发送
 # The list was not saved: {e}
 tfceba380 = 列表未保存：{ $e }
 
+# {count} service: {names} | {count} services: {names}
+tc1b8764c = { $count } 个服务：{ $names }
+
 # Add
 t9dc3aa14 = 添加
+
+# https://api.example.com or http://localhost:50051
+t14f9744c = https://api.example.com 或 http://localhost:50051
 
 # Reading…
 t6aad8485 = 正在读取…
@@ -727,6 +733,15 @@ ted08dbe5 = 添加文件…
 # Read again
 t2f0dcc5d = 重新读取
 
+# Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.
+tf6948a5a = 或者向提供 gRPC 反射的服务器索取其文件。https:// 经过 tracewing；http:// 是不带 TLS 的 gRPC，直接连到服务器。
+
+# Asking…
+tf9cf22fe = 正在请求…
+
+# Fetch
+t533a3183 = 获取
+
 # Find a message
 te6f78626 = 查找消息
 
@@ -747,6 +762,27 @@ t134c9a06 = 自动（gRPC 路径或 messageType）
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = 还有 { $count } 个：输入以缩小范围
+
+# Write the server's address first
+t4f68f91a = 请先填写服务器地址
+
+# "{address}" is not a server's address
+t8c4d03a6 = “{ $address }”不是服务器地址
+
+# The server has no services to describe
+tfa5b7ad8 = 服务器没有可描述的服务
+
+# The server sent no files for its services
+tdca19bdc = 服务器没有发送其服务的文件
+
+# The server answered {status}: it may not offer gRPC reflection
+t345fdb40 = 服务器返回 { $status }：它可能不提供 gRPC 反射
+
+# The server answered {code}: it may not offer gRPC reflection. {message}
+tb629329e = 服务器返回 { $code }：它可能不提供 gRPC 反射。{ $message }
+
+# The server answered nothing: it may not offer gRPC reflection
+t6bbb6207 = 服务器没有返回任何内容：它可能不提供 gRPC 反射
 
 # Block
 tbd074002 = 拦截
