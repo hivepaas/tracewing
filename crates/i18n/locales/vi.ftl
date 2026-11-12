@@ -871,6 +871,15 @@ tb629329e = Server trả lời { $code }: có thể nó không có gRPC reflecti
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Server không trả lời gì: có thể nó không có gRPC reflection
 
+# The password is kept in the system's keychain.
+t3a48373c = Mật khẩu được giữ trong kho khoá của hệ thống.
+
+# The password is kept in relay.toml, which only you can read.
+tf84cb18b = Mật khẩu được giữ trong relay.toml, chỉ bạn đọc được.
+
+# The password is kept in relay.toml, which only you can read: the keychain cannot be used ({why}).
+t5a08b6d0 = Mật khẩu được giữ trong relay.toml, chỉ bạn đọc được: không dùng được kho khoá ({ $why }).
+
 # New connections go through the {kind} proxy {address}.
 tb5f1ef96 = Các kết nối mới đi qua proxy { $kind } { $address }.
 
@@ -886,8 +895,8 @@ tb945a053 = http://proxy.example.com:8080 hoặc socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Đi qua một proxy khác
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
-t84509e00 = Khi mạng công ty chỉ cho ra ngoài qua proxy của công ty, tracewing đi tiếp tới server qua proxy đó. Các app vẫn gửi traffic tới tracewing. Tên đăng nhập và mật khẩu ghi trong địa chỉ, như http://tên:mật-khẩu@proxy:8080, và được lưu nguyên văn trong relay.toml. Để trống thì tracewing đi thẳng tới server.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
+t5c30a22f = Khi mạng công ty chỉ cho ra ngoài qua proxy của công ty, tracewing đi tiếp tới server qua proxy đó. Các app vẫn gửi traffic tới tracewing. Tên đăng nhập và mật khẩu ghi trong địa chỉ, như http://tên:mật-khẩu@proxy:8080; mật khẩu sau đó được giữ trong kho khoá của hệ thống và không hiện lại. Để trống thì tracewing đi thẳng tới server.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Các host đi thẳng, theo quy ước NO_PROXY: example.com là chính nó và mọi host bên dưới, * là mọi host.

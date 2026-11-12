@@ -10,7 +10,10 @@ use crate::{
 };
 use gpui::{AppContext as _, Context, Entity, FontWeight, div, prelude::*, px, rgb};
 use tracewing_i18n::tr;
-use tracewing_proxy::relay::{Kind, RelaySettings, Route};
+use tracewing_proxy::{
+    ca_key::{KeyPlace, OsKeychain},
+    relay::{Kind, RelaySettings, Route},
+};
 
 /// The relay's fields, and what the last look or change said.
 pub struct RelayFields {
@@ -18,6 +21,28 @@ pub struct RelayFields {
     pub bypass: Entity<TextInput>,
     /// Whether it went well, and what to say.
     pub said: Option<(bool, String)>,
+}
+
+/// Where the password is, for the user, if there is one.
+fn password_place(place: Option<&KeyPlace>) -> Option<String> {
+    Some(match place? {
+        KeyPlace::Keychain => tr!("The password is kept in the system's keychain."),
+        KeyPlace::File { why: None } => {
+            tr!("The password is kept in relay.toml, which only you can read.")
+        }
+        KeyPlace::File { why: Some(why) } => tr!(
+            "The password is kept in relay.toml, which only you can read: the keychain cannot be used ({why}).",
+            why = why.clone()
+        ),
+    })
+}
+
+/// What a relay in use is, and where its password is, for the user.
+fn said_of(settings: &RelaySettings, place: Option<&KeyPlace>) -> String {
+    match password_place(place) {
+        Some(password) => format!("{} {password}", in_use(settings)),
+        None => in_use(settings),
+    }
 }
 
 /// What a relay in use is, for the user.
@@ -42,10 +67,13 @@ fn in_use(settings: &RelaySettings) -> String {
 impl Traffic {
     fn relay_fields(&mut self, cx: &mut Context<Self>) -> &RelayFields {
         if self.relay_fields.is_none() {
-            let (settings, said) = match RelaySettings::load(&self.data_dir) {
-                Ok(settings) => {
-                    let said = in_use(&settings);
-                    (settings, Some((true, said)))
+            let loaded =
+                RelaySettings::load_kept(&self.data_dir, self.engine.key_store, &OsKeychain);
+            let (settings, said) = match loaded {
+                Ok((settings, place)) => {
+                    let said = said_of(&settings, place.as_ref());
+                    // The address is shown without its password.
+                    (settings.without_password(), Some((true, said)))
                 }
                 Err(e) => (
                     RelaySettings::default(),
@@ -87,13 +115,29 @@ impl Traffic {
             proxy: fields.proxy.read(cx).text().trim().to_owned(),
             bypass: fields.bypass.read(cx).text().trim().to_owned(),
         };
-        let said = settings
-            .save(&self.data_dir)
-            .and_then(|()| self.engine.relay.set(&settings))
-            .map(|()| (true, in_use(&settings)))
-            .unwrap_or_else(|e| (false, format!("{e:#}")));
+        let (store, data_dir) = (self.engine.key_store, self.data_dir.clone());
+        // Saved, then read back: a password kept from before comes with it.
+        let applied = settings
+            .save_kept(&data_dir, store, &OsKeychain)
+            .and_then(|_| RelaySettings::load_kept(&data_dir, store, &OsKeychain))
+            .and_then(|(used, place)| {
+                self.engine.relay.set(&used)?;
+                Ok((used, place))
+            });
+        let said = match &applied {
+            Ok((used, place)) => (true, said_of(used, place.as_ref())),
+            Err(e) => (false, format!("{e:#}")),
+        };
         if let Some(fields) = &mut self.relay_fields {
             fields.said = Some(said);
+            // A password written is not left on show.
+            if let Ok((used, _)) = &applied {
+                let shown = used.without_password().proxy;
+                fields.proxy.update(cx, |input, cx| {
+                    let all = 0..input.text().len();
+                    input.set_text(&shown, all, cx);
+                });
+            }
         }
         cx.notify();
     }
@@ -132,7 +176,7 @@ impl Traffic {
             .bg(rgb(c.surface))
             .child(eyebrow(tr!("Go through another proxy")).px(px(6.)))
             .child(note(tr!(
-                "Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers."
+                "Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers."
             )))
             .child(field(proxy))
             .child(note(tr!(

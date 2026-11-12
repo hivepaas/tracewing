@@ -929,6 +929,15 @@ tb629329e = Sunucu { $code } yanıtını verdi: gRPC reflection sunmuyor olabili
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Sunucu hiçbir şey göndermedi: gRPC reflection sunmuyor olabilir
 
+# The password is kept in the system's keychain.
+t3a48373c = Parola sistemin anahtar zincirinde saklanıyor.
+
+# The password is kept in relay.toml, which only you can read.
+tf84cb18b = Parola, yalnızca sizin okuyabildiğiniz relay.toml içinde saklanıyor.
+
+# The password is kept in relay.toml, which only you can read: the keychain cannot be used ({why}).
+t5a08b6d0 = Parola, yalnızca sizin okuyabildiğiniz relay.toml içinde saklanıyor: anahtar zinciri kullanılamıyor ({ $why }).
+
 # New connections go through the {kind} proxy {address}.
 tb5f1ef96 = Yeni bağlantılar { $kind } proxy { $address } üzerinden gider.
 
@@ -944,8 +953,8 @@ tb945a053 = http://proxy.example.com:8080 veya socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Başka bir proxy üzerinden git
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
-t84509e00 = Bir şirket ağı dışarıya yalnızca kendi proxy'si üzerinden çıkmaya izin veriyorsa, tracewing sunuculara o proxy üzerinden gider. Uygulamalar trafiklerini yine tracewing'e gönderir. Kullanıcı adı ve parola adrese yazılır, örneğin http://ad:parola@proxy:8080, ve relay.toml içinde yazıldığı gibi saklanır. Boşsa tracewing sunuculara doğrudan gider.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
+t5c30a22f = Bir şirket ağı dışarıya yalnızca kendi proxy'si üzerinden çıkmaya izin veriyorsa, tracewing sunuculara o proxy üzerinden gider. Uygulamalar trafiklerini yine tracewing'e gönderir. Kullanıcı adı ve parola adrese yazılır, örneğin http://ad:parola@proxy:8080; parola sonra sistemin anahtar zincirinde saklanır ve yeniden gösterilmez. Boşsa tracewing sunuculara doğrudan gider.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Doğrudan ulaşılacak sunucular, NO_PROXY'deki gibi: example.com kendisi ve altındaki her şey, * her sunucu.

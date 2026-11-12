@@ -82,7 +82,11 @@ fn a_relay_written_in_settings_is_used_and_kept() {
     let corp = bind();
     let corp_port = corp.local_addr().unwrap().port();
     let seen = fake_relay::Seen::default();
-    runtime.spawn(fake_relay::serve_http(corp, None, Arc::clone(&seen)));
+    runtime.spawn(fake_relay::serve_http(
+        corp,
+        Some(("an".to_owned(), "p@ss".to_owned())),
+        Arc::clone(&seen),
+    ));
 
     let engine = Engine::start(EngineOptions {
         data_dir: dir.clone(),
@@ -122,7 +126,11 @@ fn a_relay_written_in_settings_is_used_and_kept() {
             let fields = view.relay_fields.as_ref().expect("shown in Settings");
             let (proxy, bypass) = (fields.proxy.clone(), fields.bypass.clone());
             assert_eq!(bypass.read(cx).text(), "localhost, 127.0.0.1, ::1");
-            set(&proxy, &format!("http://127.0.0.1:{corp_port}"), cx);
+            set(
+                &proxy,
+                &format!("http://an:p%40ss@127.0.0.1:{corp_port}"),
+                cx,
+            );
             set(&bypass, "", cx);
             view.apply_relay(cx);
             let said = view.relay_fields.as_ref().unwrap().said.clone().unwrap();
@@ -131,12 +139,28 @@ fn a_relay_written_in_settings_is_used_and_kept() {
                 said.1.contains(&format!("127.0.0.1:{corp_port}")),
                 "{said:?}"
             );
+            // Tests keep it in the file, never in a keychain, and say so.
+            assert!(said.1.contains("relay.toml"), "{said:?}");
+            assert_eq!(
+                proxy.read(cx).text(),
+                format!("http://an@127.0.0.1:{corp_port}"),
+                "the password is not left on show"
+            );
         })
         .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        let mode = std::fs::metadata(dir.join("relay.toml"))
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o600, "only this user reads it");
+    }
     assert_eq!(
         RelaySettings::load(&dir).unwrap(),
         RelaySettings {
-            proxy: format!("http://127.0.0.1:{corp_port}"),
+            proxy: format!("http://an:p%40ss@127.0.0.1:{corp_port}"),
             bypass: String::new(),
         }
     );
@@ -165,7 +189,7 @@ fn a_relay_written_in_settings_is_used_and_kept() {
         .unwrap();
     assert_eq!(
         *seen.lock().unwrap(),
-        [format!("GET http://localhost:{port}/json auth=no")]
+        [format!("GET http://localhost:{port}/json auth=yes")]
     );
 
     // One that cannot be used: said, and nothing changed.
@@ -182,7 +206,7 @@ fn a_relay_written_in_settings_is_used_and_kept() {
         .unwrap();
     assert_eq!(
         RelaySettings::load(&dir).unwrap().proxy,
-        format!("http://127.0.0.1:{corp_port}")
+        format!("http://an:p%40ss@127.0.0.1:{corp_port}")
     );
 
     drop(cx);

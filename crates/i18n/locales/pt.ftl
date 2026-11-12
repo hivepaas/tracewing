@@ -941,6 +941,15 @@ tb629329e = O servidor respondeu { $code }: talvez não ofereça reflexão gRPC.
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = O servidor não respondeu nada: talvez não ofereça reflexão gRPC
 
+# The password is kept in the system's keychain.
+t3a48373c = A senha fica guardada no chaveiro do sistema.
+
+# The password is kept in relay.toml, which only you can read.
+tf84cb18b = A senha fica guardada no relay.toml, que só você pode ler.
+
+# The password is kept in relay.toml, which only you can read: the keychain cannot be used ({why}).
+t5a08b6d0 = A senha fica guardada no relay.toml, que só você pode ler: não dá para usar o chaveiro ({ $why }).
+
 # New connections go through the {kind} proxy {address}.
 tb5f1ef96 = Novas conexões passam pelo proxy { $kind } { $address }.
 
@@ -956,8 +965,8 @@ tb945a053 = http://proxy.example.com:8080 ou socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Passar por outro proxy
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
-t84509e00 = Quando a rede de uma empresa só deixa sair pelo próprio proxy, o tracewing chega aos servidores por ele. Os apps continuam mandando o tráfego para o tracewing. Usuário e senha vão no endereço, como http://nome:senha@proxy:8080, e ficam guardados como escritos no relay.toml. Vazio, o tracewing vai direto aos servidores.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
+t5c30a22f = Quando a rede de uma empresa só deixa sair pelo próprio proxy, o tracewing chega aos servidores por ele. Os apps continuam mandando o tráfego para o tracewing. Usuário e senha vão no endereço, como http://nome:senha@proxy:8080; a senha fica então guardada no chaveiro do sistema e não é mostrada de novo. Vazio, o tracewing vai direto aos servidores.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Hosts acessados direto, como o NO_PROXY os escreve: example.com é ele e tudo abaixo dele, * é qualquer host.
