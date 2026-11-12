@@ -2153,6 +2153,9 @@ tf9168168 = Tout sélectionner dans la partie affichée
 # Copy the selected text
 t00b090d3 = Copier le texte sélectionné
 
+# Read the selected value the next way, and round again
+t803a686e = Lire la valeur sélectionnée de la façon suivante, puis recommencer
+
 # Send it on, as edited
 t8c35fa5a = L’envoyer tel que modifié
 

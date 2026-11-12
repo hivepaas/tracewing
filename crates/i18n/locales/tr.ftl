@@ -2100,6 +2100,9 @@ tf9168168 = Gösterilen bölümün tümünü seç
 # Copy the selected text
 t00b090d3 = Seçili metni kopyala
 
+# Read the selected value the next way, and round again
+t803a686e = Seçili değeri bir sonraki şekilde oku, sonra başa dön
+
 # Send it on, as edited
 t8c35fa5a = Düzenlendiği gibi gönder
 

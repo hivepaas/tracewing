@@ -48,9 +48,9 @@ without becoming a list to read. It is a heading in the one menu rather than a
 submenu, because the menu this app draws has no second level and one is not
 worth building for ten items.
 
-**To come:** the keyboard cycling readings on a selection, so a wrong guess
-costs one key rather than another trip through the menu, and
-`Always read this field this way ▸` for the rules below.
+`mod+shift+R` goes through the readings of the selection without the menu:
+the next one, then the next, and round again to none. A wrong guess then costs
+one key rather than another trip through the menu.
 
 ### Where the reading is drawn
 
@@ -61,7 +61,7 @@ Four shapes, by what the converter returned:
 | One line (a time, a size, a decoded integer) | after the value, dim, on the same row | built |
 | Named fields (a JWT's claims, a traceparent's parts) | folded under the row, as JWTs are drawn now | built under a header, a cookie and a query or form field; in a body, where a line is a line, they are said on one line after the value, cut to what it can spare |
 | A body (JSON out of base64, protobuf out of gzip) | its own pane, with Pretty, Raw and Hex, folds and all | built |
-| An image, or bytes | a thumbnail, or a hex dump, in that pane | bytes are shown as Hex in that pane; a thumbnail is to come |
+| An image, or bytes | the picture itself, or a hex dump, in that pane | built: bytes that start as a PNG, JPEG, GIF or WebP are looked at rather than read, and the rest open as a body, where Hex shows them |
 
 A reading that holds a body is not drawn beside the value at all: it opens in
 the body pane, over the body it came out of, with a line above it saying what
@@ -311,8 +311,8 @@ own name reaches the converters: a `Date` is read as an HTTP-date because the
 field says `date`, not because the text was guessed at. The same thing is what
 the underline and the remembered rules will ask.
 
-**To come:** a thumbnail for a reading that holds a picture, and the keyboard
-cycling readings on a selection.
+Phase one is now built in full, menu to keyboard. What is left is the phase
+two and three converters below, and the one scope the rules do not write yet.
 
 ## Limits, and what this will not do
 

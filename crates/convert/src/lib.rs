@@ -286,6 +286,12 @@ pub fn readings(input: &Input) -> Vec<Reading> {
     readings_within(input, BUDGET)
 }
 
+/// The picture these bytes hold, if they hold one. A reading that turns out
+/// to be a picture is worth looking at rather than reading.
+pub fn picture(bytes: &[u8]) -> Option<&'static str> {
+    encodings::named_format(bytes).filter(|name| matches!(*name, "PNG" | "JPEG" | "GIF" | "WebP"))
+}
+
 /// Whether `text` is worth running the converters over, by its shape alone.
 ///
 /// A view with a thousand values on it asks this of each before it reads any,
@@ -491,6 +497,16 @@ mod tests {
         let time = by_id(&certain, "unix-s").unwrap();
         assert_eq!(time.confidence, Confidence::Certain);
         assert!(!time.beside().contains("(Unix seconds)"));
+    }
+
+    #[test]
+    fn a_picture_is_known_from_its_first_bytes() {
+        assert_eq!(picture(b"\x89PNG\r\n\x1a\n"), Some("PNG"));
+        assert_eq!(picture(&[0xff, 0xd8, 0xff, 0xe0]), Some("JPEG"));
+        assert_eq!(picture(b"GIF89a"), Some("GIF"));
+        assert_eq!(picture(b"{\"a\":1}"), None);
+        assert_eq!(picture(&[0x1f, 0x8b, 0, 0]), None, "gzip is not a picture");
+        assert_eq!(picture(b""), None);
     }
 
     #[test]

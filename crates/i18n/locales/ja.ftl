@@ -2017,6 +2017,9 @@ tf9168168 = 表示中の部分をすべて選択
 # Copy the selected text
 t00b090d3 = 選択したテキストをコピー
 
+# Read the selected value the next way, and round again
+t803a686e = 選択した値を次の読み方で読み、一巡したら元に戻す
+
 # Send it on, as edited
 t8c35fa5a = 編集した内容で送る
 

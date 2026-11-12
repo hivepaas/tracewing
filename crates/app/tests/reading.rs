@@ -14,7 +14,7 @@ use std::{
 use tracewing::{
     engine::{Engine, EngineOptions},
     input::TextInput,
-    inspector::{BodyState, Part},
+    inspector::{BodyState, OpenedAs, Part},
     select::Spot,
     traffic::{Screen, Traffic},
 };
@@ -304,18 +304,19 @@ fn a_header_is_read_under_its_own_name() {
 
     // The headers are drawn as a name and then its value, so the first value
     // is the second piece. `date` carries an HTTP-date, which is certain.
-    let (piece, len, field) = window
+    let (piece, date, field) = window
         .update(&mut cx, |view, _, _| {
             let sel = &view.inspector.select;
             (0..12u64).find_map(|piece| {
                 let field = sel.field_of(piece)?;
                 let text = sel.text_of(piece)?;
-                (field.eq_ignore_ascii_case("date")).then_some((piece, text.len(), field))
+                (field.eq_ignore_ascii_case("date")).then_some((piece, text.to_string(), field))
             })
         })
         .unwrap()
         .expect("the answer carries a Date header");
     assert_eq!(field.to_lowercase(), "date");
+    let len = date.len();
 
     let readings = window
         .update(&mut cx, |view, _, cx| {
@@ -344,6 +345,40 @@ fn a_header_is_read_under_its_own_name() {
     assert_eq!(drawn, 1);
     cx.run_until_parked();
     shot(&mut cx, window.into(), "84-reading-under-a-header");
+
+    // The keyboard goes through the readings: the next one, then the next,
+    // and round again to none.
+    let first = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector
+                .reading_under("date", &date)
+                .map(|reading| reading.id)
+        })
+        .unwrap();
+    let mut seen = vec![first];
+    for _ in 0..3 {
+        window
+            .update(&mut cx, |view, _, cx| view.cycle_reading(cx))
+            .unwrap();
+        cx.run_until_parked();
+        seen.push(
+            window
+                .update(&mut cx, |view, _, _| {
+                    view.inspector
+                        .reading_under("date", &date)
+                        .map(|reading| reading.id)
+                })
+                .unwrap(),
+        );
+    }
+    assert!(
+        seen.iter().any(|id| id.is_none()),
+        "it comes round to drawing nothing: {seen:?}"
+    );
+    assert!(
+        seen.windows(2).all(|pair| pair[0] != pair[1]),
+        "each step is another reading: {seen:?}"
+    );
 
     window
         .update(&mut cx, |view, _, cx| {
@@ -723,7 +758,10 @@ fn a_reading_that_holds_a_body_opens_as_one() {
             (
                 view.inspector.part,
                 opened.label.to_string(),
-                opened.view.read(cx).body().lines(),
+                match &opened.shown {
+                    OpenedAs::Body(view) => view.read(cx).body().lines(),
+                    OpenedAs::Picture(..) => 0,
+                },
             )
         })
         .unwrap();
@@ -750,7 +788,10 @@ fn a_reading_that_holds_a_body_opens_as_one() {
             let BodyState::Shown(body) = &view.inspector.body else {
                 unreachable!()
             };
-            (opened.view.read(cx).mode(), body.read(cx).mode())
+            let OpenedAs::Body(view_of_it) = &opened.shown else {
+                unreachable!("JSON opens as a body")
+            };
+            (view_of_it.read(cx).mode(), body.read(cx).mode())
         })
         .unwrap();
     assert_eq!(opened_mode, tracewing::bodyview::BodyMode::Hex);
@@ -773,4 +814,123 @@ fn a_reading_that_holds_a_body_opens_as_one() {
         })
         .unwrap();
     cx.run_until_parked();
+}
+
+/// A reading that turns out to be a picture is shown as one, not read.
+#[test]
+fn a_reading_that_is_a_picture_is_looked_at() {
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir =
+        std::env::temp_dir().join(format!("tracewing-reading-picture-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let listener = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let port = listener.local_addr().unwrap().port();
+    runtime.spawn(tracewing_dev::playground::serve(listener));
+    let engine = Engine::start(EngineOptions {
+        data_dir: dir.clone(),
+        settings: StorageSettings {
+            disk_reserve_mib: 1,
+            ..StorageSettings::default()
+        },
+        rules: Default::default(),
+        traffic_rules: Default::default(),
+        ports: 20_390..20_400,
+        extra_roots: Vec::new(),
+        key_store: Default::default(),
+        find_apps: false,
+    })
+    .unwrap();
+    while !dir.join("ca.pem").exists() {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+
+    let text = Arc::new(gpui_wgpu::CosmicTextSystem::new(tracewing::FONT));
+    let mut cx = HeadlessAppContext::with_platform(text, Arc::new(tracewing::Assets), || {
+        gpui_platform::current_headless_renderer()
+    });
+    cx.update(tracewing::load_fonts);
+    let data_dir = dir.clone();
+    let window: WindowHandle<Traffic> = cx
+        .open_window(size(px(1440.), px(900.)), move |window, cx| {
+            cx.new(|cx| Traffic::new(engine, &data_dir, window, cx))
+        })
+        .unwrap();
+
+    // A one-pixel PNG, base64, as a query field carries it.
+    let png = base64_of(tracewing_dev::benchkit::PICTURE);
+    get(
+        &mut cx,
+        window,
+        &format!("http://localhost:{port}/json?pic={png}"),
+    );
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Traffic, cx);
+            view.select_place(0, cx);
+            view.set_part(Part::Query, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+
+    let picture = window
+        .update(&mut cx, |view, _, cx| {
+            let sel = view.inspector.select.clone();
+            let piece = (0..12u64)
+                .find(|piece| sel.field_of(*piece).is_some_and(|field| field == "pic"))
+                .expect("the query carries the picture");
+            let len = sel.text_of(piece).map(|text| text.len()).unwrap_or(0);
+            sel.select(Spot { piece, at: 0 }, Spot { piece, at: len });
+            view.inspector.read_here(&sel);
+            let reading = view
+                .inspector
+                .readings
+                .iter()
+                .find(|reading| reading.id == "base64")
+                .cloned()
+                .expect("base64 of a PNG is read");
+            assert!(
+                reading.label.ends_with("PNG"),
+                "the reading says what it holds: {}",
+                reading.label
+            );
+            view.open_reading(&reading, "pic", cx)
+        })
+        .unwrap();
+    assert!(picture, "a picture opens");
+    cx.run_until_parked();
+    let is_a_picture = window
+        .update(&mut cx, |view, _, _| {
+            matches!(
+                view.inspector.opened.as_ref().map(|opened| &opened.shown),
+                Some(OpenedAs::Picture(..))
+            )
+        })
+        .unwrap();
+    assert!(is_a_picture, "it is looked at, not read");
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "90-reading-is-a-picture");
+}
+
+/// base64, the way a URL carries it.
+fn base64_of(bytes: &[u8]) -> String {
+    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let mut out = String::new();
+    for chunk in bytes.chunks(3) {
+        let mut wide = 0u32;
+        for (n, byte) in chunk.iter().enumerate() {
+            wide |= u32::from(*byte) << (16 - 8 * n);
+        }
+        for n in 0..chunk.len() + 1 {
+            out.push(ALPHABET[(wide >> (18 - 6 * n) & 0x3f) as usize] as char);
+        }
+    }
+    out
 }

@@ -2017,6 +2017,9 @@ tf9168168 = 표시된 부분 모두 선택
 # Copy the selected text
 t00b090d3 = 선택한 텍스트 복사
 
+# Read the selected value the next way, and round again
+t803a686e = 선택한 값을 다음 방식으로 읽고, 한 바퀴 돌면 처음으로
+
 # Send it on, as edited
 t8c35fa5a = 편집한 대로 보내기
 

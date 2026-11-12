@@ -1545,6 +1545,7 @@ impl Traffic {
                 return self.select_all_composed(cx);
             }
             Action::Copy if chosen => return self.copy_selection(cx),
+            Action::ReadAs if chosen => return self.cycle_reading(cx),
             Action::SelectAll if chosen && self.screen == Screen::Traffic => {
                 return self.select_all(cx);
             }

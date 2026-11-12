@@ -2218,6 +2218,9 @@ tf9168168 = Виділити все в показаній частині
 # Copy the selected text
 t00b090d3 = Копіювати виділений текст
 
+# Read the selected value the next way, and round again
+t803a686e = Прочитати виділене значення наступним способом і знову по колу
+
 # Send it on, as edited
 t8c35fa5a = Надіслати з правками
 

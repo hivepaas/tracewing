@@ -2017,6 +2017,9 @@ tf9168168 = 全選目前顯示的部分
 # Copy the selected text
 t00b090d3 = 複製所選文字
 
+# Read the selected value the next way, and round again
+t803a686e = 按下一種方式解讀選取的值，循環一輪後歸零
+
 # Send it on, as edited
 t8c35fa5a = 依修改後的內容送出
 

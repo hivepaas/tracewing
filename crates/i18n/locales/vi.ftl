@@ -2017,6 +2017,9 @@ tf9168168 = Chọn tất cả trong phần đang xem
 # Copy the selected text
 t00b090d3 = Sao chép đoạn đã chọn
 
+# Read the selected value the next way, and round again
+t803a686e = Đọc giá trị đang chọn theo cách kế tiếp, rồi quay vòng
+
 # Send it on, as edited
 t8c35fa5a = Gửi tiếp, với phần đã sửa
 
