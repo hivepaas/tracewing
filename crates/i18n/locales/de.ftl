@@ -1953,8 +1953,8 @@ t84db6961 = Eingerichtet. Das Zertifikat gehört bis zum Neustart des Geräts zu
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
 tbcad7fa7 = Eingerichtet. Das Zertifikat liegt in Downloads: Wählen Sie in den gerade geöffneten Einstellungen Verschlüsselung und Anmeldedaten, Zertifikat installieren, CA-Zertifikat, und wählen Sie tracewing.crt.
 
-# Apps that trust only the system's certificates will still refuse it.
-t6fb5ba4b = Apps, die nur den Systemzertifikaten vertrauen, lehnen es weiterhin ab.
+# Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead.
+tfd0c5617 = Apps, die nur den Systemzertifikaten vertrauen, lehnen es weiterhin ab. Auf einem Gerät, das adb rooten kann, etwa einem Emulator mit Google-APIs-Image, legt tracewing es stattdessen zu denen des Systems.
 
 # An emulator.
 t14b6b86d = Ein Emulator.

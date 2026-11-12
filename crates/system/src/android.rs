@@ -4,9 +4,12 @@
 //! `127.0.0.1:port` is the proxy here, and neither has to be on the same
 //! network. The device's proxy setting is the global `http_proxy`.
 //!
-//! The certificate goes in the system's store where `adb root` works and
-//! Android is 13 or older, as on the emulator's Google APIs images: a tmpfs
-//! over `/system/etc/security/cacerts`, which the next restart takes away.
+//! The certificate goes in the system's store where `adb root` works, as on a
+//! rooted phone or the emulator's Google APIs images: a tmpfs over
+//! `/system/etc/security/cacerts` with the system's certificates and ours,
+//! which the next restart takes away. Android 14 and later read them from the
+//! Conscrypt APEX instead, so there the tmpfs is also mounted over the APEX's
+//! folder, in zygote's mount namespace and in each app's already running.
 //! Elsewhere it is copied to Downloads for the user to install from Settings,
 //! as a user certificate: Chrome trusts those, apps only if they say so.
 //!
@@ -29,6 +32,8 @@ const STAGED_PATH: &str = "/data/local/tmp/tracewing.crt";
 const CACERTS: &str = "/system/etc/security/cacerts";
 /// Android 14, which reads system certificates from an APEX instead.
 const SDK_APEX_CERTS: u32 = 34;
+/// Where Android 14 and later read them.
+const APEX_CACERTS: &str = "/apex/com.android.conscrypt/cacerts";
 
 /// `adb`, on the path or in the SDK where Android Studio puts it.
 pub fn find_adb() -> Option<PathBuf> {
@@ -189,6 +194,55 @@ fn system_install_script(name: &str) -> String {
     )
 }
 
+/// The same for Android 14 and later: the system's certificates, from the
+/// APEX now, and ours on a tmpfs, mounted over the APEX's folder where apps
+/// look. Zygote's mount namespace has it from now on, and so every app it
+/// starts; each app already running gets it in its own. All of it goes at
+/// the next restart; nothing underneath is touched.
+fn apex_install_script(name: &str) -> String {
+    let held = "/data/local/tmp/tracewing-cacerts";
+    format!(
+        "set -e; \
+         rm -rf {held}; \
+         mkdir -p -m 700 {held}; \
+         cp {APEX_CACERTS}/* {held}/; \
+         cp {STAGED_PATH} {held}/{name}; \
+         mount -t tmpfs tmpfs {CACERTS}; \
+         cp {held}/* {CACERTS}/; \
+         chown root:root {CACERTS}/*; \
+         chmod 644 {CACERTS}/*; \
+         chcon u:object_r:system_file:s0 {CACERTS}/* 2>/dev/null || true; \
+         rm -rf {held}; \
+         zygotes=\"$(pidof zygote || true) $(pidof zygote64 || true)\"; \
+         for z in $zygotes; do \
+           nsenter --mount=/proc/$z/ns/mnt -- /bin/mount --bind {CACERTS} {APEX_CACERTS}; \
+         done; \
+         for z in $zygotes; do \
+           for app in $(ps -o PID= -P $z); do \
+             nsenter --mount=/proc/$app/ns/mnt -- /bin/mount --bind {CACERTS} {APEX_CACERTS} 2>/dev/null & \
+           done; \
+         done; \
+         wait"
+    )
+}
+
+/// Whether the system's store holds a certificate of that name where apps
+/// look, as a check after putting it there.
+fn system_holds(adb: &Path, serial: &str, sdk: u32, name: &str) -> bool {
+    let folder = if sdk >= SDK_APEX_CERTS {
+        APEX_CACERTS
+    } else {
+        CACERTS
+    };
+    // As an app sees it: zygote's namespace, where there is one.
+    let look = format!(
+        "z=$(pidof zygote64 || pidof zygote); \
+         if [ -n \"$z\" ]; then nsenter --mount=/proc/$z/ns/mnt -- ls {folder}/{name}; \
+         else ls {folder}/{name}; fi"
+    );
+    shell(adb, serial, &look).is_ok_and(|out| out.contains(name))
+}
+
 fn is_root(adb: &Path, serial: &str) -> bool {
     shell(adb, serial, "id -u").is_ok_and(|id| id.trim() == "0")
 }
@@ -210,24 +264,31 @@ pub fn set_up(
     let pem = ca_pem.display().to_string();
 
     let mut trust = Trust::Downloads;
-    if sdk < SDK_APEX_CERTS {
-        let was_root = is_root(adb, serial);
-        // Production builds refuse, which is an answer, not a failure.
-        let rooted = was_root
-            || (run(adb, &["-s", serial, "root"]).is_ok()
-                && on(adb, serial, &["wait-for-device"]).is_ok()
-                && is_root(adb, serial));
-        if rooted {
-            on(adb, serial, &["push", &pem, STAGED_PATH])?;
-            let name = store_name(ca_der)?;
-            shell(adb, serial, &system_install_script(&name))
-                .context("put the certificate among the system's")?;
+    let was_root = is_root(adb, serial);
+    // Production builds refuse, which is an answer, not a failure.
+    let rooted = was_root
+        || (run(adb, &["-s", serial, "root"]).is_ok()
+            && on(adb, serial, &["wait-for-device"]).is_ok()
+            && is_root(adb, serial));
+    if rooted {
+        on(adb, serial, &["push", &pem, STAGED_PATH])?;
+        let name = store_name(ca_der)?;
+        let script = if sdk >= SDK_APEX_CERTS {
+            apex_install_script(&name)
+        } else {
+            system_install_script(&name)
+        };
+        // Already there from before, since the last restart: once is enough.
+        if !system_holds(adb, serial, sdk, &name) {
+            shell(adb, serial, &script).context("put the certificate among the system's")?;
+        }
+        if system_holds(adb, serial, sdk, &name) {
             trust = Trust::System;
-            if !was_root {
-                // As it was found. adbd starts again, which `reverse` below needs.
-                let _ = on(adb, serial, &["unroot"]);
-                on(adb, serial, &["wait-for-device"])?;
-            }
+        }
+        if !was_root {
+            // As it was found. adbd starts again, which `reverse` below needs.
+            let _ = on(adb, serial, &["unroot"]);
+            on(adb, serial, &["wait-for-device"])?;
         }
     }
     if trust == Trust::Downloads {
@@ -424,6 +485,25 @@ mod tests {
             )
         );
         assert!(!script.contains("remount"));
+    }
+
+    #[test]
+    fn android_14_gets_it_where_its_apps_look() {
+        let script = apex_install_script("6187b673.0");
+        assert!(script.starts_with("set -e;"));
+        assert!(
+            script.contains("cp /apex/com.android.conscrypt/cacerts/* "),
+            "the system's own"
+        );
+        assert!(script.contains("mount -t tmpfs tmpfs /system/etc/security/cacerts"));
+        assert!(script.contains(
+            "nsenter --mount=/proc/$z/ns/mnt -- /bin/mount --bind /system/etc/security/cacerts /apex/com.android.conscrypt/cacerts"
+        ), "zygote, for the apps it starts");
+        assert!(
+            script.contains("ps -o PID= -P $z"),
+            "and the apps running now"
+        );
+        assert!(!script.contains("remount"), "nothing underneath is touched");
     }
 
     #[test]

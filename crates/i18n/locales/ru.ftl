@@ -2035,8 +2035,8 @@ t84db6961 = Готово. Сертификат находится среди с�
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
 tbcad7fa7 = Готово. Сертификат в Загрузках: в только что открытых Настройках выберите Шифрование и учетные данные, Установка сертификата, Сертификат ЦС и укажите tracewing.crt.
 
-# Apps that trust only the system's certificates will still refuse it.
-t6fb5ba4b = Приложения, доверяющие только системным сертификатам, всё равно будут его отклонять.
+# Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead.
+tfd0c5617 = Приложения, доверяющие только системным сертификатам, по-прежнему его отвергнут. На устройстве, которое adb может получить root, например на эмуляторе с образом Google APIs, tracewing добавляет его к системным.
 
 # An emulator.
 t14b6b86d = Эмулятор.

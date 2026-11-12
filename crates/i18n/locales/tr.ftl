@@ -1917,8 +1917,8 @@ t84db6961 = Kuruldu. Sertifika, cihaz yeniden başlayana kadar sistem sertifikal
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
 tbcad7fa7 = Kuruldu. Sertifika İndirilenler'de: az önce açılan Ayarlar'da sırasıyla Şifreleme ve kimlik bilgileri, Sertifika yükle, CA sertifikası seçeneklerine dokunun ve tracewing.crt dosyasını seçin.
 
-# Apps that trust only the system's certificates will still refuse it.
-t6fb5ba4b = Yalnızca sistem sertifikalarına güvenen uygulamalar onu yine de reddeder.
+# Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead.
+tfd0c5617 = Yalnızca sistem sertifikalarına güvenen uygulamalar onu yine reddeder. adb'nin root yapabildiği bir cihazda, Google APIs imajlı bir emülatör gibi, tracewing onu sistemin sertifikaları arasına koyar.
 
 # An emulator.
 t14b6b86d = Bir emülatör.

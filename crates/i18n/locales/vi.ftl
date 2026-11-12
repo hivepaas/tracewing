@@ -1834,8 +1834,8 @@ t84db6961 = Đã thiết lập. Chứng chỉ nằm trong kho của hệ thống
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
 tbcad7fa7 = Đã thiết lập. Chứng chỉ nằm trong Downloads: trong Cài đặt vừa mở, chọn Mã hoá và thông tin xác thực, Cài đặt chứng chỉ, Chứng chỉ CA, rồi chọn tracewing.crt.
 
-# Apps that trust only the system's certificates will still refuse it.
-t6fb5ba4b = Các app chỉ tin chứng chỉ của hệ thống vẫn sẽ từ chối nó.
+# Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead.
+tfd0c5617 = Các ứng dụng chỉ tin chứng chỉ hệ thống vẫn sẽ từ chối nó. Trên thiết bị mà adb root được, như emulator dùng image Google APIs, tracewing sẽ đặt nó vào kho hệ thống.
 
 # An emulator.
 t14b6b86d = Một emulator.

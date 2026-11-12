@@ -1834,8 +1834,8 @@ t84db6961 = 已设置完成。在设备重启之前，该证书会保留在系�
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
 tbcad7fa7 = 已设置完成。证书位于“下载”文件夹：在刚打开的“设置”中，选择“加密与凭据”>“安装证书”>“CA 证书”，然后选择 tracewing.crt。
 
-# Apps that trust only the system's certificates will still refuse it.
-t6fb5ba4b = 只信任系统证书的应用仍会拒绝它。
+# Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead.
+tfd0c5617 = 只信任系统证书的应用仍会拒绝它。在 adb 可以获取 root 的设备上（如使用 Google APIs 镜像的模拟器），tracewing 会把它放入系统证书中。
 
 # An emulator.
 t14b6b86d = 模拟器。

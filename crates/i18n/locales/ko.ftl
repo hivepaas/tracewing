@@ -1834,8 +1834,8 @@ t84db6961 = 설정 완료. 기기가 다시 시작될 때까지 인증서가 시
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
 tbcad7fa7 = 설정 완료. 인증서는 다운로드 폴더에 있습니다. 방금 열린 설정에서 ‘암호화 및 사용자 인증 정보’ > ‘인증서 설치’ > ‘CA 인증서’를 선택하고 tracewing.crt를 고르세요.
 
-# Apps that trust only the system's certificates will still refuse it.
-t6fb5ba4b = 시스템 인증서만 신뢰하는 앱은 여전히 이 인증서를 거부합니다.
+# Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead.
+tfd0c5617 = 시스템 인증서만 신뢰하는 앱은 여전히 거부합니다. Google APIs 이미지 에뮬레이터처럼 adb로 루팅할 수 있는 기기에서는 tracewing이 시스템 인증서에 추가합니다.
 
 # An emulator.
 t14b6b86d = 에뮬레이터입니다.

@@ -1081,7 +1081,7 @@ fn android_note(device: &Device, set: Option<&SetUp>) -> String {
             if *sdk >= 34 {
                 note.push(' ');
                 note.push_str(&tr!(
-                    "Apps that trust only the system's certificates will still refuse it."
+                    "Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead."
                 ));
             }
             note

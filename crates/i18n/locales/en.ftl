@@ -761,7 +761,7 @@ t864ac93f =
     }
 t84db6961 = Set up. The certificate is among the system's until the device restarts.
 tbcad7fa7 = Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
-t6fb5ba4b = Apps that trust only the system's certificates will still refuse it.
+tfd0c5617 = Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead.
 t14b6b86d = An emulator.
 t67dafc14 = On USB.
 tff6a046e = Accept the USB debugging prompt on the device, then look again.

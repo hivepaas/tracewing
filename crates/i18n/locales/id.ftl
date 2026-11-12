@@ -1834,8 +1834,8 @@ t84db6961 = Siap. Sertifikat ada di antara sertifikat sistem sampai perangkat di
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
 tbcad7fa7 = Siap. Sertifikat ada di Download: di Setelan yang baru dibuka, pilih Enkripsi & kredensial, Instal sertifikat, Sertifikat CA, lalu pilih tracewing.crt.
 
-# Apps that trust only the system's certificates will still refuse it.
-t6fb5ba4b = Aplikasi yang hanya memercayai sertifikat sistem tetap akan menolaknya.
+# Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead.
+tfd0c5617 = Aplikasi yang hanya memercayai sertifikat sistem tetap akan menolaknya. Di perangkat yang bisa di-root oleh adb, seperti emulator dengan image Google APIs, tracewing menaruhnya di antara sertifikat sistem.
 
 # An emulator.
 t14b6b86d = Emulator.
