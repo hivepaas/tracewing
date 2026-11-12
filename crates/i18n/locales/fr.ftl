@@ -600,6 +600,12 @@ t1e92fb27 = Cette image ne peut pas être affichée. Enregistrez le corps pour l
 # Opening…
 tc40f2321 = Ouverture…
 
+# Read from {from}
+t6d510d3d = Lu depuis { $from }
+
+# Back to the body
+t3506a32c = Retour au corps
+
 # No response
 t8c2c37b1 = Aucune réponse
 

@@ -600,6 +600,12 @@ t1e92fb27 = Questa immagine non può essere mostrata. Salva il body per guardarl
 # Opening…
 tc40f2321 = Apertura…
 
+# Read from {from}
+t6d510d3d = Letto da { $from }
+
+# Back to the body
+t3506a32c = Torna al corpo
+
 # No response
 t8c2c37b1 = Nessuna risposta
 

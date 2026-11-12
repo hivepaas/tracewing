@@ -600,6 +600,12 @@ t1e92fb27 = Esta imagem não pode ser exibida. Salve o corpo para vê-la.
 # Opening…
 tc40f2321 = Abrindo…
 
+# Read from {from}
+t6d510d3d = Lido de { $from }
+
+# Back to the body
+t3506a32c = Voltar ao corpo
+
 # No response
 t8c2c37b1 = Sem resposta
 

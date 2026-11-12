@@ -594,6 +594,12 @@ t1e92fb27 = Dieses Bild kann nicht dargestellt werden. Speichern Sie den Body, u
 # Opening…
 tc40f2321 = Wird geöffnet…
 
+# Read from {from}
+t6d510d3d = Gelesen aus { $from }
+
+# Back to the body
+t3506a32c = Zurück zum Body
+
 # No response
 t8c2c37b1 = Keine Antwort
 

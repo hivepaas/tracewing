@@ -3,7 +3,8 @@
 The design, and where it stands. Built: `crates/convert` — the registry, the
 phase one converters and their tests — the readings in the right-click menu of
 a body and of the headers, cookies, query and form fields, the reading chosen
-drawn where the value is, and rules remembered per host and field. What is not
+drawn where the value is, a reading that holds a body opened as one, and rules
+remembered per host and field. What is not
 built yet is marked **to come** below.
 
 A response says `1763000000`, or `eyJhbGciOiJIUzI1NiJ9…`, or `H4sIAAAAAAAA…`.
@@ -59,8 +60,26 @@ Four shapes, by what the converter returned:
 |---|---|---|
 | One line (a time, a size, a decoded integer) | after the value, dim, on the same row | built |
 | Named fields (a JWT's claims, a traceparent's parts) | folded under the row, as JWTs are drawn now | built under a header, a cookie and a query or form field; in a body, where a line is a line, they are said on one line after the value, cut to what it can spare |
-| A body (JSON out of base64, protobuf out of gzip) | its own pane, with Pretty, Raw and Hex, folds and all | to come: for now the size and what it holds are said after the value |
-| An image, or bytes | a thumbnail, or a hex dump, in that pane | to come |
+| A body (JSON out of base64, protobuf out of gzip) | its own pane, with Pretty, Raw and Hex, folds and all | built |
+| An image, or bytes | a thumbnail, or a hex dump, in that pane | bytes are shown as Hex in that pane; a thumbnail is to come |
+
+A reading that holds a body is not drawn beside the value at all: it opens in
+the body pane, over the body it came out of, with a line above it saying what
+read it and where from, and the way back.
+
+```
+  READ FROM BLOB   base64 → json                      Back to the body
+  1  ▾ {
+  2      "a": 1,
+  3      "b": 2
+  4    }
+```
+
+It is a body like any other, because it is one: the bytes are written into a
+file in the data folder and opened as a body is opened, so Pretty, Raw, Hex,
+folds, search and copying all work on them. The switch above the pane is about
+what is in the pane, not about the body behind it, and the file goes when the
+pane closes or another flow is chosen.
 
 What is drawn in a body is kept by the piece it was read from, and a click on
 it takes it away again, as does `Clear what was read`. Another mode is another
@@ -286,10 +305,8 @@ own name reaches the converters: a `Date` is read as an HTTP-date because the
 field says `date`, not because the text was guessed at. The same thing is what
 the underline and the remembered rules will ask.
 
-**To come:** the pane for a `Bytes` reading — which means writing the bytes
-beside the body's own file and opening them as a body, the way
-`detail::json_file` already does for MessagePack and Protobuf — the rules
-listed in Settings, the setting that switches the underline off, and the
+**To come:** the rules listed in Settings, the setting that switches the
+underline off, a thumbnail for a reading that holds a picture, and the
 keyboard.
 
 ## Limits, and what this will not do

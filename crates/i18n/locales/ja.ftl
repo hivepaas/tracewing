@@ -565,6 +565,12 @@ t1e92fb27 = この画像は表示できません。ボディを保存して確�
 # Opening…
 tc40f2321 = 開いています…
 
+# Read from {from}
+t6d510d3d = { $from } から読み取り
+
+# Back to the body
+t3506a32c = ボディに戻る
+
 # No response
 t8c2c37b1 = レスポンスなし
 
