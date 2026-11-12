@@ -871,6 +871,63 @@ tb629329e = 서버가 { $code }(으)로 응답했습니다: gRPC 리플렉션을
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = 서버가 아무것도 보내지 않았습니다: gRPC 리플렉션을 제공하지 않을 수 있습니다
 
+# any
+t2c29f04d = 모두
+
+# Failed
+t5579c3d4 = 실패
+
+# The server answered 200: a call that fails says so in the body.
+ta74e5f73 = 서버는 200을 반환합니다. 실패한 호출은 본문에서 그것을 알립니다.
+
+# {count} item | {count} items
+t534e422e = { $count } 항목
+
+# {count} field | {count} fields
+t0039810a = { $count } 필드
+
+# and {count} more
+tbdb1ff6a = 그리고 { $count }개 더
+
+# {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
+t36ffce30 = { $count } 바이트, 서명이 읽는 방법을 알려주지 않습니다
+
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } 바이트는 트랜잭션으로 읽히지 않습니다
+
+# none: it makes a contract
+t188b58f6 = 없음: 컨트랙트를 생성합니다
+
+# {count} place | {count} places
+t0965779e = { $count } 곳
+
+# {count} blob | {count} blobs
+t95369f92 = 블롭 { $count }개
+
+# 0, the kind from before EIP-2718
+tc2fde48e = 0, EIP-2718 이전의 종류
+
+# The bodies were not kept, so what the call sent cannot be shown.
+teaf455ca = 본문이 보관되지 않아 호출이 보낸 내용을 표시할 수 없습니다.
+
+# and {count} more calls
+tf0ac7103 = 호출 { $count }개 더
+
+# {count} function | {count} functions
+t9ffc3c7c = 함수 { $count }개
+
+# {count} event | {count} events
+t4dd03992 = 이벤트 { $count }개
+
+# {count} error | {count} errors
+t4fba4c4e = 오류 { $count }개
+
+# Contract ABIs
+t08fb00f2 = 컨트랙트 ABI
+
+# Folders or files of ABI JSON, as solc, Hardhat and Foundry write it, to name the functions, events and errors in a JSON-RPC call instead of showing four bytes. They are read again when they change. Nothing is sent anywhere: a signature is worked out from the ABI on this machine.
+tfadffbd2 = solc, Hardhat, Foundry가 작성하는 ABI JSON 폴더 또는 파일. JSON-RPC 호출에서 4바이트 대신 함수, 이벤트, 오류의 이름을 보여줍니다. 변경되면 다시 읽습니다. 어디로도 전송하지 않습니다. 서명은 이 컴퓨터에서 ABI로 계산합니다.
+
 # Block
 tbd074002 = 차단
 

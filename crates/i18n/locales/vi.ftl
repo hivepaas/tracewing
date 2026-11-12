@@ -871,6 +871,63 @@ tb629329e = Server trả lời { $code }: có thể nó không có gRPC reflecti
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Server không trả lời gì: có thể nó không có gRPC reflection
 
+# any
+t2c29f04d = bất kỳ
+
+# Failed
+t5579c3d4 = Thất bại
+
+# The server answered 200: a call that fails says so in the body.
+ta74e5f73 = Server trả về 200: lời gọi thất bại nói điều đó trong body.
+
+# {count} item | {count} items
+t534e422e = { $count } mục
+
+# {count} field | {count} fields
+t0039810a = { $count } trường
+
+# and {count} more
+tbdb1ff6a = và { $count } nữa
+
+# {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
+t36ffce30 = { $count } byte mà chữ ký không cho biết cách đọc
+
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } byte không đọc được thành một transaction
+
+# none: it makes a contract
+t188b58f6 = không có: nó tạo contract
+
+# {count} place | {count} places
+t0965779e = { $count } vị trí
+
+# {count} blob | {count} blobs
+t95369f92 = { $count } blob
+
+# 0, the kind from before EIP-2718
+tc2fde48e = 0, loại có từ trước EIP-2718
+
+# The bodies were not kept, so what the call sent cannot be shown.
+teaf455ca = Body không được lưu, nên không hiện được lời gọi đã gửi gì.
+
+# and {count} more calls
+tf0ac7103 = và { $count } lời gọi nữa
+
+# {count} function | {count} functions
+t9ffc3c7c = { $count } hàm
+
+# {count} event | {count} events
+t4dd03992 = { $count } sự kiện
+
+# {count} error | {count} errors
+t4fba4c4e = { $count } lỗi
+
+# Contract ABIs
+t08fb00f2 = ABI của contract
+
+# Folders or files of ABI JSON, as solc, Hardhat and Foundry write it, to name the functions, events and errors in a JSON-RPC call instead of showing four bytes. They are read again when they change. Nothing is sent anywhere: a signature is worked out from the ABI on this machine.
+tfadffbd2 = Thư mục hoặc file ABI JSON, dạng solc, Hardhat và Foundry sinh ra, để gọi tên hàm, sự kiện và lỗi trong một lời gọi JSON-RPC thay vì hiện bốn byte. Chúng được đọc lại khi thay đổi. Không gửi gì ra ngoài: chữ ký được tính từ ABI trên máy này.
+
 # Block
 tbd074002 = Chặn
 

@@ -871,6 +871,63 @@ tb629329e = Server menjawab { $code }: mungkin tidak menyediakan gRPC reflection
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Server tidak menjawab apa-apa: mungkin tidak menyediakan gRPC reflection
 
+# any
+t2c29f04d = apa saja
+
+# Failed
+t5579c3d4 = Gagal
+
+# The server answered 200: a call that fails says so in the body.
+ta74e5f73 = Server menjawab 200: panggilan yang gagal menyatakannya di body.
+
+# {count} item | {count} items
+t534e422e = { $count } item
+
+# {count} field | {count} fields
+t0039810a = { $count } bidang
+
+# and {count} more
+tbdb1ff6a = dan { $count } lagi
+
+# {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
+t36ffce30 = { $count } byte yang tidak dijelaskan cara membacanya oleh signature
+
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } byte yang tidak terbaca sebagai transaksi
+
+# none: it makes a contract
+t188b58f6 = tidak ada: ini membuat kontrak
+
+# {count} place | {count} places
+t0965779e = { $count } tempat
+
+# {count} blob | {count} blobs
+t95369f92 = { $count } blob
+
+# 0, the kind from before EIP-2718
+tc2fde48e = 0, jenis dari sebelum EIP-2718
+
+# The bodies were not kept, so what the call sent cannot be shown.
+teaf455ca = Body tidak disimpan, jadi apa yang dikirim panggilan ini tidak bisa ditampilkan.
+
+# and {count} more calls
+tf0ac7103 = dan { $count } panggilan lagi
+
+# {count} function | {count} functions
+t9ffc3c7c = { $count } fungsi
+
+# {count} event | {count} events
+t4dd03992 = { $count } event
+
+# {count} error | {count} errors
+t4fba4c4e = { $count } error
+
+# Contract ABIs
+t08fb00f2 = ABI kontrak
+
+# Folders or files of ABI JSON, as solc, Hardhat and Foundry write it, to name the functions, events and errors in a JSON-RPC call instead of showing four bytes. They are read again when they change. Nothing is sent anywhere: a signature is worked out from the ABI on this machine.
+tfadffbd2 = Folder atau file ABI JSON, seperti yang ditulis solc, Hardhat, dan Foundry, untuk menyebut nama fungsi, event, dan error dalam panggilan JSON-RPC alih-alih menampilkan empat byte. Dibaca ulang saat berubah. Tidak ada yang dikirim ke mana pun: signature dihitung dari ABI di mesin ini.
+
 # Block
 tbd074002 = Blokir
 
