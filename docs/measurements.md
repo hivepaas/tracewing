@@ -482,6 +482,11 @@ The same, within what runs differ by.
 
 ## Known gaps
 
+- A request's body is written down as it goes on to the server. A server that answers
+  before reading it, as one refusing an upload may, can have the rest let go unsent,
+  and then the flow does not have what the client sent either: over HTTP/2, a body sent
+  200 ms after the answer was kept as none (`req_bytes` 0, not complete).
+
 - hudsucker always offers `h2, http/1.1` to the client instead of mirroring
   what the origin chose, and builds leaves from the SNI/`CONNECT` host only.
 - CONNECT tunnels run in detached tasks, so on shutdown the writer is closed
