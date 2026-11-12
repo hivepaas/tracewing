@@ -18,5 +18,6 @@ is nothing in here to keep secret.
 | `error_no_method` | The plain JSON-RPC `-32601` |
 | `get_logs` | Logs with `Transfer` topics; cut from 67 logs to 3 |
 | `receipt.res.json` | A receipt, cut from 11 logs to 2 |
+| `receipt_failed.res.json` | A receipt of a transaction that was mined and did **not** go through: `status` `0x0`, its gas spent, no logs |
 | `mcp.req.json` | MCP over HTTP: JSON-RPC too, and not a chain call |
 | `multicall.req.json` | A real Multicall3 `aggregate3`: 4,772 bytes of calldata, tuples inside an array inside a call |

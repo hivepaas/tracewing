@@ -991,6 +991,15 @@ t0039810a =
 # and {count} more
 tbdb1ff6a = y { $count } más
 
+# succeeded
+t6b166ff2 = con éxito
+
+# failed: it was mined, and what it asked for did not happen
+t46ea918c = falló: se minó, y lo que pedía no ocurrió
+
+# none: it makes a contract
+t188b58f6 = ninguna: crea un contrato
+
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 =
     { $n ->
@@ -1004,9 +1013,6 @@ ta7ee514c =
         [one] { $count } byte que no se lee como una transacción
        *[other] { $count } bytes que no se leen como una transacción
     }
-
-# none: it makes a contract
-t188b58f6 = ninguna: crea un contrato
 
 # {count} place | {count} places
 t0965779e =

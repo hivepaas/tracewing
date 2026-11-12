@@ -1027,6 +1027,15 @@ t0039810a =
 # and {count} more
 tbdb1ff6a = і ще { $count }
 
+# succeeded
+t6b166ff2 = успішно
+
+# failed: it was mined, and what it asked for did not happen
+t46ea918c = не вдалося: вона потрапила в блок, а те, про що просила, не сталося
+
+# none: it makes a contract
+t188b58f6 = немає: створює контракт
+
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 =
     { $n ->
@@ -1044,9 +1053,6 @@ ta7ee514c =
         [many] { $count } байтів, які не читаються як транзакція
        *[other] { $count } байтів, які не читаються як транзакція
     }
-
-# none: it makes a contract
-t188b58f6 = немає: створює контракт
 
 # {count} place | {count} places
 t0965779e =

@@ -913,14 +913,20 @@ t0039810a = { $count } 필드
 # and {count} more
 tbdb1ff6a = 그리고 { $count }개 더
 
+# succeeded
+t6b166ff2 = 성공
+
+# failed: it was mined, and what it asked for did not happen
+t46ea918c = 실패: 블록에는 포함되었지만 요청한 일은 일어나지 않았습니다
+
+# none: it makes a contract
+t188b58f6 = 없음: 컨트랙트를 생성합니다
+
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } 바이트, 서명이 읽는 방법을 알려주지 않습니다
 
 # {count} byte that does not read as one | {count} bytes that do not read as one
 ta7ee514c = { $count } 바이트는 트랜잭션으로 읽히지 않습니다
-
-# none: it makes a contract
-t188b58f6 = 없음: 컨트랙트를 생성합니다
 
 # {count} place | {count} places
 t0965779e = { $count } 곳

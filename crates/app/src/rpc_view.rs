@@ -404,15 +404,19 @@ fn answered(answer: &serde_json::Value, abi: &Abi, call: &jsonrpc::Call) -> Sect
             lines.extend(logs_in(list, abi));
         }
         Some(serde_json::Value::Object(fields)) => {
-            lines.push(Line::said(
-                "result",
-                tr_n!(
-                    fields.len(),
-                    "{count} field",
-                    "{count} fields",
-                    count = fields.len()
-                ),
-            ));
+            let said = object_lines(method, fields, abi);
+            match said.is_empty() {
+                true => lines.push(Line::said(
+                    "result",
+                    tr_n!(
+                        fields.len(),
+                        "{count} field",
+                        "{count} fields",
+                        count = fields.len()
+                    ),
+                )),
+                false => lines.extend(said),
+            }
             // A receipt carries the logs of what the transaction did.
             if let Some(logs) = fields.get("logs").and_then(|l| l.as_array()) {
                 lines.extend(logs_in(logs, abi));
@@ -511,6 +515,126 @@ fn logs_in(list: &[serde_json::Value], abi: &Abi) -> Vec<Line> {
     if more > 0 {
         lines.push(Line::said("", tr!("and {count} more", count = more)));
     }
+    lines
+}
+
+/// What an object a node answered with holds, where its shape is known: a
+/// receipt, a transaction, a block. Empty for one that is not, which is then
+/// counted as before.
+fn object_lines(
+    method: &str,
+    fields: &serde_json::Map<String, serde_json::Value>,
+    abi: &Abi,
+) -> Vec<Line> {
+    match method {
+        "eth_getTransactionReceipt" => receipt_lines(fields),
+        "eth_getTransactionByHash"
+        | "eth_getTransactionByBlockHashAndIndex"
+        | "eth_getTransactionByBlockNumberAndIndex" => transaction_lines(fields, abi),
+        "eth_getBlockByNumber" | "eth_getBlockByHash" => block_lines(fields),
+        _ => Vec::new(),
+    }
+}
+
+/// A receipt: whether it went through at all, what it cost, and what it
+/// made. Its `status` is the whole point of asking for one.
+fn receipt_lines(fields: &serde_json::Map<String, serde_json::Value>) -> Vec<Line> {
+    let said = |name: &str| fields.get(name).and_then(|v| v.as_str());
+    let mut lines = Vec::new();
+    // A transaction that was mined and did not go through costs its gas and
+    // looks like any other until this is read.
+    lines.extend(said("status").map(|status| match status {
+        "0x1" => Line::said("status", tr!("succeeded")),
+        "0x0" => Line::said(
+            "status",
+            tr!("failed: it was mined, and what it asked for did not happen"),
+        ),
+        other => Line::code("status", other.to_owned()),
+    }));
+    lines.extend(said("blockNumber").map(|at| Line::said("blockNumber", block_text(at))));
+    lines.extend(said("gasUsed").map(|gas| Line::said("gasUsed", block_text(gas))));
+    lines.extend(
+        said("effectiveGasPrice")
+            .and_then(web3::quantity)
+            .map(|wei| Line::said("effectiveGasPrice", web3::gwei(wei))),
+    );
+    // A deployment: where the contract it made now lives.
+    lines.extend(said("contractAddress").map(|made| Line::code("contractAddress", address(made))));
+    lines
+}
+
+/// A transaction as the node reads it, which is the same handful of fields
+/// its RLP holds, and the call its input makes.
+fn transaction_lines(fields: &serde_json::Map<String, serde_json::Value>, abi: &Abi) -> Vec<Line> {
+    let said = |name: &str| fields.get(name).and_then(|v| v.as_str());
+    let mut lines = Vec::new();
+    lines.extend(
+        said("type")
+            .and_then(web3::quantity)
+            .map(|kind| Line::said("type", kind_text(kind as u8))),
+    );
+    lines.extend(
+        said("chainId")
+            .and_then(web3::quantity)
+            .map(|id| Line::said("chainId", chain_text(id))),
+    );
+    lines.extend(said("nonce").map(|nonce| Line::said("nonce", block_text(nonce))));
+    lines.extend(said("from").map(|from| Line::code("from", address(from))));
+    lines.push(match said("to") {
+        Some(to) => Line::code("to", address(to)),
+        None => Line::said("to", tr!("none: it makes a contract")),
+    });
+    lines.extend(
+        said("value")
+            .and_then(web3::quantity_bytes)
+            .map(|wei| Line::said("value", web3::ether(&wei))),
+    );
+    lines.extend(said("gas").map(|gas| Line::said("gas", block_text(gas))));
+    for (name, label) in [
+        ("gasPrice", "gasPrice"),
+        ("maxFeePerGas", "maxFeePerGas"),
+        ("maxPriorityFeePerGas", "maxPriorityFeePerGas"),
+    ] {
+        lines.extend(
+            said(name)
+                .and_then(web3::quantity)
+                .map(|wei| Line::said(label, web3::gwei(wei))),
+        );
+    }
+    if let Some(input) = said("input").filter(|input| *input != "0x") {
+        lines.extend(calldata(input, abi));
+    }
+    lines
+}
+
+/// A block: which one, when, and how much is in it.
+fn block_lines(fields: &serde_json::Map<String, serde_json::Value>) -> Vec<Line> {
+    let said = |name: &str| fields.get(name).and_then(|v| v.as_str());
+    let mut lines = Vec::new();
+    lines.extend(said("number").map(|at| Line::said("number", block_text(at))));
+    lines.extend(said("hash").map(|hash| Line::code("hash", hash.to_owned())));
+    lines.extend(said("gasUsed").map(|gas| Line::said("gasUsed", block_text(gas))));
+    lines.extend(
+        said("baseFeePerGas")
+            .and_then(web3::quantity)
+            .map(|wei| Line::said("baseFeePerGas", web3::gwei(wei))),
+    );
+    lines.extend(
+        fields
+            .get("transactions")
+            .and_then(|list| list.as_array())
+            .map(|list| {
+                Line::said(
+                    "transactions",
+                    tr_n!(
+                        list.len(),
+                        "{count} item",
+                        "{count} items",
+                        count = list.len()
+                    ),
+                )
+            }),
+    );
     lines
 }
 
@@ -1291,6 +1415,70 @@ mod tests {
 
     /// A receipt's logs are what the transaction actually did; before this
     /// they were counted and left at that.
+    /// A transaction that was mined and did not go through costs its gas and
+    /// looks like any other, unless the receipt's status is read. This one
+    /// really failed on mainnet.
+    #[test]
+    fn a_transaction_that_did_not_go_through_says_so() {
+        let asked = br#"{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt",
+                         "params":["0x6dd4134ad889bbb0fd2589146eac5c6b73a1f8c5f23f47924f09fc9a2cca1708"]}"#;
+        let shown = of(asked, sample!("receipt_failed.res.json"));
+        let lines = lines(&shown.sections[1]);
+        assert_eq!(
+            lines[0],
+            (
+                "status",
+                "failed: it was mined, and what it asked for did not happen"
+            )
+        );
+        assert!(
+            lines.contains(&("gasUsed", "552,030")),
+            "and it was paid for anyway: {lines:?}"
+        );
+        assert!(
+            !lines.iter().any(|(label, _)| *label == "result"),
+            "the count it used to show is gone, not kept beside it: {lines:?}"
+        );
+    }
+
+    #[test]
+    fn a_receipt_that_went_through_says_that_too() {
+        let asked = br#"{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt",
+                         "params":["0xc0e96fa11b3d298c3f37b7fc2fc43dc8ac11d9e0fab3f3d3816d8b2497757b6e"]}"#;
+        let shown = of(asked, sample!("receipt.res.json"));
+        let lines = lines(&shown.sections[1]);
+        assert_eq!(lines[0], ("status", "succeeded"));
+        // And the logs are still said under it.
+        assert_eq!(
+            lines
+                .iter()
+                .filter(|(label, _)| *label == "Transfer")
+                .count(),
+            2
+        );
+    }
+
+    /// The node's own view of a transaction holds the same fields its RLP
+    /// does, and the call its input makes.
+    #[test]
+    fn a_transaction_a_node_answered_with_is_laid_out_too() {
+        let asked = br#"{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionByHash",
+                         "params":["0xc0e96fa11b3d298c3f37b7fc2fc43dc8ac11d9e0fab3f3d3816d8b2497757b6e"]}"#;
+        let shown = of(asked, sample!("tx.res.json"));
+        let lines = lines(&shown.sections[1]);
+        for said in [
+            ("type", "2 (EIP-1559)"),
+            ("chainId", "1 (Ethereum)"),
+            ("nonce", "204,580"),
+            ("from", "0x5875Db54CD9AE2b2A875E09bB731772297aE9d92"),
+            ("value", "0 ETH"),
+            ("maxFeePerGas", "0.346815537 gwei"),
+            ("selector", "0x09c5eabe"),
+        ] {
+            assert!(lines.contains(&said), "{said:?} in {lines:?}");
+        }
+    }
+
     #[test]
     fn the_logs_of_a_reply_say_which_event_each_one_is() {
         let asked = br#"{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt",
@@ -1298,10 +1486,9 @@ mod tests {
         let shown = of(asked, sample!("receipt.res.json"));
         let answer = &shown.sections[1];
         let lines = lines(answer);
-        assert!(
-            lines.iter().any(|(label, _)| *label == "result"),
-            "{lines:?}"
-        );
+        // The receipt is laid out now, rather than counted: see
+        // `a_receipt_that_went_through_says_that_too`.
+        assert_eq!(lines[0], ("status", "succeeded"));
         // Two real USDC Transfers, each out of its topics and its data.
         assert_eq!(
             lines

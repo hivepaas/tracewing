@@ -971,14 +971,20 @@ t0039810a = { $count } alan
 # and {count} more
 tbdb1ff6a = ve { $count } tane daha
 
+# succeeded
+t6b166ff2 = başarılı
+
+# failed: it was mined, and what it asked for did not happen
+t46ea918c = başarısız: bloğa girdi, ama istediği şey gerçekleşmedi
+
+# none: it makes a contract
+t188b58f6 = yok: bir sözleşme oluşturur
+
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } bayt, imza bunların nasıl okunacağını söylemiyor
 
 # {count} byte that does not read as one | {count} bytes that do not read as one
 ta7ee514c = { $count } bayt, bir işlem olarak okunmuyor
-
-# none: it makes a contract
-t188b58f6 = yok: bir sözleşme oluşturur
 
 # {count} place | {count} places
 t0965779e = { $count } yer
