@@ -1495,6 +1495,27 @@ tb457f0b3 = Хости, які не розшифровувати
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = По одному в рядку: хост або *.example.com для нього й усього під ним. Їхній трафік проходить непрочитаним. Список застосовується одразу.
 
+# Authorities trusted for servers
+t0a308a8a = Довірені центри сертифікації для серверів
+
+# tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.
+t571051f9 = tracewing довіряє серверам, за які ручаються публічні центри сертифікації та центри, яким довіряє цей комп'ютер. Також він довіряє цим: власному центру компанії або вашому власному, покладеному як файл .pem у { $folder }. Вони читаються під час запуску tracewing.
+
+# Left out: {why}
+t4a567d82 = Пропущено: { $why }
+
+# None yet.
+t786bc275 = Поки немає.
+
+# The folder has changed since tracewing started: restart it to use what it holds now.
+t65f2d800 = Папка змінилася після запуску tracewing: перезапустіть його, щоб використати її поточний вміст.
+
+# Open the folder
+tc7d7e212 = Відкрити папку
+
+# Read it again
+td72efd5e = Прочитати знову
+
 # Language
 t9a73db9b = Мова
 

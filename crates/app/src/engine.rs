@@ -70,6 +70,9 @@ pub struct Engine {
     pub other_devices: Arc<OtherDevices>,
     /// The other settings that apply as they change.
     pub live: Arc<Live>,
+    /// The authorities trusted for servers besides the public and the
+    /// system's, as the proxy was started with them.
+    pub extra_roots: Vec<PathBuf>,
     stop: Option<oneshot::Sender<()>>,
     thread: Option<JoinHandle<()>>,
 }
@@ -102,7 +105,7 @@ impl Engine {
             key_store: opts.key_store,
             session: session.clone(),
             settings: opts.settings.clone(),
-            extra_roots: opts.extra_roots,
+            extra_roots: opts.extra_roots.clone(),
             queue: 100_000,
             stats_every: None,
             shared: Arc::clone(&shared),
@@ -155,6 +158,7 @@ impl Engine {
             failure,
             other_devices,
             live,
+            extra_roots: opts.extra_roots,
             stop: Some(stop),
             thread: Some(thread),
         })

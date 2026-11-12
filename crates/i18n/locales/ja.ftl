@@ -1321,6 +1321,27 @@ tb457f0b3 = 復号しないホスト
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 1 行に 1 つ: ホスト、またはそのホストと配下すべてを表す *.example.com。これらのトラフィックは中身を読まずに通過します。このリストはすぐに適用されます。
 
+# Authorities trusted for servers
+t0a308a8a = サーバーに信頼する認証局
+
+# tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.
+t571051f9 = tracewing は公開の認証局と、このコンピューターが信頼する認証局が保証するサーバーを信頼します。さらに次のものも信頼します：会社独自の認証局や自分の認証局を、.pem ファイルとして { $folder } に置いたもの。tracewing の起動時に読み込まれます。
+
+# Left out: {why}
+t4a567d82 = 除外：{ $why }
+
+# None yet.
+t786bc275 = まだありません。
+
+# The folder has changed since tracewing started: restart it to use what it holds now.
+t65f2d800 = tracewing の起動後にフォルダーが変わりました。今の内容を使うには再起動してください。
+
+# Open the folder
+tc7d7e212 = フォルダーを開く
+
+# Read it again
+td72efd5e = 読み直す
+
 # Language
 t9a73db9b = 言語
 

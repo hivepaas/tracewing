@@ -1387,6 +1387,27 @@ tb457f0b3 = Şifresi çözülmeyecek host'lar
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = Satır başına bir tane: bir host, ya da kendisi ve altındaki her şey için *.example.com. Bunların trafiği okunmadan geçer. Bu liste hemen uygulanır.
 
+# Authorities trusted for servers
+t0a308a8a = Sunucular için güvenilen sertifika yetkilileri
+
+# tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.
+t571051f9 = tracewing, genel sertifika yetkililerinin ve bu bilgisayarın güvendiklerinin onayladığı sunuculara güvenir. Bunlara da güvenir: bir şirketin kendi yetkilisi ya da sizin kendi yetkiliniz, { $folder } içinde .pem dosyası olarak. tracewing başlarken okunurlar.
+
+# Left out: {why}
+t4a567d82 = Atlandı: { $why }
+
+# None yet.
+t786bc275 = Henüz yok.
+
+# The folder has changed since tracewing started: restart it to use what it holds now.
+t65f2d800 = Klasör, tracewing başladığından beri değişti: şimdiki içeriği kullanmak için yeniden başlatın.
+
+# Open the folder
+tc7d7e212 = Klasörü aç
+
+# Read it again
+td72efd5e = Yeniden oku
+
 # Language
 t9a73db9b = Dil
 

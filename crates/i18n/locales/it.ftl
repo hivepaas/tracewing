@@ -1436,6 +1436,27 @@ tb457f0b3 = Host da non decifrare
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = Uno per riga: un host, oppure *.example.com per quell'host e tutto ciò che sta sotto. Il loro traffico passa senza essere letto. Questo elenco si applica subito.
 
+# Authorities trusted for servers
+t0a308a8a = Autorità attendibili per i server
+
+# tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.
+t571051f9 = tracewing si fida dei server garantiti dalle autorità pubbliche e da quelle di questo computer. Si fida anche di queste: l'autorità di un'azienda, o una tua, messa come file .pem in { $folder }. Vengono lette all'avvio di tracewing.
+
+# Left out: {why}
+t4a567d82 = Escluso: { $why }
+
+# None yet.
+t786bc275 = Nessuna per ora.
+
+# The folder has changed since tracewing started: restart it to use what it holds now.
+t65f2d800 = La cartella è cambiata dall'avvio di tracewing: riavvialo per usare ciò che contiene ora.
+
+# Open the folder
+tc7d7e212 = Apri la cartella
+
+# Read it again
+td72efd5e = Rileggi
+
 # Language
 t9a73db9b = Lingua
 

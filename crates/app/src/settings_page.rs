@@ -530,6 +530,7 @@ impl Traffic {
         let language = self.render_language(cx);
         let protos = self.render_protos(cx);
         let abis = self.render_abis(cx);
+        let trusted = self.render_trusted(cx);
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);
         // A problem shows under the setting being changed, or else at the top.
@@ -758,9 +759,107 @@ impl Traffic {
                             .child(page.no_decrypt.clone()),
                     ),
             )
+            .child(trusted)
             .child(protos)
             .child(abis)
             .children(groups)
+    }
+
+    /// The authorities trusted for servers from the folder, which a restart
+    /// takes in.
+    fn render_trusted(&mut self, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let button = |id: &'static str, label: String| {
+            div()
+                .id(id)
+                .h(px(32.))
+                .px(px(14.))
+                .rounded(px(16.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .reachable()
+                .text_size(px(12.5))
+                .font_weight(FontWeight::BOLD)
+                .bg(rgb(c.chip))
+                .text_color(rgb(c.on_chip))
+                .child(label)
+        };
+        let line = |name: String, file: String, color: u32| {
+            div()
+                .px(px(6.))
+                .flex()
+                .flex_row()
+                .gap(px(10.))
+                .child(
+                    div()
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(rgb(color))
+                        .child(name),
+                )
+                .child(
+                    div()
+                        .text_size(px(12.))
+                        .text_color(rgb(c.muted))
+                        .child(file),
+                )
+        };
+        let found = &self.trusted;
+        let changed = found.paths() != self.engine.extra_roots;
+        let folder = crate::trusted::folder(&self.data_dir);
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(8.))
+            .p(px(14.))
+            .rounded(px(22.))
+            .bg(rgb(c.surface))
+            .child(eyebrow(tr!("Authorities trusted for servers")).px(px(6.)))
+            .child(div().px(px(6.)).text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                "tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.",
+                folder = folder.display().to_string()
+            )))
+            .children(found.good.iter().map(|authority| {
+                let file = authority
+                    .file
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                line(authority.name.clone(), file, c.text)
+            }))
+            .children(found.bad.iter().map(|(file, why)| {
+                line(
+                    file.clone(),
+                    tr!("Left out: {why}", why = why.clone()),
+                    c.error,
+                )
+            }))
+            .when(found.good.is_empty() && found.bad.is_empty(), |d| {
+                d.child(div().px(px(6.)).text_color(rgb(c.muted)).child(tr!("None yet.")))
+            })
+            .when(changed, |d| {
+                d.child(div().px(px(6.)).text_color(rgb(c.warn)).child(tr!(
+                    "The folder has changed since tracewing started: restart it to use what it holds now."
+                )))
+            })
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .gap(px(8.))
+                    .child(button("trusted-open", tr!("Open the folder")).on_click(cx.listener(
+                        move |_, _, _, cx| {
+                            let _ = std::fs::create_dir_all(&folder);
+                            cx.open_with_system(&folder);
+                        },
+                    )))
+                    .child(button("trusted-read", tr!("Read it again")).on_click(cx.listener(
+                        |this, _, _, cx| {
+                            this.trusted = crate::trusted::read(&this.data_dir);
+                            cx.notify();
+                        },
+                    ))),
+            )
     }
 }
 

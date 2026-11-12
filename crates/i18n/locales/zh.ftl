@@ -1321,6 +1321,27 @@ tb457f0b3 = 不解密的主机
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 每行一个：主机名，或 *.example.com（匹配该域名及其所有子域名）。这些主机的流量将直接通过，不被读取。此列表立即生效。
 
+# Authorities trusted for servers
+t0a308a8a = 为服务器信任的证书颁发机构
+
+# tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.
+t571051f9 = tracewing 信任公共证书颁发机构以及本机信任的颁发机构所担保的服务器。它还信任以下这些：公司自己的颁发机构，或你自己的，以 .pem 文件放在 { $folder } 中。它们在 tracewing 启动时读取。
+
+# Left out: {why}
+t4a567d82 = 已略过：{ $why }
+
+# None yet.
+t786bc275 = 暂无。
+
+# The folder has changed since tracewing started: restart it to use what it holds now.
+t65f2d800 = 自 tracewing 启动后文件夹已更改：请重启以使用当前内容。
+
+# Open the folder
+tc7d7e212 = 打开文件夹
+
+# Read it again
+td72efd5e = 重新读取
+
 # Language
 t9a73db9b = 语言
 
