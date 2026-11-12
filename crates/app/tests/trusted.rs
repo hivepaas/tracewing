@@ -1,5 +1,6 @@
 //! Authorities put in the data directory's `trusted-servers` folder: the
-//! proxy trusts their servers, and Settings says what the folder holds.
+//! proxy trusts their servers, and Settings says what the folder holds. And
+//! the TLS secrets of those connections, written for Wireshark from Settings.
 //!
 //! `cargo test --release -p tracewing --features headless --test trusted`
 
@@ -163,6 +164,55 @@ fn servers_of_a_trusted_authority_are_trusted() {
             assert_ne!(view.trusted.paths(), view.engine.extra_roots);
         })
         .unwrap();
+
+    // TLS keys for Wireshark, switched on in Settings: the next request's
+    // secrets are written to the data folder.
+    let keys = dir.join(tracewing::settings_page::TLS_KEYS_FILE);
+    window
+        .update(&mut cx, |view, _, cx| {
+            assert!(view.engine.tls_keys.path().is_none(), "off at start");
+            view.switch_tls_keys(cx);
+            assert_eq!(view.engine.tls_keys.path(), Some(keys.clone()));
+            view.new_compose(cx);
+            let page = view.compose_page.as_ref().unwrap();
+            type_in(
+                &page.url.clone(),
+                &format!("https://localhost:{port}/xml"),
+                cx,
+            );
+            view.send_composed(cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the answer", |view| {
+        view.compose_page
+            .as_ref()
+            .is_some_and(|page| page.answer.is_some() || page.problem.is_some())
+    });
+    let written = std::fs::read_to_string(&keys).unwrap();
+    assert!(written.contains("CLIENT_TRAFFIC_SECRET_0 "), "{written}");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Settings, cx);
+            view.switch_tls_keys(cx);
+            assert!(view.engine.tls_keys.path().is_none());
+            view.switch_tls_keys(cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    // Down to it.
+    cx.update_window(window.into(), |_, window, cx| {
+        window.dispatch_event(
+            gpui::PlatformInput::ScrollWheel(gpui::ScrollWheelEvent {
+                position: gpui::point(px(900.), px(500.)),
+                delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(-900.))),
+                ..Default::default()
+            }),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "100-tls-keys");
 
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);

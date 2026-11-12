@@ -1390,6 +1390,18 @@ tc7d7e212 = Mở thư mục
 # Read it again
 td72efd5e = Đọc lại
 
+# TLS keys for Wireshark
+tcb4394af = Khoá TLS cho Wireshark
+
+# Writes the secrets of each HTTPS connection, from apps to tracewing and from it to servers, to a file Wireshark reads: Preferences, Protocols, TLS, (Pre)-Master-Secret log filename. Anyone with the file can read the traffic it covers. Off again when tracewing starts, unless SSLKEYLOGFILE names a file.
+t2f92ac10 = Ghi khoá bí mật của mỗi kết nối HTTPS, từ ứng dụng tới tracewing và từ tracewing tới server, vào một file mà Wireshark đọc được: Preferences, Protocols, TLS, (Pre)-Master-Secret log filename. Ai có file này đều đọc được lưu lượng mà nó bao gồm. Tự tắt khi tracewing khởi động lại, trừ khi SSLKEYLOGFILE chỉ định một file.
+
+# Cannot write to it: {why}
+t956ecc4b = Không ghi được vào đó: { $why }
+
+# Copy the path
+t095d064e = Sao chép đường dẫn
+
 # Language
 t9a73db9b = Ngôn ngữ
 

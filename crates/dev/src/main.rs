@@ -326,6 +326,8 @@ async fn main() -> Result<()> {
                     live: Default::default(),
                     other_devices: None,
                     relay,
+                    // As browsers and curl, it writes them where SSLKEYLOGFILE says.
+                    tls_keys: Arc::new(tracewing_proxy::key_log::TlsKeys::from_env()),
                 },
                 async move {
                     match exit_after {

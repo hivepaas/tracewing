@@ -71,6 +71,8 @@ pub struct LocalCa {
     provider: Arc<CryptoProvider>,
     cache: Mutex<HashMap<String, (Instant, Arc<ServerConfig>)>>,
     key_place: KeyPlace,
+    /// Where the secrets of connections from apps are written, for Wireshark.
+    key_log: Option<Arc<dyn hudsucker::rustls::KeyLog>>,
 }
 
 impl LocalCa {
@@ -126,6 +128,7 @@ impl LocalCa {
             provider: Arc::new(provider),
             cache: Mutex::new(HashMap::new()),
             key_place,
+            key_log: None,
         })
     }
 
@@ -148,6 +151,11 @@ impl LocalCa {
         let der = CertificateDer::from_pem_slice(pem.as_bytes())
             .with_context(|| format!("parse {}", self.cert_path.display()))?;
         Ok(der.to_vec())
+    }
+
+    /// Writes the secrets of connections from apps there, while it is on.
+    pub fn log_keys_to(&mut self, key_log: Arc<dyn hudsucker::rustls::KeyLog>) {
+        self.key_log = Some(key_log);
     }
 
     /// Names the proxy's own CRL in every leaf from now on.
@@ -209,6 +217,9 @@ impl LocalCa {
             .with_no_client_auth()
             .with_single_cert(vec![leaf], self.leaf_key_der.clone_key())?;
         config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+        if let Some(key_log) = &self.key_log {
+            config.key_log = Arc::clone(key_log);
+        }
         Ok(Arc::new(config))
     }
 }
