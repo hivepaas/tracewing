@@ -899,9 +899,11 @@ fn a_reading_that_is_a_picture_is_looked_at() {
                 .find(|reading| reading.id == "base64")
                 .cloned()
                 .expect("base64 of a PNG is read");
+            // What it holds, and how large it is: the playground's picture
+            // is 96 by 96, which the reading says without decoding it.
             assert!(
-                reading.label.ends_with("PNG"),
-                "the reading says what it holds: {}",
+                reading.label.ends_with("PNG 96×96"),
+                "the reading says what it holds and how large: {}",
                 reading.label
             );
             view.open_reading(&reading, "pic", cx)

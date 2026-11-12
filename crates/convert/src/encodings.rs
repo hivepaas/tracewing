@@ -373,10 +373,15 @@ mod tests {
 
     #[test]
     fn a_decoded_format_is_named() {
+        // Its signature and no header chunk: a PNG that cannot say its size.
         let png = STANDARD.encode(b"\x89PNG\r\n\x1a\n");
         let found = read(&png);
         let label = &by_id(&found, "base64").unwrap().label;
         assert!(label.ends_with("PNG"), "{label}");
+        assert!(
+            !label.contains('×'),
+            "nothing to say about its size: {label}"
+        );
     }
 
     #[test]
