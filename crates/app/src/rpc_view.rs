@@ -2036,16 +2036,23 @@ mod tests {
         );
     }
 
+    /// The kind SIMD-0385 lays out, which the inspector declined until the
+    /// rules for it were in hand.
     #[test]
-    fn a_transaction_solana_writes_in_a_way_this_does_not_read_is_left_alone() {
+    fn a_version_1_transaction_is_laid_out_like_any_other() {
         let shown = of(solana!("send_transaction_v1.req.json"), b"");
         let asked = lines(&shown.sections[0]);
+        assert!(asked.contains(&("version", "1")), "{asked:?}");
+        assert!(
+            asked.iter().any(|(label, _)| *label == "signature"),
+            "which this kind keeps at the end of its bytes: {asked:?}"
+        );
+        assert!(asked.contains(&("accounts", "8 items")), "{asked:?}");
         assert!(
             asked
                 .iter()
-                .any(|(label, value)| *label == "transaction"
-                    && value.contains("do not read as one")),
-            "said plainly, not guessed at: {asked:?}"
+                .any(|(label, value)| *label == "instruction" && value.starts_with("System")),
+            "{asked:?}"
         );
     }
 

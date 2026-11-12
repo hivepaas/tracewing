@@ -1836,13 +1836,76 @@ impl http_body::Body for TapBody {
     }
 }
 
+/// How much more of a request's body is read once the server has stopped
+/// reading it, and for how long, so that the flow has what the client sent.
+const READ_ON_MAX: u64 = 16 << 20;
+const READ_ON_WAIT: std::time::Duration = std::time::Duration::from_secs(10);
+
 impl Drop for TapBody {
     fn drop(&mut self) {
+        if self.done {
+            return;
+        }
         // hyper does not poll a body it already knows is empty, so an
         // end-of-stream body that is dropped still counts as complete.
         let complete = http_body::Body::is_end_stream(&self.inner);
+        // A server that answers before reading a request's body, as one
+        // refusing an upload may, has the rest let go unsent. The client
+        // may be sending it still: it is read on, a while, so that the flow
+        // has what was sent.
+        if !complete
+            && matches!(self.side, Side::Request)
+            && let Ok(runtime) = tokio::runtime::Handle::try_current()
+        {
+            let rest = Self {
+                inner: std::mem::replace(&mut self.inner, Body::empty()),
+                flow: Arc::clone(&self.flow),
+                side: Side::Request,
+                cap: self.cap,
+                body: std::mem::take(&mut self.body),
+                done: false,
+                spool: self.spool.clone(),
+                file: self.file.take(),
+                events: self.events.take(),
+                trailers: std::mem::take(&mut self.trailers),
+            };
+            self.done = true;
+            runtime.spawn(read_on(rest));
+            return;
+        }
         self.finish(complete, None);
     }
+}
+
+/// Reads what is left of a request's body that no server will read, written
+/// down as it comes, up to [`READ_ON_MAX`] and [`READ_ON_WAIT`]. Cut short,
+/// or by the client going, it is not complete; that is no error of the flow.
+async fn read_on(mut rest: TapBody) {
+    use http_body_util::BodyExt as _;
+    let reading = async {
+        let mut read = 0u64;
+        loop {
+            match rest.inner.frame().await {
+                Some(Ok(frame)) => {
+                    if let Some(data) = frame.data_ref() {
+                        read += data.len() as u64;
+                        rest.observe(data);
+                        if read > READ_ON_MAX {
+                            return false;
+                        }
+                    } else if let Some(trailers) = frame.trailers_ref() {
+                        rest.trailers.push_str(&header_lines(trailers));
+                    }
+                }
+                Some(Err(_)) => return false,
+                None => return true,
+            }
+        }
+    };
+    let complete = tokio::time::timeout(READ_ON_WAIT, reading)
+        .await
+        .unwrap_or(false);
+    rest.finish(complete, None);
 }
 
 pub fn error_chain(err: &dyn StdError) -> String {

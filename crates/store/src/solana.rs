@@ -152,9 +152,16 @@ pub struct Transaction {
     pub lookups: usize,
 }
 
+/// The byte a transaction laid out by SIMD-0385 begins with, which no count
+/// of signatures can be.
+const VERSION_1: u8 = 129;
+
 impl Transaction {
     /// What a signed transaction holds. `None` when the bytes are not one.
     pub fn decode(raw: &[u8]) -> Option<Self> {
+        if raw.first() == Some(&VERSION_1) {
+            return Self::decode_v1(raw);
+        }
         let (count, rest) = shortvec(raw)?;
         let (signatures, rest) = chunks(rest, count, 64)?;
         let mut tx = Self {
@@ -202,6 +209,56 @@ impl Transaction {
             let (lookups, _) = shortvec(rest)?;
             tx.lookups = lookups;
         }
+        Some(tx)
+    }
+
+    /// The kind SIMD-0385 lays out, which is not the one before it: counts
+    /// are a fixed byte or two rather than the compact kind, what used to be
+    /// set by Compute Budget instructions is a mask and its values instead,
+    /// there are no tables of further addresses, and the signatures are at
+    /// the end rather than the front.
+    fn decode_v1(raw: &[u8]) -> Option<Self> {
+        let header = raw.get(1..4)?;
+        let signers = usize::from(header[0]);
+        // Each bit set asks for four more bytes of it, further down.
+        let mask = u32::from_le_bytes(raw.get(4..8)?.try_into().ok()?);
+        let mut tx = Self {
+            version: Some(1),
+            signers,
+            blockhash: base58(raw.get(8..40)?),
+            ..Self::default()
+        };
+        let instructions = usize::from(*raw.get(40)?);
+        let addresses = usize::from(*raw.get(41)?);
+        let (keys, rest) = chunks(raw.get(42..)?, addresses, 32)?;
+        tx.accounts = keys.iter().map(|bytes| base58(bytes)).collect();
+        // The values the mask asked for, which say what the transaction may
+        // use rather than what it does.
+        let rest = rest.get(mask.count_ones() as usize * 4..)?;
+        let (headers, mut rest) = chunks(rest, instructions, 4)?;
+        // Every instruction says how long it is before any of them say what
+        // they hold, so the two are gone over separately.
+        let mut said = Vec::with_capacity(instructions);
+        for head in headers {
+            let data = usize::from(u16::from_le_bytes(head.get(2..4)?.try_into().ok()?));
+            said.push((usize::from(head[0]), usize::from(head[1]), data));
+        }
+        for (program, accounts, data) in said {
+            let (data, after) = rest.get(accounts..)?.split_at_checked(data)?;
+            tx.instructions.push(Instruction {
+                program: tx.accounts.get(program)?.clone(),
+                accounts,
+                data: data.to_vec(),
+            });
+            rest = after;
+        }
+        let (signatures, rest) = chunks(rest, signers, 64)?;
+        // "The transaction must not contain trailing data after the
+        // signatures field."
+        if !rest.is_empty() {
+            return None;
+        }
+        tx.signatures = signatures.iter().map(|bytes| base58(bytes)).collect();
         Some(tx)
     }
 }
@@ -306,15 +363,66 @@ mod tests {
         );
     }
 
-    /// A node calls some transactions version 1, and their bytes are not laid
-    /// out as a legacy or a version 0 one is: the signature is at the end
-    /// rather than the front. Reading one by these rules would give nonsense,
-    /// so it is declined, and this keeps that deliberate.
+    /// The kind SIMD-0385 lays out, which was declined until its rules were
+    /// in hand. Checked against the node the same way as the older kind.
     #[test]
-    fn a_kind_this_does_not_know_is_declined_rather_than_guessed_at() {
+    fn a_version_1_transaction_reads_as_the_node_reads_it() {
         let raw = at(sample!("send_transaction_v1.req.json"), &["params", "0"]);
         let bytes = STANDARD.decode(raw.as_str().unwrap()).expect("base64");
-        assert_eq!(Transaction::decode(&bytes), None);
+        let tx = Transaction::decode(&bytes).expect("a transaction");
+        let node = at(sample!("transaction_v1.res.json"), &["result"]);
+        let message = &node["transaction"]["message"];
+
+        assert_eq!(tx.version, Some(1));
+        assert_eq!(node["version"].as_u64(), Some(1));
+        assert_eq!(
+            tx.signatures,
+            node["transaction"]["signatures"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|one| one.as_str().unwrap().to_owned())
+                .collect::<Vec<_>>(),
+            "the signatures, which this kind keeps at the end"
+        );
+        assert_eq!(
+            tx.signers as u64,
+            message["header"]["numRequiredSignatures"].as_u64().unwrap()
+        );
+        assert_eq!(
+            tx.accounts,
+            message["accountKeys"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|one| one.as_str().unwrap().to_owned())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(tx.blockhash, message["recentBlockhash"].as_str().unwrap());
+        assert_eq!(
+            tx.lookups, 0,
+            "this kind has no tables of further addresses"
+        );
+        let said = message["instructions"].as_array().unwrap();
+        assert_eq!(tx.instructions.len(), said.len());
+        for (read, said) in tx.instructions.iter().zip(said) {
+            let program = said["programIdIndex"].as_u64().unwrap() as usize;
+            assert_eq!(read.program, tx.accounts[program]);
+            assert_eq!(read.accounts, said["accounts"].as_array().unwrap().len());
+            assert_eq!(base58(&read.data), said["data"].as_str().unwrap());
+        }
+    }
+
+    #[test]
+    fn a_version_1_transaction_with_anything_after_it_is_not_read() {
+        let raw = at(sample!("send_transaction_v1.req.json"), &["params", "0"]);
+        let mut bytes = STANDARD.decode(raw.as_str().unwrap()).expect("base64");
+        bytes.push(0);
+        assert_eq!(
+            Transaction::decode(&bytes),
+            None,
+            "the rules say there is nothing after the signatures"
+        );
     }
 
     #[test]
