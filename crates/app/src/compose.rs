@@ -3,6 +3,7 @@
 //! rules and breakpoints apply to it too.
 
 use anyhow::{Context as _, Result, bail};
+use serde::{Deserialize, Serialize};
 use std::{
     net::SocketAddr,
     path::Path,
@@ -36,6 +37,83 @@ pub fn left_out(headers: &[(String, String)]) -> Vec<String> {
         }
     }
     found
+}
+
+/// The most of a body kept between runs. A request with more in it than
+/// this is still sent whole: only what is written down for next time stops
+/// here, since the file is read at every start.
+pub const BODY_KEPT: usize = 256 * 1024;
+
+/// Why the body was not written down with the rest.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BodyLeft {
+    /// Longer than [`BODY_KEPT`], as the bytes it stands for.
+    TooBig(u64),
+    /// The editor shows text, but the request sends bytes that are not that
+    /// text: a body read back from a session, or a Protobuf written as JSON.
+    /// Writing the text down would send something else next time, so it is
+    /// left out rather than quietly changed.
+    NotText,
+}
+
+/// What the Compose screen was holding, kept in `compose.toml` in the data
+/// folder: closing the window no longer loses a request half written.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Kept {
+    pub method: String,
+    pub url: String,
+    /// As the field has them: a header a line.
+    pub headers: String,
+    pub body: String,
+    /// Set where the body was left out, with why.
+    pub body_left: Option<BodyLeft>,
+}
+
+impl Kept {
+    /// What is kept where `method` and `url` were typed, and `body` is the
+    /// text of the body field. `bytes` is what the request would send, where
+    /// that is not the text itself.
+    pub fn of(method: &str, url: &str, headers: &str, body: &str, bytes: Option<&[u8]>) -> Self {
+        let mut kept = Self {
+            method: method.to_owned(),
+            url: url.to_owned(),
+            headers: headers.to_owned(),
+            body: String::new(),
+            body_left: None,
+        };
+        match bytes {
+            // The text stands for other bytes: see `BodyLeft::NotText`.
+            Some(bytes) if bytes != body.as_bytes() => {
+                kept.body_left = Some(BodyLeft::NotText);
+            }
+            _ if body.len() > BODY_KEPT => {
+                kept.body_left = Some(BodyLeft::TooBig(body.len() as u64));
+            }
+            _ => kept.body = body.to_owned(),
+        }
+        kept
+    }
+
+    /// A file that cannot be read is no reason not to start, as the layout's
+    /// is not.
+    pub fn load(path: &Path) -> Self {
+        std::fs::read_to_string(path)
+            .ok()
+            .and_then(|text| toml::from_str(&text).ok())
+            .unwrap_or_default()
+    }
+
+    /// Nothing typed anywhere: there is nothing to come back to.
+    pub fn is_empty(&self) -> bool {
+        self == &Self::default()
+    }
+
+    pub fn save(&self, path: &Path) {
+        if let Ok(text) = toml::to_string(self) {
+            let _ = std::fs::write(path, text);
+        }
+    }
 }
 
 /// What came back.
@@ -268,6 +346,54 @@ mod tests {
         assert!(answer.is_none(), "a stopped send has no answer");
         assert!(took < Duration::from_secs(5), "it waited {took:?}");
         let _ = held.join();
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn what_was_being_composed_comes_back() {
+        let dir = std::env::temp_dir().join(format!("tracewing-kept-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("compose.toml");
+
+        // Nothing kept yet: a start finds nothing to take up.
+        assert!(Kept::load(&path).is_empty());
+
+        let kept = Kept::of(
+            "POST",
+            "https://a.test/x",
+            "content-type: application/json",
+            r#"{"made":"here"}"#,
+            None,
+        );
+        kept.save(&path);
+        assert_eq!(Kept::load(&path), kept, "as it was left");
+        assert_eq!(kept.body, r#"{"made":"here"}"#);
+        assert_eq!(kept.body_left, None);
+        assert!(!kept.is_empty());
+
+        // A body read back from a session: the editor shows text, the
+        // request sends other bytes. Writing the text down would send
+        // something else next time, so the body is left out and says so.
+        let shown = "hello\u{fffd}";
+        let bytes = [b'h', b'e', b'l', b'l', b'o', 0xff];
+        let kept = Kept::of("POST", "https://a.test/x", "", shown, Some(&bytes));
+        assert_eq!(kept.body, "");
+        assert_eq!(kept.body_left, Some(BodyLeft::NotText));
+        assert_eq!(kept.url, "https://a.test/x", "the rest is still kept");
+        // The same bytes as the text: nothing is in the way of keeping it.
+        let text = "hello";
+        let kept = Kept::of("POST", "https://a.test/x", "", text, Some(text.as_bytes()));
+        assert_eq!((kept.body.as_str(), kept.body_left), (text, None));
+
+        // Too long to write down, which the window says rather than coming
+        // back with half a request.
+        let big = "x".repeat(BODY_KEPT + 1);
+        let kept = Kept::of("POST", "https://a.test/x", "", &big, None);
+        assert_eq!(kept.body, "");
+        assert_eq!(kept.body_left, Some(BodyLeft::TooBig(big.len() as u64)));
+        kept.save(&path);
+        assert_eq!(Kept::load(&path), kept, "and that reads back too");
+
         let _ = std::fs::remove_dir_all(&dir);
     }
 

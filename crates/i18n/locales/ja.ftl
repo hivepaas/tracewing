@@ -223,6 +223,12 @@ t296762f8 = このフロー: { $e }
 # The body is not a {message}: {e}
 t3220a10a = 本文が { $message } ではありません: { $e }
 
+# The body of {bytes} bytes was too large to keep when the window last closed, so this request came back without it.
+t781059cd = { $bytes } バイトの本文は、前回ウィンドウを閉じたときに保存するには大きすぎたため、このリクエストは本文なしで戻っています。
+
+# This request came back without its body: the body it had was bytes that are not the text shown for them, and writing the text down would have sent something else.
+t5e2cb6ff = このリクエストは本文なしで戻っています: 本文は、そのために表示されていたテキストとは別のバイトで、テキストを書き留めると別のものを送ることになるからです。
+
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message } を JSON で書きます。送信時は Protobuf になります。
 

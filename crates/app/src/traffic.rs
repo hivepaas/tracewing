@@ -433,6 +433,8 @@ impl Traffic {
         cx.on_app_quit(|this, cx| {
             // What was typed last in Settings, if the field was never left.
             this.save_settings(cx);
+            // And what was typed in Compose and never sent.
+            this.save_composed(cx);
             this.save_layout();
             if let Some(indexer) = this.catching_up.take() {
                 let _ = indexer.leave();

@@ -223,6 +223,12 @@ t296762f8 = 此流量记录：{ $e }
 # The body is not a {message}: {e}
 t3220a10a = 正文不是 { $message }：{ $e }
 
+# The body of {bytes} bytes was too large to keep when the window last closed, so this request came back without it.
+t781059cd = { $bytes } 字节的正文在上次关闭窗口时过大，无法保留，所以这个请求回来时没有正文。
+
+# This request came back without its body: the body it had was bytes that are not the text shown for them, and writing the text down would have sent something else.
+t5e2cb6ff = 这个请求回来时没有正文：原来的正文是字节，与为它显示的文本并不相同，记下文本会导致下次发出另一样东西。
+
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }，以 JSON 编写：发送时为 Protobuf。
 

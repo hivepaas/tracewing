@@ -72,6 +72,9 @@ pub struct ComposePage {
     pub loaded: Option<(String, Vec<u8>)>,
     /// The Protobuf message the body is written as, as JSON.
     pub proto: Option<String>,
+    /// Why the body it came back with was not kept, where a request was
+    /// taken up again from `compose.toml` and its body was left out.
+    pub body_left: Option<compose::BodyLeft>,
     /// The calls that were written out in the body and sent as calldata,
     /// by the signatures they were taken to mean.
     pub calls: Vec<String>,
@@ -87,8 +90,8 @@ fn set(input: &Entity<TextInput>, text: &str, cx: &mut Context<Traffic>) {
 }
 
 impl ComposePage {
-    fn new(cx: &mut Context<Traffic>) -> Self {
-        let page = Self {
+    fn new(kept: &compose::Kept, cx: &mut Context<Traffic>) -> Self {
+        let mut page = Self {
             method: cx.new(|cx| TextInput::said(|| tr!("Method"), cx)),
             url: cx.new(|cx| TextInput::new("https://api.example.com/v1/items", cx)),
             headers: cx
@@ -103,11 +106,25 @@ impl ComposePage {
             problem: None,
             loaded: None,
             proto: None,
+            body_left: None,
             calls: Vec::new(),
             left_out: Vec::new(),
             select: Selection::default(),
         };
         set(&page.method, "GET", cx);
+        if !kept.is_empty() {
+            // Taken up where it was left: the body only where keeping it
+            // would send the same bytes again.
+            page.body_left = kept.body_left.clone();
+            for (input, text) in [
+                (page.method.clone(), &kept.method),
+                (page.url.clone(), &kept.url),
+                (page.headers.clone(), &kept.headers),
+                (page.body.clone(), &kept.body),
+            ] {
+                set(&input, text, cx);
+            }
+        }
         page
     }
 }
@@ -115,9 +132,46 @@ impl ComposePage {
 impl Traffic {
     fn compose_page(&mut self, cx: &mut Context<Self>) -> &mut ComposePage {
         if self.compose_page.is_none() {
-            self.compose_page = Some(ComposePage::new(cx));
+            let kept = compose::Kept::load(&self.compose_path());
+            self.compose_page = Some(ComposePage::new(&kept, cx));
         }
         self.compose_page.as_mut().expect("just made")
+    }
+
+    /// Where the composed request is kept between runs.
+    pub(crate) fn compose_path(&self) -> std::path::PathBuf {
+        self.data_dir.join("compose.toml")
+    }
+
+    /// Writes down what is in the editor, to be taken up next time. Called
+    /// where the window knows something changed, and once more as the app
+    /// quits, for what was typed and never sent.
+    pub fn save_composed(&mut self, cx: &mut Context<Self>) {
+        let Some(page) = &self.compose_page else {
+            return;
+        };
+        let read = |input: &Entity<TextInput>| input.read(cx).text().to_owned();
+        let body = read(&page.body);
+        // The bytes the body would be sent as, where the text is not them.
+        let bytes = page
+            .loaded
+            .as_ref()
+            .filter(|(shown, _)| shown == &body)
+            .map(|(_, bytes)| bytes.clone());
+        let kept = compose::Kept::of(
+            &read(&page.method),
+            &read(&page.url),
+            &read(&page.headers),
+            &body,
+            bytes.as_deref(),
+        );
+        kept.save(&self.compose_path());
+    }
+
+    /// Puts what was kept back in the editor, as a start does.
+    pub fn use_kept(&mut self, kept: &compose::Kept, cx: &mut Context<Self>) {
+        self.compose_page = Some(ComposePage::new(kept, cx));
+        cx.notify();
     }
 
     /// The Protobuf message a request to `url` with these headers sends, if
@@ -161,6 +215,7 @@ impl Traffic {
             None => String::from_utf8_lossy(&message.body).into_owned(),
         };
         page.loaded = Some((body.clone(), message.body.clone()));
+        page.body_left = None;
         page.proto = proto.map(|(_, name)| name);
         let fields = [
             (page.method.clone(), message.method.clone()),
@@ -172,6 +227,7 @@ impl Traffic {
             set(&input, &text, cx);
         }
         self.set_screen(Screen::Compose, cx);
+        self.save_composed(cx);
         if now {
             self.send_composed(cx);
         }
@@ -279,6 +335,7 @@ impl Traffic {
                 return;
             }
         };
+        self.save_composed(cx);
         let (stop, stopped) = compose::stopper();
         let page = self.compose_page(cx);
         page.sending = true;
@@ -447,6 +504,20 @@ impl Traffic {
             .child(eyebrow(tr!("Headers")))
             .child(field(&page.headers))
             .child(eyebrow(tr!("Body")))
+            .children(page.body_left.clone().map(|why| {
+                div()
+                    .text_size(px(12.))
+                    .text_color(rgb(c.muted))
+                    .child(match why {
+                        compose::BodyLeft::TooBig(bytes) => tr!(
+                            "The body of {bytes} bytes was too large to keep when the window last closed, so this request came back without it.",
+                            bytes = bytes.to_string()
+                        ),
+                        compose::BodyLeft::NotText => tr!(
+                            "This request came back without its body: the body it had was bytes that are not the text shown for them, and writing the text down would have sent something else."
+                        ),
+                    })
+            }))
             .children(page.proto.clone().map(|message| {
                 div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
                     "Protobuf {message}, written as JSON: it is sent as Protobuf.",

@@ -223,6 +223,12 @@ t296762f8 = Flow ini: { $e }
 # The body is not a {message}: {e}
 t3220a10a = Body bukan { $message }: { $e }
 
+# The body of {bytes} bytes was too large to keep when the window last closed, so this request came back without it.
+t781059cd = Body berukuran { $bytes } byte terlalu besar untuk disimpan saat jendela terakhir ditutup, jadi permintaan ini kembali tanpa body.
+
+# This request came back without its body: the body it had was bytes that are not the text shown for them, and writing the text down would have sent something else.
+t5e2cb6ff = Permintaan ini kembali tanpa body-nya: isinya byte yang bukan teks yang ditampilkan untuknya, dan menyimpan teks itu akan mengirim hal yang lain.
+
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, ditulis sebagai JSON: dikirim sebagai Protobuf.
 
