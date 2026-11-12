@@ -1,47 +1,88 @@
-# tracewing
+<p align="center">
+  <img src="docs/images/tracewing.svg" width="104" alt="tracewing">
+</p>
 
-**A native HTTP(S) debugging proxy for Windows, Linux and macOS that keeps up with big sessions.**
+<h1 align="center">tracewing</h1>
 
-Built in Rust with [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui).
+<p align="center">
+  <b>The HTTP(S) debugging proxy that keeps up with big sessions.</b><br>
+  See, pause and change every request your apps make: web, mobile, AI and web3. Native, for Windows, macOS and Linux.
+</p>
 
-> **Status:** early development. There is nothing to download yet. The window shows traffic as it happens, and can be tried from source (see [Build](#-build)).
+<p align="center">
+  <a href="https://tracewing.app"><b>tracewing.app</b></a> ·
+  <a href="https://tracewing.app/#get">Download</a> ·
+  <a href="docs/features.md">Features</a> ·
+  <a href="docs/scripts.md">Scripts</a>
+</p>
 
-## 🎯 Plans
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-2f55b4" alt="GPL-3.0"></a>
+  <img src="https://img.shields.io/badge/Windows%20·%20macOS%20·%20Linux-native-2f55b4" alt="Windows, macOS and Linux">
+  <img src="https://img.shields.io/badge/built%20with-Rust-2f55b4" alt="Built with Rust">
+</p>
 
-- **See every request:** HTTP/1.1, HTTP/2, WebSocket and server-sent events, over HTTPS through a certificate authority made for your machine alone.
-- **Big sessions stay smooth:** a million requests scroll at the display's refresh rate, and large bodies stream through instead of piling up in memory.
-- **Change traffic on the way:** breakpoints, map to a local file or another host, rewrite rules.
-- **Phones and emulators too:** set up from a QR code, with help for Android's certificate rules.
+<p align="center">
+  <img src="docs/images/traffic.webp" alt="tracewing with a request open" width="860">
+</p>
 
-## 🔨 Build
+## Why tracewing
 
-Needs Rust; `rust-toolchain.toml` picks the version. On Linux, the window also needs the packages listed in `.github/workflows/ci.yml`. It builds for Wayland by default: add `--features x11` for X11.
+- 🔍 **See every request.** HTTP/1.1 and HTTP/2, WebSocket, server-sent events, gRPC and GraphQL, over HTTPS through a certificate authority made for your computer alone.
+- ⚡ **Big sessions stay smooth.** A million requests scroll at your display's pace, and large bodies stream through instead of piling up in memory.
+- 🔬 **Read what is inside.** JSON, XML, Protobuf, MessagePack and CBOR laid out; tokens, cookies and timings explained; two requests compared side by side.
+- ✋ **Pause and edit.** Breakpoints hold a request or a response, and WebSocket messages too, until you send it on, changed or not.
+- 🔀 **Change traffic on the way.** Rules block, answer from a file, send to another host, rewrite headers and bodies, or slow the network down. For the rest, a few lines of JavaScript.
+- 🤖 **Made for AI work.** LLM API streams put back together, tokens and tool calls, and an MCP server so your AI tools can search and read what tracewing recorded.
+- ⛓️ **Web3 too.** JSON-RPC calls and their calldata read by your contracts' ABIs, and a warning when an edit breaks a signed transaction.
+- 📱 **Phones and emulators.** Set up from a QR code, with Android emulators (14 and later too) and the iOS Simulator trusted in one click.
+- 🏢 **Works at work.** Through your company's proxy, NTLM included, with your company's own CA, client certificates and TLS keys for Wireshark.
+- ⌨️ **No window needed.** `tracewing capture` records on a server or in CI, and writes HAR.
+- 🌍 **Made for every day.** 15 languages, light and dark, a text size of your choice, and layouts you can name. It runs on your computer and sends nothing anywhere.
+
+Every feature in detail: [docs/features.md](docs/features.md).
+
+<table>
+  <tr>
+    <td><img src="docs/images/llm.webp" alt="An LLM API stream put back together"></td>
+    <td><img src="docs/images/breakpoint.webp" alt="A response held at a breakpoint"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/rules.webp" alt="Rules that change traffic"></td>
+    <td><img src="docs/images/phones.webp" alt="Setting up a phone from a QR code"></td>
+  </tr>
+</table>
+
+## Download
+
+tracewing's first release, 0.1, is on its way: it will be at **[tracewing.app](https://tracewing.app/#get)** and in [GitHub Releases](https://github.com/hivepaas/tracewing/releases). Until then, build it from source.
+
+## Command line
 
 ```sh
-make release                                # the window; listens on 127.0.0.1:9090
-make debug                                  # the same, built for debugging
-make test                                   # includes end-to-end tests through the proxy
-curl --proxy http://127.0.0.1:9090 \
-     --cacert ~/.local/share/tracewing/ca.pem https://example.com/
-cargo run --release -p tracewing-dev -- settings       # every storage setting and its default
-make playground                             # a server to try it on: http://localhost:10000 lists its paths, and https://localhost:10443
-make playground-trust                       # the same, its authority trusted by tracewing first (restart tracewing)
-cargo test --release -p tracewing --features headless --test screen  # the window with no display; pictures in target/shots
+tracewing capture --seconds 60 --har api.har
+tracewing sessions
+tracewing export --har today.har --filter "host:api.example.com"
 ```
 
-What the core has been measured to do, and why it is built this way: [docs/measurements.md](docs/measurements.md).
+`tracewing help` lists the rest.
+
+## Build from source
+
+```sh
+make release
+```
+
+Then point an app at `127.0.0.1:9090`. What it needs, the tests and a server to try it on: [docs/building.md](docs/building.md).
 
 ## 🐝 Made by HivePaaS
 
-tracewing is built and maintained by HivePaaS, who also make:
+HivePaaS also makes [shellwing](https://shellwing.app), a fast native SSH client, [packwing](https://packwing.app), the file archiver that uses every core you have, [authwing](https://github.com/hivepaas/authwing), two-factor codes that know the window you are in, and [hivepaas](https://github.com/hivepaas/hivepaas), a self-hosted PaaS.
 
-- [hivepaas](https://github.com/hivepaas/hivepaas): a self-hosted PaaS.
-- [shellwing](https://shellwing.app): a fast, native SSH client for macOS, Windows and Linux.
-- [packwing](https://github.com/hivepaas/packwing): a file archiver for macOS, Windows and Linux that opens archives safely.
-- [authwing](https://github.com/hivepaas/authwing): a two-factor code app for macOS, Windows and Linux that knows the window you are in.
+⭐ If tracewing is useful to you, a star on GitHub helps others find it.
 
-## 📜 License
+## License
 
-tracewing is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License, version 3 or (at your option) any later version. See [LICENSE](LICENSE). Copyright (C) 2026 HivePaaS.
+tracewing is free software under the [GNU General Public License, version 3](LICENSE) or later. The name and logo are not covered by the GPL: see [TRADEMARKS.md](TRADEMARKS.md). Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-The name and logo are not covered by the GPL: see [TRADEMARKS.md](TRADEMARKS.md). Contributions are welcome under the terms in [CONTRIBUTING.md](CONTRIBUTING.md).
+Copyright © 2026 HivePaaS.

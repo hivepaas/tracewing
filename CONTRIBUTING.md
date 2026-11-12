@@ -7,8 +7,10 @@ open an issue first so we can agree on the shape before you write it.
 
 - `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`
   and `cargo test --workspace` pass.
-- Changes people see come with a line in the README when they change how
-  something is used.
+- Changes people see come with a line in `docs/features.md`, and in
+  `docs/building.md` when they change how tracewing is built or tested. The
+  README is the project's front page: it says what tracewing is in a line a
+  feature, and changes only for something that changes that picture.
 
 ## Licensing your contribution
 

@@ -1,5 +1,5 @@
 //! What the user can change about how a session is stored. The app picks every
-//! default, from what the benchmarks found (see the README), and every one can be
+//! default, from what the benchmarks found (see docs/measurements.md), and every one can be
 //! overridden: a laptop with little disk and a build server want different things.
 
 use anyhow::{Context, Result, bail};
