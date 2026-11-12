@@ -712,6 +712,9 @@ t114f9980 = Header
 # Payload
 ta0639745 = Payload
 
+# The simulator did not take it: {why}
+t7f8fa9c0 = Simulator không nhận: { $why }
+
 # Light
 t8ad2f8cf = Sáng
 
@@ -1878,6 +1881,30 @@ t379e433c = Android emulator và thiết bị USB
 
 # Find devices
 t54d4af39 = Tìm thiết bị
+
+# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
+t01863e29 = Đặt chứng chỉ vào danh sách tin cậy của các iOS simulator đang chạy trên Mac này. Chúng đi qua proxy của Mac, nên chỉ cần vậy.
+
+# xcrun was not found. Install Xcode, or its command line tools, then look again.
+t2bd95662 = Không tìm thấy xcrun. Hãy cài Xcode hoặc command line tools của nó, rồi tìm lại.
+
+# No simulator is running. Start one from Xcode, then look again.
+tbd7bf840 = Không có simulator nào đang chạy. Hãy mở một cái từ Xcode, rồi tìm lại.
+
+# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
+tc88c5c9b = Tin chứng chỉ trong một simulator. Nó giữ nguyên cho tới khi simulator bị xoá; app đang mở có thể cần mở lại.
+
+# The certificate is trusted.
+tdbe3bd38 = Chứng chỉ đã được tin.
+
+# Running.
+ta1c67066 = Đang chạy.
+
+# iOS simulators
+tb198618d = iOS simulator
+
+# Find simulators
+ta969b661 = Tìm simulator
 
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = System proxy và việc chặn HTTP/3 tự trả về khi tracewing tắt hoặc bị crash, thiết bị Android thiết lập qua USB cũng vậy. Chứng chỉ vẫn được tin cho tới khi nút Remove ở bước 1 gỡ nó. Điện thoại thiết lập bằng tay vẫn giữ proxy Wi-Fi và chứng chỉ cho tới khi được gỡ trên chính nó: hướng dẫn của từng loại thiết bị nói cách làm. Thiết bị khác vẫn dùng được proxy của máy này cho tới khi tắt tùy chọn đó trong Settings.

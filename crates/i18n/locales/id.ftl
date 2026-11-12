@@ -712,6 +712,9 @@ t114f9980 = Header
 # Payload
 ta0639745 = Payload
 
+# The simulator did not take it: {why}
+t7f8fa9c0 = Simulator tidak menerimanya: { $why }
+
 # Light
 t8ad2f8cf = Terang
 
@@ -1878,6 +1881,30 @@ t379e433c = Emulator Android dan perangkat USB
 
 # Find devices
 t54d4af39 = Temukan perangkat
+
+# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
+t01863e29 = Memercayakan sertifikat di simulator iOS yang berjalan di Mac ini. Simulator memakai proxy Mac ini, jadi hanya itu yang dibutuhkan.
+
+# xcrun was not found. Install Xcode, or its command line tools, then look again.
+t2bd95662 = xcrun tidak ditemukan. Pasang Xcode atau command line tools-nya, lalu cari lagi.
+
+# No simulator is running. Start one from Xcode, then look again.
+tbd7bf840 = Tidak ada simulator yang berjalan. Jalankan satu dari Xcode, lalu cari lagi.
+
+# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
+tc88c5c9b = Percayakan sertifikat di sebuah simulator. Ia tetap ada sampai simulator dihapus; aplikasi yang sudah terbuka mungkin perlu dibuka ulang.
+
+# The certificate is trusted.
+tdbe3bd38 = Sertifikat sudah dipercaya.
+
+# Running.
+ta1c67066 = Berjalan.
+
+# iOS simulators
+tb198618d = Simulator iOS
+
+# Find simulators
+ta969b661 = Cari simulator
 
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = Proxy sistem dan pemblokiran HTTP/3 kembali seperti semula saat tracewing ditutup atau crash, begitu juga perangkat Android yang disiapkan lewat USB. Sertifikat tetap dipercaya sampai tombol Hapus di langkah 1 mengeluarkannya. Ponsel yang disiapkan secara manual tetap menyimpan proxy Wi-Fi dan sertifikatnya sampai dihapus di ponsel itu: panduan tiap perangkat menjelaskan caranya. Perangkat lain bisa memakai proxy komputer ini sampai itu dimatikan di Settings.

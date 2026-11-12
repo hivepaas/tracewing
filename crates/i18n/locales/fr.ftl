@@ -749,6 +749,9 @@ t114f9980 = En-tête
 # Payload
 ta0639745 = Charge utile
 
+# The simulator did not take it: {why}
+t7f8fa9c0 = Le simulateur ne l'a pas accepté : { $why }
+
 # Light
 t8ad2f8cf = Clair
 
@@ -2014,6 +2017,30 @@ t379e433c = Émulateurs Android et appareils USB
 
 # Find devices
 t54d4af39 = Rechercher des appareils
+
+# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
+t01863e29 = Fait confiance au certificat dans les simulateurs iOS en cours sur ce Mac. Ils passent par le proxy de ce Mac, il ne leur faut rien d'autre.
+
+# xcrun was not found. Install Xcode, or its command line tools, then look again.
+t2bd95662 = xcrun est introuvable. Installez Xcode ou ses outils en ligne de commande, puis cherchez à nouveau.
+
+# No simulator is running. Start one from Xcode, then look again.
+tbd7bf840 = Aucun simulateur n'est lancé. Lancez-en un depuis Xcode, puis cherchez à nouveau.
+
+# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
+tc88c5c9b = Faites confiance au certificat dans un simulateur. Il reste jusqu'à ce que le simulateur soit effacé ; une app déjà ouverte devra peut-être être rouverte.
+
+# The certificate is trusted.
+tdbe3bd38 = Le certificat est approuvé.
+
+# Running.
+ta1c67066 = En cours.
+
+# iOS simulators
+tb198618d = Simulateurs iOS
+
+# Find simulators
+ta969b661 = Chercher des simulateurs
 
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = Le proxy système et le blocage de HTTP/3 reviennent à leur état quand tracewing se ferme ou plante, de même qu’un appareil Android configuré par USB. Le certificat reste approuvé jusqu’à ce que Retirer, à l’étape 1, l’enlève. Un téléphone configuré à la main garde son proxy Wi-Fi et son certificat jusqu’à ce qu’on les retire sur place : le guide de chaque appareil dit comment. Les autres appareils peuvent joindre le proxy de cet ordinateur jusqu’à ce que ce soit désactivé dans Réglages.

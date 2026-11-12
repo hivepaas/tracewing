@@ -29,6 +29,7 @@ pub mod hosts;
 pub mod input;
 pub mod inspector;
 pub mod inspector_window;
+pub mod ios_sim_view;
 pub mod jwt;
 pub mod layout;
 pub mod llm;

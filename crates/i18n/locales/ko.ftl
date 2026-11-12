@@ -712,6 +712,9 @@ t114f9980 = 헤더
 # Payload
 ta0639745 = 페이로드
 
+# The simulator did not take it: {why}
+t7f8fa9c0 = 시뮬레이터가 받아들이지 않았습니다: { $why }
+
 # Light
 t8ad2f8cf = 라이트
 
@@ -1878,6 +1881,30 @@ t379e433c = Android 에뮬레이터 및 USB 기기
 
 # Find devices
 t54d4af39 = 기기 찾기
+
+# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
+t01863e29 = 이 Mac에서 실행 중인 iOS 시뮬레이터가 인증서를 신뢰하게 합니다. 시뮬레이터는 Mac의 프록시를 사용하므로 이것만 있으면 됩니다.
+
+# xcrun was not found. Install Xcode, or its command line tools, then look again.
+t2bd95662 = xcrun을 찾을 수 없습니다. Xcode나 명령줄 도구를 설치한 뒤 다시 찾아보세요.
+
+# No simulator is running. Start one from Xcode, then look again.
+tbd7bf840 = 실행 중인 시뮬레이터가 없습니다. Xcode에서 하나 실행한 뒤 다시 찾아보세요.
+
+# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
+tc88c5c9b = 시뮬레이터에서 인증서를 신뢰합니다. 시뮬레이터를 지울 때까지 유지되며, 이미 열린 앱은 다시 열어야 할 수 있습니다.
+
+# The certificate is trusted.
+tdbe3bd38 = 인증서를 신뢰합니다.
+
+# Running.
+ta1c67066 = 실행 중.
+
+# iOS simulators
+tb198618d = iOS 시뮬레이터
+
+# Find simulators
+ta969b661 = 시뮬레이터 찾기
 
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = 시스템 프록시와 HTTP/3 차단은 tracewing이 닫히거나 비정상 종료되면 원래대로 돌아가며, USB로 설정한 Android 기기도 마찬가지입니다. 인증서는 1단계의 제거로 빼기 전까지 계속 신뢰됩니다. 직접 설정한 휴대폰은 그 기기에서 지울 때까지 Wi-Fi 프록시와 인증서가 남아 있습니다. 방법은 각 기기의 안내에 있습니다. 다른 기기는 설정에서 끄기 전까지 이 컴퓨터의 프록시를 쓸 수 있습니다.

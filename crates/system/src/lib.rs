@@ -33,6 +33,7 @@ mod quic;
 mod quic;
 
 pub mod android;
+pub mod ios_sim;
 pub mod launch;
 
 use anyhow::{Context, Result, bail};
