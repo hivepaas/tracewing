@@ -1125,8 +1125,8 @@ tb945a053 = http://proxy.example.com:8080 ou socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Passar por outro proxy
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
-t5c30a22f = Quando a rede de uma empresa só deixa sair pelo próprio proxy, o tracewing chega aos servidores por ele. Os apps continuam mandando o tráfego para o tracewing. Usuário e senha vão no endereço, como http://nome:senha@proxy:8080; a senha fica então guardada no chaveiro do sistema e não é mostrada de novo. Vazio, o tracewing vai direto aos servidores.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers.
+tf46c980f = Quando a rede de uma empresa só deixa sair pelo próprio proxy, o tracewing chega aos servidores por ele. Os apps continuam mandando o tráfego para o tracewing. Usuário e senha vão no endereço, como http://nome:senha@proxy:8080, ou http://DOMAIN%5Cnome:senha@proxy:8080 para um domínio Windows; a senha fica então guardada no chaveiro do sistema e não é mostrada de novo. Basic ou NTLM, conforme o proxy pedir. Vazio, o tracewing vai direto aos servidores.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Hosts acessados direto, como o NO_PROXY os escreve: example.com é ele e tudo abaixo dele, * é qualquer host.

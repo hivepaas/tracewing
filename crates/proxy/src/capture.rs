@@ -242,6 +242,10 @@ pub struct FlowHandler {
     connector: TimedConnector,
     sockets: Arc<Sockets>,
     scripts: Arc<Scripts>,
+    /// The relay the request this clone is handling was passed on to whole.
+    forwarded_to: Option<Arc<crate::relay::Route>>,
+    /// The connection it went over, to be let go of if it asks for NTLM.
+    forwarded_over: Option<hyper_util::client::legacy::connect::CaptureConnection>,
     /// The scripts with an `onResponse` to run on the response of the request
     /// this clone is handling, and that request as it went.
     response_scripts: Vec<PathBuf>,
@@ -309,6 +313,8 @@ impl FlowHandler {
             connector: controls.connector,
             sockets: controls.sockets,
             scripts: controls.scripts,
+            forwarded_to: None,
+            forwarded_over: None,
             response_scripts: Vec::new(),
             script_request: None,
             slowed: None,
@@ -785,17 +791,27 @@ impl HttpHandler for FlowHandler {
         // After the flow has them, so that it shows what the client sent.
         let upgrade = is_websocket(&req);
         drop_hop_by_hop(req.headers_mut(), upgrade);
-        // Plain HTTP goes to an HTTP relay whole, and says who is asking.
+        // Plain HTTP goes to an HTTP relay whole, and says who is asking;
+        // through a tunnel instead for one that wants NTLM, which then knows
+        // who is asking, and must not have the password passed on inside.
+        self.forwarded_to = None;
+        self.forwarded_over = None;
         if req.uri().scheme_str() == Some("http")
-            && let Some(basic) = req
+            && let Some(route) = req
                 .uri()
                 .host()
                 .and_then(|host| self.relay.route_for(host))
-                .filter(|route| route.kind == crate::relay::Kind::Http)
-                .and_then(|route| route.basic())
-            && let Ok(value) = HeaderValue::from_str(&basic)
+                .filter(|route| route.kind == crate::relay::Kind::Http && !route.wants_ntlm())
         {
-            req.headers_mut().insert(header::PROXY_AUTHORIZATION, value);
+            if let Some(basic) = route.basic()
+                && let Ok(value) = HeaderValue::from_str(&basic)
+            {
+                req.headers_mut().insert(header::PROXY_AUTHORIZATION, value);
+            }
+            self.forwarded_to = Some(route);
+            self.forwarded_over = Some(hyper_util::client::legacy::connect::capture_connection(
+                &mut req,
+            ));
         }
         match plan.end {
             Some(End::Block(status)) => {
@@ -886,6 +902,29 @@ impl HttpHandler for FlowHandler {
         if let Some(flow) = &flow {
             let_its_program_be_found(flow).await;
         }
+        // A relay that asks for NTLM is asked with it, through a tunnel, from
+        // the next request on.
+        if let Some(route) = self.forwarded_to.take()
+            && res.status() == StatusCode::PROXY_AUTHENTICATION_REQUIRED
+            && res
+                .headers()
+                .get_all(header::PROXY_AUTHENTICATE)
+                .iter()
+                .any(|v| {
+                    v.to_str()
+                        .is_ok_and(|v| v.trim().to_ascii_uppercase().starts_with("NTLM"))
+                })
+        {
+            route.learn_ntlm();
+            // That connection takes no more requests: the next goes through
+            // a tunnel, signed in.
+            if let Some(over) = self.forwarded_over.take()
+                && let Some(connected) = over.connection_metadata().as_ref()
+            {
+                connected.poison();
+            }
+        }
+        self.forwarded_over = None;
         let res = self.run_response_scripts(res).await;
         let res = match self.pause_response.take() {
             // Events and upgrades go on for as long as they last.

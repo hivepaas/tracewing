@@ -1125,8 +1125,8 @@ tb945a053 = http://proxy.example.com:8080 o socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Passa da un altro proxy
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
-t5c30a22f = Quando la rete di un'azienda non lascia uscire nulla se non dal proprio proxy, tracewing raggiunge i server passando da quello. Le app continuano a mandare il traffico a tracewing. Nome utente e password vanno nell'indirizzo, come http://nome:password@proxy:8080; la password viene poi conservata nel portachiavi di sistema e non è più mostrata. Vuoto, tracewing va direttamente ai server.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers.
+tf46c980f = Quando la rete di un'azienda non lascia uscire nulla se non dal proprio proxy, tracewing raggiunge i server passando da quello. Le app continuano a mandare il traffico a tracewing. Nome utente e password vanno nell'indirizzo, come http://nome:password@proxy:8080, o http://DOMAIN%5Cnome:password@proxy:8080 per un dominio Windows; la password viene poi conservata nel portachiavi di sistema e non è più mostrata. Basic o NTLM, come chiede il proxy. Vuoto, tracewing va direttamente ai server.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Host raggiunti direttamente, come li scrive NO_PROXY: example.com è lui e tutto ciò che sta sotto, * è ogni host.

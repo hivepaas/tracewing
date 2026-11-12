@@ -109,6 +109,93 @@ async fn http_one(
     Ok(())
 }
 
+/// A company's proxy that takes NTLM alone, as a Windows domain's often
+/// does: each 407 offers NTLM only, with a body, and keeps the connection,
+/// as NTLM needs. What it saw is written down with ` auth=ntlm`, ` auth=no`
+/// or ` auth=wrong`, and plain requests with their method.
+pub async fn serve_http_ntlm(listener: TcpListener, user: (String, String), seen: Seen) {
+    while let Ok((client, _)) = listener.accept().await {
+        let (user, seen) = (user.clone(), Arc::clone(&seen));
+        tokio::spawn(async move {
+            let _ = ntlm_one(client, user, seen).await;
+        });
+    }
+}
+
+async fn ntlm_one(
+    mut client: TcpStream,
+    (name, password): (String, String),
+    seen: Seen,
+) -> std::io::Result<()> {
+    use tracewing_proxy::ntlm;
+    let account = ntlm::Account::new(&name, &password);
+    let mut challenge = None;
+    loop {
+        let head = match read_head(&mut client).await {
+            Ok(head) => head,
+            Err(_) => return Ok(()),
+        };
+        let mut lines = head.split("\r\n");
+        let first = lines.next().unwrap_or_default().to_owned();
+        let auth = lines.find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.eq_ignore_ascii_case("proxy-authorization")
+                .then(|| value.trim().to_owned())
+        });
+        let mut parts = first.split_whitespace();
+        let (method, target) = (
+            parts.next().unwrap_or_default().to_owned(),
+            parts.next().unwrap_or_default().to_owned(),
+        );
+        let refuse = |ask: String| {
+            format!(
+                "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: {ask}\r\n\
+                 Content-Type: text/plain\r\nContent-Length: 7\r\n\r\nsign in"
+            )
+        };
+        match auth.as_deref() {
+            Some(value) if value.starts_with("NTLM ") && challenge.is_none() => {
+                // Negotiate: the challenge, on this connection.
+                let header = ntlm::challenge_header([9; 8], &ntlm::target_info("CORP", "PROXY"));
+                challenge = ntlm::read_challenge(&header).ok();
+                client.write_all(refuse(header).as_bytes()).await?;
+            }
+            Some(value) if value.starts_with("NTLM ") => {
+                let proved = challenge
+                    .as_ref()
+                    .map(|c| ntlm::check(value, c, &password))
+                    .is_some_and(|who| {
+                        who.is_ok_and(|(d, u)| d == account.domain && u == account.user)
+                    });
+                let said = if proved { "ntlm" } else { "wrong" };
+                seen.lock()
+                    .unwrap()
+                    .push(format!("{method} {target} auth={said}"));
+                if !proved {
+                    client
+                        .write_all(refuse("NTLM".to_owned()).as_bytes())
+                        .await?;
+                    return Ok(());
+                }
+                let mut server = TcpStream::connect(target.as_str()).await?;
+                client
+                    .write_all(b"HTTP/1.1 200 Connection established\r\n\r\n")
+                    .await?;
+                let _ = copy_bidirectional(&mut client, &mut server).await;
+                return Ok(());
+            }
+            _ => {
+                seen.lock()
+                    .unwrap()
+                    .push(format!("{method} {target} auth=no"));
+                client
+                    .write_all(refuse("NTLM".to_owned()).as_bytes())
+                    .await?;
+            }
+        }
+    }
+}
+
 pub async fn serve_socks5(listener: TcpListener, user: Option<(String, String)>, seen: Seen) {
     while let Ok((client, _)) = listener.accept().await {
         let (user, seen) = (user.clone(), Arc::clone(&seen));

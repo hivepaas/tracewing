@@ -1159,8 +1159,8 @@ tb945a053 = http://proxy.example.com:8080 або socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Іти через інший проксі
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
-t5c30a22f = Якщо мережа компанії випускає назовні лише через свій проксі, tracewing іде до серверів через нього. Застосунки й далі надсилають трафік до tracewing. Ім'я користувача й пароль пишуться в адресі, як http://ім'я:пароль@proxy:8080; потім пароль зберігається в системній в'язці ключів і більше не показується. Порожньо — tracewing іде до серверів напряму.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers.
+tf46c980f = Якщо мережа компанії випускає назовні лише через свій проксі, tracewing іде до серверів через нього. Застосунки й далі надсилають трафік до tracewing. Ім'я користувача й пароль пишуться в адресі, як http://ім'я:пароль@proxy:8080, або http://DOMAIN%5Cім'я:пароль@proxy:8080 для домену Windows; потім пароль зберігається в системній в'язці ключів і більше не показується. Basic або NTLM, як вимагає проксі. Порожньо — tracewing іде до серверів напряму.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Хости, до яких іти напряму, як у NO_PROXY: example.com — він сам і все під ним, * — будь-який хост.

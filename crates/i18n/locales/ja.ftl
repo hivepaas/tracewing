@@ -1054,8 +1054,8 @@ tb945a053 = http://proxy.example.com:8080 または socks5://proxy.example.com:1
 # Go through another proxy
 tc67dfdb1 = 別のプロキシを経由する
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
-t5c30a22f = 会社のネットワークが自社のプロキシ経由でしか外へ出られない場合、tracewing はそのプロキシを通ってサーバーへ進みます。アプリは引き続き tracewing へ通信を送ります。ユーザー名とパスワードは http://名前:パスワード@proxy:8080 のようにアドレスに書きます。パスワードはその後システムのキーチェーンに保存され、再表示されません。空なら tracewing はサーバーへ直接行きます。
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers.
+tf46c980f = 会社のネットワークが自社のプロキシ経由でしか外へ出られない場合、tracewing はそのプロキシを通ってサーバーへ進みます。アプリは引き続き tracewing へ通信を送ります。ユーザー名とパスワードは http://名前:パスワード@proxy:8080、または http://DOMAIN%5C名前:パスワード@proxy:8080（Windows ドメインの場合） のようにアドレスに書きます。パスワードはその後システムのキーチェーンに保存され、再表示されません。プロキシの求めに応じて Basic か NTLM を使います。空なら tracewing はサーバーへ直接行きます。
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = 直接つなぐホスト（NO_PROXY と同じ書き方）：example.com はそのホストと配下すべて、* はすべてのホスト。

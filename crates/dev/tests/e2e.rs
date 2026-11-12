@@ -2453,6 +2453,74 @@ async fn servers_are_reached_through_a_company_proxy() {
     clean_up(conn, dir);
 }
 
+/// A company's proxy that takes NTLM alone: tracewing signs in with NTLM's
+/// three messages on one connection, never sending the password, and from
+/// then on asks it with NTLM straight away, plain HTTP through a tunnel too.
+#[tokio::test(flavor = "multi_thread")]
+async fn servers_are_reached_through_a_relay_that_wants_ntlm() {
+    use tracewing_dev::fake_relay;
+    use tracewing_proxy::relay::RelaySettings;
+    let h = Harness::start("relay-ntlm").await;
+    let plain = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let plain_port = plain.local_addr().unwrap().port();
+    tokio::spawn(tracewing_dev::playground::serve(plain));
+    let corp = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let corp_port = corp.local_addr().unwrap().port();
+    let seen = fake_relay::Seen::default();
+    tokio::spawn(fake_relay::serve_http_ntlm(
+        corp,
+        ("CORP\\ann".to_owned(), "s3cret".to_owned()),
+        Arc::clone(&seen),
+    ));
+    h.relay
+        .set(&RelaySettings {
+            proxy: format!("http://CORP%5Cann:s3cret@127.0.0.1:{corp_port}"),
+            bypass: String::new(),
+        })
+        .unwrap();
+    let client = h.client(false);
+    let origin_port = h.origin.rsplit(':').next().unwrap().to_owned();
+
+    // Plain HTTP first, passed on whole: the relay asks for NTLM, which the
+    // app sees once.
+    let first = client
+        .get(format!("http://localhost:{plain_port}/json"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(first.status(), 407);
+    first.bytes().await.unwrap();
+    // HTTPS: Basic is not offered, so NTLM, on one connection.
+    let secure = client
+        .get(format!("{}/json?size=10", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(secure.status(), 200);
+    secure.bytes().await.unwrap();
+    // Plain HTTP again: through a tunnel now, signed in.
+    let again = client
+        .get(format!("http://localhost:{plain_port}/json"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(again.status(), 200);
+    again.bytes().await.unwrap();
+
+    let seen = seen.lock().unwrap().clone();
+    assert_eq!(
+        seen,
+        [
+            format!("GET http://localhost:{plain_port}/json auth=no"),
+            format!("CONNECT localhost:{origin_port} auth=ntlm"),
+            format!("CONNECT localhost:{plain_port} auth=ntlm"),
+        ],
+        "NTLM straight away once asked; no password passed on"
+    );
+    let (_, conn, dir) = h.finish(3).await;
+    clean_up(conn, dir);
+}
+
 /// A SOCKS5 proxy, with a password, and hosts passed by.
 #[tokio::test(flavor = "multi_thread")]
 async fn servers_are_reached_through_socks5_or_passed_by() {

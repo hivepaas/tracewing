@@ -250,6 +250,31 @@ pub struct Route {
     pub port: u16,
     pub user: Option<(String, String)>,
     bypass: Vec<String>,
+    /// It asked for NTLM once, so it is asked with NTLM from then on.
+    ntlm: Learned,
+}
+
+/// Whether an HTTP relay has asked for NTLM: learnt as it goes, the same
+/// for every copy of its route.
+#[derive(Clone, Debug, Default)]
+struct Learned(std::sync::Arc<std::sync::atomic::AtomicBool>);
+
+impl PartialEq for Learned {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for Learned {}
+
+/// What a relay answered a CONNECT with.
+struct Answer {
+    status: u16,
+    line: String,
+    /// `Proxy-Authenticate`'s values.
+    asks: Vec<String>,
+    /// It closes the connection after this answer.
+    closes: bool,
 }
 
 impl Route {
@@ -305,7 +330,21 @@ impl Route {
             port: port.unwrap_or(default_port),
             user,
             bypass,
+            ntlm: Learned::default(),
         }))
+    }
+
+    /// It asked for NTLM, as a plain request passed on to it can tell.
+    pub fn learn_ntlm(&self) {
+        self.ntlm
+            .0
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// Whether this relay wants NTLM: plain HTTP then goes through a tunnel
+    /// too, as NTLM signs in a connection, not a request.
+    pub fn wants_ntlm(&self) -> bool {
+        self.ntlm.0.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     /// Whether `host`, with no port, is reached through the relay.
@@ -368,41 +407,37 @@ impl Route {
         }
     }
 
+    /// A tunnel through an HTTP relay: CONNECT, signing in as it asks, with
+    /// Basic or with NTLM's three messages on one connection.
     async fn http_connect(&self, tcp: &mut TcpStream, host: &str, port: u16) -> Result<(), String> {
         let target = if host.contains(':') {
             format!("[{host}]:{port}")
         } else {
             format!("{host}:{port}")
         };
-        let mut ask = format!("CONNECT {target} HTTP/1.1\r\nHost: {target}\r\n");
-        if let Some(basic) = self.basic() {
-            ask.push_str(&format!("Proxy-Authorization: {basic}\r\n"));
-        }
-        ask.push_str("\r\n");
-        let io = |e: std::io::Error| format!("the relay {}: {e}", self.address());
-        tcp.write_all(ask.as_bytes()).await.map_err(io)?;
-        // Byte by byte, so that nothing of what comes after is taken.
-        let mut answer = Vec::new();
-        while !answer.ends_with(b"\r\n\r\n") {
-            if answer.len() >= ANSWER_MAX {
-                return Err(format!("the relay {} answered too much", self.address()));
+        let mut answer = match (&self.user, self.wants_ntlm()) {
+            (Some(_), true) => self.ntlm_connect(tcp, &target).await?,
+            _ => {
+                self.ask_connect(tcp, &target, self.basic().as_deref())
+                    .await?
             }
-            let mut byte = [0];
-            if tcp.read(&mut byte).await.map_err(io)? == 0 {
-                return Err(format!(
-                    "the relay {} closed the connection",
-                    self.address()
-                ));
+        };
+        let offers_ntlm = answer
+            .asks
+            .iter()
+            .any(|ask| ask.trim().to_ascii_uppercase().starts_with("NTLM"));
+        if answer.status == 407 && offers_ntlm && self.user.is_some() && !self.wants_ntlm() {
+            self.ntlm
+                .0
+                .store(true, std::sync::atomic::Ordering::Relaxed);
+            // Its first answer may have ended the connection.
+            if answer.closes {
+                *tcp = self.connect().await?;
             }
-            answer.push(byte[0]);
+            answer = self.ntlm_connect(tcp, &target).await?;
         }
-        let answer = String::from_utf8_lossy(&answer);
-        let line = answer.lines().next().unwrap_or_default();
-        let status: u16 = line
-            .split_whitespace()
-            .nth(1)
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(0);
+        let Answer { status, line, .. } = answer;
+        let line = line.as_str();
         match status {
             200..=299 => Ok(()),
             407 if self.user.is_none() => Err(format!(
@@ -418,6 +453,105 @@ impl Route {
                 self.address()
             )),
         }
+    }
+
+    /// NTLM's three messages: negotiate, the relay's challenge, authenticate.
+    async fn ntlm_connect(&self, tcp: &mut TcpStream, target: &str) -> Result<Answer, String> {
+        let (name, password) = self.user.clone().unwrap_or_default();
+        let first = self
+            .ask_connect(tcp, target, Some(&crate::ntlm::negotiate()))
+            .await?;
+        if first.status != 407 {
+            return Ok(first);
+        }
+        let Some(challenge) = first
+            .asks
+            .iter()
+            .find_map(|ask| crate::ntlm::read_challenge(ask).ok())
+        else {
+            return Ok(first);
+        };
+        if first.closes {
+            return Err(format!(
+                "the relay {} closed the connection in the middle of signing in with NTLM",
+                self.address()
+            ));
+        }
+        let account = crate::ntlm::Account::new(&name, &password);
+        let proof = crate::ntlm::authenticate(&account, &challenge, &crate::ca::hostname());
+        self.ask_connect(tcp, target, Some(&proof)).await
+    }
+
+    /// Sends one CONNECT and reads the answer's head, and its body if it has
+    /// one, so that the connection can be asked again.
+    async fn ask_connect(
+        &self,
+        tcp: &mut TcpStream,
+        target: &str,
+        authorization: Option<&str>,
+    ) -> Result<Answer, String> {
+        let mut ask = format!(
+            "CONNECT {target} HTTP/1.1\r\nHost: {target}\r\nProxy-Connection: keep-alive\r\n"
+        );
+        if let Some(value) = authorization {
+            ask.push_str(&format!("Proxy-Authorization: {value}\r\n"));
+        }
+        ask.push_str("\r\n");
+        let io = |e: std::io::Error| format!("the relay {}: {e}", self.address());
+        tcp.write_all(ask.as_bytes()).await.map_err(io)?;
+        // Byte by byte, so that nothing of what comes after is taken.
+        let mut head = Vec::new();
+        while !head.ends_with(b"\r\n\r\n") {
+            if head.len() >= ANSWER_MAX {
+                return Err(format!("the relay {} answered too much", self.address()));
+            }
+            let mut byte = [0];
+            if tcp.read(&mut byte).await.map_err(io)? == 0 {
+                return Err(format!(
+                    "the relay {} closed the connection",
+                    self.address()
+                ));
+            }
+            head.push(byte[0]);
+        }
+        let head = String::from_utf8_lossy(&head);
+        let mut lines = head.lines();
+        let line = lines.next().unwrap_or_default().to_owned();
+        let status: u16 = line
+            .split_whitespace()
+            .nth(1)
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        let (mut asks, mut closes, mut length) = (Vec::new(), false, 0usize);
+        for header in lines {
+            let Some((name, value)) = header.split_once(':') else {
+                continue;
+            };
+            let (name, value) = (name.trim().to_ascii_lowercase(), value.trim());
+            match name.as_str() {
+                "proxy-authenticate" => asks.push(value.to_owned()),
+                "connection" | "proxy-connection" => {
+                    closes |= value.eq_ignore_ascii_case("close");
+                }
+                "content-length" => length = value.parse().unwrap_or(0),
+                _ => {}
+            }
+        }
+        // A tunnel's bytes follow a 2xx; anything else may have a body first.
+        if !(200..300).contains(&status) && length > 0 {
+            if length > ANSWER_MAX {
+                closes = true;
+            } else {
+                let mut body = vec![0; length];
+                tcp.read_exact(&mut body).await.map_err(io)?;
+            }
+        }
+        Ok(Answer {
+            status,
+            line,
+            asks,
+            closes,
+        })
     }
 
     async fn socks5_connect(

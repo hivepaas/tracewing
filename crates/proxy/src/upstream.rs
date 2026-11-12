@@ -297,7 +297,8 @@ async fn connect(
     let (tcp, remote, dns_us, connect_us, forwarded) = match &route {
         Some(route) => {
             let connecting = Instant::now();
-            let forwarded = !secure && !tunnel && route.kind == RelayKind::Http;
+            let forwarded =
+                !secure && !tunnel && route.kind == RelayKind::Http && !route.wants_ntlm();
             let tcp = if forwarded {
                 route.connect().await
             } else {
