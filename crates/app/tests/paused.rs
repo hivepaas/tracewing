@@ -1,5 +1,5 @@
 //! Breakpoints made in the window: a response held, changed there and sent on,
-//! and a request dropped, through the real proxy.
+//! a request dropped, and a socket's message changed, through the real proxy.
 //!
 //! `cargo test --release -p tracewing --features headless --test paused`
 
@@ -7,6 +7,10 @@
 
 use gpui::{
     AppContext as _, Entity, Focusable as _, HeadlessAppContext, Keystroke, WindowHandle, px, size,
+};
+use hudsucker::{
+    futures::{SinkExt, StreamExt},
+    tokio_tungstenite::tungstenite::Message,
 };
 use std::{
     path::PathBuf,
@@ -20,6 +24,7 @@ use tracewing::{
     traffic::{Screen, Traffic},
 };
 use tracewing_dev::benchkit;
+use tracewing_proxy::pause::Stage;
 use tracewing_store::settings::StorageSettings;
 
 fn wait_for(
@@ -83,7 +88,18 @@ fn breakpoints_made_in_the_window_hold_traffic() {
         runtime.spawn(async move { benchkit::serve_origin(listener, &ca_out).await });
         port
     };
-    while !origin_ca.exists() {
+    // And one for WebSockets, which echoes.
+    let ws_ca = dir.join("ws-ca.pem");
+    let ws_port = {
+        let listener = runtime
+            .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+            .unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let ca_out = ws_ca.clone();
+        runtime.spawn(async move { benchkit::serve_ws_origin(listener, &ca_out).await });
+        port
+    };
+    while !origin_ca.exists() || !ws_ca.exists() {
         std::thread::sleep(Duration::from_millis(5));
     }
     let engine = Engine::start(EngineOptions {
@@ -97,10 +113,11 @@ fn breakpoints_made_in_the_window_hold_traffic() {
         rules: Default::default(),
         traffic_rules: Default::default(),
         ports: 19_790..19_800,
-        extra_roots: vec![origin_ca],
+        extra_roots: vec![origin_ca, ws_ca],
     })
     .unwrap();
-    let proxy = format!("http://{}", engine.addr);
+    let addr = engine.addr;
+    let proxy = format!("http://{addr}");
     let ca = dir.join("ca.pem");
     while !ca.exists() {
         std::thread::sleep(Duration::from_millis(5));
@@ -208,6 +225,56 @@ fn breakpoints_made_in_the_window_hold_traffic() {
         .unwrap();
     assert_eq!(runtime.block_on(first).unwrap().1.len(), 41);
     assert_eq!(runtime.block_on(second).unwrap().1.len(), 410);
+    wait_for(&mut cx, window, "nothing held again", |view| {
+        held(view) == 0
+    });
+
+    // A socket's message to the server, held by a rule made in the window,
+    // and changed there: the server echoes the change.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Rules, cx);
+            view.set_rule_kind(RuleKind::PauseMessagesToServer, cx);
+            view.fill_rule("Hold chat", "*/chat*", "", "", cx);
+            view.save_rule(cx);
+            assert_eq!(view.traffic_rules().rules.len(), 3);
+        })
+        .unwrap();
+    let mut ws = runtime
+        .block_on(benchkit::websocket_through_proxy(
+            addr,
+            &ca,
+            "localhost",
+            ws_port,
+            "/chat?room=7",
+        ))
+        .unwrap();
+    runtime
+        .block_on(ws.send(Message::text(r#"{"say":"as typed"}"#)))
+        .unwrap();
+    wait_for(&mut cx, window, "the held message", |view| {
+        held(view) == 1 && view.screen == Screen::Paused
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let page = view.paused_page.as_ref().unwrap();
+            let paused = &page.held[0];
+            assert_eq!(paused.stage, Stage::ToServer);
+            assert_eq!(paused.rule, "Hold chat");
+            assert!(paused.message.url.ends_with("/chat?room=7"));
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "102-paused-socket-message");
+    window
+        .update(&mut cx, |view, _, cx| {
+            let body = view.paused_page.as_ref().unwrap().body.clone();
+            type_in(&body, r#"{"say":"as changed"}"#, cx);
+            view.send_paused(cx);
+        })
+        .unwrap();
+    let echoed = runtime.block_on(ws.next()).unwrap().unwrap();
+    assert_eq!(echoed, Message::text(r#"{"say":"as changed"}"#));
 
     std::fs::remove_dir_all(&dir).ok();
 }

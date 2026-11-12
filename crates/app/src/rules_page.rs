@@ -32,10 +32,12 @@ pub enum RuleKind {
     Status,
     PauseRequest,
     PauseResponse,
+    PauseMessagesToServer,
+    PauseMessagesToApp,
 }
 
 impl RuleKind {
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 16] = [
         Self::Block,
         Self::MapLocal,
         Self::MapRemote,
@@ -50,6 +52,8 @@ impl RuleKind {
         Self::Status,
         Self::PauseRequest,
         Self::PauseResponse,
+        Self::PauseMessagesToServer,
+        Self::PauseMessagesToApp,
     ];
 
     /// Its second field is a body, written over several lines.
@@ -73,6 +77,8 @@ impl RuleKind {
             Self::Status => tr!("Change the status"),
             Self::PauseRequest => tr!("Pause the request"),
             Self::PauseResponse => tr!("Pause the response"),
+            Self::PauseMessagesToServer => tr!("Pause a socket's messages to the server"),
+            Self::PauseMessagesToApp => tr!("Pause a socket's messages to the app"),
         }
     }
 
@@ -95,7 +101,10 @@ impl RuleKind {
                 Some(tr!("What to put in its place")),
             ),
             Self::Status => (Some(tr!("Status the client gets, like 500")), None),
-            Self::PauseRequest | Self::PauseResponse => (None, None),
+            Self::PauseRequest
+            | Self::PauseResponse
+            | Self::PauseMessagesToServer
+            | Self::PauseMessagesToApp => (None, None),
         }
     }
 
@@ -151,6 +160,8 @@ impl RuleKind {
             },
             Self::PauseRequest => Action::PauseRequest,
             Self::PauseResponse => Action::PauseResponse,
+            Self::PauseMessagesToServer => Action::PauseMessagesToServer,
+            Self::PauseMessagesToApp => Action::PauseMessagesToApp,
         })
     }
 }
@@ -186,6 +197,8 @@ fn action_text(action: &Action) -> String {
         Action::SetStatus { status } => tr!("Status {status}", status = *status),
         Action::PauseRequest => tr!("Pause the request"),
         Action::PauseResponse => tr!("Pause the response"),
+        Action::PauseMessagesToServer => tr!("Pause a socket's messages to the server"),
+        Action::PauseMessagesToApp => tr!("Pause a socket's messages to the app"),
     }
 }
 
@@ -251,6 +264,12 @@ fn fields_of(action: &Action) -> (RuleKind, String, String) {
         Action::SetStatus { status } => (RuleKind::Status, status.to_string(), String::new()),
         Action::PauseRequest => (RuleKind::PauseRequest, String::new(), String::new()),
         Action::PauseResponse => (RuleKind::PauseResponse, String::new(), String::new()),
+        Action::PauseMessagesToServer => (
+            RuleKind::PauseMessagesToServer,
+            String::new(),
+            String::new(),
+        ),
+        Action::PauseMessagesToApp => (RuleKind::PauseMessagesToApp, String::new(), String::new()),
     }
 }
 
@@ -1000,6 +1019,8 @@ mod tests {
             (RuleKind::ResponseHeader, "x-b", "2"),
             (RuleKind::PauseRequest, "", ""),
             (RuleKind::PauseResponse, "", ""),
+            (RuleKind::PauseMessagesToServer, "", ""),
+            (RuleKind::PauseMessagesToApp, "", ""),
         ] {
             let action = kind.action(first, second).unwrap();
             assert_eq!(

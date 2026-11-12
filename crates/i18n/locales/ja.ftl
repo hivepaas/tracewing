@@ -769,8 +769,17 @@ t1f3f6dd2 = リクエスト
 # RESPONSE
 tc85f77de = レスポンス
 
+# MESSAGE TO THE SERVER
+t270a6209 = サーバーへのメッセージ
+
+# MESSAGE TO THE APP
+t7d928b05 = アプリへのメッセージ
+
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
 tf9ab4327 = 一時停止中のものはありません。ここでトラフィックを止めるには、ルール画面で一時停止ルールを追加してください。
+
+# {kind} on {url}
+t1204e859 = { $url } の { $kind }
 
 # for {method} {url}
 t093a86f6 = { $method } { $url } 宛て
@@ -780,6 +789,15 @@ tc840fed6 = サーバーが受け取る前のリクエスト
 
 # The response, before the app gets it
 t6683d72a = アプリが受け取る前のレスポンス
+
+# A socket's message, before the server gets it
+tda2ebc5d = サーバーが受け取る前のソケットのメッセージ
+
+# A socket's message, before the app gets it
+tbce07e9d = アプリが受け取る前のソケットのメッセージ
+
+# Message
+tae0ed984 = メッセージ
 
 # Send as it came
 tb593e730 = そのまま送信
@@ -1038,6 +1056,12 @@ t40ecc39b = リクエストを一時停止
 
 # Pause the response
 t18a34799 = レスポンスを一時停止
+
+# Pause a socket's messages to the server
+te5d065fe = サーバーへのソケットメッセージを一時停止
+
+# Pause a socket's messages to the app
+t482173e8 = アプリへのソケットメッセージを一時停止
 
 # Status to answer with, like 403
 t8f3ebb6c = 応答するステータス（例: 403）

@@ -769,8 +769,17 @@ t1f3f6dd2 = PERMINTAAN
 # RESPONSE
 tc85f77de = RESPONS
 
+# MESSAGE TO THE SERVER
+t270a6209 = PESAN KE SERVER
+
+# MESSAGE TO THE APP
+t7d928b05 = PESAN KE APLIKASI
+
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
 tf9ab4327 = Tidak ada yang dijeda. Tambahkan aturan Jeda di layar Aturan untuk menghentikan lalu lintas di sini.
+
+# {kind} on {url}
+t1204e859 = { $kind } di { $url }
 
 # for {method} {url}
 t093a86f6 = untuk { $method } { $url }
@@ -780,6 +789,15 @@ tc840fed6 = Permintaan, sebelum diterima server
 
 # The response, before the app gets it
 t6683d72a = Respons, sebelum diterima aplikasi
+
+# A socket's message, before the server gets it
+tda2ebc5d = Pesan soket, sebelum diterima server
+
+# A socket's message, before the app gets it
+tbce07e9d = Pesan soket, sebelum diterima aplikasi
+
+# Message
+tae0ed984 = Pesan
 
 # Send as it came
 tb593e730 = Kirim apa adanya
@@ -1038,6 +1056,12 @@ t40ecc39b = Jeda permintaan
 
 # Pause the response
 t18a34799 = Jeda respons
+
+# Pause a socket's messages to the server
+te5d065fe = Jeda pesan soket ke server
+
+# Pause a socket's messages to the app
+t482173e8 = Jeda pesan soket ke aplikasi
 
 # Status to answer with, like 403
 t8f3ebb6c = Status untuk menjawab, seperti 403

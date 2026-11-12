@@ -33,9 +33,22 @@ pub const HOLD_MAX: usize = 16 * 1024 * 1024;
 pub enum Stage {
     Request,
     Response,
+    /// A WebSocket's message from the app, before the server gets it.
+    ToServer,
+    /// One from the server, before the app gets it.
+    ToApp,
 }
 
-/// What is held, and what goes on in its place.
+impl Stage {
+    /// A WebSocket's message, not a request or a response.
+    pub fn is_message(self) -> bool {
+        matches!(self, Self::ToServer | Self::ToApp)
+    }
+}
+
+/// What is held, and what goes on in its place. A WebSocket's message has
+/// its kind, `text` or `binary`, for a method, the socket's URL, and no
+/// status or headers.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Message {
     /// The request's, also for a response, where it cannot be changed.

@@ -769,8 +769,17 @@ t1f3f6dd2 = 요청
 # RESPONSE
 tc85f77de = 응답
 
+# MESSAGE TO THE SERVER
+t270a6209 = 서버로 가는 메시지
+
+# MESSAGE TO THE APP
+t7d928b05 = 앱으로 가는 메시지
+
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
 tf9ab4327 = 일시 정지된 항목이 없습니다. 여기서 트래픽을 멈추려면 규칙 화면에서 일시 정지 규칙을 추가하세요.
+
+# {kind} on {url}
+t1204e859 = { $url }의 { $kind }
 
 # for {method} {url}
 t093a86f6 = { $method } { $url } 대상
@@ -780,6 +789,15 @@ tc840fed6 = 서버가 받기 전의 요청
 
 # The response, before the app gets it
 t6683d72a = 앱이 받기 전의 응답
+
+# A socket's message, before the server gets it
+tda2ebc5d = 서버가 받기 전의 소켓 메시지
+
+# A socket's message, before the app gets it
+tbce07e9d = 앱이 받기 전의 소켓 메시지
+
+# Message
+tae0ed984 = 메시지
 
 # Send as it came
 tb593e730 = 그대로 보내기
@@ -1038,6 +1056,12 @@ t40ecc39b = 요청 일시 정지
 
 # Pause the response
 t18a34799 = 응답 일시 정지
+
+# Pause a socket's messages to the server
+te5d065fe = 서버로 가는 소켓 메시지 일시 중지
+
+# Pause a socket's messages to the app
+t482173e8 = 앱으로 가는 소켓 메시지 일시 중지
 
 # Status to answer with, like 403
 t8f3ebb6c = 응답할 상태 코드(예: 403)

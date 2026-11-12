@@ -804,7 +804,8 @@ impl HttpHandler for FlowHandler {
         // A WebSocket is opened to the server here, the way other connections
         // go, a relay included; the client hears what the server answered.
         if is_websocket(&req) {
-            return self.open_websocket(req, flow).await.into();
+            let holds = (plan.pause_to_server, plan.pause_to_app);
+            return self.open_websocket(req, flow, holds).await.into();
         }
         let Some(flow) = flow else {
             return self.slow_request(req).into();
@@ -916,7 +917,14 @@ impl FlowHandler {
     /// with what the server answered: an upgrade, with the subprotocol the
     /// server took, or its refusal. Then carries messages both ways, each
     /// written down on its way.
-    async fn open_websocket(&self, req: Request<Body>, flow: Option<Arc<Flow>>) -> Response<Body> {
+    /// `holds` are the rules that hold its messages to the server, and to the
+    /// app, if any do.
+    async fn open_websocket(
+        &self,
+        req: Request<Body>,
+        flow: Option<Arc<Flow>>,
+        holds: (Option<String>, Option<String>),
+    ) -> Response<Body> {
         let (mut parts, body) = req.into_parts();
         // The request's side ends here: an upgrade has no body.
         if let Some(flow) = &flow {
@@ -945,6 +953,7 @@ impl FlowHandler {
         };
         // As the client asked, but for compression, which is not passed on:
         // what is written down is the messages as they are.
+        let url = ws_uri.to_string();
         let mut ask = http::Request::builder().method(Method::GET).uri(ws_uri);
         for (name, value) in &parts.headers {
             if name.as_str() != "sec-websocket-extensions" {
@@ -1031,12 +1040,14 @@ impl FlowHandler {
                 }
                 None => (None, None, None),
             };
+            let (hold_up, hold_down) = holds;
             tokio::spawn(handler.clone().pump(
                 flow.clone(),
                 true,
                 client_stream,
                 server_sink,
                 (to_server, registered.clone()),
+                hold_up.map(|rule| (rule, url.clone())),
             ));
             handler
                 .pump(
@@ -1045,6 +1056,7 @@ impl FlowHandler {
                     server_stream,
                     client_sink,
                     (to_app, registered),
+                    hold_down.map(|rule| (rule, url)),
                 )
                 .await;
         });
@@ -1092,6 +1104,8 @@ impl FlowHandler {
         // What the window sends this way, and the socket's place among those
         // open, kept while this way goes.
         (mut inbox, _registered): (Option<Inbox>, Option<Arc<Registered>>),
+        // The rule that holds each message this way, and the socket's URL.
+        hold: Option<(String, String)>,
     ) {
         let recorded = flow.as_ref().and_then(|flow| flow.stream());
         // A socket's calls are in its messages, so its row cannot be named
@@ -1124,6 +1138,17 @@ impl FlowHandler {
                 },
                 Some(message) = next_sent(&mut inbox) => (message, true),
             };
+            // Held for the window, unless the window sent it: what it says
+            // goes on in its place, or nothing does.
+            let message = match &hold {
+                Some((rule, url)) if !sent => {
+                    match self.hold_message(from_client, rule, url, message).await {
+                        Some(message) => message,
+                        None => continue,
+                    }
+                }
+                _ => message,
+            };
             if let Some(recorded) = &recorded {
                 note_message(recorded, from_client, &message);
             }
@@ -1145,6 +1170,54 @@ impl FlowHandler {
             }
         }
         out.end().await;
+    }
+}
+
+impl FlowHandler {
+    /// Holds a socket's text or binary message until the window says what to
+    /// send in its place, if anything. Control frames, and a message too big
+    /// to hold, go on as they are.
+    async fn hold_message(
+        &self,
+        from_client: bool,
+        rule: &str,
+        url: &str,
+        message: WsMessage,
+    ) -> Option<WsMessage> {
+        let kind = match &message {
+            WsMessage::Text(_) => "text",
+            WsMessage::Binary(_) => "binary",
+            _ => return Some(message),
+        };
+        if message.len() > pause::HOLD_MAX {
+            return Some(message);
+        }
+        let held = pause::Message {
+            method: kind.to_owned(),
+            url: url.to_owned(),
+            status: 0,
+            headers: Vec::new(),
+            body: message.into_data().to_vec(),
+        };
+        let stage = if from_client {
+            Stage::ToServer
+        } else {
+            Stage::ToApp
+        };
+        match self.pauses.hold(stage, rule.to_owned(), held).await {
+            Verdict::Send(sent) => Some(socket_message(sent)),
+            Verdict::Drop => None,
+        }
+    }
+}
+
+/// What the window lets go of, as a socket's message: text if it was and
+/// still is.
+fn socket_message(message: pause::Message) -> WsMessage {
+    match (message.method.as_str(), String::from_utf8(message.body)) {
+        ("text", Ok(text)) => WsMessage::text(text),
+        (_, Ok(text)) => WsMessage::binary(text.into_bytes()),
+        (_, Err(e)) => WsMessage::binary(e.into_bytes()),
     }
 }
 

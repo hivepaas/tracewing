@@ -802,8 +802,17 @@ t1f3f6dd2 = İSTEK
 # RESPONSE
 tc85f77de = YANIT
 
+# MESSAGE TO THE SERVER
+t270a6209 = SUNUCUYA İLETİ
+
+# MESSAGE TO THE APP
+t7d928b05 = UYGULAMAYA İLETİ
+
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
 tf9ab4327 = Duraklatılmış bir şey yok. Trafiği burada durdurmak için Kurallar ekranında bir Duraklat kuralı ekleyin.
+
+# {kind} on {url}
+t1204e859 = { $url } üzerinde { $kind }
 
 # for {method} {url}
 t093a86f6 = { $method } { $url } için
@@ -813,6 +822,15 @@ tc840fed6 = İstek, sunucu almadan önce
 
 # The response, before the app gets it
 t6683d72a = Yanıt, uygulama almadan önce
+
+# A socket's message, before the server gets it
+tda2ebc5d = Sunucu almadan önce soketin iletisi
+
+# A socket's message, before the app gets it
+tbce07e9d = Uygulama almadan önce soketin iletisi
+
+# Message
+tae0ed984 = İleti
 
 # Send as it came
 tb593e730 = Geldiği gibi gönder
@@ -1096,6 +1114,12 @@ t40ecc39b = İsteği duraklat
 
 # Pause the response
 t18a34799 = Yanıtı duraklat
+
+# Pause a socket's messages to the server
+te5d065fe = Soketin sunucuya iletilerini duraklat
+
+# Pause a socket's messages to the app
+t482173e8 = Soketin uygulamaya iletilerini duraklat
 
 # Status to answer with, like 403
 t8f3ebb6c = Yanıt durum kodu, örneğin 403

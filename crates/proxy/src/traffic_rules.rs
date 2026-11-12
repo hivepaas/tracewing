@@ -66,6 +66,11 @@ pub enum Action {
     PauseRequest,
     /// The same for the response, before the client gets it.
     PauseResponse,
+    /// Holds each message of a WebSocket the app sends, before the server
+    /// gets it.
+    PauseMessagesToServer,
+    /// The same for each the server sends, before the app gets it.
+    PauseMessagesToApp,
 }
 
 fn yes() -> bool {
@@ -113,6 +118,9 @@ pub struct Plan {
     /// The rule that holds the request, if one does.
     pub pause_request: Option<String>,
     pub pause_response: Option<String>,
+    /// The rule that holds a WebSocket's messages each way, if one does.
+    pub pause_to_server: Option<String>,
+    pub pause_to_app: Option<String>,
 }
 
 #[derive(Debug)]
@@ -290,7 +298,9 @@ impl TrafficRule {
             Action::ReplaceRequestBody { .. }
             | Action::ReplaceResponseBody { .. }
             | Action::PauseRequest
-            | Action::PauseResponse => {}
+            | Action::PauseResponse
+            | Action::PauseMessagesToServer
+            | Action::PauseMessagesToApp => {}
         }
         Ok(())
     }
@@ -467,6 +477,15 @@ impl TrafficRules {
                 }
                 Action::PauseResponse => {
                     plan.pause_response.get_or_insert_with(|| rule.name.clone());
+                    true
+                }
+                Action::PauseMessagesToServer => {
+                    plan.pause_to_server
+                        .get_or_insert_with(|| rule.name.clone());
+                    true
+                }
+                Action::PauseMessagesToApp => {
+                    plan.pause_to_app.get_or_insert_with(|| rule.name.clone());
                     true
                 }
                 _ => false,
@@ -825,6 +844,29 @@ path = "mocks/c"
 
         let text = toml::to_string(&rules).unwrap();
         assert!(text.contains(r#"action = "pause_request""#), "{text}");
+        assert_eq!(toml::from_str::<TrafficRules>(&text).unwrap(), rules);
+    }
+
+    #[test]
+    fn a_sockets_messages_are_paused_each_way() {
+        let rules = TrafficRules {
+            rules: vec![
+                rule("chat.dev/*", Action::PauseMessagesToServer),
+                rule("chat.dev/live", Action::PauseMessagesToApp),
+            ],
+        };
+        let plan = rules.plan("GET", "chat.dev/live");
+        assert_eq!(plan.pause_to_server.as_deref(), Some("rule chat.dev/*"));
+        assert_eq!(plan.pause_to_app.as_deref(), Some("rule chat.dev/live"));
+        assert!(plan.pause_request.is_none(), "not its upgrade");
+        let plan = rules.plan("GET", "chat.dev/other");
+        assert!(plan.pause_to_app.is_none());
+
+        let text = toml::to_string(&rules).unwrap();
+        assert!(
+            text.contains(r#"action = "pause_messages_to_server""#),
+            "{text}"
+        );
         assert_eq!(toml::from_str::<TrafficRules>(&text).unwrap(), rules);
     }
 
