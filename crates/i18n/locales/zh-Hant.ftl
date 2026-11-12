@@ -2311,6 +2311,63 @@ td8d653d6 =
        *[other] { $n } 行
     }
 
+# As an address
+t9c53ba7c = 作為位址
+
+# this machine
+t8bdabc70 = 本機
+
+# a private network
+tbe1021ed = 私有網路
+
+# link-local
+tadacc537 = 連結本地
+
+# multicast
+t1010cf81 = 群播
+
+# a carrier's network
+t9740f2e4 = 電信業者網路
+
+# Short
+t5fdddd75 = 簡寫
+
+# In full
+t8d20daf3 = 完整
+
+# The IPv4 in it
+tc1fb8957 = 其中的 IPv4
+
+# What it is
+t065b8fa0 = 是什麼
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = 一段位址範圍
+
+# From
+t18743595 = 從
+
+# To
+t41f59644 = 到
+
+# How many
+tc31ec050 = 數量
+
+# As a port
+t9fea9931 = 作為通訊埠
+
+# to many, not to one
+t660024a1 = 送給多方，而非一方
+
+# given by hand, not by the maker
+tc16b0e31 = 手動指定，而非廠商分配
+
+# A MAC address
+t6d968a53 = 一個 MAC 位址
+
 # In hex and binary
 tc31ef85f = 十六進位與二進位
 
@@ -2364,6 +2421,21 @@ te55df34c = HTTP-date
 
 # Seconds
 t7e12f48a = 秒
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET 計時單位
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = 自 2001 年起的秒數 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = 自 1904 年起的秒數 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = 自 1899 年起的天數（試算表）
 
 # Trace context
 ta58c7c95 = 追蹤內容

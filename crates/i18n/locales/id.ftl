@@ -2311,6 +2311,63 @@ td8d653d6 =
        *[other] { $n } baris
     }
 
+# As an address
+t9c53ba7c = Sebagai alamat
+
+# this machine
+t8bdabc70 = mesin ini
+
+# a private network
+tbe1021ed = jaringan privat
+
+# link-local
+tadacc537 = link-local
+
+# multicast
+t1010cf81 = multicast
+
+# a carrier's network
+t9740f2e4 = jaringan operator
+
+# Short
+t5fdddd75 = Pendek
+
+# In full
+t8d20daf3 = Lengkap
+
+# The IPv4 in it
+tc1fb8957 = IPv4 di dalamnya
+
+# What it is
+t065b8fa0 = Apa ini
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Rentang alamat
+
+# From
+t18743595 = Dari
+
+# To
+t41f59644 = Sampai
+
+# How many
+tc31ec050 = Berapa banyak
+
+# As a port
+t9fea9931 = Sebagai port
+
+# to many, not to one
+t660024a1 = ke banyak, bukan ke satu
+
+# given by hand, not by the maker
+tc16b0e31 = diberikan manual, bukan oleh pabrikan
+
+# A MAC address
+t6d968a53 = Alamat MAC
+
 # In hex and binary
 tc31ef85f = Dalam hex dan biner
 
@@ -2364,6 +2421,21 @@ te55df34c = HTTP-date
 
 # Seconds
 t7e12f48a = Detik
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET ticks
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = Detik sejak 2001 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = Detik sejak 1904 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = Hari sejak 1899 (lembar sebar)
 
 # Trace context
 ta58c7c95 = Konteks trace

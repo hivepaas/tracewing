@@ -206,7 +206,7 @@ The values that come up daily. Every one of these is pure, offline and cheap.
 | HTTP's own | A URL in parts; a query string or a form body as a table; `Authorization: Basic` as its user and password; `Cache-Control` as a sentence; a status code by meaning; `Retry-After`; a cookie's attributes; a `data:` URI as what it holds |
 | Tracing | `traceparent` as trace id, span id and flags; B3; `X-Amzn-Trace-Id`; `Server-Timing` |
 
-### Phase two — to come
+### Phase two — partly built
 
 Narrower, and worth it for anyone debugging a backend.
 
@@ -215,9 +215,9 @@ Narrower, and worth it for anyone debugging a backend.
 | Binary formats | MessagePack, CBOR, BSON, and protobuf off the wire with no `.proto`: field numbers and wire types. The store already reads protobuf and CBOR, so this is reuse, not new code |
 | Tokens and keys | JWS and JWE told apart; PASETO; SAML (base64, deflate, XML); DER and PEM as a certificate or a public key; a hash named by its length; bcrypt and argon2 parameters out of their prefix |
 | With a secret the reader types | Verify a JWT's HMAC; open a framework's signed cookie (Rails, Django, Laravel, Flask); decrypt with a key given by hand |
-| Network | An IP as an integer; IPv6 shortened and spelled out; IPv4-mapped; a CIDR as its range, and whether it is private; a port by service; a MAC by vendor, from an OUI table in the build |
-| Other epochs | Windows FILETIME, .NET ticks, Cocoa, HFS+, Excel serial |
-| Bytes as a thing | A base64 image as a thumbnail; magic bytes as `PNG, 128×128`; a file type named |
+| Network — **built** | An IP as an integer, with what sort of address it is; IPv6 shortened and spelled out, with the IPv4 inside it; a CIDR as the range it holds; a port by what listens there; a MAC, with what its own bits say. A vendor from an OUI table is to come: the table is a megabyte of data to carry |
+| Other epochs — **built** | Windows FILETIME and .NET ticks, which nothing else is large enough to be; Cocoa, HFS+ and a spreadsheet's serial, which a Unix time could be too, and so are only offered where the field says it is a time — or, for HFS+, past where a Unix time can reach |
+| Bytes as a thing — **built** | A picture shown as itself in the pane, and named with its size: `PNG 128×128`, read from the first bytes of a PNG, GIF or JPEG |
 
 ### Phase three — to come
 

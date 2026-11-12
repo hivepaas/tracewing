@@ -2527,6 +2527,63 @@ td8d653d6 =
        *[other] { $n } строки
     }
 
+# As an address
+t9c53ba7c = Как адрес
+
+# this machine
+t8bdabc70 = эта машина
+
+# a private network
+tbe1021ed = частная сеть
+
+# link-local
+tadacc537 = link-local
+
+# multicast
+t1010cf81 = многоадресный
+
+# a carrier's network
+t9740f2e4 = сеть оператора
+
+# Short
+t5fdddd75 = Кратко
+
+# In full
+t8d20daf3 = Полностью
+
+# The IPv4 in it
+tc1fb8957 = IPv4 внутри
+
+# What it is
+t065b8fa0 = Что это
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Диапазон адресов
+
+# From
+t18743595 = От
+
+# To
+t41f59644 = До
+
+# How many
+tc31ec050 = Сколько
+
+# As a port
+t9fea9931 = Как порт
+
+# to many, not to one
+t660024a1 = многим, а не одному
+
+# given by hand, not by the maker
+tc16b0e31 = задан вручную, не изготовителем
+
+# A MAC address
+t6d968a53 = MAC-адрес
+
 # In hex and binary
 tc31ef85f = В hex и двоичном виде
 
@@ -2580,6 +2637,21 @@ te55df34c = HTTP-date
 
 # Seconds
 t7e12f48a = Секунды
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET-тики
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = Секунды с 2001 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = Секунды с 1904 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = Дни с 1899 (таблица)
 
 # Trace context
 ta58c7c95 = Контекст трассировки

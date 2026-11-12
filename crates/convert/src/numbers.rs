@@ -22,6 +22,19 @@ pub fn bytes_size(bytes: u64) -> String {
     }
 }
 
+/// `1 048 576`, as a count a reader has to take in at a glance.
+pub fn group_digits(n: u64) -> String {
+    let digits = n.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3);
+    for (at, digit) in digits.chars().enumerate() {
+        if at > 0 && (digits.len() - at).is_multiple_of(3) {
+            out.push('\u{202f}');
+        }
+        out.push(digit);
+    }
+    out
+}
+
 fn whole(text: &str) -> Option<u64> {
     let text = text.trim_matches('"');
     if text.len() > 20 || text.is_empty() || !text.bytes().all(|b| b.is_ascii_digit()) {
@@ -104,6 +117,13 @@ mod tests {
             line(&read_under("content_length", "1048576"), "size"),
             "1.0 MiB"
         );
+    }
+
+    #[test]
+    fn a_count_is_grouped_to_be_taken_in() {
+        assert_eq!(group_digits(7), "7");
+        assert_eq!(group_digits(256), "256");
+        assert_eq!(group_digits(1_048_576), "1\u{202f}048\u{202f}576");
     }
 
     #[test]

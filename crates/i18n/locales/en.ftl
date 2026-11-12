@@ -935,6 +935,25 @@ td8d653d6 =
         [one] { $n } row
        *[other] { $n } rows
     }
+t9c53ba7c = As an address
+t8bdabc70 = this machine
+tbe1021ed = a private network
+tadacc537 = link-local
+t1010cf81 = multicast
+t9740f2e4 = a carrier's network
+t5fdddd75 = Short
+t8d20daf3 = In full
+tc1fb8957 = The IPv4 in it
+t065b8fa0 = What it is
+t43fe7378 = IPv6
+t889c22f2 = A range of addresses
+t18743595 = From
+t41f59644 = To
+tc31ec050 = How many
+t9fea9931 = As a port
+t660024a1 = to many, not to one
+tc16b0e31 = given by hand, not by the maker
+t6d968a53 = A MAC address
 tc31ef85f = In hex and binary
 tb67e8e09 = Bits set
 ta9175b27 = As a size
@@ -953,6 +972,11 @@ t402bdff3 = ISO 8601
 t3bb6c7ca = ISO 8601, no zone: read as UTC
 te55df34c = HTTP-date
 t7e12f48a = Seconds
+t8582ebf1 = Windows FILETIME
+t8c35aaf6 = .NET ticks
+t4bd1d35a = Seconds since 2001 (Apple)
+tc7a82a5d = Seconds since 1904 (HFS+)
+td7bc06f2 = Days since 1899 (spreadsheet)
 ta58c7c95 = Trace context
 t26f8e74e = Trace
 taba837e1 = Span
