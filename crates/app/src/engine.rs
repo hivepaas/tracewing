@@ -52,6 +52,50 @@ pub struct EngineOptions {
 /// Where the slow network's conditions are kept, in the data folder.
 pub const THROTTLE_FILE: &str = "throttle.toml";
 
+impl EngineOptions {
+    /// What the app starts with from `data_dir`: its settings, rules, and the
+    /// authorities trusted for servers, the CA's key in the keychain. A file
+    /// that cannot be read is left out, and what was wrong is given, for the
+    /// window to say.
+    pub fn from_data_dir(
+        data_dir: &std::path::Path,
+        ports: std::ops::Range<u16>,
+    ) -> (Self, Option<String>) {
+        let path = data_dir.join("settings.toml");
+        let (settings, settings_problem) = if path.exists() {
+            match StorageSettings::load(&path) {
+                Ok(settings) => (settings, None),
+                Err(e) => (StorageSettings::default(), Some(format!("{e:#}"))),
+            }
+        } else {
+            (StorageSettings::default(), None)
+        };
+        let (rules, rules_problem) = match HostRules::load(&data_dir.join("decrypt.toml")) {
+            Ok(rules) => (rules, None),
+            Err(e) => (HostRules::default(), Some(format!("{e:#}"))),
+        };
+        let (traffic_rules, traffic_problem) =
+            match TrafficRules::load(&data_dir.join("traffic-rules.toml")) {
+                Ok(rules) => (rules, None),
+                Err(e) => (TrafficRules::default(), Some(format!("{e:#}"))),
+            };
+        let trusted = crate::trusted::read(data_dir);
+        (
+            Self {
+                data_dir: data_dir.to_owned(),
+                key_store: KeyStore::System,
+                find_apps: true,
+                settings,
+                rules,
+                traffic_rules,
+                ports,
+                extra_roots: trusted.paths(),
+            },
+            settings_problem.or(rules_problem).or(traffic_problem),
+        )
+    }
+}
+
 /// The file in the data directory that says where the proxy listens, while
 /// it does.
 pub const PROXY_ADDRESS_FILE: &str = "proxy-address";

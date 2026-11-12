@@ -5,6 +5,7 @@ pub mod body;
 pub mod bodyview;
 pub mod calldata;
 pub mod chrome;
+pub mod cli;
 pub mod client_certs_view;
 pub mod colors;
 pub mod columns;

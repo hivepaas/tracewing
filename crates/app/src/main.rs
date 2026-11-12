@@ -10,10 +10,7 @@ use tracewing::{
     placement,
     traffic::Traffic,
 };
-use tracewing_proxy::{
-    crypto_provider, default_data_dir, rules::HostRules, traffic_rules::TrafficRules,
-};
-use tracewing_store::settings::StorageSettings;
+use tracewing_proxy::{crypto_provider, default_data_dir};
 use tracewing_system as system;
 
 /// `tracewing mcp`, which an AI tool starts to read the recorded traffic. And
@@ -30,6 +27,7 @@ fn helper_command(args: &[String]) -> Option<Result<()>> {
         [_, sysproxy, recover, flag, value] if sysproxy == "sysproxy" && recover == "recover" => {
             Some(system::recover(&data_dir(flag, value)?).map(|_| ()))
         }
+        [_, command, ..] if tracewing::cli::is_command(command) => Some(tracewing::cli::run(args)),
         [_, mcp] if mcp == "mcp" => Some(tracewing::mcp::serve(&default_data_dir())),
         [_, mcp, flag, value] if mcp == "mcp" => {
             Some(tracewing::mcp::serve(&data_dir(flag, value)?))
@@ -56,38 +54,8 @@ fn main() -> Result<()> {
     if let Err(e) = system::recover(&data_dir) {
         eprintln!("tracewing: cannot put the system proxy back: {e:#}");
     }
-    let path = data_dir.join("settings.toml");
-    let (settings, settings_problem) = if path.exists() {
-        match StorageSettings::load(&path) {
-            Ok(settings) => (settings, None),
-            Err(e) => (StorageSettings::default(), Some(format!("{e:#}"))),
-        }
-    } else {
-        (StorageSettings::default(), None)
-    };
-    let rules_path = data_dir.join("decrypt.toml");
-    let (rules, rules_problem) = match HostRules::load(&rules_path) {
-        Ok(rules) => (rules, None),
-        Err(e) => (HostRules::default(), Some(format!("{e:#}"))),
-    };
-    let (traffic_rules, traffic_problem) =
-        match TrafficRules::load(&data_dir.join("traffic-rules.toml")) {
-            Ok(rules) => (rules, None),
-            Err(e) => (TrafficRules::default(), Some(format!("{e:#}"))),
-        };
-    let settings_problem = settings_problem.or(rules_problem).or(traffic_problem);
-    // A file that cannot be read is left out here, and said in Settings.
-    let trusted = tracewing::trusted::read(&data_dir);
-    let engine = Engine::start(EngineOptions {
-        data_dir: data_dir.clone(),
-        key_store: tracewing_proxy::ca_key::KeyStore::System,
-        find_apps: true,
-        settings,
-        rules,
-        traffic_rules,
-        ports: PORTS,
-        extra_roots: trusted.paths(),
-    })?;
+    let (options, settings_problem) = EngineOptions::from_data_dir(&data_dir, PORTS);
+    let engine = Engine::start(options)?;
 
     gpui_platform::application()
         .with_assets(Assets)
