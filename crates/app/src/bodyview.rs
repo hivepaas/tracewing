@@ -200,6 +200,9 @@ pub struct BodyView {
     rules: Rc<RefCell<Remembered>>,
     /// The host this body came from, which rules are remembered against.
     host: SharedString,
+    /// Whether values with a reading behind them are underlined, as Settings
+    /// says. Shared with the inspector, so a change takes hold at once.
+    marks_on: reading::MarksOn,
     /// What those rules read, by piece, and the rules' version they were read
     /// at: a frame must not read every line again on every draw.
     by_rule: RefCell<(u64, HashMap<u64, Option<Reading>>)>,
@@ -244,6 +247,7 @@ impl BodyView {
             drawn: BTreeMap::new(),
             rules: Rc::new(RefCell::new(Remembered::default())),
             host: SharedString::default(),
+            marks_on: reading::MarksOn::default(),
             by_rule: RefCell::new((0, HashMap::new())),
             marks: RefCell::new(HashMap::new()),
             opens: None,
@@ -491,9 +495,15 @@ impl BodyView {
 
     /// The rules to read this body's fields by, and the host they are
     /// remembered against. Given by the inspector as the view is made.
-    pub fn set_rules(&mut self, rules: Rc<RefCell<Remembered>>, host: impl Into<SharedString>) {
+    pub fn set_rules(
+        &mut self,
+        rules: Rc<RefCell<Remembered>>,
+        host: impl Into<SharedString>,
+        marks_on: reading::MarksOn,
+    ) {
         self.rules = rules;
         self.host = host.into();
+        self.marks_on = marks_on;
         self.by_rule.borrow_mut().1.clear();
     }
 
@@ -512,6 +522,9 @@ impl BodyView {
     /// and kept, because a body of a million lines asks as it scrolls; past
     /// what a reader could have looked at, the answers are dropped.
     fn marked(&self, key: u64, line: &str) -> Option<std::ops::Range<usize>> {
+        if !self.marks_on.get() {
+            return None;
+        }
         let (field, value) = reading::field_and_value(line)?;
         let at = (value.as_ptr() as usize).checked_sub(line.as_ptr() as usize)?;
         let known = self.marks.borrow().get(&key).copied();

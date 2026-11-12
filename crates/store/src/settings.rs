@@ -60,6 +60,10 @@ pub struct StorageSettings {
     /// Let AI tools add and remove rules, and send requests through the proxy.
     /// Read at each call.
     pub ai_actions: bool,
+    /// Underline the values that have a reading behind them — a time, a
+    /// token, something packed — so that a reader knows there is something
+    /// there to read. Applies at once.
+    pub mark_readings: bool,
 }
 
 impl Default for StorageSettings {
@@ -83,6 +87,7 @@ impl Default for StorageSettings {
             os_roots: true,
             ai_secrets: false,
             ai_actions: false,
+            mark_readings: true,
         }
     }
 }
@@ -127,6 +132,7 @@ impl StorageSettings {
         self.hide_http3 = other.hide_http3;
         self.ai_secrets = other.ai_secrets;
         self.ai_actions = other.ai_actions;
+        self.mark_readings = other.mark_readings;
         self.body_max_mib = other.body_max_mib;
         self.view_max_mib = other.view_max_mib;
     }

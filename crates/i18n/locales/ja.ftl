@@ -1429,6 +1429,15 @@ tfea2d91b = このコンピュータが信頼するものを信頼
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
 t1705bfb4 = このコンピュータにインストールされた認証局（社内の認証局など）の証明書を持つサーバーには、このコンピュータのブラウザと同じように接続します。オフの場合は、公的な認証局のみを信頼します。tracewing の再起動後に有効になります。
 
+# Reading values
+t53722007 = 値の読み取り
+
+# Underline what can be read
+t3f1c9b5a = 読み取れる値に下線を引く
+
+# A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
+t9e1ebac7 = 読み取りのある値 — 時刻、トークン、圧縮されたもの — に下線を引き、右クリックする価値があることを示します。オフでも読み取りはありますが、何も知らせません。
+
 # AI tools
 t294d7ea4 = AI ツール
 
@@ -1569,6 +1578,24 @@ tb457f0b3 = 復号しないホスト
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 1 行に 1 つ: ホスト、またはそのホストと配下すべてを表す *.example.com。これらのトラフィックは中身を読まずに通過します。このリストはすぐに適用されます。
+
+# Fields always read a certain way
+tb6e892b1 = 常に同じ読み方をするフィールド
+
+# A value read in the inspector can be kept that way for its field, and every later flow from that host reads itself. They are kept in readings.toml in the data folder.
+t176e5171 = インスペクターで読んだ値は、そのフィールドの読み方として保存できます。以後そのホストのフローは自分で読み取ります。データフォルダーの readings.toml にあります。
+
+# Nothing is remembered yet.
+t9e58a80c = まだ何も覚えていません。
+
+# {reading} · every host
+tb54bdd97 = { $reading } · すべてのホスト
+
+# {reading} · {host}
+t58858d86 = { $reading } · { $host }
+
+# Forget
+t6e3fab8c = 忘れる
 
 # Authorities trusted for servers
 t0a308a8a = サーバーに信頼する認証局

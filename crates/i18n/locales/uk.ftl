@@ -1612,6 +1612,15 @@ tfea2d91b = Довіряти тому, чому довіряє цей комп�
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
 t1705bfb4 = До серверів із сертифікатом від центру сертифікації, установленого на цьому комп’ютері (наприклад, корпоративного), підключення відбувається так само, як у браузерах цього комп’ютера. Якщо вимкнено, довіряються лише публічні центри сертифікації. Набуває чинності після перезапуску tracewing.
 
+# Reading values
+t53722007 = Читання значень
+
+# Underline what can be read
+t3f1c9b5a = Підкреслювати те, що читається
+
+# A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
+t9e1ebac7 = Значення, за яким стоїть прочитання — час, токен, щось запаковане, — підкреслюється, щоб правий клік по ньому мав сенс. Вимкнено — прочитання лишаються, але ніщо про це не каже.
+
 # AI tools
 t294d7ea4 = Інструменти ШІ
 
@@ -1758,6 +1767,24 @@ tb457f0b3 = Хости, які не розшифровувати
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = По одному в рядку: хост або *.example.com для нього й усього під ним. Їхній трафік проходить непрочитаним. Список застосовується одразу.
+
+# Fields always read a certain way
+tb6e892b1 = Поля, які завжди читаються певним чином
+
+# A value read in the inspector can be kept that way for its field, and every later flow from that host reads itself. They are kept in readings.toml in the data folder.
+t176e5171 = Значення, прочитане в інспекторі, можна закріпити за його полем, і кожен наступний потік з цього хоста прочитається сам. Вони лежать у readings.toml у теці даних.
+
+# Nothing is remembered yet.
+t9e58a80c = Поки нічого не запам'ятано.
+
+# {reading} · every host
+tb54bdd97 = { $reading } · будь-який хост
+
+# {reading} · {host}
+t58858d86 = { $reading } · { $host }
+
+# Forget
+t6e3fab8c = Забути
 
 # Authorities trusted for servers
 t0a308a8a = Довірені центри сертифікації для серверів

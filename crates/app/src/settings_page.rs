@@ -66,6 +66,19 @@ fn groups() -> Vec<(String, Vec<Row>)> {
             )],
         ),
         (
+            tr!("Reading values"),
+            vec![row(
+                "mark_readings",
+                tr!("Underline what can be read"),
+                tr!(
+                    "A value with a reading behind it — a time, a token, something packed — is \
+                     underlined, so that a right click on it is worth trying. Off, the readings \
+                     are still there; nothing says so."
+                ),
+                "",
+            )],
+        ),
+        (
             tr!("AI tools"),
             vec![
                 row(
@@ -550,6 +563,7 @@ impl Traffic {
         let tls_keys = self.render_tls_keys(cx);
         let client_certs = self.render_client_certs(cx);
         let company_ca = self.render_company_ca(cx);
+        let readings = self.render_readings(cx);
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);
         // A problem shows under the setting being changed, or else at the top.
@@ -785,7 +799,105 @@ impl Traffic {
             .child(tls_keys)
             .child(protos)
             .child(abis)
+            .child(readings)
             .children(groups)
+    }
+
+    /// The fields that are always read a certain way, to look over and to
+    /// forget. They are remembered from the value itself, in the menu a right
+    /// click opens; this is where they can be found again afterwards.
+    fn render_readings(&mut self, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let rules: Vec<(String, String, String)> = self
+            .inspector
+            .remembered
+            .borrow()
+            .all()
+            .map(|(host, field, read_as)| (host.to_owned(), field.to_owned(), read_as.to_owned()))
+            .collect();
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(8.))
+            .p(px(14.))
+            .rounded(px(22.))
+            .bg(rgb(c.surface))
+            .child(eyebrow(tr!("Fields always read a certain way")).px(px(6.)))
+            .child(
+                div()
+                    .px(px(6.))
+                    .text_size(px(12.))
+                    .text_color(rgb(c.muted))
+                    .child(tr!(
+                        "A value read in the inspector can be kept that way for its field, and \
+                         every later flow from that host reads itself. They are kept in \
+                         readings.toml in the data folder."
+                    )),
+            )
+            .when(rules.is_empty(), |d| {
+                d.child(
+                    div()
+                        .px(px(6.))
+                        .text_color(rgb(c.faint))
+                        .child(tr!("Nothing is remembered yet.")),
+                )
+            })
+            .children(rules.into_iter().map(|(host, field, read_as)| {
+                let forgetting = (host.clone(), field.clone());
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap(px(10.))
+                    .px(px(6.))
+                    .min_h(px(34.))
+                    .child(
+                        div()
+                            .w(gpui::relative(0.34))
+                            .flex_shrink_0()
+                            .font_family(crate::MONO_FONT)
+                            .text_size(px(12.))
+                            .font_weight(FontWeight::BOLD)
+                            .child(field.clone()),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .font_family(crate::MONO_FONT)
+                            .text_size(px(12.))
+                            .text_color(rgb(c.muted))
+                            .child(if host.is_empty() {
+                                tr!("{reading} · every host", reading = read_as.as_str())
+                            } else {
+                                tr!(
+                                    "{reading} · {host}",
+                                    reading = read_as.as_str(),
+                                    host = host.as_str()
+                                )
+                            }),
+                    )
+                    .child(
+                        div()
+                            .id(gpui::SharedString::from(format!("forget-{host}-{field}")))
+                            .px(px(12.))
+                            .py(px(5.))
+                            .rounded(px(16.))
+                            .cursor_pointer()
+                            .reachable()
+                            .text_size(px(12.))
+                            .font_weight(FontWeight::BOLD)
+                            .bg(rgb(c.chip))
+                            .text_color(rgb(c.on_chip))
+                            .child(tr!("Forget"))
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                let (host, field) = forgetting.clone();
+                                let _ =
+                                    this.inspector.remembered.borrow_mut().forget(&host, &field);
+                                cx.notify();
+                            })),
+                    )
+            }))
     }
 
     /// The authorities trusted for servers from the folder, which a restart

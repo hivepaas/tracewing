@@ -1429,6 +1429,15 @@ tfea2d91b = Tin những gì máy này tin
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
 t1705bfb4 = Server có chứng chỉ từ một tổ chức cấp chứng chỉ được cài trên máy này, chẳng hạn CA của công ty, sẽ được kết nối như trình duyệt trên máy này vẫn làm. Khi tắt, chỉ các tổ chức công khai được tin. Có hiệu lực khi tracewing khởi động lại.
 
+# Reading values
+t53722007 = Đọc giá trị
+
+# Underline what can be read
+t3f1c9b5a = Gạch chân cái đọc được
+
+# A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
+t9e1ebac7 = Giá trị có thể đọc được — một thời điểm, một token, một thứ đã nén — sẽ được gạch chân, để biết là đáng click chuột phải vào đó. Tắt thì các reading vẫn còn, chỉ là không có gì báo.
+
 # AI tools
 t294d7ea4 = Công cụ AI
 
@@ -1569,6 +1578,24 @@ tb457f0b3 = Host không giải mã
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = Mỗi dòng một mục: một host, hoặc *.example.com cho host đó và mọi host bên dưới. Traffic của chúng đi qua mà không bị đọc. Danh sách này áp dụng ngay.
+
+# Fields always read a certain way
+tb6e892b1 = Các field luôn đọc theo một cách
+
+# A value read in the inspector can be kept that way for its field, and every later flow from that host reads itself. They are kept in readings.toml in the data folder.
+t176e5171 = Một giá trị đã đọc trong inspector có thể giữ luôn cách đọc đó cho field của nó, và mọi flow sau từ host đó tự đọc. Chúng nằm trong readings.toml ở thư mục dữ liệu.
+
+# Nothing is remembered yet.
+t9e58a80c = Chưa nhớ gì cả.
+
+# {reading} · every host
+tb54bdd97 = { $reading } · mọi host
+
+# {reading} · {host}
+t58858d86 = { $reading } · { $host }
+
+# Forget
+t6e3fab8c = Quên
 
 # Authorities trusted for servers
 t0a308a8a = CA được tin cho server

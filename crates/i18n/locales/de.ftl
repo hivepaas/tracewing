@@ -1536,6 +1536,15 @@ tfea2d91b = Den Zertifikaten dieses Computers vertrauen
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
 t1705bfb4 = Server mit einem Zertifikat einer auf diesem Computer installierten Zertifizierungsstelle, etwa einer firmeneigenen, werden so erreicht, wie die Browser dieses Computers sie erreichen. Wenn aus, wird nur öffentlichen Zertifizierungsstellen vertraut. Wird beim nächsten Start von tracewing wirksam.
 
+# Reading values
+t53722007 = Werte lesen
+
+# Underline what can be read
+t3f1c9b5a = Lesbares unterstreichen
+
+# A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
+t9e1ebac7 = Ein Wert, hinter dem eine Lesung steht — eine Zeit, ein Token, etwas Gepacktes — wird unterstrichen, damit ein Rechtsklick darauf sich lohnt. Aus bleiben die Lesungen; nichts sagt es.
+
 # AI tools
 t294d7ea4 = KI-Tools
 
@@ -1680,6 +1689,24 @@ tb457f0b3 = Nicht zu entschlüsselnde Hosts
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = Einer pro Zeile: ein Host, oder *.example.com für ihn und alles darunter. Ihr Traffic wird ungelesen durchgeleitet. Diese Liste gilt sofort.
+
+# Fields always read a certain way
+tb6e892b1 = Felder, die immer gleich gelesen werden
+
+# A value read in the inspector can be kept that way for its field, and every later flow from that host reads itself. They are kept in readings.toml in the data folder.
+t176e5171 = Ein im Inspektor gelesener Wert kann für sein Feld so behalten werden; jeder spätere Flow von diesem Host liest sich dann selbst. Sie stehen in readings.toml im Datenordner.
+
+# Nothing is remembered yet.
+t9e58a80c = Noch nichts gemerkt.
+
+# {reading} · every host
+tb54bdd97 = { $reading } · jeder Host
+
+# {reading} · {host}
+t58858d86 = { $reading } · { $host }
+
+# Forget
+t6e3fab8c = Vergessen
 
 # Authorities trusted for servers
 t0a308a8a = Für Server vertraute Zertifizierungsstellen

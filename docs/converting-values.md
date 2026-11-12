@@ -123,7 +123,9 @@ Three things keep it honest and cheap:
 Where the reading itself is already shown, the underline is not: it has
 nothing left to say.
 
-**To come:** a setting to switch it off, for anyone who finds it noisy.
+Settings has a switch for it — **Reading values · Underline what can be read**
+— for anyone who finds it noisy. It takes hold at once: the views read the
+switch as they draw, so nothing has to be told about it.
 
 ### Remembering the choice — built
 
@@ -164,9 +166,13 @@ What a rule reads is worked out once per value and kept until the rules change,
 which a version counter on the rules says. A frame looks things up; it does not
 read them again.
 
-**To come:** the list of rules in Settings, to read and to forget from
-somewhere other than the value itself, and the third scope — every host — which
-the store already understands.
+Settings lists them under **Fields always read a certain way**, with what each
+is read as, the host it applies to, and a `Forget` beside it, since a rule
+remembered from a value should not have to be found again from that same
+value.
+
+**To come:** the third scope — every host — which the store already
+understands and reads, but which nothing writes yet.
 
 ### Chains
 
@@ -305,9 +311,8 @@ own name reaches the converters: a `Date` is read as an HTTP-date because the
 field says `date`, not because the text was guessed at. The same thing is what
 the underline and the remembered rules will ask.
 
-**To come:** the rules listed in Settings, the setting that switches the
-underline off, a thumbnail for a reading that holds a picture, and the
-keyboard.
+**To come:** a thumbnail for a reading that holds a picture, and the keyboard
+cycling readings on a selection.
 
 ## Limits, and what this will not do
 
