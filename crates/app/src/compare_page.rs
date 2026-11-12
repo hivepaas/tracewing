@@ -154,7 +154,12 @@ impl ComparePage {
 }
 
 /// A body as lines, or `None` if it was not kept.
-fn read_body(session_dir: &Path, protos: &Library, d: &Detail, side: Side) -> Option<BodyText> {
+pub(crate) fn read_body(
+    session_dir: &Path,
+    protos: &Library,
+    d: &Detail,
+    side: Side,
+) -> Option<BodyText> {
     let facts = d.body(side);
     if !facts.stored.exists() {
         return (facts.bytes == 0).then(BodyText::default);

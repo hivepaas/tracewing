@@ -41,10 +41,15 @@ const SECRET_HEADERS: [&str; 4] = [
     "set-cookie",
 ];
 const REMOVED: &str = "(removed)";
+/// How many fields or lines of a body `compare_flows` gives, unless asked.
+const CHANGES_DEFAULT: u64 = 100;
+const CHANGES_MAX: u64 = 2_000;
 
 const INSTRUCTIONS: &str = "tracewing is an HTTP(S) debugging proxy. These tools read the \
 traffic it recorded: list_sessions, then list_flows to find requests, with the same filter \
-as tracewing's search box, then get_flow for one request's headers, bodies and timing. \
+as tracewing's search box, then get_flow for one request's headers, bodies and timing, \
+or compare_flows for what differs between two, as between a call that failed and one \
+that did not. \
 Values of credential headers and cookies are removed unless the user allowed them in \
 tracewing's Settings.";
 
@@ -130,6 +135,7 @@ impl Server {
             "list_sessions" => self.list_sessions(),
             "list_flows" => self.list_flows(&args),
             "get_flow" => self.get_flow(&args),
+            "compare_flows" => self.compare_flows(&args),
             _ => return Err((-32602, format!("there is no tool {name}"))),
         };
         Ok(match outcome {
@@ -326,6 +332,180 @@ impl Server {
     }
 }
 
+impl Server {
+    fn compare_flows(&self, args: &Value) -> Result<Value> {
+        use crate::compare::{self, Change, Pair};
+        let dir = self.session(args)?;
+        let conn = open(&dir)?;
+        let id_a = args
+            .get("a")
+            .and_then(Value::as_i64)
+            .context("compare_flows needs `a`, a flow's id as list_flows gives it")?;
+        let a = Detail::load(&conn, &dir, id_a)
+            .with_context(|| format!("there is no flow {id_a} in this session"))?;
+        let id_b = match args.get("b").and_then(Value::as_i64) {
+            Some(id) => id,
+            None => crate::compare_page::previous_call(&conn, &a).with_context(|| {
+                format!("no call before flow {id_a} to the same method, host and path: give `b`")
+            })?,
+        };
+        let b = Detail::load(&conn, &dir, id_b)
+            .with_context(|| format!("there is no flow {id_b} in this session"))?;
+        let max = args
+            .get("max_changes")
+            .and_then(Value::as_u64)
+            .unwrap_or(CHANGES_DEFAULT)
+            .clamp(1, CHANGES_MAX) as usize;
+        let secrets = self.secrets_allowed();
+        let change_name = |change: Change| match change {
+            Change::Same => "same",
+            Change::Added => "only_b",
+            Change::Removed => "only_a",
+            Change::Changed => "changed",
+        };
+        let shown_pairs = |pairs: Vec<Pair>, headers: bool| -> Vec<Value> {
+            pairs
+                .into_iter()
+                .filter(|p| p.change() != Change::Same)
+                .map(|p| {
+                    let secret = headers
+                        && !secrets
+                        && SECRET_HEADERS.contains(&p.name.to_ascii_lowercase().as_str());
+                    let value =
+                        |v: Option<String>| v.map(|v| if secret { REMOVED.to_owned() } else { v });
+                    json!({
+                        "name": p.name,
+                        "change": change_name(p.change()),
+                        "a": value(p.a),
+                        "b": value(p.b),
+                    })
+                })
+                .collect()
+        };
+        let side = |side: Side| {
+            let of = |d: &Detail| {
+                d.headers(side)
+                    .unwrap_or_default()
+                    .iter()
+                    .chain(d.trailers(side))
+                    .cloned()
+                    .collect::<Vec<_>>()
+            };
+            let headers = shown_pairs(compare::pairs(&of(&a), &of(&b), true), true);
+            let body = match (
+                crate::compare_page::read_body(&dir, &self.protos, &a, side),
+                crate::compare_page::read_body(&dir, &self.protos, &b, side),
+            ) {
+                (Some(mut ta), Some(mut tb)) => {
+                    let kinds = json!({ "a": ta.kind, "b": tb.kind });
+                    let cut = ta.cut || tb.cut;
+                    match (ta.json.take(), tb.json.take()) {
+                        (Some(ja), Some(jb)) => {
+                            let tree = compare::diff_tree(&ja, &jb);
+                            let fields = compare::field_paths(&tree);
+                            let count = fields.len();
+                            let listed: Vec<Value> = fields
+                                .into_iter()
+                                .take(max)
+                                .map(|(path, node)| {
+                                    json!({
+                                        "path": path,
+                                        "change": change_name(node.change),
+                                        "a": node.a,
+                                        "b": node.b,
+                                    })
+                                })
+                                .collect();
+                            json!({
+                                "kind": kinds,
+                                "same": count == 0,
+                                "fields_differ": count,
+                                "fields": listed,
+                                "more": count > max,
+                                "cut_to_first_bytes": cut.then_some(compare::BODY_MAX),
+                            })
+                        }
+                        _ => {
+                            let lines = compare::diff_lines(&ta.lines, &tb.lines);
+                            let changed: Vec<_> =
+                                lines.iter().filter(|l| l.change != Change::Same).collect();
+                            let count = changed.len();
+                            let listed: Vec<Value> = changed
+                                .into_iter()
+                                .take(max)
+                                .map(|l| {
+                                    json!({
+                                        "change": change_name(l.change),
+                                        "a_line": l.a.map(|n| n + 1),
+                                        "b_line": l.b.map(|n| n + 1),
+                                        "a": l.a.and_then(|n| ta.lines.get(n)),
+                                        "b": l.b.and_then(|n| tb.lines.get(n)),
+                                    })
+                                })
+                                .collect();
+                            json!({
+                                "kind": kinds,
+                                "same": count == 0,
+                                "lines_differ": count,
+                                "lines": listed,
+                                "more": count > max,
+                                "cut_to_first_bytes": cut.then_some(compare::BODY_MAX),
+                            })
+                        }
+                    }
+                }
+                _ => json!({ "note": "a body was not kept, so the two cannot be compared" }),
+            };
+            json!({ "headers": headers, "body": body })
+        };
+        let size = |d: &Detail| json!({ "request": d.request.bytes, "response": d.response.bytes });
+        let mut summary = Vec::new();
+        for (field, va, vb) in [
+            ("method", json!(a.method), json!(b.method)),
+            ("url", json!(a.url), json!(b.url)),
+            ("status", json!(a.status), json!(b.status)),
+            ("grpc_status", json!(a.grpc_status), json!(b.grpc_status)),
+            ("error", json!(a.error), json!(b.error)),
+            ("protocols", json!(a.protocols()), json!(b.protocols())),
+            (
+                "request_type",
+                json!(a.req_content_type),
+                json!(b.req_content_type),
+            ),
+            (
+                "response_type",
+                json!(a.content_type),
+                json!(b.content_type),
+            ),
+            ("bytes", size(&a), size(&b)),
+            (
+                "total_ms",
+                json!(a.duration_us.map(|us| us as f64 / 1000.0)),
+                json!(b.duration_us.map(|us| us as f64 / 1000.0)),
+            ),
+            ("app", json!(a.app), json!(b.app)),
+        ] {
+            if va != vb {
+                summary.push(json!({ "field": field, "a": va, "b": vb }));
+            }
+        }
+        Ok(json!({
+            "session": session_id(&dir),
+            "a": id_a,
+            "b": id_b,
+            "b_is_the_call_before": args.get("b").is_none(),
+            "differs": summary,
+            "query": shown_pairs(
+                compare::pairs(&compare::query_of(&a.url), &compare::query_of(&b.url), false),
+                false,
+            ),
+            "request": side(Side::Request),
+            "response": side(Side::Response),
+            "secrets_removed": !secrets,
+        }))
+    }
+}
+
 fn initialize(params: &Value) -> Value {
     let asked = params.get("protocolVersion").and_then(Value::as_str);
     let version = asked
@@ -379,6 +559,25 @@ fn tools() -> Value {
                     "max_body_bytes": { "type": "integer", "maximum": BODY_MAX, "default": BODY_DEFAULT },
                 },
                 "required": ["id"],
+            },
+            "annotations": { "readOnlyHint": true },
+        },
+        {
+            "name": "compare_flows",
+            "description": "What differs between two requests and their responses: method, URL, \
+                status, sizes and time; the query and headers, by name; and the bodies, JSON \
+                (and MessagePack, CBOR, Protobuf) field by field as paths like items[3].price, \
+                other text line by line. Only what differs is given. Leave `b` out to compare \
+                `a` with the call before it to the same method, host and path.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "session": { "type": "string", "description": "A session's id; the newest if left out." },
+                    "a": { "type": "integer", "description": "The first flow's id." },
+                    "b": { "type": "integer", "description": "The second's; the call before `a` if left out." },
+                    "max_changes": { "type": "integer", "minimum": 1, "maximum": CHANGES_MAX, "default": CHANGES_DEFAULT },
+                },
+                "required": ["a"],
             },
             "annotations": { "readOnlyHint": true },
         },
@@ -616,7 +815,10 @@ mod tests {
             .iter()
             .map(|t| t["name"].as_str().unwrap())
             .collect();
-        assert_eq!(names, ["list_sessions", "list_flows", "get_flow"]);
+        assert_eq!(
+            names,
+            ["list_sessions", "list_flows", "get_flow", "compare_flows"]
+        );
     }
 
     #[test]
