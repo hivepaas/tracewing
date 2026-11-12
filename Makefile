@@ -46,7 +46,7 @@ lint: ## Check the format and run clippy, as CI does
 fmt: ## Format the code
 	$(CARGO) fmt --all
 
-playground: ## Run a server to try tracewing on: http://localhost:10000 and https://localhost:10443
+playground: ## Run a server to try tracewing on: http://localhost:10000, https://localhost:10443, mutual TLS on 10444
 	$(CARGO) run --release -p tracewing-dev --bin tracewing-dev -- playground
 
 playground-trust: ## The same, its authority trusted by tracewing first (once; restart tracewing)

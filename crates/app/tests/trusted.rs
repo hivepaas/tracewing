@@ -82,6 +82,13 @@ fn servers_of_a_trusted_authority_are_trusted() {
     let port = listener.local_addr().unwrap().port();
     let serving = state.clone();
     runtime.spawn(async move { tracewing_dev::playground::serve_tls(listener, &serving).await });
+    // And with mutual TLS, for a client certificate given in Settings.
+    let mtls = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let mtls_port = mtls.local_addr().unwrap().port();
+    let serving = state.clone();
+    runtime.spawn(async move { tracewing_dev::playground::serve_mtls(mtls, &serving).await });
 
     let found = trusted::read(&dir);
     let engine = Engine::start(EngineOptions {
@@ -162,6 +169,88 @@ fn servers_of_a_trusted_authority_are_trusted() {
             view.set_screen(Screen::Settings, cx);
             assert_eq!(view.trusted.good.len(), 2);
             assert_ne!(view.trusted.paths(), view.engine.extra_roots);
+        })
+        .unwrap();
+
+    // A client certificate, given in Settings for localhost: the server that
+    // asks for one has it from then on.
+    let (client_cert, client_key) = tracewing_dev::playground::client_certificate(&state).unwrap();
+    let ask = |cx: &mut HeadlessAppContext| {
+        window
+            .update(cx, |view, _, cx| {
+                view.new_compose(cx);
+                let page = view.compose_page.as_ref().unwrap();
+                type_in(
+                    &page.url.clone(),
+                    &format!("https://localhost:{mtls_port}/text"),
+                    cx,
+                );
+                view.send_composed(cx);
+            })
+            .unwrap();
+        wait_for(cx, window, "the answer", |view| {
+            view.compose_page
+                .as_ref()
+                .is_some_and(|page| page.answer.is_some() || page.problem.is_some())
+        });
+        window
+            .update(cx, |view, _, _| {
+                let page = view.compose_page.as_ref().unwrap();
+                (
+                    page.answer.as_ref().map(|answer| answer.status),
+                    page.problem.clone(),
+                )
+            })
+            .unwrap()
+    };
+    let (status, _) = ask(&mut cx);
+    assert_ne!(status, Some(200), "none given yet");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Settings, cx);
+            // Nothing chosen: it says what is missing.
+            view.add_client_cert(cx);
+            let form = view.client_cert_form.as_ref().unwrap();
+            assert!(form.problem.is_some());
+            let host = form.host.clone();
+            type_in(&host, "localhost", cx);
+            // A key that is not this certificate's is refused.
+            view.set_client_cert_file(false, client_cert.clone(), cx);
+            view.set_client_cert_file(true, dir.join("ca.pem"), cx);
+            view.add_client_cert(cx);
+            assert!(view.client_cert_settings().certs.is_empty(), "not added");
+            view.set_client_cert_file(true, client_key.clone(), cx);
+            view.add_client_cert(cx);
+            assert_eq!(view.client_cert_settings().certs.len(), 1);
+            let form = view.client_cert_form.as_ref().unwrap();
+            assert_eq!(form.problem, None);
+            assert!(form.cert.is_none(), "the form is emptied");
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let (status, problem) = ask(&mut cx);
+    assert_eq!(status, Some(200), "{problem:?}");
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Settings, cx))
+        .unwrap();
+    cx.run_until_parked();
+    cx.update_window(window.into(), |_, window, cx| {
+        window.dispatch_event(
+            gpui::PlatformInput::ScrollWheel(gpui::ScrollWheelEvent {
+                position: gpui::point(px(900.), px(500.)),
+                delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(-900.))),
+                ..Default::default()
+            }),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "103-client-certificates");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.remove_client_cert(0, cx);
+            assert!(view.client_cert_settings().certs.is_empty());
         })
         .unwrap();
 

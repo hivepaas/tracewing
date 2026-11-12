@@ -3,13 +3,18 @@
 //! TLS version and certificates, goes with every response over the connection.
 //! When TLS fails, the certificates the server showed go with the error.
 
+use crate::client_certs::ClientCerts;
 use crate::relay::{Kind as RelayKind, Relay, Route};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use http::Uri;
 use hudsucker::rustls::{
     self, ClientConfig, DigitallySignedStruct, SignatureScheme,
-    client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
+    client::{
+        ResolvesClientCert,
+        danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
+    },
     pki_types::{CertificateDer, ServerName, UnixTime},
+    sign::{CertifiedKey, SingleCertAndKey},
 };
 use hyper::rt::{Read, ReadBufCursor, Write};
 use hyper_util::{
@@ -47,6 +52,8 @@ pub struct Upstream {
     pub tls_us: Option<i64>,
     pub remote: SocketAddr,
     pub tls: Option<TlsFacts>,
+    /// The server asked for a client certificate, and tracewing had none for it.
+    pub client_cert_missing: bool,
     /// Its facts are written once, with the first flow to come back over it.
     told: AtomicBool,
 }
@@ -184,6 +191,8 @@ pub struct TimedConnector {
     next_id: Arc<AtomicI64>,
     /// Another proxy to go through, as a company's.
     relay: Arc<Relay>,
+    /// Certificates for servers that ask the client for one.
+    client_certs: Arc<ClientCerts>,
 }
 
 impl TimedConnector {
@@ -192,6 +201,7 @@ impl TimedConnector {
         mut config: ClientConfig,
         verifier: Arc<dyn ServerCertVerifier>,
         relay: Arc<Relay>,
+        client_certs: Arc<ClientCerts>,
     ) -> Self {
         config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
         Self {
@@ -199,7 +209,15 @@ impl TimedConnector {
             verifier,
             next_id: Arc::new(AtomicI64::new(1)),
             relay,
+            client_certs,
         }
+    }
+
+    /// The certificate to show the server `uri` points to, if it asks.
+    fn client_cert(&self, uri: &Uri) -> Option<Arc<CertifiedKey>> {
+        let host = uri.host()?;
+        self.client_certs
+            .for_host(host.trim_start_matches('[').trim_end_matches(']'))
     }
 }
 
@@ -218,6 +236,7 @@ impl TimedConnector {
             self.relay
                 .route_for(host.trim_start_matches('[').trim_end_matches(']'))
         });
+        let client_cert = self.client_cert(&uri);
         connect(
             uri,
             Arc::new(config),
@@ -225,6 +244,7 @@ impl TimedConnector {
             id,
             route,
             true,
+            client_cert,
         )
         .await
     }
@@ -246,7 +266,8 @@ impl tower_service::Service<Uri> for TimedConnector {
             self.relay
                 .route_for(host.trim_start_matches('[').trim_end_matches(']'))
         });
-        Box::pin(async move { connect(uri, config, verifier, id, route, false).await })
+        let client_cert = self.client_cert(&uri);
+        Box::pin(async move { connect(uri, config, verifier, id, route, false, client_cert).await })
     }
 }
 
@@ -257,6 +278,7 @@ async fn connect(
     id: i64,
     route: Option<Arc<Route>>,
     tunnel: bool,
+    client_cert: Option<Arc<CertifiedKey>>,
 ) -> Result<Stream, BoxError> {
     let secure = match uri.scheme_str() {
         Some("https") => true,
@@ -291,7 +313,7 @@ async fn connect(
         }
     };
 
-    let (stream, tls_us, facts) = if secure {
+    let (stream, tls_us, facts, client_cert_missing) = if secure {
         let shaking = Instant::now();
         let name = ServerName::try_from(host.to_owned())
             .map_err(|_| format!("\"{host}\" is not a name TLS can check"))?;
@@ -305,6 +327,13 @@ async fn connect(
         config
             .dangerous()
             .set_certificate_verifier(Arc::clone(&witness) as Arc<dyn ServerCertVerifier>);
+        // Shown only if the server asks for one. With none, whether it asked
+        // is kept, to say what to do when it then turns the connection down.
+        let unanswered = Arc::new(Unanswered::default());
+        config.client_auth_cert_resolver = match client_cert {
+            Some(cert) => Arc::new(SingleCertAndKey::from(cert)),
+            None => Arc::clone(&unanswered) as Arc<dyn ResolvesClientCert>,
+        };
         let stream = TlsConnector::from(Arc::new(config))
             .connect(name, tcp)
             .await
@@ -343,9 +372,10 @@ async fn connect(
             Inner::Tls(TokioIo::new(Box::new(stream))),
             Some(tls_us),
             Some(facts),
+            unanswered.asked.load(Ordering::Relaxed),
         )
     } else {
-        (Inner::Plain(TokioIo::new(tcp)), None, None)
+        (Inner::Plain(TokioIo::new(tcp)), None, None, false)
     };
 
     Ok(Stream {
@@ -360,9 +390,27 @@ async fn connect(
             tls_us,
             remote,
             tls: facts,
+            client_cert_missing,
             told: AtomicBool::new(false),
         }),
     })
+}
+
+/// No client certificate to give: says none, and keeps that one was asked for.
+#[derive(Debug, Default)]
+struct Unanswered {
+    asked: AtomicBool,
+}
+
+impl ResolvesClientCert for Unanswered {
+    fn resolve(&self, _: &[&[u8]], _: &[SignatureScheme]) -> Option<Arc<CertifiedKey>> {
+        self.asked.store(true, Ordering::Relaxed);
+        None
+    }
+
+    fn has_certs(&self) -> bool {
+        false
+    }
 }
 
 /// A connection to the server itself: the name looked up, then TCP.

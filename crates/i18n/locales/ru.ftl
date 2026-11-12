@@ -43,6 +43,48 @@ t49fe2cb3 = { $size } · чтение { $percent }%
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Оформление: { $now }. Нажмите, чтобы переключить: { $next }.
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com или *.example.com
+
+# Choose
+t73c66160 = Выбрать
+
+# Choose the certificate's file.
+t6c7ace6e = Выберите файл сертификата.
+
+# Say which host it is for.
+taf39b2e1 = Укажите, для какого хоста он.
+
+# Not used: {why}
+t3a0298f3 = Не используется: { $why }
+
+# Remove
+t21a5901d = Удалить
+
+# Client certificates
+te3ce8812 = Клиентские сертификаты
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = Для серверов, которые требуют сертификат клиента (взаимный TLS): tracewing предъявляет сертификат, заданный для их хоста, вместо приложения. Сертификат PEM и его ключ без парольной фразы; файлы остаются на месте. Каждый действует со следующего соединения.
+
+# None yet.
+t786bc275 = Пока нет.
+
+# Certificate…
+t164f4d6c = Сертификат…
+
+# none chosen
+t23b63bc7 = не выбран
+
+# Key…
+t7aa250a8 = Ключ…
+
+# in the certificate's file
+t13bc7052 = в файле сертификата
+
+# Add
+t9dc3aa14 = Добавить
+
 # Method
 t98a2c750 = Метод
 
@@ -928,9 +970,6 @@ tc1b8764c =
        *[other] { $count } сервиса: { $names }
     }
 
-# Add
-t9dc3aa14 = Добавить
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com или http://localhost:50051
 
@@ -972,9 +1011,6 @@ t591ce5ea =
         [many] и ещё { $count } проблем
        *[other] и ещё { $count } проблемы
     }
-
-# Remove
-t21a5901d = Удалить
 
 # Protobuf schemas
 ta4401d1a = Схемы Protobuf
@@ -1623,9 +1659,6 @@ t571051f9 = tracewing доверяет серверам, за которые р�
 
 # Left out: {why}
 t4a567d82 = Пропущено: { $why }
-
-# None yet.
-t786bc275 = Пока нет.
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = Папка изменилась после запуска tracewing: перезапустите его, чтобы использовать её текущее содержимое.

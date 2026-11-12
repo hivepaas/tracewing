@@ -317,6 +317,8 @@ pub struct Traffic {
     pub relay_fields: Option<crate::relay_view::RelayFields>,
     /// The address of a server to ask for its files by gRPC reflection.
     pub protos_server: Option<Entity<TextInput>>,
+    /// A client certificate being added in Settings.
+    pub client_cert_form: Option<crate::client_certs_view::ClientCertForm>,
     pub protos_fetching: bool,
     /// What came of the last time a server was asked: what it has, or why
     /// not.
@@ -519,6 +521,7 @@ impl Traffic {
             trusted: crate::trusted::read(data_dir),
             relay_fields: None,
             protos_server: None,
+            client_cert_form: None,
             protos_fetching: false,
             protos_fetched: None,
             device_name,

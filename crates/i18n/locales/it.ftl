@@ -39,6 +39,48 @@ t49fe2cb3 = { $size } · lettura { $percent }%
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Aspetto: { $now }. Fai clic per passare a { $next }.
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com, o *.example.com
+
+# Choose
+t73c66160 = Scegli
+
+# Choose the certificate's file.
+t6c7ace6e = Scegli il file del certificato.
+
+# Say which host it is for.
+taf39b2e1 = Indica per quale host è.
+
+# Not used: {why}
+t3a0298f3 = Non usato: { $why }
+
+# Remove
+t21a5901d = Rimuovi
+
+# Client certificates
+te3ce8812 = Certificati client
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = Per i server che chiedono un certificato al client (TLS reciproco): tracewing presenta quello indicato per il loro host, al posto dell'app. Un certificato PEM e la sua chiave senza passphrase; i file restano dove sono. Ognuno vale dalla connessione successiva.
+
+# None yet.
+t786bc275 = Nessuna per ora.
+
+# Certificate…
+t164f4d6c = Certificato…
+
+# none chosen
+t23b63bc7 = nessuno scelto
+
+# Key…
+t7aa250a8 = Chiave…
+
+# in the certificate's file
+t13bc7052 = nel file del certificato
+
+# Add
+t9dc3aa14 = Aggiungi
+
 # Method
 t98a2c750 = Metodo
 
@@ -899,9 +941,6 @@ tc1b8764c =
        *[other] { $count } servizi: { $names }
     }
 
-# Add
-t9dc3aa14 = Aggiungi
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com o http://localhost:50051
 
@@ -939,9 +978,6 @@ t591ce5ea =
         [many] e altri { $count } problemi
        *[other] e altri { $count } problemi
     }
-
-# Remove
-t21a5901d = Rimuovi
 
 # Protobuf schemas
 ta4401d1a = Schemi Protobuf
@@ -1562,9 +1598,6 @@ t571051f9 = tracewing si fida dei server garantiti dalle autorità pubbliche e d
 
 # Left out: {why}
 t4a567d82 = Escluso: { $why }
-
-# None yet.
-t786bc275 = Nessuna per ora.
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = La cartella è cambiata dall'avvio di tracewing: riavvialo per usare ciò che contiene ora.

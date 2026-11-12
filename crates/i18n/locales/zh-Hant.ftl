@@ -28,6 +28,48 @@ t49fe2cb3 = { $size } · 正在讀取 { $percent }%
 # Appearance: {now}. Click for {next}.
 t332cfa6d = 外觀：{ $now }。按一下切換為 { $next }。
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com，或 *.example.com
+
+# Choose
+t73c66160 = 選擇
+
+# Choose the certificate's file.
+t6c7ace6e = 請選擇憑證檔案。
+
+# Say which host it is for.
+taf39b2e1 = 請填寫它用於哪個主機。
+
+# Not used: {why}
+t3a0298f3 = 未使用：{ $why }
+
+# Remove
+t21a5901d = 移除
+
+# Client certificates
+te3ce8812 = 用戶端憑證
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = 用於要求用戶端提供憑證的伺服器（雙向 TLS）：tracewing 代替應用程式出示為其主機指定的憑證。PEM 憑證及其不含密碼的金鑰；檔案保留在原處。每個憑證從下一個連線起生效。
+
+# None yet.
+t786bc275 = 尚無。
+
+# Certificate…
+t164f4d6c = 憑證…
+
+# none chosen
+t23b63bc7 = 未選擇
+
+# Key…
+t7aa250a8 = 金鑰…
+
+# in the certificate's file
+t13bc7052 = 在憑證檔案中
+
+# Add
+t9dc3aa14 = 新增
+
 # Method
 t98a2c750 = 方法
 
@@ -853,9 +895,6 @@ tfceba380 = 清單未儲存：{ $e }
 # {count} service: {names} | {count} services: {names}
 tc1b8764c = { $count } 個服務：{ $names }
 
-# Add
-t9dc3aa14 = 新增
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com 或 http://localhost:50051
 
@@ -873,9 +912,6 @@ t51f71902 = { $count } 個服務
 
 # and {count} more problem | and {count} more problems
 t591ce5ea = 還有 { $count } 個問題
-
-# Remove
-t21a5901d = 移除
 
 # Protobuf schemas
 ta4401d1a = Protobuf 結構描述
@@ -1446,9 +1482,6 @@ t571051f9 = tracewing 信任公開憑證授權單位以及本機信任的授權�
 
 # Left out: {why}
 t4a567d82 = 已略過：{ $why }
-
-# None yet.
-t786bc275 = 尚無。
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = 自 tracewing 啟動後資料夾已變更：請重新啟動以使用目前內容。

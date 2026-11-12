@@ -28,6 +28,48 @@ t49fe2cb3 = { $size } · đang đọc { $percent }%
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Giao diện: { $now }. Bấm để chuyển sang { $next }.
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com, hoặc *.example.com
+
+# Choose
+t73c66160 = Chọn
+
+# Choose the certificate's file.
+t6c7ace6e = Hãy chọn file chứng chỉ.
+
+# Say which host it is for.
+taf39b2e1 = Hãy cho biết chứng chỉ dùng cho host nào.
+
+# Not used: {why}
+t3a0298f3 = Không dùng: { $why }
+
+# Remove
+t21a5901d = Gỡ
+
+# Client certificates
+te3ce8812 = Chứng chỉ client
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = Cho các server yêu cầu client đưa chứng chỉ (mutual TLS): tracewing đưa chứng chỉ đã gán cho host của server đó, thay cho ứng dụng. Một chứng chỉ PEM và khoá của nó, không có mật khẩu; các file vẫn nằm nguyên chỗ cũ. Mỗi chứng chỉ có hiệu lực từ kết nối kế tiếp.
+
+# None yet.
+t786bc275 = Chưa có.
+
+# Certificate…
+t164f4d6c = Chứng chỉ…
+
+# none chosen
+t23b63bc7 = chưa chọn
+
+# Key…
+t7aa250a8 = Khoá…
+
+# in the certificate's file
+t13bc7052 = nằm trong file chứng chỉ
+
+# Add
+t9dc3aa14 = Thêm
+
 # Method
 t98a2c750 = Method
 
@@ -853,9 +895,6 @@ tfceba380 = Danh sách chưa được lưu: { $e }
 # {count} service: {names} | {count} services: {names}
 tc1b8764c = { $count } service: { $names }
 
-# Add
-t9dc3aa14 = Thêm
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com hoặc http://localhost:50051
 
@@ -873,9 +912,6 @@ t51f71902 = { $count } service
 
 # and {count} more problem | and {count} more problems
 t591ce5ea = và { $count } lỗi khác
-
-# Remove
-t21a5901d = Gỡ
 
 # Protobuf schemas
 ta4401d1a = Schema Protobuf
@@ -1446,9 +1482,6 @@ t571051f9 = tracewing tin các server được các CA công khai xác nhận, v
 
 # Left out: {why}
 t4a567d82 = Bỏ qua: { $why }
-
-# None yet.
-t786bc275 = Chưa có.
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = Thư mục đã thay đổi từ khi tracewing khởi động: hãy khởi động lại để dùng nội dung mới.

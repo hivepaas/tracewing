@@ -28,6 +28,48 @@ t49fe2cb3 = { $size } · 読み込み中 { $percent }%
 # Appearance: {now}. Click for {next}.
 t332cfa6d = 外観: { $now }。クリックすると{ $next }に切り替わります。
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com、または *.example.com
+
+# Choose
+t73c66160 = 選択
+
+# Choose the certificate's file.
+t6c7ace6e = 証明書のファイルを選んでください。
+
+# Say which host it is for.
+taf39b2e1 = どのホスト用か入力してください。
+
+# Not used: {why}
+t3a0298f3 = 使用されていません：{ $why }
+
+# Remove
+t21a5901d = 削除
+
+# Client certificates
+te3ce8812 = クライアント証明書
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = クライアントに証明書を求めるサーバー（相互 TLS）向け：tracewing はアプリの代わりに、そのホストに指定された証明書を提示します。パスフレーズなしの PEM 証明書と鍵。ファイルは元の場所のままです。次の接続から適用されます。
+
+# None yet.
+t786bc275 = まだありません。
+
+# Certificate…
+t164f4d6c = 証明書…
+
+# none chosen
+t23b63bc7 = 未選択
+
+# Key…
+t7aa250a8 = 鍵…
+
+# in the certificate's file
+t13bc7052 = 証明書ファイル内
+
+# Add
+t9dc3aa14 = 追加
+
 # Method
 t98a2c750 = メソッド
 
@@ -853,9 +895,6 @@ tfceba380 = 一覧を保存できませんでした: { $e }
 # {count} service: {names} | {count} services: {names}
 tc1b8764c = { $count } サービス: { $names }
 
-# Add
-t9dc3aa14 = 追加
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com または http://localhost:50051
 
@@ -873,9 +912,6 @@ t51f71902 = { $count } サービス
 
 # and {count} more problem | and {count} more problems
 t591ce5ea = ほかに { $count } 件の問題
-
-# Remove
-t21a5901d = 削除
 
 # Protobuf schemas
 ta4401d1a = Protobuf スキーマ
@@ -1446,9 +1482,6 @@ t571051f9 = tracewing は公開の認証局と、このコンピューターが�
 
 # Left out: {why}
 t4a567d82 = 除外：{ $why }
-
-# None yet.
-t786bc275 = まだありません。
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = tracewing の起動後にフォルダーが変わりました。今の内容を使うには再起動してください。

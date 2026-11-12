@@ -47,6 +47,7 @@ struct Harness {
     relay: Arc<tracewing_proxy::relay::Relay>,
     tls_keys: Arc<tracewing_proxy::key_log::TlsKeys>,
     sockets: Arc<tracewing_proxy::sockets::Sockets>,
+    client_certs: Arc<tracewing_proxy::client_certs::ClientCerts>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -119,6 +120,7 @@ impl Harness {
         let relay = Arc::new(tracewing_proxy::relay::Relay::default());
         let tls_keys = Arc::new(tracewing_proxy::key_log::TlsKeys::default());
         let sockets = Arc::new(tracewing_proxy::sockets::Sockets::default());
+        let client_certs = Arc::new(tracewing_proxy::client_certs::ClientCerts::default());
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -146,6 +148,7 @@ impl Harness {
                 relay: Arc::clone(&relay),
                 tls_keys: Arc::clone(&tls_keys),
                 sockets: Arc::clone(&sockets),
+                client_certs: Arc::clone(&client_certs),
             },
             async {
                 let _ = stopped.await;
@@ -173,6 +176,7 @@ impl Harness {
             relay,
             tls_keys,
             sockets,
+            client_certs,
             stop,
             proxy,
         }
@@ -353,6 +357,67 @@ async fn tls_keys_are_written_for_wireshark_while_on() {
     );
 
     let (_, conn, dir) = h.finish(2).await;
+    clean_up(conn, dir);
+}
+
+/// A server that asks the client for a certificate gets the one set for its
+/// host, and none before it is set.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_server_that_asks_for_a_client_certificate_gets_it() {
+    use tracewing_proxy::client_certs::{ClientCert, ClientCertSettings};
+    let h = Harness::start("mtls").await;
+    let state = h.dir.join("playground");
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let serving = state.clone();
+    tokio::spawn(async move { tracewing_dev::playground::serve_mtls(listener, &serving).await });
+    let get = || {
+        let client = h.client(true);
+        async move {
+            client
+                .get(format!("https://localhost:{port}/json"))
+                .send()
+                .await
+                .unwrap()
+        }
+    };
+
+    // None set: the server will not have the connection.
+    let refused = get().await;
+    assert_eq!(refused.status(), 502);
+
+    let (cert, key) = tracewing_dev::playground::client_certificate(&state).unwrap();
+    h.client_certs.set(&ClientCertSettings {
+        certs: vec![ClientCert {
+            host: "localhost".into(),
+            cert,
+            key: Some(key),
+        }],
+    });
+    let res = get().await;
+    assert_eq!(res.status(), 200);
+    let shown: usize = res.headers()["x-client-certificate"]
+        .to_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert!(shown > 0, "the server saw the certificate");
+    assert!(res.text().await.unwrap().starts_with('{'), "the JSON");
+
+    let (_, conn, dir) = h.finish(2).await;
+    let errors: Vec<Option<String>> = {
+        let mut stmt = conn.prepare("SELECT error FROM flows ORDER BY id").unwrap();
+        stmt.query_map([], |r| r.get(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    let refusal = errors[0].as_deref().expect("the refusal is in the flow");
+    assert!(
+        refusal.contains("asks for a client certificate"),
+        "and says what to do: {refusal}"
+    );
+    assert_eq!(errors[1], None);
     clean_up(conn, dir);
 }
 

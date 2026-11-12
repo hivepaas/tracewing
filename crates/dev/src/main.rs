@@ -146,6 +146,10 @@ enum Command {
         /// The same paths over TLS, with the playground's own authority.
         #[arg(long, default_value = "127.0.0.1:10443")]
         tls_listen: SocketAddr,
+        /// The same paths again, only for a client with a certificate from
+        /// its authority (mutual TLS); the certificate is made in `state`.
+        #[arg(long, default_value = "127.0.0.1:10444")]
+        mtls_listen: SocketAddr,
         /// Where its authority is kept, so that it is trusted once.
         #[arg(long, default_value = "target/playground")]
         state: PathBuf,
@@ -301,6 +305,11 @@ async fn main() -> Result<()> {
                 }
                 eprintln!("leaf SPKI {}", spki.get().unwrap());
             });
+            // As the app has them, from the same data directory.
+            let client_certs = Arc::new(tracewing_proxy::client_certs::ClientCerts::new(
+                &tracewing_proxy::client_certs::ClientCertSettings::load(&data_dir)
+                    .unwrap_or_default(),
+            ));
             let summary = run_proxy(
                 ProxyOptions {
                     listener: Some(listener),
@@ -329,6 +338,7 @@ async fn main() -> Result<()> {
                     // As browsers and curl, it writes them where SSLKEYLOGFILE says.
                     tls_keys: Arc::new(tracewing_proxy::key_log::TlsKeys::from_env()),
                     sockets: Default::default(),
+                    client_certs,
                 },
                 async move {
                     match exit_after {
@@ -478,6 +488,7 @@ async fn main() -> Result<()> {
         Command::Playground {
             listen,
             tls_listen,
+            mtls_listen,
             state,
             trust,
             data_dir,
@@ -495,6 +506,8 @@ async fn main() -> Result<()> {
             }
             let listener = TcpListener::bind(listen).await?;
             let tls = TcpListener::bind(tls_listen).await?;
+            let mtls = TcpListener::bind(mtls_listen).await?;
+            let (client_cert, client_key) = playground::client_certificate(&state)?;
             let base = format!("http://localhost:{}", listener.local_addr()?.port());
             let tls_base = format!("https://localhost:{}", tls.local_addr()?.port());
             println!("playground on {base} and {tls_base}");
@@ -502,9 +515,21 @@ async fn main() -> Result<()> {
                 "its authority: {} (--trust puts it where tracewing looks)",
                 ca.display()
             );
+            println!(
+                "mutual TLS on https://localhost:{}: in tracewing's Settings, give localhost the certificate {} and the key {}",
+                mtls.local_addr()?.port(),
+                client_cert.display(),
+                client_key.display()
+            );
             for (path, what) in playground::ROUTES {
                 println!("  {base}{path:<20} {what}");
             }
+            let mtls_state = state.clone();
+            tokio::spawn(async move {
+                if let Err(e) = playground::serve_mtls(mtls, &mtls_state).await {
+                    eprintln!("playground with mutual TLS: {e:#}");
+                }
+            });
             let state_dir = state.clone();
             tokio::spawn(async move {
                 if let Err(e) = playground::serve_tls(tls, &state_dir).await {

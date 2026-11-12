@@ -21,6 +21,20 @@ t51332550 =
     }
 t49fe2cb3 = { $size } · reading { $percent }%
 t332cfa6d = Appearance: { $now }. Click for { $next }.
+tdc6588ac = api.example.com, or *.example.com
+t73c66160 = Choose
+t6c7ace6e = Choose the certificate's file.
+taf39b2e1 = Say which host it is for.
+t3a0298f3 = Not used: { $why }
+t21a5901d = Remove
+te3ce8812 = Client certificates
+tcd3f6864 = For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+t786bc275 = None yet.
+t164f4d6c = Certificate…
+t23b63bc7 = none chosen
+t7aa250a8 = Key…
+t13bc7052 = in the certificate's file
+t9dc3aa14 = Add
 t98a2c750 = Method
 t005ef20f = Status
 t81f51acc = App
@@ -346,7 +360,6 @@ tc1b8764c =
         [one] { $count } service: { $names }
        *[other] { $count } services: { $names }
     }
-t9dc3aa14 = Add
 t14f9744c = https://api.example.com or http://localhost:50051
 t6aad8485 = Reading…
 tde674bd8 =
@@ -369,7 +382,6 @@ t591ce5ea =
         [one] and { $count } more problem
        *[other] and { $count } more problems
     }
-t21a5901d = Remove
 ta4401d1a = Protobuf schemas
 te5f4f07c = Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.
 tb5930e43 = Add a folder…
@@ -616,7 +628,6 @@ t38e21213 = One a line: a host, or *.example.com for it and everything under it.
 t0a308a8a = Authorities trusted for servers
 t571051f9 = tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in { $folder }. They are read when tracewing starts.
 t4a567d82 = Left out: { $why }
-t786bc275 = None yet.
 t65f2d800 = The folder has changed since tracewing started: restart it to use what it holds now.
 tc7d7e212 = Open the folder
 td72efd5e = Read it again

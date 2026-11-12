@@ -28,6 +28,48 @@ t49fe2cb3 = { $size } · membaca { $percent }%
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Tampilan: { $now }. Klik untuk { $next }.
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com, atau *.example.com
+
+# Choose
+t73c66160 = Pilih
+
+# Choose the certificate's file.
+t6c7ace6e = Pilih file sertifikat.
+
+# Say which host it is for.
+taf39b2e1 = Sebutkan untuk host mana.
+
+# Not used: {why}
+t3a0298f3 = Tidak dipakai: { $why }
+
+# Remove
+t21a5901d = Hapus
+
+# Client certificates
+te3ce8812 = Sertifikat klien
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = Untuk server yang meminta sertifikat dari klien (mutual TLS): tracewing menunjukkan sertifikat yang diberikan untuk host-nya, menggantikan aplikasi. Sertifikat PEM dan kuncinya tanpa frasa sandi; file tetap di tempatnya. Masing-masing berlaku mulai koneksi berikutnya.
+
+# None yet.
+t786bc275 = Belum ada.
+
+# Certificate…
+t164f4d6c = Sertifikat…
+
+# none chosen
+t23b63bc7 = belum dipilih
+
+# Key…
+t7aa250a8 = Kunci…
+
+# in the certificate's file
+t13bc7052 = di dalam file sertifikat
+
+# Add
+t9dc3aa14 = Tambah
+
 # Method
 t98a2c750 = Metode
 
@@ -853,9 +895,6 @@ tfceba380 = Daftar tidak tersimpan: { $e }
 # {count} service: {names} | {count} services: {names}
 tc1b8764c = { $count } service: { $names }
 
-# Add
-t9dc3aa14 = Tambah
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com atau http://localhost:50051
 
@@ -873,9 +912,6 @@ t51f71902 = { $count } service
 
 # and {count} more problem | and {count} more problems
 t591ce5ea = dan { $count } masalah lain
-
-# Remove
-t21a5901d = Hapus
 
 # Protobuf schemas
 ta4401d1a = Skema Protobuf
@@ -1446,9 +1482,6 @@ t571051f9 = tracewing memercayai server yang dijamin otoritas publik, dan yang d
 
 # Left out: {why}
 t4a567d82 = Dilewati: { $why }
-
-# None yet.
-t786bc275 = Belum ada.
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = Folder berubah sejak tracewing dimulai: mulai ulang untuk memakai isinya sekarang.

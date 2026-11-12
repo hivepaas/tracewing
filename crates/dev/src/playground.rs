@@ -167,21 +167,103 @@ pub fn authority(dir: &Path) -> Result<PathBuf> {
     Ok(cert)
 }
 
+/// Where it listens for clients with a certificate unless told otherwise.
+pub const MTLS_PORT: u16 = 10444;
+
+/// The same paths again, but only for a client that shows a certificate from
+/// the playground's authority: see [`client_certificate`]. Each answer says
+/// which certificate came, in `x-client-certificate`, by its size.
+pub async fn serve_mtls(listener: TcpListener, dir: &Path) -> Result<()> {
+    use hudsucker::rustls::pki_types::pem::PemObject as _;
+    use hudsucker::rustls::{RootCertStore, server::WebPkiClientVerifier};
+    let mut roots = RootCertStore::empty();
+    roots.add(
+        CertificateDer::from_pem_file(authority(dir)?)
+            .context("read the playground's authority")?,
+    )?;
+    let provider = Arc::new(tracewing_proxy::crypto_provider());
+    let verifier =
+        WebPkiClientVerifier::builder_with_provider(Arc::new(roots), Arc::clone(&provider))
+            .build()?;
+    let mut config = tls_config_asking(dir, Some(verifier))?;
+    config.alpn_protocols = vec![b"http/1.1".to_vec()];
+    let acceptor = tokio_rustls::TlsAcceptor::from(Arc::new(config));
+    loop {
+        let (tcp, _) = listener.accept().await?;
+        let acceptor = acceptor.clone();
+        tokio::spawn(async move {
+            let Ok(tls) = acceptor.accept(tcp).await else {
+                return;
+            };
+            let shown = tls
+                .get_ref()
+                .1
+                .peer_certificates()
+                .and_then(|chain| chain.first())
+                .map_or(0, |cert| cert.len());
+            let _ = Builder::new(TokioExecutor::new())
+                .serve_connection(
+                    TokioIo::new(tls),
+                    service_fn(move |req| async move {
+                        let mut res = route(req).await?;
+                        res.headers_mut()
+                            .insert("x-client-certificate", HeaderValue::from(shown));
+                        Ok::<_, Infallible>(res)
+                    }),
+                )
+                .await;
+        });
+    }
+}
+
+/// A certificate for a client, from the playground's authority, and its key:
+/// `client.pem` and `client-key.pem` in `dir`, made the first time.
+pub fn client_certificate(dir: &Path) -> Result<(PathBuf, PathBuf)> {
+    use hudsucker::rcgen::ExtendedKeyUsagePurpose;
+    let (cert, key) = (dir.join("client.pem"), dir.join("client-key.pem"));
+    if cert.exists() && key.exists() {
+        return Ok((cert, key));
+    }
+    let ca = authority(dir)?;
+    let ca_key = KeyPair::from_pem(&std::fs::read_to_string(dir.join("ca-key.pem"))?)?;
+    let issuer = Issuer::from_ca_cert_pem(&std::fs::read_to_string(&ca)?, ca_key)?;
+    let client_key = KeyPair::generate()?;
+    let mut params = CertificateParams::default();
+    params
+        .distinguished_name
+        .push(DnType::CommonName, "tracewing playground client");
+    params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ClientAuth];
+    let client = params.signed_by(&client_key, &issuer)?;
+    std::fs::write(&key, client_key.serialize_pem())?;
+    std::fs::write(&cert, client.pem())?;
+    Ok((cert, key))
+}
+
 fn tls_config(dir: &Path) -> Result<ServerConfig> {
+    tls_config_asking(dir, None)
+}
+
+/// With `clients`, it asks each client for a certificate that it checks.
+fn tls_config_asking(
+    dir: &Path,
+    clients: Option<Arc<dyn hudsucker::rustls::server::danger::ClientCertVerifier>>,
+) -> Result<ServerConfig> {
     let cert = authority(dir)?;
     let ca_key = KeyPair::from_pem(&std::fs::read_to_string(dir.join("ca-key.pem"))?)?;
     let issuer = Issuer::from_ca_cert_pem(&std::fs::read_to_string(&cert)?, ca_key)?;
     let leaf_key = KeyPair::generate()?;
     let leaf = CertificateParams::new(vec!["localhost".to_owned(), "127.0.0.1".to_owned()])?
         .signed_by(&leaf_key, &issuer)?;
-    let mut config =
-        ServerConfig::builder_with_provider(Arc::new(tracewing_proxy::crypto_provider()))
-            .with_safe_default_protocol_versions()?
-            .with_no_client_auth()
-            .with_single_cert(
-                vec![CertificateDer::from(leaf.der().to_vec())],
-                PrivateKeyDer::from(PrivatePkcs8KeyDer::from(leaf_key.serialize_der())),
-            )?;
+    let chain = vec![CertificateDer::from(leaf.der().to_vec())];
+    let key = PrivateKeyDer::from(PrivatePkcs8KeyDer::from(leaf_key.serialize_der()));
+    let builder = ServerConfig::builder_with_provider(Arc::new(tracewing_proxy::crypto_provider()))
+        .with_safe_default_protocol_versions()?;
+    let mut config = match clients {
+        Some(verifier) => builder
+            .with_client_cert_verifier(verifier)
+            .with_single_cert(chain, key)?,
+        None => builder.with_no_client_auth().with_single_cert(chain, key)?,
+    };
     config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     Ok(config)
 }

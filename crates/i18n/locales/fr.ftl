@@ -39,6 +39,48 @@ t49fe2cb3 = { $size } · lecture { $percent } %
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Apparence : { $now }. Cliquez pour choisir { $next }.
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com, ou *.example.com
+
+# Choose
+t73c66160 = Choisir
+
+# Choose the certificate's file.
+t6c7ace6e = Choisissez le fichier du certificat.
+
+# Say which host it is for.
+taf39b2e1 = Indiquez pour quel hôte il est.
+
+# Not used: {why}
+t3a0298f3 = Non utilisé : { $why }
+
+# Remove
+t21a5901d = Retirer
+
+# Client certificates
+te3ce8812 = Certificats client
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = Pour les serveurs qui demandent un certificat au client (TLS mutuel) : tracewing présente celui indiqué pour leur hôte, à la place de l'app. Un certificat PEM et sa clé sans phrase secrète ; les fichiers restent où ils sont. Chacun s'applique à la connexion suivante.
+
+# None yet.
+t786bc275 = Aucune pour l'instant.
+
+# Certificate…
+t164f4d6c = Certificat…
+
+# none chosen
+t23b63bc7 = aucun choisi
+
+# Key…
+t7aa250a8 = Clé…
+
+# in the certificate's file
+t13bc7052 = dans le fichier du certificat
+
+# Add
+t9dc3aa14 = Ajouter
+
 # Method
 t98a2c750 = Méthode
 
@@ -899,9 +941,6 @@ tc1b8764c =
        *[other] { $count } services : { $names }
     }
 
-# Add
-t9dc3aa14 = Ajouter
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com ou http://localhost:50051
 
@@ -939,9 +978,6 @@ t591ce5ea =
         [many] et { $count } autres problèmes
        *[other] et { $count } autres problèmes
     }
-
-# Remove
-t21a5901d = Retirer
 
 # Protobuf schemas
 ta4401d1a = Schémas Protobuf
@@ -1562,9 +1598,6 @@ t571051f9 = tracewing fait confiance aux serveurs garantis par les autorités pu
 
 # Left out: {why}
 t4a567d82 = Ignoré : { $why }
-
-# None yet.
-t786bc275 = Aucune pour l'instant.
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = Le dossier a changé depuis le démarrage de tracewing : redémarrez-le pour utiliser son contenu actuel.
