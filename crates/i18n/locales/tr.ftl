@@ -971,6 +971,12 @@ t0039810a = { $count } alan
 # and {count} more
 tbdb1ff6a = ve { $count } tane daha
 
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } bayt, bir işlem olarak okunmuyor
+
+# {program}, {count} bytes
+t1ce6ad3b = { $program }, { $count } bayt
+
 # succeeded
 t6b166ff2 = başarılı
 
@@ -982,9 +988,6 @@ t188b58f6 = yok: bir sözleşme oluşturur
 
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } bayt, imza bunların nasıl okunacağını söylemiyor
-
-# {count} byte that does not read as one | {count} bytes that do not read as one
-ta7ee514c = { $count } bayt, bir işlem olarak okunmuyor
 
 # {count} place | {count} places
 t0965779e = { $count } yer

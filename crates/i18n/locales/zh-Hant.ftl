@@ -913,6 +913,12 @@ t0039810a = { $count } 個欄位
 # and {count} more
 tbdb1ff6a = 還有 { $count } 個
 
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } 位元組無法讀作交易
+
+# {program}, {count} bytes
+t1ce6ad3b = { $program }，{ $count } 位元組
+
 # succeeded
 t6b166ff2 = 成功
 
@@ -924,9 +930,6 @@ t188b58f6 = 無：它建立合約
 
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } 位元組，簽章未說明如何讀取
-
-# {count} byte that does not read as one | {count} bytes that do not read as one
-ta7ee514c = { $count } 位元組無法讀作交易
 
 # {count} place | {count} places
 t0965779e = { $count } 處

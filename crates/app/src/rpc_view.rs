@@ -8,6 +8,7 @@
 //! only draws what it returns.
 
 use crate::{colors::colors, select::Selection, traffic::Traffic, widgets::Reachable};
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 use gpui::{
     AppContext as _, Context, ElementId, FontWeight, IntoElement, PathPromptOptions, SharedString,
     div, prelude::*, px, rgb,
@@ -18,6 +19,7 @@ use tracewing_store::{
     abi::Abi,
     jsonrpc, session,
     session::BodyReader,
+    solana,
     web3::{self, Revert, Transaction},
 };
 
@@ -341,9 +343,13 @@ fn asked(call: &jsonrpc::Call, abi: &Abi) -> Vec<Line> {
         "eth_getTransactionByHash" | "eth_getTransactionReceipt" | "eth_getBlockByHash" => {
             lines.extend(text_at(0).map(|hash| Line::code("hash", hash)));
         }
-        // Everything else: the params as they came, with hex read where it is
-        // a number.
+        // Everything else: Solana's own calls, then the params as they came,
+        // with hex read where it is a number.
         _ => {
+            let said = solana_asked(&call.method, params);
+            if !said.is_empty() {
+                return said;
+            }
             if let Some(serde_json::Value::Array(list)) = params {
                 for (n, param) in list.iter().enumerate() {
                     let label = format!("param {n}");
@@ -532,8 +538,179 @@ fn object_lines(
         | "eth_getTransactionByBlockHashAndIndex"
         | "eth_getTransactionByBlockNumberAndIndex" => transaction_lines(fields, abi),
         "eth_getBlockByNumber" | "eth_getBlockByHash" => block_lines(fields),
-        _ => Vec::new(),
+        _ => solana_result(method, fields),
     }
+}
+
+/// What a Solana call asks for. Its addresses are base58 rather than hex, and
+/// its methods are camelCase, which is what tells them from Bitcoin's.
+fn solana_asked(method: &str, params: Option<&serde_json::Value>) -> Vec<Line> {
+    let at = |n: usize| params.and_then(|params| params.get(n));
+    let text_at = |n: usize| at(n).and_then(|one| one.as_str());
+    let mut lines = match method {
+        "getBalance"
+        | "getAccountInfo"
+        | "getTokenAccountBalance"
+        | "getTokenSupply"
+        | "getProgramAccounts"
+        | "getTokenAccountsByOwner" => {
+            let mut lines = Vec::new();
+            lines.extend(text_at(0).map(|who| Line::code("address", who.to_owned())));
+            lines.extend(solana_program(text_at(0)));
+            lines
+        }
+        "getTransaction" | "getSignatureStatuses" => {
+            let signature = text_at(0).or_else(|| {
+                at(0)
+                    .and_then(|list| list.get(0))
+                    .and_then(|one| one.as_str())
+            });
+            signature
+                .map(|one| vec![Line::code("signature", one.to_owned())])
+                .unwrap_or_default()
+        }
+        "sendTransaction" | "simulateTransaction" => {
+            text_at(0).map(solana_transaction).unwrap_or_default()
+        }
+        "getBlock" | "getBlockTime" => at(0)
+            .and_then(|slot| slot.as_u64())
+            .map(|slot| vec![Line::said("slot", crate::flows::group_digits(slot))])
+            .unwrap_or_default(),
+        _ => return Vec::new(),
+    };
+    // What was asked of the chain beyond the call itself.
+    if let Some(config) = at(1).filter(|config| config.is_object()) {
+        for name in ["commitment", "encoding"] {
+            lines.extend(
+                config
+                    .get(name)
+                    .and_then(|said| said.as_str())
+                    .map(|said| Line::said(name, said.to_owned())),
+            );
+        }
+    }
+    lines
+}
+
+/// The program that address is, where it is one everyone uses.
+fn solana_program(address: Option<&str>) -> Option<Line> {
+    let name = solana::program_name(address?)?;
+    Some(Line::said("program", name.to_owned()))
+}
+
+/// A signed transaction, out of the one string `sendTransaction` carries.
+fn solana_transaction(raw: &str) -> Vec<Line> {
+    let bytes = match STANDARD.decode(raw) {
+        Ok(bytes) => bytes,
+        // A client may send it base58 instead, as the older ones do.
+        Err(_) => match solana::from_base58(raw) {
+            Some(bytes) => bytes,
+            None => return vec![Line::code("transaction", raw.to_owned())],
+        },
+    };
+    let Some(tx) = solana::Transaction::decode(&bytes) else {
+        return vec![Line::said(
+            "transaction",
+            tr_n!(
+                bytes.len(),
+                "{count} byte that does not read as one",
+                "{count} bytes that do not read as one",
+                count = bytes.len()
+            ),
+        )];
+    };
+    let mut lines = Vec::new();
+    lines.extend(
+        tx.signatures
+            .first()
+            .map(|one| Line::code("signature", one.clone())),
+    );
+    lines.extend(
+        tx.version
+            .map(|version| Line::said("version", version.to_string())),
+    );
+    lines.push(Line::code("blockhash", tx.blockhash.clone()));
+    lines.push(Line::said(
+        "accounts",
+        tr_n!(
+            tx.accounts.len(),
+            "{count} item",
+            "{count} items",
+            count = tx.accounts.len()
+        ),
+    ));
+    for instruction in tx.instructions.iter().take(LOGS_SHOWN) {
+        let program = instruction
+            .program_name()
+            .map(str::to_owned)
+            .unwrap_or_else(|| instruction.program.clone());
+        lines.push(Line::code(
+            "instruction",
+            tr!(
+                "{program}, {count} bytes",
+                program = program,
+                count = instruction.data.len()
+            ),
+        ));
+    }
+    lines
+}
+
+/// What a Solana call came back with, where its shape is known. Most of its
+/// answers put what was asked for under `value`, beside the slot it was true
+/// at.
+fn solana_result(method: &str, fields: &serde_json::Map<String, serde_json::Value>) -> Vec<Line> {
+    let value = fields.get("value");
+    let mut lines = Vec::new();
+    match method {
+        "getBalance" => {
+            lines.extend(
+                value
+                    .and_then(|value| value.as_u64())
+                    .map(|lamports| Line::said("value", solana::sol(lamports))),
+            );
+        }
+        "getAccountInfo" => {
+            let said = |name: &str| value.and_then(|value| value.get(name));
+            lines.extend(
+                said("lamports")
+                    .and_then(|one| one.as_u64())
+                    .map(|lamports| Line::said("lamports", solana::sol(lamports))),
+            );
+            if let Some(owner) = said("owner").and_then(|one| one.as_str()) {
+                lines.push(Line::code("owner", owner.to_owned()));
+                lines.extend(solana_program(Some(owner)));
+            }
+            lines.extend(
+                said("executable")
+                    .and_then(|one| one.as_bool())
+                    .map(|yes| Line::said("executable", yes.to_string())),
+            );
+        }
+        "getLatestBlockhash" => {
+            lines.extend(
+                value
+                    .and_then(|value| value.get("blockhash"))
+                    .and_then(|one| one.as_str())
+                    .map(|hash| Line::code("blockhash", hash.to_owned())),
+            );
+        }
+        "getTransaction" => {
+            lines.extend(
+                fields
+                    .get("meta")
+                    .and_then(|meta| meta.get("fee"))
+                    .and_then(|fee| fee.as_u64())
+                    .map(|fee| Line::said("fee", solana::sol(fee))),
+            );
+            lines.push(match fields.get("meta").and_then(|meta| meta.get("err")) {
+                Some(serde_json::Value::Null) | None => Line::said("err", tr!("succeeded")),
+                Some(err) => Line::code("err", err.to_string()),
+            });
+        }
+        _ => {}
+    }
+    lines
 }
 
 /// A receipt: whether it went through at all, what it cost, and what it
@@ -1616,6 +1793,81 @@ mod tests {
                 ("toBlock", "26,393,566"),
                 ("topic 0", "Transfer(address,address,uint256)"),
             ]
+        );
+    }
+
+    macro_rules! solana {
+        ($name:literal) => {
+            include_bytes!(concat!("../../store/testdata/solana/", $name))
+        };
+    }
+
+    /// Solana speaks the same JSON-RPC, and nothing of its own was read: an
+    /// address, a transaction and an amount all looked like any other string.
+    #[test]
+    fn a_solana_call_is_read_as_solana() {
+        let shown = of(solana!("balance.req.json"), solana!("balance.res.json"));
+        assert_eq!(shown.sections[0].title, "getBalance");
+        assert_eq!(
+            lines(&shown.sections[0]),
+            [("address", "So11111111111111111111111111111111111111112")]
+        );
+        // Lamports, which are what SOL is counted in.
+        assert_eq!(lines(&shown.sections[1]), [("value", "1867.492609312 SOL")]);
+    }
+
+    #[test]
+    fn an_account_says_what_it_holds_and_what_owns_it() {
+        let shown = of(
+            solana!("account_info.req.json"),
+            solana!("account_info.res.json"),
+        );
+        let asked = lines(&shown.sections[0]);
+        assert!(asked.contains(&("encoding", "base64")), "{asked:?}");
+        let answer = lines(&shown.sections[1]);
+        assert!(
+            answer.contains(&("program", "Token")),
+            "the program that owns it, by name: {answer:?}"
+        );
+        assert!(
+            answer
+                .iter()
+                .any(|(label, value)| *label == "lamports" && value.ends_with(" SOL")),
+            "{answer:?}"
+        );
+    }
+
+    /// What `sendTransaction` carries is one base64 string of a few hundred
+    /// bytes. This one is real.
+    #[test]
+    fn a_transaction_sent_to_solana_is_laid_out() {
+        let shown = of(solana!("send_transaction.req.json"), b"");
+        let asked = lines(&shown.sections[0]);
+        assert_eq!(shown.sections[0].title, "sendTransaction");
+        assert!(
+            asked.iter().any(|(label, _)| *label == "signature"),
+            "{asked:?}"
+        );
+        assert!(asked.contains(&("version", "0")), "{asked:?}");
+        assert!(asked.contains(&("accounts", "6 items")), "{asked:?}");
+        assert!(
+            asked.iter().any(
+                |(label, value)| *label == "instruction" && value.starts_with("Compute Budget")
+            ),
+            "the programs it calls, by name: {asked:?}"
+        );
+    }
+
+    #[test]
+    fn a_transaction_solana_writes_in_a_way_this_does_not_read_is_left_alone() {
+        let shown = of(solana!("send_transaction_v1.req.json"), b"");
+        let asked = lines(&shown.sections[0]);
+        assert!(
+            asked
+                .iter()
+                .any(|(label, value)| *label == "transaction"
+                    && value.contains("do not read as one")),
+            "said plainly, not guessed at: {asked:?}"
         );
     }
 

@@ -19,6 +19,7 @@ pub mod search;
 pub mod secrets;
 pub mod session;
 pub mod settings;
+pub mod solana;
 pub mod spool;
 pub mod store;
 pub mod web3;

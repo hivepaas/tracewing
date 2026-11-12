@@ -1027,6 +1027,18 @@ t0039810a =
 # and {count} more
 tbdb1ff6a = и ещё { $count }
 
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c =
+    { $n ->
+        [one] { $count } байт, который не читается как транзакция
+        [few] { $count } байта, которые не читаются как транзакция
+        [many] { $count } байт, которые не читаются как транзакция
+       *[other] { $count } байт, которые не читаются как транзакция
+    }
+
+# {program}, {count} bytes
+t1ce6ad3b = { $program }, { $count } байт
+
 # succeeded
 t6b166ff2 = успешно
 
@@ -1043,15 +1055,6 @@ t36ffce30 =
         [few] { $count } байта, которые подпись не объясняет, как читать
         [many] { $count } байт, которые подпись не объясняет, как читать
        *[other] { $count } байт, которые подпись не объясняет, как читать
-    }
-
-# {count} byte that does not read as one | {count} bytes that do not read as one
-ta7ee514c =
-    { $n ->
-        [one] { $count } байт, который не читается как транзакция
-        [few] { $count } байта, которые не читаются как транзакция
-        [many] { $count } байт, которые не читаются как транзакция
-       *[other] { $count } байт, которые не читаются как транзакция
     }
 
 # {count} place | {count} places
