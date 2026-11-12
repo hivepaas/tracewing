@@ -159,7 +159,7 @@ keyboard.
 | An MCP server: AI tools can list and search flows, read one whole, and compare two (only what differs; a JSON body by the paths of its fields; the call before when no second is named) | 1.0 | Free |
 | The MCP server can also list, add and remove rules (each marked "AI: "), and send requests through tracewing, a recorded one again or changed; only once Settings allow AI tools to act, off by default. The window takes in a rule added this way at once | Beta | Pro |
 | A view for LLM API traffic: streamed tokens and tool calls put together | 1.0 | Free |
-| A command line: capture without a window, export | 1.x | Pro |
+| A command line: `tracewing capture` records with no window (a port, a time limit, rules, relay and client certificates as the window has them, the CA's key in a file for a server or CI with `--ca-key-in-file`), then writes a HAR, filtered as the search box filters; `tracewing export` writes any session as HAR; `tracewing sessions` lists them | Beta | Pro |
 
 ## The app
 
