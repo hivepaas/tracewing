@@ -2329,6 +2329,63 @@ td8d653d6 =
        *[other] { $n } 行
     }
 
+# As an address
+t9c53ba7c = アドレスとして
+
+# this machine
+t8bdabc70 = このマシン
+
+# a private network
+tbe1021ed = プライベートネットワーク
+
+# link-local
+tadacc537 = リンクローカル
+
+# multicast
+t1010cf81 = マルチキャスト
+
+# a carrier's network
+t9740f2e4 = キャリアのネットワーク
+
+# Short
+t5fdddd75 = 短縮形
+
+# In full
+t8d20daf3 = 完全形
+
+# The IPv4 in it
+tc1fb8957 = 中のIPv4
+
+# What it is
+t065b8fa0 = これは何か
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = アドレスの範囲
+
+# From
+t18743595 = 開始
+
+# To
+t41f59644 = 終了
+
+# How many
+tc31ec050 = いくつ
+
+# As a port
+t9fea9931 = ポートとして
+
+# to many, not to one
+t660024a1 = 1対1ではなく1対多
+
+# given by hand, not by the maker
+tc16b0e31 = メーカーではなく手動で設定
+
+# A MAC address
+t6d968a53 = MACアドレス
+
 # In hex and binary
 tc31ef85f = 16進数と2進数で
 
@@ -2382,6 +2439,21 @@ te55df34c = HTTP-date
 
 # Seconds
 t7e12f48a = 秒
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET ticks
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = 2001年からの秒 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = 1904年からの秒 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = 1899年からの日数 (表計算)
 
 # Trace context
 ta58c7c95 = トレースコンテキスト

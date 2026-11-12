@@ -176,6 +176,103 @@ pub fn duration(input: &Input) -> Option<Reading> {
     ))
 }
 
+/// Whether the field says this value is a time, which is what lets the
+/// epochs below be offered at all where they could be read as something else.
+fn says_time(input: &Input) -> bool {
+    input.field_says(SAYS_TIME) || input.field_ends(ENDS_TIME)
+}
+
+/// Windows counts 100-nanosecond ticks from 1601. Nothing else is this large,
+/// so it needs no help from the field's name.
+pub fn filetime(input: &Input) -> Option<Reading> {
+    let n = whole(input.text)?;
+    // 1990 to 2100, in ticks.
+    if !(122_768_784_000_000_000..157_472_784_000_000_000).contains(&n) {
+        return None;
+    }
+    let at = (n / 10_000_000 - 11_644_473_600) as i64;
+    Some(Reading::new(
+        "filetime",
+        tr!("Windows FILETIME"),
+        Confidence::Likely,
+        moment(at, input),
+    ))
+}
+
+/// .NET counts the same ticks from the year 1, which makes them larger still.
+pub fn dotnet_ticks(input: &Input) -> Option<Reading> {
+    let n = whole(input.text)?;
+    // 1990 to 2100, in ticks.
+    if !(627_667_488_000_000_000..662_371_488_000_000_000).contains(&n) {
+        return None;
+    }
+    let at = (n / 10_000_000 - 62_135_596_800) as i64;
+    Some(Reading::new(
+        "dotnet-ticks",
+        tr!(".NET ticks"),
+        Confidence::Likely,
+        moment(at, input),
+    ))
+}
+
+/// Apple counts seconds from 2001. A number that size is a Unix time just as
+/// readily, so this is only offered where the field says it is a time at all.
+pub fn cocoa(input: &Input) -> Option<Reading> {
+    let n = whole(input.text)?;
+    if !says_time(input) || !(0..3_124_137_600).contains(&n) {
+        return None;
+    }
+    Some(Reading::new(
+        "cocoa",
+        tr!("Seconds since 2001 (Apple)"),
+        Confidence::Possible,
+        moment(n as i64 + 978_307_200, input),
+    ))
+}
+
+/// HFS+ counts seconds from 1904. Past where a Unix time can reach it needs
+/// no help; inside that window it asks the field.
+pub fn hfs(input: &Input) -> Option<Reading> {
+    let n = whole(input.text)?;
+    // 1990 to 2100, in seconds from 1904.
+    if !(2_713_996_800..6_185_289_600).contains(&n) {
+        return None;
+    }
+    if n < CEILING && !says_time(input) {
+        return None;
+    }
+    Some(Reading::new(
+        "hfs",
+        tr!("Seconds since 1904 (HFS+)"),
+        Confidence::Possible,
+        moment((n - 2_082_844_800) as i64, input),
+    ))
+}
+
+/// A spreadsheet counts days from the last day of 1899, and often with a
+/// fraction for the time of day. A whole number that small is anything at
+/// all, so it asks the field unless it has that fraction.
+pub fn excel_date(input: &Input) -> Option<Reading> {
+    let text = input.text.trim_matches('"');
+    let days: f64 = text.parse().ok()?;
+    // 1990 to 2100.
+    if !(32_874.0..73_051.0).contains(&days) {
+        return None;
+    }
+    let fraction = days.fract() != 0.;
+    if !fraction && !says_time(input) {
+        return None;
+    }
+    // From 1899-12-30, which is what the format counts from.
+    let at = ((days - 25_569.0) * 86_400.0) as i64;
+    Some(Reading::new(
+        "excel-date",
+        tr!("Days since 1899 (spreadsheet)"),
+        Confidence::Possible,
+        moment(at, input),
+    ))
+}
+
 /// `45s`, `2h 30m`, `3d 4h`: the two largest units that say anything.
 pub fn span(seconds: u64) -> String {
     const UNITS: [(u64, &str); 4] = [(86_400, "d"), (3_600, "h"), (60, "m"), (1, "s")];
@@ -279,6 +376,28 @@ mod tests {
         assert_eq!(relative(1_000 + 3 * 86_400, 1_000), "in 3 d");
         assert_eq!(relative(1_000, 1_000), "in 0 s");
         assert_eq!(relative(1_000 + 800 * 86_400, 1_000), "in 2 y");
+    }
+
+    #[test]
+    fn the_other_epochs_are_read_where_they_cannot_be_mistaken() {
+        // Large enough to be nothing else.
+        assert!(line(&read("133756428000000000"), "filetime").starts_with("2024-11-"));
+        assert!(line(&read("638669100000000000"), "dotnet-ticks").starts_with("2024-11-"));
+        // These could be a Unix time, so they wait to be asked.
+        assert!(by_id(&read("750000000"), "cocoa").is_none());
+        assert!(line(&read_under("created_at", "750000000"), "cocoa").starts_with("2024-10-"));
+        assert!(by_id(&read("3500000000"), "hfs").is_none());
+        assert!(line(&read_under("modified_at", "3500000000"), "hfs").starts_with("2014-"));
+        // Past where a Unix time reaches, it needs no asking.
+        assert!(
+            by_id(&read("4000000000"), "hfs").is_none(),
+            "still a Unix time"
+        );
+        assert!(line(&read("4200000000"), "hfs").starts_with("2037-"));
+        // A fraction says a spreadsheet wrote it; a whole number asks.
+        assert!(by_id(&read("45678"), "excel-date").is_none());
+        assert!(line(&read("45678.5"), "excel-date").starts_with("2025-01-"));
+        assert!(line(&read_under("date", "45678"), "excel-date").starts_with("2025-01-"));
     }
 
     #[test]

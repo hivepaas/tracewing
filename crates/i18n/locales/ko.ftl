@@ -2329,6 +2329,63 @@ td8d653d6 =
        *[other] { $n }행
     }
 
+# As an address
+t9c53ba7c = 주소로
+
+# this machine
+t8bdabc70 = 이 컴퓨터
+
+# a private network
+tbe1021ed = 사설 네트워크
+
+# link-local
+tadacc537 = 링크 로컬
+
+# multicast
+t1010cf81 = 멀티캐스트
+
+# a carrier's network
+t9740f2e4 = 통신사 네트워크
+
+# Short
+t5fdddd75 = 짧게
+
+# In full
+t8d20daf3 = 전체
+
+# The IPv4 in it
+tc1fb8957 = 안에 있는 IPv4
+
+# What it is
+t065b8fa0 = 무엇인지
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = 주소 범위
+
+# From
+t18743595 = 시작
+
+# To
+t41f59644 = 끝
+
+# How many
+tc31ec050 = 개수
+
+# As a port
+t9fea9931 = 포트로
+
+# to many, not to one
+t660024a1 = 하나가 아니라 여럿에게
+
+# given by hand, not by the maker
+tc16b0e31 = 제조사가 아니라 직접 지정
+
+# A MAC address
+t6d968a53 = MAC 주소
+
 # In hex and binary
 tc31ef85f = 16진수와 2진수로
 
@@ -2382,6 +2439,21 @@ te55df34c = HTTP-date
 
 # Seconds
 t7e12f48a = 초
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET 틱
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = 2001년부터의 초 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = 1904년부터의 초 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = 1899년부터의 일수 (스프레드시트)
 
 # Trace context
 ta58c7c95 = 트레이스 컨텍스트

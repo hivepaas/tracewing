@@ -2417,6 +2417,63 @@ td8d653d6 =
        *[other] { $n } satır
     }
 
+# As an address
+t9c53ba7c = Adres olarak
+
+# this machine
+t8bdabc70 = bu makine
+
+# a private network
+tbe1021ed = özel bir ağ
+
+# link-local
+tadacc537 = bağlantı yerel
+
+# multicast
+t1010cf81 = çoklu gönderim
+
+# a carrier's network
+t9740f2e4 = operatör ağı
+
+# Short
+t5fdddd75 = Kısa
+
+# In full
+t8d20daf3 = Tam hâli
+
+# The IPv4 in it
+tc1fb8957 = İçindeki IPv4
+
+# What it is
+t065b8fa0 = Bu nedir
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Bir adres aralığı
+
+# From
+t18743595 = Başlangıç
+
+# To
+t41f59644 = Bitiş
+
+# How many
+tc31ec050 = Kaç tane
+
+# As a port
+t9fea9931 = Port olarak
+
+# to many, not to one
+t660024a1 = bire değil, çoğa
+
+# given by hand, not by the maker
+tc16b0e31 = üretici değil, elle verilmiş
+
+# A MAC address
+t6d968a53 = Bir MAC adresi
+
 # In hex and binary
 tc31ef85f = Hex ve ikilik olarak
 
@@ -2470,6 +2527,21 @@ te55df34c = HTTP-date
 
 # Seconds
 t7e12f48a = Saniye
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET ticks
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = 2001'den beri saniye (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = 1904'ten beri saniye (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = 1899'dan beri gün (hesap tablosu)
 
 # Trace context
 ta58c7c95 = İzleme bağlamı

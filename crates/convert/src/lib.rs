@@ -18,6 +18,7 @@ mod encodings;
 mod ids;
 mod json;
 pub mod jwt;
+mod net;
 mod numbers;
 mod packed;
 mod times;
@@ -247,6 +248,8 @@ const CONVERTERS: &[Converter] = &[
     times::unix,
     times::iso,
     times::http_date,
+    times::filetime,
+    times::dotnet_ticks,
     ids::uuid,
     ids::ulid,
     ids::object_id,
@@ -263,6 +266,9 @@ const CONVERTERS: &[Converter] = &[
     web::status,
     web::cookie,
     web::data_uri,
+    net::ipv6,
+    net::cidr,
+    net::mac,
     json::in_string,
     json::whole,
     packed::gzip,
@@ -275,10 +281,15 @@ const CONVERTERS: &[Converter] = &[
     encodings::percent,
     encodings::unicode_escapes,
     encodings::entities,
+    net::ip_number,
+    net::port,
     numbers::size,
     numbers::radix,
     numbers::flags,
     times::duration,
+    times::hfs,
+    times::cocoa,
+    times::excel_date,
 ];
 
 /// Every reading of `input`, best first, within [`BUDGET`].

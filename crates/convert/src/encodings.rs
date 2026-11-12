@@ -60,6 +60,51 @@ pub fn named_format(bytes: &[u8]) -> Option<&'static str> {
         .map(|(_, name)| *name)
 }
 
+/// How large the picture these bytes hold is, where that can be read from
+/// its first bytes: a reader looking at `PNG` learns more from `PNG 128×128`.
+pub fn picture_size(bytes: &[u8]) -> Option<(u32, u32)> {
+    let be32 = |at: usize| -> Option<u32> {
+        Some(u32::from_be_bytes(bytes.get(at..at + 4)?.try_into().ok()?))
+    };
+    let be16 = |at: usize| -> Option<u32> {
+        Some(u32::from(u16::from_be_bytes(
+            bytes.get(at..at + 2)?.try_into().ok()?,
+        )))
+    };
+    if bytes.starts_with(b"\x89PNG") {
+        // The header chunk comes first, and holds both.
+        if bytes.get(12..16)? != b"IHDR" {
+            return None;
+        }
+        return Some((be32(16)?, be32(20)?));
+    }
+    if bytes.starts_with(b"GIF8") {
+        let le16 = |at: usize| -> Option<u32> {
+            Some(u32::from(u16::from_le_bytes(
+                bytes.get(at..at + 2)?.try_into().ok()?,
+            )))
+        };
+        return Some((le16(6)?, le16(8)?));
+    }
+    if bytes.starts_with(&[0xff, 0xd8]) {
+        // Walk the segments to the one that says how large the frame is.
+        let mut at = 2;
+        while at + 9 < bytes.len() {
+            if bytes[at] != 0xff {
+                return None;
+            }
+            let marker = bytes[at + 1];
+            let length = be16(at + 2)? as usize;
+            // The frame headers, less the four that are not.
+            if (0xc0..=0xcf).contains(&marker) && !matches!(marker, 0xc4 | 0xc8 | 0xcc) {
+                return Some((be16(at + 7)?, be16(at + 5)?));
+            }
+            at += 2 + length;
+        }
+    }
+    None
+}
+
 /// `0000  7b 22 61 22 3a 31 7d                              {"a":1}`
 pub fn hex_dump(bytes: &[u8]) -> String {
     bytes
@@ -87,7 +132,10 @@ pub fn hex_dump(bytes: &[u8]) -> String {
 fn decoded(id: &'static str, label: String, bytes: Vec<u8>, sure: bool) -> Option<Reading> {
     let kind = interesting(&bytes)?;
     let said = match (&kind, named_format(&bytes)) {
-        (_, Some(name)) => format!("{label}: {name}"),
+        (_, Some(name)) => match picture_size(&bytes) {
+            Some((wide, high)) => format!("{label}: {name} {wide}×{high}"),
+            None => format!("{label}: {name}"),
+        },
         (Kind::Json, _) => format!("{label}: JSON"),
         (Kind::Xml, _) => format!("{label}: XML"),
         _ => label,
@@ -329,6 +377,37 @@ mod tests {
         let found = read(&png);
         let label = &by_id(&found, "base64").unwrap().label;
         assert!(label.ends_with("PNG"), "{label}");
+    }
+
+    #[test]
+    fn a_picture_says_how_large_it_is() {
+        // A PNG header chunk, saying 128 by 64.
+        let mut png = b"\x89PNG\r\n\x1a\n".to_vec();
+        png.extend_from_slice(&13u32.to_be_bytes());
+        png.extend_from_slice(b"IHDR");
+        png.extend_from_slice(&128u32.to_be_bytes());
+        png.extend_from_slice(&64u32.to_be_bytes());
+        assert_eq!(picture_size(&png), Some((128, 64)));
+        let found = read(&STANDARD.encode(&png));
+        let label = &by_id(&found, "base64").unwrap().label;
+        assert!(label.ends_with("PNG 128×64"), "{label}");
+
+        // A GIF, which counts the other way round.
+        let mut gif = b"GIF89a".to_vec();
+        gif.extend_from_slice(&64u16.to_le_bytes());
+        gif.extend_from_slice(&32u16.to_le_bytes());
+        assert_eq!(picture_size(&gif), Some((64, 32)));
+
+        // A JPEG, where it is in a segment further in.
+        let mut jpeg = vec![0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00];
+        jpeg.extend_from_slice(&[0xff, 0xc0, 0x00, 0x11, 0x08]);
+        jpeg.extend_from_slice(&200u16.to_be_bytes());
+        jpeg.extend_from_slice(&300u16.to_be_bytes());
+        jpeg.extend_from_slice(&[0; 8]);
+        assert_eq!(picture_size(&jpeg), Some((300, 200)));
+
+        assert_eq!(picture_size(b"{\"a\":1}"), None);
+        assert_eq!(picture_size(b"\x89PNG"), None);
     }
 
     #[test]

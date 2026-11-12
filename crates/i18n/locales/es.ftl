@@ -2471,6 +2471,63 @@ td8d653d6 =
        *[other] { $n } filas
     }
 
+# As an address
+t9c53ba7c = Como dirección
+
+# this machine
+t8bdabc70 = esta máquina
+
+# a private network
+tbe1021ed = una red privada
+
+# link-local
+tadacc537 = enlace local
+
+# multicast
+t1010cf81 = multidifusión
+
+# a carrier's network
+t9740f2e4 = una red del operador
+
+# Short
+t5fdddd75 = Corta
+
+# In full
+t8d20daf3 = Completa
+
+# The IPv4 in it
+tc1fb8957 = La IPv4 que contiene
+
+# What it is
+t065b8fa0 = Qué es
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Un rango de direcciones
+
+# From
+t18743595 = Desde
+
+# To
+t41f59644 = Hasta
+
+# How many
+tc31ec050 = Cuántas
+
+# As a port
+t9fea9931 = Como puerto
+
+# to many, not to one
+t660024a1 = a muchos, no a uno
+
+# given by hand, not by the maker
+tc16b0e31 = asignada a mano, no por el fabricante
+
+# A MAC address
+t6d968a53 = Una dirección MAC
+
 # In hex and binary
 tc31ef85f = En hex y binario
 
@@ -2524,6 +2581,21 @@ te55df34c = HTTP-date
 
 # Seconds
 t7e12f48a = Segundos
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET ticks
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = Segundos desde 2001 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = Segundos desde 1904 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = Días desde 1899 (hoja de cálculo)
 
 # Trace context
 ta58c7c95 = Contexto de traza

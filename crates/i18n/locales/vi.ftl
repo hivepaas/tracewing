@@ -2329,6 +2329,63 @@ td8d653d6 =
        *[other] { $n } dòng
     }
 
+# As an address
+t9c53ba7c = Dạng địa chỉ
+
+# this machine
+t8bdabc70 = máy này
+
+# a private network
+tbe1021ed = mạng nội bộ
+
+# link-local
+tadacc537 = link-local
+
+# multicast
+t1010cf81 = multicast
+
+# a carrier's network
+t9740f2e4 = mạng của nhà mạng
+
+# Short
+t5fdddd75 = Ngắn
+
+# In full
+t8d20daf3 = Đầy đủ
+
+# The IPv4 in it
+tc1fb8957 = IPv4 bên trong
+
+# What it is
+t065b8fa0 = Nó là gì
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Một dải địa chỉ
+
+# From
+t18743595 = Từ
+
+# To
+t41f59644 = Đến
+
+# How many
+tc31ec050 = Bao nhiêu
+
+# As a port
+t9fea9931 = Dạng port
+
+# to many, not to one
+t660024a1 = tới nhiều máy, không phải một
+
+# given by hand, not by the maker
+tc16b0e31 = do người đặt, không phải do hãng
+
+# A MAC address
+t6d968a53 = Một địa chỉ MAC
+
 # In hex and binary
 tc31ef85f = Dạng hex và binary
 
@@ -2382,6 +2439,21 @@ te55df34c = HTTP-date
 
 # Seconds
 t7e12f48a = Giây
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET ticks
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = Giây từ 2001 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = Giây từ 1904 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = Ngày từ 1899 (bảng tính)
 
 # Trace context
 ta58c7c95 = Trace context
