@@ -11,8 +11,8 @@ use crate::{
     widgets::{Reachable, eyebrow},
 };
 use gpui::{
-    AnyElement, Context, FontWeight, SharedString, UniformListScrollHandle, div, prelude::*, px,
-    rgb, uniform_list,
+    AnyElement, Context, FontWeight, HighlightStyle, Hsla, SharedString, StyledText,
+    UniformListScrollHandle, div, prelude::*, px, rgb, uniform_list,
 };
 use std::{collections::HashSet, ops::Range, path::Path, sync::Arc};
 use tracewing_i18n::{tr, tr_n};
@@ -200,6 +200,25 @@ fn body_diff(session_dir: &Path, protos: &Library, a: &Detail, b: &Detail, side:
         }
         _ => BodyLoad::Not(tr!("A body was not kept, so the two cannot be compared.").into()),
     }
+}
+
+/// The last flow before `d` with the same method, host and path, its query
+/// aside: the call made before, to be compared with.
+pub fn previous_call(flows: &rusqlite::Connection, d: &Detail) -> Option<i64> {
+    let (_, path) = crate::detail::host_and_path(&d.url);
+    let path = path.split_once('?').map_or(path, |(path, _)| path);
+    // By the index on host, newest first; a path is itself or itself and a query.
+    flows
+        .query_row(
+            "SELECT id FROM flows
+             WHERE host = ?1 AND id < ?2 AND method = ?3
+               AND substr(path, 1, length(?4)) = ?4
+               AND (length(path) = length(?4) OR substr(path, length(?4) + 1, 1) = '?')
+             ORDER BY id DESC LIMIT 1",
+            rusqlite::params![d.host, d.id, d.method, path],
+            |r| r.get(0),
+        )
+        .ok()
 }
 
 impl Traffic {
@@ -473,13 +492,36 @@ impl Traffic {
         let BodyLoad::Ready(diff) = page.body(side) else {
             return Vec::new();
         };
-        let shown = |line: &str| -> SharedString {
-            match line.char_indices().nth(LINE_SHOWN) {
-                Some((cut, _)) => format!("{}…", &line[..cut]).into(),
-                None => line.to_owned().into(),
-            }
+        // What changed in a line, on its own ground, darker than the line's.
+        let marked = |color: u32| HighlightStyle {
+            background_color: Some({
+                let mut color = Hsla::from(rgb(color));
+                color.a = 0.28;
+                color
+            }),
+            ..Default::default()
         };
-        let half = |number: Option<usize>, text: Option<&String>, ground: Option<u32>| {
+        let shown = |line: &str, spans: &[Range<usize>], color: u32| -> StyledText {
+            let cut = line
+                .char_indices()
+                .nth(LINE_SHOWN)
+                .map_or(line.len(), |(cut, _)| cut);
+            let mut text = line[..cut].to_owned();
+            if cut < line.len() {
+                text.push('…');
+            }
+            let highlights: Vec<(Range<usize>, HighlightStyle)> = spans
+                .iter()
+                .filter(|span| span.start < cut)
+                .map(|span| (span.start..span.end.min(cut), marked(color)))
+                .collect();
+            StyledText::new(text).with_highlights(highlights)
+        };
+        let half = |number: Option<usize>,
+                    text: Option<&String>,
+                    ground: Option<u32>,
+                    spans: &[Range<usize>],
+                    strong: u32| {
             div()
                 .flex_1()
                 .min_w_0()
@@ -506,7 +548,7 @@ impl Traffic {
                         .min_w_0()
                         .overflow_hidden()
                         .whitespace_nowrap()
-                        .children(text.map(|t| shown(t))),
+                        .children(text.map(|t| shown(t, spans, strong))),
                 )
         };
         let rows = page.rows(side);
@@ -518,6 +560,12 @@ impl Traffic {
                         .then_some(c.error_ground);
                     let right = matches!(line.change, Change::Added | Change::Changed)
                         .then_some(c.ok_ground);
+                    let text_a = line.a.and_then(|n| diff.a.lines.get(n));
+                    let text_b = line.b.and_then(|n| diff.b.lines.get(n));
+                    let (spans_a, spans_b) = match (line.change, text_a, text_b) {
+                        (Change::Changed, Some(a), Some(b)) => compare::changed_spans(a, b),
+                        _ => Default::default(),
+                    };
                     div()
                         .id(("compare-line", i))
                         .h(px(LINE_H))
@@ -525,12 +573,8 @@ impl Traffic {
                         .flex()
                         .flex_row()
                         .gap(px(2.))
-                        .child(half(line.a, line.a.and_then(|n| diff.a.lines.get(n)), left))
-                        .child(half(
-                            line.b,
-                            line.b.and_then(|n| diff.b.lines.get(n)),
-                            right,
-                        ))
+                        .child(half(line.a, text_a, left, &spans_a, c.error))
+                        .child(half(line.b, text_b, right, &spans_b, c.ok))
                         .into_any_element()
                 }
                 Row::Folded { at, count } => div()
