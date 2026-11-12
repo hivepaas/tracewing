@@ -200,7 +200,12 @@ impl Network {
     }
 
     /// When a slice of `bytes` going `direction` is through.
-    fn send(&self, direction: Direction, bytes: usize, conditions: &Conditions) -> Instant {
+    pub(crate) fn send(
+        &self,
+        direction: Direction,
+        bytes: usize,
+        conditions: &Conditions,
+    ) -> Instant {
         let (link, kbps) = match direction {
             Direction::Down => (&self.down, conditions.down_kbps),
             Direction::Up => (&self.up, conditions.up_kbps),

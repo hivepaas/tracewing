@@ -2824,6 +2824,95 @@ async fn a_websocket_is_sent_elsewhere_by_a_rule() {
     clean_up(conn, dir);
 }
 
+/// A slow network slows a WebSocket as it does other flows: its upgrade a
+/// round trip, each message half of one each way, and its bytes by the
+/// link. Messages sent together arrive together, a round trip later, not one
+/// after another.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_slow_network_slows_a_websocket() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::tungstenite::Message,
+    };
+    use std::time::Instant;
+    const LATENCY: Duration = Duration::from_millis(600);
+    let h = Harness::start("ws-slow").await;
+    h.network.set(Conditions {
+        on: true,
+        name: "Test".to_owned(),
+        latency_ms: LATENCY.as_millis() as u32,
+        ..Conditions::default()
+    });
+    let opening = Instant::now();
+    let (mut ws, _) = playground_ws(&h, false, "/ws?ticks=0", &[]).await.unwrap();
+    assert!(
+        opening.elapsed() >= LATENCY,
+        "the upgrade: {:?}",
+        opening.elapsed()
+    );
+    assert!(ws.next().await.unwrap().unwrap().is_text(), "the hello");
+
+    let one = Instant::now();
+    ws.send(Message::text("one")).await.unwrap();
+    assert_eq!(ws.next().await.unwrap().unwrap(), Message::text("one"));
+    assert!(
+        one.elapsed() >= LATENCY,
+        "a message there and back: {:?}",
+        one.elapsed()
+    );
+
+    let five = Instant::now();
+    for n in 0..5 {
+        ws.send(Message::text(format!("m{n}"))).await.unwrap();
+    }
+    for n in 0..5 {
+        assert_eq!(
+            ws.next().await.unwrap().unwrap(),
+            Message::text(format!("m{n}"))
+        );
+    }
+    let took = five.elapsed();
+    assert!(
+        took >= LATENCY && took < LATENCY * 2,
+        "five together: {took:?}"
+    );
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+
+    // The link's bandwidth: 50 kB at 400 kbit/s is a second.
+    h.network.set(Conditions {
+        on: true,
+        name: "Test".to_owned(),
+        down_kbps: 400,
+        ..Conditions::default()
+    });
+    let (mut ws, _) = playground_ws(&h, false, "/ws?ticks=0&big=50000", &[])
+        .await
+        .unwrap();
+    assert!(ws.next().await.unwrap().unwrap().is_text());
+    let big = Instant::now();
+    assert_eq!(ws.next().await.unwrap().unwrap().len(), 50_000);
+    assert!(
+        big.elapsed() >= Duration::from_millis(800),
+        "50 kB: {:?}",
+        big.elapsed()
+    );
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+
+    let (_, conn, dir) = h.finish(2).await;
+    let rule: Option<String> = conn
+        .query_row("SELECT rule FROM flows ORDER BY id LIMIT 1", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert!(
+        rule.is_some_and(|r| r.contains("Test")),
+        "the row says it was slowed"
+    );
+    clean_up(conn, dir);
+}
+
 /// Dropping the oldest flows takes their messages along.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_full_session_drops_messages_with_their_flows() {
