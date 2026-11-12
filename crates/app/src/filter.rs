@@ -30,15 +30,22 @@ pub enum Kind {
 }
 
 impl Kind {
+    /// In the order the tabs show them: what went wrong first, for it is
+    /// looked for most and is no kind of content, then the kinds.
     pub const ALL: [Self; 7] = [
         Self::All,
+        Self::Errors,
         Self::Json,
         Self::GraphQl,
         Self::Rpc,
-        Self::Errors,
         Self::WebSocket,
         Self::Media,
     ];
+
+    /// Whether a line goes after its tab: between what happened and what it is.
+    pub fn ends_group(self) -> bool {
+        self == Self::Errors
+    }
 
     pub fn label(self) -> String {
         match self {
