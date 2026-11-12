@@ -96,7 +96,11 @@ pub const ROUTES: &[(&str, &str)] = &[
     ),
     ("/echo", "Any method: says what came, body and all"),
     ("/ws.html", "A page to talk to /ws"),
-    ("/ws", "WebSocket: echoes, and ticks each second (?ticks=N)"),
+    (
+        "/ws",
+        "WebSocket: says what came, echoes, ticks each second (?ticks=N), \
+         sends N bytes (?big=N), closes with a code (?close=4000), refuses (?refuse=403)",
+    ),
     (
         "/shop.Orders/Get",
         "gRPC (HTTP/2, POST): the order asked for; 42 is not found",
@@ -304,7 +308,25 @@ async fn route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallibl
             )
         }
         "/ws.html" => body("text/html; charset=utf-8", WS_PAGE),
-        "/ws" => websocket(req, number("ticks", 5).min(10_000)),
+        "/ws" => websocket(
+            req,
+            WsOptions {
+                ticks: number("ticks", 5).min(10_000),
+                big: query
+                    .iter()
+                    .find(|(k, _)| k == "big")
+                    .and_then(|(_, v)| v.parse().ok())
+                    .map(|n: usize| n.min(64 << 20)),
+                close: query
+                    .iter()
+                    .find(|(k, _)| k == "close")
+                    .and_then(|(_, v)| v.parse().ok()),
+                refuse: query
+                    .iter()
+                    .find(|(k, _)| k == "refuse")
+                    .and_then(|(_, v)| v.parse().ok()),
+            },
+        ),
         "/shop.Orders/Get" => grpc_get(req).await,
         _ => match path.strip_prefix("/status/").map(str::parse::<u16>) {
             Some(Ok(code)) if (200..=599).contains(&code) => {
@@ -692,9 +714,25 @@ async fn echo(req: Request<Incoming>) -> Response<OriginBody> {
     body("application/json", out)
 }
 
-/// A WebSocket that says hello, ticks `ticks` times a second apart, and sends
-/// back whatever it gets.
-fn websocket(mut req: Request<Incoming>, ticks: u64) -> Response<OriginBody> {
+/// What `/ws` is asked to do beside echoing.
+struct WsOptions {
+    /// Ticks, a second apart.
+    ticks: u64,
+    /// A binary message of this many bytes, after the hello.
+    big: Option<usize>,
+    /// Closing, with this code, after the hello.
+    close: Option<u16>,
+    /// No upgrade: this status instead.
+    refuse: Option<u16>,
+}
+
+/// A WebSocket that says hello with what came (some headers, and the
+/// subprotocol it took: the first offered), then does what `options` say,
+/// and sends back whatever it gets: a close with its code and reason too.
+fn websocket(mut req: Request<Incoming>, options: WsOptions) -> Response<OriginBody> {
+    use hudsucker::tokio_tungstenite::tungstenite::protocol::{
+        CloseFrame, frame::coding::CloseCode,
+    };
     let upgrade = req
         .headers()
         .get(header::UPGRADE)
@@ -709,19 +747,64 @@ fn websocket(mut req: Request<Incoming>, ticks: u64) -> Response<OriginBody> {
             ),
         );
     };
+    if let Some(status) = options
+        .refuse
+        .and_then(|s| StatusCode::from_u16(s).ok())
+        .filter(|s| s.as_u16() >= 200)
+    {
+        return with_status(
+            status,
+            body("text/plain; charset=utf-8", "No WebSocket for you.\n"),
+        );
+    }
+    let header_of = |name: &str| {
+        req.headers()
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned)
+    };
+    let protocol = header_of("sec-websocket-protocol")
+        .and_then(|offered| offered.split(',').next().map(|p| p.trim().to_owned()))
+        .filter(|p| !p.is_empty());
+    let hello = serde_json_like(&[
+        ("hello", Some("tracewing playground".to_owned())),
+        ("origin", header_of("origin")),
+        ("cookie", header_of("cookie")),
+        ("x_test", header_of("x-test")),
+        ("protocol", protocol.clone()),
+        ("extensions", header_of("sec-websocket-extensions")),
+    ]);
     tokio::spawn(async move {
         let Ok(upgraded) = hyper::upgrade::on(&mut req).await else {
             return;
         };
         let ws = WebSocketStream::from_raw_socket(TokioIo::new(upgraded), Role::Server, None).await;
         let (mut sink, mut incoming) = ws.split();
-        if sink
-            .send(Message::text(r#"{"hello":"tracewing playground"}"#))
-            .await
-            .is_err()
-        {
+        if sink.send(Message::text(hello)).await.is_err() {
             return;
         }
+        if let Some(size) = options.big {
+            let data: Vec<u8> = (0..size).map(|i| (i % 251) as u8).collect();
+            if sink.send(Message::binary(data)).await.is_err() {
+                return;
+            }
+        }
+        if let Some(code) = options.close {
+            let _ = sink
+                .send(Message::Close(Some(CloseFrame {
+                    code: CloseCode::from(code),
+                    reason: "bye".into(),
+                })))
+                .await;
+            // What the client says back, then the end.
+            while let Some(Ok(message)) = incoming.next().await {
+                if message.is_close() {
+                    break;
+                }
+            }
+            return;
+        }
+        let ticks = options.ticks;
         let mut clock = tokio::time::interval(Duration::from_secs(1));
         clock.tick().await;
         let mut ticked = 0;
@@ -740,8 +823,8 @@ fn websocket(mut req: Request<Incoming>, ticks: u64) -> Response<OriginBody> {
                             break;
                         }
                     }
-                    Some(Ok(message)) if message.is_close() => {
-                        let _ = sink.send(Message::Close(None)).await;
+                    Some(Ok(Message::Close(frame))) => {
+                        let _ = sink.send(Message::Close(frame)).await;
                         break;
                     }
                     Some(Ok(_)) => {}
@@ -750,16 +833,29 @@ fn websocket(mut req: Request<Incoming>, ticks: u64) -> Response<OriginBody> {
             }
         }
     });
-    Response::builder()
+    let mut response = Response::builder()
         .status(StatusCode::SWITCHING_PROTOCOLS)
         .header(header::UPGRADE, "websocket")
         .header(header::CONNECTION, "Upgrade")
         .header(
             header::SEC_WEBSOCKET_ACCEPT,
             derive_accept_key(key.as_bytes()),
-        )
+        );
+    if let Some(protocol) = protocol {
+        response = response.header("sec-websocket-protocol", protocol);
+    }
+    response
         .body(Full::new(Bytes::new()).boxed())
         .expect("a valid answer")
+}
+
+/// A flat JSON object of text values, those that are there.
+fn serde_json_like(fields: &[(&str, Option<String>)]) -> String {
+    let inner: Vec<String> = fields
+        .iter()
+        .filter_map(|(k, v)| v.as_ref().map(|v| format!(r#""{k}":"{}""#, escape_json(v))))
+        .collect();
+    format!("{{{}}}", inner.join(","))
 }
 
 /// `shop.Orders/Get`: the order with the id asked for, or for 42, the
