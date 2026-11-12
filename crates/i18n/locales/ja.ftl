@@ -1843,8 +1843,8 @@ t84db6961 = セットアップが完了しました。デバイスを再起動�
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
 tbcad7fa7 = セットアップが完了しました。証明書は「ダウンロード」にあります。今開いた設定で「暗号化と認証情報」>「証明書のインストール」>「CA 証明書」を選び、tracewing.crt を選択してください。
 
-# Apps that trust only the system's certificates will still refuse it.
-t6fb5ba4b = システムの証明書だけを信頼するアプリは、引き続きこの証明書を拒否します。
+# Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead.
+tfd0c5617 = システム証明書だけを信頼するアプリは引き続き拒否します。adb で root 化できる端末（Google APIs イメージのエミュレーターなど）では、tracewing がシステム証明書に追加します。
 
 # An emulator.
 t14b6b86d = エミュレータです。

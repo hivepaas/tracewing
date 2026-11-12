@@ -142,7 +142,7 @@ keyboard.
 | Guides for iOS trust settings, Android user certificates (with the `network_security_config` snippet) and Flutter, each with how to undo it when done; a reminder of the devices that still have the proxy set | Beta | Free |
 | Let other devices in, or out again, without a restart: tracewing follows this computer's addresses as networks come and go | Beta | Free |
 | Android emulator over ADB: set the proxy and install the CA in one step | Beta | Free |
-| Android 14 and later on a rooted device or an emulator: install the CA as a system certificate | 1.x | Pro |
+| Android 14 and later on a device adb can root, as an emulator with a Google APIs image: the CA among the system's, where apps look (the Conscrypt APEX), for apps running and those started after, until the device restarts | Beta | Pro |
 | iOS Simulator: install the CA (macOS) | 1.x | Free |
 | Name devices and filter by device | Beta | Free |
 

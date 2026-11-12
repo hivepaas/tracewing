@@ -1979,8 +1979,8 @@ t84db6961 = Configuré. Le certificat fait partie de ceux du système jusqu'au r
 # Set up. The certificate is in Downloads: in the Settings just opened, choose Encryption & credentials, Install a certificate, CA certificate, and pick tracewing.crt.
 tbcad7fa7 = Configuré. Le certificat est dans Téléchargements : dans les Paramètres qui viennent de s'ouvrir, choisissez Chiffrement et identifiants, Installer un certificat, Certificat CA, et sélectionnez tracewing.crt.
 
-# Apps that trust only the system's certificates will still refuse it.
-t6fb5ba4b = Les apps qui ne font confiance qu'aux certificats du système le refuseront toujours.
+# Apps that trust only the system's certificates will still refuse it. On a device adb can root, as an emulator with a Google APIs image, tracewing puts it among the system's instead.
+tfd0c5617 = Les apps qui ne font confiance qu'aux certificats du système le refuseront encore. Sur un appareil que adb peut rooter, comme un émulateur avec une image Google APIs, tracewing le place parmi ceux du système.
 
 # An emulator.
 t14b6b86d = Un émulateur.
