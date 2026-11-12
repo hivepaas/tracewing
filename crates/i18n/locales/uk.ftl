@@ -40,6 +40,24 @@ t51332550 =
 # {size} · reading {percent}%
 t49fe2cb3 = { $size } · читання { $percent }%
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = { $call } не вдалося записати в тіло як calldata. Напишіть її в hex або дайте tracewing написати тіло.
+
+# That is not a call written out.
+tc159f8f5 = Це не виклик, записаний словами.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Виклик з іменем { $name } тут невідомий. Напишіть разом із ним типи, як transfer(address,uint256)(…), або додайте його ABI у розділі «ABI контрактів» у Налаштуваннях.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } — це більше ніж один виклик: { $found }. Напишіть разом із ним типи, як { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } — це не типи, якими можна записати виклик.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Значення не підходять до { $signature }: { $why }
+
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Вигляд: { $now }. Натисніть, щоб змінити на: { $next }.
 
@@ -231,24 +249,6 @@ tacdcf5cb = "{ $method }" не є методом
 
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = тіло запиту не збережено повністю, тому його не можна надіслати знову
-
-# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
-t1d03e346 = { $call } не вдалося записати в тіло як calldata. Напишіть її в hex або дайте tracewing написати тіло.
-
-# That is not a call written out.
-tc159f8f5 = Це не виклик, записаний словами.
-
-# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
-t61568d43 = Виклик з іменем { $name } тут невідомий. Напишіть разом із ним типи, як transfer(address,uint256)(…), або додайте його ABI у розділі «ABI контрактів» у Налаштуваннях.
-
-# {name} is more than one call: {found}. Write the types with it, as {first}(…).
-t48b75c8d = { $name } — це більше ніж один виклик: { $found }. Напишіть разом із ним типи, як { $first }(…).
-
-# {types} are not types a call can be written with.
-t544218b9 = { $types } — це не типи, якими можна записати виклик.
-
-# The values do not fit {signature}: {why}
-t14015b69 = Значення не підходять до { $signature }: { $why }
 
 # name: value, one a line
 t4df37bea = назва: значення, по одному в рядку

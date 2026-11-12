@@ -25,6 +25,24 @@ t51332550 =
 # {size} · reading {percent}%
 t49fe2cb3 = { $size } · đang đọc { $percent }%
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = Không đặt được { $call } vào body dưới dạng calldata. Hãy viết nó thành hex, hoặc để tracewing viết body.
+
+# That is not a call written out.
+tc159f8f5 = Đó không phải một lời gọi được viết ra.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Ở đây không biết lời gọi nào tên { $name }. Hãy viết kèm kiểu tham số, như transfer(address,uint256)(…), hoặc thêm ABI của nó ở ABI của contract trong Cài đặt.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } ứng với nhiều lời gọi: { $found }. Hãy viết kèm kiểu tham số, như { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } không phải kiểu mà một lời gọi có thể dùng.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Các giá trị không khớp { $signature }: { $why }
+
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Giao diện: { $now }. Bấm để chuyển sang { $next }.
 
@@ -192,24 +210,6 @@ tacdcf5cb = "{ $method }" không phải là một method
 
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = body của request không được giữ đầy đủ, nên không gửi lại được
-
-# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
-t1d03e346 = Không đặt được { $call } vào body dưới dạng calldata. Hãy viết nó thành hex, hoặc để tracewing viết body.
-
-# That is not a call written out.
-tc159f8f5 = Đó không phải một lời gọi được viết ra.
-
-# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
-t61568d43 = Ở đây không biết lời gọi nào tên { $name }. Hãy viết kèm kiểu tham số, như transfer(address,uint256)(…), hoặc thêm ABI của nó ở ABI của contract trong Cài đặt.
-
-# {name} is more than one call: {found}. Write the types with it, as {first}(…).
-t48b75c8d = { $name } ứng với nhiều lời gọi: { $found }. Hãy viết kèm kiểu tham số, như { $first }(…).
-
-# {types} are not types a call can be written with.
-t544218b9 = { $types } không phải kiểu mà một lời gọi có thể dùng.
-
-# The values do not fit {signature}: {why}
-t14015b69 = Các giá trị không khớp { $signature }: { $why }
 
 # name: value, one a line
 t4df37bea = tên: giá trị, mỗi dòng một header

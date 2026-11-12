@@ -25,6 +25,24 @@ t51332550 =
 # {size} · reading {percent}%
 t49fe2cb3 = { $size } · 正在讀取 { $percent }%
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = 無法把 { $call } 當成 calldata 寫入內容。請寫成十六進位，或讓 tracewing 寫內容。
+
+# That is not a call written out.
+tc159f8f5 = 那不是寫出來的呼叫。
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = 這裡不認識名為 { $name } 的呼叫。請連型別一起寫，如 transfer(address,uint256)(…)，或在設定的合約 ABI 中加入它的 ABI。
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } 對應多個呼叫：{ $found }。請連型別一起寫，如 { $first }(…)。
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } 不是可以用來寫呼叫的型別。
+
+# The values do not fit {signature}: {why}
+t14015b69 = 這些值與 { $signature } 不符：{ $why }
+
 # Appearance: {now}. Click for {next}.
 t332cfa6d = 外觀：{ $now }。按一下切換為 { $next }。
 
@@ -192,24 +210,6 @@ tacdcf5cb = 「{ $method }」不是有效的方法
 
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = 其請求本文未完整保留，因此無法重新傳送
-
-# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
-t1d03e346 = 無法把 { $call } 當成 calldata 寫入內容。請寫成十六進位，或讓 tracewing 寫內容。
-
-# That is not a call written out.
-tc159f8f5 = 那不是寫出來的呼叫。
-
-# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
-t61568d43 = 這裡不認識名為 { $name } 的呼叫。請連型別一起寫，如 transfer(address,uint256)(…)，或在設定的合約 ABI 中加入它的 ABI。
-
-# {name} is more than one call: {found}. Write the types with it, as {first}(…).
-t48b75c8d = { $name } 對應多個呼叫：{ $found }。請連型別一起寫，如 { $first }(…)。
-
-# {types} are not types a call can be written with.
-t544218b9 = { $types } 不是可以用來寫呼叫的型別。
-
-# The values do not fit {signature}: {why}
-t14015b69 = 這些值與 { $signature } 不符：{ $why }
 
 # name: value, one a line
 t4df37bea = 名稱: 值，每行一個

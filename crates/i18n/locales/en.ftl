@@ -20,6 +20,12 @@ t51332550 =
        *[other] { $size } · { $count } lines
     }
 t49fe2cb3 = { $size } · reading { $percent }%
+t1d03e346 = { $call } could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+tc159f8f5 = That is not a call written out.
+t61568d43 = No call named { $name } is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t48b75c8d = { $name } is more than one call: { $found }. Write the types with it, as { $first }(…).
+t544218b9 = { $types } are not types a call can be written with.
+t14015b69 = The values do not fit { $signature }: { $why }
 t332cfa6d = Appearance: { $now }. Click for { $next }.
 tdc6588ac = api.example.com, or *.example.com
 t73c66160 = Choose
@@ -92,12 +98,6 @@ te519d36e = Swap
 t644042d2 = Back to Traffic
 tacdcf5cb = "{ $method }" is not a method
 t1f9e5368 = its request body was not kept whole, so it cannot be sent again
-t1d03e346 = { $call } could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
-tc159f8f5 = That is not a call written out.
-t61568d43 = No call named { $name } is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
-t48b75c8d = { $name } is more than one call: { $found }. Write the types with it, as { $first }(…).
-t544218b9 = { $types } are not types a call can be written with.
-t14015b69 = The values do not fit { $signature }: { $why }
 t4df37bea = name: value, one a line
 t550b0a98 = No flow is chosen
 t296762f8 = This flow: { $e }

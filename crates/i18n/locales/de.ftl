@@ -34,6 +34,24 @@ t51332550 =
 # {size} · reading {percent}%
 t49fe2cb3 = { $size } · wird gelesen: { $percent }%
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = { $call } konnte nicht als Calldata in den Body geschrieben werden. Schreibe sie als Hex, oder lass tracewing den Body schreiben.
+
+# That is not a call written out.
+tc159f8f5 = Das ist kein ausgeschriebener Aufruf.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Hier ist kein Aufruf namens { $name } bekannt. Schreibe die Typen dazu, als transfer(address,uint256)(…), oder füge sein ABI unter Vertrags-ABIs in den Einstellungen hinzu.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } ist mehr als ein Aufruf: { $found }. Schreibe die Typen dazu, als { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } sind keine Typen, mit denen ein Aufruf geschrieben werden kann.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Die Werte passen nicht zu { $signature }: { $why }
+
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Darstellung: { $now }. Klicken für { $next }.
 
@@ -217,24 +235,6 @@ tacdcf5cb = „{ $method }“ ist keine Methode
 
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = der Body der Anfrage wurde nicht vollständig gespeichert, daher kann sie nicht erneut gesendet werden
-
-# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
-t1d03e346 = { $call } konnte nicht als Calldata in den Body geschrieben werden. Schreibe sie als Hex, oder lass tracewing den Body schreiben.
-
-# That is not a call written out.
-tc159f8f5 = Das ist kein ausgeschriebener Aufruf.
-
-# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
-t61568d43 = Hier ist kein Aufruf namens { $name } bekannt. Schreibe die Typen dazu, als transfer(address,uint256)(…), oder füge sein ABI unter Vertrags-ABIs in den Einstellungen hinzu.
-
-# {name} is more than one call: {found}. Write the types with it, as {first}(…).
-t48b75c8d = { $name } ist mehr als ein Aufruf: { $found }. Schreibe die Typen dazu, als { $first }(…).
-
-# {types} are not types a call can be written with.
-t544218b9 = { $types } sind keine Typen, mit denen ein Aufruf geschrieben werden kann.
-
-# The values do not fit {signature}: {why}
-t14015b69 = Die Werte passen nicht zu { $signature }: { $why }
 
 # name: value, one a line
 t4df37bea = Name: Wert, einer pro Zeile

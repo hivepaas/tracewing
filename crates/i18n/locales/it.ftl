@@ -36,6 +36,24 @@ t51332550 =
 # {size} · reading {percent}%
 t49fe2cb3 = { $size } · lettura { $percent }%
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = Non è stato possibile mettere { $call } nel corpo come calldata. Scrivila in esadecimale, o lascia che tracewing scriva il corpo.
+
+# That is not a call written out.
+tc159f8f5 = Quella non è una chiamata scritta per esteso.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Qui non è nota nessuna chiamata di nome { $name }. Scrivi anche i suoi tipi, come transfer(address,uint256)(…), oppure aggiungi il suo ABI in ABI dei contratti, nelle Impostazioni.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } è più di una chiamata: { $found }. Scrivi anche i tipi, come { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } non sono tipi con cui si possa scrivere una chiamata.
+
+# The values do not fit {signature}: {why}
+t14015b69 = I valori non corrispondono a { $signature }: { $why }
+
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Aspetto: { $now }. Fai clic per passare a { $next }.
 
@@ -223,24 +241,6 @@ tacdcf5cb = "{ $method }" non è un metodo
 
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = il body della sua richiesta non è stato conservato per intero, quindi non può essere reinviata
-
-# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
-t1d03e346 = Non è stato possibile mettere { $call } nel corpo come calldata. Scrivila in esadecimale, o lascia che tracewing scriva il corpo.
-
-# That is not a call written out.
-tc159f8f5 = Quella non è una chiamata scritta per esteso.
-
-# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
-t61568d43 = Qui non è nota nessuna chiamata di nome { $name }. Scrivi anche i suoi tipi, come transfer(address,uint256)(…), oppure aggiungi il suo ABI in ABI dei contratti, nelle Impostazioni.
-
-# {name} is more than one call: {found}. Write the types with it, as {first}(…).
-t48b75c8d = { $name } è più di una chiamata: { $found }. Scrivi anche i tipi, come { $first }(…).
-
-# {types} are not types a call can be written with.
-t544218b9 = { $types } non sono tipi con cui si possa scrivere una chiamata.
-
-# The values do not fit {signature}: {why}
-t14015b69 = I valori non corrispondono a { $signature }: { $why }
 
 # name: value, one a line
 t4df37bea = nome: valore, uno per riga
