@@ -13,6 +13,7 @@ is nothing in here to keep secret.
 | `call_balanceof` | `eth_call` of ERC-20 `balanceOf`: selector `0x70a08231`, result 39.192124 USDC |
 | `send_raw` | A real signed EIP-1559 transaction, 884 bytes of hex to decode |
 | `tx.res.json` | The same transaction as the node sees it, to check a decoder against |
+| `send_transaction` | The same transaction as `send_raw`, written as a dev node is asked to sign one (`eth_sendTransaction`): every field is the real one, taken from `tx.res.json`, and only the envelope is written. Its answer is the hash the chain knows it by |
 | `send_raw_legacy` / `tx_legacy.res.json` | The same pair for a transaction of the kind from before EIP-2718, whose `v` carries the chain (EIP-155) |
 | `revert` | A reverted `eth_call`: **HTTP 200**, code `3`, `Error(string)` data |
 | `error_no_method` | The plain JSON-RPC `-32601` |
