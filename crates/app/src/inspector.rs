@@ -105,6 +105,9 @@ pub struct InspectorState {
     pub body_mode: BodyMode,
     /// CSV and TSV shown as text rather than as a table, as last chosen.
     pub tables_as_text: bool,
+    /// The last call before the chosen flow to the same method, host and
+    /// path, which it can be compared with in a click.
+    pub previous_call: Option<i64>,
 }
 
 impl InspectorState {
@@ -133,6 +136,8 @@ impl Traffic {
         };
         match Detail::load(flows.conn(), self.session_dir(), id) {
             Ok(detail) => {
+                self.inspector.previous_call =
+                    crate::compare_page::previous_call(flows.conn(), &detail);
                 let stream = matches!(detail.kind.as_str(), "websocket" | "sse" | "ndjson");
                 self.inspector.messages = stream.then(|| MessagesState::new(id));
                 let no_cookies = cookie_counts(&detail) == (0, 0);
@@ -991,7 +996,14 @@ impl Traffic {
                                     },
                                 )
                                 .on_click(cx.listener(|view, _, _, cx| view.start_compare(cx))),
-                            ),
+                            )
+                            .children(self.inspector.previous_call.map(|previous| {
+                                let id = detail.id;
+                                small("compare-previous", tr!("Compare with the call before"))
+                                    .on_click(cx.listener(move |view, _, _, cx| {
+                                        view.compare(previous, id, cx)
+                                    }))
+                            })),
                     )
                 },
             )

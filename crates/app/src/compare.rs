@@ -5,6 +5,7 @@
 use similar::{Algorithm, DiffOp};
 use std::{
     collections::HashSet,
+    ops::Range,
     time::{Duration, Instant},
 };
 use tracewing_store::{binjson, prost_reflect::MessageDescriptor};
@@ -296,6 +297,72 @@ pub fn diff_lines(a: &[String], b: &[String]) -> Vec<Line> {
     out
 }
 
+/// What changed between two lines, a word at a time: where in each the
+/// words differ, as byte ranges. Nothing if they share no word, as the
+/// whole line then says it.
+pub fn changed_spans(a: &str, b: &str) -> (Vec<Range<usize>>, Vec<Range<usize>>) {
+    let (wa, wb) = (words(a), words(b));
+    let ta: Vec<&str> = wa.iter().map(|r| &a[r.clone()]).collect();
+    let tb: Vec<&str> = wb.iter().map(|r| &b[r.clone()]).collect();
+    let deadline = Instant::now() + Duration::from_millis(20);
+    let ops = similar::capture_diff_slices_deadline(Algorithm::Myers, &ta, &tb, Some(deadline));
+    if !ops.iter().any(|op| matches!(op, DiffOp::Equal { .. })) {
+        return (Vec::new(), Vec::new());
+    }
+    let span = |of: &[Range<usize>], from: usize, len: usize| -> Option<Range<usize>> {
+        (len > 0).then(|| of[from].start..of[from + len - 1].end)
+    };
+    let (mut out_a, mut out_b) = (Vec::new(), Vec::new());
+    for op in ops {
+        let (old, new) = match op {
+            DiffOp::Equal { .. } => continue,
+            DiffOp::Delete {
+                old_index, old_len, ..
+            } => (span(&wa, old_index, old_len), None),
+            DiffOp::Insert {
+                new_index, new_len, ..
+            } => (None, span(&wb, new_index, new_len)),
+            DiffOp::Replace {
+                old_index,
+                old_len,
+                new_index,
+                new_len,
+            } => (span(&wa, old_index, old_len), span(&wb, new_index, new_len)),
+        };
+        out_a.extend(old);
+        out_b.extend(new);
+    }
+    (merged(out_a), merged(out_b))
+}
+
+/// A line's words: runs of letters, digits and `_`, and each other
+/// character alone, as byte ranges.
+fn words(line: &str) -> Vec<Range<usize>> {
+    let mut out: Vec<Range<usize>> = Vec::new();
+    let mut in_word = false;
+    for (at, c) in line.char_indices() {
+        let word = c.is_alphanumeric() || c == '_';
+        match out.last_mut() {
+            Some(last) if word && in_word => last.end = at + c.len_utf8(),
+            _ => out.push(at..at + c.len_utf8()),
+        }
+        in_word = word;
+    }
+    out
+}
+
+/// Ranges that touch, made one.
+fn merged(ranges: Vec<Range<usize>>) -> Vec<Range<usize>> {
+    let mut out: Vec<Range<usize>> = Vec::new();
+    for range in ranges {
+        match out.last_mut() {
+            Some(last) if last.end >= range.start => last.end = last.end.max(range.end),
+            _ => out.push(range),
+        }
+    }
+    out
+}
+
 /// What is drawn: a line, or lines the same in both, folded.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Row {
@@ -523,6 +590,26 @@ pub fn shown_nodes(nodes: &[Node], closed: &HashSet<usize>) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn what_changed_in_a_line_is_found_word_by_word() {
+        let (a, b) = changed_spans(r#"  "price": 100,"#, r#"  "price": 120,"#);
+        assert_eq!((a.len(), b.len()), (1, 1));
+        assert_eq!((a[0].clone(), b[0].clone()), (11..14, 11..14));
+        // A word put in, and one taken out.
+        let (a, b) = changed_spans("GET /v1/orders", "GET /v2/orders?page=2");
+        assert_eq!(&"GET /v1/orders"[a[0].clone()], "v1");
+        assert_eq!(&"GET /v2/orders?page=2"[b[0].clone()], "v2");
+        assert_eq!(&"GET /v2/orders?page=2"[b[1].clone()], "?page=2");
+        // Nothing in common: the line says it all.
+        assert_eq!(changed_spans("abc", "xyz"), (vec![], vec![]));
+        // Words of any script.
+        let (a, b) = changed_spans("Hà Nội", "Hà Giang");
+        assert_eq!(
+            (&"Hà Nội"[a[0].clone()], &"Hà Giang"[b[0].clone()]),
+            ("Nội", "Giang")
+        );
+    }
 
     fn node(depth: usize, key: &str, a: Option<&str>, b: Option<&str>, change: Change) -> Node {
         Node {

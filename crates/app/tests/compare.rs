@@ -171,8 +171,11 @@ fn two_flows_are_compared() {
         .update(&mut cx, |view, _, cx| {
             view.select_place(0, cx);
             let first = view.inspector.detail.as_ref().unwrap().id;
+            assert_eq!(view.inspector.previous_call, None, "the first call");
             view.select_place(1, cx);
             let second = view.inspector.detail.as_ref().unwrap().id;
+            // The same method, host and path; the query aside.
+            assert_eq!(view.inspector.previous_call, Some(first));
             view.select_place(0, cx);
             assert!(!view.compare_on_click(first, true, cx), "not with itself");
             assert!(
@@ -226,6 +229,19 @@ fn two_flows_are_compared() {
             assert_eq!(request.a.kind, "JSON");
             assert_eq!(request.changed, 1);
             assert_eq!(page.differences(Side::Request, ComparePart::Body), Some(1));
+            // In the line that changed, the words that did.
+            let line = request
+                .lines
+                .iter()
+                .find(|l| l.change == Change::Changed)
+                .unwrap();
+            let (a, b) = (
+                &request.a.lines[line.a.unwrap()],
+                &request.b.lines[line.b.unwrap()],
+            );
+            let (spans_a, spans_b) = tracewing::compare::changed_spans(a, b);
+            assert_eq!(&a[spans_a[0].clone()], "first");
+            assert_eq!(&b[spans_b[0].clone()], "second");
             let BodyLoad::Ready(response) = page.body(Side::Response) else {
                 panic!("the responses' bodies");
             };
