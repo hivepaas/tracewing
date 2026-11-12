@@ -670,6 +670,18 @@ t51e7624c = 아직 메시지가 없습니다
 # {said} kept, of {size}
 t3558745a = { $size } 중 { $said } 보관됨
 
+# The socket has closed.
+t8d883a0f = 소켓이 닫혔습니다.
+
+# Too many are still waiting to go. Try again.
+tbea55dfd = 전송 대기 중인 메시지가 너무 많습니다. 다시 시도하세요.
+
+# To the server
+te1ef193a = 서버로
+
+# To the app
+t1bcabce4 = 앱으로
+
 # Layouts
 t17809004 = 레이아웃
 
@@ -1833,6 +1845,9 @@ t19f89214 = 이름(예: iPhone 테스트)
 
 # A name, as Phone
 tfce439bf = 이름 (예: Phone)
+
+# A message to send; {keys} sends it
+tf9d9c09b = 보낼 메시지 ({ $keys }로 전송)
 
 # The search index: {e}
 te3c971c9 = 검색 색인: { $e }

@@ -20,6 +20,7 @@ use tracewing::{
     traffic::Traffic,
 };
 use tracewing_dev::benchkit;
+use tracewing_proxy::sockets::Toward;
 use tracewing_store::settings::StorageSettings;
 
 fn wait_for(
@@ -182,6 +183,48 @@ fn streams_show_as_they_come() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "20-websocket-message");
 
+    // A message of the window's own: to the app, then to the server, which
+    // echoes it. Each joins the list.
+    let before = window
+        .update(&mut cx, |view, _, cx| {
+            assert!(view.socket_open());
+            view.set_socket_toward(Toward::App, cx);
+            view.socket_message
+                .update(cx, |input, cx| input.set_text("from tracewing", 0..0, cx));
+            view.send_socket_message(cx);
+            assert_eq!(view.socket_message.read(cx).text(), "", "emptied once sent");
+            messages(view)
+        })
+        .unwrap();
+    let got = runtime.block_on(ws.next()).unwrap().unwrap();
+    assert_eq!(got, Message::text("from tracewing"));
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_socket_toward(Toward::Server, cx);
+            view.socket_message.update(cx, |input, cx| {
+                input.set_text(r#"{"sent":"by hand"}"#, 0..0, cx)
+            });
+            view.send_socket_message(cx);
+        })
+        .unwrap();
+    let echoed = runtime.block_on(ws.next()).unwrap().unwrap();
+    assert_eq!(
+        echoed,
+        Message::text(r#"{"sent":"by hand"}"#),
+        "the server's echo"
+    );
+    wait_for(&mut cx, window, "the sent messages", |view| {
+        messages(view) >= before + 3
+    });
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.socket_message
+                .update(cx, |input, cx| input.set_text("half typed", 0..0, cx));
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "101-websocket-send");
+
     // Closed: the row and the inspector say so.
     runtime
         .block_on(async {
@@ -193,6 +236,15 @@ fn streams_show_as_they_come() {
     wait_for(&mut cx, window, "it to close", |view| {
         view.inspector.detail.as_ref().is_some_and(|d| !d.open)
     });
+    // Nothing more can be sent into it, and the window says why.
+    window
+        .update(&mut cx, |view, _, cx| {
+            assert!(!view.socket_open());
+            view.send_socket_message(cx);
+            let state = view.inspector.messages.as_ref().unwrap();
+            assert!(state.send_problem.is_some(), "it says the socket closed");
+        })
+        .unwrap();
 
     // Server-sent events: the same, from the response.
     let client =

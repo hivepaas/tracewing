@@ -492,6 +492,10 @@ a timer whatever the network, and each waited for the timer's next millisecond: 
 benchmark above went past ten minutes where it takes one, which no test noticed. Without
 the queue it is 49,300–50,500 round trips/s recording off and 45,800–47,400 on.
 
+Each way also waits for a message the window sends into the socket, beside the next
+from its side (`tokio::select!`, the side's first). The same benchmark after:
+48,100–49,800 round trips/s recording off, 45,200–46,200 on.
+
 ## A request's body no server reads (`crates/proxy/src/capture.rs`, 2026-11-12)
 
 A request's body is written down as it goes on to the server. A server that answers

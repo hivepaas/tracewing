@@ -670,6 +670,18 @@ t51e7624c = 尚無訊息
 # {said} kept, of {size}
 t3558745a = 已保留 { $said }，共 { $size }
 
+# The socket has closed.
+t8d883a0f = 通訊端已關閉。
+
+# Too many are still waiting to go. Try again.
+tbea55dfd = 等待傳送的訊息過多，請再試一次。
+
+# To the server
+te1ef193a = 傳給伺服器
+
+# To the app
+t1bcabce4 = 傳給應用程式
+
 # Layouts
 t17809004 = 版面配置
 
@@ -1833,6 +1845,9 @@ t19f89214 = 名稱，例如：測試用 iPhone
 
 # A name, as Phone
 tfce439bf = 名稱，如：Phone
+
+# A message to send; {keys} sends it
+tf9d9c09b = 要傳送的訊息；按 { $keys } 傳送
 
 # The search index: {e}
 te3c971c9 = 搜尋索引：{ $e }

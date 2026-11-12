@@ -21,6 +21,7 @@ use tracewing_proxy::{
     relay::{Relay, RelaySettings},
     rules::HostRules,
     run_proxy,
+    sockets::Sockets,
     throttle::{Conditions, Network},
     traffic_rules::TrafficRules,
 };
@@ -80,6 +81,8 @@ pub struct Engine {
     /// Where TLS secrets are written for Wireshark: off at each start, unless
     /// `SSLKEYLOGFILE` says where.
     pub tls_keys: Arc<TlsKeys>,
+    /// The WebSockets open now, to send messages into.
+    pub sockets: Arc<Sockets>,
     stop: Option<oneshot::Sender<()>>,
     thread: Option<JoinHandle<()>>,
 }
@@ -115,6 +118,7 @@ impl Engine {
         );
         let network = Arc::new(Network::new(conditions));
         let tls_keys = Arc::new(TlsKeys::from_env());
+        let sockets = Arc::new(Sockets::default());
         let (stop, stopped) = oneshot::channel::<()>();
         let proxy = ProxyOptions {
             listener: None,
@@ -141,6 +145,7 @@ impl Engine {
             other_devices: Some(Arc::clone(&other_devices)),
             relay: Arc::clone(&relay),
             tls_keys: Arc::clone(&tls_keys),
+            sockets: Arc::clone(&sockets),
         };
         let thread = {
             let failure = Arc::clone(&failure);
@@ -181,6 +186,7 @@ impl Engine {
             extra_roots: opts.extra_roots,
             relay,
             tls_keys,
+            sockets,
             stop: Some(stop),
             thread: Some(thread),
         })

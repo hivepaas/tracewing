@@ -30,7 +30,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         Arc,
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicI64, AtomicU64, Ordering},
         mpsc::{self, Receiver, RecvTimeoutError, SyncSender, TryRecvError, TrySendError},
     },
     thread::JoinHandle,
@@ -184,7 +184,8 @@ pub struct StreamMessage {
 
 enum Message {
     Flow(Box<FlowRecord>),
-    Open(u64, Box<FlowRecord>),
+    /// With where the writer says which row it became.
+    Open(u64, Box<FlowRecord>, Arc<AtomicI64>),
     Stream(u64, StreamMessage),
     /// The row of a stream that is still going, written again.
     Update(u64, Box<FlowRecord>),
@@ -197,6 +198,8 @@ enum Message {
 pub struct StreamHandle {
     key: u64,
     recorder: Recorder,
+    /// Its row's id once written, 0 until then.
+    row: Arc<AtomicI64>,
 }
 
 fn unix_micros() -> i64 {
@@ -207,6 +210,11 @@ fn unix_micros() -> i64 {
 }
 
 impl StreamHandle {
+    /// The id of its row, once the writer has written it.
+    pub fn row(&self) -> Option<i64> {
+        Some(self.row.load(Ordering::Acquire)).filter(|id| *id > 0)
+    }
+
     /// Keeps a message, or as much of it as `log_max`, and if there is no room says
     /// it was there. The stream never waits for the disk.
     pub fn message(&self, from_client: bool, kind: &'static str, data: &[u8]) {
@@ -380,9 +388,10 @@ impl Recorder {
         // wrapped below zero, and every body after was let go.
         let size = body_bytes(&record);
         self.queued.fetch_add(size, Ordering::Relaxed);
+        let row = Arc::new(AtomicI64::new(0));
         if self
             .tx
-            .try_send(Message::Open(key, Box::new(record)))
+            .try_send(Message::Open(key, Box::new(record), Arc::clone(&row)))
             .is_err()
         {
             self.queued.fetch_sub(size, Ordering::Relaxed);
@@ -391,6 +400,7 @@ impl Recorder {
         StreamHandle {
             key,
             recorder: self.clone(),
+            row,
         }
     }
 
@@ -650,11 +660,12 @@ impl Writer {
             match message {
                 Message::Flow(record) => flows.push(*record),
                 Message::Stream(key, message) => messages.push((key, message)),
-                Message::Open(key, mut record) => {
+                Message::Open(key, mut record, row) => {
                     let id = self.next_id;
                     self.write_batch(std::slice::from_mut(&mut *record));
                     if self.next_id > id {
                         self.streams.insert(key, id);
+                        row.store(id, Ordering::Release);
                     }
                 }
                 Message::Update(key, record) => self.update_stream(key, &record),

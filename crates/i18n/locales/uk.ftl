@@ -730,6 +730,18 @@ t51e7624c = Поки немає повідомлень
 # {said} kept, of {size}
 t3558745a = Збережено { $said } з { $size }
 
+# The socket has closed.
+t8d883a0f = Сокет закрито.
+
+# Too many are still waiting to go. Try again.
+tbea55dfd = Забагато повідомлень ще чекають на відправлення. Спробуйте ще раз.
+
+# To the server
+te1ef193a = Серверу
+
+# To the app
+t1bcabce4 = Застосунку
+
 # Layouts
 t17809004 = Розкладки
 
@@ -2019,6 +2031,9 @@ t19f89214 = Назва, наприклад Тестовий iPhone
 
 # A name, as Phone
 tfce439bf = Назва, наприклад Phone
+
+# A message to send; {keys} sends it
+tf9d9c09b = Повідомлення для надсилання; { $keys } — надіслати
 
 # The search index: {e}
 te3c971c9 = Пошуковий індекс: { $e }
