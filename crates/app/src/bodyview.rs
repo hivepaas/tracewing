@@ -17,8 +17,8 @@ use crate::{
 use gpui::{
     AnyElement, Bounds, ClipboardItem, Context, FocusHandle, FontWeight, HighlightStyle, Hsla,
     ListHorizontalSizingBehavior, MouseButton, MouseDownEvent, Pixels, Point, Render,
-    ScrollWheelEvent, SharedString, UniformListScrollHandle, Window, canvas, div, prelude::*, px,
-    rgb, uniform_list,
+    ScrollWheelEvent, SharedString, UniformListScrollHandle, Window, canvas, combine_highlights,
+    div, prelude::*, px, rgb, uniform_list,
 };
 use std::{
     cell::{Cell, RefCell},
@@ -31,6 +31,10 @@ use tracewing_convert::Reading;
 use tracewing_i18n::{tr, tr_n};
 
 pub const LINE_HEIGHT: f32 = 20.;
+/// How many lines' worth of "is this worth reading" to keep. A reader who has
+/// scrolled past this many has not looked at the first of them.
+const MARKS_MAX: usize = 4096;
+
 const GUTTER_W: f32 = 52.;
 /// Where an object or an array is folded and unfolded, after the number.
 const FOLD_W: f32 = 20.;
@@ -195,6 +199,9 @@ pub struct BodyView {
     /// What those rules read, by piece, and the rules' version they were read
     /// at: a frame must not read every line again on every draw.
     by_rule: RefCell<(u64, HashMap<u64, Option<Reading>>)>,
+    /// Which pieces hold a value worth saying something about, by piece. The
+    /// same reason, and the same answer kept.
+    marks: RefCell<HashMap<u64, bool>>,
     /// CSV or TSV read as a table, which [`BodyMode::Table`] shows.
     table: Option<Arc<Table>>,
     table_scroll: UniformListScrollHandle,
@@ -231,6 +238,7 @@ impl BodyView {
             rules: Rc::new(RefCell::new(Remembered::default())),
             host: SharedString::default(),
             by_rule: RefCell::new((0, HashMap::new())),
+            marks: RefCell::new(HashMap::new()),
             table: None,
             table_scroll: UniformListScrollHandle::new(),
         }
@@ -486,6 +494,29 @@ impl BodyView {
         &self.rules
     }
 
+    /// Where the value on this line is worth underlining, so that a reader
+    /// knows there is something here to read. Worked out once for each piece
+    /// and kept, because a body of a million lines asks as it scrolls; past
+    /// what a reader could have looked at, the answers are dropped.
+    fn marked(&self, key: u64, line: &str) -> Option<std::ops::Range<usize>> {
+        let (field, value) = reading::field_and_value(line)?;
+        let at = (value.as_ptr() as usize).checked_sub(line.as_ptr() as usize)?;
+        let known = self.marks.borrow().get(&key).copied();
+        let worth = match known {
+            Some(worth) => worth,
+            None => {
+                let worth = reading::worth_marking(value, Some(field));
+                let mut marks = self.marks.borrow_mut();
+                if marks.len() > MARKS_MAX {
+                    marks.clear();
+                }
+                marks.insert(key, worth);
+                worth
+            }
+        };
+        worth.then_some(at..at + value.len())
+    }
+
     /// What is drawn beside the piece `key` of a line that reads `line`: the
     /// reading chosen for it, else the one a remembered rule asks for.
     pub fn reading_at(&self, key: u64, line: &str) -> Option<Reading> {
@@ -704,6 +735,7 @@ impl BodyView {
         self.mode = mode;
         self.drawn.clear();
         self.by_rule.borrow_mut().1.clear();
+        self.marks.borrow_mut().clear();
         self.place = Place::default();
         self.row_counts.borrow_mut().clear();
         self.folds = Folds::default();
@@ -803,7 +835,7 @@ impl BodyView {
         // What the reader chose to see here, or what a rule says this field
         // is always read as.
         let note = self.reading_at(key, &shown.text);
-        let highlights: Vec<_> = if self.hex() {
+        let mut highlights: Vec<_> = if self.hex() {
             Vec::new()
         } else {
             self.syntax
@@ -812,6 +844,14 @@ impl BodyView {
                 .map(|(range, token)| (range, highlight(token)))
                 .collect()
         };
+        // A value with something to say about it is underlined, dimly, until
+        // it says it: then the reading itself stands beside it instead.
+        if note.is_none()
+            && !self.hex()
+            && let Some(at) = self.marked(key, &shown.text)
+        {
+            highlights = combine_highlights(highlights, [(at, reading::underlined())]).collect();
+        }
         let text: SharedString = shown.text.into();
         let folded = matches!(mark, FoldMark::Folded(..));
         let mut row = div()

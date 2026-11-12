@@ -76,12 +76,35 @@ A reading is never part of the body. It is not in `selected_text()`, not in
 `Copy all`, not in a saved body, not in Copy as cURL. The menu carries
 `Copy reading` for when it is wanted.
 
-### Saying that a reading exists
+### Saying that a reading exists — built
 
-A reader who does not know the feature is there gets nothing from it. So values
-with a certain or likely reading carry a dim dotted underline, worked out only
-for the lines on screen, and switched off by a setting for anyone who finds it
-noisy.
+A reader who does not know the feature is there gets nothing from it. So a
+value with a reading behind it carries a faint underline, in a body and under
+a field alike:
+
+```
+  content-length   869
+  date             Thu, 12 Nov 2026 16:11:41 GMT
+                   ─────────────────────────────
+```
+
+Three things keep it honest and cheap:
+
+- **Only what is more than a guess.** A `Possible` reading is not marked: every
+  number is a size and a mask of bits and a number in hex, and underlining
+  every number says nothing at all. A time, a token, a URL, a cookie — those
+  are marked.
+- **A sieve before the readings.** `could_read` turns away prose by its shape
+  alone — too short, or it has spaces and is not an HTTP-date — so most lines
+  never reach a converter.
+- **Worked out once.** Each answer is kept by the piece it was found for, and
+  dropped once there are more than a reader could have looked at (4096 lines in
+  a body, 512 values under fields). A frame looks things up.
+
+Where the reading itself is already shown, the underline is not: it has
+nothing left to say.
+
+**To come:** a setting to switch it off, for anyone who finds it noisy.
 
 ### Remembering the choice — built
 
@@ -265,8 +288,9 @@ the underline and the remembered rules will ask.
 
 **To come:** the pane for a `Bytes` reading — which means writing the bytes
 beside the body's own file and opening them as a body, the way
-`detail::json_file` already does for MessagePack and Protobuf — the dim
-underline, the rules listed in Settings, and the keyboard.
+`detail::json_file` already does for MessagePack and Protobuf — the rules
+listed in Settings, the setting that switches the underline off, and the
+keyboard.
 
 ## Limits, and what this will not do
 

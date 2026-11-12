@@ -132,7 +132,14 @@ pub struct InspectorState {
     /// What those rules read, by [`drawn_key`], and the rules' version they
     /// were read at: a frame must not read a value again on every draw.
     by_rule: RefCell<(u64, HashMap<String, Option<Reading>>)>,
+    /// Which values are worth underlining, by [`drawn_key`]. The same reason,
+    /// and the same answer kept.
+    marks: RefCell<HashMap<String, bool>>,
 }
+
+/// How many values' worth of "is this worth reading" to keep. A flow has
+/// tens of them; this is for the reader who walks through hundreds.
+const MARKS_MAX: usize = 512;
 
 /// What a drawn reading is kept under: the field and the value it was read
 /// from, rather than where they sat. Rows move as a flow is chosen or a side
@@ -225,6 +232,38 @@ impl InspectorState {
         let found = reading::read_as(&id, value, Some(field));
         self.by_rule.borrow_mut().1.insert(key, found.clone());
         found
+    }
+
+    /// The runs that underline a value worth reading, so that a reader knows
+    /// there is something here. Nothing, where the reading is already shown.
+    pub fn marks_of(
+        &self,
+        field: &str,
+        value: &str,
+        shown: bool,
+    ) -> Vec<(std::ops::Range<usize>, gpui::HighlightStyle)> {
+        if shown || value.is_empty() {
+            return Vec::new();
+        }
+        let key = drawn_key(field, value);
+        let known = self.marks.borrow().get(&key).copied();
+        let worth = match known {
+            Some(worth) => worth,
+            None => {
+                let worth = reading::worth_marking(value, Some(field));
+                let mut marks = self.marks.borrow_mut();
+                if marks.len() > MARKS_MAX {
+                    marks.clear();
+                }
+                marks.insert(key, worth);
+                worth
+            }
+        };
+        if worth {
+            vec![(0..value.len(), reading::underlined())]
+        } else {
+            Vec::new()
+        }
     }
 
     /// What is drawn under a field: the reading chosen for it, else the one a
@@ -2186,6 +2225,8 @@ fn render_headers(
         return note(tr!("No headers.")).into_any_element();
     }
     let row = |(name, value): &(String, String)| {
+        let reading = read.reading_under(name, value);
+        let shown = reading.is_some() || Jwt::find(value).is_some();
         div()
             .flex()
             .flex_row()
@@ -2203,12 +2244,14 @@ fn render_headers(
                     .min_w_0()
                     .flex()
                     .flex_col()
-                    .child(sel.piece_under(name.clone(), value.clone(), ": ", Vec::new()))
+                    .child(sel.piece_under(
+                        name.clone(),
+                        value.clone(),
+                        ": ",
+                        read.marks_of(name, value, shown),
+                    ))
                     .children(Jwt::find(value).map(|jwt| render_jwt(jwt, sel)))
-                    .children(
-                        read.reading_under(name, value)
-                            .map(|reading| render_reading(&reading, sel)),
-                    ),
+                    .children(reading.map(|reading| render_reading(&reading, sel))),
             )
     };
     div()
@@ -2367,7 +2410,14 @@ fn render_cookies(
                         .flex()
                         .flex_col()
                         .gap(px(2.))
-                        .child(sel.piece_under(cookie_name, cookie.value, ": ", Vec::new()))
+                        .child({
+                            let marks = read.marks_of(
+                                &cookie_name,
+                                &cookie.value,
+                                drawn.is_some() || jwt.is_some(),
+                            );
+                            sel.piece_under(cookie_name, cookie.value, ": ", marks)
+                        })
                         .when(!cookie.attributes.is_empty(), |d| {
                             d.child(
                                 div().text_size(px(11.5)).text_color(rgb(c.muted)).child(
@@ -2492,6 +2542,22 @@ fn render_jwt(jwt: Jwt, sel: &Selection) -> Div {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_value_worth_reading_is_underlined_and_the_rest_is_not() {
+        let state = InspectorState::default();
+        let date = "Thu, 12 Nov 2026 15:20:02 GMT";
+        assert_eq!(state.marks_of("date", date, false).len(), 1);
+        assert_eq!(state.marks_of("date", date, false)[0].0, 0..date.len());
+        // Once the reading itself is shown, the hint has nothing to say.
+        assert!(state.marks_of("date", date, true).is_empty());
+        // A number that is only a number, and a word, are left alone.
+        assert!(state.marks_of("total", "868617", false).is_empty());
+        assert!(state.marks_of("customer", "Chi Pham", false).is_empty());
+        assert!(state.marks_of("x", "", false).is_empty());
+        // The answer is kept, and the same the second time.
+        assert_eq!(state.marks_of("date", date, false).len(), 1);
+    }
 
     #[test]
     fn the_size_says_both_ways_when_a_body_was_sent() {
