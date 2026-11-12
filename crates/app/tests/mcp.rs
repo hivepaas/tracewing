@@ -1,6 +1,7 @@
 //! The MCP server, as an AI tool sees it: sessions, flows found with the box's
 //! filter, one flow whole, and tokens and cookies left out until Settings let
-//! them in. Then the same through the program's own stdin and stdout.
+//! them in. Then the same through the program's own stdin and stdout. And,
+//! once Settings allow it, rules added and requests sent.
 //!
 //! `cargo test --release -p tracewing --features headless --test mcp`
 
@@ -343,4 +344,178 @@ fn ai_tools_compare_two_flows() {
 
     drop(engine);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A tool's result when it fails: what it says.
+fn refused(server: &Server, name: &str, arguments: Value) -> String {
+    let message = json!({ "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                          "params": { "name": name, "arguments": arguments } });
+    let reply = server.handle_line(&message.to_string()).remove(0);
+    assert_eq!(reply["result"]["isError"], true, "{reply}");
+    reply["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap()
+        .to_owned()
+}
+
+/// Rules added and taken away, and requests sent through the proxy, only once
+/// Settings allow it; the window takes in a rule an AI tool added.
+#[test]
+fn ai_tools_add_rules_and_send_requests_when_allowed() {
+    use gpui::{AppContext as _, HeadlessAppContext, WindowHandle, px, size};
+    use std::sync::Arc;
+    use tracewing::traffic::Traffic;
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir = std::env::temp_dir().join(format!("tracewing-mcp-act-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let listener = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let port = listener.local_addr().unwrap().port();
+    runtime.spawn(tracewing_dev::playground::serve(listener));
+    let engine = Engine::start(EngineOptions {
+        data_dir: dir.clone(),
+        settings: StorageSettings {
+            disk_reserve_mib: 1,
+            ..StorageSettings::default()
+        },
+        rules: Default::default(),
+        traffic_rules: Default::default(),
+        ports: 20_330..20_340,
+        extra_roots: Vec::new(),
+        key_store: Default::default(),
+        find_apps: false,
+    })
+    .unwrap();
+    while !dir.join("ca.pem").exists() {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    let proxy = engine.addr;
+    let text = Arc::new(gpui_wgpu::CosmicTextSystem::new(tracewing::FONT));
+    let mut cx = HeadlessAppContext::with_platform(text, Arc::new(tracewing::Assets), || {
+        gpui_platform::current_headless_renderer()
+    });
+    cx.update(tracewing::load_fonts);
+    let data_dir = dir.clone();
+    let window: WindowHandle<Traffic> = cx
+        .open_window(size(px(1200.), px(800.)), move |window, cx| {
+            cx.new(|cx| Traffic::new(engine, &data_dir, window, cx))
+        })
+        .unwrap();
+    let curl = |path: &str| -> u16 {
+        let out = Command::new("curl")
+            .args(["-sS", "-o", "/dev/null", "-w", "%{http_code}", "--proxy"])
+            .arg(format!("http://{proxy}"))
+            .arg(format!("http://localhost:{port}{path}"))
+            .output()
+            .expect("curl");
+        String::from_utf8_lossy(&out.stdout).parse().unwrap()
+    };
+    assert_eq!(curl("/echo?first"), 200);
+
+    // Not allowed yet: each says where to allow it.
+    let server = Server::new(&dir);
+    let block = json!({ "name": "teapot", "url": "localhost:*/echo*",
+                        "action": { "action": "block", "status": 418 } });
+    assert!(refused(&server, "add_rule", block.clone()).contains("Settings"));
+    assert!(
+        refused(
+            &server,
+            "send_request",
+            json!({ "url": "http://localhost/" })
+        )
+        .contains("Settings")
+    );
+    // An unknown action is refused too, once allowed.
+    let settings = StorageSettings {
+        ai_actions: true,
+        ..StorageSettings::default()
+    };
+    std::fs::write(dir.join("settings.toml"), settings.to_toml().unwrap()).unwrap();
+    assert!(
+        refused(
+            &server,
+            "add_rule",
+            json!({ "name": "x", "url": "a/*", "action": { "action": "explode" } })
+        )
+        .contains("action")
+    );
+
+    let added = call(&server, "add_rule", block.clone());
+    assert_eq!(added["added"]["name"], "AI: teapot");
+    assert!(refused(&server, "add_rule", block).contains("already"));
+    assert_eq!(
+        call(&server, "list_rules", json!({}))["rules"][0]["action"]["status"],
+        418
+    );
+    // The window takes it in, and the proxy follows it.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let has = window
+            .update(&mut cx, |view, _, cx| {
+                view.look(cx);
+                view.traffic_rules().rules.len() == 1
+            })
+            .unwrap();
+        if has {
+            break;
+        }
+        assert!(Instant::now() < deadline, "the window reads the rule");
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    assert_eq!(curl("/echo?second"), 418);
+
+    // A recorded flow sent again, changed: the rule answers it too.
+    until("the flows", || {
+        call(&server, "list_flows", json!({}))["flows"]
+            .as_array()
+            .is_some_and(|f| f.len() == 2)
+    });
+    let first = call(&server, "list_flows", json!({ "filter": "first" }))["flows"][0]["id"].clone();
+    let sent = call(
+        &server,
+        "send_request",
+        json!({ "id": first, "method": "post", "headers": { "x-from": "ai" }, "body": "hello" }),
+    );
+    assert_eq!(sent["status"], 418);
+    assert_eq!(sent["method"], "POST");
+
+    // Taken away: through to the server, which says what it got.
+    assert_eq!(
+        call(&server, "remove_rule", json!({ "name": "AI: teapot" }))["removed"],
+        "AI: teapot"
+    );
+    assert!(refused(&server, "remove_rule", json!({ "name": "AI: teapot" })).contains("no rule"));
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let none = window
+            .update(&mut cx, |view, _, cx| {
+                view.look(cx);
+                view.traffic_rules().rules.is_empty()
+            })
+            .unwrap();
+        if none {
+            break;
+        }
+        assert!(Instant::now() < deadline, "the window reads it is gone");
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let sent = call(
+        &server,
+        "send_request",
+        json!({ "id": first, "method": "POST", "headers": { "x-from": "ai" }, "body": "hello" }),
+    );
+    assert_eq!(sent["status"], 200);
+    let echoed: Value = serde_json::from_str(sent["body"].as_str().unwrap()).unwrap();
+    assert_eq!(echoed["method"], "POST");
+    assert_eq!(echoed["headers"]["x-from"], "ai");
+    assert_eq!(echoed["body"], "hello");
+
+    drop(cx);
+    std::fs::remove_dir_all(&dir).ok();
 }

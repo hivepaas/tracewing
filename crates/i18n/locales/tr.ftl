@@ -1411,6 +1411,12 @@ te1d26d3c = Yapay zekâ araçlarının token'ları ve çerezleri görmesine izin
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
 tb496980f = Yapay zekâ araçları kaydedilen trafiği tracewing'in MCP sunucusu üzerinden okur. Kapalıyken Authorization, Cookie ve Set-Cookie değerleri onlara verilmez. Hemen uygulanır.
 
+# Let AI tools add rules and send requests
+t663de1ba = Yapay zekâ araçlarının kural eklemesine ve istek göndermesine izin ver
+
+# Through the MCP server, an AI tool may then add and remove rules, which change traffic as yours do, and send requests through tracewing, again or changed, which reach their servers. Off, it can only read. Applies at once.
+t46d53486 = MCP sunucusu üzerinden bir yapay zekâ aracı, sizinkiler gibi trafiği değiştiren kurallar ekleyip kaldırabilir ve tracewing üzerinden, yeniden ya da değiştirilmiş olarak, sunucularına ulaşan istekler gönderebilir. Kapalıyken yalnızca okuyabilir. Hemen uygulanır.
+
 # HTTP/3
 tfec0f477 = HTTP/3
 

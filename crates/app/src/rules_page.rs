@@ -359,11 +359,38 @@ impl Traffic {
             .clone()
     }
 
+    /// Reads the rules' file again if something else has changed it since it
+    /// was last read or written here. True if it did.
+    pub(crate) fn read_rules_again(&mut self) -> bool {
+        let path = self.traffic_rules_path();
+        let modified = std::fs::metadata(&path).and_then(|m| m.modified()).ok();
+        if modified == self.rules_seen {
+            return false;
+        }
+        self.rules_seen = modified;
+        // A file half written, or one that cannot be read, leaves them as they are.
+        let Ok(rules) = TrafficRules::load(&path) else {
+            return false;
+        };
+        let mut held = self
+            .engine
+            .traffic_rules
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
+        if *held == rules {
+            return false;
+        }
+        *held = rules;
+        true
+    }
+
     fn change_traffic_rules(
         &mut self,
         change: impl FnOnce(&mut TrafficRules),
         cx: &mut Context<Self>,
     ) {
+        // On what the file says now, so as not to undo what another changed.
+        self.read_rules_again();
         let rules = {
             let mut rules = self
                 .engine
@@ -376,6 +403,9 @@ impl Traffic {
         if let Err(e) = rules.save(&self.traffic_rules_path()) {
             self.rules_form(cx).problem = Some(format!("{e:#}"));
         }
+        self.rules_seen = std::fs::metadata(self.traffic_rules_path())
+            .and_then(|m| m.modified())
+            .ok();
         cx.notify();
     }
 

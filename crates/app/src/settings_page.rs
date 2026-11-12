@@ -67,15 +67,27 @@ fn groups() -> Vec<(String, Vec<Row>)> {
         ),
         (
             tr!("AI tools"),
-            vec![row(
-                "ai_secrets",
-                tr!("Let AI tools see tokens and cookies"),
-                tr!(
-                    "AI tools read recorded traffic through tracewing's MCP server. Off, the values of \
-                     Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once."
+            vec![
+                row(
+                    "ai_secrets",
+                    tr!("Let AI tools see tokens and cookies"),
+                    tr!(
+                        "AI tools read recorded traffic through tracewing's MCP server. Off, the values of \
+                         Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once."
+                    ),
+                    "",
                 ),
-                "",
-            )],
+                row(
+                    "ai_actions",
+                    tr!("Let AI tools add rules and send requests"),
+                    tr!(
+                        "Through the MCP server, an AI tool may then add and remove rules, which change \
+                         traffic as yours do, and send requests through tracewing, again or changed, which \
+                         reach their servers. Off, it can only read. Applies at once."
+                    ),
+                    "",
+                ),
+            ],
         ),
         (
             tr!("HTTP/3"),

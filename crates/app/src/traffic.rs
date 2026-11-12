@@ -252,6 +252,11 @@ pub struct Traffic {
     viewing_started: String,
     pub sessions_page: SessionsPage,
     pub rules_page: Option<RulesPage>,
+    /// When the rules' file was last read or written here, to read it again
+    /// when something else changes it, as an AI tool through the MCP server.
+    pub(crate) rules_seen: Option<std::time::SystemTime>,
+    /// When it was last looked at.
+    pub(crate) rules_looked: Instant,
     pub paused_page: Option<PausedPage>,
     pub compose_page: Option<ComposePage>,
     pub compare_page: Option<ComparePage>,
@@ -472,6 +477,10 @@ impl Traffic {
             viewing_started: String::new(),
             sessions_page: SessionsPage::default(),
             rules_page: None,
+            rules_seen: std::fs::metadata(data_dir.join("traffic-rules.toml"))
+                .and_then(|m| m.modified())
+                .ok(),
+            rules_looked: Instant::now(),
             paused_page: None,
             compose_page: None,
             compare_page: None,
@@ -853,6 +862,10 @@ impl Traffic {
             self.flows = Flows::open(self.session_dir(), self.viewing.is_none()).ok();
         }
         let mut changed = false;
+        if self.rules_looked.elapsed() >= Duration::from_millis(500) {
+            self.rules_looked = Instant::now();
+            changed |= self.read_rules_again();
+        }
         if let Some(flows) = &self.flows {
             let bounds = flows.bounds().ok().flatten();
             changed |= bounds != self.bounds;

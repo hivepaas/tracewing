@@ -1519,6 +1519,12 @@ te1d26d3c = Дозволити інструментам ШІ бачити ток
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
 tb496980f = Інструменти ШІ читають записаний трафік через MCP-сервер tracewing. Якщо вимкнено, значення Authorization, Cookie і Set-Cookie їм не передаються. Діє одразу.
 
+# Let AI tools add rules and send requests
+t663de1ba = Дозволити ШІ-інструментам додавати правила й надсилати запити
+
+# Through the MCP server, an AI tool may then add and remove rules, which change traffic as yours do, and send requests through tracewing, again or changed, which reach their servers. Off, it can only read. Applies at once.
+t46d53486 = Через MCP-сервер ШІ-інструмент зможе додавати й вилучати правила, які змінюють трафік, як ваші, і надсилати запити через tracewing, повторно або змінені, — вони доходять до своїх серверів. Якщо вимкнено, він може лише читати. Діє одразу.
+
 # HTTP/3
 tfec0f477 = HTTP/3
 

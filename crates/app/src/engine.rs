@@ -52,8 +52,14 @@ pub struct EngineOptions {
 /// Where the slow network's conditions are kept, in the data folder.
 pub const THROTTLE_FILE: &str = "throttle.toml";
 
+/// The file in the data directory that says where the proxy listens, while
+/// it does.
+pub const PROXY_ADDRESS_FILE: &str = "proxy-address";
+
 pub struct Engine {
     pub addr: SocketAddr,
+    /// Says where it listens; taken away when it stops.
+    address_file: PathBuf,
     pub key_store: KeyStore,
     pub session: PathBuf,
     pub settings: StorageSettings,
@@ -126,6 +132,9 @@ impl Engine {
         let client_certs = Arc::new(ClientCerts::new(
             &ClientCertSettings::load(&opts.data_dir).unwrap_or_default(),
         ));
+        // Where it listens, for `tracewing mcp` to send requests through.
+        let address_file = opts.data_dir.join(PROXY_ADDRESS_FILE);
+        let _ = std::fs::write(&address_file, addr.to_string());
         let (stop, stopped) = oneshot::channel::<()>();
         let proxy = ProxyOptions {
             listener: None,
@@ -177,6 +186,7 @@ impl Engine {
         };
         Ok(Self {
             addr,
+            address_file,
             key_store: opts.key_store,
             session,
             settings: opts.settings,
@@ -226,6 +236,10 @@ impl Engine {
 
     /// Stops the proxy and waits for what is queued to be written.
     pub fn stop(&mut self) {
+        // Only if it still says this one: another may have started since.
+        if std::fs::read_to_string(&self.address_file).is_ok_and(|a| a == self.addr.to_string()) {
+            let _ = std::fs::remove_file(&self.address_file);
+        }
         if let Some(stop) = self.stop.take() {
             let _ = stop.send(());
         }

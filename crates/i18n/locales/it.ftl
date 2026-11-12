@@ -1459,6 +1459,12 @@ te1d26d3c = Consenti agli strumenti di IA di vedere token e cookie
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
 tb496980f = Gli strumenti di IA leggono il traffico registrato tramite il server MCP di tracewing. Se disattivato, i valori di Authorization, Cookie e Set-Cookie vengono esclusi da ciò che ricevono. Si applica subito.
 
+# Let AI tools add rules and send requests
+t663de1ba = Consenti agli strumenti di IA di aggiungere regole e inviare richieste
+
+# Through the MCP server, an AI tool may then add and remove rules, which change traffic as yours do, and send requests through tracewing, again or changed, which reach their servers. Off, it can only read. Applies at once.
+t46d53486 = Tramite il server MCP, uno strumento di IA può allora aggiungere e togliere regole, che cambiano il traffico come le tue, e inviare richieste tramite tracewing, di nuovo o modificate, che raggiungono i loro server. Disattivato, può solo leggere. Vale subito.
+
 # HTTP/3
 tfec0f477 = HTTP/3
 

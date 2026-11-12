@@ -57,6 +57,9 @@ pub struct StorageSettings {
     /// Let AI tools, through `tracewing mcp`, see the values of credential
     /// headers and cookies. Read at each call.
     pub ai_secrets: bool,
+    /// Let AI tools add and remove rules, and send requests through the proxy.
+    /// Read at each call.
+    pub ai_actions: bool,
 }
 
 impl Default for StorageSettings {
@@ -79,6 +82,7 @@ impl Default for StorageSettings {
             hide_http3: true,
             os_roots: true,
             ai_secrets: false,
+            ai_actions: false,
         }
     }
 }
@@ -122,6 +126,7 @@ impl StorageSettings {
         self.other_devices = other.other_devices;
         self.hide_http3 = other.hide_http3;
         self.ai_secrets = other.ai_secrets;
+        self.ai_actions = other.ai_actions;
         self.body_max_mib = other.body_max_mib;
         self.view_max_mib = other.view_max_mib;
     }

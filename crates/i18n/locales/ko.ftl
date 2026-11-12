@@ -1348,6 +1348,12 @@ te1d26d3c = AI 도구가 토큰과 쿠키를 볼 수 있도록 허용
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
 tb496980f = AI 도구는 tracewing의 MCP 서버를 통해 기록된 트래픽을 읽습니다. 끄면 Authorization, Cookie, Set-Cookie 값은 전달되지 않습니다. 즉시 적용됩니다.
 
+# Let AI tools add rules and send requests
+t663de1ba = AI 도구가 규칙을 추가하고 요청을 보내도록 허용
+
+# Through the MCP server, an AI tool may then add and remove rules, which change traffic as yours do, and send requests through tracewing, again or changed, which reach their servers. Off, it can only read. Applies at once.
+t46d53486 = MCP 서버를 통해 AI 도구가 규칙을 추가·삭제하고(사용자의 규칙처럼 트래픽을 바꿉니다), tracewing을 통해 요청을 다시 또는 바꿔서 보낼 수 있습니다(실제 서버에 도달합니다). 끄면 읽기만 할 수 있습니다. 바로 적용됩니다.
+
 # HTTP/3
 tfec0f477 = HTTP/3
 
