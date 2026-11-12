@@ -913,6 +913,12 @@ t0039810a = { $count } フィールド
 # and {count} more
 tbdb1ff6a = ほか { $count } 件
 
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } バイトはトランザクションとして読めません
+
+# {program}, {count} bytes
+t1ce6ad3b = { $program }、{ $count } バイト
+
 # succeeded
 t6b166ff2 = 成功
 
@@ -924,9 +930,6 @@ t188b58f6 = なし: コントラクトを作成します
 
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } バイト、署名が読み方を示していません
-
-# {count} byte that does not read as one | {count} bytes that do not read as one
-ta7ee514c = { $count } バイトはトランザクションとして読めません
 
 # {count} place | {count} places
 t0965779e = { $count } 箇所

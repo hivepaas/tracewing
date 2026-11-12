@@ -391,6 +391,12 @@ t0039810a =
        *[other] { $count } fields
     }
 tbdb1ff6a = and { $count } more
+ta7ee514c =
+    { $n ->
+        [one] { $count } byte that does not read as one
+       *[other] { $count } bytes that do not read as one
+    }
+t1ce6ad3b = { $program }, { $count } bytes
 t6b166ff2 = succeeded
 t46ea918c = failed: it was mined, and what it asked for did not happen
 t188b58f6 = none: it makes a contract
@@ -398,11 +404,6 @@ t36ffce30 =
     { $n ->
         [one] { $count } byte, which the signature does not say how to read
        *[other] { $count } bytes, which the signature does not say how to read
-    }
-ta7ee514c =
-    { $n ->
-        [one] { $count } byte that does not read as one
-       *[other] { $count } bytes that do not read as one
     }
 t0965779e =
     { $n ->

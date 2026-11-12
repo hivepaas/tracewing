@@ -979,6 +979,16 @@ t0039810a =
 # and {count} more
 tbdb1ff6a = und { $count } weitere
 
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c =
+    { $n ->
+        [one] { $count } Byte, das sich nicht als Transaktion liest
+       *[other] { $count } Bytes, die sich nicht als Transaktion lesen
+    }
+
+# {program}, {count} bytes
+t1ce6ad3b = { $program }, { $count } Bytes
+
 # succeeded
 t6b166ff2 = erfolgreich
 
@@ -993,13 +1003,6 @@ t36ffce30 =
     { $n ->
         [one] { $count } Byte, das die Signatur nicht zu lesen angibt
        *[other] { $count } Bytes, die die Signatur nicht zu lesen angibt
-    }
-
-# {count} byte that does not read as one | {count} bytes that do not read as one
-ta7ee514c =
-    { $n ->
-        [one] { $count } Byte, das sich nicht als Transaktion liest
-       *[other] { $count } Bytes, die sich nicht als Transaktion lesen
     }
 
 # {count} place | {count} places

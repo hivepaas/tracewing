@@ -913,6 +913,12 @@ t0039810a = { $count } trường
 # and {count} more
 tbdb1ff6a = và { $count } nữa
 
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } byte không đọc được thành một transaction
+
+# {program}, {count} bytes
+t1ce6ad3b = { $program }, { $count } byte
+
 # succeeded
 t6b166ff2 = thành công
 
@@ -924,9 +930,6 @@ t188b58f6 = không có: nó tạo contract
 
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } byte mà chữ ký không cho biết cách đọc
-
-# {count} byte that does not read as one | {count} bytes that do not read as one
-ta7ee514c = { $count } byte không đọc được thành một transaction
 
 # {count} place | {count} places
 t0965779e = { $count } vị trí

@@ -913,6 +913,12 @@ t0039810a = { $count } bidang
 # and {count} more
 tbdb1ff6a = dan { $count } lagi
 
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } byte yang tidak terbaca sebagai transaksi
+
+# {program}, {count} bytes
+t1ce6ad3b = { $program }, { $count } byte
+
 # succeeded
 t6b166ff2 = berhasil
 
@@ -924,9 +930,6 @@ t188b58f6 = tidak ada: ini membuat kontrak
 
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } byte yang tidak dijelaskan cara membacanya oleh signature
-
-# {count} byte that does not read as one | {count} bytes that do not read as one
-ta7ee514c = { $count } byte yang tidak terbaca sebagai transaksi
 
 # {count} place | {count} places
 t0965779e = { $count } tempat

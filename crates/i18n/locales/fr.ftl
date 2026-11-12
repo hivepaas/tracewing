@@ -991,6 +991,16 @@ t0039810a =
 # and {count} more
 tbdb1ff6a = et { $count } de plus
 
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c =
+    { $n ->
+        [one] { $count } octet qui ne se lit pas comme une transaction
+       *[other] { $count } octets qui ne se lisent pas comme une transaction
+    }
+
+# {program}, {count} bytes
+t1ce6ad3b = { $program }, { $count } octets
+
 # succeeded
 t6b166ff2 = réussie
 
@@ -1005,13 +1015,6 @@ t36ffce30 =
     { $n ->
         [one] { $count } octet que la signature ne dit pas comment lire
        *[other] { $count } octets que la signature ne dit pas comment lire
-    }
-
-# {count} byte that does not read as one | {count} bytes that do not read as one
-ta7ee514c =
-    { $n ->
-        [one] { $count } octet qui ne se lit pas comme une transaction
-       *[other] { $count } octets qui ne se lisent pas comme une transaction
     }
 
 # {count} place | {count} places
