@@ -244,6 +244,9 @@ te519d36e = 入れ替え
 # Back to Traffic
 t644042d2 = Traffic に戻る
 
+# As agreed
+td3a1f5f7 = 合意どおり
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" はメソッドではありません
 
@@ -280,8 +283,14 @@ te85cbcea =
        *[other] { $names } はクライアントが決めるので、書かれた値は送られませんでした。
     }
 
+# {version} is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.
+t4916bc86 = { $version } は tracewing に尋ねるときのものです。サーバーに尋ねるときのものは、他のフローと同じく tracewing とサーバーの間で決まります。
+
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = 停止しました: 応答は読み取っていません。サーバーに届いた分は Traffic に表示されます。
+
+# Ask with
+tb5209e72 = 尋ねる方式
 
 # Sending…
 te946e7bf = 送信中…

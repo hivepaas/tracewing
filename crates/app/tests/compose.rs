@@ -15,7 +15,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tracewing::{
-    compose::Kept,
+    compose::{self, Kept},
     compose_page::signature_trouble,
     engine::{Engine, EngineOptions},
     input::TextInput,
@@ -108,6 +108,15 @@ fn requests_composed_in_the_window_go_through() {
     while !origin_ca.exists() {
         std::thread::sleep(Duration::from_millis(5));
     }
+    // The same origin with no TLS, to see what a cleartext leg is asked with.
+    let plain_port = {
+        let listener = runtime
+            .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+            .unwrap();
+        let port = listener.local_addr().unwrap().port();
+        runtime.spawn(async move { benchkit::serve_plain_origin(listener).await });
+        port
+    };
     let engine = Engine::start(EngineOptions {
         data_dir: dir.clone(),
         settings: StorageSettings {
@@ -429,6 +438,115 @@ fn requests_composed_in_the_window_go_through() {
         })
         .unwrap();
     shot(&mut cx, window.into(), "36-compose-stopped");
+
+    // The version chosen settles how tracewing is asked. What the origin is
+    // asked with is settled between tracewing and the origin: the echo says
+    // which it saw, so both legs are read here rather than assumed.
+    let echo = format!("https://localhost:{origin_port}/echo");
+    let mut legs = Vec::new();
+    for speak in compose::Speak::EVERY {
+        window
+            .update(&mut cx, |view, _, cx| {
+                view.set_screen(Screen::Compose, cx);
+                view.set_speak(speak, cx);
+                let page = view.compose_page.as_ref().unwrap();
+                let (method, url_field, headers, body) = (
+                    page.method.clone(),
+                    page.url.clone(),
+                    page.headers.clone(),
+                    page.body.clone(),
+                );
+                type_in(&method, "GET", cx);
+                type_in(&url_field, &echo, cx);
+                type_in(&headers, "", cx);
+                type_in(&body, "", cx);
+                view.send_composed(cx);
+            })
+            .unwrap();
+        wait_for(&mut cx, window, "the echo", |view| answer(view).is_some());
+        let (asked, saw) = window
+            .update(&mut cx, |view, _, _| {
+                let answer = view.compose_page.as_ref().unwrap().answer.clone().unwrap();
+                let text = String::from_utf8_lossy(&answer.body).into_owned();
+                let saw = text
+                    .lines()
+                    .next()
+                    .and_then(|line| line.strip_prefix("version="))
+                    .map(str::to_owned)
+                    .expect("the echo says which version it was asked with");
+                (answer.version, saw)
+            })
+            .unwrap();
+        legs.push((speak, asked, saw));
+    }
+    for (speak, asked, saw) in &legs {
+        println!("TLS   {speak:?}: tracewing answered {asked}, the origin saw {saw}");
+    }
+    // What tracewing is asked with is the leg the choice settles.
+    assert_eq!(
+        legs.iter()
+            .map(|(_, asked, _)| asked.as_str())
+            .collect::<Vec<_>>(),
+        ["HTTP/2.0", "HTTP/1.1", "HTTP/2.0"],
+        "as agreed, pinned to HTTP/1.1, and HTTP/2 without asking"
+    );
+    // The origin's leg is not: tracewing offers `h2, http/1.1` upstream and
+    // this origin takes h2, whatever the client asked tracewing with. That
+    // is what the window says under the chips, and it is measured here so
+    // the words stay true.
+    assert!(
+        legs.iter().all(|(_, _, saw)| saw == "HTTP/2.0"),
+        "the server's leg is settled with the server: {legs:?}"
+    );
+
+    // The same three over a cleartext leg, where there is no ALPN to settle
+    // it: HTTP/2 there means h2c, spoken from the first byte.
+    let plain = format!("http://localhost:{plain_port}/echo");
+    let mut clear = Vec::new();
+    for speak in compose::Speak::EVERY {
+        window
+            .update(&mut cx, |view, _, cx| {
+                view.set_speak(speak, cx);
+                let page = view.compose_page.as_ref().unwrap();
+                let url_field = page.url.clone();
+                type_in(&url_field, &plain, cx);
+                view.send_composed(cx);
+            })
+            .unwrap();
+        wait_for(&mut cx, window, "the cleartext echo", |view| {
+            answer(view).is_some()
+        });
+        let saw = window
+            .update(&mut cx, |view, _, _| {
+                let answer = view.compose_page.as_ref().unwrap().answer.clone().unwrap();
+                let text = String::from_utf8_lossy(&answer.body).into_owned();
+                let saw = text
+                    .lines()
+                    .next()
+                    .and_then(|line| line.strip_prefix("version="))
+                    .map(str::to_owned)
+                    .expect("the echo says which version it was asked with");
+                (answer.version, saw)
+            })
+            .unwrap();
+        clear.push((speak, saw.0, saw.1));
+    }
+    for (speak, asked, saw) in &clear {
+        println!("clear {speak:?}: tracewing answered {asked}, the origin saw {saw}");
+    }
+    assert_eq!(
+        clear
+            .iter()
+            .map(|(_, asked, _)| asked.as_str())
+            .collect::<Vec<_>>(),
+        ["HTTP/1.1", "HTTP/1.1", "HTTP/2.0"],
+        "with no ALPN what is agreed is HTTP/1.1, and h2c reaches tracewing \
+         from the first byte with no upgrade asked for"
+    );
+    assert!(
+        clear.iter().all(|(_, _, saw)| saw == "HTTP/1.1"),
+        "tracewing asks a cleartext server with HTTP/1.1, h2c or not: {clear:?}"
+    );
 
     // What is being composed is kept between runs: the window writes it
     // down, and a start takes it up where it was left.

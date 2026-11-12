@@ -503,8 +503,16 @@ impl Server {
                 .and_then(|text| text.trim().parse::<std::net::SocketAddr>().ok())
                 .context("tracewing is not running, so there is nothing to send through")?;
         let (_keep, stop) = compose::stopper();
-        let answer = compose::send(address, &self.data_dir.join("ca.pem"), &message, stop)?
-            .context("the request was stopped")?;
+        // As agreed: an AI tool has no say over the version, as it has none
+        // over the proxy's leg to the server.
+        let answer = compose::send(
+            address,
+            &self.data_dir.join("ca.pem"),
+            &message,
+            compose::Speak::Agreed,
+            stop,
+        )?
+        .context("the request was stopped")?;
         let secrets = self.secrets_allowed();
         let headers: Vec<Value> = answer
             .headers

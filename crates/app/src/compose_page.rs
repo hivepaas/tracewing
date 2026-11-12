@@ -75,6 +75,8 @@ pub struct ComposePage {
     /// Why the body it came back with was not kept, where a request was
     /// taken up again from `compose.toml` and its body was left out.
     pub body_left: Option<compose::BodyLeft>,
+    /// Which version the client asks with.
+    pub speak: compose::Speak,
     /// The calls that were written out in the body and sent as calldata,
     /// by the signatures they were taken to mean.
     pub calls: Vec<String>,
@@ -107,6 +109,7 @@ impl ComposePage {
             loaded: None,
             proto: None,
             body_left: None,
+            speak: compose::Speak::default(),
             calls: Vec::new(),
             left_out: Vec::new(),
             select: Selection::default(),
@@ -116,6 +119,7 @@ impl ComposePage {
             // Taken up where it was left: the body only where keeping it
             // would send the same bytes again.
             page.body_left = kept.body_left.clone();
+            page.speak = kept.speak;
             for (input, text) in [
                 (page.method.clone(), &kept.method),
                 (page.url.clone(), &kept.url),
@@ -164,8 +168,16 @@ impl Traffic {
             &read(&page.headers),
             &body,
             bytes.as_deref(),
+            page.speak,
         );
         kept.save(&self.compose_path());
+    }
+
+    /// Which version the client asks tracewing with, kept for next time.
+    pub fn set_speak(&mut self, speak: compose::Speak, cx: &mut Context<Self>) {
+        self.compose_page(cx).speak = speak;
+        self.save_composed(cx);
+        cx.notify();
     }
 
     /// Puts what was kept back in the editor, as a start does.
@@ -347,11 +359,12 @@ impl Traffic {
         page.answer = None;
         page.answer_json = None;
         let (proxy, ca) = (self.engine.addr, self.data_dir.join("ca.pem"));
+        let speak = self.compose_page(cx).speak;
         let protos = std::sync::Arc::clone(&self.protos);
         cx.spawn(async move |this, cx| {
             let (result, json) = cx
                 .background_spawn(async move {
-                    let result = compose::send(proxy, &ca, &message, stopped);
+                    let result = compose::send(proxy, &ca, &message, speak, stopped);
                     let json = result
                         .as_ref()
                         .ok()
@@ -472,6 +485,25 @@ impl Traffic {
                 .when(!loud, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
                 .child(label)
         };
+        // Chosen or not, as the Messages box marks which way a message goes:
+        // this picks, it does not act, so it is not the loud kind.
+        let pick = |id: &'static str, label: String, on: bool| {
+            div()
+                .id(id)
+                .flex_shrink_0()
+                .h(px(26.))
+                .px(px(10.))
+                .rounded(px(13.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .reachable()
+                .text_size(px(12.))
+                .font_weight(FontWeight::BOLD)
+                .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
+                .when(!on, |d| d.text_color(rgb(c.muted)))
+                .child(label)
+        };
         let mono_block = |text: String| {
             div()
                 .w_full()
@@ -552,11 +584,40 @@ impl Traffic {
                         names = page.left_out.join(", ")
                     ))
             }))
+            .children((page.speak != compose::Speak::Agreed).then(|| {
+                div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                    "{version} is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.",
+                    version = page.speak.text()
+                ))
+            }))
             .children(page.stopped.then(|| {
                 div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
                     "Stopped: no answer was read. What reached the server shows in Traffic."
                 ))
             }))
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap(px(4.))
+                    .child(
+                        div()
+                            .text_size(px(12.))
+                            .text_color(rgb(c.muted))
+                            .pr(px(4.))
+                            .child(tr!("Ask with")),
+                    )
+                    .children(compose::Speak::EVERY.map(|speak| {
+                        let id: &'static str = match speak {
+                            compose::Speak::Agreed => "compose-speak-agreed",
+                            compose::Speak::Http1 => "compose-speak-http1",
+                            compose::Speak::Http2 => "compose-speak-http2",
+                        };
+                        pick(id, speak.text(), page.speak == speak)
+                            .on_click(cx.listener(move |this, _, _, cx| this.set_speak(speak, cx)))
+                    })),
+            )
             .child(
                 div()
                     .flex()

@@ -430,7 +430,10 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
     // What reached the server, to check what was changed on the way: the query,
     // each header, and the body, a line each.
     if req.uri().path() == "/echo" {
-        let mut text = format!("query={}\n", req.uri().query().unwrap_or(""));
+        // The version as the origin was asked, which is not always the one
+        // the client asked the proxy with: the two legs are settled apart.
+        let mut text = format!("version={:?}\n", req.version());
+        text.push_str(&format!("query={}\n", req.uri().query().unwrap_or("")));
         for (name, value) in req.headers() {
             text.push_str(&format!("{name}: {}\n", value.to_str().unwrap_or("?")));
         }

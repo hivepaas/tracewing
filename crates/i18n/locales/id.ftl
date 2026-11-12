@@ -244,6 +244,9 @@ te519d36e = Tukar
 # Back to Traffic
 t644042d2 = Kembali ke Traffic
 
+# As agreed
+td3a1f5f7 = Sesuai kesepakatan
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" bukan metode
 
@@ -280,8 +283,14 @@ te85cbcea =
        *[other] { $names } ditentukan sendiri oleh klien, jadi yang dituliskan untuknya tidak terkirim.
     }
 
+# {version} is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.
+t4916bc86 = { $version } adalah versi yang dipakai untuk bertanya ke tracewing. Versi untuk bertanya ke server ditentukan antara tracewing dan server, seperti pada flow lainnya.
+
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Dihentikan: tidak ada jawaban yang dibaca. Apa yang sampai ke server tampil di Traffic.
+
+# Ask with
+tb5209e72 = Bertanya dengan
 
 # Sending…
 te946e7bf = Mengirim…
