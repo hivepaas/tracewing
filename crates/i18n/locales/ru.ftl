@@ -40,6 +40,24 @@ t51332550 =
 # {size} · reading {percent}%
 t49fe2cb3 = { $size } · чтение { $percent }%
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = { $call } не удалось записать в тело как calldata. Напишите её в hex или позвольте tracewing написать тело.
+
+# That is not a call written out.
+tc159f8f5 = Это не вызов, записанный словами.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Вызов с именем { $name } здесь неизвестен. Напишите вместе с ним типы, как transfer(address,uint256)(…), или добавьте его ABI в разделе «ABI контрактов» в Настройках.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } — это больше одного вызова: { $found }. Напишите вместе с ним типы, как { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } — это не типы, которыми можно записать вызов.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Значения не подходят к { $signature }: { $why }
+
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Оформление: { $now }. Нажмите, чтобы переключить: { $next }.
 
@@ -231,24 +249,6 @@ tacdcf5cb = "{ $method }" — не метод
 
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = тело запроса сохранено не целиком, поэтому его нельзя отправить повторно
-
-# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
-t1d03e346 = { $call } не удалось записать в тело как calldata. Напишите её в hex или позвольте tracewing написать тело.
-
-# That is not a call written out.
-tc159f8f5 = Это не вызов, записанный словами.
-
-# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
-t61568d43 = Вызов с именем { $name } здесь неизвестен. Напишите вместе с ним типы, как transfer(address,uint256)(…), или добавьте его ABI в разделе «ABI контрактов» в Настройках.
-
-# {name} is more than one call: {found}. Write the types with it, as {first}(…).
-t48b75c8d = { $name } — это больше одного вызова: { $found }. Напишите вместе с ним типы, как { $first }(…).
-
-# {types} are not types a call can be written with.
-t544218b9 = { $types } — это не типы, которыми можно записать вызов.
-
-# The values do not fit {signature}: {why}
-t14015b69 = Значения не подходят к { $signature }: { $why }
 
 # name: value, one a line
 t4df37bea = имя: значение, по одному на строку

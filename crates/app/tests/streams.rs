@@ -21,7 +21,7 @@ use tracewing::{
 };
 use tracewing_dev::benchkit;
 use tracewing_proxy::sockets::Toward;
-use tracewing_store::settings::StorageSettings;
+use tracewing_store::{settings::StorageSettings, web3};
 
 fn wait_for(
     cx: &mut HeadlessAppContext,
@@ -216,6 +216,68 @@ fn streams_show_as_they_come() {
     wait_for(&mut cx, window, "the sent messages", |view| {
         messages(view) >= before + 3
     });
+
+    // A call written out in a message goes as the calldata it stands for,
+    // as one written in Compose does. Sent toward the app, where this test
+    // holds the other end and so can read the bytes themselves: the writing
+    // is the same whichever way the message goes, and the origin answers a
+    // call rather than sending it back.
+    let whose = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+    let call = format!("balanceOf({whose})");
+    let written = format!(
+        r#"{{"jsonrpc":"2.0","id":7,"method":"eth_call","params":[{{"to":"{whose}","data":"{call}"}},"latest"]}}"#
+    );
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_socket_toward(Toward::App, cx);
+            view.socket_message
+                .update(cx, |input, cx| input.set_text(&written, 0..0, cx));
+            view.send_socket_message(cx);
+            let state = view.inspector.messages.as_ref().unwrap();
+            assert_eq!(state.send_problem, None);
+            assert_eq!(state.send_calls, ["balanceOf(address)"]);
+            assert_eq!(view.socket_message.read(cx).text(), "", "emptied once sent");
+        })
+        .unwrap();
+    let arrived = runtime.block_on(ws.next()).unwrap().unwrap();
+    let hex = web3::hex_text(
+        &web3::calldata(&call, &web3::known_signatures)
+            .expect("a call every chain knows")
+            .data,
+    );
+    assert_eq!(
+        arrived,
+        Message::text(written.replace(&call, &hex)),
+        "the bytes went, not the text"
+    );
+
+    // One that cannot be written says why, and nothing goes.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.socket_message.update(cx, |input, cx| {
+                input.set_text(
+                    r#"{"jsonrpc":"2.0","id":8,"method":"eth_call","params":[{"data":"frobnicate(1)"}]}"#,
+                    0..0,
+                    cx,
+                )
+            });
+            view.send_socket_message(cx);
+            let state = view.inspector.messages.as_ref().unwrap();
+            assert!(
+                state
+                    .send_problem
+                    .as_deref()
+                    .is_some_and(|why| why.contains("frobnicate")),
+                "{:?}",
+                state.send_problem
+            );
+            assert!(state.send_calls.is_empty());
+            assert!(
+                !view.socket_message.read(cx).text().is_empty(),
+                "what was typed is still there to be put right"
+            );
+        })
+        .unwrap();
     window
         .update(&mut cx, |view, _, cx| {
             view.socket_message

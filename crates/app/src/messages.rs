@@ -38,6 +38,9 @@ pub struct MessagesState {
     pub toward: Toward,
     /// Why the last one could not be sent.
     pub send_problem: Option<String>,
+    /// The calls the last message sent had written out in it, by the
+    /// signatures they were taken to mean.
+    pub send_calls: Vec<String>,
 }
 
 impl MessagesState {
@@ -51,6 +54,7 @@ impl MessagesState {
             scroll: UniformListScrollHandle::new(),
             toward: Toward::Server,
             send_problem: None,
+            send_calls: Vec::new(),
         }
     }
 }
@@ -350,14 +354,29 @@ impl Traffic {
 
     /// Sends what is typed into the socket, the way chosen. It joins the
     /// list as it is written down, as any message.
+    ///
+    /// A call written out in it — `balanceOf(0xd8dA…)` where a node wants
+    /// calldata — is sent as the bytes it stands for, as in Compose: a node
+    /// is as often asked over a socket as over a request.
     pub fn send_socket_message(&mut self, cx: &mut Context<Self>) {
         let text = self.socket_message.read(cx).text().to_owned();
-        let Some(state) = &mut self.inspector.messages else {
-            return;
-        };
         if text.is_empty() {
             return;
         }
+        let abi = self.abis.abi();
+        let written = crate::calldata::as_calldata(&text, &crate::calldata::signatures_of(&abi));
+        let Some(state) = &mut self.inspector.messages else {
+            return;
+        };
+        let (text, calls) = match written {
+            Ok(written) => written,
+            Err(problem) => {
+                state.send_problem = Some(problem);
+                state.send_calls = Vec::new();
+                cx.notify();
+                return;
+            }
+        };
         let sent = self
             .engine
             .sockets
@@ -366,6 +385,10 @@ impl Traffic {
             Ok(()) => None,
             Err(NotSent::NotOpen) => Some(tr!("The socket has closed.")),
             Err(NotSent::Busy) => Some(tr!("Too many are still waiting to go. Try again.")),
+        };
+        state.send_calls = match sent.is_ok() {
+            true => calls,
+            false => Vec::new(),
         };
         if sent.is_ok() {
             self.socket_message
@@ -400,6 +423,7 @@ impl Traffic {
                 .child(label)
         };
         let problem = state.send_problem.clone();
+        let calls = state.send_calls.clone();
         Some(
             div()
                 .flex_shrink_0()
@@ -485,7 +509,13 @@ impl Traffic {
                 })
                 .children(
                     problem.map(|why| div().text_size(px(12.)).text_color(rgb(c.error)).child(why)),
-                ),
+                )
+                .children((!calls.is_empty()).then(|| {
+                    div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                        "Written out in the body and sent as calldata: {calls}",
+                        calls = calls.join(", ")
+                    ))
+                })),
         )
     }
 }

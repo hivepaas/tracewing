@@ -34,6 +34,24 @@ t51332550 =
 # {size} · reading {percent}%
 t49fe2cb3 = { $size } · okunuyor %{ $percent }
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = { $call } gövdeye calldata olarak yazılamadı. Onu hex olarak yazın ya da gövdeyi tracewing yazsın.
+
+# That is not a call written out.
+tc159f8f5 = Bu, açık yazılmış bir çağrı değil.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = { $name } adında bir çağrı burada bilinmiyor. Tiplerini de yazın, transfer(address,uint256)(…) gibi, ya da ABI'sini Ayarlar'daki Sözleşme ABI'leri bölümünde ekleyin.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } birden fazla çağrıya karşılık geliyor: { $found }. Tipleri de yazın, { $first }(…) gibi.
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types }, bir çağrının yazılabileceği tipler değil.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Değerler { $signature } ile uyuşmuyor: { $why }
+
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Görünüm: { $now }. Değiştirmek için tıklayın: { $next }.
 
@@ -217,24 +235,6 @@ tacdcf5cb = "{ $method }" bir metot değil
 
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = istek gövdesi bütün olarak saklanmadı, bu yüzden yeniden gönderilemez
-
-# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
-t1d03e346 = { $call } gövdeye calldata olarak yazılamadı. Onu hex olarak yazın ya da gövdeyi tracewing yazsın.
-
-# That is not a call written out.
-tc159f8f5 = Bu, açık yazılmış bir çağrı değil.
-
-# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
-t61568d43 = { $name } adında bir çağrı burada bilinmiyor. Tiplerini de yazın, transfer(address,uint256)(…) gibi, ya da ABI'sini Ayarlar'daki Sözleşme ABI'leri bölümünde ekleyin.
-
-# {name} is more than one call: {found}. Write the types with it, as {first}(…).
-t48b75c8d = { $name } birden fazla çağrıya karşılık geliyor: { $found }. Tipleri de yazın, { $first }(…) gibi.
-
-# {types} are not types a call can be written with.
-t544218b9 = { $types }, bir çağrının yazılabileceği tipler değil.
-
-# The values do not fit {signature}: {why}
-t14015b69 = Değerler { $signature } ile uyuşmuyor: { $why }
 
 # name: value, one a line
 t4df37bea = ad: değer, satır başına bir tane
