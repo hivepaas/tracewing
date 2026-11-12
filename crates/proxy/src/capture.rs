@@ -891,7 +891,19 @@ impl HttpHandler for FlowHandler {
         _ctx: &HttpContext,
         err: hyper_util::client::legacy::Error,
     ) -> Response<Body> {
-        let message = error_chain(&err);
+        let mut message = error_chain(&err);
+        // A server that asked for a client certificate, given none, may only
+        // close the connection, with no word of why.
+        let missing = err.connect_info().is_some_and(|connected| {
+            let mut extensions = http::Extensions::new();
+            connected.get_extras(&mut extensions);
+            extensions
+                .get::<Arc<Upstream>>()
+                .is_some_and(|upstream| upstream.client_cert_missing)
+        });
+        if missing && !message.contains(CLIENT_CERT_HINT) {
+            message.push_str(CLIENT_CERT_HINT);
+        }
         self.slowed = None;
         if let Some(flow) = self.flow.take() {
             flow.fail(message.clone());
@@ -2038,12 +2050,14 @@ pub fn error_chain(err: &dyn StdError) -> String {
     }
     // What to do about it, where TLS says only its name.
     if message.contains("CertificateRequired") {
-        message.push_str(
-            ". The server asks for a client certificate: give one for this host in Settings",
-        );
+        message.push_str(CLIENT_CERT_HINT);
     }
     message
 }
+
+/// What a flow says when its server asked for a client certificate and had none.
+const CLIENT_CERT_HINT: &str =
+    ". The server asks for a client certificate: give one for this host in Settings";
 
 fn unix_micros() -> i64 {
     SystemTime::now()

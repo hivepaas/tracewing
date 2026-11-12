@@ -9,7 +9,10 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use http::Uri;
 use hudsucker::rustls::{
     self, ClientConfig, DigitallySignedStruct, SignatureScheme,
-    client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
+    client::{
+        ResolvesClientCert,
+        danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
+    },
     pki_types::{CertificateDer, ServerName, UnixTime},
     sign::{CertifiedKey, SingleCertAndKey},
 };
@@ -49,6 +52,8 @@ pub struct Upstream {
     pub tls_us: Option<i64>,
     pub remote: SocketAddr,
     pub tls: Option<TlsFacts>,
+    /// The server asked for a client certificate, and tracewing had none for it.
+    pub client_cert_missing: bool,
     /// Its facts are written once, with the first flow to come back over it.
     told: AtomicBool,
 }
@@ -308,7 +313,7 @@ async fn connect(
         }
     };
 
-    let (stream, tls_us, facts) = if secure {
+    let (stream, tls_us, facts, client_cert_missing) = if secure {
         let shaking = Instant::now();
         let name = ServerName::try_from(host.to_owned())
             .map_err(|_| format!("\"{host}\" is not a name TLS can check"))?;
@@ -322,10 +327,13 @@ async fn connect(
         config
             .dangerous()
             .set_certificate_verifier(Arc::clone(&witness) as Arc<dyn ServerCertVerifier>);
-        // Shown only if the server asks for one.
-        if let Some(cert) = client_cert {
-            config.client_auth_cert_resolver = Arc::new(SingleCertAndKey::from(cert));
-        }
+        // Shown only if the server asks for one. With none, whether it asked
+        // is kept, to say what to do when it then turns the connection down.
+        let unanswered = Arc::new(Unanswered::default());
+        config.client_auth_cert_resolver = match client_cert {
+            Some(cert) => Arc::new(SingleCertAndKey::from(cert)),
+            None => Arc::clone(&unanswered) as Arc<dyn ResolvesClientCert>,
+        };
         let stream = TlsConnector::from(Arc::new(config))
             .connect(name, tcp)
             .await
@@ -364,9 +372,10 @@ async fn connect(
             Inner::Tls(TokioIo::new(Box::new(stream))),
             Some(tls_us),
             Some(facts),
+            unanswered.asked.load(Ordering::Relaxed),
         )
     } else {
-        (Inner::Plain(TokioIo::new(tcp)), None, None)
+        (Inner::Plain(TokioIo::new(tcp)), None, None, false)
     };
 
     Ok(Stream {
@@ -381,9 +390,27 @@ async fn connect(
             tls_us,
             remote,
             tls: facts,
+            client_cert_missing,
             told: AtomicBool::new(false),
         }),
     })
+}
+
+/// No client certificate to give: says none, and keeps that one was asked for.
+#[derive(Debug, Default)]
+struct Unanswered {
+    asked: AtomicBool,
+}
+
+impl ResolvesClientCert for Unanswered {
+    fn resolve(&self, _: &[&[u8]], _: &[SignatureScheme]) -> Option<Arc<CertifiedKey>> {
+        self.asked.store(true, Ordering::Relaxed);
+        None
+    }
+
+    fn has_certs(&self) -> bool {
+        false
+    }
 }
 
 /// A connection to the server itself: the name looked up, then TCP.
