@@ -1,6 +1,123 @@
 # tracewing in Japanese. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# Free software
+t731220a4 = フリーソフトウェア
+
+# Under the GNU General Public License, version 3 or later
+t4e98bf3c = GNU General Public License バージョン 3 以降に基づきます
+
+# View license
+tfc21d38b = ライセンスを表示
+
+# Made by HivePaaS
+t10c7007a = HivePaaS 製
+
+# Built in Rust, on GPUI
+t49e74c86 = Rust と GPUI で作成
+
+# Source code
+tf6a49f4d = ソースコード
+
+# Something wrong?
+t610dfb6f = 問題がありますか？
+
+# Tell us, with the version above
+ta3e29034 = 上記のバージョンを添えてお知らせください
+
+# Report a problem
+t7b1728e7 = 問題を報告
+
+# What changed
+te8345543 = 変更点
+
+# Every release, and what is new in it
+t8e6f2052 = すべてのリリースと、その新機能
+
+# Release notes
+tc52ab62f = リリースノート
+
+# © {year} HivePaaS. The tracewing name and logo are trademarks of HivePaaS.
+t14b291a4 = © { $year } HivePaaS. tracewing の名称とロゴは HivePaaS の商標です。
+
+# Copied
+t8dc21305 = コピーしました
+
+# Copy version info
+t3d37483c = バージョン情報をコピー
+
+# Version {version} · {os} {arch}
+t6bead5ae = バージョン { $version } · { $os } { $arch }
+
+# A native HTTP(S) debugging proxy that keeps up with big sessions.
+t86e5ad3e = 大きなセッションにもついていくネイティブ HTTP(S) デバッグプロキシ。
+
+# More from HivePaaS
+tb25cf729 = HivePaaS のその他の製品
+
+# Free and open source, like tracewing.
+tb730ab28 = tracewing と同じく、無料のオープンソースです。
+
+# A self-hosted platform for your apps, built on Docker Swarm: an open-source alternative to Heroku, Render and Coolify.
+tc9d13419 = Docker Swarm 上に構築された、アプリ向けのセルフホスト型プラットフォーム。Heroku、Render、Coolify に代わるオープンソースです。
+
+# 300+ one-click apps
+t6a770b0a = 300 以上のワンクリックアプリ
+
+# Deploy on push
+tb0bfc3e9 = push で自動デプロイ
+
+# Pull request previews
+t4e4180fc = プルリクエストのプレビュー
+
+# Automatic TLS
+t9e9776ed = 自動 TLS
+
+# Live logs and metrics
+tebe3a172 = ライブログとメトリクス
+
+# Apache-2.0
+t0274f036 = Apache-2.0
+
+# Visit hivepaas.com
+t0632975a = hivepaas.com を見る
+
+# A fast, native SSH client for Linux, macOS and Windows.
+t0f4c758a = Linux、macOS、Windows で動作する、高速なネイティブ SSH クライアント。
+
+# SSH and SFTP
+t0f8af34d = SSH と SFTP
+
+# Follows your ssh_config
+tc1c4446d = ssh_config に対応
+
+# A real terminal
+tae9bcfa8 = 本格的なターミナル
+
+# GPL-3.0-or-later
+t8622a5c1 = GPL-3.0-or-later
+
+# Visit shellwing.app
+t1d2ed540 = shellwing.app を開く
+
+# A file archiver that puts every core to work and opens archives safely.
+t5d2a9fa0 = すべてのコアを働かせ、アーカイブを安全に開くファイルアーカイバ。
+
+# ZIP, 7z, RAR and tar
+t4d2518b8 = ZIP、7z、RAR、tar
+
+# Every core at work
+t553f5ef1 = すべてのコアを活用
+
+# Safe by default
+t3ffc07c8 = 最初から安全
+
+# Browse S3, WebDAV and SFTP
+t61def008 = S3・WebDAV・SFTP を閲覧
+
+# Visit packwing.app
+t11cbc28f = packwing.app を開く
+
 # … {count} line {closer} | … {count} lines {closer}
 t2ba67348 = … { $count } 行 { $closer }
 
@@ -541,9 +658,6 @@ tf5910557 = 再送信
 # Edit and send
 tf837e542 = 編集して送信
 
-# Copied
-t8dc21305 = コピーしました
-
 # Copy as cURL
 t866d1e3e = cURL としてコピー
 
@@ -744,6 +858,9 @@ t34eddf06 = ストレージ
 
 # AI tools
 t294d7ea4 = AI ツール
+
+# About
+t58e096de = 説明
 
 # Light
 t8ad2f8cf = ライト
@@ -2637,9 +2754,6 @@ tb79773df = Server-Timing
 
 # Took
 tcea1562e = 所要時間
-
-# About
-t58e096de = 説明
 
 # Scheme
 t9c9083a2 = スキーム

@@ -1,5 +1,6 @@
 //! The window: traffic as it happens, on top of the proxy core.
 
+pub mod about_page;
 pub mod android;
 pub mod body;
 pub mod bodyview;
@@ -96,6 +97,9 @@ macro_rules! icons {
 
 const ICONS: &[(&str, &[u8])] = icons![
     "logo",
+    "packwing",
+    "packwing-feather",
+    "shellwing",
     "send",
     "traffic",
     "trash",

@@ -1,6 +1,123 @@
 # tracewing in Vietnamese. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# Free software
+t731220a4 = Phần mềm tự do
+
+# Under the GNU General Public License, version 3 or later
+t4e98bf3c = Theo Giấy phép Công cộng GNU, phiên bản 3 trở lên
+
+# View license
+tfc21d38b = Xem giấy phép
+
+# Made by HivePaaS
+t10c7007a = Do HivePaaS tạo ra
+
+# Built in Rust, on GPUI
+t49e74c86 = Viết bằng Rust, trên GPUI
+
+# Source code
+tf6a49f4d = Mã nguồn
+
+# Something wrong?
+t610dfb6f = Có gì không ổn?
+
+# Tell us, with the version above
+ta3e29034 = Báo cho chúng tôi, kèm phiên bản ở trên
+
+# Report a problem
+t7b1728e7 = Báo lỗi
+
+# What changed
+te8345543 = Có gì thay đổi
+
+# Every release, and what is new in it
+t8e6f2052 = Mọi bản phát hành và điểm mới trong đó
+
+# Release notes
+tc52ab62f = Ghi chú phát hành
+
+# © {year} HivePaaS. The tracewing name and logo are trademarks of HivePaaS.
+t14b291a4 = © { $year } HivePaaS. Tên và logo tracewing là nhãn hiệu của HivePaaS.
+
+# Copied
+t8dc21305 = Đã sao chép
+
+# Copy version info
+t3d37483c = Sao chép thông tin phiên bản
+
+# Version {version} · {os} {arch}
+t6bead5ae = Phiên bản { $version } · { $os } { $arch }
+
+# A native HTTP(S) debugging proxy that keeps up with big sessions.
+t86e5ad3e = Proxy gỡ lỗi HTTP(S) chạy native, vẫn mượt với những phiên lớn.
+
+# More from HivePaaS
+tb25cf729 = Thêm từ HivePaaS
+
+# Free and open source, like tracewing.
+tb730ab28 = Miễn phí và mã nguồn mở, như tracewing.
+
+# A self-hosted platform for your apps, built on Docker Swarm: an open-source alternative to Heroku, Render and Coolify.
+tc9d13419 = Nền tảng tự lưu trữ cho các ứng dụng của bạn, xây trên Docker Swarm: lựa chọn mã nguồn mở thay cho Heroku, Render và Coolify.
+
+# 300+ one-click apps
+t6a770b0a = 300+ ứng dụng cài một chạm
+
+# Deploy on push
+tb0bfc3e9 = Deploy khi push
+
+# Pull request previews
+t4e4180fc = Bản xem trước cho pull request
+
+# Automatic TLS
+t9e9776ed = TLS tự động
+
+# Live logs and metrics
+tebe3a172 = Log và metrics trực tiếp
+
+# Apache-2.0
+t0274f036 = Apache-2.0
+
+# Visit hivepaas.com
+t0632975a = Xem hivepaas.com
+
+# A fast, native SSH client for Linux, macOS and Windows.
+t0f4c758a = Ứng dụng SSH nhanh, chạy native cho Linux, macOS và Windows.
+
+# SSH and SFTP
+t0f8af34d = SSH và SFTP
+
+# Follows your ssh_config
+tc1c4446d = Theo ssh_config của bạn
+
+# A real terminal
+tae9bcfa8 = Terminal thật sự
+
+# GPL-3.0-or-later
+t8622a5c1 = GPL-3.0-or-later
+
+# Visit shellwing.app
+t1d2ed540 = Xem shellwing.app
+
+# A file archiver that puts every core to work and opens archives safely.
+t5d2a9fa0 = Trình nén tệp tận dụng mọi nhân của máy và mở tệp nén an toàn.
+
+# ZIP, 7z, RAR and tar
+t4d2518b8 = ZIP, 7z, RAR và tar
+
+# Every core at work
+t553f5ef1 = Dùng mọi nhân CPU
+
+# Safe by default
+t3ffc07c8 = An toàn mặc định
+
+# Browse S3, WebDAV and SFTP
+t61def008 = Duyệt S3, WebDAV và SFTP
+
+# Visit packwing.app
+t11cbc28f = Xem packwing.app
+
 # … {count} line {closer} | … {count} lines {closer}
 t2ba67348 = … { $count } dòng { $closer }
 
@@ -541,9 +658,6 @@ tf5910557 = Gửi lại
 # Edit and send
 tf837e542 = Sửa rồi gửi
 
-# Copied
-t8dc21305 = Đã sao chép
-
 # Copy as cURL
 t866d1e3e = Sao chép dạng cURL
 
@@ -744,6 +858,9 @@ t34eddf06 = Lưu trữ
 
 # AI tools
 t294d7ea4 = Công cụ AI
+
+# About
+t58e096de = Mô tả
 
 # Light
 t8ad2f8cf = Sáng
@@ -2637,9 +2754,6 @@ tb79773df = Server-Timing
 
 # Took
 tcea1562e = Mất
-
-# About
-t58e096de = Mô tả
 
 # Scheme
 t9c9083a2 = Scheme

@@ -1,6 +1,123 @@
 # tracewing in Turkish. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# Free software
+t731220a4 = Özgür yazılım
+
+# Under the GNU General Public License, version 3 or later
+t4e98bf3c = GNU Genel Kamu Lisansı, sürüm 3 veya üzeri altında
+
+# View license
+tfc21d38b = Lisansı gör
+
+# Made by HivePaaS
+t10c7007a = HivePaaS yapımı
+
+# Built in Rust, on GPUI
+t49e74c86 = Rust ile, GPUI üzerinde yapıldı
+
+# Source code
+tf6a49f4d = Kaynak kodu
+
+# Something wrong?
+t610dfb6f = Bir sorun mu var?
+
+# Tell us, with the version above
+ta3e29034 = Yukarıdaki sürümle birlikte bize bildirin
+
+# Report a problem
+t7b1728e7 = Sorun bildir
+
+# What changed
+te8345543 = Neler değişti
+
+# Every release, and what is new in it
+t8e6f2052 = Her sürüm ve içindeki yenilikler
+
+# Release notes
+tc52ab62f = Sürüm notları
+
+# © {year} HivePaaS. The tracewing name and logo are trademarks of HivePaaS.
+t14b291a4 = © { $year } HivePaaS. tracewing adı ve logosu HivePaaS'ın ticari markalarıdır.
+
+# Copied
+t8dc21305 = Kopyalandı
+
+# Copy version info
+t3d37483c = Sürüm bilgisini kopyala
+
+# Version {version} · {os} {arch}
+t6bead5ae = Sürüm { $version } · { $os } { $arch }
+
+# A native HTTP(S) debugging proxy that keeps up with big sessions.
+t86e5ad3e = Büyük oturumlara ayak uyduran yerel bir HTTP(S) hata ayıklama vekili.
+
+# More from HivePaaS
+tb25cf729 = HivePaaS'tan daha fazlası
+
+# Free and open source, like tracewing.
+tb730ab28 = tracewing gibi ücretsiz ve açık kaynak.
+
+# A self-hosted platform for your apps, built on Docker Swarm: an open-source alternative to Heroku, Render and Coolify.
+tc9d13419 = Docker Swarm üzerine kurulu, uygulamalarınız için kendi sunucunuzda çalışan bir platform: Heroku, Render ve Coolify'a açık kaynaklı bir alternatif.
+
+# 300+ one-click apps
+t6a770b0a = 300+ tek tıkla kurulan uygulama
+
+# Deploy on push
+tb0bfc3e9 = Push ile dağıtım
+
+# Pull request previews
+t4e4180fc = Pull request önizlemeleri
+
+# Automatic TLS
+t9e9776ed = Otomatik TLS
+
+# Live logs and metrics
+tebe3a172 = Canlı günlükler ve metrikler
+
+# Apache-2.0
+t0274f036 = Apache-2.0
+
+# Visit hivepaas.com
+t0632975a = hivepaas.com sitesini ziyaret et
+
+# A fast, native SSH client for Linux, macOS and Windows.
+t0f4c758a = Linux, macOS ve Windows için hızlı, yerel bir SSH istemcisi.
+
+# SSH and SFTP
+t0f8af34d = SSH ve SFTP
+
+# Follows your ssh_config
+tc1c4446d = ssh_config dosyanızı izler
+
+# A real terminal
+tae9bcfa8 = Gerçek bir terminal
+
+# GPL-3.0-or-later
+t8622a5c1 = GPL-3.0-or-later
+
+# Visit shellwing.app
+t1d2ed540 = shellwing.app'i ziyaret edin
+
+# A file archiver that puts every core to work and opens archives safely.
+t5d2a9fa0 = Her çekirdeği çalıştıran ve arşivleri güvenle açan bir dosya arşivleyici.
+
+# ZIP, 7z, RAR and tar
+t4d2518b8 = ZIP, 7z, RAR ve tar
+
+# Every core at work
+t553f5ef1 = Her çekirdek iş başında
+
+# Safe by default
+t3ffc07c8 = Varsayılan olarak güvenli
+
+# Browse S3, WebDAV and SFTP
+t61def008 = S3, WebDAV ve SFTP'de gezinin
+
+# Visit packwing.app
+t11cbc28f = packwing.app'i ziyaret edin
+
 # … {count} line {closer} | … {count} lines {closer}
 t2ba67348 =
     { $n ->
@@ -570,9 +687,6 @@ tf5910557 = Yeniden gönder
 # Edit and send
 tf837e542 = Düzenle ve gönder
 
-# Copied
-t8dc21305 = Kopyalandı
-
 # Copy as cURL
 t866d1e3e = cURL olarak kopyala
 
@@ -775,6 +889,9 @@ t34eddf06 = Depolama
 
 # AI tools
 t294d7ea4 = Yapay zekâ araçları
+
+# About
+t58e096de = Açıklama
 
 # Light
 t8ad2f8cf = Açık
@@ -2726,9 +2843,6 @@ tb79773df = Server-Timing
 
 # Took
 tcea1562e = Süre
-
-# About
-t58e096de = Açıklama
 
 # Scheme
 t9c9083a2 = Şema

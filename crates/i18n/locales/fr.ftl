@@ -1,6 +1,123 @@
 # tracewing in French. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# Free software
+t731220a4 = Logiciel libre
+
+# Under the GNU General Public License, version 3 or later
+t4e98bf3c = Sous la licence publique générale GNU, version 3 ou ultérieure
+
+# View license
+tfc21d38b = Voir la licence
+
+# Made by HivePaaS
+t10c7007a = Créé par HivePaaS
+
+# Built in Rust, on GPUI
+t49e74c86 = Écrit en Rust, sur GPUI
+
+# Source code
+tf6a49f4d = Code source
+
+# Something wrong?
+t610dfb6f = Un problème ?
+
+# Tell us, with the version above
+ta3e29034 = Dites-le-nous, avec la version ci-dessus
+
+# Report a problem
+t7b1728e7 = Signaler un problème
+
+# What changed
+te8345543 = Nouveautés
+
+# Every release, and what is new in it
+t8e6f2052 = Chaque version, et ses nouveautés
+
+# Release notes
+tc52ab62f = Notes de version
+
+# © {year} HivePaaS. The tracewing name and logo are trademarks of HivePaaS.
+t14b291a4 = © { $year } HivePaaS. Le nom et le logo tracewing sont des marques de HivePaaS.
+
+# Copied
+t8dc21305 = Copié
+
+# Copy version info
+t3d37483c = Copier les infos de version
+
+# Version {version} · {os} {arch}
+t6bead5ae = Version { $version } · { $os } { $arch }
+
+# A native HTTP(S) debugging proxy that keeps up with big sessions.
+t86e5ad3e = Un proxy de débogage HTTP(S) natif qui suit les grandes sessions.
+
+# More from HivePaaS
+tb25cf729 = Plus de HivePaaS
+
+# Free and open source, like tracewing.
+tb730ab28 = Libre et open source, comme tracewing.
+
+# A self-hosted platform for your apps, built on Docker Swarm: an open-source alternative to Heroku, Render and Coolify.
+tc9d13419 = Une plateforme auto-hébergée pour vos applications, construite sur Docker Swarm : une alternative open source à Heroku, Render et Coolify.
+
+# 300+ one-click apps
+t6a770b0a = Plus de 300 applications en un clic
+
+# Deploy on push
+tb0bfc3e9 = Déploiement à chaque push
+
+# Pull request previews
+t4e4180fc = Aperçus des pull requests
+
+# Automatic TLS
+t9e9776ed = TLS automatique
+
+# Live logs and metrics
+tebe3a172 = Logs et métriques en direct
+
+# Apache-2.0
+t0274f036 = Apache-2.0
+
+# Visit hivepaas.com
+t0632975a = Visiter hivepaas.com
+
+# A fast, native SSH client for Linux, macOS and Windows.
+t0f4c758a = Un client SSH rapide et natif pour Linux, macOS et Windows.
+
+# SSH and SFTP
+t0f8af34d = SSH et SFTP
+
+# Follows your ssh_config
+tc1c4446d = Suit votre ssh_config
+
+# A real terminal
+tae9bcfa8 = Un vrai terminal
+
+# GPL-3.0-or-later
+t8622a5c1 = GPL-3.0-or-later
+
+# Visit shellwing.app
+t1d2ed540 = Visiter shellwing.app
+
+# A file archiver that puts every core to work and opens archives safely.
+t5d2a9fa0 = Un archiveur de fichiers qui fait travailler chaque cœur et ouvre les archives en toute sécurité.
+
+# ZIP, 7z, RAR and tar
+t4d2518b8 = ZIP, 7z, RAR et tar
+
+# Every core at work
+t553f5ef1 = Chaque cœur au travail
+
+# Safe by default
+t3ffc07c8 = Sûr par défaut
+
+# Browse S3, WebDAV and SFTP
+t61def008 = Parcourt S3, WebDAV et SFTP
+
+# Visit packwing.app
+t11cbc28f = Visiter packwing.app
+
 # … {count} line {closer} | … {count} lines {closer}
 t2ba67348 =
     { $n ->
@@ -576,9 +693,6 @@ tf5910557 = Renvoyer
 # Edit and send
 tf837e542 = Modifier et envoyer
 
-# Copied
-t8dc21305 = Copié
-
 # Copy as cURL
 t866d1e3e = Copier en cURL
 
@@ -781,6 +895,9 @@ t34eddf06 = Stockage
 
 # AI tools
 t294d7ea4 = Outils d'IA
+
+# About
+t58e096de = Description
 
 # Light
 t8ad2f8cf = Clair
@@ -2781,9 +2898,6 @@ tb79773df = Server-Timing
 
 # Took
 tcea1562e = Durée
-
-# About
-t58e096de = Description
 
 # Scheme
 t9c9083a2 = Schéma
