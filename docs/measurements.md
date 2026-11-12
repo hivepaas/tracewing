@@ -434,6 +434,28 @@ by the same writer thread as flows.
 All 400,002 messages of the two recorded runs were kept: two for each round trip, and
 the two closes. `WS_BENCH=100000` repeats it.
 
+## The program behind a quick request (`crates/proxy/src/capture.rs`, 2026-11-12)
+
+curl asks once and is gone as soon as it is answered. Finding the program behind a
+connection takes about a millisecond on Linux: the socket's inode from the kernel, then
+`/proc`, newest processes first. A server on this computer answers sooner than that,
+so curl had gone before it was looked for, and its flows had no program. An answer now
+waits for the look, at most 20 ms, woken the moment it ends. Only a connection from this
+computer whose program is not known yet waits; one is looked for once.
+
+Plain HTTP through the proxy to the playground's `/json` on the same machine, a new
+curl and a new connection each time, 30 runs, 690 processes running:
+
+| | Flows with their program | curl's whole time, median | p90 |
+|---|---|---|---|
+| Before | 0 of 30 | 0.19 ms | 0.31 ms |
+| Waiting 1 ms at a time | 30 of 30 | 2.20 ms | 2.42 ms |
+| Woken when found (kept) | 30 of 30 | 0.46 ms | 0.52 ms |
+
+`tracewing-dev load` over HTTPS, 4,000 requests, did not move: 14,800–15,200 req/s on
+one connection and 60,800–62,200 on 32, p99 0.08–0.12 and 0.59–0.62 ms, before and
+after. HTTPS is looked for from its CONNECT, which is done before the first answer.
+
 ## Known gaps
 
 - hudsucker always offers `h2, http/1.1` to the client instead of mirroring

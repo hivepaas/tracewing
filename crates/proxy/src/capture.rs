@@ -90,6 +90,26 @@ certificate, then CA certificate, and pick tracewing.crt. Apps trust it only if 
 certificates the user added: tracewing's Set up page shows how, for an app of your own.</p></details>
 "#;
 
+/// The longest an answer waits for the program that asked to be found.
+const APP_HOLD: std::time::Duration = std::time::Duration::from_millis(20);
+
+/// A program that asks once and is gone as soon as it is answered, as curl
+/// is, can be found only while it waits. Looking takes about a millisecond,
+/// and a quick server answers sooner: so an answer that would beat the look
+/// waits for it, a little. Only a client on this machine has a program to
+/// find, and a connection is looked for once, so this is a first answer's.
+async fn let_its_program_be_found(flow: &Flow) {
+    let Some(answer) = flow.lock().app.clone() else {
+        return;
+    };
+    if answer.now().is_some() {
+        return;
+    }
+    // Woken the moment it is found, on a thread that may wait.
+    let deadline = std::time::Instant::now() + APP_HOLD;
+    let _ = tokio::task::spawn_blocking(move || answer.wait_until(deadline)).await;
+}
+
 /// A WebSocket's URL written whole, `ws://` or `wss://`, as curl sends one to
 /// a proxy, as the `http://` or `https://` its upgrade starts as. hudsucker
 /// takes any scheme but `http` for one with TLS, and would reach a server
@@ -808,6 +828,9 @@ impl HttpHandler for FlowHandler {
         // Before a breakpoint, which makes the response again.
         if let (Some(flow), Some(upstream)) = (&flow, res.extensions().get::<Arc<Upstream>>()) {
             flow.went_over(upstream);
+        }
+        if let Some(flow) = &flow {
+            let_its_program_be_found(flow).await;
         }
         let res = match self.pause_response.take() {
             // Events and upgrades go on for as long as they last.
