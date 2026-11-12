@@ -941,6 +941,27 @@ tb629329e = O servidor respondeu { $code }: talvez não ofereça reflexão gRPC.
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = O servidor não respondeu nada: talvez não ofereça reflexão gRPC
 
+# New connections go through the {kind} proxy {address}.
+tb5f1ef96 = Novas conexões passam pelo proxy { $kind } { $address }.
+
+# Connections go straight to servers.
+t4a64a08f = As conexões vão direto aos servidores.
+
+# relay.toml cannot be used, so connections go straight: {problem}
+tbc6a2da3 = Não dá para usar o relay.toml, então as conexões vão direto: { $problem }
+
+# http://proxy.example.com:8080 or socks5://proxy.example.com:1080
+tb945a053 = http://proxy.example.com:8080 ou socks5://proxy.example.com:1080
+
+# Go through another proxy
+tc67dfdb1 = Passar por outro proxy
+
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
+t84509e00 = Quando a rede de uma empresa só deixa sair pelo próprio proxy, o tracewing chega aos servidores por ele. Os apps continuam mandando o tráfego para o tracewing. Usuário e senha vão no endereço, como http://nome:senha@proxy:8080, e ficam guardados como escritos no relay.toml. Vazio, o tracewing vai direto aos servidores.
+
+# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host. WebSockets go straight for now.
+te1c6df83 = Hosts acessados direto, como o NO_PROXY os escreve: example.com é ele e tudo abaixo dele, * é qualquer host. Por enquanto, WebSockets vão direto.
+
 # Sent by the server, not asked for
 td717c770 = Enviado pelo servidor, sem ter sido pedido
 

@@ -307,6 +307,8 @@ pub struct Traffic {
     pub(crate) protos_problem: Option<String>,
     /// What the folder of trusted authorities holds, as last read.
     pub trusted: crate::trusted::Found,
+    /// The relay's fields in Settings, made when first shown.
+    pub relay_fields: Option<crate::relay_view::RelayFields>,
     /// The address of a server to ask for its files by gRPC reflection.
     pub protos_server: Option<Entity<TextInput>>,
     pub protos_fetching: bool,
@@ -478,6 +480,7 @@ impl Traffic {
             protos_busy: false,
             protos_problem: None,
             trusted: crate::trusted::read(data_dir),
+            relay_fields: None,
             protos_server: None,
             protos_fetching: false,
             protos_fetched: None,
