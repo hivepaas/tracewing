@@ -45,6 +45,7 @@ pub mod shortcuts;
 pub mod snippets;
 pub mod syntax;
 pub mod system;
+pub mod table;
 pub mod traffic;
 pub mod widgets;
 pub mod wrap;

@@ -10,6 +10,9 @@ ta8dc6eab = … 还有 { $size }
 # {size} {format} · {count} line of JSON | {size} {format} · {count} lines of JSON
 t0a4220dc = { $size } { $format } · { $count } 行 JSON
 
+# The first {count} rows are shown.
+t16aa1c6d = 只显示前 { $count } 行。
+
 # Unfold all
 t3849d44e = 全部展开
 
@@ -363,6 +366,9 @@ t3d35ce69 = 请求和响应并排显示
 
 # Request above the response
 t83c63123 = 请求在响应上方
+
+# Table
+td70ceb7f = 表格
 
 # Pretty
 t7e09470d = 格式化

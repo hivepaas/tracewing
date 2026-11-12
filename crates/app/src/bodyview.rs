@@ -9,12 +9,14 @@ use crate::{
     flows::size_text,
     select::{self, COPY_MAX, Copied, Selection, Spot},
     syntax::Syntax,
+    table::{self, Table},
     wrap::{self, Place},
 };
 use gpui::{
-    Bounds, ClipboardItem, Context, FocusHandle, HighlightStyle, Hsla, MouseButton, MouseDownEvent,
-    Pixels, Point, Render, ScrollWheelEvent, SharedString, Window, canvas, div, prelude::*, px,
-    rgb,
+    AnyElement, Bounds, ClipboardItem, Context, FocusHandle, FontWeight, HighlightStyle, Hsla,
+    ListHorizontalSizingBehavior, MouseButton, MouseDownEvent, Pixels, Point, Render,
+    ScrollWheelEvent, SharedString, UniformListScrollHandle, Window, canvas, div, prelude::*, px,
+    rgb, uniform_list,
 };
 use std::{
     cell::{Cell, RefCell},
@@ -141,6 +143,8 @@ pub enum BodyMode {
     Pretty,
     Raw,
     Hex,
+    /// CSV and TSV as a table of cells.
+    Table,
 }
 
 pub struct BodyView {
@@ -173,6 +177,9 @@ pub struct BodyView {
     select: Selection,
     /// The window's, which a press in the body takes so that its keys work.
     focus: FocusHandle,
+    /// CSV or TSV read as a table, which [`BodyMode::Table`] shows.
+    table: Option<Arc<Table>>,
+    table_scroll: UniformListScrollHandle,
 }
 
 impl BodyView {
@@ -201,7 +208,23 @@ impl BodyView {
             bounds: Rc::new(Cell::new(Bounds::default())),
             select: Selection::default(),
             focus,
+            table: None,
+            table_scroll: UniformListScrollHandle::new(),
         }
+    }
+
+    /// The body read as a table too, which it can then be shown as.
+    pub fn set_table(&mut self, table: Arc<Table>, cx: &mut Context<Self>) {
+        self.table = Some(table);
+        cx.notify();
+    }
+
+    pub fn has_table(&self) -> bool {
+        self.table.is_some()
+    }
+
+    pub fn table(&self) -> Option<&Arc<Table>> {
+        self.table.as_ref()
     }
 
     pub fn selection(&self) -> &Selection {
@@ -501,6 +524,7 @@ impl BodyView {
     /// `mode`, or the nearest this body has.
     fn fit(&self, mode: BodyMode) -> BodyMode {
         match mode {
+            BodyMode::Table if self.table.is_none() => self.fit(BodyMode::Pretty),
             BodyMode::Raw if !self.has_raw() => BodyMode::Pretty,
             // Made from bytes, what is shown is never as sent, laid out or not.
             BodyMode::Pretty if !self.has_pretty() && self.has_raw() => BodyMode::Raw,
@@ -867,6 +891,111 @@ impl BodyView {
 
 impl Render for BodyView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        match self.table.clone() {
+            Some(table) if self.mode() == BodyMode::Table => {
+                self.render_table(table, cx).into_any_element()
+            }
+            _ => self.render_text(window, cx).into_any_element(),
+        }
+    }
+}
+
+/// A character's width in the table, at its size of text, near enough.
+const TABLE_CHAR_W: f32 = 7.4;
+
+impl BodyView {
+    fn render_table(&mut self, table: Arc<Table>, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = colors();
+        let rows = table.rows();
+        let scroll = self.table_scroll.clone();
+        div()
+            .size_full()
+            .flex()
+            .flex_col()
+            .font_family(crate::MONO_FONT)
+            .font_features(gpui::FontFeatures::disable_ligatures())
+            .text_size(px(12.))
+            .when(table.cut, |d| {
+                d.child(
+                    div()
+                        .px(px(10.))
+                        .pb(px(4.))
+                        .text_color(rgb(c.muted))
+                        .font_family(crate::FONT)
+                        .child(tr!(
+                            "The first {count} rows are shown.",
+                            count = crate::flows::group_digits(table::ROWS_MAX as u64)
+                        )),
+                )
+            })
+            .child(
+                uniform_list(
+                    "table-rows",
+                    rows,
+                    cx.processor(|this, range: std::ops::Range<usize>, _, _| {
+                        this.render_table_rows(range)
+                    }),
+                )
+                .flex_1()
+                .with_horizontal_sizing_behavior(ListHorizontalSizingBehavior::Unconstrained)
+                .track_scroll(&scroll),
+            )
+    }
+
+    fn render_table_rows(&self, range: std::ops::Range<usize>) -> Vec<AnyElement> {
+        let c = colors();
+        let Some(table) = &self.table else {
+            return Vec::new();
+        };
+        let digits = table.rows().to_string().len();
+        let number_w = digits as f32 * TABLE_CHAR_W + 16.;
+        range
+            .map(|row| {
+                let cells = table.cells(row);
+                let head = row == 0;
+                div()
+                    .id(("table-row", row))
+                    .h(px(LINE_HEIGHT))
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .when(head, |d| d.font_weight(FontWeight::BOLD).bg(rgb(c.chip)))
+                    .when(!head && row % 2 == 0, |d| d.bg(rgb(c.code)))
+                    .child(
+                        div()
+                            .w(px(number_w))
+                            .flex_shrink_0()
+                            .pr(px(8.))
+                            .flex()
+                            .justify_end()
+                            .text_color(rgb(c.faint))
+                            .when(!head, |d| d.child(row.to_string())),
+                    )
+                    .children(table.widths.iter().enumerate().map(|(i, width)| {
+                        div()
+                            .w(px(*width as f32 * TABLE_CHAR_W + 14.))
+                            .h_full()
+                            .flex_shrink_0()
+                            .px(px(7.))
+                            .flex()
+                            .items_center()
+                            .overflow_hidden()
+                            .whitespace_nowrap()
+                            .border_l_1()
+                            .border_color(rgb(c.line))
+                            .child(
+                                cells
+                                    .get(i)
+                                    .map(|cell| table::shown(cell))
+                                    .unwrap_or_default(),
+                            )
+                    }))
+                    .into_any_element()
+            })
+            .collect()
+    }
+
+    fn render_text(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         // Enough for any size of the panel; what does not fit is clipped.
         let in_view = (f32::from(window.viewport_size().height) / LINE_HEIGHT).ceil() as u64 + 1;

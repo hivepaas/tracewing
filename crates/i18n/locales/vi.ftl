@@ -10,6 +10,9 @@ ta8dc6eab = … còn { $size }
 # {size} {format} · {count} line of JSON | {size} {format} · {count} lines of JSON
 t0a4220dc = { $size } { $format } · { $count } dòng JSON
 
+# The first {count} rows are shown.
+t16aa1c6d = Chỉ hiện { $count } dòng đầu tiên.
+
 # Unfold all
 t3849d44e = Mở hết
 
@@ -363,6 +366,9 @@ t3d35ce69 = Request và response cạnh nhau
 
 # Request above the response
 t83c63123 = Request ở trên response
+
+# Table
+td70ceb7f = Bảng
 
 # Pretty
 t7e09470d = Định dạng

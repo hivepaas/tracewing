@@ -10,6 +10,9 @@ ta8dc6eab = … あと { $size }
 # {size} {format} · {count} line of JSON | {size} {format} · {count} lines of JSON
 t0a4220dc = { $size } { $format } · JSON { $count } 行
 
+# The first {count} rows are shown.
+t16aa1c6d = 最初の { $count } 行のみ表示しています。
+
 # Unfold all
 t3849d44e = すべて展開
 
@@ -363,6 +366,9 @@ t3d35ce69 = リクエストとレスポンスを横に並べる
 
 # Request above the response
 t83c63123 = リクエストをレスポンスの上に
+
+# Table
+td70ceb7f = 表
 
 # Pretty
 t7e09470d = 整形

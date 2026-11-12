@@ -22,6 +22,9 @@ t0a4220dc =
        *[other] { $size } { $format } · { $count } рядка JSON
     }
 
+# The first {count} rows are shown.
+t16aa1c6d = Показано лише перші { $count } рядків.
+
 # Unfold all
 t3849d44e = Розгорнути все
 
@@ -411,6 +414,9 @@ t3d35ce69 = Запит і відповідь поруч
 
 # Request above the response
 t83c63123 = Запит над відповіддю
+
+# Table
+td70ceb7f = Таблиця
 
 # Pretty
 t7e09470d = Формат

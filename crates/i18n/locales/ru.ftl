@@ -22,6 +22,9 @@ t0a4220dc =
        *[other] { $size } { $format } · { $count } строки JSON
     }
 
+# The first {count} rows are shown.
+t16aa1c6d = Показаны только первые { $count } строк.
+
 # Unfold all
 t3849d44e = Развернуть всё
 
@@ -411,6 +414,9 @@ t3d35ce69 = Запрос и ответ рядом
 
 # Request above the response
 t83c63123 = Запрос над ответом
+
+# Table
+td70ceb7f = Таблица
 
 # Pretty
 t7e09470d = Формат

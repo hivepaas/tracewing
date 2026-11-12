@@ -103,6 +103,8 @@ pub struct InspectorState {
     pub select: Selection,
     /// How bodies are shown, kept from one flow to the next.
     pub body_mode: BodyMode,
+    /// CSV and TSV shown as text rather than as a table, as last chosen.
+    pub tables_as_text: bool,
 }
 
 impl InspectorState {
@@ -238,7 +240,12 @@ impl Traffic {
                                 crate::detail::message_of(&protos, &url, content_type, side);
                             crate::detail::json_file(path, *size, content_type, message.as_ref())
                         });
-                        (file, json)
+                        let table = file.as_ref().and_then(|(path, _)| {
+                            let separator =
+                                crate::table::separator_of(content_type.as_deref())?;
+                            crate::table::Table::open(path, separator)
+                        });
+                        (file, json, table)
                     }
                 })
                 .await;
@@ -251,7 +258,8 @@ impl Traffic {
                 if now != load {
                     return;
                 }
-                let (file, json) = file;
+                let (file, json, table) = file;
+                let tables_as_text = this.inspector.tables_as_text;
                 *this.inspector.slot(other) = match file {
                     None => BodyState::Note(
                         tr!("This body is gone: it was dropped with the oldest flows, or cannot be read.")
@@ -280,6 +288,12 @@ impl Traffic {
                                     None => BodyView::new(body, content_type.as_deref(), focus, cx),
                                 };
                                 view.set_mode(mode, cx);
+                                if let Some(table) = table {
+                                    view.set_table(table, cx);
+                                    if !tables_as_text {
+                                        view.set_mode(BodyMode::Table, cx);
+                                    }
+                                }
                                 view
                             })
                         }),
@@ -658,10 +672,24 @@ impl Traffic {
     /// Shows bodies laid out, as they were sent, or as dumps of their bytes:
     /// both sides' when both are shown, and the next flows' too.
     pub fn set_body_mode(&mut self, mode: BodyMode, cx: &mut Context<Self>) {
-        self.inspector.body_mode = mode;
+        // Chosen for a table, a way says how tables show, and no more; chosen
+        // for another body, how the rest show.
+        let on_a_table =
+            matches!(&self.inspector.body, BodyState::Shown(view) if view.read(cx).has_table());
+        if mode == BodyMode::Table {
+            self.inspector.tables_as_text = false;
+        } else if on_a_table {
+            self.inspector.tables_as_text = true;
+        } else {
+            self.inspector.body_mode = mode;
+        }
         for slot in [&self.inspector.body, &self.inspector.other] {
             if let BodyState::Shown(view) = slot {
-                view.update(cx, |view, cx| view.set_mode(mode, cx));
+                view.update(cx, |view, cx| {
+                    if mode != BodyMode::Table || view.has_table() {
+                        view.set_mode(mode, cx);
+                    }
+                });
             }
         }
         cx.notify();
@@ -681,6 +709,7 @@ impl Traffic {
         }
         let c = colors();
         let (mode, pretty, raw) = (view.mode(), view.has_pretty(), view.has_raw());
+        let table = view.has_table();
         let half = |id: &'static str, label: String, to: BodyMode| {
             let on = mode == to;
             div()
@@ -706,6 +735,9 @@ impl Traffic {
                 .p(px(2.))
                 .rounded(px(14.))
                 .bg(rgb(c.chip))
+                .when(table, |d| {
+                    d.child(half("body-as-table", tr!("Table"), BodyMode::Table))
+                })
                 .when(pretty || !raw, |d| {
                     d.child(half("body-as-pretty", tr!("Pretty"), BodyMode::Pretty))
                 })

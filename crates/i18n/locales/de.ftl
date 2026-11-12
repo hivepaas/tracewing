@@ -18,6 +18,9 @@ t0a4220dc =
        *[other] { $size } { $format } · { $count } Zeilen JSON
     }
 
+# The first {count} rows are shown.
+t16aa1c6d = Nur die ersten { $count } Zeilen werden gezeigt.
+
 # Unfold all
 t3849d44e = Alles aufklappen
 
@@ -391,6 +394,9 @@ t3d35ce69 = Anfrage und Antwort nebeneinander
 
 # Request above the response
 t83c63123 = Anfrage über der Antwort
+
+# Table
+td70ceb7f = Tabelle
 
 # Pretty
 t7e09470d = Formatiert
