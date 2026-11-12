@@ -664,6 +664,15 @@ t51e7624c = 아직 메시지가 없습니다
 # {said} kept, of {size}
 t3558745a = { $size } 중 { $said } 보관됨
 
+# Layouts
+t17809004 = 레이아웃
+
+# Keep the panels as they are now under a name, to come back to them.
+t2b6aeb69 = 지금의 패널 배치를 이름으로 저장해 두고 나중에 돌아올 수 있습니다.
+
+# Keep
+t555cbe68 = 저장
+
 # {what}: {text} is not a whole number
 t2a8515ce = { $what }: { $text }은(는) 정수가 아닙니다
 
@@ -1803,6 +1812,9 @@ t00d0cf30 = host:, status:4xx 또는 본문 텍스트
 
 # A name, as iPhone test
 t19f89214 = 이름(예: iPhone 테스트)
+
+# A name, as Phone
+tfce439bf = 이름 (예: Phone)
 
 # The search index: {e}
 te3c971c9 = 검색 색인: { $e }

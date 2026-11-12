@@ -696,6 +696,15 @@ t51e7624c = Henüz mesaj yok
 # {said} kept, of {size}
 t3558745a = { $size } içinden { $said } saklandı
 
+# Layouts
+t17809004 = Düzenler
+
+# Keep the panels as they are now under a name, to come back to them.
+t2b6aeb69 = Panellerin şu anki düzenini bir adla saklayın, sonra ona dönün.
+
+# Keep
+t555cbe68 = Sakla
+
 # {what}: {text} is not a whole number
 t2a8515ce = { $what }: { $text } bir tam sayı değil
 
@@ -1877,6 +1886,9 @@ t00d0cf30 = host:, status:4xx, ya da gövdelerde metin
 
 # A name, as iPhone test
 t19f89214 = Bir ad, örneğin iPhone test
+
+# A name, as Phone
+tfce439bf = Bir ad, örneğin Phone
 
 # The search index: {e}
 te3c971c9 = Arama dizini: { $e }

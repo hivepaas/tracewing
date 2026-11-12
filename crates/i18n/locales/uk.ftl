@@ -724,6 +724,15 @@ t51e7624c = Поки немає повідомлень
 # {said} kept, of {size}
 t3558745a = Збережено { $said } з { $size }
 
+# Layouts
+t17809004 = Розкладки
+
+# Keep the panels as they are now under a name, to come back to them.
+t2b6aeb69 = Збережіть поточне розташування панелей під назвою, щоб повернутися до нього.
+
+# Keep
+t555cbe68 = Зберегти
+
 # {what}: {text} is not a whole number
 t2a8515ce = { $what }: { $text } не є цілим числом
 
@@ -1989,6 +1998,9 @@ t00d0cf30 = host:, status:4xx або текст у тілах
 
 # A name, as iPhone test
 t19f89214 = Назва, наприклад Тестовий iPhone
+
+# A name, as Phone
+tfce439bf = Назва, наприклад Phone
 
 # The search index: {e}
 te3c971c9 = Пошуковий індекс: { $e }

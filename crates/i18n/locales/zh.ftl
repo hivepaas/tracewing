@@ -664,6 +664,15 @@ t51e7624c = 暂无消息
 # {said} kept, of {size}
 t3558745a = 已保留 { $said }，共 { $size }
 
+# Layouts
+t17809004 = 布局
+
+# Keep the panels as they are now under a name, to come back to them.
+t2b6aeb69 = 将当前面板布局以名称保存，以便日后切换回来。
+
+# Keep
+t555cbe68 = 保存
+
 # {what}: {text} is not a whole number
 t2a8515ce = { $what }：{ $text } 不是整数
 
@@ -1803,6 +1812,9 @@ t00d0cf30 = host:、status:4xx 或正文中的文字
 
 # A name, as iPhone test
 t19f89214 = 名称，如：测试用 iPhone
+
+# A name, as Phone
+tfce439bf = 名称，如：Phone
 
 # The search index: {e}
 te3c971c9 = 搜索索引：{ $e }

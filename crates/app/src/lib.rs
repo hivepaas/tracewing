@@ -31,6 +31,7 @@ pub mod llm;
 pub mod llm_view;
 pub mod mcp;
 pub mod messages;
+pub mod named_layouts;
 pub mod network;
 pub mod paused_page;
 pub mod placement;
@@ -93,6 +94,7 @@ const ICONS: &[(&str, &[u8])] = icons![
     "beside",
     "below",
     "window",
+    "layouts",
     "tabs",
     "sidebar",
     "down",

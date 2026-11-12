@@ -281,7 +281,7 @@ pub struct Traffic {
     filter_input: Entity<TextInput>,
     /// Narrows the hosts in the sidebar to those with this in their name.
     host_filter: Entity<TextInput>,
-    filter: Filter,
+    pub(crate) filter: Filter,
     /// With a filter on, the flows that fit. Without one, every id in `bounds`.
     ids: Option<Arc<Vec<i64>>>,
     generation: u64,
@@ -348,6 +348,10 @@ pub struct Traffic {
     pub check_visits: Vec<CheckVisit>,
     /// The menu of columns to show is open.
     columns_menu: bool,
+    /// The menu of named layouts is open.
+    pub(crate) layouts_menu: bool,
+    /// The name to keep the layout in use under.
+    pub layout_name: Entity<TextInput>,
     /// The list of keyboard shortcuts is open over the window.
     shortcuts_open: bool,
     /// The slow network's fields, once the Rules screen has been shown.
@@ -373,6 +377,9 @@ impl Traffic {
             cx.new(|cx| TextInput::said(|| tr!("host:, status:4xx, or text in bodies"), cx));
         let device_name = cx.new(|cx| TextInput::said(|| tr!("A name, as iPhone test"), cx));
         let host_filter = cx.new(|cx| TextInput::said(|| tr!("Filter"), cx));
+        let layout_name = cx.new(|cx| TextInput::said(|| tr!("A name, as Phone"), cx));
+        cx.subscribe(&layout_name, |_, _, _: &Changed, cx| cx.notify())
+            .detach();
         cx.subscribe(&host_filter, |_, _, _: &Changed, cx| cx.notify())
             .detach();
         cx.subscribe(&device_name, |this, input, _: &Changed, cx| {
@@ -468,6 +475,8 @@ impl Traffic {
             host_filter,
             filter,
             columns_menu: false,
+            layouts_menu: false,
+            layout_name,
             shortcuts_open: false,
             network_form: None,
             ids: None,
@@ -1436,6 +1445,7 @@ impl Traffic {
                 cx.notify();
             }
             Action::Close if self.shortcuts_open => self.set_shortcuts(false, cx),
+            Action::Close if self.layouts_menu => self.set_layouts_menu(false, cx),
             Action::Close if self.close_copy_menu(cx) => {}
             Action::Close if self.compare_pick.is_some() => self.cancel_compare(cx),
             Action::Close if self.screen == Screen::Compare => self.set_screen(Screen::Traffic, cx),
@@ -1742,6 +1752,7 @@ impl Traffic {
                     },
                 )),
             )
+            .child(self.render_layouts_button(button, cx))
     }
 
     fn render_sidebar(&self, cx: &mut Context<Self>) -> impl IntoElement {

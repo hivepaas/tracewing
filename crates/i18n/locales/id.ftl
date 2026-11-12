@@ -664,6 +664,15 @@ t51e7624c = Belum ada pesan
 # {said} kept, of {size}
 t3558745a = { $said } disimpan, dari { $size }
 
+# Layouts
+t17809004 = Tata letak
+
+# Keep the panels as they are now under a name, to come back to them.
+t2b6aeb69 = Simpan susunan panel saat ini dengan sebuah nama, untuk kembali ke sana nanti.
+
+# Keep
+t555cbe68 = Simpan
+
 # {what}: {text} is not a whole number
 t2a8515ce = { $what }: { $text } bukan bilangan bulat
 
@@ -1803,6 +1812,9 @@ t00d0cf30 = host:, status:4xx, atau teks di body
 
 # A name, as iPhone test
 t19f89214 = Nama, misalnya Tes iPhone
+
+# A name, as Phone
+tfce439bf = Nama, misalnya Phone
 
 # The search index: {e}
 te3c971c9 = Indeks pencarian: { $e }

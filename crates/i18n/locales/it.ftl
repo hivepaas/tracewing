@@ -702,6 +702,15 @@ t51e7624c = Ancora nessun messaggio
 # {said} kept, of {size}
 t3558745a = { $said } conservati su { $size }
 
+# Layouts
+t17809004 = Layout
+
+# Keep the panels as they are now under a name, to come back to them.
+t2b6aeb69 = Conserva la disposizione attuale dei pannelli con un nome, per tornarci.
+
+# Keep
+t555cbe68 = Conserva
+
 # {what}: {text} is not a whole number
 t2a8515ce = { $what }: { $text } non è un numero intero
 
@@ -1928,6 +1937,9 @@ t00d0cf30 = host:, status:4xx o testo nei body
 
 # A name, as iPhone test
 t19f89214 = Un nome, come iPhone di prova
+
+# A name, as Phone
+tfce439bf = Un nome, ad es. Phone
 
 # The search index: {e}
 te3c971c9 = L'indice di ricerca: { $e }

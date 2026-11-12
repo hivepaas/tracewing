@@ -724,6 +724,15 @@ t51e7624c = Сообщений пока нет
 # {said} kept, of {size}
 t3558745a = Сохранено { $said } из { $size }
 
+# Layouts
+t17809004 = Раскладки
+
+# Keep the panels as they are now under a name, to come back to them.
+t2b6aeb69 = Сохраните текущее расположение панелей под именем, чтобы вернуться к нему.
+
+# Keep
+t555cbe68 = Сохранить
+
 # {what}: {text} is not a whole number
 t2a8515ce = { $what }: { $text } — не целое число
 
@@ -1989,6 +1998,9 @@ t00d0cf30 = host:, status:4xx или текст в телах
 
 # A name, as iPhone test
 t19f89214 = Имя, например iPhone тест
+
+# A name, as Phone
+tfce439bf = Имя, например Phone
 
 # The search index: {e}
 te3c971c9 = Поисковый индекс: { $e }
