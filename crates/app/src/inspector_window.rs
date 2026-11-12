@@ -60,7 +60,10 @@ impl Render for InspectorWindow {
             .flex_1()
             .min_h_0()
             .w_full()
-            .p(px(10.))
+            // Close under the title bar, as the main window's toolbar is.
+            .pt(px(2.))
+            .px(px(10.))
+            .pb(px(10.))
             .flex()
             .text_color(rgb(c.text))
             .font_family(crate::FONT)
