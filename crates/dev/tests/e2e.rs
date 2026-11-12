@@ -319,6 +319,47 @@ async fn each_flow_knows_the_program_that_sent_it() {
     clean_up(conn, dir);
 }
 
+/// What a server says to the next hop alone does not reach the client
+/// either; the flow still shows what the server sent.
+#[tokio::test(flavor = "multi_thread")]
+async fn what_the_server_says_to_the_proxy_alone_goes_no_further() {
+    let h = Harness::start("hop-back").await;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(tracewing_dev::playground::serve(listener));
+    let client = reqwest::Client::builder()
+        .proxy(reqwest::Proxy::http(&h.proxy_url).unwrap())
+        .build()
+        .unwrap();
+    let res = client
+        .get(format!("http://localhost:{port}/hop"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    let headers = res.headers().clone();
+    res.bytes().await.unwrap();
+    for gone in ["connection", "x-hop", "keep-alive", "proxy-authenticate"] {
+        assert!(
+            !headers.contains_key(gone),
+            "{gone} reached the client: {headers:?}"
+        );
+    }
+    assert_eq!(headers["x-end"], "1");
+
+    let (_, conn, dir) = h.finish(1).await;
+    let mut reader = BodyReader::new(&dir.join("session"));
+    let (_, response) = session::stored_headers(&conn, &mut reader, 1)
+        .unwrap()
+        .expect("kept");
+    drop(reader);
+    assert!(
+        response.iter().any(|(n, _)| n == "proxy-authenticate"),
+        "the flow shows what the server sent: {response:?}"
+    );
+    clean_up(conn, dir);
+}
+
 /// A program that asks once and is gone as soon as it is answered, as curl
 /// is, is found all the same, though the server answers at once.
 #[tokio::test(flavor = "multi_thread")]

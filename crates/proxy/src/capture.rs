@@ -391,6 +391,8 @@ impl FlowHandler {
         if let Some(flow) = &flow {
             flow.on_response(&res);
         }
+        let upgrade = res.status() == StatusCode::SWITCHING_PROTOCOLS;
+        drop_hop_by_hop(res.headers_mut(), upgrade);
         if hide_http3 {
             hide_http3_offers(res.headers_mut());
         }
@@ -957,11 +959,12 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|e| e.into_inner())
 }
 
-/// What a client says to the proxy alone, which a proxy must not pass on
-/// (RFC 9110, 7.6.1): `Connection` and the headers it names, and the
-/// `Proxy-` and `Keep-Alive` ones. `Proxy-Authorization` would hand the
-/// server the password for the proxy. `TE` goes on only as `trailers`, which
-/// gRPC needs. A WebSocket's upgrade keeps `Connection` and `Upgrade`.
+/// What is said to the next hop alone, which a proxy must not pass on
+/// (RFC 9110, 7.6.1), either way: `Connection` and the headers it names, and
+/// the `Proxy-` and `Keep-Alive` ones. `Proxy-Authorization` would hand the
+/// server the password for the proxy, and a server's `Proxy-Authenticate`
+/// would have the client think the proxy asks for one. `TE` goes on only as
+/// `trailers`, which gRPC needs. An upgrade keeps `Connection` and `Upgrade`.
 fn drop_hop_by_hop(headers: &mut http::HeaderMap, upgrade: bool) {
     let named: Vec<HeaderName> = headers
         .get_all(header::CONNECTION)
@@ -982,6 +985,7 @@ fn drop_hop_by_hop(headers: &mut http::HeaderMap, upgrade: bool) {
     for name in [
         HeaderName::from_static("proxy-connection"),
         header::PROXY_AUTHORIZATION,
+        header::PROXY_AUTHENTICATE,
         HeaderName::from_static("keep-alive"),
     ] {
         headers.remove(name);
@@ -1612,6 +1616,7 @@ mod tests {
             ("x-hop", "1"),
             ("proxy-connection", "Keep-Alive"),
             ("proxy-authorization", "Basic dXNlcjpwYXNz"),
+            ("proxy-authenticate", "Basic realm=\"x\""),
             ("keep-alive", "timeout=5"),
             ("te", "gzip, trailers"),
             ("upgrade", "h2c"),
