@@ -76,6 +76,8 @@ fn main() -> Result<()> {
             Err(e) => (TrafficRules::default(), Some(format!("{e:#}"))),
         };
     let settings_problem = settings_problem.or(rules_problem).or(traffic_problem);
+    // A file that cannot be read is left out here, and said in Settings.
+    let trusted = tracewing::trusted::read(&data_dir);
     let engine = Engine::start(EngineOptions {
         data_dir: data_dir.clone(),
         key_store: tracewing_proxy::ca_key::KeyStore::System,
@@ -84,7 +86,7 @@ fn main() -> Result<()> {
         rules,
         traffic_rules,
         ports: PORTS,
-        extra_roots: Vec::new(),
+        extra_roots: trusted.paths(),
     })?;
 
     gpui_platform::application()

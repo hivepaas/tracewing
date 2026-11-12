@@ -136,6 +136,19 @@ enum Command {
     Playground {
         #[arg(long, default_value = "127.0.0.1:10000")]
         listen: SocketAddr,
+        /// The same paths over TLS, with the playground's own authority.
+        #[arg(long, default_value = "127.0.0.1:10443")]
+        tls_listen: SocketAddr,
+        /// Where its authority is kept, so that it is trusted once.
+        #[arg(long, default_value = "target/playground")]
+        state: PathBuf,
+        /// Put its authority among those tracewing trusts for servers, in
+        /// `trusted-servers` under the data directory, then go on.
+        #[arg(long)]
+        trust: bool,
+        /// The data directory `--trust` puts it in [default: tracewing's].
+        #[arg(long)]
+        data_dir: Option<PathBuf>,
     },
     /// Send load through the proxy, trusting only the proxy's CA.
     Load {
@@ -443,14 +456,43 @@ async fn main() -> Result<()> {
             );
             benchkit::serve_origin(listener, &ca_out).await?;
         }
-        Command::Playground { listen } => {
+        Command::Playground {
+            listen,
+            tls_listen,
+            state,
+            trust,
+            data_dir,
+        } => {
+            use tracewing_dev::playground;
+            let ca = playground::authority(&state)?;
+            if trust {
+                let folder = data_dir
+                    .unwrap_or_else(default_data_dir)
+                    .join("trusted-servers");
+                std::fs::create_dir_all(&folder)?;
+                let to = folder.join("tracewing-playground.pem");
+                std::fs::copy(&ca, &to)?;
+                println!("trusted: {} (restart tracewing to use it)", to.display());
+            }
             let listener = TcpListener::bind(listen).await?;
+            let tls = TcpListener::bind(tls_listen).await?;
             let base = format!("http://localhost:{}", listener.local_addr()?.port());
-            println!("playground on {base}");
-            for (path, what) in tracewing_dev::playground::ROUTES {
+            let tls_base = format!("https://localhost:{}", tls.local_addr()?.port());
+            println!("playground on {base} and {tls_base}");
+            println!(
+                "its authority: {} (--trust puts it where tracewing looks)",
+                ca.display()
+            );
+            for (path, what) in playground::ROUTES {
                 println!("  {base}{path:<20} {what}");
             }
-            tracewing_dev::playground::serve(listener).await?;
+            let state_dir = state.clone();
+            tokio::spawn(async move {
+                if let Err(e) = playground::serve_tls(tls, &state_dir).await {
+                    eprintln!("playground over TLS: {e:#}");
+                }
+            });
+            playground::serve(listener).await?;
         }
         Command::Load {
             proxy,

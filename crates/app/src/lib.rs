@@ -48,6 +48,7 @@ pub mod syntax;
 pub mod system;
 pub mod table;
 pub mod traffic;
+pub mod trusted;
 pub mod widgets;
 pub mod wrap;
 

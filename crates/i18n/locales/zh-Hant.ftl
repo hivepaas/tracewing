@@ -1321,6 +1321,27 @@ tb457f0b3 = 不解密的主機
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 每行一個：主機名稱，或 *.example.com（符合該網域及其所有子網域）。這些主機的流量將直接通過，不會被讀取。此清單立即生效。
 
+# Authorities trusted for servers
+t0a308a8a = 為伺服器信任的憑證授權單位
+
+# tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.
+t571051f9 = tracewing 信任公開憑證授權單位以及本機信任的授權單位所擔保的伺服器。它也信任以下這些：公司自己的授權單位，或你自己的，以 .pem 檔放在 { $folder } 中。它們在 tracewing 啟動時讀取。
+
+# Left out: {why}
+t4a567d82 = 已略過：{ $why }
+
+# None yet.
+t786bc275 = 尚無。
+
+# The folder has changed since tracewing started: restart it to use what it holds now.
+t65f2d800 = 自 tracewing 啟動後資料夾已變更：請重新啟動以使用目前內容。
+
+# Open the folder
+tc7d7e212 = 開啟資料夾
+
+# Read it again
+td72efd5e = 重新讀取
+
 # Language
 t9a73db9b = 語言
 

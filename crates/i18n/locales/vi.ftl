@@ -1321,6 +1321,27 @@ tb457f0b3 = Host không giải mã
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = Mỗi dòng một mục: một host, hoặc *.example.com cho host đó và mọi host bên dưới. Traffic của chúng đi qua mà không bị đọc. Danh sách này áp dụng ngay.
 
+# Authorities trusted for servers
+t0a308a8a = CA được tin cho server
+
+# tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.
+t571051f9 = tracewing tin các server được các CA công khai xác nhận, và các CA mà máy này tin. Nó cũng tin các CA sau: CA riêng của công ty, hoặc CA của chính bạn, đặt dưới dạng file .pem trong { $folder }. Chúng được đọc khi tracewing khởi động.
+
+# Left out: {why}
+t4a567d82 = Bỏ qua: { $why }
+
+# None yet.
+t786bc275 = Chưa có.
+
+# The folder has changed since tracewing started: restart it to use what it holds now.
+t65f2d800 = Thư mục đã thay đổi từ khi tracewing khởi động: hãy khởi động lại để dùng nội dung mới.
+
+# Open the folder
+tc7d7e212 = Mở thư mục
+
+# Read it again
+td72efd5e = Đọc lại
+
 # Language
 t9a73db9b = Ngôn ngữ
 

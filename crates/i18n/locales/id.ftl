@@ -1321,6 +1321,27 @@ tb457f0b3 = Host yang tidak didekripsi
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = Satu per baris: host, atau *.example.com untuk host itu dan semua di bawahnya. Lalu lintasnya lewat tanpa dibaca. Daftar ini langsung berlaku.
 
+# Authorities trusted for servers
+t0a308a8a = Otoritas yang dipercaya untuk server
+
+# tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.
+t571051f9 = tracewing memercayai server yang dijamin otoritas publik, dan yang dijamin otoritas komputer ini. Ia juga memercayai yang berikut: otoritas milik perusahaan, atau milik Anda sendiri, sebagai file .pem di { $folder }. Dibaca saat tracewing dimulai.
+
+# Left out: {why}
+t4a567d82 = Dilewati: { $why }
+
+# None yet.
+t786bc275 = Belum ada.
+
+# The folder has changed since tracewing started: restart it to use what it holds now.
+t65f2d800 = Folder berubah sejak tracewing dimulai: mulai ulang untuk memakai isinya sekarang.
+
+# Open the folder
+tc7d7e212 = Buka folder
+
+# Read it again
+td72efd5e = Baca lagi
+
 # Language
 t9a73db9b = Bahasa
 

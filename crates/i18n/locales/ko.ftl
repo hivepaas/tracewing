@@ -1321,6 +1321,27 @@ tb457f0b3 = 복호화하지 않을 호스트
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 한 줄에 하나씩: 호스트, 또는 그 호스트와 모든 하위 호스트를 뜻하는 *.example.com. 이 호스트들의 트래픽은 내용을 읽지 않고 통과합니다. 이 목록은 바로 적용됩니다.
 
+# Authorities trusted for servers
+t0a308a8a = 서버에 신뢰하는 인증 기관
+
+# tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.
+t571051f9 = tracewing은 공용 인증 기관과 이 컴퓨터가 신뢰하는 인증 기관이 보증하는 서버를 신뢰합니다. 다음도 신뢰합니다: 회사 자체 인증 기관이나 직접 만든 인증 기관을 { $folder }에 .pem 파일로 넣은 것. tracewing이 시작할 때 읽습니다.
+
+# Left out: {why}
+t4a567d82 = 제외됨: { $why }
+
+# None yet.
+t786bc275 = 아직 없습니다.
+
+# The folder has changed since tracewing started: restart it to use what it holds now.
+t65f2d800 = tracewing 시작 후 폴더가 바뀌었습니다. 지금 내용을 쓰려면 다시 시작하세요.
+
+# Open the folder
+tc7d7e212 = 폴더 열기
+
+# Read it again
+td72efd5e = 다시 읽기
+
 # Language
 t9a73db9b = 언어
 

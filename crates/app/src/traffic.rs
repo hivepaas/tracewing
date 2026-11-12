@@ -305,6 +305,8 @@ pub struct Traffic {
     pub(crate) protos_busy: bool,
     /// Why the list of them could not be saved.
     pub(crate) protos_problem: Option<String>,
+    /// What the folder of trusted authorities holds, as last read.
+    pub trusted: crate::trusted::Found,
     /// The address of a server to ask for its files by gRPC reflection.
     pub protos_server: Option<Entity<TextInput>>,
     pub protos_fetching: bool,
@@ -475,6 +477,7 @@ impl Traffic {
             protos_read: None,
             protos_busy: false,
             protos_problem: None,
+            trusted: crate::trusted::read(data_dir),
             protos_server: None,
             protos_fetching: false,
             protos_fetched: None,
@@ -556,6 +559,7 @@ impl Traffic {
         }
         if screen == Screen::Settings {
             self.settings_left = None;
+            self.trusted = crate::trusted::read(&self.data_dir);
         }
         // Once left, it does not open by itself again.
         if self.screen == Screen::Setup && !self.layout.setup_seen {

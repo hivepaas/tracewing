@@ -9,6 +9,7 @@ use crate::{
     benchkit::{self, OriginBody},
     seed::Rng,
 };
+use anyhow::Context as _;
 use anyhow::Result;
 use bytes::Bytes;
 use http::{HeaderValue, Request, Response, StatusCode, header};
@@ -20,12 +21,25 @@ use hudsucker::{
         tungstenite::{Message, handshake::derive_accept_key, protocol::Role},
     },
 };
+use hudsucker::{
+    rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, Issuer, KeyPair, KeyUsagePurpose},
+    rustls::{
+        ServerConfig,
+        pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer},
+    },
+};
 use hyper::{body::Frame, body::Incoming, service::service_fn};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
     server::conn::auto::Builder,
 };
-use std::{convert::Infallible, fmt::Write as _, time::Duration};
+use std::{
+    convert::Infallible,
+    fmt::Write as _,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 use tokio::net::TcpListener;
 
 /// Where it listens unless told otherwise.
@@ -104,6 +118,68 @@ pub async fn serve(listener: TcpListener) -> Result<()> {
                 .await;
         });
     }
+}
+
+/// Where it listens with TLS unless told otherwise.
+pub const TLS_PORT: u16 = 10443;
+
+/// The same paths over TLS, HTTP/2 to a client that offers it, with a
+/// certificate for `localhost` and `127.0.0.1` from the authority in `dir`.
+pub async fn serve_tls(listener: TcpListener, dir: &Path) -> Result<()> {
+    let acceptor = tokio_rustls::TlsAcceptor::from(Arc::new(tls_config(dir)?));
+    loop {
+        let (tcp, _) = listener.accept().await?;
+        tcp.set_nodelay(true)?;
+        let acceptor = acceptor.clone();
+        tokio::spawn(async move {
+            let Ok(tls) = acceptor.accept(tcp).await else {
+                return;
+            };
+            let _ = Builder::new(TokioExecutor::new())
+                .serve_connection_with_upgrades(TokioIo::new(tls), service_fn(route))
+                .await;
+        });
+    }
+}
+
+/// The playground's authority, made the first time and kept in `dir`, so
+/// that it is trusted once: its certificate is `ca.pem` there.
+pub fn authority(dir: &Path) -> Result<PathBuf> {
+    let (cert, key) = (dir.join("ca.pem"), dir.join("ca-key.pem"));
+    if cert.exists() && key.exists() {
+        return Ok(cert);
+    }
+    std::fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
+    let ca_key = KeyPair::generate()?;
+    let mut params = CertificateParams::default();
+    params
+        .distinguished_name
+        .push(DnType::CommonName, "tracewing playground CA");
+    params.is_ca = IsCa::Ca(BasicConstraints::Constrained(0));
+    params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];
+    let ca = params.self_signed(&ca_key)?;
+    std::fs::write(&key, ca_key.serialize_pem())?;
+    std::fs::write(&cert, ca.pem())?;
+    Ok(cert)
+}
+
+fn tls_config(dir: &Path) -> Result<ServerConfig> {
+    let cert = authority(dir)?;
+    let ca_key = KeyPair::from_pem(&std::fs::read_to_string(dir.join("ca-key.pem"))?)?;
+    let issuer = Issuer::from_ca_cert_pem(&std::fs::read_to_string(&cert)?, ca_key)?;
+    let leaf_key = KeyPair::generate()?;
+    let leaf = CertificateParams::new(vec!["localhost".to_owned(), "127.0.0.1".to_owned()])?
+        .signed_by(&leaf_key, &issuer)?;
+    let mut config =
+        ServerConfig::builder_with_provider(Arc::new(tracewing_proxy::crypto_provider()))
+            .with_safe_default_protocol_versions()?
+            .with_no_client_auth()
+            .with_single_cert(
+                vec![CertificateDer::from(leaf.der().to_vec())],
+                PrivateKeyDer::from(PrivatePkcs8KeyDer::from(leaf_key.serialize_der())),
+            )?;
+    config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+    Ok(config)
 }
 
 fn body(content_type: &str, data: impl Into<Bytes>) -> Response<OriginBody> {
