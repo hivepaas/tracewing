@@ -2385,6 +2385,38 @@ t4ab0ecb4 = Atalhos { $keys }
 # Columns
 tea156fdc = Colunas
 
+# Field {number}, {wire}
+ta367cc19 = Campo { $number }, { $wire }
+
+# gRPC, with no .proto to name its fields
+t212b75bf = gRPC, sem .proto para nomear seus campos
+
+# Protobuf, with no .proto to name its fields
+t7f1e0096 = Protobuf, sem .proto para nomear seus campos
+
+# a number
+tb42f6255 = um número
+
+# eight bytes
+t0487503b = oito bytes
+
+# bytes
+t65b1d004 = bytes
+
+# four bytes
+tabee15aa = quatro bytes
+
+# unknown
+t9b759fb9 = desconhecido
+
+# a message of {n} field | a message of {n} fields
+t88e6aa3c =
+    { $n ->
+        [one] uma mensagem de { $n } campo
+        [many] uma mensagem de { $n } campos
+       *[other] uma mensagem de { $n } campos
+    }
+
 # base64url
 tadfc8ac3 = base64url
 
@@ -2596,6 +2628,114 @@ tc7a82a5d = Segundos desde 1904 (HFS+)
 
 # Days since 1899 (spreadsheet)
 td7bc06f2 = Dias desde 1899 (planilha)
+
+# Key wrapped with
+ted680adb = Chave empacotada com
+
+# Encrypted with
+t7e4ecbbd = Criptografado com
+
+# Key named
+t79491281 = Chave chamada
+
+# The rest
+tbfad8752 = O resto
+
+# encrypted: it needs the key, which tracewing does not have
+tacb4301a = criptografado: precisa da chave, que o tracewing não tem
+
+# JWE, an encrypted token
+t6da81e5b = JWE, um token criptografado
+
+# What it is for
+t7f5984ef = Para que serve
+
+# shared key, encrypted
+t63aa35b5 = chave compartilhada, criptografado
+
+# public key, signed
+tf7f41fd7 = chave pública, assinado
+
+# The claims
+t5918e3d1 = As declarações
+
+# PASETO
+t309420ff = PASETO
+
+# MD5, or MD4, or NTLM
+t562aaed5 = MD5, MD4 ou NTLM
+
+# SHA-1, or RIPEMD-160
+tf202ac9d = SHA-1 ou RIPEMD-160
+
+# SHA-224
+tc24ef188 = SHA-224
+
+# SHA-256, or SHA3-256, or BLAKE2s
+ta2e8a8a4 = SHA-256, SHA3-256 ou BLAKE2s
+
+# SHA-384
+ta4d7ea95 = SHA-384
+
+# SHA-512, or SHA3-512, or BLAKE2b
+t275da5bd = SHA-512, SHA3-512 ou BLAKE2b
+
+# A hash, by its size
+te82b53c8 = Um hash, pelo seu tamanho
+
+# Made by
+te8ff7e65 = Feito por
+
+# bcrypt
+tef91acbf = bcrypt
+
+# Rounds
+tfdc8b178 = Rodadas
+
+# 2 to the {cost}
+t25e03044 = 2 elevado a { $cost }
+
+# Memory
+t58f879ce = Memória
+
+# Passes
+t364b5a7c = Passagens
+
+# In parallel
+t81449775 = Em paralelo
+
+# SHA-256 crypt
+tefb8e7ad = SHA-256 crypt
+
+# SHA-512 crypt
+t9dcf716c = SHA-512 crypt
+
+# A hashed password
+t0157a1e6 = Uma senha com hash
+
+# PEM
+tf70119c9 = PEM
+
+# What it holds
+tff372c62 = O que contém
+
+# How much
+td909a26a = Quanto
+
+# {size} of DER
+tbfdcf758 = { $size } de DER
+
+# Which message
+t867ac265 = Qual mensagem
+
+# Made
+t3890a578 = Criado
+
+# Named
+t6055a346 = Nome
+
+# SAML
+t015e7110 = SAML
 
 # Trace context
 ta58c7c95 = Contexto de trace

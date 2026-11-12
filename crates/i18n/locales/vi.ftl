@@ -2245,6 +2245,36 @@ t4ab0ecb4 = Phím tắt { $keys }
 # Columns
 tea156fdc = Cột
 
+# Field {number}, {wire}
+ta367cc19 = Field { $number }, { $wire }
+
+# gRPC, with no .proto to name its fields
+t212b75bf = gRPC, không có .proto để đặt tên field
+
+# Protobuf, with no .proto to name its fields
+t7f1e0096 = Protobuf, không có .proto để đặt tên field
+
+# a number
+tb42f6255 = một số
+
+# eight bytes
+t0487503b = tám byte
+
+# bytes
+t65b1d004 = byte
+
+# four bytes
+tabee15aa = bốn byte
+
+# unknown
+t9b759fb9 = không rõ
+
+# a message of {n} field | a message of {n} fields
+t88e6aa3c =
+    { $n ->
+       *[other] một message có { $n } field
+    }
+
 # base64url
 tadfc8ac3 = base64url
 
@@ -2454,6 +2484,114 @@ tc7a82a5d = Giây từ 1904 (HFS+)
 
 # Days since 1899 (spreadsheet)
 td7bc06f2 = Ngày từ 1899 (bảng tính)
+
+# Key wrapped with
+ted680adb = Key bọc bằng
+
+# Encrypted with
+t7e4ecbbd = Mã hóa bằng
+
+# Key named
+t79491281 = Tên key
+
+# The rest
+tbfad8752 = Phần còn lại
+
+# encrypted: it needs the key, which tracewing does not have
+tacb4301a = đã mã hóa: cần key, mà tracewing không có
+
+# JWE, an encrypted token
+t6da81e5b = JWE, một token đã mã hóa
+
+# What it is for
+t7f5984ef = Dùng để làm gì
+
+# shared key, encrypted
+t63aa35b5 = key dùng chung, đã mã hóa
+
+# public key, signed
+tf7f41fd7 = public key, đã ký
+
+# The claims
+t5918e3d1 = Các claim
+
+# PASETO
+t309420ff = PASETO
+
+# MD5, or MD4, or NTLM
+t562aaed5 = MD5, MD4, hoặc NTLM
+
+# SHA-1, or RIPEMD-160
+tf202ac9d = SHA-1 hoặc RIPEMD-160
+
+# SHA-224
+tc24ef188 = SHA-224
+
+# SHA-256, or SHA3-256, or BLAKE2s
+ta2e8a8a4 = SHA-256, SHA3-256, hoặc BLAKE2s
+
+# SHA-384
+ta4d7ea95 = SHA-384
+
+# SHA-512, or SHA3-512, or BLAKE2b
+t275da5bd = SHA-512, SHA3-512, hoặc BLAKE2b
+
+# A hash, by its size
+te82b53c8 = Một hash, đoán theo độ dài
+
+# Made by
+te8ff7e65 = Tạo bởi
+
+# bcrypt
+tef91acbf = bcrypt
+
+# Rounds
+tfdc8b178 = Số vòng
+
+# 2 to the {cost}
+t25e03044 = 2 mũ { $cost }
+
+# Memory
+t58f879ce = Bộ nhớ
+
+# Passes
+t364b5a7c = Số lần lặp
+
+# In parallel
+t81449775 = Song song
+
+# SHA-256 crypt
+tefb8e7ad = SHA-256 crypt
+
+# SHA-512 crypt
+t9dcf716c = SHA-512 crypt
+
+# A hashed password
+t0157a1e6 = Một mật khẩu đã hash
+
+# PEM
+tf70119c9 = PEM
+
+# What it holds
+tff372c62 = Chứa gì
+
+# How much
+td909a26a = Bao nhiêu
+
+# {size} of DER
+tbfdcf758 = { $size } DER
+
+# Which message
+t867ac265 = Thông điệp nào
+
+# Made
+t3890a578 = Tạo lúc
+
+# Named
+t6055a346 = Tên
+
+# SAML
+t015e7110 = SAML
 
 # Trace context
 ta58c7c95 = Trace context

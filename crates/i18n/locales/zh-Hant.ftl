@@ -2245,6 +2245,36 @@ t4ab0ecb4 = 快速鍵 { $keys }
 # Columns
 tea156fdc = 欄位
 
+# Field {number}, {wire}
+ta367cc19 = 欄位 { $number }，{ $wire }
+
+# gRPC, with no .proto to name its fields
+t212b75bf = gRPC，沒有 .proto 為欄位命名
+
+# Protobuf, with no .proto to name its fields
+t7f1e0096 = Protobuf，沒有 .proto 為欄位命名
+
+# a number
+tb42f6255 = 一個數
+
+# eight bytes
+t0487503b = 八個位元組
+
+# bytes
+t65b1d004 = 位元組
+
+# four bytes
+tabee15aa = 四個位元組
+
+# unknown
+t9b759fb9 = 未知
+
+# a message of {n} field | a message of {n} fields
+t88e6aa3c =
+    { $n ->
+       *[other] 一則有 { $n } 個欄位的訊息
+    }
+
 # base64url
 tadfc8ac3 = base64url
 
@@ -2454,6 +2484,114 @@ tc7a82a5d = 自 1904 年起的秒數 (HFS+)
 
 # Days since 1899 (spreadsheet)
 td7bc06f2 = 自 1899 年起的天數（試算表）
+
+# Key wrapped with
+ted680adb = 金鑰封裝方式
+
+# Encrypted with
+t7e4ecbbd = 加密方式
+
+# Key named
+t79491281 = 金鑰名稱
+
+# The rest
+tbfad8752 = 其餘部分
+
+# encrypted: it needs the key, which tracewing does not have
+tacb4301a = 已加密：需要金鑰，而 tracewing 沒有
+
+# JWE, an encrypted token
+t6da81e5b = JWE，加密的權杖
+
+# What it is for
+t7f5984ef = 用途
+
+# shared key, encrypted
+t63aa35b5 = 共用金鑰，已加密
+
+# public key, signed
+tf7f41fd7 = 公鑰，已簽名
+
+# The claims
+t5918e3d1 = 宣告內容
+
+# PASETO
+t309420ff = PASETO
+
+# MD5, or MD4, or NTLM
+t562aaed5 = MD5、MD4 或 NTLM
+
+# SHA-1, or RIPEMD-160
+tf202ac9d = SHA-1 或 RIPEMD-160
+
+# SHA-224
+tc24ef188 = SHA-224
+
+# SHA-256, or SHA3-256, or BLAKE2s
+ta2e8a8a4 = SHA-256、SHA3-256 或 BLAKE2s
+
+# SHA-384
+ta4d7ea95 = SHA-384
+
+# SHA-512, or SHA3-512, or BLAKE2b
+t275da5bd = SHA-512、SHA3-512 或 BLAKE2b
+
+# A hash, by its size
+te82b53c8 = 依長度判斷的雜湊
+
+# Made by
+te8ff7e65 = 由什麼產生
+
+# bcrypt
+tef91acbf = bcrypt
+
+# Rounds
+tfdc8b178 = 輪數
+
+# 2 to the {cost}
+t25e03044 = 2 的 { $cost } 次方
+
+# Memory
+t58f879ce = 記憶體
+
+# Passes
+t364b5a7c = 迭代次數
+
+# In parallel
+t81449775 = 平行度
+
+# SHA-256 crypt
+tefb8e7ad = SHA-256 crypt
+
+# SHA-512 crypt
+t9dcf716c = SHA-512 crypt
+
+# A hashed password
+t0157a1e6 = 經過雜湊的密碼
+
+# PEM
+tf70119c9 = PEM
+
+# What it holds
+tff372c62 = 裡面是什麼
+
+# How much
+td909a26a = 多少
+
+# {size} of DER
+tbfdcf758 = { $size } 的 DER
+
+# Which message
+t867ac265 = 哪種訊息
+
+# Made
+t3890a578 = 建立於
+
+# Named
+t6055a346 = 名稱
+
+# SAML
+t015e7110 = SAML
 
 # Trace context
 ta58c7c95 = 追蹤內容

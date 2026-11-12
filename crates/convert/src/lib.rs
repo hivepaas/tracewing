@@ -14,6 +14,7 @@
 
 use std::time::{Duration, Instant};
 
+mod binary;
 mod encodings;
 mod ids;
 mod json;
@@ -22,6 +23,7 @@ mod net;
 mod numbers;
 mod packed;
 mod times;
+mod tokens;
 mod tracing;
 mod web;
 
@@ -245,6 +247,11 @@ pub type Converter = fn(&Input) -> Option<Reading>;
 /// Every converter, in the order a tie is broken.
 const CONVERTERS: &[Converter] = &[
     jwt::read,
+    tokens::jwe,
+    tokens::paseto,
+    tokens::crypt,
+    tokens::pem,
+    tokens::saml,
     times::unix,
     times::iso,
     times::http_date,
@@ -271,6 +278,7 @@ const CONVERTERS: &[Converter] = &[
     net::mac,
     json::in_string,
     json::whole,
+    binary::protobuf,
     packed::gzip,
     packed::zlib,
     packed::deflate,
@@ -283,6 +291,7 @@ const CONVERTERS: &[Converter] = &[
     encodings::entities,
     net::ip_number,
     net::port,
+    tokens::hash,
     numbers::size,
     numbers::radix,
     numbers::flags,

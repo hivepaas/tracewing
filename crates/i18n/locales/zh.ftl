@@ -2245,6 +2245,36 @@ t4ab0ecb4 = 快捷键 { $keys }
 # Columns
 tea156fdc = 列
 
+# Field {number}, {wire}
+ta367cc19 = 字段 { $number }，{ $wire }
+
+# gRPC, with no .proto to name its fields
+t212b75bf = gRPC，没有 .proto 给字段命名
+
+# Protobuf, with no .proto to name its fields
+t7f1e0096 = Protobuf，没有 .proto 给字段命名
+
+# a number
+tb42f6255 = 一个数
+
+# eight bytes
+t0487503b = 八个字节
+
+# bytes
+t65b1d004 = 字节
+
+# four bytes
+tabee15aa = 四个字节
+
+# unknown
+t9b759fb9 = 未知
+
+# a message of {n} field | a message of {n} fields
+t88e6aa3c =
+    { $n ->
+       *[other] 一条有 { $n } 个字段的消息
+    }
+
 # base64url
 tadfc8ac3 = base64url
 
@@ -2454,6 +2484,114 @@ tc7a82a5d = 自 1904 年起的秒数 (HFS+)
 
 # Days since 1899 (spreadsheet)
 td7bc06f2 = 自 1899 年起的天数（电子表格）
+
+# Key wrapped with
+ted680adb = 密钥封装方式
+
+# Encrypted with
+t7e4ecbbd = 加密方式
+
+# Key named
+t79491281 = 密钥名称
+
+# The rest
+tbfad8752 = 其余部分
+
+# encrypted: it needs the key, which tracewing does not have
+tacb4301a = 已加密：需要密钥，而 tracewing 没有
+
+# JWE, an encrypted token
+t6da81e5b = JWE，加密的令牌
+
+# What it is for
+t7f5984ef = 用途
+
+# shared key, encrypted
+t63aa35b5 = 共享密钥，已加密
+
+# public key, signed
+tf7f41fd7 = 公钥，已签名
+
+# The claims
+t5918e3d1 = 声明内容
+
+# PASETO
+t309420ff = PASETO
+
+# MD5, or MD4, or NTLM
+t562aaed5 = MD5、MD4 或 NTLM
+
+# SHA-1, or RIPEMD-160
+tf202ac9d = SHA-1 或 RIPEMD-160
+
+# SHA-224
+tc24ef188 = SHA-224
+
+# SHA-256, or SHA3-256, or BLAKE2s
+ta2e8a8a4 = SHA-256、SHA3-256 或 BLAKE2s
+
+# SHA-384
+ta4d7ea95 = SHA-384
+
+# SHA-512, or SHA3-512, or BLAKE2b
+t275da5bd = SHA-512、SHA3-512 或 BLAKE2b
+
+# A hash, by its size
+te82b53c8 = 按长度判断的哈希
+
+# Made by
+te8ff7e65 = 由什么生成
+
+# bcrypt
+tef91acbf = bcrypt
+
+# Rounds
+tfdc8b178 = 轮数
+
+# 2 to the {cost}
+t25e03044 = 2 的 { $cost } 次方
+
+# Memory
+t58f879ce = 内存
+
+# Passes
+t364b5a7c = 迭代次数
+
+# In parallel
+t81449775 = 并行度
+
+# SHA-256 crypt
+tefb8e7ad = SHA-256 crypt
+
+# SHA-512 crypt
+t9dcf716c = SHA-512 crypt
+
+# A hashed password
+t0157a1e6 = 经过哈希的密码
+
+# PEM
+tf70119c9 = PEM
+
+# What it holds
+tff372c62 = 里面是什么
+
+# How much
+td909a26a = 多少
+
+# {size} of DER
+tbfdcf758 = { $size } 的 DER
+
+# Which message
+t867ac265 = 哪种消息
+
+# Made
+t3890a578 = 创建于
+
+# Named
+t6055a346 = 名称
+
+# SAML
+t015e7110 = SAML
 
 # Trace context
 ta58c7c95 = 追踪上下文
