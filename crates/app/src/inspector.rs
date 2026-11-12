@@ -154,9 +154,15 @@ pub struct Opened {
     pub label: SharedString,
     /// The field or line it was read from, to say where it came from.
     pub from: SharedString,
-    pub view: Entity<BodyView>,
+    pub shown: OpenedAs,
     /// The file the bytes went into, to take away when it closes.
     path: std::path::PathBuf,
+}
+
+/// What was opened: a body to read, or a picture to look at.
+pub enum OpenedAs {
+    Body(Entity<BodyView>),
+    Picture(std::path::PathBuf, u64),
 }
 
 impl Drop for Opened {
@@ -196,6 +202,34 @@ impl InspectorState {
         if let (Some(field), Some(value)) = (field, sel.text_of(start.piece)) {
             self.read_from = Some((field, value));
         }
+    }
+
+    /// Draws the next reading of what is selected, after the one drawn
+    /// there, and round again to none: the keyboard's way through the menu,
+    /// for a reader who would rather not guess which item to pick.
+    pub fn cycle_reading(&mut self, sel: &Selection) -> bool {
+        self.read_here(sel);
+        let Some((field, value)) = self.read_from.clone() else {
+            return false;
+        };
+        if self.readings.is_empty() {
+            return false;
+        }
+        let now = self.drawn_under(&field, &value).map(|reading| reading.id);
+        let next = match now {
+            None => self.readings.first().cloned(),
+            Some(id) => match self.readings.iter().position(|found| found.id == id) {
+                Some(at) => self.readings.get(at + 1).cloned(),
+                None => self.readings.first().cloned(),
+            },
+        };
+        match next {
+            Some(reading) => self.draw_reading(reading),
+            None => {
+                self.drawn.remove(&drawn_key(&field, &value));
+            }
+        }
+        true
     }
 
     /// Draws `reading` under the field the last read came from, which is
@@ -898,7 +932,11 @@ impl Traffic {
     /// while that is what the pane shows, else the body itself.
     pub(crate) fn shown_body(&self) -> Option<&Entity<BodyView>> {
         if let Some(opened) = &self.inspector.opened {
-            return Some(&opened.view);
+            // A picture has no body behind it, and no switch to offer.
+            return match &opened.shown {
+                OpenedAs::Body(view) => Some(view),
+                OpenedAs::Picture(..) => None,
+            };
         }
         match &self.inspector.body {
             BodyState::Shown(view) => Some(view),
@@ -924,7 +962,10 @@ impl Traffic {
             .inspector
             .opened
             .as_ref()
-            .map(|opened| opened.view.clone());
+            .and_then(|opened| match &opened.shown {
+                OpenedAs::Body(view) => Some(view.clone()),
+                OpenedAs::Picture(..) => None,
+            });
         let slots: Vec<Entity<BodyView>> = match opened {
             Some(view) => vec![view],
             None => [&self.inspector.body, &self.inspector.other]
@@ -1407,12 +1448,12 @@ impl Traffic {
                 (Some(picker), _) => well.child(picker),
                 // What a reading held, until it is closed again.
                 (None, Some(opened)) => {
-                    let (label, from, view) = (
-                        opened.label.clone(),
-                        opened.from.clone(),
-                        opened.view.clone(),
-                    );
-                    well.child(self.render_opened(label, from, view, cx))
+                    let (label, from) = (opened.label.clone(), opened.from.clone());
+                    let shown = match &opened.shown {
+                        OpenedAs::Body(view) => view.clone().into_any_element(),
+                        OpenedAs::Picture(path, _) => picture_well(path.clone()),
+                    };
+                    well.child(self.render_opened(label, from, shown, cx))
                 }
                 (None, None) => body_well(well, &self.inspector.body),
             },
@@ -1519,6 +1560,29 @@ impl Traffic {
 }
 
 /// A body in its well, or why it is not there.
+/// A picture to look at, in the pane a reading opened.
+fn picture_well(path: std::path::PathBuf) -> AnyElement {
+    div()
+        .size_full()
+        .p(px(12.))
+        .flex()
+        .items_center()
+        .justify_center()
+        .child(
+            img(path)
+                .max_w_full()
+                .max_h_full()
+                .object_fit(ObjectFit::Contain)
+                .with_fallback(|| {
+                    note(tr!(
+                        "This picture cannot be drawn. Save the body to look at it."
+                    ))
+                    .into_any_element()
+                }),
+        )
+        .into_any_element()
+}
+
 fn body_well(well: Div, state: &BodyState) -> Div {
     match state {
         BodyState::Shown(view) => well.py(px(8.)).child(view.clone()),
@@ -1572,17 +1636,24 @@ impl Traffic {
         if std::fs::write(&path, bytes).is_err() {
             return false;
         }
-        let Ok(body) = Body::open_typed(&path, content_type) else {
-            let _ = std::fs::remove_file(&path);
-            return false;
+        // A picture is to look at, not to read, and needs no body behind it.
+        let shown = match tracewing_convert::picture(bytes) {
+            Some(_) => OpenedAs::Picture(path.clone(), bytes.len() as u64),
+            None => match Body::open_typed(&path, content_type) {
+                Ok(body) => {
+                    let focus = self.focus.clone();
+                    OpenedAs::Body(cx.new(|cx| BodyView::new(body, content_type, focus, cx)))
+                }
+                Err(_) => {
+                    let _ = std::fs::remove_file(&path);
+                    return false;
+                }
+            },
         };
-        let focus = self.focus.clone();
-        let view = cx.new(|cx| BodyView::new(body, content_type, focus, cx));
-        let label = reading.chain.join(" → ");
         self.inspector.opened = Some(Opened {
-            label: label.into(),
+            label: reading.chain.join(" → ").into(),
             from: from.to_owned().into(),
-            view,
+            shown,
             path,
         });
         self.inspector.part = Part::Body;
@@ -1595,7 +1666,7 @@ impl Traffic {
         &self,
         label: SharedString,
         from: SharedString,
-        view: Entity<BodyView>,
+        shown: AnyElement,
         cx: &mut Context<Self>,
     ) -> Div {
         let c = colors();
@@ -1633,7 +1704,24 @@ impl Traffic {
                             })),
                     ),
             )
-            .child(div().flex_1().min_h_0().py(px(4.)).child(view))
+            .child(div().flex_1().min_h_0().py(px(4.)).child(shown))
+    }
+
+    /// The next reading of what is selected, wherever the selection is: in a
+    /// body, or under a field.
+    pub fn cycle_reading(&mut self, cx: &mut Context<Self>) -> bool {
+        let in_a_body = self.inspector.part == Part::Body;
+        let done = match self.shown_body().cloned().filter(|_| in_a_body) {
+            Some(view) => view.update(cx, |view, cx| view.cycle_reading(cx)),
+            None => {
+                let sel = self.inspector.select.clone();
+                self.inspector.cycle_reading(&sel)
+            }
+        };
+        if done {
+            cx.notify();
+        }
+        done
     }
 
     /// Closes what was opened, and shows the body itself again.

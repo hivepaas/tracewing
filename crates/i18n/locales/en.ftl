@@ -822,6 +822,7 @@ tdf4221d9 = The part before or after the one shown
 t20d9b7c0 = Save the body shown
 tf9168168 = Select all of the part shown
 t00b090d3 = Copy the selected text
+t803a686e = Read the selected value the next way, and round again
 t8c35fa5a = Send it on, as edited
 t16f7abb5 = Send it on as it was
 t4e7f48b9 = Drop it

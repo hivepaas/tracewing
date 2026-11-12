@@ -35,6 +35,8 @@ pub enum Action {
     Drop,
     /// Copies what is selected in the inspector.
     Copy,
+    /// Draws the next reading of what is selected, and round again to none.
+    ReadAs,
     SelectAll,
     Record,
     Clear,
@@ -83,6 +85,7 @@ pub fn action_of(key: &str, secondary: bool, shift: bool, typing: bool) -> Optio
             ("s", false) => Some(SaveBody),
             ("e", false) => Some(EditAndSend),
             ("c", true) => Some(CopyCurl),
+            ("r", true) => Some(ReadAs),
             // In a text field these are the field's.
             ("c", false) if !typing => Some(Copy),
             ("a", false) if !typing => Some(SelectAll),
@@ -179,6 +182,10 @@ pub fn list() -> Vec<Group> {
                 ("mod+s", tr!("Save the body shown")),
                 ("mod+a", tr!("Select all of the part shown")),
                 ("mod+c", tr!("Copy the selected text")),
+                (
+                    "mod+shift+r",
+                    tr!("Read the selected value the next way, and round again"),
+                ),
             ],
         ),
         (
@@ -313,6 +320,8 @@ mod tests {
     fn keys_do_what_the_list_says() {
         assert_eq!(action_of("f", true, false, true), Some(Action::Filter));
         assert_eq!(action_of("c", true, true, false), Some(Action::CopyCurl));
+        assert_eq!(action_of("r", true, true, false), Some(Action::ReadAs));
+        assert_eq!(action_of("r", true, false, false), Some(Action::Record));
         // Plain mod+c and mod+a stay the text field's.
         assert_eq!(action_of("c", true, false, true), None);
         assert_eq!(action_of("a", true, false, true), None);

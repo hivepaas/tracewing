@@ -581,6 +581,34 @@ impl BodyView {
         found
     }
 
+    /// Draws the next reading of the selection, after the one drawn there,
+    /// and round again to none: what the keyboard does instead of the menu.
+    pub fn cycle_reading(&mut self, cx: &mut Context<Self>) -> bool {
+        let Some((start, _)) = self.select.bounds() else {
+            return false;
+        };
+        let readings = self.read_selection();
+        if readings.is_empty() {
+            return false;
+        }
+        let now = self.drawn.get(&start.piece).map(|reading| reading.id);
+        let next = match now {
+            None => readings.first().cloned(),
+            Some(id) => match readings.iter().position(|found| found.id == id) {
+                Some(at) => readings.get(at + 1).cloned(),
+                None => readings.first().cloned(),
+            },
+        };
+        match next {
+            Some(reading) => self.draw_reading(reading, cx),
+            None => {
+                self.drawn.remove(&start.piece);
+                cx.notify();
+            }
+        }
+        true
+    }
+
     /// Takes away everything that was drawn beside a value.
     pub fn clear_readings(&mut self, cx: &mut Context<Self>) {
         self.drawn.clear();
