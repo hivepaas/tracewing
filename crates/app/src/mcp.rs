@@ -309,6 +309,8 @@ impl Server {
             "app": detail.app,
             "device": detail.app.is_none().then(|| device_of(&detail.client)).flatten(),
             "graphql": detail.graphql,
+            "rpc": detail.rpc,
+            "rpc_error": detail.rpc_error,
             "changed_by_rules": detail.rule,
             "timing_ms": {
                 "dns": ms(detail.dns_us),
@@ -350,7 +352,8 @@ fn tools() -> Value {
             "name": "list_flows",
             "description": "Requests in a session, the newest first. `filter` is tracewing's \
                 search box: host:api.example.com, method:POST, status:404, status:5xx, \
-                type:json, app:chrome, device:phone, graphql:GetUser, grpc:error, grpc:NOT_FOUND, \
+                type:json, app:chrome, device:phone, graphql:GetUser, rpc:eth_call, grpc:error, \
+                grpc:NOT_FOUND, \
                 and plain words to find in URLs and bodies. Page back with `before` set to `next_before`.",
             "inputSchema": {
                 "type": "object",
@@ -407,7 +410,7 @@ fn time_text(us: i64) -> String {
 fn rows(conn: &Connection, ids: &[i64], devices: &Devices) -> Result<Vec<Value>> {
     let mut stmt = conn.prepare_cached(
         "SELECT id, started_us, method, scheme, host, path, status, kind, resp_bytes,
-                duration_us, app, client, error, graphql, rule, open, grpc_status
+                duration_us, app, client, error, graphql, rule, open, grpc_status, rpc, rpc_error
          FROM flows WHERE id = ?1",
     )?;
     let mut out = Vec::with_capacity(ids.len());
@@ -430,6 +433,8 @@ fn rows(conn: &Connection, ids: &[i64], devices: &Devices) -> Result<Vec<Value>>
                 "url": format!("{scheme}://{host}{path}"),
                 "status": r.get::<_, Option<u16>>(6)?,
                 "grpc_status": r.get::<_, Option<u16>>(16)?,
+                "rpc": r.get::<_, Option<String>>(17)?,
+                "rpc_error": r.get::<_, Option<i64>>(18)?,
                 "kind": r.get::<_, String>(7)?,
                 "response_bytes": r.get::<_, i64>(8)?,
                 "duration_ms": r.get::<_, Option<i64>>(9)?.map(|us| us as f64 / 1000.0),

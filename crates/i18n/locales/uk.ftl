@@ -478,6 +478,9 @@ tce693254 = Тунель, не розшифровано
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
+# RPC: {method}
+tf8162891 = RPC: { $method }
+
 # Over connection {id}, made before: no time went on connecting.
 t84144a81 = Через з’єднання { $id }, створене раніше: на підключення час не витрачено.
 

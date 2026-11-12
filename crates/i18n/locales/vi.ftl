@@ -430,6 +430,9 @@ tce693254 = Tunnel, không giải mã
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
+# RPC: {method}
+tf8162891 = RPC: { $method }
+
 # Over connection {id}, made before: no time went on connecting.
 t84144a81 = Đi qua kết nối { $id } đã có từ trước: không mất thời gian kết nối.
 

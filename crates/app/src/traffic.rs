@@ -2833,7 +2833,7 @@ fn render_row(
         status,
         host,
         path,
-        graphql,
+        operation,
         note,
         size,
         time,
@@ -2889,12 +2889,13 @@ fn render_row(
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(px(12.))
                 .children(
-                    graphql
+                    operation
                         .clone()
                         .filter(|_| !operation_shown)
                         .map(|operation| {
                             div()
-                                // The operation says more than `/graphql` does.
+                                // It says more than `/graphql` or a JSON-RPC
+                                // path, which is the same for every call.
                                 .flex_shrink_0()
                                 .max_w(gpui::relative(0.8))
                                 .mr(px(8.))
@@ -2923,7 +2924,7 @@ fn render_row(
                 .text_size(px(12.))
                 .text_color(rgb(c.on_tonal))
                 .truncate()
-                .children(graphql.clone()),
+                .children(operation.clone()),
             Column::Size => d.text_color(rgb(c.muted)).child(size.clone()),
             Column::Time => d
                 .text_color(rgb(if slow { c.slow } else { c.muted }))

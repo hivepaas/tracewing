@@ -82,6 +82,13 @@ pub struct FlowRecord {
     pub rule: Option<String>,
     /// The GraphQL operation it asked for, as `query GetUser`.
     pub graphql: Option<String>,
+    /// The JSON-RPC method it called, as `eth_call`, or `eth_chainId +2` for
+    /// a batch. The same column as [`Self::graphql`] shows in the list: a
+    /// request is one or the other, never both.
+    pub rpc: Option<String>,
+    /// The code a failed JSON-RPC call answered with, which it answers with
+    /// 200. Its message stays in the body, where the inspector reads it.
+    pub rpc_error: Option<i64>,
     /// The connection to the server it went over, counted in each run.
     pub conn_id: Option<i64>,
     /// When it waited for that connection to be made: from its start to the
@@ -412,7 +419,7 @@ fn open(path: &Path) -> Result<Connection> {
         "PRAGMA journal_mode = WAL;
          PRAGMA synchronous = NORMAL;
          PRAGMA journal_size_limit = 67108864;
-         PRAGMA user_version = 7;
+         PRAGMA user_version = 8;
          CREATE TABLE IF NOT EXISTS flows (
              id INTEGER PRIMARY KEY,
              started_us INTEGER NOT NULL,
@@ -469,7 +476,9 @@ fn open(path: &Path) -> Result<Connection> {
              app TEXT,
              app_pid INTEGER,
              app_path TEXT,
-             grpc_status INTEGER
+             grpc_status INTEGER,
+             rpc TEXT,
+             rpc_error INTEGER
          );
          CREATE TABLE IF NOT EXISTS messages (
              id INTEGER PRIMARY KEY,
@@ -1016,11 +1025,11 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                  resp_segment, resp_offset, resp_len, resp_zstd, resp_spool, resp_spool_lost, resp_shed,
                  head_segment, head_offset, head_len, open, rule, graphql,
                  conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len,
-                 app, app_pid, app_path, grpc_status
+                 app, app_pid, app_path, grpc_status, rpc, rpc_error
              ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
                        ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27,
                        ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42, ?43, ?44,
-                       ?45, ?46, ?47, ?48, ?49, ?50, ?51, ?52, ?53, ?54, ?55, ?56)",
+                       ?45, ?46, ?47, ?48, ?49, ?50, ?51, ?52, ?53, ?54, ?55, ?56, ?57, ?58)",
         )?;
         for (i, r) in batch.iter().enumerate() {
             let (req, resp) = (r.request.place, r.response.place);
@@ -1083,6 +1092,8 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
                 app.as_ref().map(|a| a.pid),
                 app.as_ref().and_then(|a| a.path.as_ref()),
                 r.grpc_status,
+                r.rpc,
+                r.rpc_error,
             ])?;
         }
     }

@@ -62,6 +62,11 @@ pub struct Detail {
     pub rule: Option<String>,
     /// The GraphQL operation, as `query GetUser`.
     pub graphql: Option<String>,
+    /// The JSON-RPC method called, as `eth_call`.
+    pub rpc: Option<String>,
+    /// The code a failed JSON-RPC call answered with. Its message is in the
+    /// body, where the Body part already shows it.
+    pub rpc_error: Option<i64>,
     pub status: Option<u16>,
     pub client_version: String,
     pub server_version: Option<String>,
@@ -95,18 +100,25 @@ pub struct Detail {
     pub grpc_status: Option<u16>,
 }
 
+/// The columns [`Detail::load`] reads, in the order it reads them by number.
+/// Kept apart so that a test can say where each one lands: a column added in
+/// the middle moves every number after it.
+fn columns() -> String {
+    format!(
+        "rule, open, kind, scheme, host, path, method, status, client_version, server_version, client,
+         content_type, ttfb_us, duration_us, error,
+         req_bytes, req_truncated, req_shed, req_spool_lost, {},
+         resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}, graphql,
+         conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len,
+         req_content_type, app, app_pid, app_path, grpc_status, rpc, rpc_error",
+        StoredBody::columns("req"),
+        StoredBody::columns("resp")
+    )
+}
+
 impl Detail {
     pub fn load(flows: &Connection, session_dir: &Path, id: i64) -> Result<Self> {
-        let columns = format!(
-            "rule, open, kind, scheme, host, path, method, status, client_version, server_version, client,
-             content_type, ttfb_us, duration_us, error,
-             req_bytes, req_truncated, req_shed, req_spool_lost, {},
-             resp_bytes, resp_truncated, resp_shed, resp_spool_lost, {}, graphql,
-             conn_id, blocked_us, dns_us, connect_us, tls_us, conn_segment, conn_offset, conn_len,
-             req_content_type, app, app_pid, app_path, grpc_status",
-            StoredBody::columns("req"),
-            StoredBody::columns("resp")
-        );
+        let columns = columns();
         let mut detail = flows.query_row(
             &format!("SELECT {columns} FROM flows WHERE id = ?1"),
             params![id],
@@ -156,6 +168,8 @@ impl Detail {
                     app_pid: r.get(46)?,
                     app_path: r.get(47)?,
                     grpc_status: r.get(48)?,
+                    rpc: r.get(49)?,
+                    rpc_error: r.get(50)?,
                     form: None,
                     headers: None,
                     trailers: Vec::new(),
@@ -400,6 +414,25 @@ pub fn host_and_path(url: &str) -> (&str, &str) {
 mod tests {
     use super::*;
 
+    /// `load` reads each column by number, and nothing says they still line
+    /// up with the names: this does.
+    #[test]
+    fn each_column_is_read_by_the_number_it_is_at() {
+        let columns = columns();
+        let at = |name: &str| {
+            columns
+                .split(',')
+                .position(|column| column.trim() == name)
+                .unwrap_or_else(|| panic!("no column {name} in {columns}"))
+        };
+        assert_eq!(at("rule"), 0);
+        assert_eq!(at("graphql"), 35);
+        assert_eq!(at("req_content_type"), 44);
+        assert_eq!(at("grpc_status"), 48);
+        assert_eq!(at("rpc"), 49);
+        assert_eq!(at("rpc_error"), 50);
+    }
+
     fn detail(client: &str, server: Option<&str>) -> Detail {
         Detail {
             id: 1,
@@ -410,6 +443,8 @@ mod tests {
             open: false,
             rule: None,
             graphql: None,
+            rpc: None,
+            rpc_error: None,
             status: Some(200),
             client_version: client.into(),
             server_version: server.map(str::to_owned),

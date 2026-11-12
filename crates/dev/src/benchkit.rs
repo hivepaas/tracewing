@@ -248,6 +248,55 @@ pub(crate) fn reflection_answer(body: &[u8]) -> Response<OriginBody> {
 
 /// A gRPC call that failed: the order's frame, then trailers that say it
 /// was not found, as gRPC sends them after the body over HTTP/2.
+/// The `Error(string)` a reverted ERC-20 transfer comes back with, as a node
+/// sends it: the selector, where the string starts, how long it is, and the
+/// bytes of "ERC20: transfer amount exceeds balance".
+const REVERTED: &str = "0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002645524332303a207472616e7366657220616d6f756e7420657863656564732062616c616e63650000000000000000000000000000000000000000000000000000";
+
+/// What a node answers the calls in `body`: a result each, or, with `fail`,
+/// a reverted call — which answers **200** like every other, and says what
+/// went wrong in the body. A batch is answered with a batch.
+pub fn rpc_reply(body: &[u8], fail: bool) -> Bytes {
+    let calls = tracewing_store::jsonrpc::calls("POST", Some("application/json"), body);
+    if calls.is_empty() {
+        return Bytes::from_static(
+            br#"{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"invalid request"}}"#,
+        );
+    }
+    let one = |call: &tracewing_store::jsonrpc::Call| {
+        let id = call
+            .id
+            .as_ref()
+            .map_or_else(|| "null".to_owned(), |id| id.to_string());
+        if fail {
+            // No line breaks in here: a raw string keeps a `\` as it is, and
+            // the answer has to be JSON a client can read.
+            let error = concat!(
+                r#""error":{"code":3,"#,
+                r#""message":"execution reverted: ERC20: transfer amount exceeds balance","#,
+                r#""data":""#
+            );
+            return format!(r#"{{"jsonrpc":"2.0","id":{id},{error}{REVERTED}"}}}}"#);
+        }
+        let result = match call.method.as_str() {
+            "eth_chainId" => "0x1".to_owned(),
+            "eth_blockNumber" => "0x192bbde".to_owned(),
+            "eth_getBalance" => "0x506a9d72ec36d56a".to_owned(),
+            "eth_sendRawTransaction" => format!("0x{}", "ab".repeat(32)),
+            // 39.192124 of a token with six decimals, as a balance comes.
+            "eth_call" => format!("0x{:064x}", 39_192_124u64),
+            _ => "0x1".to_owned(),
+        };
+        format!(r#"{{"jsonrpc":"2.0","id":{id},"result":"{result}"}}"#)
+    };
+    let replies: Vec<String> = calls.iter().map(one).collect();
+    let text = match body.trim_ascii_start().starts_with(b"[") {
+        true => format!("[{}]", replies.join(",")),
+        false => replies.concat(),
+    };
+    Bytes::from(text)
+}
+
 pub fn grpc_not_found() -> Response<OriginBody> {
     let mut frame = vec![0u8];
     let order = order_protobuf();
@@ -389,6 +438,21 @@ async fn origin_route(req: Request<Incoming>) -> Result<Response<OriginBody>, In
         return Ok(Response::builder()
             .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
             .body(Full::new(Bytes::from(text)).boxed())
+            .expect("valid response"));
+    }
+    // JSON-RPC: the body says what was called, so it is read here, before
+    // the paths that answer without one.
+    if req.uri().path() == "/rpc" {
+        let fail = parse_query(req.uri().query().unwrap_or("")).contains_key("fail");
+        let body = req
+            .into_body()
+            .collect()
+            .await
+            .map(|body| body.to_bytes())
+            .unwrap_or_default();
+        return Ok(Response::builder()
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Full::new(rpc_reply(&body, fail)).boxed())
             .expect("valid response"));
     }
     let query = parse_query(req.uri().query().unwrap_or(""));
@@ -929,4 +993,43 @@ pub async fn run_load(opts: LoadOptions) -> Result<LoadReport> {
         report.peak_rss_mib = watcher.await?;
     }
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parsed(body: &[u8], fail: bool) -> serde_json::Value {
+        let reply = rpc_reply(body, fail);
+        serde_json::from_slice(&reply)
+            .unwrap_or_else(|e| panic!("{e}: {}", String::from_utf8_lossy(&reply)))
+    }
+
+    #[test]
+    fn the_json_rpc_answers_are_json_a_client_can_read() {
+        let call = br#"{"jsonrpc":"2.0","id":7,"method":"eth_chainId"}"#;
+        assert_eq!(parsed(call, false)["result"], "0x1");
+        assert_eq!(parsed(call, false)["id"], 7, "the id that was asked");
+        // A reverted call: 200 from the server, and the reason in the body.
+        let failed = parsed(call, true);
+        assert_eq!(failed["error"]["code"], 3);
+        assert!(
+            failed["error"]["data"]
+                .as_str()
+                .is_some_and(|d| d.starts_with("0x08c379a0")),
+            "{failed}"
+        );
+        // A batch is answered with a batch, an answer for each call.
+        let batch = br#"[{"jsonrpc":"2.0","id":1,"method":"eth_chainId"},
+                         {"jsonrpc":"2.0","id":"b","method":"eth_call","params":[]}]"#;
+        let replies = parsed(batch, false);
+        assert_eq!(replies.as_array().map(Vec::len), Some(2));
+        assert_eq!(replies[1]["id"], "b");
+        assert_eq!(
+            replies[1]["result"],
+            format!("0x{:064x}", 39_192_124u64),
+            "a balance, as a uint256"
+        );
+        assert_eq!(parsed(b"not json", false)["error"]["code"], -32600);
+    }
 }

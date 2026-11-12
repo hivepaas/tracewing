@@ -8,6 +8,7 @@ pub mod decode;
 pub mod graphql;
 pub mod har;
 pub mod import;
+pub mod jsonrpc;
 pub mod protobuf;
 pub mod protojson;
 pub mod reflection;

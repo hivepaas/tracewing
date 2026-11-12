@@ -83,6 +83,10 @@ pub const ROUTES: &[(&str, &str)] = &[
         "/shop.Orders/Get",
         "gRPC (HTTP/2, POST): the order asked for; 42 is not found",
     ),
+    (
+        "/rpc",
+        "JSON-RPC (POST), as an Ethereum node answers; ?fail=1 reverts, in a 200",
+    ),
 ];
 
 /// Serves until the task is dropped.
@@ -198,6 +202,13 @@ async fn route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallibl
         "/cookies" => cookies(&req),
         "/auth" => auth(&req),
         "/echo" => echo(req).await,
+        "/rpc" => {
+            let fail = query.iter().any(|(key, _)| key == "fail");
+            body(
+                "application/json",
+                benchkit::rpc_reply(&read_body(req).await, fail),
+            )
+        }
         "/ws.html" => body("text/html; charset=utf-8", WS_PAGE),
         "/ws" => websocket(req, number("ticks", 5).min(10_000)),
         "/shop.Orders/Get" => grpc_get(req).await,

@@ -63,6 +63,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Any other response still going after 2 s (long polls, logs as they are written, big downloads) listed while it lasts | Beta | Free |
 | WebSocket: see every message | Beta | Free |
 | GraphQL: the operation name as a column (shown on request), queries laid out and colored, and variables formatted, batches and persisted queries too | Beta | Free |
+| JSON-RPC: the method as a column (`eth_call` for an Ethereum node, `getAccountInfo` for Solana, `tools/call` for MCP over HTTP), the other calls of a batch counted, and a call that failed marked although it answered 200 | Beta | Free |
 | WebSocket: breakpoints and sending messages | 1.x | Pro |
 | gRPC and protobuf: decoded with a `.proto` file or without one, and editable | 1.x | Pro |
 | HTTP/3 | 2.0 | Pro |
@@ -75,7 +76,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | A million flows scroll at the display's refresh rate | Gate 0 | Free |
 | Columns to show, hide, resize and sort | Beta | Free |
 | A sidebar of hosts and devices; pin a host, hide a noisy one | Beta | Free |
-| Filter by host, method, status class, gRPC status and type; search every URL and body | Beta | Free |
+| Filter by host, method, status class, gRPC status, JSON-RPC method and type; search every URL and body | Beta | Free |
 | Sessions: name them, keep them, open them again | Beta | Free |
 | A size limit per session, oldest flows dropped first | Beta | Free |
 | Compare two flows side by side | 1.x | Pro |
