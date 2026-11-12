@@ -743,6 +743,9 @@ t114f9980 = Başlık
 # Payload
 ta0639745 = Payload
 
+# The simulator did not take it: {why}
+t7f8fa9c0 = Simülatör onu kabul etmedi: { $why }
+
 # Light
 t8ad2f8cf = Açık
 
@@ -1961,6 +1964,30 @@ t379e433c = Android emülatörleri ve USB cihazları
 
 # Find devices
 t54d4af39 = Cihazları bul
+
+# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
+t01863e29 = Bu Mac'te çalışan iOS simülatörlerinin sertifikaya güvenmesini sağlar. Simülatörler bu Mac'in proxy'sini kullanır, başka bir şeye gerek yoktur.
+
+# xcrun was not found. Install Xcode, or its command line tools, then look again.
+t2bd95662 = xcrun bulunamadı. Xcode'u veya komut satırı araçlarını kurun, sonra yeniden arayın.
+
+# No simulator is running. Start one from Xcode, then look again.
+tbd7bf840 = Çalışan simülatör yok. Xcode'dan birini başlatın, sonra yeniden arayın.
+
+# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
+tc88c5c9b = Bir simülatörde sertifikaya güvenin. Simülatör silinene kadar kalır; açık bir uygulamanın yeniden açılması gerekebilir.
+
+# The certificate is trusted.
+tdbe3bd38 = Sertifikaya güveniliyor.
+
+# Running.
+ta1c67066 = Çalışıyor.
+
+# iOS simulators
+tb198618d = iOS simülatörleri
+
+# Find simulators
+ta969b661 = Simülatörleri bul
 
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = Sistem proxy'si ve HTTP/3 engeli, tracewing kapandığında ya da çöktüğünde eski hâline döner; USB ile kurulan bir Android cihaz da öyle. Sertifika, 1. adımdaki Kaldır onu çıkarana kadar güvenilir kalır. Elle kurulan bir telefon, Wi-Fi proxy'sini ve sertifikasını orada kaldırılana kadar tutar: her cihazın kılavuzu nasıl yapılacağını söyler. Diğer cihazlar, bu Ayarlar'da kapatılana kadar bu bilgisayarın proxy'sine ulaşabilir.

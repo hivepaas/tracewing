@@ -455,6 +455,7 @@ impl Traffic {
             .child(self.render_one_app(cx))
             .child(self.render_other_devices(cx))
             .child(self.render_android(cx))
+            .children(self.render_simulators(cx))
             .child(self.render_http3(cx))
             .child(self.render_ai_tools())
             .child(self.render_when_done(cx))
@@ -1192,6 +1193,98 @@ impl Traffic {
             })
             .child(div().w_full().flex().flex_col().children(rows))
             .children(problem.map(|problem| div().w_full().text_color(rgb(c.error)).child(problem)))
+    }
+}
+
+impl Traffic {
+    /// iOS simulators on this Mac: nothing where there can be none.
+    fn render_simulators(&mut self, cx: &mut Context<Self>) -> Option<Div> {
+        let c = colors();
+        let state = &self.system.ios;
+        if !state.possible() {
+            return None;
+        }
+        let text = match &state.xcrun {
+            None => tr!(
+                "Trusts the certificate in the iOS simulators running on this Mac. They go \
+                 through this Mac's proxy, so that is all they need."
+            ),
+            Some(None) => tr!(
+                "xcrun was not found. Install Xcode, or its command line tools, then look again."
+            ),
+            Some(Some(_)) if state.simulators.is_empty() => {
+                tr!("No simulator is running. Start one from Xcode, then look again.")
+            }
+            Some(Some(_)) => tr!(
+                "Trust the certificate in a simulator. It stays until the simulator is erased; \
+                 an app already open may need opening again."
+            ),
+        };
+        let looked = state.xcrun.is_some();
+        let looking = state.looking;
+        let busy = state.working.is_some();
+        let rows = state.simulators.iter().enumerate().map(|(at, sim)| {
+            let trusted = state.trusted.contains(&sim.udid);
+            let working = state.working.as_deref() == Some(sim.udid.as_str());
+            let udid = sim.udid.clone();
+            div()
+                .flex()
+                .flex_row()
+                .flex_wrap()
+                .items_center()
+                .gap(px(12.))
+                .py(px(6.))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(260.))
+                        .flex()
+                        .flex_col()
+                        .child(
+                            div()
+                                .font_weight(FontWeight::BOLD)
+                                .child(format!("{} · {}", sim.name, sim.runtime)),
+                        )
+                        .child(div().text_color(rgb(c.muted)).child(if working {
+                            tr!("Working…")
+                        } else if trusted {
+                            tr!("The certificate is trusted.")
+                        } else {
+                            tr!("Running.")
+                        })),
+                )
+                .when(!trusted && !busy, |d| {
+                    d.child(
+                        button(("simulator", at), tr!("Trust the certificate"), true).on_click(
+                            cx.listener(move |this, _, _, cx| {
+                                this.trust_simulator(udid.clone(), cx)
+                            }),
+                        ),
+                    )
+                })
+        });
+        let problem = state.problem.clone();
+        Some(
+            aside(tr!("iOS simulators"), text)
+                .when(!looking, |d| {
+                    d.child(
+                        button(
+                            "setup-simulators",
+                            if looked {
+                                tr!("Look again")
+                            } else {
+                                tr!("Find simulators")
+                            },
+                            false,
+                        )
+                        .on_click(cx.listener(|this, _, _, cx| this.find_simulators(cx))),
+                    )
+                })
+                .child(div().w_full().flex().flex_col().children(rows))
+                .children(
+                    problem.map(|problem| div().w_full().text_color(rgb(c.error)).child(problem)),
+                ),
+        )
     }
 }
 

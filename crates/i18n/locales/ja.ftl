@@ -712,6 +712,9 @@ t114f9980 = ヘッダー
 # Payload
 ta0639745 = ペイロード
 
+# The simulator did not take it: {why}
+t7f8fa9c0 = シミュレーターが受け付けませんでした：{ $why }
+
 # Light
 t8ad2f8cf = ライト
 
@@ -1878,6 +1881,30 @@ t379e433c = Android エミュレータと USB デバイス
 
 # Find devices
 t54d4af39 = デバイスを探す
+
+# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
+t01863e29 = この Mac で動作中の iOS シミュレーターに証明書を信頼させます。シミュレーターは Mac のプロキシを使うので、これだけで十分です。
+
+# xcrun was not found. Install Xcode, or its command line tools, then look again.
+t2bd95662 = xcrun が見つかりません。Xcode かそのコマンドラインツールをインストールして、もう一度探してください。
+
+# No simulator is running. Start one from Xcode, then look again.
+tbd7bf840 = 動作中のシミュレーターがありません。Xcode から起動して、もう一度探してください。
+
+# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
+tc88c5c9b = シミュレーターで証明書を信頼させます。シミュレーターを消去するまで残ります。開いているアプリは開き直す必要があるかもしれません。
+
+# The certificate is trusted.
+tdbe3bd38 = 証明書は信頼されています。
+
+# Running.
+ta1c67066 = 動作中。
+
+# iOS simulators
+tb198618d = iOS シミュレーター
+
+# Find simulators
+ta969b661 = シミュレーターを探す
 
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = システムプロキシと HTTP/3 のブロックは、tracewing を閉じたときやクラッシュしたときに元に戻ります。USB で設定した Android デバイスも同じです。証明書は、ステップ 1 の「削除」で外すまで信頼されたままです。手動で設定した電話は、その端末で外すまで Wi-Fi プロキシと証明書が残ります。方法は各デバイスのガイドにあります。他のデバイスは、設定でオフにするまでこのコンピューターのプロキシに接続できます。

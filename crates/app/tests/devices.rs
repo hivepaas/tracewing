@@ -257,6 +257,53 @@ fn other_devices_are_counted_found_and_named() {
     };
     scroll(&mut cx, 820.);
     shot(&mut cx, window.into(), "95-setup-devices-to-undo");
+
+    // iOS simulators, as on a Mac: here an `xcrun` that answers as simctl does
+    // and writes down what it was asked.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let asked = dir.join("asked");
+        let fake = dir.join("xcrun");
+        std::fs::write(
+            &fake,
+            format!(
+                "#!/bin/sh\necho \"$@\" >> {asked}\n\
+                 case \"$2\" in list) echo '{{\"devices\":{{\"com.apple.CoreSimulator.SimRuntime.iOS-18-2\":\
+                 [{{\"udid\":\"A1\",\"name\":\"iPhone 16\",\"state\":\"Booted\"}},\
+                 {{\"udid\":\"A2\",\"name\":\"iPad Air\",\"state\":\"Booted\"}}]}}}}' ;; esac\n",
+                asked = asked.display()
+            ),
+        )
+        .unwrap();
+        std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
+        window
+            .update(&mut cx, |view, _, cx| {
+                view.system.ios.xcrun = Some(Some(fake.clone()));
+                view.find_simulators(cx);
+            })
+            .unwrap();
+        wait_for(&mut cx, window, "the simulators", |view| {
+            view.system.ios.simulators.len() == 2
+        });
+        window
+            .update(&mut cx, |view, _, cx| view.trust_simulator("A1".into(), cx))
+            .unwrap();
+        wait_for(&mut cx, window, "the certificate trusted", |view| {
+            view.system.ios.trusted.contains("A1") && view.system.ios.working.is_none()
+        });
+        let said = std::fs::read_to_string(&asked).unwrap();
+        assert!(
+            said.ends_with(&format!(
+                "simctl keychain A1 add-root-cert {}\n",
+                dir.join("ca.pem").display()
+            )),
+            "{said}"
+        );
+        scroll(&mut cx, 500.);
+        shot(&mut cx, window.into(), "106-setup-simulators");
+        scroll(&mut cx, -500.);
+    }
     scroll(&mut cx, 1400.);
     shot(&mut cx, window.into(), "96-setup-when-done");
     window

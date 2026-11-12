@@ -743,6 +743,9 @@ t114f9980 = Header
 # Payload
 ta0639745 = Payload
 
+# The simulator did not take it: {why}
+t7f8fa9c0 = Der Simulator hat es nicht angenommen: { $why }
+
 # Light
 t8ad2f8cf = Hell
 
@@ -1997,6 +2000,30 @@ t379e433c = Android-Emulatoren und USB-Geräte
 
 # Find devices
 t54d4af39 = Geräte suchen
+
+# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
+t01863e29 = Vertraut dem Zertifikat in den iOS-Simulatoren, die auf diesem Mac laufen. Sie nutzen den Proxy dieses Macs, mehr brauchen sie nicht.
+
+# xcrun was not found. Install Xcode, or its command line tools, then look again.
+t2bd95662 = xcrun wurde nicht gefunden. Installieren Sie Xcode oder seine Befehlszeilentools und suchen Sie erneut.
+
+# No simulator is running. Start one from Xcode, then look again.
+tbd7bf840 = Kein Simulator läuft. Starten Sie einen in Xcode und suchen Sie erneut.
+
+# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
+tc88c5c9b = Vertrauen Sie dem Zertifikat in einem Simulator. Es bleibt, bis der Simulator gelöscht wird; eine bereits geöffnete App muss eventuell neu geöffnet werden.
+
+# The certificate is trusted.
+tdbe3bd38 = Dem Zertifikat wird vertraut.
+
+# Running.
+ta1c67066 = Läuft.
+
+# iOS simulators
+tb198618d = iOS-Simulatoren
+
+# Find simulators
+ta969b661 = Simulatoren suchen
 
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = Der Systemproxy und die Sperre für HTTP/3 werden zurückgesetzt, wenn tracewing schließt oder abstürzt, ebenso ein per USB eingerichtetes Android-Gerät. Das Zertifikat bleibt vertrauenswürdig, bis Entfernen in Schritt 1 es herausnimmt. Ein von Hand eingerichtetes Telefon behält WLAN-Proxy und Zertifikat, bis sie dort entfernt werden: Die Anleitung jedes Geräts sagt wie. Andere Geräte erreichen den Proxy dieses Computers, bis das in den Einstellungen ausgeschaltet wird.

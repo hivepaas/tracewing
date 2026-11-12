@@ -74,6 +74,7 @@ pub struct SystemState {
     /// Which device's guide the Set up page shows.
     pub guide: crate::setup_page::Guide,
     pub android: crate::android::AndroidState,
+    pub ios: crate::ios_sim_view::IosState,
 }
 
 /// The proxy makes the CA as it starts; making one here too would give two.

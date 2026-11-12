@@ -769,6 +769,9 @@ t114f9980 = Заголовок
 # Payload
 ta0639745 = Payload
 
+# The simulator did not take it: {why}
+t7f8fa9c0 = Симулятор його не прийняв: { $why }
+
 # Light
 t8ad2f8cf = Світла
 
@@ -2079,6 +2082,30 @@ t379e433c = Емулятори Android і USB-пристрої
 
 # Find devices
 t54d4af39 = Знайти пристрої
+
+# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
+t01863e29 = Додає сертифікат до довірених у запущених на цьому Mac симуляторах iOS. Вони ходять через проксі цього Mac, більше нічого не треба.
+
+# xcrun was not found. Install Xcode, or its command line tools, then look again.
+t2bd95662 = xcrun не знайдено. Встановіть Xcode або його інструменти командного рядка й пошукайте знову.
+
+# No simulator is running. Start one from Xcode, then look again.
+tbd7bf840 = Жоден симулятор не запущено. Запустіть його з Xcode й пошукайте знову.
+
+# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
+tc88c5c9b = Зробіть сертифікат довіреним у симуляторі. Він лишиться, доки симулятор не стерто; вже відкритий застосунок, можливо, доведеться відкрити знову.
+
+# The certificate is trusted.
+tdbe3bd38 = Сертифікат довірений.
+
+# Running.
+ta1c67066 = Запущено.
+
+# iOS simulators
+tb198618d = Симулятори iOS
+
+# Find simulators
+ta969b661 = Знайти симулятори
 
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = Системний проксі й блокування HTTP/3 повертаються як було, коли tracewing закривається або падає, як і Android-пристрій, налаштований через USB. Сертифікат лишається довіреним, доки «Видалити» на кроці 1 його не прибере. Телефон, налаштований вручну, зберігає проксі Wi-Fi і сертифікат, доки їх не приберуть на ньому: як це зробити, сказано в інструкції для кожного пристрою. Інші пристрої можуть під’єднуватися до проксі цього комп’ютера, доки це не вимкнено в Налаштуваннях.

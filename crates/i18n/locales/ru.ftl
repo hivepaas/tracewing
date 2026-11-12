@@ -769,6 +769,9 @@ t114f9980 = Заголовок
 # Payload
 ta0639745 = Payload
 
+# The simulator did not take it: {why}
+t7f8fa9c0 = Симулятор не принял его: { $why }
+
 # Light
 t8ad2f8cf = Светлое
 
@@ -2079,6 +2082,30 @@ t379e433c = Эмуляторы Android и USB-устройства
 
 # Find devices
 t54d4af39 = Найти устройства
+
+# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
+t01863e29 = Добавляет сертификат в доверенные в запущенных на этом Mac симуляторах iOS. Они ходят через прокси этого Mac, больше ничего не нужно.
+
+# xcrun was not found. Install Xcode, or its command line tools, then look again.
+t2bd95662 = xcrun не найден. Установите Xcode или его инструменты командной строки и поищите снова.
+
+# No simulator is running. Start one from Xcode, then look again.
+tbd7bf840 = Ни один симулятор не запущен. Запустите его из Xcode и поищите снова.
+
+# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
+tc88c5c9b = Сделайте сертификат доверенным в симуляторе. Он останется, пока симулятор не стёрт; уже открытое приложение может понадобиться открыть заново.
+
+# The certificate is trusted.
+tdbe3bd38 = Сертификат доверенный.
+
+# Running.
+ta1c67066 = Запущен.
+
+# iOS simulators
+tb198618d = Симуляторы iOS
+
+# Find simulators
+ta969b661 = Найти симуляторы
 
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = Системный прокси и блокировка HTTP/3 возвращаются как было, когда tracewing закрывается или падает, как и Android-устройство, настроенное по USB. Сертификат остаётся доверенным, пока «Удалить» на шаге 1 его не уберёт. Телефон, настроенный вручную, хранит прокси Wi-Fi и сертификат, пока их не уберут на нём самом: как это сделать, сказано в инструкции для каждого устройства. Другие устройства могут подключаться к прокси этого компьютера, пока это не выключено в Настройках.

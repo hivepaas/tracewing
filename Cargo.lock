@@ -8480,6 +8480,7 @@ dependencies = [
  "md-5",
  "rustls-native-certs",
  "rustls-platform-verifier",
+ "serde_json",
  "tracewing-proxy",
  "tracing",
  "windows-sys 0.61.2",

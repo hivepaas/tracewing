@@ -712,6 +712,9 @@ t114f9980 = 头部
 # Payload
 ta0639745 = 载荷
 
+# The simulator did not take it: {why}
+t7f8fa9c0 = 模拟器未接受：{ $why }
+
 # Light
 t8ad2f8cf = 浅色
 
@@ -1878,6 +1881,30 @@ t379e433c = Android 模拟器和 USB 设备
 
 # Find devices
 t54d4af39 = 查找设备
+
+# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
+t01863e29 = 让此 Mac 上正在运行的 iOS 模拟器信任证书。模拟器使用此 Mac 的代理，只需这一步。
+
+# xcrun was not found. Install Xcode, or its command line tools, then look again.
+t2bd95662 = 未找到 xcrun。请安装 Xcode 或其命令行工具，然后再找一次。
+
+# No simulator is running. Start one from Xcode, then look again.
+tbd7bf840 = 没有正在运行的模拟器。请从 Xcode 启动一个，然后再找一次。
+
+# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
+tc88c5c9b = 让模拟器信任证书。在抹掉模拟器之前一直有效；已打开的应用可能需要重新打开。
+
+# The certificate is trusted.
+tdbe3bd38 = 证书已受信任。
+
+# Running.
+ta1c67066 = 运行中。
+
+# iOS simulators
+tb198618d = iOS 模拟器
+
+# Find simulators
+ta969b661 = 查找模拟器
 
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = tracewing 关闭或崩溃时，系统代理和 HTTP/3 屏蔽都会恢复原样，通过 USB 设置的 Android 设备也是如此。证书会一直受信任，直到第 1 步中的「移除」将其删除。手动设置的手机会保留 Wi-Fi 代理和证书，直到在手机上将其删除：各设备的指南说明了做法。在「设置」中关闭该选项之前，其他设备都能使用这台电脑的代理。
