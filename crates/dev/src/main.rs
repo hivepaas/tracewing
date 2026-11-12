@@ -52,6 +52,13 @@ enum Command {
         /// Stop cleanly after this many seconds.
         #[arg(long)]
         exit_after: Option<u64>,
+        /// Go on to servers through another proxy: http://host:port or
+        /// socks5://host:port, with user:password@ if it asks.
+        #[arg(long)]
+        relay: Option<String>,
+        /// Hosts reached without the relay, as NO_PROXY has them.
+        #[arg(long, default_value = "localhost, 127.0.0.1, ::1")]
+        relay_bypass: String,
     },
     /// Manage the root CA in the OS's trust stores.
     Ca {
@@ -251,8 +258,16 @@ async fn main() -> Result<()> {
             no_watchdog,
             no_apps,
             exit_after,
+            relay,
+            relay_bypass,
         } => {
             let data_dir = data_dir.unwrap_or_else(default_data_dir);
+            let relay = Arc::new(tracewing_proxy::relay::Relay::new(
+                &tracewing_proxy::relay::RelaySettings {
+                    proxy: relay.unwrap_or_default(),
+                    bypass: relay_bypass,
+                },
+            )?);
             let settings = load_settings(settings.as_deref())?;
             let session = session.unwrap_or_else(|| {
                 data_dir
@@ -310,6 +325,7 @@ async fn main() -> Result<()> {
                     stop_limit: Duration::from_secs(5),
                     live: Default::default(),
                     other_devices: None,
+                    relay,
                 },
                 async move {
                     match exit_after {

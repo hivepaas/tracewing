@@ -7,6 +7,7 @@ pub mod ca_key;
 pub mod capture;
 pub mod lan;
 pub mod pause;
+pub mod relay;
 pub mod rules;
 pub mod throttle;
 pub mod traffic_rules;
@@ -103,6 +104,9 @@ pub struct ProxyOptions {
     /// Whether other devices on the network may use the proxy, switched while
     /// it runs. `None` keeps them out.
     pub other_devices: Option<Arc<lan::OtherDevices>>,
+    /// Another proxy that connections to servers go through, as a company's.
+    /// Changes apply to the next connection.
+    pub relay: Arc<relay::Relay>,
 }
 
 #[derive(Debug)]
@@ -188,7 +192,8 @@ pub async fn run_proxy(
     // latency jumps to ~40 ms. Linux copies the flag to accepted sockets.
     socket2::SockRef::from(&listener).set_tcp_nodelay(true)?;
     let (upstream_tls, verifier) = upstream_tls(&opts.extra_roots, opts.settings.os_roots)?;
-    let connector = upstream::TimedConnector::new(upstream_tls.clone(), verifier);
+    let connector =
+        upstream::TimedConnector::new(upstream_tls.clone(), verifier, Arc::clone(&opts.relay));
 
     let handler = FlowHandler::new(
         recorder,
@@ -207,6 +212,7 @@ pub async fn run_proxy(
                 .transpose()?,
             live: Arc::clone(&opts.live),
             network: opts.network,
+            relay: Arc::clone(&opts.relay),
         },
     );
     let stop_limit = opts.stop_limit;

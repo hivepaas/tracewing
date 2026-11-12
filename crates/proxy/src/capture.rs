@@ -233,6 +233,7 @@ pub struct FlowHandler {
     live: Arc<Live>,
     /// The network traffic goes through, slow on purpose or not.
     network: Arc<Network>,
+    relay: Arc<crate::relay::Relay>,
     /// What slowed the request this clone is handling, to slow its response too.
     slowed: Option<Conditions>,
     /// Headers rules set, or take out, on the response of the request this
@@ -264,6 +265,8 @@ pub struct Controls {
     pub live: Arc<Live>,
     /// Changes apply to the next request.
     pub network: Arc<Network>,
+    /// The proxy that connections to servers go through, if any.
+    pub relay: Arc<crate::relay::Relay>,
 }
 
 impl FlowHandler {
@@ -287,6 +290,7 @@ impl FlowHandler {
             apps: controls.apps,
             live: controls.live,
             network: controls.network,
+            relay: controls.relay,
             slowed: None,
             response_headers: Vec::new(),
             response_status: None,
@@ -748,6 +752,18 @@ impl HttpHandler for FlowHandler {
         // After the flow has them, so that it shows what the client sent.
         let upgrade = is_websocket(&req);
         drop_hop_by_hop(req.headers_mut(), upgrade);
+        // Plain HTTP goes to an HTTP relay whole, and says who is asking.
+        if req.uri().scheme_str() == Some("http")
+            && let Some(basic) = req
+                .uri()
+                .host()
+                .and_then(|host| self.relay.route_for(host))
+                .filter(|route| route.kind == crate::relay::Kind::Http)
+                .and_then(|route| route.basic())
+            && let Ok(value) = HeaderValue::from_str(&basic)
+        {
+            req.headers_mut().insert(header::PROXY_AUTHORIZATION, value);
+        }
         match plan.end {
             Some(End::Block(status)) => {
                 let res = Response::builder()

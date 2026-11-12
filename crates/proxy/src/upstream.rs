@@ -3,6 +3,7 @@
 //! TLS version and certificates, goes with every response over the connection.
 //! When TLS fails, the certificates the server showed go with the error.
 
+use crate::relay::{Kind as RelayKind, Relay, Route};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use http::Uri;
 use hudsucker::rustls::{
@@ -181,16 +182,23 @@ pub struct TimedConnector {
     config: Arc<ClientConfig>,
     verifier: Arc<dyn ServerCertVerifier>,
     next_id: Arc<AtomicI64>,
+    /// Another proxy to go through, as a company's.
+    relay: Arc<Relay>,
 }
 
 impl TimedConnector {
     /// `verifier` must be the one `config` checks certificates with.
-    pub fn new(mut config: ClientConfig, verifier: Arc<dyn ServerCertVerifier>) -> Self {
+    pub fn new(
+        mut config: ClientConfig,
+        verifier: Arc<dyn ServerCertVerifier>,
+        relay: Arc<Relay>,
+    ) -> Self {
         config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
         Self {
             config: Arc::new(config),
             verifier,
             next_id: Arc::new(AtomicI64::new(1)),
+            relay,
         }
     }
 }
@@ -209,7 +217,11 @@ impl tower_service::Service<Uri> for TimedConnector {
     fn call(&mut self, uri: Uri) -> Self::Future {
         let (config, verifier) = (Arc::clone(&self.config), Arc::clone(&self.verifier));
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        Box::pin(async move { connect(uri, config, verifier, id).await })
+        let route = uri.host().and_then(|host| {
+            self.relay
+                .route_for(host.trim_start_matches('[').trim_end_matches(']'))
+        });
+        Box::pin(async move { connect(uri, config, verifier, id, route).await })
     }
 }
 
@@ -218,6 +230,7 @@ async fn connect(
     config: Arc<ClientConfig>,
     verifier: Arc<dyn ServerCertVerifier>,
     id: i64,
+    route: Option<Arc<Route>>,
 ) -> Result<Stream, BoxError> {
     let secure = match uri.scheme_str() {
         Some("https") => true,
@@ -230,33 +243,27 @@ async fn connect(
     let started_us = unix_micros();
     let began = Instant::now();
 
-    // Looked up here to be timed; hyper's own connector then tries the
-    // addresses, falling back from IPv6 to IPv4 when the first is slow.
-    let (addresses, dns_us) = match host.parse::<IpAddr>() {
-        Ok(ip) => (vec![SocketAddr::new(ip, port)], None),
-        Err(_) => {
-            let found: Vec<SocketAddr> = tokio::net::lookup_host((host, port))
-                .await
-                .map_err(|e| format!("look up {host}: {e}"))?
-                .collect();
-            if found.is_empty() {
-                return Err(format!("look up {host}: no addresses").into());
-            }
-            (found, Some(micros(began)))
+    // Through a relay, the name goes to it as it is, for it to look up. Plain
+    // HTTP goes to an HTTP relay as a request to pass on, which is what such
+    // a relay allows; anything else goes through a tunnel.
+    let (tcp, remote, dns_us, connect_us, forwarded) = match &route {
+        Some(route) => {
+            let connecting = Instant::now();
+            let forwarded = !secure && route.kind == RelayKind::Http;
+            let tcp = if forwarded {
+                route.connect().await
+            } else {
+                route.tunnel(host, port).await
+            }?;
+            let remote = tcp.peer_addr()?;
+            (tcp, remote, None, micros(connecting), forwarded)
+        }
+        None => {
+            let (tcp, dns_us, connect_us) = connect_straight(&uri, host, port, began).await?;
+            let remote = tcp.peer_addr()?;
+            (tcp, remote, dns_us, connect_us, false)
         }
     };
-
-    let connecting = Instant::now();
-    let mut http = HttpConnector::new_with_resolver(Resolved(addresses));
-    http.enforce_http(false);
-    http.set_nodelay(true);
-    let tcp = http
-        .call(uri.clone())
-        .await
-        .map_err(|e| format!("connect to {host}:{port}: {}", error_text(&e)))?
-        .into_inner();
-    let remote = tcp.peer_addr()?;
-    let connect_us = micros(connecting);
 
     let (stream, tls_us, facts) = if secure {
         let shaking = Instant::now();
@@ -316,6 +323,7 @@ async fn connect(
     };
 
     Ok(Stream {
+        forwarded,
         inner: stream,
         upstream: Arc::new(Upstream {
             id,
@@ -329,6 +337,41 @@ async fn connect(
             told: AtomicBool::new(false),
         }),
     })
+}
+
+/// A connection to the server itself: the name looked up, then TCP.
+async fn connect_straight(
+    uri: &Uri,
+    host: &str,
+    port: u16,
+    began: Instant,
+) -> Result<(TcpStream, Option<i64>, i64), BoxError> {
+    // Looked up here to be timed; hyper's own connector then tries the
+    // addresses, falling back from IPv6 to IPv4 when the first is slow.
+    let (addresses, dns_us) = match host.parse::<IpAddr>() {
+        Ok(ip) => (vec![SocketAddr::new(ip, port)], None),
+        Err(_) => {
+            let found: Vec<SocketAddr> = tokio::net::lookup_host((host, port))
+                .await
+                .map_err(|e| format!("look up {host}: {e}"))?
+                .collect();
+            if found.is_empty() {
+                return Err(format!("look up {host}: no addresses").into());
+            }
+            (found, Some(micros(began)))
+        }
+    };
+
+    let connecting = Instant::now();
+    let mut http = HttpConnector::new_with_resolver(Resolved(addresses));
+    http.enforce_http(false);
+    http.set_nodelay(true);
+    let tcp = http
+        .call(uri.clone())
+        .await
+        .map_err(|e| format!("connect to {host}:{port}: {}", error_text(&e)))?
+        .into_inner();
+    Ok((tcp, dns_us, micros(connecting)))
 }
 
 /// Addresses already looked up, handed to hyper's connector.
@@ -379,11 +422,15 @@ enum Inner {
 pub struct Stream {
     inner: Inner,
     upstream: Arc<Upstream>,
+    /// To an HTTP relay, which takes requests whole, their URL in full.
+    forwarded: bool,
 }
 
 impl Connection for Stream {
     fn connected(&self) -> Connected {
-        let connected = Connected::new().extra(Arc::clone(&self.upstream));
+        let connected = Connected::new()
+            .extra(Arc::clone(&self.upstream))
+            .proxy(self.forwarded);
         let h2 = self
             .upstream
             .tls
