@@ -565,6 +565,12 @@ t1e92fb27 = 無法顯示此圖片。請儲存本文後檢視。
 # Opening…
 tc40f2321 = 正在開啟…
 
+# Read from {from}
+t6d510d3d = 讀自 { $from }
+
+# Back to the body
+t3506a32c = 返回內文
+
 # No response
 t8c2c37b1 = 無回應
 

@@ -30,6 +30,10 @@ use std::{
 use tracewing_convert::Reading;
 use tracewing_i18n::{tr, tr_n};
 
+/// What opens a reading that holds a body of its own: the reading, the field
+/// or line it was read from, and the window to open it in.
+pub type OpensReading = Rc<dyn Fn(Reading, String, &mut gpui::App)>;
+
 pub const LINE_HEIGHT: f32 = 20.;
 /// How many lines' worth of "is this worth reading" to keep. A reader who has
 /// scrolled past this many has not looked at the first of them.
@@ -202,6 +206,9 @@ pub struct BodyView {
     /// Which pieces hold a value worth saying something about, by piece. The
     /// same reason, and the same answer kept.
     marks: RefCell<HashMap<u64, bool>>,
+    /// What to call to open a reading that holds a body of its own. A body
+    /// view has no pane to put one in; the window does.
+    opens: Option<OpensReading>,
     /// CSV or TSV read as a table, which [`BodyMode::Table`] shows.
     table: Option<Arc<Table>>,
     table_scroll: UniformListScrollHandle,
@@ -239,6 +246,7 @@ impl BodyView {
             host: SharedString::default(),
             by_rule: RefCell::new((0, HashMap::new())),
             marks: RefCell::new(HashMap::new()),
+            opens: None,
             table: None,
             table_scroll: UniformListScrollHandle::new(),
         }
@@ -487,6 +495,11 @@ impl BodyView {
         self.rules = rules;
         self.host = host.into();
         self.by_rule.borrow_mut().1.clear();
+    }
+
+    /// What to call when a reading holds a body of its own.
+    pub fn on_open_reading(&mut self, opens: OpensReading) {
+        self.opens = Some(opens);
     }
 
     /// The rules, to remember one or to forget one from the menu.
@@ -1250,10 +1263,24 @@ impl BodyView {
             // `Copy reading` takes the whole of it instead.
             let pick = me.clone();
             items.extend(reading::items(&self.readings, move |reading, _, cx| {
+                let mut opened = None;
                 let _ = pick.update(cx, |this, cx| {
-                    this.draw_reading(reading, cx);
+                    // What holds a body of its own is opened as one; the
+                    // rest is drawn beside the value.
+                    let holds_body =
+                        matches!(reading.shown, tracewing_convert::Shown::Bytes { .. });
+                    match (holds_body, this.opens.clone()) {
+                        (true, Some(opens)) => {
+                            let from = this.selected_field().unwrap_or_default();
+                            opened = Some((opens, reading, from));
+                        }
+                        _ => this.draw_reading(reading, cx),
+                    }
                     this.close_menu();
                 });
+                if let Some((opens, reading, from)) = opened {
+                    opens(reading, from, cx);
+                }
             }));
             let copied = me.clone();
             items.extend(reading::copy_item(&self.readings, move |_, cx| {

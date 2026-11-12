@@ -565,6 +565,12 @@ t1e92fb27 = 이 이미지를 표시할 수 없습니다. 본문을 저장해서 
 # Opening…
 tc40f2321 = 여는 중…
 
+# Read from {from}
+t6d510d3d = { $from }에서 읽음
+
+# Back to the body
+t3506a32c = 본문으로 돌아가기
+
 # No response
 t8c2c37b1 = 응답 없음
 

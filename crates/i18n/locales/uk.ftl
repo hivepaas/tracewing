@@ -616,6 +616,12 @@ t1e92fb27 = Це зображення не вдається показати. З
 # Opening…
 tc40f2321 = Відкриття…
 
+# Read from {from}
+t6d510d3d = Прочитано з { $from }
+
+# Back to the body
+t3506a32c = Назад до тіла
+
 # No response
 t8c2c37b1 = Немає відповіді
 

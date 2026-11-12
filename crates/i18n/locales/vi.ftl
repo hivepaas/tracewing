@@ -565,6 +565,12 @@ t1e92fb27 = Không vẽ được hình này. Hãy lưu body để xem.
 # Opening…
 tc40f2321 = Đang mở…
 
+# Read from {from}
+t6d510d3d = Đọc từ { $from }
+
+# Back to the body
+t3506a32c = Quay lại body
+
 # No response
 t8c2c37b1 = Không có phản hồi
 

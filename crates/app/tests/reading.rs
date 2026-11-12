@@ -572,3 +572,162 @@ fn what_is_remembered_reads_itself_next_time() {
         "{kept}"
     );
 }
+
+/// A reading that holds a body — JSON out of base64 — opens as one, with
+/// Pretty, Raw and Hex and everything else a body has.
+#[test]
+fn a_reading_that_holds_a_body_opens_as_one() {
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir = std::env::temp_dir().join(format!("tracewing-reading-opened-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let listener = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let port = listener.local_addr().unwrap().port();
+    runtime.spawn(tracewing_dev::playground::serve(listener));
+    let engine = Engine::start(EngineOptions {
+        data_dir: dir.clone(),
+        settings: StorageSettings {
+            disk_reserve_mib: 1,
+            ..StorageSettings::default()
+        },
+        rules: Default::default(),
+        traffic_rules: Default::default(),
+        ports: 20_380..20_390,
+        extra_roots: Vec::new(),
+        key_store: Default::default(),
+        find_apps: false,
+    })
+    .unwrap();
+    while !dir.join("ca.pem").exists() {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+
+    let text = Arc::new(gpui_wgpu::CosmicTextSystem::new(tracewing::FONT));
+    let mut cx = HeadlessAppContext::with_platform(text, Arc::new(tracewing::Assets), || {
+        gpui_platform::current_headless_renderer()
+    });
+    cx.update(tracewing::load_fonts);
+    let data_dir = dir.clone();
+    let window: WindowHandle<Traffic> = cx
+        .open_window(size(px(1440.), px(900.)), move |window, cx| {
+            cx.new(|cx| Traffic::new(engine, &data_dir, window, cx))
+        })
+        .unwrap();
+
+    // A query field holding base64 of `{"a":1,"b":2}`.
+    get(
+        &mut cx,
+        window,
+        &format!("http://localhost:{port}/json?blob=eyJhIjoxLCJiIjoyfQ"),
+    );
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Traffic, cx);
+            view.select_place(0, cx);
+            view.set_part(Part::Query, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+
+    let piece = window
+        .update(&mut cx, |view, _, _| {
+            let sel = &view.inspector.select;
+            (0..12u64).find(|piece| sel.field_of(*piece).is_some_and(|field| field == "blob"))
+        })
+        .unwrap()
+        .expect("the query carries the blob");
+
+    let opened = window
+        .update(&mut cx, |view, _, cx| {
+            let sel = view.inspector.select.clone();
+            let len = sel.text_of(piece).map(|text| text.len()).unwrap_or(0);
+            sel.select(Spot { piece, at: 0 }, Spot { piece, at: len });
+            view.inspector.read_here(&sel);
+            // Two readings of the same value: the bytes base64 held, and
+            // the JSON inside them. The chain is the one to open.
+            let plain = view
+                .inspector
+                .readings
+                .iter()
+                .find(|reading| reading.id == "base64")
+                .expect("base64 is read");
+            assert_eq!(plain.chain, ["base64"]);
+            let reading = view
+                .inspector
+                .readings
+                .iter()
+                .find(|reading| reading.id == "json")
+                .cloned()
+                .expect("the JSON inside the base64 is read too");
+            assert_eq!(reading.chain, ["base64", "json"]);
+            view.open_reading(&reading, "blob", cx)
+        })
+        .unwrap();
+    assert!(opened, "a reading holding a body opens");
+    cx.run_until_parked();
+
+    // It is a body like any other: laid out, with lines of its own.
+    let (part, label, lines) = window
+        .update(&mut cx, |view, _, cx| {
+            let opened = view.inspector.opened.as_ref().expect("it stays open");
+            (
+                view.inspector.part,
+                opened.label.to_string(),
+                opened.view.read(cx).body().lines(),
+            )
+        })
+        .unwrap();
+    assert_eq!(part, Part::Body, "it is shown where bodies are shown");
+    assert_eq!(label, "base64 → json", "it says what read it");
+    assert!(
+        lines >= 4,
+        "{{\"a\":1,\"b\":2}} laid out is four lines: {lines}"
+    );
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "88-reading-opened");
+
+    // The switch above the pane is about what is in it: Hex shows the bytes
+    // the reading held, not the bytes of the body behind it.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_body_mode(tracewing::bodyview::BodyMode::Hex, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let (opened_mode, body_mode) = window
+        .update(&mut cx, |view, _, cx| {
+            let opened = view.inspector.opened.as_ref().unwrap();
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            (opened.view.read(cx).mode(), body.read(cx).mode())
+        })
+        .unwrap();
+    assert_eq!(opened_mode, tracewing::bodyview::BodyMode::Hex);
+    assert_ne!(
+        body_mode,
+        tracewing::bodyview::BodyMode::Hex,
+        "the body behind it is left as it was"
+    );
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_body_mode(tracewing::bodyview::BodyMode::Pretty, cx)
+        })
+        .unwrap();
+
+    // And the way back leaves the body itself.
+    window
+        .update(&mut cx, |view, _, cx| {
+            assert!(view.close_opened(cx));
+            assert!(view.inspector.opened.is_none());
+        })
+        .unwrap();
+    cx.run_until_parked();
+}

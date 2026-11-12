@@ -565,6 +565,12 @@ t1e92fb27 = Gambar ini tidak bisa ditampilkan. Simpan body-nya untuk melihatnya.
 # Opening…
 tc40f2321 = Membuka…
 
+# Read from {from}
+t6d510d3d = Dibaca dari { $from }
+
+# Back to the body
+t3506a32c = Kembali ke body
+
 # No response
 t8c2c37b1 = Tidak ada respons
 

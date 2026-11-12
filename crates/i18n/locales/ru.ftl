@@ -616,6 +616,12 @@ t1e92fb27 = Это изображение не удаётся отобразит
 # Opening…
 tc40f2321 = Открытие…
 
+# Read from {from}
+t6d510d3d = Прочитано из { $from }
+
+# Back to the body
+t3506a32c = Назад к телу
+
 # No response
 t8c2c37b1 = Нет ответа
 

@@ -34,7 +34,7 @@ use std::{
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tracewing_convert::{Reading, Shown};
+use tracewing_convert::{Kind, Reading, Shown};
 use tracewing_i18n::{tr, tr_n};
 use tracewing_store::session::BodyReader;
 
@@ -135,6 +135,30 @@ pub struct InspectorState {
     /// Which values are worth underlining, by [`drawn_key`]. The same reason,
     /// and the same answer kept.
     marks: RefCell<HashMap<String, bool>>,
+    /// A reading being looked at as a body of its own, which the body pane
+    /// shows until it is closed.
+    pub opened: Option<Opened>,
+    /// How many have been opened, so that each gets a file of its own.
+    opened_count: u64,
+}
+
+/// A reading opened as a body of its own: JSON out of base64, a body out of
+/// gzip. The bytes are written beside the data folder and read as any body
+/// is, so Pretty, Raw, Hex, folds and search all work on them.
+pub struct Opened {
+    /// What read it: `base64 → gzip → JSON`.
+    pub label: SharedString,
+    /// The field or line it was read from, to say where it came from.
+    pub from: SharedString,
+    pub view: Entity<BodyView>,
+    /// The file the bytes went into, to take away when it closes.
+    path: std::path::PathBuf,
+}
+
+impl Drop for Opened {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
 }
 
 /// How many values' worth of "is this worth reading" to keep. A flow has
@@ -325,6 +349,7 @@ impl Traffic {
                     (false, part) => part,
                 };
                 self.inspector.detail = Some(detail);
+                self.inspector.opened = None;
                 self.inspector.copied = false;
                 self.inspector.llm = None;
                 self.load_llm(cx);
@@ -450,6 +475,16 @@ impl Traffic {
                             // the host they are remembered against.
                             let rules = this.inspector.remembered.clone();
                             let host = this.inspector.host();
+                            // A body view cannot open a pane of its own, so
+                            // it asks the window to.
+                            let opens = {
+                                let me = cx.entity().downgrade();
+                                Rc::new(move |reading: Reading, from: String, cx: &mut gpui::App| {
+                                    let _ = me.update(cx, |this: &mut Traffic, cx| {
+                                        this.open_reading(&reading, &from, cx);
+                                    });
+                                }) as crate::bodyview::OpensReading
+                            };
                             // MessagePack, CBOR or Protobuf, shown as the JSON made of it.
                             let json = json.and_then(|(json, name)| {
                                 Some((Body::open(&json).ok()?, name))
@@ -465,6 +500,7 @@ impl Traffic {
                                     None => BodyView::new(body, content_type.as_deref(), focus, cx),
                                 };
                                 view.set_rules(rules, host);
+                                view.on_open_reading(opens);
                                 view.set_mode(mode, cx);
                                 if let Some(table) = table {
                                     view.set_table(table, cx);
@@ -853,11 +889,24 @@ impl Traffic {
 
     /// Shows bodies laid out, as they were sent, or as dumps of their bytes:
     /// both sides' when both are shown, and the next flows' too.
+    /// The body the toolbar above it acts on: what a reading was opened as,
+    /// while that is what the pane shows, else the body itself.
+    pub(crate) fn shown_body(&self) -> Option<&Entity<BodyView>> {
+        if let Some(opened) = &self.inspector.opened {
+            return Some(&opened.view);
+        }
+        match &self.inspector.body {
+            BodyState::Shown(view) => Some(view),
+            _ => None,
+        }
+    }
+
     pub fn set_body_mode(&mut self, mode: BodyMode, cx: &mut Context<Self>) {
         // Chosen for a table, a way says how tables show, and no more; chosen
         // for another body, how the rest show.
-        let on_a_table =
-            matches!(&self.inspector.body, BodyState::Shown(view) if view.read(cx).has_table());
+        let on_a_table = self
+            .shown_body()
+            .is_some_and(|view| view.read(cx).has_table());
         if mode == BodyMode::Table {
             self.inspector.tables_as_text = false;
         } else if on_a_table {
@@ -865,8 +914,24 @@ impl Traffic {
         } else {
             self.inspector.body_mode = mode;
         }
-        for slot in [&self.inspector.body, &self.inspector.other] {
-            if let BodyState::Shown(view) = slot {
+        // While a reading is open, the switch is about that body alone.
+        let opened = self
+            .inspector
+            .opened
+            .as_ref()
+            .map(|opened| opened.view.clone());
+        let slots: Vec<Entity<BodyView>> = match opened {
+            Some(view) => vec![view],
+            None => [&self.inspector.body, &self.inspector.other]
+                .into_iter()
+                .filter_map(|slot| match slot {
+                    BodyState::Shown(view) => Some(view.clone()),
+                    _ => None,
+                })
+                .collect(),
+        };
+        for view in slots {
+            {
                 view.update(cx, |view, cx| {
                     if mode != BodyMode::Table || view.has_table() {
                         view.set_mode(mode, cx);
@@ -881,10 +946,7 @@ impl Traffic {
     /// switch. Only JSON is laid out, and a body that is bytes already has no
     /// switch.
     fn render_hex_switch(&self, part: Part, cx: &mut Context<Self>) -> Option<Div> {
-        let BodyState::Shown(view) = &self.inspector.body else {
-            return None;
-        };
-        let view = view.read(cx);
+        let view = self.shown_body()?.read(cx);
         let kind = view.body().kind();
         if part != Part::Body || kind == crate::body::Kind::Binary {
             return None;
@@ -1016,6 +1078,9 @@ impl Traffic {
         // Both shown, each pane says its own.
         let summary_text: Option<String> = match (&self.inspector.body, part) {
             _ if both && part == Part::Body => None,
+            (_, Part::Body) if self.inspector.opened.is_some() => {
+                self.shown_body().map(|view| view.read(cx).summary())
+            }
             (BodyState::Shown(view), Part::Body) => Some(view.read(cx).summary()),
             (BodyState::Image(_, size), Part::Body) => {
                 Some(tr!("Picture · {size}", size = size_text(*size)))
@@ -1328,9 +1393,18 @@ impl Traffic {
                     &self.inspector,
                 ))
             }
-            Part::Body => match self.render_read_as(cx) {
-                Some(picker) => well.child(picker),
-                None => body_well(well, &self.inspector.body),
+            Part::Body => match (self.render_read_as(cx), &self.inspector.opened) {
+                (Some(picker), _) => well.child(picker),
+                // What a reading held, until it is closed again.
+                (None, Some(opened)) => {
+                    let (label, from, view) = (
+                        opened.label.clone(),
+                        opened.from.clone(),
+                        opened.view.clone(),
+                    );
+                    well.child(self.render_opened(label, from, view, cx))
+                }
+                (None, None) => body_well(well, &self.inspector.body),
             },
         }
     }
@@ -1464,6 +1538,103 @@ fn body_well(well: Div, state: &BodyState) -> Div {
 }
 
 impl Traffic {
+    /// Opens a reading that holds bytes as a body of its own: the JSON inside
+    /// base64, what gzip held. The bytes go into a file beside the others,
+    /// because a body is read from a file however it was made.
+    pub fn open_reading(&mut self, reading: &Reading, from: &str, cx: &mut Context<Self>) -> bool {
+        let Shown::Bytes { kind, bytes } = &reading.shown else {
+            return false;
+        };
+        let (extension, content_type) = match kind {
+            Kind::Json => ("json", Some("application/json")),
+            Kind::Xml => ("xml", Some("application/xml")),
+            Kind::Text => ("txt", Some("text/plain")),
+            Kind::Binary => ("bin", None),
+        };
+        let folder = self.data_dir.join("opened");
+        if std::fs::create_dir_all(&folder).is_err() {
+            return false;
+        }
+        // One at a time, and a name of its own each time: the last one may
+        // still be mapped into memory while this one is written.
+        self.inspector.opened_count = self.inspector.opened_count.wrapping_add(1);
+        let path = folder.join(format!("{}.{extension}", self.inspector.opened_count));
+        if std::fs::write(&path, bytes).is_err() {
+            return false;
+        }
+        let Ok(body) = Body::open_typed(&path, content_type) else {
+            let _ = std::fs::remove_file(&path);
+            return false;
+        };
+        let focus = self.focus.clone();
+        let view = cx.new(|cx| BodyView::new(body, content_type, focus, cx));
+        let label = reading.chain.join(" → ");
+        self.inspector.opened = Some(Opened {
+            label: label.into(),
+            from: from.to_owned().into(),
+            view,
+            path,
+        });
+        self.inspector.part = Part::Body;
+        cx.notify();
+        true
+    }
+
+    /// What was opened, over the body it came out of, with the way back.
+    fn render_opened(
+        &self,
+        label: SharedString,
+        from: SharedString,
+        view: Entity<BodyView>,
+        cx: &mut Context<Self>,
+    ) -> Div {
+        let c = colors();
+        div()
+            .size_full()
+            .flex()
+            .flex_col()
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap(px(8.))
+                    .px(px(12.))
+                    .pt(px(10.))
+                    .pb(px(6.))
+                    .child(eyebrow(tr!("Read from {from}", from = from.as_ref())))
+                    .child(chip(label, c.chip, c.on_chip))
+                    .child(div().flex_1())
+                    .child(
+                        div()
+                            .id("close-opened")
+                            .px(px(10.))
+                            .py(px(4.))
+                            .rounded_full()
+                            .cursor_pointer()
+                            .reachable()
+                            .text_size(px(12.))
+                            .font_weight(FontWeight::BOLD)
+                            .bg(rgb(c.chip))
+                            .text_color(rgb(c.on_chip))
+                            .child(tr!("Back to the body"))
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.close_opened(cx);
+                            })),
+                    ),
+            )
+            .child(div().flex_1().min_h_0().py(px(4.)).child(view))
+    }
+
+    /// Closes what was opened, and shows the body itself again.
+    pub fn close_opened(&mut self, cx: &mut Context<Self>) -> bool {
+        let was = self.inspector.opened.take().is_some();
+        if was {
+            cx.notify();
+        }
+        was
+    }
+
     /// A view whose text can be selected with `sel`: a press starts a
     /// selection, a drag moves its end, and a right click opens the menu to
     /// copy it.
@@ -1507,7 +1678,17 @@ impl Traffic {
                 &self.inspector.readings,
                 move |reading, _, cx| {
                     let _ = pick_me.update(cx, |this, cx| {
-                        this.inspector.draw_reading(reading);
+                        let from = this
+                            .inspector
+                            .read_from
+                            .clone()
+                            .map(|(field, _)| field.to_string())
+                            .unwrap_or_default();
+                        // What holds a body opens as one; the rest is drawn
+                        // where the value stands.
+                        if !this.open_reading(&reading, &from, cx) {
+                            this.inspector.draw_reading(reading);
+                        }
                         this.inspector.readings = Vec::new();
                         cx.notify();
                     });

@@ -594,6 +594,12 @@ t1e92fb27 = Bu resim çizilemiyor. Görmek için gövdeyi kaydedin.
 # Opening…
 tc40f2321 = Açılıyor…
 
+# Read from {from}
+t6d510d3d = { $from } içinden okundu
+
+# Back to the body
+t3506a32c = Gövdeye dön
+
 # No response
 t8c2c37b1 = Yanıt yok
 

@@ -565,6 +565,12 @@ t1e92fb27 = 无法显示此图片。请保存正文后查看。
 # Opening…
 tc40f2321 = 正在打开…
 
+# Read from {from}
+t6d510d3d = 读自 { $from }
+
+# Back to the body
+t3506a32c = 返回正文
+
 # No response
 t8c2c37b1 = 无响应
 
