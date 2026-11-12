@@ -22,10 +22,16 @@ const NAME_MAX: usize = 80;
 /// `eth_call`, or `eth_chainId +2` for a batch that holds three calls.
 /// `None` when the request is not JSON-RPC.
 pub fn method(http_method: &str, content_type: Option<&str>, body: &[u8]) -> Option<String> {
-    if !http_method.eq_ignore_ascii_case("POST") {
+    if !http_method.eq_ignore_ascii_case("POST") || !is_json(content_type?) {
         return None;
     }
-    if !is_json(content_type?) || !holds(body, b"\"method\"") {
+    method_in(body)
+}
+
+/// The same, where there is no HTTP around it to say what it is: a socket's
+/// message carries a call with no content type of its own.
+pub fn method_in(body: &[u8]) -> Option<String> {
+    if !holds(body, b"\"method\"") {
         return None;
     }
     match serde_json::from_slice::<Value>(body).ok()? {

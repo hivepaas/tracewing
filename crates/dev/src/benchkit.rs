@@ -743,6 +743,9 @@ pub(crate) fn parse_query(query: &str) -> BTreeMap<&str, &str> {
 
 /// A WebSocket origin over TLS that sends back whatever it gets. It has a CA of its
 /// own, written to `ca_out`.
+// The handshake callback answers with tungstenite's own Response, whose
+// error variant is large; that is its API, not a choice here.
+#[allow(clippy::result_large_err)]
 pub async fn serve_ws_origin(listener: TcpListener, ca_out: &Path) -> Result<()> {
     let mut config = origin_tls(ca_out)?;
     config.alpn_protocols = vec![b"http/1.1".to_vec()];
@@ -754,7 +757,21 @@ pub async fn serve_ws_origin(listener: TcpListener, ca_out: &Path) -> Result<()>
             let Ok(tls) = acceptor.accept(tcp).await else {
                 return;
             };
-            let Ok(mut ws) = hudsucker::tokio_tungstenite::accept_async(tls).await else {
+            // The path says whether to answer as a node that is well, as
+            // `/rpc?fail=1` does over HTTP.
+            let mut failing = false;
+            let seen = &mut failing;
+            let Ok(mut ws) = hudsucker::tokio_tungstenite::accept_hdr_async(
+                tls,
+                |req: &hudsucker::tokio_tungstenite::tungstenite::handshake::server::Request,
+                 reply: hudsucker::tokio_tungstenite::tungstenite::handshake::server::Response| {
+                    // The whole URI: a path alone leaves the query out.
+                    *seen = req.uri().to_string().contains("fail");
+                    Ok(reply)
+                },
+            )
+            .await
+            else {
                 return;
             };
             while let Some(Ok(message)) = ws.next().await {
@@ -775,7 +792,7 @@ pub async fn serve_ws_origin(listener: TcpListener, ca_out: &Path) -> Result<()>
                     }
                     continue;
                 }
-                let reply = String::from_utf8_lossy(&rpc_reply(&data, false)).into_owned();
+                let reply = String::from_utf8_lossy(&rpc_reply(&data, failing)).into_owned();
                 if ws
                     .send(hudsucker::tokio_tungstenite::tungstenite::Message::text(
                         reply,
@@ -785,7 +802,7 @@ pub async fn serve_ws_origin(listener: TcpListener, ca_out: &Path) -> Result<()>
                 {
                     break;
                 }
-                if calls.iter().any(|call| call.method == "eth_subscribe") {
+                if !failing && calls.iter().any(|call| call.method == "eth_subscribe") {
                     let sent = format!(
                         r#"{{"jsonrpc":"2.0","method":"eth_subscription","params":{{"subscription":"{SUBSCRIPTION}","result":{{"number":"0x192bbde","hash":"0x7dded073c97474ced7e600795a8a03e928b44de8e0bb056b1d65032871691e1d"}}}}}}"#
                     );

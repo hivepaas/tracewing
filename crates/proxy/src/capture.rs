@@ -44,6 +44,11 @@ use tracewing_store::spool::{Spool, SpoolFile};
 use tracewing_store::store::{BodyRecord, FlowRecord, Recorder, StreamHandle};
 use tracewing_store::{binjson, graphql, jsonrpc, protobuf};
 
+/// How many of a socket's messages are looked at for what it is. One that
+/// speaks JSON-RPC subscribes in its first message or two; one that does not
+/// should stop being asked.
+const RPC_LOOK_AT: usize = 20;
+
 /// The CRL the proxy answers for itself, and the address it answers on.
 #[derive(Clone)]
 pub struct Crl {
@@ -899,11 +904,25 @@ impl WebSocketHandler for FlowHandler {
         };
         let flow = lock(&self.websockets).get(&key).cloned();
         let recorded = flow.as_ref().and_then(|flow| flow.stream());
+        // A socket's calls are in its messages, so its row cannot be named
+        // when it opens. Only the first few are looked at: one that speaks
+        // JSON-RPC says so straight away, and one that never will should not
+        // pay for the looking all its life.
+        let mut look = flow.is_some().then_some(0usize);
         while let Some(message) = stream.next().await {
             match message {
                 Ok(message) => {
                     if let Some(recorded) = &recorded {
                         note_message(recorded, from_client, &message);
+                    }
+                    if let (Some(seen), Some(flow), Some(recorded)) =
+                        (look.as_mut(), &flow, &recorded)
+                    {
+                        *seen += 1;
+                        let found = name_the_call(flow, recorded, from_client, &message);
+                        if found || *seen >= RPC_LOOK_AT {
+                            look = None;
+                        }
                     }
                     match sink.send(message).await {
                         Err(tungstenite::Error::ConnectionClosed) | Ok(()) => {}
@@ -920,6 +939,43 @@ impl WebSocketHandler for FlowHandler {
         // Either side ending ends it; the row is written when the other lets go too.
         lock(&self.websockets).remove(&key);
     }
+}
+
+/// What the row of a socket says it is, from one of its messages: the method
+/// a call from the client names, or the code a reply from the server failed
+/// with. Writes the row again the once it learns either, and says whether it
+/// did, so that the looking stops.
+fn name_the_call(
+    flow: &Flow,
+    stream: &StreamHandle,
+    from_client: bool,
+    message: &WsMessage,
+) -> bool {
+    let WsMessage::Text(text) = message else {
+        return false;
+    };
+    let mut record = flow.lock();
+    let found = match from_client {
+        true if record.rpc.is_none() => {
+            record.rpc = jsonrpc::method_in(text.as_bytes());
+            record.rpc.is_some()
+        }
+        // A call that failed answers over the socket like any other message,
+        // so without this a socket of failures looks like one of successes.
+        false if record.rpc_error.is_none() => {
+            record.rpc_error = jsonrpc::faults_in(text.as_bytes())
+                .first()
+                .map(|fault| fault.code);
+            record.rpc_error.is_some()
+        }
+        _ => return true,
+    };
+    if found {
+        let said = record.clone();
+        drop(record);
+        stream.update(said);
+    }
+    found
 }
 
 fn note_message(stream: &StreamHandle, from_client: bool, message: &WsMessage) {

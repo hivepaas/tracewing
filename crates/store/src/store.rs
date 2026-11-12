@@ -186,6 +186,8 @@ enum Message {
     Flow(Box<FlowRecord>),
     Open(u64, Box<FlowRecord>),
     Stream(u64, StreamMessage),
+    /// The row of a stream that is still going, written again.
+    Update(u64, Box<FlowRecord>),
     Finish(u64, Box<FlowRecord>),
     Close,
 }
@@ -237,6 +239,24 @@ impl StreamHandle {
             }
             recorder.stats.messages_lost.fetch_add(1, Ordering::Relaxed);
         }
+    }
+
+    /// Writes the row again while the stream is still going, for what was
+    /// not known when it opened: a socket carries its calls in its messages,
+    /// so what it is cannot be told from its first line.
+    ///
+    /// **Send one of these once a stream, not once a message.** The writer
+    /// hands over the messages it has gathered before it takes one, so a
+    /// steady drip of them would undo the batching that keeps a busy socket
+    /// quick — which `websocket_bench` measures.
+    pub fn update(&self, mut record: FlowRecord) {
+        // Still going, by definition: the flow keeps `open` false in its own
+        // copy and it is set as the row is written, as the end sets it false.
+        record.open = true;
+        let _ = self
+            .recorder
+            .tx
+            .try_send(Message::Update(self.key, Box::new(record)));
     }
 
     /// Writes the row again, with the stream over.
@@ -637,6 +657,7 @@ impl Writer {
                         self.streams.insert(key, id);
                     }
                 }
+                Message::Update(key, record) => self.update_stream(key, &record),
                 Message::Finish(key, mut record) => self.finish_stream(key, &mut record),
                 Message::Close => {}
             }
@@ -708,6 +729,18 @@ impl Writer {
     }
 
     /// Writes a stream's row again in the same place, with what only its end knows.
+    /// A stream's row written again while it goes. Unlike its end, this
+    /// leaves it on the list of streams and does not move its bodies: they
+    /// are still being written to.
+    fn update_stream(&mut self, key: u64, record: &FlowRecord) {
+        let Some(&id) = self.streams.get(&key).filter(|&&id| id > self.deleted_to) else {
+            return;
+        };
+        if let Err(e) = insert(&mut self.conn, id, std::slice::from_ref(record)) {
+            self.warn(format_args!("a stream's row not written again: {e:#}"));
+        }
+    }
+
     fn finish_stream(&mut self, key: u64, record: &mut FlowRecord) {
         let queued = body_bytes(record);
         let id = self.streams.remove(&key).filter(|&id| id > self.deleted_to);
