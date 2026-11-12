@@ -203,7 +203,32 @@ impl TimedConnector {
     }
 }
 
-type BoxError = Box<dyn std::error::Error + Send + Sync>;
+pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
+impl TimedConnector {
+    /// A connection to where `uri` points, as any other, a relay included, that
+    /// speaks HTTP/1.1 alone: a WebSocket's upgrade is HTTP/1.1's. Through an
+    /// HTTP relay it is always a tunnel, as browsers have it: a relay passes
+    /// requests on, not upgrades.
+    pub async fn connect_http1(&self, uri: Uri) -> Result<Stream, BoxError> {
+        let mut config = (*self.config).clone();
+        config.alpn_protocols = vec![b"http/1.1".to_vec()];
+        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        let route = uri.host().and_then(|host| {
+            self.relay
+                .route_for(host.trim_start_matches('[').trim_end_matches(']'))
+        });
+        connect(
+            uri,
+            Arc::new(config),
+            Arc::clone(&self.verifier),
+            id,
+            route,
+            true,
+        )
+        .await
+    }
+}
 
 impl tower_service::Service<Uri> for TimedConnector {
     type Response = Stream;
@@ -221,7 +246,7 @@ impl tower_service::Service<Uri> for TimedConnector {
             self.relay
                 .route_for(host.trim_start_matches('[').trim_end_matches(']'))
         });
-        Box::pin(async move { connect(uri, config, verifier, id, route).await })
+        Box::pin(async move { connect(uri, config, verifier, id, route, false).await })
     }
 }
 
@@ -231,6 +256,7 @@ async fn connect(
     verifier: Arc<dyn ServerCertVerifier>,
     id: i64,
     route: Option<Arc<Route>>,
+    tunnel: bool,
 ) -> Result<Stream, BoxError> {
     let secure = match uri.scheme_str() {
         Some("https") => true,
@@ -249,7 +275,7 @@ async fn connect(
     let (tcp, remote, dns_us, connect_us, forwarded) = match &route {
         Some(route) => {
             let connecting = Instant::now();
-            let forwarded = !secure && route.kind == RelayKind::Http;
+            let forwarded = !secure && !tunnel && route.kind == RelayKind::Http;
             let tcp = if forwarded {
                 route.connect().await
             } else {
@@ -424,6 +450,13 @@ pub struct Stream {
     upstream: Arc<Upstream>,
     /// To an HTTP relay, which takes requests whole, their URL in full.
     forwarded: bool,
+}
+
+impl Stream {
+    /// The connection it is, with what the server showed of itself.
+    pub fn upstream(&self) -> &Arc<Upstream> {
+        &self.upstream
+    }
 }
 
 impl Connection for Stream {

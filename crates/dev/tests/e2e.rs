@@ -2436,8 +2436,6 @@ async fn a_websockets_headers_reach_the_server() {
 
 /// The subprotocol the server takes is the one the client is told of.
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "hudsucker answers the upgrade before the server does, so the client \
-            is never told the subprotocol: fixed by the proxy's own WebSocket path"]
 async fn a_websockets_subprotocol_is_agreed_end_to_end() {
     use hudsucker::futures::StreamExt;
     let h = Harness::start("ws-protocol").await;
@@ -2622,8 +2620,6 @@ async fn a_websocket_works_while_nothing_is_recorded() {
 
 /// A server that will not upgrade: the client is told so, with its status.
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "hudsucker answers 101 before the server does, so a refusal never \
-            reaches the client: fixed by the proxy's own WebSocket path"]
 async fn a_websocket_the_server_refuses_is_refused() {
     use hudsucker::tokio_tungstenite::tungstenite::Error;
     let h = Harness::start("ws-refused").await;
@@ -2643,6 +2639,145 @@ async fn a_websocket_the_server_refuses_is_refused() {
         .map(Result::unwrap)
         .collect();
     assert_eq!(statuses, [Some(403), Some(403)]);
+    clean_up(conn, dir);
+}
+
+/// WebSockets through a company's proxy, as other connections go: over TLS
+/// and not, through CONNECT with its password, and through SOCKS5; a host
+/// passed by goes straight; a refusal is said to the client and in the flow.
+#[tokio::test(flavor = "multi_thread")]
+async fn websockets_go_through_a_company_proxy() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::tungstenite::{Error, Message},
+    };
+    use tracewing_dev::fake_relay;
+    use tracewing_proxy::relay::RelaySettings;
+    let h = Harness::start("ws-relay").await;
+    let bind = || async { TcpListener::bind("127.0.0.1:0").await.unwrap() };
+    let http_relay = bind().await;
+    let http_port = http_relay.local_addr().unwrap().port();
+    let socks_relay = bind().await;
+    let socks_port = socks_relay.local_addr().unwrap().port();
+    let seen = fake_relay::Seen::default();
+    let user = || Some(("an".to_owned(), "pw".to_owned()));
+    tokio::spawn(fake_relay::serve_http(
+        http_relay,
+        user(),
+        Arc::clone(&seen),
+    ));
+    tokio::spawn(fake_relay::serve_socks5(
+        socks_relay,
+        user(),
+        Arc::clone(&seen),
+    ));
+    let through = |proxy: String, bypass: &str| RelaySettings {
+        proxy,
+        bypass: bypass.to_owned(),
+    };
+    let echo = |mut ws: benchkit::AnyWebSocket, text: &'static str| async move {
+        assert!(ws.next().await.unwrap().unwrap().is_text(), "the hello");
+        ws.send(Message::text(text)).await.unwrap();
+        assert_eq!(ws.next().await.unwrap().unwrap(), Message::text(text));
+        ws.close(None).await.unwrap();
+        while ws.next().await.is_some() {}
+    };
+    let (tls, plain) = (h.playground_tls_port, h.playground_port);
+
+    h.relay
+        .set(&through(format!("http://an:pw@127.0.0.1:{http_port}"), ""))
+        .unwrap();
+    for secure in [true, false] {
+        let (ws, _) = playground_ws(&h, secure, "/ws?ticks=0", &[]).await.unwrap();
+        echo(ws, "through CONNECT").await;
+    }
+    h.relay
+        .set(&through(
+            format!("socks5://an:pw@127.0.0.1:{socks_port}"),
+            "",
+        ))
+        .unwrap();
+    let (ws, _) = playground_ws(&h, true, "/ws?ticks=0", &[]).await.unwrap();
+    echo(ws, "through SOCKS5").await;
+    // Plain WebSockets go through a tunnel too, as browsers have them.
+    assert_eq!(
+        *seen.lock().unwrap(),
+        [
+            format!("CONNECT localhost:{tls} auth=yes"),
+            format!("CONNECT localhost:{plain} auth=yes"),
+            format!("SOCKS5 localhost:{tls} auth=yes"),
+        ]
+    );
+
+    // Passed by: straight.
+    h.relay
+        .set(&through(
+            format!("socks5://an:pw@127.0.0.1:{socks_port}"),
+            "localhost",
+        ))
+        .unwrap();
+    let (ws, _) = playground_ws(&h, true, "/ws?ticks=0", &[]).await.unwrap();
+    echo(ws, "straight").await;
+    assert_eq!(seen.lock().unwrap().len(), 3, "not through the relay");
+
+    // A wrong password: the client is told, and so is the flow.
+    h.relay
+        .set(&through(
+            format!("http://an:wrong@127.0.0.1:{http_port}"),
+            "",
+        ))
+        .unwrap();
+    match playground_ws(&h, true, "/ws?ticks=0", &[]).await {
+        Err(Error::Http(answer)) => assert_eq!(answer.status(), 502),
+        Err(other) => panic!("{other}"),
+        Ok(_) => panic!("a socket through a relay that refused"),
+    }
+
+    let (_, conn, dir) = h.finish(5).await;
+    let error: String = conn
+        .query_row("SELECT error FROM flows WHERE error IS NOT NULL", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert!(
+        error.contains("refused the user name and password"),
+        "{error}"
+    );
+    clean_up(conn, dir);
+}
+
+/// A WebSocket's row knows its connection now, as other flows' do: when it
+/// was made and what TLS the server spoke. And a header that is not ASCII
+/// reaches the server as it was sent.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_websocket_knows_its_connection() {
+    use hudsucker::futures::StreamExt;
+    let h = Harness::start("ws-connection").await;
+    let (mut ws, _) = playground_ws(&h, true, "/ws?ticks=0", &[("x-test", "đặt-hàng")])
+        .await
+        .unwrap();
+    let hello = json_of(&ws.next().await.unwrap().unwrap());
+    assert_eq!(hello["x_test"], "đặt-hàng");
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+    let (_, conn, dir) = h.finish(1).await;
+    let (conn_id, connect_us, tls_us, kind): (Option<i64>, Option<i64>, Option<i64>, String) = conn
+        .query_row(
+            "SELECT conn_id, connect_us, tls_us, kind FROM flows",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .unwrap();
+    assert_eq!(kind, "websocket");
+    assert!(conn_id.is_some(), "its connection");
+    assert!(connect_us.is_some() && tls_us.is_some(), "and its timing");
+    let facts: Option<i64> = conn
+        .query_row("SELECT conn_len FROM flows", [], |r| r.get(0))
+        .unwrap();
+    assert!(
+        facts.is_some_and(|len| len > 0),
+        "what the server showed is kept"
+    );
     clean_up(conn, dir);
 }
 

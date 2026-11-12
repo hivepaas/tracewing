@@ -465,6 +465,21 @@ curl and a new connection each time, 30 runs, 690 processes running:
 one connection and 60,800–62,200 on 32, p99 0.08–0.12 and 0.59–0.62 ms, before and
 after. HTTPS is looked for from its CONNECT, which is done before the first answer.
 
+## WebSockets opened by tracewing itself (`crates/proxy/src/capture.rs`, 2026-11-12)
+
+hudsucker answered a WebSocket's upgrade before asking the server, and opened the
+connection to the server by itself: a relay could not be put in, the subprotocol the
+server took never reached the client, nor did a refusal. tracewing now opens it, through
+the connector that other flows go through, and answers the client with what the server
+answered. `WS_BENCH=100000`, the same machine, three rounds each, taken in turn:
+
+| | Recording off | Recording on |
+|---|---|---|
+| hudsucker's path | 43,300–50,500 round trips/s | 41,600–46,300 |
+| tracewing's own | 46,500–51,700 | 42,800–47,400 |
+
+The same, within what runs differ by.
+
 ## Known gaps
 
 - hudsucker always offers `h2, http/1.1` to the client instead of mirroring

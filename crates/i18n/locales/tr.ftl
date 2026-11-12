@@ -947,8 +947,8 @@ tc67dfdb1 = Başka bir proxy üzerinden git
 # Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
 t84509e00 = Bir şirket ağı dışarıya yalnızca kendi proxy'si üzerinden çıkmaya izin veriyorsa, tracewing sunuculara o proxy üzerinden gider. Uygulamalar trafiklerini yine tracewing'e gönderir. Kullanıcı adı ve parola adrese yazılır, örneğin http://ad:parola@proxy:8080, ve relay.toml içinde yazıldığı gibi saklanır. Boşsa tracewing sunuculara doğrudan gider.
 
-# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host. WebSockets go straight for now.
-te1c6df83 = Doğrudan ulaşılacak sunucular, NO_PROXY'deki gibi: example.com kendisi ve altındaki her şey, * her sunucu. WebSocket'ler şimdilik doğrudan gider.
+# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
+tcbc7d298 = Doğrudan ulaşılacak sunucular, NO_PROXY'deki gibi: example.com kendisi ve altındaki her şey, * her sunucu.
 
 # Sent by the server, not asked for
 td717c770 = Sunucunun kendiliğinden gönderdiği, istenmiş değil

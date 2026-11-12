@@ -14,18 +14,21 @@ use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
 use crate::throttle::{Conditions, Direction, Network};
 use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of, edit_body, edit_query};
-use crate::upstream::{TlsFailure, Upstream};
+use crate::upstream::{BoxError, TimedConnector, TlsFailure, Upstream};
 use bytes::Bytes;
 use http::{HeaderName, HeaderValue, Method, Request, Response, StatusCode, header};
 use http_body::{Frame, SizeHint};
 use http_body_util::combinators::BoxBody;
 use hudsucker::{
-    Body, HttpContext, HttpHandler, RequestOrResponse, WebSocketContext, WebSocketHandler,
+    Body, HttpContext, HttpHandler, RequestOrResponse,
     futures::{Sink, SinkExt, Stream, StreamExt},
-    tokio_tungstenite::tungstenite::{self, Message as WsMessage},
+    tokio_tungstenite::{
+        self, WebSocketStream,
+        tungstenite::{self, Message as WsMessage, protocol::Role},
+    },
 };
+use hyper_util::rt::TokioIo;
 use std::{
-    collections::HashMap,
     error::Error as StdError,
     net::SocketAddr,
     path::PathBuf,
@@ -234,6 +237,7 @@ pub struct FlowHandler {
     /// The network traffic goes through, slow on purpose or not.
     network: Arc<Network>,
     relay: Arc<crate::relay::Relay>,
+    connector: TimedConnector,
     /// What slowed the request this clone is handling, to slow its response too.
     slowed: Option<Conditions>,
     /// Headers rules set, or take out, on the response of the request this
@@ -245,9 +249,6 @@ pub struct FlowHandler {
     response_body: Vec<(String, String)>,
     /// The rule that holds its response, with the request's method and URL.
     pause_response: Option<(String, String, String)>,
-    /// WebSockets from their upgrade until they end. hudsucker tells the handler of
-    /// messages only by client and URL, and this is what ties those to a flow.
-    websockets: Arc<Mutex<HashMap<WsKey, Arc<Flow>>>>,
     /// The flow of the request this clone is handling. hudsucker clones the
     /// handler per request, so request and response see the same value.
     flow: Option<Arc<Flow>>,
@@ -267,6 +268,8 @@ pub struct Controls {
     pub network: Arc<Network>,
     /// The proxy that connections to servers go through, if any.
     pub relay: Arc<crate::relay::Relay>,
+    /// What connects to servers, for the WebSockets the proxy opens itself.
+    pub connector: TimedConnector,
 }
 
 impl FlowHandler {
@@ -291,12 +294,12 @@ impl FlowHandler {
             live: controls.live,
             network: controls.network,
             relay: controls.relay,
+            connector: controls.connector,
             slowed: None,
             response_headers: Vec::new(),
             response_status: None,
             response_body: Vec::new(),
             pause_response: None,
-            websockets: Arc::default(),
             flow: None,
         }
     }
@@ -795,15 +798,14 @@ impl HttpHandler for FlowHandler {
                 record.rule = Some(names.collect::<Vec<_>>().join(", "));
             }
         }
+        // A WebSocket is opened to the server here, the way other connections
+        // go, a relay included; the client hears what the server answered.
+        if is_websocket(&req) {
+            return self.open_websocket(req, flow).await.into();
+        }
         let Some(flow) = flow else {
             return self.slow_request(req).into();
         };
-        if is_websocket(&req) {
-            // hudsucker answers an upgrade itself, and handle_response never hears.
-            flow.opened_as("websocket", Some(101));
-            lock(&self.websockets)
-                .insert(WsKey::new(ctx.client_addr, req.uri()), Arc::clone(&flow));
-        }
         let (cap, tapped, spool) = (self.log_max, Arc::clone(&flow), self.spool.clone());
         let req = req.map(move |body| TapBody::wrap(body, tapped, Side::Request, cap, spool, None));
         self.flow = Some(flow);
@@ -906,19 +908,155 @@ impl HttpHandler for FlowHandler {
     }
 }
 
-/// hudsucker's own loop, and each message written down on its way.
-impl WebSocketHandler for FlowHandler {
-    async fn handle_websocket(
+impl FlowHandler {
+    /// Opens the WebSocket `req` asks for to its server, and answers the client
+    /// with what the server answered: an upgrade, with the subprotocol the
+    /// server took, or its refusal. Then carries messages both ways, each
+    /// written down on its way.
+    async fn open_websocket(&self, req: Request<Body>, flow: Option<Arc<Flow>>) -> Response<Body> {
+        let (mut parts, body) = req.into_parts();
+        // The request's side ends here: an upgrade has no body.
+        if let Some(flow) = &flow {
+            let tapped = TapBody::wrap(
+                body,
+                Arc::clone(flow),
+                Side::Request,
+                self.log_max,
+                self.spool.clone(),
+                None,
+            );
+            let _ = http_body_util::BodyExt::collect(tapped).await;
+        }
+        let Some(upgrading) = parts.extensions.remove::<hyper::upgrade::OnUpgrade>() else {
+            return self.websocket_failed(flow, "this connection cannot be upgraded".to_owned());
+        };
+        let Some(key) = parts.headers.get(header::SEC_WEBSOCKET_KEY).cloned() else {
+            return self.websocket_failed(flow, "the upgrade has no Sec-WebSocket-Key".to_owned());
+        };
+        let secure = parts.uri.scheme_str() == Some("https");
+        let mut to_ws = parts.uri.clone().into_parts();
+        to_ws.scheme = Some(if secure { "wss" } else { "ws" }.parse().expect("a scheme"));
+        let Ok(ws_uri) = http::Uri::from_parts(to_ws) else {
+            return self
+                .websocket_failed(flow, format!("cannot open a WebSocket to {}", parts.uri));
+        };
+        // As the client asked, but for compression, which is not passed on:
+        // what is written down is the messages as they are.
+        let mut ask = http::Request::builder().method(Method::GET).uri(ws_uri);
+        for (name, value) in &parts.headers {
+            if name.as_str() != "sec-websocket-extensions" {
+                ask = ask.header(name, value);
+            }
+        }
+        let Ok(ask) = ask.body(()) else {
+            return self.websocket_failed(flow, "the upgrade cannot be passed on".to_owned());
+        };
+        let stream = match self.connector.connect_http1(parts.uri.clone()).await {
+            Ok(stream) => stream,
+            Err(error) => return self.websocket_unreached(flow, &error),
+        };
+        if let Some(flow) = &flow {
+            flow.went_over(stream.upstream());
+        }
+        let (server, answer) = match tokio_tungstenite::client_async_with_config(
+            ask,
+            TokioIo::new(stream),
+            None,
+        )
+        .await
+        {
+            Ok(both) => both,
+            // Refused: the client is told as the server told it.
+            Err(tungstenite::Error::Http(answer)) => {
+                let (parts, body) = answer.into_parts();
+                let res = Response::from_parts(parts, Body::from(body.unwrap_or_default()));
+                let flow = flow;
+                return match flow {
+                    Some(flow) => {
+                        flow.on_response(&res);
+                        res
+                    }
+                    None => res,
+                };
+            }
+            Err(e) => return self.websocket_failed(flow, format!("WebSocket: {e}")),
+        };
+        let mut res = Response::builder()
+            .status(StatusCode::SWITCHING_PROTOCOLS)
+            .header(header::UPGRADE, "websocket")
+            .header(header::CONNECTION, "Upgrade")
+            .header(
+                header::SEC_WEBSOCKET_ACCEPT,
+                tungstenite::handshake::derive_accept_key(key.as_bytes()),
+            );
+        for (name, value) in answer.headers() {
+            let skip = matches!(
+                name.as_str(),
+                "upgrade" | "connection" | "sec-websocket-accept" | "sec-websocket-extensions"
+            );
+            if !skip {
+                res = res.header(name, value);
+            }
+        }
+        let res = res.body(Body::empty()).expect("valid response");
+        if let Some(flow) = &flow {
+            flow.on_response(&res);
+            flow.opened_as("websocket", Some(101));
+        }
+        let handler = self.clone();
+        tokio::spawn(async move {
+            let Ok(upgraded) = upgrading.await else {
+                return;
+            };
+            let client =
+                WebSocketStream::from_raw_socket(TokioIo::new(upgraded), Role::Server, None).await;
+            let (client_sink, client_stream) = client.split();
+            let (server_sink, server_stream) = server.split();
+            tokio::spawn(
+                handler
+                    .clone()
+                    .pump(flow.clone(), true, client_stream, server_sink),
+            );
+            handler.pump(flow, false, server_stream, client_sink).await;
+        });
+        res
+    }
+
+    /// The server could not be reached: said in the flow, and to the client.
+    fn websocket_unreached(&self, flow: Option<Arc<Flow>>, error: &BoxError) -> Response<Body> {
+        if let Some(flow) = &flow {
+            let mut source: Option<&(dyn StdError + 'static)> = Some(error.as_ref());
+            while let Some(cause) = source {
+                if let Some(failure) = cause.downcast_ref::<TlsFailure>() {
+                    flow.refused_by(failure);
+                    break;
+                }
+                source = cause.source();
+            }
+        }
+        self.websocket_failed(flow, error_chain(error.as_ref()))
+    }
+
+    fn websocket_failed(&self, flow: Option<Arc<Flow>>, message: String) -> Response<Body> {
+        if let Some(flow) = flow {
+            flow.fail(message.clone());
+        }
+        Response::builder()
+            .status(StatusCode::BAD_GATEWAY)
+            .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
+            .body(Body::from(format!("tracewing: {message}\n")))
+            .expect("valid response")
+    }
+
+    /// Carries one way's messages, each written down on its way. Either side
+    /// ending ends it; the row is written when the other lets go too.
+    async fn pump(
         self,
-        ctx: WebSocketContext,
+        flow: Option<Arc<Flow>>,
+        from_client: bool,
         mut stream: impl Stream<Item = Result<WsMessage, tungstenite::Error>> + Unpin + Send + 'static,
         mut sink: impl Sink<WsMessage, Error = tungstenite::Error> + Unpin + Send + 'static,
     ) {
-        let (key, from_client) = match &ctx {
-            WebSocketContext::ClientToServer { src, dst, .. } => (WsKey::new(*src, dst), true),
-            WebSocketContext::ServerToClient { src, dst, .. } => (WsKey::new(*dst, src), false),
-        };
-        let flow = lock(&self.websockets).get(&key).cloned();
         let recorded = flow.as_ref().and_then(|flow| flow.stream());
         // A socket's calls are in its messages, so its row cannot be named
         // when it opens. Only the first few are looked at: one that speaks
@@ -940,9 +1078,14 @@ impl WebSocketHandler for FlowHandler {
                             look = None;
                         }
                     }
+                    let closing = message.is_close();
                     match sink.send(message).await {
                         Err(tungstenite::Error::ConnectionClosed) | Ok(()) => {}
                         Err(e) => tracing::debug!("WebSocket send: {e}"),
+                    }
+                    if closing {
+                        // The other side's close comes back the other way.
+                        continue;
                     }
                 }
                 Err(e) => {
@@ -952,8 +1095,7 @@ impl WebSocketHandler for FlowHandler {
                 }
             }
         }
-        // Either side ending ends it; the row is written when the other lets go too.
-        lock(&self.websockets).remove(&key);
+        let _ = sink.close().await;
     }
 }
 
@@ -1004,27 +1146,6 @@ fn note_message(stream: &StreamHandle, from_client: bool, message: &WsMessage) {
         WsMessage::Frame(_) => return,
     };
     stream.message(from_client, kind, data);
-}
-
-/// A WebSocket's client and where it went. hudsucker changes the scheme on the way,
-/// so that is left out.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-struct WsKey {
-    client: SocketAddr,
-    target: String,
-}
-
-impl WsKey {
-    fn new(client: SocketAddr, uri: &http::Uri) -> Self {
-        Self {
-            client,
-            target: format!(
-                "{}{}",
-                uri.authority().map_or("", |a| a.as_str()),
-                uri.path_and_query().map_or("/", |p| p.as_str())
-            ),
-        }
-    }
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -1869,13 +1990,5 @@ mod tests {
         splitter.feed(&vec![b'x'; EVENT_MAX + 1], |event| out += event.len());
         assert_eq!(out, EVENT_MAX + 1);
         assert!(splitter.buffer.is_empty());
-    }
-
-    #[test]
-    fn a_websocket_is_known_whatever_its_scheme() {
-        let client: SocketAddr = "127.0.0.1:5000".parse().unwrap();
-        let https: http::Uri = "https://a.dev:443/ws?x=1".parse().unwrap();
-        let wss: http::Uri = "wss://a.dev:443/ws?x=1".parse().unwrap();
-        assert_eq!(WsKey::new(client, &https), WsKey::new(client, &wss));
     }
 }

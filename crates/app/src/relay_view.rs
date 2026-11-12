@@ -136,7 +136,7 @@ impl Traffic {
             )))
             .child(field(proxy))
             .child(note(tr!(
-                "Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host. WebSockets go straight for now."
+                "Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host."
             )))
             .child(field(bypass))
             .children(said.map(|(ok, text)| {

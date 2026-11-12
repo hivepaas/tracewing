@@ -991,8 +991,8 @@ tc67dfdb1 = Іти через інший проксі
 # Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
 t84509e00 = Якщо мережа компанії випускає назовні лише через свій проксі, tracewing іде до серверів через нього. Застосунки й далі надсилають трафік до tracewing. Ім'я користувача й пароль пишуться в адресі, як http://ім'я:пароль@proxy:8080, і зберігаються як є в relay.toml. Порожньо — tracewing іде до серверів напряму.
 
-# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host. WebSockets go straight for now.
-te1c6df83 = Хости, до яких іти напряму, як у NO_PROXY: example.com — він сам і все під ним, * — будь-який хост. WebSocket поки йдуть напряму.
+# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
+tcbc7d298 = Хости, до яких іти напряму, як у NO_PROXY: example.com — він сам і все під ним, * — будь-який хост.
 
 # Sent by the server, not asked for
 td717c770 = Надіслано сервером самостійно, не у відповідь на запит
