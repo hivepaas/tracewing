@@ -871,6 +871,27 @@ tb629329e = Server trả lời { $code }: có thể nó không có gRPC reflecti
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Server không trả lời gì: có thể nó không có gRPC reflection
 
+# New connections go through the {kind} proxy {address}.
+tb5f1ef96 = Các kết nối mới đi qua proxy { $kind } { $address }.
+
+# Connections go straight to servers.
+t4a64a08f = Kết nối đi thẳng tới server.
+
+# relay.toml cannot be used, so connections go straight: {problem}
+tbc6a2da3 = Không dùng được relay.toml, nên kết nối đi thẳng: { $problem }
+
+# http://proxy.example.com:8080 or socks5://proxy.example.com:1080
+tb945a053 = http://proxy.example.com:8080 hoặc socks5://proxy.example.com:1080
+
+# Go through another proxy
+tc67dfdb1 = Đi qua một proxy khác
+
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
+t84509e00 = Khi mạng công ty chỉ cho ra ngoài qua proxy của công ty, tracewing đi tiếp tới server qua proxy đó. Các app vẫn gửi traffic tới tracewing. Tên đăng nhập và mật khẩu ghi trong địa chỉ, như http://tên:mật-khẩu@proxy:8080, và được lưu nguyên văn trong relay.toml. Để trống thì tracewing đi thẳng tới server.
+
+# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host. WebSockets go straight for now.
+te1c6df83 = Các host đi thẳng, theo quy ước NO_PROXY: example.com là chính nó và mọi host bên dưới, * là mọi host. Tạm thời WebSocket vẫn đi thẳng.
+
 # Sent by the server, not asked for
 td717c770 = Server tự gửi, không phải trả lời yêu cầu nào
 

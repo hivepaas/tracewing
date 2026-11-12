@@ -871,6 +871,27 @@ tb629329e = Server menjawab { $code }: mungkin tidak menyediakan gRPC reflection
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Server tidak menjawab apa-apa: mungkin tidak menyediakan gRPC reflection
 
+# New connections go through the {kind} proxy {address}.
+tb5f1ef96 = Koneksi baru melewati proxy { $kind } { $address }.
+
+# Connections go straight to servers.
+t4a64a08f = Koneksi langsung ke server.
+
+# relay.toml cannot be used, so connections go straight: {problem}
+tbc6a2da3 = relay.toml tidak bisa dipakai, jadi koneksi langsung: { $problem }
+
+# http://proxy.example.com:8080 or socks5://proxy.example.com:1080
+tb945a053 = http://proxy.example.com:8080 atau socks5://proxy.example.com:1080
+
+# Go through another proxy
+tc67dfdb1 = Lewat proxy lain
+
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
+t84509e00 = Jika jaringan perusahaan hanya mengizinkan keluar lewat proxy-nya sendiri, tracewing meneruskan ke server lewat proxy itu. Aplikasi tetap mengirim traffic ke tracewing. Nama pengguna dan kata sandi ditulis di alamat, seperti http://nama:sandi@proxy:8080, dan disimpan apa adanya di relay.toml. Jika kosong, tracewing langsung ke server.
+
+# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host. WebSockets go straight for now.
+te1c6df83 = Host yang dihubungi langsung, seperti aturan NO_PROXY: example.com berarti host itu dan semua di bawahnya, * berarti semua host. WebSocket untuk sementara tetap langsung.
+
 # Sent by the server, not asked for
 td717c770 = Dikirim server, bukan jawaban atas permintaan
 

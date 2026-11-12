@@ -531,6 +531,7 @@ impl Traffic {
         let protos = self.render_protos(cx);
         let abis = self.render_abis(cx);
         let trusted = self.render_trusted(cx);
+        let relay = self.render_relay(cx);
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);
         // A problem shows under the setting being changed, or else at the top.
@@ -759,6 +760,7 @@ impl Traffic {
                             .child(page.no_decrypt.clone()),
                     ),
             )
+            .child(relay)
             .child(trusted)
             .child(protos)
             .child(abis)

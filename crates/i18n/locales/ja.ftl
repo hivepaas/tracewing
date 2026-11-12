@@ -871,6 +871,27 @@ tb629329e = サーバーの応答は { $code } でした: gRPC リフレクシ�
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = サーバーから何も返ってきませんでした: gRPC リフレクションがないのかもしれません
 
+# New connections go through the {kind} proxy {address}.
+tb5f1ef96 = 新しい接続は { $kind } プロキシ { $address } を経由します。
+
+# Connections go straight to servers.
+t4a64a08f = 接続はサーバーへ直接行きます。
+
+# relay.toml cannot be used, so connections go straight: {problem}
+tbc6a2da3 = relay.toml を使えないため、接続は直接行きます：{ $problem }
+
+# http://proxy.example.com:8080 or socks5://proxy.example.com:1080
+tb945a053 = http://proxy.example.com:8080 または socks5://proxy.example.com:1080
+
+# Go through another proxy
+tc67dfdb1 = 別のプロキシを経由する
+
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
+t84509e00 = 会社のネットワークが自社のプロキシ経由でしか外へ出られない場合、tracewing はそのプロキシを通ってサーバーへ進みます。アプリは引き続き tracewing へ通信を送ります。ユーザー名とパスワードは http://名前:パスワード@proxy:8080 のようにアドレスに書き、relay.toml にそのまま保存されます。空なら tracewing はサーバーへ直接行きます。
+
+# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host. WebSockets go straight for now.
+te1c6df83 = 直接つなぐホスト（NO_PROXY と同じ書き方）：example.com はそのホストと配下すべて、* はすべてのホスト。WebSocket は今のところ直接つながります。
+
 # Sent by the server, not asked for
 td717c770 = サーバーが自分から送ったもので、要求への返答ではありません
 

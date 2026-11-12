@@ -36,6 +36,7 @@ pub mod placement;
 pub mod protos_view;
 pub mod qr;
 pub mod reflection;
+pub mod relay_view;
 pub mod rpc_view;
 pub mod rules_page;
 pub mod select;
