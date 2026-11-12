@@ -10,8 +10,8 @@ shellwing's, which this came from.
                              English still is, dropped where it is gone, a
                              commented line for each still to translate.
     scripts/i18n.py check    fails if en.ftl or a translation is out of step
-                             (stale or broken entries); says how many are left
-                             to translate in each.
+                             (stale or broken entries), or if a translation
+                             lacks a message: each language is kept whole.
     scripts/i18n.py todo LANG
                              prints what LANG still lacks: id, then English.
     scripts/i18n.py apply LANG FILE
@@ -218,8 +218,14 @@ def check():
                 if as_text:
                     print(f"{path.name}: {mid} has {sorted(as_text)} as text, not as values: apply takes {{name}}")
                     ok = False
-        left = sum(1 for m in found if m not in entries)
-        print(f"{path.name}: {len(found) - left} of {len(found)} translated")
+        left = [m for m in found if m not in entries]
+        print(f"{path.name}: {len(found) - len(left)} of {len(found)} translated")
+        # A merge that kept one side's file loses the other's translations,
+        # and update cannot bring them back: they show here.
+        if left:
+            shown = ", ".join(left[:5]) + (" …" if len(left) > 5 else "")
+            print(f"{path.name}: {len(left)} still to translate ({shown}): scripts/i18n.py todo {path.stem}")
+            ok = False
     return ok
 
 
