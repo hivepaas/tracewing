@@ -4,6 +4,7 @@
 //! that can take long is done on a worker thread, so a flood or a million rows
 //! never holds up a frame.
 
+use crate::text_size::ui;
 use crate::{
     chrome,
     colors::{self, colors, with_alpha},
@@ -283,6 +284,8 @@ pub struct Traffic {
     pub settings_left: Option<String>,
     layout_path: PathBuf,
     pub(crate) layout: Layout,
+    /// How much larger than the design the window draws, as last drawn.
+    ui_scale: f32,
     flows: Option<Flows>,
     jobs: Sender<Job>,
     done: Receiver<Done>,
@@ -504,6 +507,7 @@ impl Traffic {
             settings_problem: None,
             settings_left: None,
             layout,
+            ui_scale: 1.,
             layout_path,
             flows: None,
             jobs: job_tx,
@@ -738,10 +742,10 @@ impl Traffic {
                 .flex()
                 .flex_row()
                 .items_center()
-                .gap(px(10.))
-                .px(px(14.))
-                .py(px(8.))
-                .rounded(px(16.))
+                .gap(ui(10.))
+                .px(ui(14.))
+                .py(ui(8.))
+                .rounded(ui(16.))
                 .bg(rgb(c.tonal))
                 .text_color(rgb(c.on_tonal))
                 .child(
@@ -752,9 +756,9 @@ impl Traffic {
                 .child(
                     div()
                         .id("compare-cancel")
-                        .h(px(30.))
-                        .px(px(14.))
-                        .rounded(px(15.))
+                        .h(ui(30.))
+                        .px(ui(14.))
+                        .rounded(ui(15.))
                         .flex()
                         .items_center()
                         .cursor_pointer()
@@ -778,10 +782,10 @@ impl Traffic {
                 .flex_row()
                 .flex_wrap()
                 .items_center()
-                .gap(px(10.))
-                .px(px(14.))
-                .py(px(8.))
-                .rounded(px(16.))
+                .gap(ui(10.))
+                .px(ui(14.))
+                .py(ui(8.))
+                .rounded(ui(16.))
                 .bg(rgb(c.tonal))
                 .text_color(rgb(c.on_tonal))
                 .child(
@@ -800,9 +804,9 @@ impl Traffic {
                 .child(
                     div()
                         .id("back-to-live")
-                        .h(px(30.))
-                        .px(px(14.))
-                        .rounded(px(15.))
+                        .h(ui(30.))
+                        .px(ui(14.))
+                        .rounded(ui(15.))
                         .flex()
                         .items_center()
                         .cursor_pointer()
@@ -960,10 +964,10 @@ impl Traffic {
     fn keep_up_with_newest(&mut self) {
         let count = self.count();
         let height = f32::from(self.list.get().size.height);
-        let max = (count as f32 * ROW_HEIGHT - height).max(0.);
+        let max = (count as f32 * self.row_h() - height).max(0.);
         if std::mem::take(&mut self.look_for_bottom) {
             let offset = -f32::from(self.scroll.0.borrow().base_handle.offset().y);
-            self.follow = offset >= max - ROW_HEIGHT;
+            self.follow = offset >= max - self.row_h();
         }
         if self.follow && count != self.last_count {
             self.scroll
@@ -1212,7 +1216,7 @@ impl Traffic {
     /// The place of the row at the top of the list.
     pub fn first_row_in_view(&self) -> usize {
         let offset = -f32::from(self.scroll.0.borrow().base_handle.offset().y);
-        (offset / ROW_HEIGHT) as usize
+        (offset / self.row_h()) as usize
     }
 
     pub fn is_filtering(&self) -> bool {
@@ -1366,22 +1370,27 @@ impl Traffic {
             return;
         }
         let content = self.content.get();
+        // Panels are kept at the design's size, so that they grow with the
+        // text: what the pointer moved is that much less of them.
+        let scale = self.ui_scale;
         match drag {
             Drag::Sidebar => {
-                self.layout.sidebar_w =
-                    f32::from(event.position.x - content.origin.x).clamp(SIDEBAR_MIN, SIDEBAR_MAX);
+                self.layout.sidebar_w = (f32::from(event.position.x - content.origin.x) / scale)
+                    .clamp(SIDEBAR_MIN, SIDEBAR_MAX);
             }
             Drag::InspectorSize => match self.layout.place {
                 Place::Beside => {
-                    let room = f32::from(content.size.width) - LIST_MIN;
+                    let room = f32::from(content.size.width) / scale - LIST_MIN;
                     self.layout.inspector_w =
-                        f32::from(content.origin.x + content.size.width - event.position.x)
+                        (f32::from(content.origin.x + content.size.width - event.position.x)
+                            / scale)
                             .clamp(INSPECTOR_MIN, room.max(INSPECTOR_MIN));
                 }
                 Place::Below => {
-                    let room = f32::from(content.size.height) - LIST_MIN;
+                    let room = f32::from(content.size.height) / scale - LIST_MIN;
                     self.layout.inspector_h =
-                        f32::from(content.origin.y + content.size.height - event.position.y)
+                        (f32::from(content.origin.y + content.size.height - event.position.y)
+                            / scale)
                             .clamp(INSPECTOR_MIN / 2., room.max(INSPECTOR_MIN / 2.));
                 }
             },
@@ -1394,7 +1403,7 @@ impl Traffic {
                 from_x,
                 from_w,
             } => {
-                let moved = f32::from(event.position.x) - from_x;
+                let moved = (f32::from(event.position.x) - from_x) / scale;
                 let width = if column.on_the_right() {
                     from_w - moved
                 } else {
@@ -1406,13 +1415,25 @@ impl Traffic {
         cx.notify();
     }
 
+    /// A row of the list's height as drawn now.
+    pub(crate) fn row_h(&self) -> f32 {
+        ROW_HEIGHT * self.ui_scale
+    }
+
+    /// The body text size chosen, in px: the design's unless Settings say.
+    pub fn text_size(&self) -> f32 {
+        self.layout
+            .text_size
+            .map_or(crate::text_size::DRAWN_AT, f32::from)
+    }
+
     fn list_max_scroll(&self) -> f32 {
-        (self.count() as f32 * ROW_HEIGHT - f32::from(self.list.get().size.height)).max(0.)
+        (self.count() as f32 * self.row_h() - f32::from(self.list.get().size.height)).max(0.)
     }
 
     fn thumb_height(&self) -> f32 {
         let height = f32::from(self.list.get().size.height);
-        let content = self.count() as f32 * ROW_HEIGHT;
+        let content = self.count() as f32 * self.row_h();
         if content <= height {
             height
         } else {
@@ -1612,7 +1633,7 @@ impl Traffic {
                 }
                 None => {
                     gaps = true;
-                    div().id(("gap", place as u64)).h(px(ROW_HEIGHT)).w_full()
+                    div().id(("gap", place as u64)).h(ui(ROW_HEIGHT)).w_full()
                 }
             })
             .collect();
@@ -1638,12 +1659,12 @@ impl Traffic {
             .flex_row()
             .flex_wrap()
             .items_center()
-            .gap(px(8.))
+            .gap(ui(8.))
             .child(
                 pill_button("record")
-                    .gap(px(8.))
-                    .pl(px(12.))
-                    .pr(px(16.))
+                    .gap(ui(8.))
+                    .pl(ui(12.))
+                    .pr(ui(16.))
                     .bg(rgb(c.surface))
                     .text_color(rgb(c.text))
                     .font_weight(FontWeight::BOLD)
@@ -1662,7 +1683,7 @@ impl Traffic {
             .children(self.render_network_chip(cx))
             .child(
                 pill_button("clear")
-                    .w(px(40.))
+                    .w(ui(40.))
                     .justify_center()
                     .bg(rgb(c.surface))
                     .child(icon("trash", 18., c.muted))
@@ -1672,13 +1693,13 @@ impl Traffic {
             .child(
                 div()
                     .flex_1()
-                    .min_w(px(280.))
-                    .h(px(40.))
-                    .px(px(14.))
-                    .rounded(px(20.))
+                    .min_w(ui(280.))
+                    .h(ui(40.))
+                    .px(ui(14.))
+                    .rounded(ui(20.))
                     .flex()
                     .items_center()
-                    .gap(px(10.))
+                    .gap(ui(10.))
                     .bg(rgb(c.input))
                     .child(icon("search", 16., c.muted))
                     .child(
@@ -1687,13 +1708,13 @@ impl Traffic {
                             .min_w_0()
                             .font_family(crate::MONO_FONT)
                             .font_features(gpui::FontFeatures::disable_ligatures())
-                            .text_size(px(12.5))
+                            .text_size(ui(12.5))
                             .child(self.filter_input.clone()),
                     )
                     .child(
                         div()
                             .flex_shrink_0()
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .text_color(rgb(c.muted))
                             .child(count),
                     ),
@@ -1717,8 +1738,8 @@ impl Traffic {
             ),
         };
         pill_button("system-proxy")
-            .px(px(14.))
-            .gap(px(8.))
+            .px(ui(14.))
+            .gap(ui(8.))
             .font_weight(FontWeight::BOLD)
             .when(on, |d| {
                 d.bg(rgb(c.tonal))
@@ -1735,23 +1756,23 @@ impl Traffic {
         let current = self.filter.kind;
         div()
             .flex()
-            .gap(px(4.))
-            .p(px(4.))
-            .rounded(px(20.))
+            .gap(ui(4.))
+            .p(ui(4.))
+            .rounded(ui(20.))
             .bg(rgb(c.surface))
             .items_center()
             .children(Kind::ALL.into_iter().flat_map(|kind| {
                 let on = kind == current;
                 let tab = div()
                     .id(("kind", kind as u64))
-                    .h(px(32.))
-                    .px(px(12.))
-                    .rounded(px(16.))
+                    .h(ui(32.))
+                    .px(ui(12.))
+                    .rounded(ui(16.))
                     .flex()
                     .items_center()
                     .cursor_pointer()
                     .reachable()
-                    .text_size(px(12.5))
+                    .text_size(ui(12.5))
                     .font_weight(FontWeight::BOLD)
                     .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
                     .when(!on, |d| d.text_color(rgb(c.muted)))
@@ -1760,9 +1781,9 @@ impl Traffic {
                     .into_any_element();
                 let line = kind.ends_group().then(|| {
                     div()
-                        .w(px(1.))
-                        .h(px(18.))
-                        .mx(px(2.))
+                        .w(ui(1.))
+                        .h(ui(18.))
+                        .mx(ui(2.))
                         .bg(rgb(c.line))
                         .into_any_element()
                 });
@@ -1777,8 +1798,8 @@ impl Traffic {
         let button = |id: &'static str, name: &'static str, on: bool| {
             div()
                 .id(id)
-                .size(px(32.))
-                .rounded(px(16.))
+                .size(ui(32.))
+                .rounded(ui(16.))
                 .flex()
                 .items_center()
                 .justify_center()
@@ -1789,9 +1810,9 @@ impl Traffic {
         };
         div()
             .flex()
-            .gap(px(4.))
-            .p(px(4.))
-            .rounded(px(20.))
+            .gap(ui(4.))
+            .p(ui(4.))
+            .rounded(ui(20.))
             .bg(rgb(c.surface))
             .child(
                 button("sidebar", "sidebar", self.layout.sidebar_shown)
@@ -1840,12 +1861,12 @@ impl Traffic {
             div()
                 .id(id)
                 .flex_shrink_0()
-                .h(px(32.))
-                .px(px(10.))
-                .rounded(px(12.))
+                .h(ui(32.))
+                .px(ui(10.))
+                .rounded(ui(12.))
                 .flex()
                 .items_center()
-                .gap(px(10.))
+                .gap(ui(10.))
                 .cursor_pointer()
                 .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
                 .when(!on, |d| d.text_color(rgb(c.text)))
@@ -1853,29 +1874,29 @@ impl Traffic {
                 .child(
                     div()
                         .flex_shrink_0()
-                        .text_size(px(12.))
+                        .text_size(ui(12.))
                         .text_color(rgb(if on { c.on_tonal } else { c.muted }))
                         .child(group_digits(count)),
                 )
         };
         div()
             .id("hosts")
-            .w(px(self.layout.sidebar_w))
+            .w(ui(self.layout.sidebar_w))
             .flex_shrink_0()
             .h_full()
-            .p(px(8.))
-            .rounded(px(22.))
+            .p(ui(8.))
+            .rounded(ui(22.))
             .flex()
             .flex_col()
-            .gap(px(2.))
+            .gap(ui(2.))
             .overflow_y_scroll()
             .bg(rgb(c.surface))
             .when(!self.apps.is_empty(), |d| {
                 d.child(
                     div()
                         .flex()
-                        .px(px(6.))
-                        .py(px(4.))
+                        .px(ui(6.))
+                        .py(ui(4.))
                         .child(section_badge(tr!("Apps"))),
                 )
                 .children(self.apps.iter().map(|(app, count)| {
@@ -1889,14 +1910,14 @@ impl Traffic {
                         }),
                     )
                 }))
-                .child(div().h(px(8.)).flex_shrink_0())
+                .child(div().h(ui(8.)).flex_shrink_0())
             })
             .when(!self.device_counts.is_empty(), |d| {
                 d.child(
                     div()
                         .flex()
-                        .px(px(6.))
-                        .py(px(4.))
+                        .px(ui(6.))
+                        .py(ui(4.))
                         .child(section_badge(tr!("Devices"))),
                 )
                 .children(self.device_counts.iter().map(|(ip, count)| {
@@ -1911,7 +1932,7 @@ impl Traffic {
                         },
                     ))
                 }))
-                .child(div().h(px(8.)).flex_shrink_0())
+                .child(div().h(ui(8.)).flex_shrink_0())
             })
             .child(self.render_hosts_heading(cx))
             .child(
@@ -1926,9 +1947,9 @@ impl Traffic {
             .when(none_match, |d| {
                 d.child(
                     div()
-                        .px(px(10.))
-                        .py(px(6.))
-                        .text_size(px(12.))
+                        .px(ui(10.))
+                        .py(ui(6.))
+                        .text_size(ui(12.))
                         .text_color(rgb(c.muted))
                         .child(tr!("No host has this in its name")),
                 )
@@ -1944,12 +1965,12 @@ impl Traffic {
                     }))
             }))
             .when(!hidden.is_empty(), |d| {
-                d.child(div().h(px(8.)).flex_shrink_0())
+                d.child(div().h(ui(8.)).flex_shrink_0())
                     .child(
                         div()
                             .flex()
-                            .px(px(6.))
-                            .py(px(4.))
+                            .px(ui(6.))
+                            .py(ui(4.))
                             .child(section_badge(tr!("Hidden"))),
                     )
                     .children(
@@ -1968,22 +1989,22 @@ impl Traffic {
             .flex()
             .flex_row()
             .items_center()
-            .gap(px(8.))
-            .px(px(6.))
-            .py(px(4.))
+            .gap(ui(8.))
+            .px(ui(6.))
+            .py(ui(4.))
             .child(section_badge(tr!("Hosts")))
             .child(
                 div()
                     .flex_1()
                     .min_w_0()
-                    .h(px(26.))
-                    .px(px(10.))
-                    .rounded(px(13.))
+                    .h(ui(26.))
+                    .px(ui(10.))
+                    .rounded(ui(13.))
                     .flex()
                     .items_center()
-                    .gap(px(6.))
+                    .gap(ui(6.))
                     .bg(rgb(c.input))
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .on_key_down(cx.listener(|this, ev: &KeyDownEvent, _, cx| {
                         if ev.keystroke.key == "escape"
                             && !this.host_filter.read(cx).text().is_empty()
@@ -2021,9 +2042,9 @@ impl Traffic {
         let action = |id: String, icon_name: &'static str, always: bool| {
             div()
                 .id(SharedString::from(id))
-                .size(px(22.))
+                .size(ui(22.))
                 .flex_shrink_0()
-                .rounded(px(6.))
+                .rounded(ui(6.))
                 .flex()
                 .items_center()
                 .justify_center()
@@ -2057,12 +2078,12 @@ impl Traffic {
             .id(group.clone())
             .group(group)
             .flex_shrink_0()
-            .h(px(32.))
-            .px(px(10.))
-            .rounded(px(12.))
+            .h(ui(32.))
+            .px(ui(10.))
+            .rounded(ui(12.))
             .flex()
             .items_center()
-            .gap(px(2.))
+            .gap(ui(2.))
             .when(!hidden, |d| d.cursor_pointer())
             .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
             .when(!on, |d| {
@@ -2075,8 +2096,8 @@ impl Traffic {
             .child(
                 div()
                     .flex_shrink_0()
-                    .pl(px(6.))
-                    .text_size(px(12.))
+                    .pl(ui(6.))
+                    .text_size(ui(12.))
                     .text_color(rgb(ink))
                     .child(group_digits(line.count)),
             )
@@ -2100,10 +2121,10 @@ impl Traffic {
         };
         div()
             .flex_1()
-            .min_w(px(LIST_MIN))
-            .min_h(px(120.))
+            .min_w(ui(LIST_MIN))
+            .min_h(ui(120.))
             .h_full()
-            .rounded(px(22.))
+            .rounded(ui(22.))
             .overflow_hidden()
             .flex()
             .flex_col()
@@ -2116,7 +2137,7 @@ impl Traffic {
                     .min_h_0()
                     .relative()
                     .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, _, _| {
-                        if f32::from(event.delta.pixel_delta(px(ROW_HEIGHT)).y) > 0. {
+                        if f32::from(event.delta.pixel_delta(px(this.row_h())).y) > 0. {
                             this.follow = false;
                         } else {
                             this.look_for_bottom = true;
@@ -2162,8 +2183,8 @@ impl Traffic {
                                         .absolute()
                                         .top(px((offset / max).clamp(0., 1.) * track))
                                         .h(px(thumb))
-                                        .left(px(2.))
-                                        .right(px(2.))
+                                        .left(ui(2.))
+                                        .right(ui(2.))
                                         .rounded_sm()
                                         .bg(rgb(c.splitter)),
                                 ),
@@ -2174,20 +2195,20 @@ impl Traffic {
                             div()
                                 .id("newest")
                                 .absolute()
-                                .bottom(px(12.))
-                                .right(px(18.))
-                                .h(px(32.))
-                                .px(px(12.))
-                                .rounded(px(16.))
+                                .bottom(ui(12.))
+                                .right(ui(18.))
+                                .h(ui(32.))
+                                .px(ui(12.))
+                                .rounded(ui(16.))
                                 .flex()
                                 .items_center()
-                                .gap(px(6.))
+                                .gap(ui(6.))
                                 .cursor_pointer()
                                 .reachable()
                                 .bg(rgb(c.accent))
                                 .text_color(rgb(c.on_accent))
                                 .font_weight(FontWeight::BOLD)
-                                .text_size(px(12.5))
+                                .text_size(ui(12.5))
                                 .child(icon("down", 14., c.on_accent))
                                 .child(tr!("Newest"))
                                 .on_click(cx.listener(|this, _, _, cx| this.jump_to_newest(cx))),
@@ -2218,11 +2239,11 @@ impl Traffic {
             .flex_col()
             .items_center()
             .justify_center()
-            .gap(px(8.))
-            .p(px(24.))
+            .gap(ui(8.))
+            .p(ui(24.))
             .child(
                 div()
-                    .text_size(px(15.))
+                    .text_size(ui(15.))
                     .font_weight(FontWeight::BOLD)
                     .child(title),
             )
@@ -2238,9 +2259,9 @@ impl Traffic {
     ) -> impl IntoElement {
         let c = colors();
         let handle = if vertical {
-            div().w(px(6.)).h(px(56.))
+            div().w(ui(6.)).h(ui(56.))
         } else {
-            div().h(px(6.)).w(px(56.))
+            div().h(ui(6.)).w(ui(56.))
         };
         let holder = div()
             .id(id)
@@ -2249,12 +2270,12 @@ impl Traffic {
             .justify_center()
             .flex_shrink_0();
         let holder = if vertical {
-            holder.w(px(10.)).h_full().cursor_col_resize()
+            holder.w(ui(10.)).h_full().cursor_col_resize()
         } else {
-            holder.h(px(10.)).w_full().cursor_row_resize()
+            holder.h(ui(10.)).w_full().cursor_row_resize()
         };
         holder
-            .child(handle.rounded(px(3.)).bg(rgb(c.splitter)))
+            .child(handle.rounded(ui(3.)).bg(rgb(c.splitter)))
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, _: &MouseDownEvent, _, cx| {
@@ -2271,7 +2292,7 @@ impl Traffic {
         let width = f32::from(content.size.width);
         let height = f32::from(content.size.height);
         let left = if self.layout.sidebar_shown {
-            self.layout.sidebar_w + 10.
+            (self.layout.sidebar_w + 10.) * self.ui_scale
         } else {
             0.
         };
@@ -2279,7 +2300,7 @@ impl Traffic {
             let on = hover == place;
             let base = div()
                 .absolute()
-                .rounded(px(24.))
+                .rounded(ui(24.))
                 .border_2()
                 .flex()
                 .items_center()
@@ -2288,8 +2309,8 @@ impl Traffic {
                 .bg(rgba(with_alpha(c.accent, if on { 0x30 } else { 0x0c })))
                 .child(
                     div()
-                        .px(px(14.))
-                        .py(px(8.))
+                        .px(ui(14.))
+                        .py(ui(8.))
                         .rounded_full()
                         .font_weight(FontWeight::BOLD)
                         .bg(rgb(if on { c.accent } else { c.surface }))
@@ -2314,10 +2335,10 @@ impl Traffic {
             .child(
                 div()
                     .absolute()
-                    .top(px(12.))
+                    .top(ui(12.))
                     .left(px(left + 12.))
-                    .px(px(14.))
-                    .py(px(8.))
+                    .px(ui(14.))
+                    .py(ui(8.))
                     .rounded_full()
                     .font_weight(FontWeight::BOLD)
                     .bg(rgb(c.surface))
@@ -2339,17 +2360,17 @@ impl Traffic {
                 .flex()
                 .flex_col()
                 .items_center()
-                .gap(px(4.))
+                .gap(ui(4.))
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(11.))
+                .text_size(ui(11.))
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(ink))
                 .child(
                     div()
-                        .w(px(52.))
-                        .h(px(30.))
-                        .rounded(px(15.))
+                        .w(ui(52.))
+                        .h(ui(30.))
+                        .rounded(ui(15.))
                         .flex()
                         .items_center()
                         .justify_center()
@@ -2360,20 +2381,20 @@ impl Traffic {
                 .on_click(cx.listener(move |this, _, _, cx| this.set_screen(screen, cx)))
         };
         div()
-            .w(px(76.))
+            .w(ui(76.))
             .flex_shrink_0()
             .h_full()
-            .pt(px(4.))
-            .pb(px(16.))
+            .pt(ui(4.))
+            .pb(ui(16.))
             .flex()
             .flex_col()
             .items_center()
-            .gap(px(14.))
+            .gap(ui(14.))
             .child(
                 div()
-                    .size(px(44.))
-                    .mb(px(4.))
-                    .rounded(px(15.))
+                    .size(ui(44.))
+                    .mb(ui(4.))
+                    .rounded(ui(15.))
                     .flex()
                     .items_center()
                     .justify_center()
@@ -2397,15 +2418,15 @@ impl Traffic {
                             div()
                                 .absolute()
                                 .top(px(-4.))
-                                .right(px(2.))
-                                .min_w(px(18.))
-                                .h(px(18.))
-                                .px(px(5.))
-                                .rounded(px(9.))
+                                .right(ui(2.))
+                                .min_w(ui(18.))
+                                .h(ui(18.))
+                                .px(ui(5.))
+                                .rounded(ui(9.))
                                 .flex()
                                 .items_center()
                                 .justify_center()
-                                .text_size(px(10.5))
+                                .text_size(ui(10.5))
                                 .font_weight(FontWeight::BOLD)
                                 .bg(rgb(c.warn))
                                 .text_color(rgb(c.on_accent))
@@ -2435,7 +2456,7 @@ impl Traffic {
 
     fn render_ca(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
-        let row = div().flex().flex_row().items_center().gap(px(6.));
+        let row = div().flex().flex_row().items_center().gap(ui(6.));
         match self.system.ca {
             CaState::Trusted => row
                 .child(icon("shield", 14., c.ok))
@@ -2546,10 +2567,10 @@ impl Traffic {
             .flex_row()
             .flex_wrap()
             .items_center()
-            .gap(px(18.))
-            .px(px(8.))
-            .min_h(px(28.))
-            .text_size(px(12.))
+            .gap(ui(18.))
+            .px(ui(8.))
+            .min_h(ui(28.))
+            .text_size(ui(12.))
             .text_color(rgb(c.muted))
             .child(tr_n!(
                 self.total(),
@@ -2595,6 +2616,9 @@ impl Focusable for Traffic {
 impl Render for Traffic {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
+        // The text size chosen, for everything drawn in rems.
+        window.set_rem_size(crate::text_size::rem_for(self.text_size()));
+        self.ui_scale = crate::text_size::scale(window);
         let setup =
             (self.screen == Screen::Setup).then(|| self.render_setup(cx).into_any_element());
         let sessions =
@@ -2635,7 +2659,7 @@ impl Render for Traffic {
                     .child(self.splitter("split-inspector", Drag::InspectorSize, true, cx))
                     .child(
                         div()
-                            .w(px(self.layout.inspector_w))
+                            .w(ui(self.layout.inspector_w))
                             .flex_shrink_0()
                             .h_full()
                             .child(inspector),
@@ -2650,7 +2674,7 @@ impl Render for Traffic {
                     .child(self.splitter("split-inspector", Drag::InspectorSize, false, cx))
                     .child(
                         div()
-                            .h(px(self.layout.inspector_h))
+                            .h(ui(self.layout.inspector_h))
                             .flex_shrink_0()
                             .w_full()
                             .child(inspector),
@@ -2675,7 +2699,7 @@ impl Render for Traffic {
             .flex_row()
             .text_color(rgb(c.text))
             .font_family(crate::FONT)
-            .text_size(px(13.))
+            .text_size(ui(13.))
             .child(self.render_rail(cx))
             .child(
                 div()
@@ -2684,12 +2708,12 @@ impl Render for Traffic {
                     .h_full()
                     .flex()
                     .flex_col()
-                    .gap(px(10.))
+                    .gap(ui(10.))
                     // Close under the title bar.
-                    .pt(px(2.))
-                    .pr(px(14.))
-                    .pb(px(10.))
-                    .pl(px(4.))
+                    .pt(ui(2.))
+                    .pr(ui(14.))
+                    .pb(ui(10.))
+                    .pl(ui(4.))
                     .when_some(setup, |d, setup| d.child(setup))
                     .when_some(rules, |d, rules| d.child(rules))
                     .when_some(paused, |d, paused| d.child(paused))
@@ -2755,11 +2779,11 @@ const EDGE_GRIP: f32 = 4.;
 fn cell(column: Column, width: f32) -> Div {
     let d = div();
     let d = if column.fills() {
-        d.flex_1().min_w(px(PATH_MIN))
+        d.flex_1().min_w(ui(PATH_MIN))
     } else if let Some(min) = column.gives_way_to() {
-        d.w(px(width)).min_w(px(min.min(width)))
+        d.w(ui(width)).min_w(ui(min.min(width)))
     } else {
-        d.w(px(width)).flex_shrink_0()
+        d.w(ui(width)).flex_shrink_0()
     };
     if column.on_the_right() {
         d.flex().justify_end()
@@ -2782,10 +2806,10 @@ impl Traffic {
                 .flex()
                 .flex_row()
                 .items_center()
-                .gap(px(4.))
+                .gap(ui(4.))
                 .when(column.on_the_right(), |d| d.justify_end())
                 // Text on the left keeps clear of the next column; numbers end at the edge.
-                .when(!column.fills() && !column.on_the_right(), |d| d.pr(px(8.)))
+                .when(!column.fills() && !column.on_the_right(), |d| d.pr(ui(8.)))
                 .cursor_pointer()
                 .reachable()
                 .when(sorted.is_some(), |d| d.text_color(rgb(c.text)))
@@ -2801,7 +2825,7 @@ impl Traffic {
                     .absolute()
                     .top_0()
                     .bottom_0()
-                    .w(px(EDGE_GRIP * 2.))
+                    .w(ui(EDGE_GRIP * 2.))
                     .when(column.on_the_right(), |d| d.left(px(-EDGE_GRIP)))
                     .when(!column.on_the_right(), |d| d.right(px(-EDGE_GRIP)))
                     .cursor_col_resize()
@@ -2825,15 +2849,15 @@ impl Traffic {
                 .children(edge)
         });
         div()
-            .h(px(36.))
+            .h(ui(36.))
             .flex_shrink_0()
             .flex()
             .flex_row()
             .items_center()
-            .px(px(12.))
+            .px(ui(12.))
             .border_b_1()
             .border_color(rgb(c.line))
-            .text_size(px(11.5))
+            .text_size(ui(11.5))
             .font_weight(FontWeight::BOLD)
             .text_color(rgb(c.muted))
             .children(cells)
@@ -2845,7 +2869,7 @@ impl Traffic {
         let c = colors();
         let open = self.columns_menu;
         div()
-            .w(px(MENU_W))
+            .w(ui(MENU_W))
             .h_full()
             .flex_shrink_0()
             .relative()
@@ -2855,8 +2879,8 @@ impl Traffic {
             .child(
                 div()
                     .id("columns-menu")
-                    .size(px(22.))
-                    .rounded(px(6.))
+                    .size(ui(22.))
+                    .rounded(ui(6.))
                     .flex()
                     .items_center()
                     .justify_center()
@@ -2873,7 +2897,7 @@ impl Traffic {
             )
             .when(open, |d| {
                 d.child(
-                    div().absolute().top(px(30.)).right_0().child(deferred(
+                    div().absolute().top(ui(30.)).right_0().child(deferred(
                         anchored()
                             .anchor(Anchor::TopRight)
                             .snap_to_window_with_margin(px(8.))
@@ -2889,19 +2913,19 @@ impl Traffic {
         let item = |id: SharedString, on: Option<bool>, text: String| {
             div()
                 .id(id)
-                .h(px(30.))
-                .px(px(10.))
-                .rounded(px(8.))
+                .h(ui(30.))
+                .px(ui(10.))
+                .rounded(ui(8.))
                 .flex()
                 .flex_row()
                 .items_center()
-                .gap(px(8.))
+                .gap(ui(8.))
                 .cursor_pointer()
                 .reachable()
                 .hover(|d| d.bg(rgb(c.tonal)))
                 .child(
                     div()
-                        .w(px(14.))
+                        .w(ui(14.))
                         .flex_shrink_0()
                         .children(on.filter(|on| *on).map(|_| icon("check", 14., c.text))),
                 )
@@ -2910,19 +2934,19 @@ impl Traffic {
         div()
             .id("columns-list")
             .occlude()
-            .w(px(200.))
-            .p(px(6.))
-            .rounded(px(14.))
+            .w(ui(200.))
+            .p(ui(6.))
+            .rounded(ui(14.))
             .border_1()
             .border_color(rgb(c.line))
             .bg(rgb(c.surface))
             .shadow_lg()
             .flex()
             .flex_col()
-            .text_size(px(13.))
+            .text_size(ui(13.))
             .font_weight(FontWeight::NORMAL)
             .text_color(rgb(c.text))
-            .child(eyebrow(tr!("Columns")).px(px(10.)).py(px(4.)))
+            .child(eyebrow(tr!("Columns")).px(ui(10.)).py(ui(4.)))
             .children(
                 Column::ALL
                     .into_iter()
@@ -2936,7 +2960,7 @@ impl Traffic {
                         .on_click(cx.listener(move |this, _, _, cx| this.toggle_column(column, cx)))
                     }),
             )
-            .child(div().h(px(1.)).my(px(4.)).bg(rgb(c.line)))
+            .child(div().h(ui(1.)).my(ui(4.)).bg(rgb(c.line)))
             .child(
                 item("reset-columns".into(), None, tr!("Back to defaults"))
                     .when(columns.is_default(), |d| d.text_color(rgb(c.muted)))
@@ -2980,12 +3004,12 @@ fn render_row(
             Column::Number => d
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
-                .text_size(px(11.5))
+                .text_size(ui(11.5))
                 .text_color(rgb(c.muted))
                 .truncate()
                 .child(number.clone()),
             Column::Method => d
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .font_weight(FontWeight::BOLD)
                 .truncate()
                 .child(method.clone()),
@@ -2993,30 +3017,30 @@ fn render_row(
                 div()
                     .flex()
                     .w_auto()
-                    .max_w(px(44.))
+                    .max_w(ui(44.))
                     .justify_center()
-                    .px(px(6.))
-                    .py(px(1.))
-                    .rounded(px(8.))
+                    .px(ui(6.))
+                    .py(ui(1.))
+                    .rounded(ui(8.))
                     .bg(rgb(ground))
                     .text_color(rgb(ink))
-                    .text_size(px(11.5))
+                    .text_size(ui(11.5))
                     .font_weight(FontWeight::BOLD)
                     .child(status.clone()),
             ),
             Column::App => d
-                .pr(px(8.))
+                .pr(ui(8.))
                 .truncate()
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .text_color(rgb(c.muted))
                 .child(sender.clone()),
-            Column::Host => d.pr(px(8.)).truncate().child(host.clone()),
+            Column::Host => d.pr(ui(8.)).truncate().child(host.clone()),
             Column::Path => d
                 .flex()
                 .flex_row()
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .children(
                     operation
                         .clone()
@@ -3027,9 +3051,9 @@ fn render_row(
                                 // path, which is the same for every call.
                                 .flex_shrink_0()
                                 .max_w(gpui::relative(0.8))
-                                .mr(px(8.))
-                                .px(px(6.))
-                                .rounded(px(6.))
+                                .mr(ui(8.))
+                                .px(ui(6.))
+                                .rounded(ui(6.))
                                 .truncate()
                                 .bg(rgb(c.tonal))
                                 .text_color(rgb(c.on_tonal))
@@ -3042,15 +3066,15 @@ fn render_row(
                         .min_w_0()
                         .max_w(gpui::relative(0.6))
                         .truncate()
-                        .pl(px(10.))
+                        .pl(ui(10.))
                         .text_color(rgb(c.muted))
                         .child(note)
                 })),
             Column::Operation => d
-                .pr(px(8.))
+                .pr(ui(8.))
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .text_color(rgb(c.on_tonal))
                 .truncate()
                 .children(operation.clone()),
@@ -3063,29 +3087,29 @@ fn render_row(
     });
     div()
         .id(("flow", id as u64))
-        .h(px(ROW_HEIGHT))
+        .h(ui(ROW_HEIGHT))
         .w_full()
-        .px(px(6.))
-        .py(px(1.))
+        .px(ui(6.))
+        .py(ui(1.))
         .child(
             div()
                 .h_full()
-                .px(px(6.))
-                .rounded(px(10.))
+                .px(ui(6.))
+                .rounded(ui(10.))
                 .flex()
                 .flex_row()
                 .items_center()
                 .when(selected, |d| d.bg(rgb(c.selected_row)))
                 .children(cells)
-                .child(div().w(px(MENU_W)).flex_shrink_0()),
+                .child(div().w(ui(MENU_W)).flex_shrink_0()),
         )
 }
 
 fn pill_button(id: &'static str) -> Stateful<Div> {
     div()
         .id(id)
-        .h(px(40.))
-        .rounded(px(20.))
+        .h(ui(40.))
+        .rounded(ui(20.))
         .flex()
         .items_center()
         .cursor_pointer()

@@ -1641,6 +1641,15 @@ ta8606963 = { $key }: "{ $text }" bir tam sayı değil
 # {key}: must not be negative
 t9c4debaa = { $key }: negatif olamaz
 
+# {size} (default)
+t5606e442 = { $size } (varsayılan)
+
+# Text size
+t2c041143 = Yazı boyutu
+
+# In px, for the text of lists and bodies. Everything grows with it. Applies at once.
+tb8052ae6 = px cinsinden, listelerin ve gövdelerin yazısı için. Her şey onunla büyür. Hemen uygulanır.
+
 # Appearance
 t31018b9f = Görünüm
 

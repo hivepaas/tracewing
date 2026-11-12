@@ -146,6 +146,8 @@ pub struct Layout {
     pub named: Vec<Named>,
     /// The part of Settings last open.
     pub settings_section: SettingsSection,
+    /// The body text size chosen, in px; `None` for the design's.
+    pub text_size: Option<u8>,
 }
 
 /// Where the panels are and how large, which columns show: what a named
@@ -198,6 +200,7 @@ impl Default for Layout {
             inspector_window: None,
             named: Vec::new(),
             settings_section: SettingsSection::default(),
+            text_size: None,
         }
     }
 }

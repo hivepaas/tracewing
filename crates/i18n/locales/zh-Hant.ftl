@@ -1570,6 +1570,15 @@ ta8606963 = { $key }：「{ $text }」不是整數
 # {key}: must not be negative
 t9c4debaa = { $key }：不可為負數
 
+# {size} (default)
+t5606e442 = { $size }(預設)
+
+# Text size
+t2c041143 = 文字大小
+
+# In px, for the text of lists and bodies. Everything grows with it. Applies at once.
+tb8052ae6 = 單位為 px，用於清單和內文的文字。其他部分隨之放大。立即生效。
+
 # Appearance
 t31018b9f = 外觀
 

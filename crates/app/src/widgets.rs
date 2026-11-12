@@ -1,6 +1,7 @@
 //! Small pieces drawn the same way everywhere.
 
 use crate::colors::colors;
+use crate::text_size::ui;
 use gpui::{
     AnyView, App, Context, Div, FontWeight, Render, SharedString, Window, div, prelude::*, px, rgb,
     svg,
@@ -9,7 +10,7 @@ use gpui::{
 pub fn icon(name: &'static str, size: f32, color: u32) -> impl IntoElement {
     svg()
         .path(format!("icons/{name}.svg"))
-        .size(px(size))
+        .size(crate::text_size::ui(size))
         .flex_shrink_0()
         .text_color(rgb(color))
 }
@@ -17,7 +18,7 @@ pub fn icon(name: &'static str, size: f32, color: u32) -> impl IntoElement {
 /// A section's name in small capitals.
 pub fn eyebrow(text: impl AsRef<str>) -> Div {
     div()
-        .text_size(px(11.))
+        .text_size(ui(11.))
         .font_weight(FontWeight::BOLD)
         .text_color(rgb(colors().muted))
         .child(text.as_ref().to_uppercase())
@@ -29,12 +30,12 @@ pub fn section_badge(text: impl AsRef<str>) -> Div {
     let c = colors();
     div()
         .flex_shrink_0()
-        .px(px(8.))
-        .py(px(2.))
-        .rounded(px(8.))
+        .px(ui(8.))
+        .py(ui(2.))
+        .rounded(ui(8.))
         .bg(rgb(c.accent))
         .text_color(rgb(c.on_accent))
-        .text_size(px(11.))
+        .text_size(ui(11.))
         .font_weight(FontWeight::BOLD)
         .child(text.as_ref().to_uppercase())
 }
@@ -53,12 +54,12 @@ pub fn status_colors(status: Option<u16>) -> (u32, u32) {
 
 pub fn chip(text: impl Into<SharedString>, ground: u32, ink: u32) -> Div {
     div()
-        .px(px(10.))
-        .py(px(4.))
+        .px(ui(10.))
+        .py(ui(4.))
         .rounded_full()
         .bg(rgb(ground))
         .text_color(rgb(ink))
-        .text_size(px(12.))
+        .text_size(ui(12.))
         .font_weight(FontWeight::BOLD)
         .child(text.into())
 }
@@ -70,14 +71,14 @@ impl Render for Tip {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         div()
-            .px(px(10.))
-            .py(px(6.))
-            .rounded(px(10.))
+            .px(ui(10.))
+            .py(ui(6.))
+            .rounded(ui(10.))
             .bg(rgb(c.surface))
             .border_1()
             .border_color(rgb(c.window_edge))
             .font_family(crate::FONT)
-            .text_size(px(13.))
+            .text_size(ui(13.))
             .text_color(rgb(c.text))
             .child(self.0.clone())
     }

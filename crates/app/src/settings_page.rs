@@ -3,6 +3,7 @@
 //! person could edit by hand, as it is made. A few apply at once; the rest
 //! from the next start on, and the screen says which are still waiting.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     input::TextInput,
@@ -12,7 +13,7 @@ use crate::{
 };
 use gpui::{
     Context, Entity, Focusable, FontWeight, KeyDownEvent, Subscription, Window, div, prelude::*,
-    px, rgb,
+    rgb,
 };
 use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::rules::HostRules;
@@ -593,6 +594,69 @@ impl Traffic {
         cx.notify();
     }
 
+    /// The body text size, `None` for the design's. Everything grows with it.
+    pub fn set_text_size(&mut self, size: Option<u8>, cx: &mut Context<Self>) {
+        self.layout.text_size = size.filter(|s| f32::from(*s) != crate::text_size::DRAWN_AT);
+        self.save_layout();
+        cx.notify();
+    }
+
+    /// The text size, from small to large, the design's marked.
+    fn render_text_size(&self, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let chosen = self.text_size();
+        let chips = crate::text_size::CHOICES.map(|size| {
+            let on = f32::from(size) == chosen;
+            let design = f32::from(size) == crate::text_size::DRAWN_AT;
+            let label = if design {
+                tr!("{size} (default)", size = size)
+            } else {
+                size.to_string()
+            };
+            div()
+                .id(("text-size", size as usize))
+                .h(ui(30.))
+                .px(ui(12.))
+                .rounded(ui(15.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .reachable()
+                .text_size(ui(12.5))
+                .font_weight(FontWeight::BOLD)
+                .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
+                .when(!on, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
+                .child(label)
+                .on_click(cx.listener(move |this, _, _, cx| this.set_text_size(Some(size), cx)))
+        });
+        div()
+            .flex()
+            .flex_col()
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
+            .bg(rgb(c.surface))
+            .child(eyebrow(tr!("Text size")).px(ui(6.)))
+            .child(
+                div()
+                    .px(ui(6.))
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .gap(ui(6.))
+                    .children(chips),
+            )
+            .child(
+                div()
+                    .px(ui(6.))
+                    .text_size(ui(12.))
+                    .text_color(rgb(c.muted))
+                    .child(tr!(
+                        "In px, for the text of lists and bodies. Everything grows with it. Applies at once."
+                    )),
+            )
+    }
+
     /// The look: the system's, light or dark, as the title bar's switch has it.
     fn render_appearance(&self, cx: &mut Context<Self>) -> gpui::Div {
         let c = colors();
@@ -601,14 +665,14 @@ impl Traffic {
             let on = look == chosen;
             div()
                 .id(("appearance", look as usize))
-                .h(px(30.))
-                .px(px(12.))
-                .rounded(px(15.))
+                .h(ui(30.))
+                .px(ui(12.))
+                .rounded(ui(15.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .font_weight(FontWeight::BOLD)
                 .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
                 .when(!on, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
@@ -620,18 +684,18 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow(tr!("Appearance")).px(px(6.)))
+            .child(eyebrow(tr!("Appearance")).px(ui(6.)))
             .child(
                 div()
-                    .px(px(6.))
+                    .px(ui(6.))
                     .flex()
                     .flex_row()
                     .flex_wrap()
-                    .gap(px(6.))
+                    .gap(ui(6.))
                     .children([Appearance::System, Appearance::Light, Appearance::Dark].map(chip)),
             )
     }
@@ -643,22 +707,22 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow(tr!("Hosts not to decrypt")).px(px(6.)))
+            .child(eyebrow(tr!("Hosts not to decrypt")).px(ui(6.)))
             .child(
                 div()
-                    .px(px(6.))
-                    .text_size(px(12.))
+                    .px(ui(6.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(tr!("One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.")),
             )
             .child(
                 div()
-                    .p(px(10.))
-                    .rounded(px(12.))
+                    .p(ui(10.))
+                    .rounded(ui(12.))
                     .bg(rgb(c.input))
                     .font_family(crate::MONO_FONT)
                     .font_features(gpui::FontFeatures::disable_ligatures())
@@ -674,9 +738,9 @@ impl Traffic {
             let on = section == open;
             div()
                 .id(("settings-section", section as usize))
-                .h(px(38.))
-                .px(px(14.))
-                .rounded(px(19.))
+                .h(ui(38.))
+                .px(ui(14.))
+                .rounded(ui(19.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
@@ -696,16 +760,16 @@ impl Traffic {
                 )
         });
         div()
-            .w(px(200.))
+            .w(ui(200.))
             .flex_shrink_0()
             .flex()
             .flex_col()
-            .gap(px(2.))
+            .gap(ui(2.))
             .child(
                 div()
-                    .px(px(14.))
-                    .pb(px(10.))
-                    .text_size(px(20.))
+                    .px(ui(14.))
+                    .pb(ui(10.))
+                    .text_size(ui(20.))
                     .font_weight(FontWeight::BOLD)
                     .child(tr!("Settings")),
             )
@@ -730,6 +794,7 @@ impl Traffic {
                 vec![
                     self.render_language(cx).into_any_element(),
                     self.render_appearance(cx).into_any_element(),
+                    self.render_text_size(cx).into_any_element(),
                 ],
                 Vec::new(),
             ),
@@ -790,11 +855,11 @@ impl Traffic {
             div()
                 .flex()
                 .flex_col()
-                .gap(px(2.))
-                .p(px(14.))
-                .rounded(px(22.))
+                .gap(ui(2.))
+                .p(ui(14.))
+                .rounded(ui(22.))
                 .bg(rgb(c.surface))
-                .child(eyebrow(title).px(px(6.)).pb(px(6.)))
+                .child(eyebrow(title).px(ui(6.)).pb(ui(6.)))
                 .children(rows.into_iter().map(|row| {
                     let key = row.key;
                     let control = match field_of(key) {
@@ -802,16 +867,16 @@ impl Traffic {
                             let on = *on;
                             div()
                                 .id(key)
-                                .w(px(44.))
-                                .h(px(24.))
-                                .p(px(3.))
-                                .rounded(px(12.))
+                                .w(ui(44.))
+                                .h(ui(24.))
+                                .p(ui(3.))
+                                .rounded(ui(12.))
                                 .flex()
                                 .cursor_pointer()
                                 .reachable()
                                 .when(on, |d| d.bg(rgb(c.accent)).justify_end())
                                 .when(!on, |d| d.bg(rgb(c.input)))
-                                .child(div().size(px(18.)).rounded(px(9.)).bg(rgb(if on {
+                                .child(div().size(ui(18.)).rounded(ui(9.)).bg(rgb(if on {
                                     c.on_accent
                                 } else {
                                     c.muted
@@ -825,7 +890,7 @@ impl Traffic {
                             .flex()
                             .flex_row()
                             .items_center()
-                            .gap(px(8.))
+                            .gap(ui(8.))
                             .on_key_down(cx.listener(move |this, ev: &KeyDownEvent, _, cx| {
                                 if ev.keystroke.key == "enter" {
                                     this.field_left(Some(key), cx);
@@ -833,10 +898,10 @@ impl Traffic {
                             }))
                             .child(
                                 div()
-                                    .w(px(96.))
-                                    .h(px(32.))
-                                    .px(px(10.))
-                                    .rounded(px(12.))
+                                    .w(ui(96.))
+                                    .h(ui(32.))
+                                    .px(ui(10.))
+                                    .rounded(ui(12.))
                                     .flex()
                                     .items_center()
                                     .bg(rgb(c.input))
@@ -846,8 +911,8 @@ impl Traffic {
                             )
                             .child(
                                 div()
-                                    .w(px(28.))
-                                    .text_size(px(12.))
+                                    .w(ui(28.))
+                                    .text_size(ui(12.))
                                     .text_color(rgb(c.muted))
                                     .child(row.unit),
                             )
@@ -857,9 +922,9 @@ impl Traffic {
                         .flex()
                         .flex_row()
                         .items_center()
-                        .gap(px(16.))
-                        .min_h(px(52.))
-                        .px(px(6.))
+                        .gap(ui(16.))
+                        .min_h(ui(52.))
+                        .px(ui(6.))
                         .child(
                             div()
                                 .flex_1()
@@ -872,7 +937,7 @@ impl Traffic {
                                         .flex_row()
                                         .flex_wrap()
                                         .items_center()
-                                        .gap(px(8.))
+                                        .gap(ui(8.))
                                         .child(
                                             div()
                                                 .font_weight(FontWeight::SEMIBOLD)
@@ -881,9 +946,9 @@ impl Traffic {
                                         .when(waiting.contains(&key), |d| {
                                             d.child(
                                                 div()
-                                                    .px(px(8.))
-                                                    .rounded(px(8.))
-                                                    .text_size(px(11.))
+                                                    .px(ui(8.))
+                                                    .rounded(ui(8.))
+                                                    .text_size(ui(11.))
                                                     .bg(rgb(c.warn_ground))
                                                     .text_color(rgb(c.warn))
                                                     .child(tr!("After a restart")),
@@ -892,14 +957,14 @@ impl Traffic {
                                 )
                                 .child(
                                     div()
-                                        .text_size(px(12.))
+                                        .text_size(ui(12.))
                                         .text_color(rgb(c.muted))
                                         .child(row.help),
                                 )
                                 .when(problem_under == Some(key), |d| {
                                     d.children(page.problem.clone().map(|problem| {
                                         div()
-                                            .text_size(px(12.))
+                                            .text_size(ui(12.))
                                             .text_color(rgb(c.error))
                                             .child(problem)
                                     }))
@@ -911,9 +976,9 @@ impl Traffic {
         let button = |id: &'static str, label: String, loud: bool| {
             div()
                 .id(id)
-                .h(px(36.))
-                .px(px(16.))
-                .rounded(px(18.))
+                .h(ui(36.))
+                .px(ui(16.))
+                .rounded(ui(18.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
@@ -948,18 +1013,18 @@ impl Traffic {
             .overflow_y_scroll()
             .flex()
             .flex_col()
-            .gap(px(10.))
+            .gap(ui(10.))
             .child(
                 div()
                     .flex()
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(10.))
-                    .min_h(px(36.))
+                    .gap(ui(10.))
+                    .min_h(ui(36.))
                     .child(
                         div()
-                            .text_size(px(20.))
+                            .text_size(ui(20.))
                             .font_weight(FontWeight::BOLD)
                             .child(section.name()),
                     )
@@ -987,7 +1052,7 @@ impl Traffic {
             .min_h_0()
             .flex()
             .flex_row()
-            .gap(px(10.))
+            .gap(ui(10.))
             .child(menu)
             .child(content)
     }
@@ -1007,15 +1072,15 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow(tr!("Fields always read a certain way")).px(px(6.)))
+            .child(eyebrow(tr!("Fields always read a certain way")).px(ui(6.)))
             .child(
                 div()
-                    .px(px(6.))
-                    .text_size(px(12.))
+                    .px(ui(6.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(tr!(
                         "A value read in the inspector can be kept that way for its field, and \
@@ -1026,7 +1091,7 @@ impl Traffic {
             .when(rules.is_empty(), |d| {
                 d.child(
                     div()
-                        .px(px(6.))
+                        .px(ui(6.))
                         .text_color(rgb(c.faint))
                         .child(tr!("Nothing is remembered yet.")),
                 )
@@ -1037,15 +1102,15 @@ impl Traffic {
                     .flex()
                     .flex_row()
                     .items_center()
-                    .gap(px(10.))
-                    .px(px(6.))
-                    .min_h(px(34.))
+                    .gap(ui(10.))
+                    .px(ui(6.))
+                    .min_h(ui(34.))
                     .child(
                         div()
                             .w(gpui::relative(0.34))
                             .flex_shrink_0()
                             .font_family(crate::MONO_FONT)
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .font_weight(FontWeight::BOLD)
                             .child(field.clone()),
                     )
@@ -1054,7 +1119,7 @@ impl Traffic {
                             .flex_1()
                             .min_w_0()
                             .font_family(crate::MONO_FONT)
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .text_color(rgb(c.muted))
                             .child(if host.is_empty() {
                                 tr!("{reading} · every host", reading = read_as.as_str())
@@ -1069,12 +1134,12 @@ impl Traffic {
                     .child(
                         div()
                             .id(gpui::SharedString::from(format!("forget-{host}-{field}")))
-                            .px(px(12.))
-                            .py(px(5.))
-                            .rounded(px(16.))
+                            .px(ui(12.))
+                            .py(ui(5.))
+                            .rounded(ui(16.))
                             .cursor_pointer()
                             .reachable()
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .font_weight(FontWeight::BOLD)
                             .bg(rgb(c.chip))
                             .text_color(rgb(c.on_chip))
@@ -1096,14 +1161,14 @@ impl Traffic {
         let button = |id: &'static str, label: String| {
             div()
                 .id(id)
-                .h(px(32.))
-                .px(px(14.))
-                .rounded(px(16.))
+                .h(ui(32.))
+                .px(ui(14.))
+                .rounded(ui(16.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .font_weight(FontWeight::BOLD)
                 .bg(rgb(c.chip))
                 .text_color(rgb(c.on_chip))
@@ -1111,10 +1176,10 @@ impl Traffic {
         };
         let line = |name: String, file: String, color: u32| {
             div()
-                .px(px(6.))
+                .px(ui(6.))
                 .flex()
                 .flex_row()
-                .gap(px(10.))
+                .gap(ui(10.))
                 .child(
                     div()
                         .font_weight(FontWeight::BOLD)
@@ -1123,7 +1188,7 @@ impl Traffic {
                 )
                 .child(
                     div()
-                        .text_size(px(12.))
+                        .text_size(ui(12.))
                         .text_color(rgb(c.muted))
                         .child(file),
                 )
@@ -1134,12 +1199,12 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow(tr!("Authorities trusted for servers")).px(px(6.)))
-            .child(div().px(px(6.)).text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+            .child(eyebrow(tr!("Authorities trusted for servers")).px(ui(6.)))
+            .child(div().px(ui(6.)).text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                 "tracewing trusts the servers the public authorities vouch for, and those this computer's do. It trusts these too: a company's own authority, or one of your own, put as a .pem file in {folder}. They are read when tracewing starts.",
                 folder = folder.display().to_string()
             )))
@@ -1159,10 +1224,10 @@ impl Traffic {
                 )
             }))
             .when(found.good.is_empty() && found.bad.is_empty(), |d| {
-                d.child(div().px(px(6.)).text_color(rgb(c.muted)).child(tr!("None yet.")))
+                d.child(div().px(ui(6.)).text_color(rgb(c.muted)).child(tr!("None yet.")))
             })
             .when(changed, |d| {
-                d.child(div().px(px(6.)).text_color(rgb(c.warn)).child(tr!(
+                d.child(div().px(ui(6.)).text_color(rgb(c.warn)).child(tr!(
                     "The folder has changed since tracewing started: restart it to use what it holds now."
                 )))
             })
@@ -1170,7 +1235,7 @@ impl Traffic {
                 div()
                     .flex()
                     .flex_row()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(button("trusted-open", tr!("Open the folder")).on_click(cx.listener(
                         move |_, _, _, cx| {
                             let _ = std::fs::create_dir_all(&folder);
@@ -1212,14 +1277,14 @@ impl Traffic {
         let button = |id: &'static str, label: String| {
             div()
                 .id(id)
-                .h(px(32.))
-                .px(px(14.))
-                .rounded(px(16.))
+                .h(ui(32.))
+                .px(ui(14.))
+                .rounded(ui(16.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .font_weight(FontWeight::BOLD)
                 .bg(rgb(c.chip))
                 .text_color(rgb(c.on_chip))
@@ -1227,17 +1292,17 @@ impl Traffic {
         };
         let switch = div()
             .id("tls-keys")
-            .w(px(44.))
-            .h(px(24.))
-            .p(px(3.))
+            .w(ui(44.))
+            .h(ui(24.))
+            .p(ui(3.))
             .flex_shrink_0()
-            .rounded(px(12.))
+            .rounded(ui(12.))
             .flex()
             .cursor_pointer()
             .reachable()
             .when(on, |d| d.bg(rgb(c.accent)).justify_end())
             .when(!on, |d| d.bg(rgb(c.input)))
-            .child(div().size(px(18.)).rounded(px(9.)).bg(rgb(if on {
+            .child(div().size(ui(18.)).rounded(ui(9.)).bg(rgb(if on {
                 c.on_accent
             } else {
                 c.muted
@@ -1247,35 +1312,35 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow(tr!("TLS keys for Wireshark")).px(px(6.)))
-            .child(div().px(px(6.)).text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+            .child(eyebrow(tr!("TLS keys for Wireshark")).px(ui(6.)))
+            .child(div().px(ui(6.)).text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                 "Writes the secrets of each HTTPS connection, from apps to tracewing and from it to servers, to a file Wireshark reads: Preferences, Protocols, TLS, (Pre)-Master-Secret log filename. Anyone with the file can read the traffic it covers. Off again when tracewing starts, unless SSLKEYLOGFILE names a file."
             )))
             .child(
                 div()
-                    .px(px(6.))
+                    .px(ui(6.))
                     .flex()
                     .flex_row()
                     .items_center()
-                    .gap(px(10.))
+                    .gap(ui(10.))
                     .child(switch)
                     .child(
                         div()
                             .flex_1()
                             .min_w_0()
                             .font_family(crate::MONO_FONT)
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .text_color(rgb(if on { c.text } else { c.muted }))
                             .child(shown.clone()),
                     ),
             )
             .children(keys.problem().map(|why| {
                 div()
-                    .px(px(6.))
+                    .px(ui(6.))
                     .text_color(rgb(c.error))
                     .child(tr!("Cannot write to it: {why}", why = why))
             }))
@@ -1283,7 +1348,7 @@ impl Traffic {
                 div()
                     .flex()
                     .flex_row()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(button("tls-keys-copy", tr!("Copy the path")).on_click(cx.listener(
                         move |_, _, _, cx| {
                             cx.write_to_clipboard(gpui::ClipboardItem::new_string(shown.clone()));
@@ -1308,14 +1373,14 @@ impl Traffic {
         let chip = |id: String, label: String, on: bool| {
             div()
                 .id(gpui::ElementId::Name(id.into()))
-                .h(px(30.))
-                .px(px(12.))
-                .rounded(px(15.))
+                .h(ui(30.))
+                .px(ui(12.))
+                .rounded(ui(15.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .font_weight(FontWeight::BOLD)
                 .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
                 .when(!on, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
@@ -1339,17 +1404,17 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow(tr!("Language")).px(px(6.)))
+            .child(eyebrow(tr!("Language")).px(ui(6.)))
             .child(
                 div()
                     .flex()
                     .flex_row()
                     .flex_wrap()
-                    .gap(px(6.))
+                    .gap(ui(6.))
                     .child(
                         chip(
                             "language-system".to_owned(),
@@ -1364,8 +1429,8 @@ impl Traffic {
             )
             .child(
                 div()
-                    .px(px(6.))
-                    .text_size(px(12.))
+                    .px(ui(6.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(tr!("Applies at once.")),
             )

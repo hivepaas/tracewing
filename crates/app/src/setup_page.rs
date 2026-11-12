@@ -4,6 +4,7 @@
 //! proxy and that it trusts the certificate. Nothing else can tell, since browsers
 //! keep trust stores of their own.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     devices::on_the_network,
@@ -14,7 +15,7 @@ use crate::{
 };
 use gpui::{
     ClipboardItem, Context, Div, ElementId, FontWeight, SharedString, Stateful, div, prelude::*,
-    px, rgb,
+    rgb,
 };
 use std::net::{IpAddr, SocketAddr};
 use tracewing_i18n::tr;
@@ -110,9 +111,9 @@ fn button(id: impl Into<ElementId>, label: impl Into<SharedString>, loud: bool) 
     div()
         .id(id)
         .flex_shrink_0()
-        .h(px(36.))
-        .px(px(16.))
-        .rounded(px(18.))
+        .h(ui(36.))
+        .px(ui(16.))
+        .rounded(ui(18.))
         .flex()
         .items_center()
         .cursor_pointer()
@@ -131,13 +132,13 @@ fn step(number: &'static str, done: bool, title: String, text: String) -> Div {
         .flex_row()
         .flex_wrap()
         .items_center()
-        .gap(px(16.))
-        .p(px(18.))
-        .rounded(px(22.))
+        .gap(ui(16.))
+        .p(ui(18.))
+        .rounded(ui(22.))
         .bg(rgb(c.surface))
         .child(
             div()
-                .size(px(32.))
+                .size(ui(32.))
                 .flex_shrink_0()
                 .rounded_full()
                 .flex()
@@ -154,13 +155,13 @@ fn step(number: &'static str, done: bool, title: String, text: String) -> Div {
         .child(
             div()
                 .flex_1()
-                .min_w(px(280.))
+                .min_w(ui(280.))
                 .flex()
                 .flex_col()
-                .gap(px(2.))
+                .gap(ui(2.))
                 .child(
                     div()
-                        .text_size(px(15.))
+                        .text_size(ui(15.))
                         .font_weight(FontWeight::BOLD)
                         .child(title),
                 )
@@ -200,21 +201,21 @@ fn aside(title: String, text: impl Into<SharedString>) -> Div {
         .flex_row()
         .flex_wrap()
         .items_center()
-        .gap(px(10.))
-        .p(px(18.))
-        .rounded(px(22.))
+        .gap(ui(10.))
+        .p(ui(18.))
+        .rounded(ui(22.))
         .border_1()
         .border_color(rgb(c.surface))
         .child(
             div()
                 .flex_1()
-                .min_w(px(280.))
+                .min_w(ui(280.))
                 .flex()
                 .flex_col()
-                .gap(px(2.))
+                .gap(ui(2.))
                 .child(
                     div()
-                        .text_size(px(15.))
+                        .text_size(ui(15.))
                         .font_weight(FontWeight::BOLD)
                         .child(title),
                 )
@@ -305,9 +306,9 @@ impl Traffic {
                         .flex_row()
                         .flex_wrap()
                         .items_center()
-                        .gap(px(10.))
-                        .pl(px(48.))
-                        .child(div().flex_1().min_w(px(240.)).child(tr!(
+                        .gap(ui(10.))
+                        .pl(ui(48.))
+                        .child(div().flex_1().min_w(ui(240.)).child(tr!(
                             "Take the certificate out of every store on this computer? \
                              HTTPS through tracewing then fails until it is installed again. \
                              tracewing keeps it, to install again later."
@@ -339,8 +340,8 @@ impl Traffic {
                         .w_full()
                         .flex()
                         .flex_col()
-                        .gap(px(8.))
-                        .pl(px(48.))
+                        .gap(ui(8.))
+                        .pl(ui(48.))
                         .child(says)
                         .when_some(command, |d, command| {
                             d.child(code_block("setup-certutil", command.to_owned()))
@@ -417,24 +418,24 @@ impl Traffic {
             .overflow_y_scroll()
             .flex()
             .flex_col()
-            .gap(px(10.))
+            .gap(ui(10.))
             .child(
                 div()
                     .flex()
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(10.))
-                    .pb(px(4.))
+                    .gap(ui(10.))
+                    .pb(ui(4.))
                     .child(
                         div()
                             .flex_1()
-                            .min_w(px(280.))
+                            .min_w(ui(280.))
                             .flex()
                             .flex_col()
                             .child(
                                 div()
-                                    .text_size(px(20.))
+                                    .text_size(ui(20.))
                                     .font_weight(FontWeight::BOLD)
                                     .child(tr!("Set up")),
                             )
@@ -546,10 +547,10 @@ fn marked(text: String, mark: Mark) -> Div {
         .flex()
         .flex_row()
         .items_center()
-        .gap(px(8.))
+        .gap(ui(8.))
         .child(
             div()
-                .size(px(8.))
+                .size(ui(8.))
                 .flex_shrink_0()
                 .rounded_full()
                 .bg(rgb(dot)),
@@ -603,13 +604,13 @@ impl Traffic {
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(12.))
-                    .pt(px(10.))
+                    .gap(ui(12.))
+                    .pt(ui(10.))
                     .border_t_1()
                     .border_color(rgb(c.surface))
                     .child(
                         div()
-                            .w(px(96.))
+                            .w(ui(96.))
                             .flex_shrink_0()
                             .font_weight(FontWeight::BOLD)
                             .child(name),
@@ -617,10 +618,10 @@ impl Traffic {
                     .child(
                         div()
                             .flex_1()
-                            .min_w(px(240.))
+                            .min_w(ui(240.))
                             .flex()
                             .flex_col()
-                            .gap(px(2.))
+                            .gap(ui(2.))
                             .child(marked(trust_line, trust_mark))
                             .child(marked(seen_line, seen_mark)),
                     )
@@ -882,23 +883,23 @@ fn code_block(id: impl Into<ElementId>, code: String) -> Div {
     div()
         .relative()
         .w_full()
-        .px(px(14.))
-        .py(px(10.))
-        .rounded(px(12.))
+        .px(ui(14.))
+        .py(ui(10.))
+        .rounded(ui(12.))
         .bg(rgb(c.input))
         .font_family(crate::MONO_FONT)
         .font_features(gpui::FontFeatures::disable_ligatures())
-        .text_size(px(12.))
+        .text_size(ui(12.))
         .child(code)
         .child(
             div()
                 .id(id.into())
                 .absolute()
-                .top(px(8.))
-                .right(px(8.))
-                .px(px(10.))
-                .py(px(3.))
-                .rounded(px(10.))
+                .top(ui(8.))
+                .right(ui(8.))
+                .px(ui(10.))
+                .py(ui(3.))
+                .rounded(ui(10.))
                 .cursor_pointer()
                 .reachable()
                 .font_family(crate::FONT)
@@ -944,9 +945,9 @@ impl Traffic {
             let on = guide == chosen;
             div()
                 .id(ElementId::Name(format!("guide-{guide:?}").into()))
-                .px(px(14.))
-                .py(px(6.))
-                .rounded(px(16.))
+                .px(ui(14.))
+                .py(ui(6.))
+                .rounded(ui(16.))
                 .cursor_pointer()
                 .reachable()
                 .font_weight(FontWeight::BOLD)
@@ -961,7 +962,7 @@ impl Traffic {
                 .enumerate()
                 .map(|(at, part)| match part {
                     Part::Title(title) => {
-                        div().pt(px(6.)).font_weight(FontWeight::BOLD).child(title)
+                        div().pt(ui(6.)).font_weight(FontWeight::BOLD).child(title)
                     }
                     Part::Text(text) => div().child(text),
                     Part::Code(code) => code_block(("copy-guide", at), code),
@@ -969,9 +970,9 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(14.))
-            .p(px(18.))
-            .rounded(px(22.))
+            .gap(ui(14.))
+            .p(ui(18.))
+            .rounded(ui(22.))
             .border_1()
             .border_color(rgb(c.surface))
             .child(
@@ -980,18 +981,18 @@ impl Traffic {
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(18.))
+                    .gap(ui(18.))
                     .children(qr_code(&page, 168.))
                     .child(
                         div()
                             .flex_1()
-                            .min_w(px(280.))
+                            .min_w(ui(280.))
                             .flex()
                             .flex_col()
-                            .gap(px(4.))
+                            .gap(ui(4.))
                             .child(
                                 div()
-                                    .text_size(px(15.))
+                                    .text_size(ui(15.))
                                     .font_weight(FontWeight::BOLD)
                                     .child(tr!("Phones and other devices")),
                             )
@@ -1006,9 +1007,9 @@ impl Traffic {
             )
             .children(self.engine.other_devices.problem().map(|problem| {
                 div()
-                    .px(px(14.))
-                    .py(px(10.))
-                    .rounded(px(14.))
+                    .px(ui(14.))
+                    .py(ui(10.))
+                    .rounded(ui(14.))
                     .bg(rgb(c.warn_ground))
                     .text_color(rgb(c.warn))
                     .child(tr!(
@@ -1023,10 +1024,10 @@ impl Traffic {
                     .flex()
                     .flex_row()
                     .flex_wrap()
-                    .gap(px(4.))
+                    .gap(ui(4.))
                     .children(tabs),
             )
-            .child(div().flex().flex_col().gap(px(8.)).children(parts))
+            .child(div().flex().flex_col().gap(ui(8.)).children(parts))
     }
 
     /// The devices this session has seen, which keep their proxy set until
@@ -1046,10 +1047,10 @@ impl Traffic {
             div()
                 .flex()
                 .flex_row()
-                .gap(px(10.))
-                .px(px(14.))
-                .py(px(10.))
-                .rounded(px(14.))
+                .gap(ui(10.))
+                .px(ui(14.))
+                .py(ui(10.))
+                .rounded(ui(14.))
                 .bg(rgb(c.warn_ground))
                 .text_color(rgb(c.warn))
                 .child(tr_n!(
@@ -1142,12 +1143,12 @@ impl Traffic {
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(12.))
-                    .py(px(6.))
+                    .gap(ui(12.))
+                    .py(ui(6.))
                     .child(
                         div()
                             .flex_1()
-                            .min_w(px(260.))
+                            .min_w(ui(260.))
                             .flex()
                             .flex_col()
                             .child(
@@ -1235,12 +1236,12 @@ impl Traffic {
                 .flex_row()
                 .flex_wrap()
                 .items_center()
-                .gap(px(12.))
-                .py(px(6.))
+                .gap(ui(12.))
+                .py(ui(6.))
                 .child(
                     div()
                         .flex_1()
-                        .min_w(px(260.))
+                        .min_w(ui(260.))
                         .flex()
                         .flex_col()
                         .child(
@@ -1353,7 +1354,7 @@ impl Traffic {
                 .w_full()
                 .flex()
                 .flex_col()
-                .gap(px(8.))
+                .gap(ui(8.))
                 .child(code_block("mcp-claude", claude))
                 .child(div().child(tr!("Elsewhere, in the tool's MCP settings:")))
                 .child(code_block("mcp-config", config)),

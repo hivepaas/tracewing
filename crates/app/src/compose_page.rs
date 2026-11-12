@@ -2,6 +2,7 @@
 //! edited or not. What comes back shows below it, and the flow shows in
 //! Traffic like any other.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     compose::{self, Answer},
@@ -12,7 +13,7 @@ use crate::{
     traffic::{Screen, Traffic},
     widgets::{Reachable, eyebrow},
 };
-use gpui::{AppContext as _, Context, Entity, FontWeight, div, prelude::*, px, rgb};
+use gpui::{AppContext as _, Context, Entity, FontWeight, div, prelude::*, rgb};
 use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::pause::{self, Message};
 use tracewing_store::{
@@ -461,9 +462,9 @@ impl Traffic {
         let field = |input: &Entity<TextInput>| {
             div()
                 .w_full()
-                .px(px(12.))
-                .py(px(8.))
-                .rounded(px(12.))
+                .px(ui(12.))
+                .py(ui(8.))
+                .rounded(ui(12.))
                 .bg(rgb(c.input))
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
@@ -473,9 +474,9 @@ impl Traffic {
             div()
                 .id(id)
                 .flex_shrink_0()
-                .h(px(34.))
-                .px(px(16.))
-                .rounded(px(17.))
+                .h(ui(34.))
+                .px(ui(16.))
+                .rounded(ui(17.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
@@ -491,14 +492,14 @@ impl Traffic {
             div()
                 .id(id)
                 .flex_shrink_0()
-                .h(px(26.))
-                .px(px(10.))
-                .rounded(px(13.))
+                .h(ui(26.))
+                .px(ui(10.))
+                .rounded(ui(13.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .font_weight(FontWeight::BOLD)
                 .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
                 .when(!on, |d| d.text_color(rgb(c.muted)))
@@ -507,30 +508,30 @@ impl Traffic {
         let mono_block = |text: String| {
             div()
                 .w_full()
-                .px(px(12.))
-                .py(px(8.))
-                .rounded(px(12.))
+                .px(ui(12.))
+                .py(ui(8.))
+                .rounded(ui(12.))
                 .bg(rgb(c.input))
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .child(sel.piece(text, "\n\n", Vec::new()))
         };
 
         let editor = div()
             .flex()
             .flex_col()
-            .gap(px(10.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(10.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
             .child(eyebrow(tr!("Request")))
             .child(
                 div()
                     .flex()
                     .flex_row()
-                    .gap(px(8.))
-                    .child(div().w(px(110.)).flex_shrink_0().child(field(&page.method)))
+                    .gap(ui(8.))
+                    .child(div().w(ui(110.)).flex_shrink_0().child(field(&page.method)))
                     .child(div().flex_1().min_w_0().child(field(&page.url))),
             )
             .child(eyebrow(tr!("Headers")))
@@ -538,7 +539,7 @@ impl Traffic {
             .child(eyebrow(tr!("Body")))
             .children(page.body_left.clone().map(|why| {
                 div()
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(match why {
                         compose::BodyLeft::TooBig(bytes) => tr!(
@@ -551,7 +552,7 @@ impl Traffic {
                     })
             }))
             .children(page.proto.clone().map(|message| {
-                div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                div().text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                     "Protobuf {message}, written as JSON: it is sent as Protobuf.",
                     message = message
                 ))
@@ -564,18 +565,18 @@ impl Traffic {
             )
             .children(
                 signature_trouble(page, cx).map(|why| {
-                    div().text_size(px(12.)).text_color(rgb(c.warn)).child(why)
+                    div().text_size(ui(12.)).text_color(rgb(c.warn)).child(why)
                 }),
             )
             .children((!page.calls.is_empty()).then(|| {
-                div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                div().text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                     "Written out in the body and sent as calldata: {calls}",
                     calls = page.calls.join(", ")
                 ))
             }))
             .children((!page.left_out.is_empty()).then(|| {
                 div()
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(tr_n!(
                         page.left_out.len(),
@@ -585,13 +586,13 @@ impl Traffic {
                     ))
             }))
             .children((page.speak != compose::Speak::Agreed).then(|| {
-                div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                div().text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                     "{version} is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.",
                     version = page.speak.text()
                 ))
             }))
             .children(page.stopped.then(|| {
-                div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                div().text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                     "Stopped: no answer was read. What reached the server shows in Traffic."
                 ))
             }))
@@ -600,12 +601,12 @@ impl Traffic {
                     .flex()
                     .flex_row()
                     .items_center()
-                    .gap(px(4.))
+                    .gap(ui(4.))
                     .child(
                         div()
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .text_color(rgb(c.muted))
-                            .pr(px(4.))
+                            .pr(ui(4.))
                             .child(tr!("Ask with")),
                     )
                     .children(compose::Speak::EVERY.map(|speak| {
@@ -622,7 +623,7 @@ impl Traffic {
                 div()
                     .flex()
                     .flex_row()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(if page.sending {
                         chip("compose-send", tr!("Sending…"), false)
                     } else {
@@ -653,9 +654,9 @@ impl Traffic {
             div()
                 .flex()
                 .flex_col()
-                .gap(px(10.))
-                .p(px(14.))
-                .rounded(px(22.))
+                .gap(ui(10.))
+                .p(ui(14.))
+                .rounded(ui(22.))
                 .bg(rgb(c.surface))
                 .child(eyebrow(tr!("Response")))
                 .child(
@@ -684,14 +685,14 @@ impl Traffic {
             .overflow_y_scroll()
             .flex()
             .flex_col()
-            .gap(px(10.))
+            .gap(ui(10.))
             .child(
                 div()
                     .flex()
                     .flex_col()
                     .child(
                         div()
-                            .text_size(px(20.))
+                            .text_size(ui(20.))
                             .font_weight(FontWeight::BOLD)
                             .child(tr!("Compose")),
                     )

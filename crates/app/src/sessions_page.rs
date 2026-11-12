@@ -2,6 +2,7 @@
 //! old session opens in the Traffic screen, read-only, with recording going on
 //! behind it, and what its search index had not reached is indexed as it opens.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     files::FileState,
@@ -11,7 +12,7 @@ use crate::{
     widgets::Reachable,
 };
 use chrono::{Local, TimeZone};
-use gpui::{AppContext as _, Context, Entity, FontWeight, SharedString, div, prelude::*, px, rgb};
+use gpui::{AppContext as _, Context, Entity, FontWeight, SharedString, div, prelude::*, rgb};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -153,15 +154,15 @@ impl Traffic {
                     div()
                         .id(id)
                         .flex_shrink_0()
-                        .h(px(32.))
-                        .px(px(14.))
-                        .rounded(px(16.))
+                        .h(ui(32.))
+                        .px(ui(14.))
+                        .rounded(ui(16.))
                         .flex()
                         .items_center()
                         .cursor_pointer()
                         .reachable()
                         .font_weight(FontWeight::BOLD)
-                        .text_size(px(12.5))
+                        .text_size(ui(12.5))
                         .when(loud, |d| d.bg(rgb(c.error_ground)).text_color(rgb(c.error)))
                         .when(!loud, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
                         .child(label)
@@ -172,14 +173,14 @@ impl Traffic {
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(14.))
-                    .px(px(16.))
-                    .py(px(12.))
-                    .rounded(px(18.))
+                    .gap(ui(14.))
+                    .px(ui(16.))
+                    .py(ui(12.))
+                    .rounded(ui(18.))
                     .bg(rgb(c.surface))
                     .child(
                         div()
-                            .w(px(240.))
+                            .w(ui(240.))
                             .flex_shrink_0()
                             .flex()
                             .flex_col()
@@ -190,7 +191,7 @@ impl Traffic {
                             )
                             .child(
                                 div()
-                                    .text_size(px(12.))
+                                    .text_size(ui(12.))
                                     .text_color(rgb(c.muted))
                                     .child(facts),
                             ),
@@ -198,10 +199,10 @@ impl Traffic {
                     .child(
                         div()
                             .flex_1()
-                            .min_w(px(160.))
-                            .h(px(32.))
-                            .px(px(10.))
-                            .rounded(px(12.))
+                            .min_w(ui(160.))
+                            .h(ui(32.))
+                            .px(ui(10.))
+                            .rounded(ui(12.))
                             .flex()
                             .items_center()
                             .bg(rgb(c.input))
@@ -211,7 +212,7 @@ impl Traffic {
                         d.child(
                             div()
                                 .flex_shrink_0()
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(rgb(c.ok))
                                 .child(tr!("Recording now")),
@@ -261,15 +262,15 @@ impl Traffic {
             .overflow_y_scroll()
             .flex()
             .flex_col()
-            .gap(px(8.))
+            .gap(ui(8.))
             .child(
                 div()
                     .flex()
                     .flex_col()
-                    .pb(px(4.))
+                    .pb(ui(4.))
                     .child(
                         div()
-                            .text_size(px(20.))
+                            .text_size(ui(20.))
                             .font_weight(FontWeight::BOLD)
                             .child(tr!("Sessions")),
                     )
@@ -299,21 +300,21 @@ impl Traffic {
             .flex_row()
             .flex_wrap()
             .items_center()
-            .gap(px(12.))
-            .pb(px(4.))
+            .gap(ui(12.))
+            .pb(ui(4.))
             .child(
                 div()
                     .id("import")
                     .flex_shrink_0()
-                    .h(px(32.))
-                    .px(px(14.))
-                    .rounded(px(16.))
+                    .h(ui(32.))
+                    .px(ui(14.))
+                    .rounded(ui(16.))
                     .flex()
                     .items_center()
                     .cursor_pointer()
                     .reachable()
                     .font_weight(FontWeight::BOLD)
-                    .text_size(px(12.5))
+                    .text_size(ui(12.5))
                     .bg(rgb(c.accent))
                     .text_color(rgb(c.on_accent))
                     .child(if har.busy {
@@ -325,7 +326,7 @@ impl Traffic {
             )
             .child(
                 div()
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(tr!("HAR, Fiddler .saz, or Charles .chlsj")),
             )
@@ -335,13 +336,13 @@ impl Traffic {
                     .flex()
                     .flex_row()
                     .items_center()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .cursor_pointer()
                     .reachable()
                     .child(
                         div()
-                            .size(px(16.))
-                            .rounded(px(4.))
+                            .size(ui(16.))
+                            .rounded(ui(4.))
                             .border_2()
                             .border_color(rgb(if without { c.accent } else { c.muted }))
                             .when(without, |d| d.bg(rgb(c.accent))),
@@ -356,7 +357,7 @@ impl Traffic {
             )
             .children(har.note.clone().map(|(note, failed)| {
                 div()
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .text_color(rgb(if failed { c.error } else { c.muted }))
                     .child(note)
             }))

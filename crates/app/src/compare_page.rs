@@ -2,6 +2,7 @@
 //! them. Picked with Ctrl (⌘ on a Mac) and a click on a second row, or with
 //! "Compare with…" in the inspector and a click on the other.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     compare::{self, BodyText, Change, Line, Node, Pair, Row},
@@ -12,7 +13,7 @@ use crate::{
 };
 use gpui::{
     AnyElement, Context, FontWeight, HighlightStyle, Hsla, SharedString, StyledText,
-    UniformListScrollHandle, div, prelude::*, px, rgb, uniform_list,
+    UniformListScrollHandle, div, prelude::*, rgb, uniform_list,
 };
 use std::{collections::HashSet, ops::Range, path::Path, sync::Arc};
 use tracewing_i18n::{tr, tr_n};
@@ -384,7 +385,7 @@ impl Traffic {
                 .flex_1()
                 .min_w_0()
                 .h_full()
-                .px(px(8.))
+                .px(ui(8.))
                 .flex()
                 .items_center()
                 .overflow_hidden()
@@ -401,21 +402,21 @@ impl Traffic {
                 // The indent inside, so that it does not widen the column.
                 let key = div()
                     .h_full()
-                    .pl(px(8. + node.depth as f32 * 16.))
+                    .pl(ui(8. + node.depth as f32 * 16.))
                     .flex()
                     .flex_row()
                     .items_center()
-                    .gap(px(4.))
+                    .gap(ui(4.))
                     .overflow_hidden()
                     .whitespace_nowrap()
                     .child(
                         div()
-                            .w(px(16.))
+                            .w(ui(16.))
                             .flex_shrink_0()
                             .flex()
                             .justify_center()
-                            .text_size(px(20.))
-                            .line_height(px(LINE_H))
+                            .text_size(ui(20.))
+                            .line_height(ui(LINE_H))
                             .text_color(rgb(c.faint))
                             .when(node.inside.is_some(), |d| {
                                 d.child(if closed.contains(&i) { "▸" } else { "▾" })
@@ -430,11 +431,11 @@ impl Traffic {
                     .child(key);
                 let row = div()
                     .id(("compare-node", i))
-                    .h(px(LINE_H))
+                    .h(ui(LINE_H))
                     .w_full()
                     .flex()
                     .flex_row()
-                    .gap(px(2.))
+                    .gap(ui(2.))
                     .child(key);
                 match node.inside {
                     Some(count) => row
@@ -444,7 +445,7 @@ impl Traffic {
                             div()
                                 .flex_1()
                                 .min_w_0()
-                                .px(px(8.))
+                                .px(ui(8.))
                                 .flex()
                                 .items_center()
                                 .text_color(rgb(c.muted))
@@ -539,9 +540,9 @@ impl Traffic {
                 .when(text.is_none(), |d| d.bg(rgb(c.track)))
                 .child(
                     div()
-                        .w(px(NUMBER_W))
+                        .w(ui(NUMBER_W))
                         .flex_shrink_0()
-                        .pr(px(8.))
+                        .pr(ui(8.))
                         .flex()
                         .justify_end()
                         .text_color(rgb(c.faint))
@@ -573,18 +574,18 @@ impl Traffic {
                     };
                     div()
                         .id(("compare-line", i))
-                        .h(px(LINE_H))
+                        .h(ui(LINE_H))
                         .w_full()
                         .flex()
                         .flex_row()
-                        .gap(px(2.))
+                        .gap(ui(2.))
                         .child(half(line.a, text_a, left, &spans_a, c.error))
                         .child(half(line.b, text_b, right, &spans_b, c.ok))
                         .into_any_element()
                 }
                 Row::Folded { at, count } => div()
                     .id(("compare-fold", i))
-                    .h(px(LINE_H))
+                    .h(ui(LINE_H))
                     .w_full()
                     .flex()
                     .items_center()
@@ -592,8 +593,8 @@ impl Traffic {
                     .child(
                         div()
                             .id(("compare-fold-open", i))
-                            .px(px(10.))
-                            .rounded(px(10.))
+                            .px(ui(10.))
+                            .rounded(ui(10.))
                             .cursor_pointer()
                             .reachable()
                             .bg(rgb(c.chip))
@@ -624,9 +625,9 @@ impl Traffic {
             div()
                 .id(id)
                 .flex_shrink_0()
-                .h(px(30.))
-                .px(px(14.))
-                .rounded(px(15.))
+                .h(ui(30.))
+                .px(ui(14.))
+                .rounded(ui(15.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
@@ -684,9 +685,9 @@ impl Traffic {
             div()
                 .flex_1()
                 .min_w_0()
-                .px(px(8.))
-                .py(px(2.))
-                .rounded(px(6.))
+                .px(ui(8.))
+                .py(ui(2.))
+                .rounded(ui(6.))
                 .when_some(ground, |d, ground| d.bg(rgb(ground)))
                 .child(text)
         };
@@ -694,17 +695,17 @@ impl Traffic {
             div()
                 .flex()
                 .flex_row()
-                .gap(px(6.))
-                .child(div().w(px(160.)).flex_shrink_0())
+                .gap(ui(6.))
+                .child(div().w(ui(160.)).flex_shrink_0())
                 .child(cell(format!("#{}", a.id), None).font_weight(FontWeight::BOLD))
                 .child(cell(format!("#{}", b.id), None).font_weight(FontWeight::BOLD))
         };
         let overview = div()
             .flex()
             .flex_col()
-            .gap(px(2.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(2.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
             .child(table_head())
             .children(
@@ -716,13 +717,13 @@ impl Traffic {
                         div()
                             .flex()
                             .flex_row()
-                            .gap(px(6.))
+                            .gap(ui(6.))
                             .when(!differ, |d| d.text_color(rgb(c.muted)))
                             .child(
                                 div()
-                                    .w(px(160.))
+                                    .w(ui(160.))
                                     .flex_shrink_0()
-                                    .py(px(2.))
+                                    .py(ui(2.))
                                     .text_color(rgb(c.muted))
                                     .child(name),
                             )
@@ -745,7 +746,7 @@ impl Traffic {
             .flex()
             .flex_row()
             .items_center()
-            .gap(px(6.))
+            .gap(ui(6.))
             .child(
                 chip("compare-request", tr!("Request"), side == Side::Request).on_click(
                     cx.listener(|this, _, _, cx| this.set_compare_side(Side::Request, cx)),
@@ -756,7 +757,7 @@ impl Traffic {
                     cx.listener(|this, _, _, cx| this.set_compare_side(Side::Response, cx)),
                 ),
             )
-            .child(div().w(px(12.)))
+            .child(div().w(ui(12.)))
             .children(parts.into_iter().map(|part| {
                 let label = match page.differences(side, part) {
                     Some(0) => part_name(part),
@@ -776,10 +777,10 @@ impl Traffic {
             div()
                 .flex()
                 .flex_col()
-                .gap(px(2.))
+                .gap(ui(2.))
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .child(table_head())
                 .children(pairs.into_iter().map(|pair| {
                     let change = pair.change();
@@ -790,13 +791,13 @@ impl Traffic {
                     div()
                         .flex()
                         .flex_row()
-                        .gap(px(6.))
+                        .gap(ui(6.))
                         .when(change == Change::Same, |d| d.text_color(rgb(c.muted)))
                         .child(
                             div()
-                                .w(px(160.))
+                                .w(ui(160.))
                                 .flex_shrink_0()
-                                .py(px(3.))
+                                .py(ui(3.))
                                 .overflow_hidden()
                                 .child(pair.name),
                         )
@@ -804,7 +805,7 @@ impl Traffic {
                         .child(cell(pair.b.unwrap_or_default(), right))
                 }))
         };
-        let note = |text: String| div().py(px(8.)).text_color(rgb(c.muted)).child(text);
+        let note = |text: String| div().py(ui(8.)).text_color(rgb(c.muted)).child(text);
 
         let content: AnyElement = match page.part {
             ComparePart::Headers => {
@@ -819,7 +820,7 @@ impl Traffic {
                     .overflow_y_scroll()
                     .flex()
                     .flex_col()
-                    .gap(px(10.))
+                    .gap(ui(10.))
                     .child(if headers.is_empty() {
                         note(tr!("Neither has headers kept."))
                     } else {
@@ -829,7 +830,7 @@ impl Traffic {
                         div()
                             .flex()
                             .flex_col()
-                            .gap(px(4.))
+                            .gap(ui(4.))
                             .child(eyebrow(tr!("Trailers")))
                             .child(pairs_table(trailers))
                     }))
@@ -908,19 +909,19 @@ impl Traffic {
                         div()
                             .flex()
                             .flex_row()
-                            .gap(px(4.))
+                            .gap(ui(4.))
                             .child(
                                 chip("compare-tree", tr!("Fields"), tree)
-                                    .h(px(26.))
-                                    .text_size(px(12.))
+                                    .h(ui(26.))
+                                    .text_size(ui(12.))
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.set_compare_tree(true, cx)
                                     })),
                             )
                             .child(
                                 chip("compare-lines-view", tr!("Lines"), !tree)
-                                    .h(px(26.))
-                                    .text_size(px(12.))
+                                    .h(ui(26.))
+                                    .text_size(ui(12.))
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.set_compare_tree(false, cx)
                                     })),
@@ -931,13 +932,13 @@ impl Traffic {
                         .min_h_0()
                         .flex()
                         .flex_col()
-                        .gap(px(6.))
+                        .gap(ui(6.))
                         .child(
                             div()
                                 .flex()
                                 .flex_row()
-                                .gap(px(6.))
-                                .text_size(px(12.))
+                                .gap(ui(6.))
+                                .text_size(ui(12.))
                                 .text_color(rgb(c.muted))
                                 .child(div().flex_1().child(kind(&diff.a)))
                                 .child(div().flex_1().child(kind(&diff.b))),
@@ -947,7 +948,7 @@ impl Traffic {
                                 .flex()
                                 .flex_row()
                                 .items_center()
-                                .gap(px(10.))
+                                .gap(ui(10.))
                                 .child(div().flex_1().font_weight(FontWeight::BOLD).child(said))
                                 .children(views),
                         )
@@ -956,12 +957,12 @@ impl Traffic {
                                 .flex_1()
                                 .min_h_0()
                                 .flex()
-                                .rounded(px(12.))
+                                .rounded(ui(12.))
                                 .overflow_hidden()
                                 .bg(rgb(c.code))
                                 .font_family(crate::MONO_FONT)
                                 .font_features(gpui::FontFeatures::disable_ligatures())
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .child(if tree {
                                     uniform_list(
                                         "compare-fields",
@@ -995,13 +996,13 @@ impl Traffic {
             .min_h_0()
             .flex()
             .flex_col()
-            .gap(px(10.))
+            .gap(ui(10.))
             .child(
                 div()
                     .flex()
                     .flex_row()
                     .items_center()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(
                         div()
                             .flex_1()
@@ -1009,7 +1010,7 @@ impl Traffic {
                             .flex_col()
                             .child(
                                 div()
-                                    .text_size(px(20.))
+                                    .text_size(ui(20.))
                                     .font_weight(FontWeight::BOLD)
                                     .child(tr!("Compare")),
                             )
@@ -1036,9 +1037,9 @@ impl Traffic {
                     .min_h_0()
                     .flex()
                     .flex_col()
-                    .gap(px(10.))
-                    .p(px(14.))
-                    .rounded(px(22.))
+                    .gap(ui(10.))
+                    .p(ui(14.))
+                    .rounded(ui(22.))
                     .bg(rgb(c.surface))
                     .child(tabs)
                     .child(content),

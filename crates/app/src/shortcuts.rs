@@ -1,12 +1,13 @@
 //! The keyboard: what each key does, and the list the window shows of them.
 //! `mod` is ⌘ on macOS and Ctrl elsewhere, as gpui's `secondary` is.
 
+use crate::text_size::ui;
 use crate::{
     colors::{colors, with_alpha},
     traffic::{Screen, Traffic},
     widgets::{Reachable, eyebrow},
 };
-use gpui::{Context, FontWeight, IntoElement, div, prelude::*, px, rgb, rgba};
+use gpui::{Context, FontWeight, IntoElement, div, prelude::*, rgb, rgba};
 use tracewing_i18n::tr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -230,25 +231,25 @@ impl Traffic {
             div()
                 .flex()
                 .flex_col()
-                .gap(px(6.))
+                .gap(ui(6.))
                 .child(eyebrow(title))
                 .children(rows.into_iter().map(|(keys, what)| {
                     div()
                         .flex()
                         .flex_row()
                         .items_center()
-                        .gap(px(14.))
+                        .gap(ui(14.))
                         .child(
-                            div().w(px(170.)).flex_shrink_0().child(
+                            div().w(ui(170.)).flex_shrink_0().child(
                                 div()
-                                    .px(px(8.))
-                                    .py(px(2.))
-                                    .rounded(px(8.))
+                                    .px(ui(8.))
+                                    .py(ui(2.))
+                                    .rounded(ui(8.))
                                     .bg(rgb(c.chip))
                                     .text_color(rgb(c.on_chip))
                                     .font_family(crate::MONO_FONT)
                                     .font_features(gpui::FontFeatures::disable_ligatures())
-                                    .text_size(px(12.))
+                                    .text_size(ui(12.))
                                     .child(row_label(keys)),
                             ),
                         )
@@ -269,12 +270,12 @@ impl Traffic {
             .child(
                 div()
                     .id("shortcuts")
-                    .w(px(620.))
+                    .w(ui(620.))
                     .flex()
                     .flex_col()
-                    .gap(px(18.))
-                    .p(px(24.))
-                    .rounded(px(22.))
+                    .gap(ui(18.))
+                    .p(ui(24.))
+                    .rounded(ui(22.))
                     .bg(rgb(c.surface))
                     .text_color(rgb(c.text))
                     .child(
@@ -285,16 +286,16 @@ impl Traffic {
                             .child(
                                 div()
                                     .flex_1()
-                                    .text_size(px(18.))
+                                    .text_size(ui(18.))
                                     .font_weight(FontWeight::BOLD)
                                     .child(tr!("Keyboard shortcuts")),
                             )
                             .child(
                                 div()
                                     .id("shortcuts-close")
-                                    .px(px(12.))
-                                    .py(px(4.))
-                                    .rounded(px(14.))
+                                    .px(ui(12.))
+                                    .py(ui(4.))
+                                    .rounded(ui(14.))
                                     .cursor_pointer()
                                     .reachable()
                                     .bg(rgb(c.chip))

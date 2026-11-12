@@ -23,6 +23,7 @@
 //! stretch of each edge resizes diagonally, so corners are easy to grab. Tiled
 //! or maximised sides have neither margin nor border.
 
+use crate::text_size::ui;
 use gpui::{
     App, BoxShadow, Corners, CursorStyle, Decorations, Div, Edges, FontWeight, HitboxBehavior,
     Hsla, MouseButton, Pixels, Point, ResizeEdge, Size, Stateful, Tiling, Window, WindowButton,
@@ -147,7 +148,7 @@ fn gnome_button(b: WindowButton) -> Stateful<Div> {
     };
     div()
         .id(b.id())
-        .size(px(24.))
+        .size(ui(24.))
         .flex()
         .items_center()
         .justify_center()
@@ -159,7 +160,7 @@ fn gnome_button(b: WindowButton) -> Stateful<Div> {
         .child(
             svg()
                 .path(icon)
-                .size(px(14.))
+                .size(ui(14.))
                 .text_color(rgb(colors().text)),
         )
 }
@@ -193,15 +194,15 @@ pub fn appearance_switch(now: Appearance) -> Stateful<Div> {
             if cfg!(target_os = "windows") {
                 d.w(px(CAPTION_W)).h_full().hover(|s| s.bg(rgb(c.hover)))
             } else if cfg!(target_os = "macos") {
-                d.size(px(26.)).rounded_full().hover(|s| s.bg(rgb(c.hover)))
+                d.size(ui(26.)).rounded_full().hover(|s| s.bg(rgb(c.hover)))
             } else {
-                d.size(px(24.))
+                d.size(ui(24.))
                     .rounded_full()
                     .bg(rgb(c.button))
                     .hover(|s| s.bg(rgb(c.button_hover)))
             }
         })
-        .child(svg().path(icon).size(px(14.)).text_color(rgb(c.text)))
+        .child(svg().path(icon).size(ui(14.)).text_color(rgb(c.text)))
 }
 
 /// Flat full-height buttons, as Windows draws them. They do nothing on a
@@ -224,7 +225,7 @@ fn windows_buttons(window: &Window) -> Div {
             .child(
                 svg()
                     .path(icon)
-                    .size(px(10.))
+                    .size(ui(10.))
                     .text_color(rgb(colors().text))
                     .when(close, |d| {
                         d.group_hover(id, |s| s.text_color(gpui::white()))
@@ -278,7 +279,7 @@ pub fn window_chrome(
         let buttons = (!fullscreen).then(|| windows_buttons(window));
         (
             row(),
-            row().pl(px(6.)).children(switch.take()).children(buttons),
+            row().pl(ui(6.)).children(switch.take()).children(buttons),
         )
     } else if mac {
         // The system draws the traffic lights over the left end.
@@ -294,15 +295,15 @@ pub fn window_chrome(
                 .collect::<Vec<_>>()
         };
         let left = row()
-            .gap(px(10.))
-            .pl(px(10.))
-            .pr(px(6.))
+            .gap(ui(10.))
+            .pl(ui(10.))
+            .pr(ui(6.))
             .children(buttons(&layout.left))
             .children(switch.take_if(|_| end == End::Left));
         let right = row()
-            .gap(px(10.))
-            .pl(px(6.))
-            .pr(px(10.))
+            .gap(ui(10.))
+            .pl(ui(6.))
+            .pr(ui(10.))
             .children(switch.take_if(|_| end == End::Right))
             .children(buttons(&layout.right));
         (left, right)
@@ -343,7 +344,7 @@ pub fn window_chrome(
                     .flex_1()
                     .flex()
                     .justify_center()
-                    .text_size(px(13.))
+                    .text_size(ui(13.))
                     .font_weight(FontWeight::BOLD)
                     .text_color(rgb(colors().muted))
                     .child("tracewing"),

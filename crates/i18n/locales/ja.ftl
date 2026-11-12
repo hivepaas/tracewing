@@ -1570,6 +1570,15 @@ ta8606963 = { $key }: "{ $text }" は整数ではありません
 # {key}: must not be negative
 t9c4debaa = { $key }: 負の値は指定できません
 
+# {size} (default)
+t5606e442 = { $size }(既定)
+
+# Text size
+t2c041143 = 文字サイズ
+
+# In px, for the text of lists and bodies. Everything grows with it. Applies at once.
+tb8052ae6 = px 単位。リストや本文の文字の大きさです。ほかの部分も合わせて大きくなります。すぐに反映されます。
+
 # Appearance
 t31018b9f = 外観
 

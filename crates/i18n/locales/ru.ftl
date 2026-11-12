@@ -1753,6 +1753,15 @@ ta8606963 = { $key }: "{ $text }" — не целое число
 # {key}: must not be negative
 t9c4debaa = { $key }: не может быть отрицательным
 
+# {size} (default)
+t5606e442 = { $size } (по умолчанию)
+
+# Text size
+t2c041143 = Размер текста
+
+# In px, for the text of lists and bodies. Everything grows with it. Applies at once.
+tb8052ae6 = В px, для текста списков и содержимого. Всё остальное растёт вместе с ним. Применяется сразу.
+
 # Appearance
 t31018b9f = Внешний вид
 

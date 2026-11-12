@@ -3,6 +3,7 @@
 //! hands it the keys pressed here. Closed, the inspector goes back beside or
 //! below the list.
 
+use crate::text_size::ui;
 use crate::{chrome, colors::colors, layout::WindowState, placement, traffic::Traffic};
 use gpui::{
     AnyWindowHandle, AppContext as _, Bounds, Context, Entity, IntoElement, Render, Subscription,
@@ -43,6 +44,8 @@ impl Render for InspectorWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let traffic = self.traffic.clone();
+        let size = traffic.read(cx).text_size();
+        window.set_rem_size(crate::text_size::rem_for(size));
         let (inspector, focus, appearance) = traffic.update(cx, |traffic, cx| {
             (
                 traffic.render_inspector(cx).into_any_element(),
@@ -61,13 +64,13 @@ impl Render for InspectorWindow {
             .min_h_0()
             .w_full()
             // Close under the title bar, as the main window's toolbar is.
-            .pt(px(2.))
-            .px(px(10.))
-            .pb(px(10.))
+            .pt(ui(2.))
+            .px(ui(10.))
+            .pb(ui(10.))
             .flex()
             .text_color(rgb(c.text))
             .font_family(crate::FONT)
-            .text_size(px(13.))
+            .text_size(ui(13.))
             .child(inspector);
         let switch = chrome::appearance_switch(appearance).on_click(move |_, window, cx| {
             traffic.update(cx, |traffic, cx| {

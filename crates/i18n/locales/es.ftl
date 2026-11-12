@@ -1691,6 +1691,15 @@ ta8606963 = { $key }: "{ $text }" no es un número entero
 # {key}: must not be negative
 t9c4debaa = { $key }: no debe ser negativo
 
+# {size} (default)
+t5606e442 = { $size } (predeterminado)
+
+# Text size
+t2c041143 = Tamaño del texto
+
+# In px, for the text of lists and bodies. Everything grows with it. Applies at once.
+tb8052ae6 = En px, para el texto de listas y cuerpos. Todo crece con él. Se aplica al instante.
+
 # Appearance
 t31018b9f = Apariencia
 

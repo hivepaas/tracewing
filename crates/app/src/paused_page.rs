@@ -2,13 +2,14 @@
 //! on, or drop. A request or a response waits here until then, and so does the
 //! app that sent it.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     input::TextInput,
     traffic::{Screen, Traffic},
     widgets::{Reachable, eyebrow},
 };
-use gpui::{AppContext as _, Context, Div, Entity, FontWeight, Stateful, div, prelude::*, px, rgb};
+use gpui::{AppContext as _, Context, Div, Entity, FontWeight, Stateful, div, prelude::*, rgb};
 use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::pause::{self, Message, Paused, Stage, Verdict};
 
@@ -227,9 +228,9 @@ impl Traffic {
             div()
                 .id(id)
                 .flex_shrink_0()
-                .h(px(34.))
-                .px(px(16.))
-                .rounded(px(17.))
+                .h(ui(34.))
+                .px(ui(16.))
+                .rounded(ui(17.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
@@ -242,9 +243,9 @@ impl Traffic {
         let field = |input: &Entity<TextInput>| {
             div()
                 .w_full()
-                .px(px(12.))
-                .py(px(8.))
-                .rounded(px(12.))
+                .px(ui(12.))
+                .py(ui(8.))
+                .rounded(ui(12.))
                 .bg(rgb(c.input))
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
@@ -271,17 +272,17 @@ impl Traffic {
                 .id(("paused", id))
                 .flex()
                 .flex_col()
-                .gap(px(2.))
-                .px(px(12.))
-                .py(px(10.))
-                .rounded(px(14.))
+                .gap(ui(2.))
+                .px(ui(12.))
+                .py(ui(10.))
+                .rounded(ui(14.))
                 .cursor_pointer()
                 .reachable()
                 .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
                 .when(!on, |d| d.bg(rgb(c.surface)))
                 .child(
                     div()
-                        .text_size(px(11.))
+                        .text_size(ui(11.))
                         .font_weight(FontWeight::BOLD)
                         .text_color(rgb(c.muted))
                         .child(format!("{stage} · {at}")),
@@ -290,7 +291,7 @@ impl Traffic {
                     div()
                         .font_family(crate::MONO_FONT)
                         .font_features(gpui::FontFeatures::disable_ligatures())
-                        .text_size(px(12.))
+                        .text_size(ui(12.))
                         .overflow_hidden()
                         .text_ellipsis()
                         .whitespace_nowrap()
@@ -298,7 +299,7 @@ impl Traffic {
                 )
                 .child(
                     div()
-                        .text_size(px(12.))
+                        .text_size(ui(12.))
                         .text_color(rgb(c.muted))
                         .child(paused.rule.clone()),
                 )
@@ -321,7 +322,7 @@ impl Traffic {
                     div()
                         .font_family(crate::MONO_FONT)
                         .font_features(gpui::FontFeatures::disable_ligatures())
-                        .text_size(px(12.))
+                        .text_size(ui(12.))
                         .text_color(rgb(c.muted))
                         .overflow_hidden()
                         .text_ellipsis()
@@ -337,22 +338,22 @@ impl Traffic {
                     Stage::Request => div()
                         .flex()
                         .flex_row()
-                        .gap(px(8.))
-                        .child(div().w(px(110.)).flex_shrink_0().child(field(&page.method)))
+                        .gap(ui(8.))
+                        .child(div().w(ui(110.)).flex_shrink_0().child(field(&page.method)))
                         .child(div().flex_1().min_w_0().child(field(&page.url))),
                     Stage::Response => div()
                         .flex()
                         .flex_row()
                         .items_center()
-                        .gap(px(8.))
-                        .child(div().w(px(110.)).flex_shrink_0().child(field(&page.status)))
+                        .gap(ui(8.))
+                        .child(div().w(ui(110.)).flex_shrink_0().child(field(&page.status)))
                         .child(
                             div()
                                 .flex_1()
                                 .min_w_0()
                                 .font_family(crate::MONO_FONT)
                                 .font_features(gpui::FontFeatures::disable_ligatures())
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .text_color(rgb(c.muted))
                                 .overflow_hidden()
                                 .text_ellipsis()
@@ -372,9 +373,9 @@ impl Traffic {
                     .overflow_y_scroll()
                     .flex()
                     .flex_col()
-                    .gap(px(10.))
-                    .p(px(14.))
-                    .rounded(px(22.))
+                    .gap(ui(10.))
+                    .p(ui(14.))
+                    .rounded(ui(22.))
                     .bg(rgb(c.surface))
                     .child(eyebrow(match paused.stage {
                         Stage::Request => tr!("The request, before the server gets it"),
@@ -404,7 +405,7 @@ impl Traffic {
                             .flex()
                             .flex_row()
                             .flex_wrap()
-                            .gap(px(8.))
+                            .gap(ui(8.))
                             .child(
                                 chip("paused-send", tr!("Send"), true)
                                     .on_click(cx.listener(|this, _, _, cx| this.send_paused(cx))),
@@ -429,23 +430,23 @@ impl Traffic {
             .min_h_0()
             .flex()
             .flex_col()
-            .gap(px(10.))
+            .gap(ui(10.))
             .child(
                 div()
                     .flex()
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(10.))
+                    .gap(ui(10.))
                     .child(
                         div()
                             .flex_1()
-                            .min_w(px(280.))
+                            .min_w(ui(280.))
                             .flex()
                             .flex_col()
                             .child(
                                 div()
-                                    .text_size(px(20.))
+                                    .text_size(ui(20.))
                                     .font_weight(FontWeight::BOLD)
                                     .child(tr!("Paused")),
                             )
@@ -470,17 +471,17 @@ impl Traffic {
                     .min_h_0()
                     .flex()
                     .flex_row()
-                    .gap(px(10.))
+                    .gap(ui(10.))
                     .when(count > 0, |d| {
                         d.child(
                             div()
                                 .id("paused-list")
-                                .w(px(320.))
+                                .w(ui(320.))
                                 .flex_shrink_0()
                                 .overflow_y_scroll()
                                 .flex()
                                 .flex_col()
-                                .gap(px(6.))
+                                .gap(ui(6.))
                                 .children(list),
                         )
                     })
