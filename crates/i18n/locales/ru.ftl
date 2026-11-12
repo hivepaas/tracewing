@@ -730,6 +730,18 @@ t51e7624c = Сообщений пока нет
 # {said} kept, of {size}
 t3558745a = Сохранено { $said } из { $size }
 
+# The socket has closed.
+t8d883a0f = Сокет закрыт.
+
+# Too many are still waiting to go. Try again.
+tbea55dfd = Слишком много сообщений ещё ждут отправки. Попробуйте снова.
+
+# To the server
+te1ef193a = Серверу
+
+# To the app
+t1bcabce4 = Приложению
+
 # Layouts
 t17809004 = Раскладки
 
@@ -2019,6 +2031,9 @@ t19f89214 = Имя, например iPhone тест
 
 # A name, as Phone
 tfce439bf = Имя, например Phone
+
+# A message to send; {keys} sends it
+tf9d9c09b = Сообщение для отправки; { $keys } — отправить
 
 # The search index: {e}
 te3c971c9 = Поисковый индекс: { $e }

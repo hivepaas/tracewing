@@ -670,6 +670,18 @@ t51e7624c = Chưa có tin nhắn
 # {said} kept, of {size}
 t3558745a = Giữ { $said } trong { $size }
 
+# The socket has closed.
+t8d883a0f = Socket đã đóng.
+
+# Too many are still waiting to go. Try again.
+tbea55dfd = Còn quá nhiều message đang chờ gửi. Hãy thử lại.
+
+# To the server
+te1ef193a = Tới server
+
+# To the app
+t1bcabce4 = Tới ứng dụng
+
 # Layouts
 t17809004 = Bố cục
 
@@ -1833,6 +1845,9 @@ t19f89214 = Một cái tên, như iPhone test
 
 # A name, as Phone
 tfce439bf = Tên, ví dụ Phone
+
+# A message to send; {keys} sends it
+tf9d9c09b = Message cần gửi; { $keys } để gửi
 
 # The search index: {e}
 te3c971c9 = Chỉ mục tìm kiếm: { $e }

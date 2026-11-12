@@ -10,6 +10,7 @@ pub mod lan;
 pub mod pause;
 pub mod relay;
 pub mod rules;
+pub mod sockets;
 pub mod throttle;
 pub mod traffic_rules;
 pub mod upstream;
@@ -109,6 +110,8 @@ pub struct ProxyOptions {
     pub relay: Arc<relay::Relay>,
     /// Where TLS secrets are written for Wireshark, while they are.
     pub tls_keys: Arc<key_log::TlsKeys>,
+    /// The WebSockets open now, for the window to send messages into.
+    pub sockets: Arc<sockets::Sockets>,
 }
 
 #[derive(Debug)]
@@ -217,6 +220,7 @@ pub async fn run_proxy(
             network: opts.network,
             relay: Arc::clone(&opts.relay),
             connector: connector.clone(),
+            sockets: Arc::clone(&opts.sockets),
         },
     );
     let stop_limit = opts.stop_limit;

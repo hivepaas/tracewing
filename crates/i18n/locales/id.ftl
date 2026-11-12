@@ -670,6 +670,18 @@ t51e7624c = Belum ada pesan
 # {said} kept, of {size}
 t3558745a = { $said } disimpan, dari { $size }
 
+# The socket has closed.
+t8d883a0f = Soket sudah tertutup.
+
+# Too many are still waiting to go. Try again.
+tbea55dfd = Terlalu banyak yang masih menunggu dikirim. Coba lagi.
+
+# To the server
+te1ef193a = Ke server
+
+# To the app
+t1bcabce4 = Ke aplikasi
+
 # Layouts
 t17809004 = Tata letak
 
@@ -1833,6 +1845,9 @@ t19f89214 = Nama, misalnya Tes iPhone
 
 # A name, as Phone
 tfce439bf = Nama, misalnya Phone
+
+# A message to send; {keys} sends it
+tf9d9c09b = Pesan untuk dikirim; { $keys } mengirimnya
 
 # The search index: {e}
 te3c971c9 = Indeks pencarian: { $e }

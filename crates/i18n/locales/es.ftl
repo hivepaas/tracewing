@@ -708,6 +708,18 @@ t51e7624c = Aún no hay mensajes
 # {said} kept, of {size}
 t3558745a = { $said } guardados de { $size }
 
+# The socket has closed.
+t8d883a0f = El socket se ha cerrado.
+
+# Too many are still waiting to go. Try again.
+tbea55dfd = Demasiados esperan aún para salir. Inténtalo de nuevo.
+
+# To the server
+te1ef193a = Al servidor
+
+# To the app
+t1bcabce4 = A la app
+
 # Layouts
 t17809004 = Diseños
 
@@ -1958,6 +1970,9 @@ t19f89214 = Un nombre, como iPhone de pruebas
 
 # A name, as Phone
 tfce439bf = Un nombre, p. ej. Phone
+
+# A message to send; {keys} sends it
+tf9d9c09b = Un mensaje para enviar; { $keys } lo envía
 
 # The search index: {e}
 te3c971c9 = El índice de búsqueda: { $e }

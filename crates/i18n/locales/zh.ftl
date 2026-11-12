@@ -670,6 +670,18 @@ t51e7624c = 暂无消息
 # {said} kept, of {size}
 t3558745a = 已保留 { $said }，共 { $size }
 
+# The socket has closed.
+t8d883a0f = 套接字已关闭。
+
+# Too many are still waiting to go. Try again.
+tbea55dfd = 等待发送的消息过多，请重试。
+
+# To the server
+te1ef193a = 发往服务器
+
+# To the app
+t1bcabce4 = 发往应用
+
 # Layouts
 t17809004 = 布局
 
@@ -1833,6 +1845,9 @@ t19f89214 = 名称，如：测试用 iPhone
 
 # A name, as Phone
 tfce439bf = 名称，如：Phone
+
+# A message to send; {keys} sends it
+tf9d9c09b = 要发送的消息；按 { $keys } 发送
 
 # The search index: {e}
 te3c971c9 = 搜索索引：{ $e }

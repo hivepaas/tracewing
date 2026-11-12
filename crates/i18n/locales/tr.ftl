@@ -702,6 +702,18 @@ t51e7624c = Henüz mesaj yok
 # {said} kept, of {size}
 t3558745a = { $size } içinden { $said } saklandı
 
+# The socket has closed.
+t8d883a0f = Soket kapandı.
+
+# Too many are still waiting to go. Try again.
+tbea55dfd = Gönderilmeyi bekleyen çok fazla ileti var. Yeniden deneyin.
+
+# To the server
+te1ef193a = Sunucuya
+
+# To the app
+t1bcabce4 = Uygulamaya
+
 # Layouts
 t17809004 = Düzenler
 
@@ -1907,6 +1919,9 @@ t19f89214 = Bir ad, örneğin iPhone test
 
 # A name, as Phone
 tfce439bf = Bir ad, örneğin Phone
+
+# A message to send; {keys} sends it
+tf9d9c09b = Gönderilecek ileti; { $keys } gönderir
 
 # The search index: {e}
 te3c971c9 = Arama dizini: { $e }

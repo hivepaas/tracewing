@@ -8,6 +8,7 @@ use crate::{
     colors::colors,
     flows::{size_text, time_text},
     traffic::Traffic,
+    widgets::Reachable,
 };
 use gpui::{
     Context, Div, Entity, FontWeight, ScrollStrategy, SharedString, Stateful,
@@ -15,6 +16,7 @@ use gpui::{
 };
 use std::{collections::HashMap, ops::Range};
 use tracewing_i18n::tr;
+use tracewing_proxy::sockets::{NotSent, Said, Toward};
 use tracewing_store::session::{self, BodyReader, StoredMessage};
 
 const ROW_HEIGHT: f32 = 26.;
@@ -32,6 +34,10 @@ pub struct MessagesState {
     pub view: Option<Entity<BodyView>>,
     previews: HashMap<i64, SharedString>,
     scroll: UniformListScrollHandle,
+    /// Where a message the window sends goes.
+    pub toward: Toward,
+    /// Why the last one could not be sent.
+    pub send_problem: Option<String>,
 }
 
 impl MessagesState {
@@ -43,6 +49,8 @@ impl MessagesState {
             view: None,
             previews: HashMap::new(),
             scroll: UniformListScrollHandle::new(),
+            toward: Toward::Server,
+            send_problem: None,
         }
     }
 }
@@ -314,13 +322,171 @@ impl Traffic {
                         })),
                 )
         });
+        let sending = self.render_socket_send(cx);
         div()
             .size_full()
             .flex()
             .flex_col()
             .pt(px(6.))
             .child(list)
+            .children(sending)
             .children(viewer)
+    }
+
+    /// Whether the socket the inspector shows is open, to send into.
+    pub fn socket_open(&self) -> bool {
+        self.inspector
+            .messages
+            .as_ref()
+            .is_some_and(|state| self.engine.sockets.is_open(state.flow_id))
+    }
+
+    pub fn set_socket_toward(&mut self, toward: Toward, cx: &mut Context<Self>) {
+        if let Some(state) = &mut self.inspector.messages {
+            state.toward = toward;
+            cx.notify();
+        }
+    }
+
+    /// Sends what is typed into the socket, the way chosen. It joins the
+    /// list as it is written down, as any message.
+    pub fn send_socket_message(&mut self, cx: &mut Context<Self>) {
+        let text = self.socket_message.read(cx).text().to_owned();
+        let Some(state) = &mut self.inspector.messages else {
+            return;
+        };
+        if text.is_empty() {
+            return;
+        }
+        let sent = self
+            .engine
+            .sockets
+            .send(state.flow_id, state.toward, Said::Text(text));
+        state.send_problem = match sent {
+            Ok(()) => None,
+            Err(NotSent::NotOpen) => Some(tr!("The socket has closed.")),
+            Err(NotSent::Busy) => Some(tr!("Too many are still waiting to go. Try again.")),
+        };
+        if sent.is_ok() {
+            self.socket_message
+                .update(cx, |input, cx| input.set_text("", 0..0, cx));
+        }
+        cx.notify();
+    }
+
+    /// Where a message is typed and sent, while the socket is open.
+    fn render_socket_send(&self, cx: &mut Context<Self>) -> Option<Div> {
+        let state = self.inspector.messages.as_ref()?;
+        let open = self.engine.sockets.is_open(state.flow_id);
+        if !open && state.send_problem.is_none() {
+            return None;
+        }
+        let c = colors();
+        let toward = state.toward;
+        let chip = |id: &'static str, label: String, on: bool| {
+            div()
+                .id(id)
+                .h(px(26.))
+                .px(px(10.))
+                .rounded(px(13.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .reachable()
+                .text_size(px(12.))
+                .font_weight(FontWeight::BOLD)
+                .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
+                .when(!on, |d| d.text_color(rgb(c.muted)))
+                .child(label)
+        };
+        let problem = state.send_problem.clone();
+        Some(
+            div()
+                .flex_shrink_0()
+                .border_t_1()
+                .border_color(rgb(c.line))
+                .px(px(10.))
+                .py(px(8.))
+                .flex()
+                .flex_col()
+                .gap(px(6.))
+                .when(open, |d| {
+                    d.child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .items_center()
+                            .gap(px(4.))
+                            .child(
+                                chip(
+                                    "send-to-server",
+                                    tr!("To the server"),
+                                    toward == Toward::Server,
+                                )
+                                .on_click(cx.listener(
+                                    |this, _, _, cx| this.set_socket_toward(Toward::Server, cx),
+                                )),
+                            )
+                            .child(
+                                chip("send-to-app", tr!("To the app"), toward == Toward::App)
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.set_socket_toward(Toward::App, cx)
+                                    })),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .items_end()
+                            .gap(px(8.))
+                            .child(
+                                div()
+                                    .id("socket-message")
+                                    .flex_1()
+                                    .min_w_0()
+                                    .px(px(10.))
+                                    .py(px(6.))
+                                    .rounded(px(10.))
+                                    .bg(rgb(c.input))
+                                    .font_family(crate::MONO_FONT)
+                                    .text_size(px(12.5))
+                                    .child(self.socket_message.clone())
+                                    .on_key_down(cx.listener(
+                                        |this, event: &gpui::KeyDownEvent, _, cx| {
+                                            let keys = &event.keystroke;
+                                            if keys.key == "enter" && keys.modifiers.secondary() {
+                                                cx.stop_propagation();
+                                                this.send_socket_message(cx);
+                                            }
+                                        },
+                                    )),
+                            )
+                            .child(
+                                div()
+                                    .id("send-socket-message")
+                                    .h(px(30.))
+                                    .px(px(14.))
+                                    .rounded(px(15.))
+                                    .flex()
+                                    .items_center()
+                                    .cursor_pointer()
+                                    .reachable()
+                                    .bg(rgb(c.accent))
+                                    .text_color(rgb(c.on_accent))
+                                    .text_size(px(12.5))
+                                    .font_weight(FontWeight::BOLD)
+                                    .child(tr!("Send"))
+                                    .on_click(
+                                        cx.listener(|this, _, _, cx| this.send_socket_message(cx)),
+                                    ),
+                            ),
+                    )
+                })
+                .children(
+                    problem.map(|why| div().text_size(px(12.)).text_color(rgb(c.error)).child(why)),
+                ),
+        )
     }
 }
 

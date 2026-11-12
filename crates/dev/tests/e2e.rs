@@ -46,6 +46,7 @@ struct Harness {
     live: Arc<Live>,
     relay: Arc<tracewing_proxy::relay::Relay>,
     tls_keys: Arc<tracewing_proxy::key_log::TlsKeys>,
+    sockets: Arc<tracewing_proxy::sockets::Sockets>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -117,6 +118,7 @@ impl Harness {
         let live = Arc::new(Live::default());
         let relay = Arc::new(tracewing_proxy::relay::Relay::default());
         let tls_keys = Arc::new(tracewing_proxy::key_log::TlsKeys::default());
+        let sockets = Arc::new(tracewing_proxy::sockets::Sockets::default());
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -143,6 +145,7 @@ impl Harness {
                 other_devices: Some(Arc::clone(&other_devices)),
                 relay: Arc::clone(&relay),
                 tls_keys: Arc::clone(&tls_keys),
+                sockets: Arc::clone(&sockets),
             },
             async {
                 let _ = stopped.await;
@@ -169,6 +172,7 @@ impl Harness {
             origin: format!("https://localhost:{origin_port}"),
             relay,
             tls_keys,
+            sockets,
             stop,
             proxy,
         }
@@ -2558,6 +2562,93 @@ async fn a_websocket_carries_large_messages_and_pings() {
     ws.close(None).await.unwrap();
     while ws.next().await.is_some() {}
     let (_, conn, dir) = h.finish(1).await;
+    clean_up(conn, dir);
+}
+
+/// A message the window sends into an open socket reaches the side it is
+/// sent toward, and is written down with the others, that way.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_message_sent_from_the_window_goes_into_the_socket() {
+    use hudsucker::{futures::StreamExt, tokio_tungstenite::tungstenite::Message};
+    use tracewing_proxy::sockets::{NotSent, Said, Toward};
+    let h = Harness::start("ws-send").await;
+    let (mut ws, _) = playground_ws(&h, false, "/ws?ticks=0", &[]).await.unwrap();
+    assert!(ws.next().await.unwrap().unwrap().is_text(), "the hello");
+
+    // Its row, once written, is the one to send into.
+    let conn = Connection::open(h.dir.join("session/flows.db")).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let row = loop {
+        let row: Option<i64> = conn
+            .query_row(
+                "SELECT id FROM flows WHERE kind = 'websocket' AND open = 1",
+                [],
+                |r| r.get(0),
+            )
+            .ok();
+        if let Some(row) = row.filter(|row| h.sockets.is_open(*row)) {
+            break row;
+        }
+        assert!(Instant::now() < deadline, "the socket's row");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    };
+    assert_eq!(
+        h.sockets
+            .send(row + 1000, Toward::App, Said::Text("nowhere".into())),
+        Err(NotSent::NotOpen)
+    );
+
+    // To the app, as if from the server.
+    h.sockets
+        .send(row, Toward::App, Said::Text("from tracewing".into()))
+        .unwrap();
+    assert_eq!(
+        ws.next().await.unwrap().unwrap(),
+        Message::text("from tracewing")
+    );
+    // To the server, as if from the app: it echoes it back.
+    h.sockets
+        .send(row, Toward::Server, Said::Binary(vec![1, 2, 3]))
+        .unwrap();
+    assert_eq!(
+        ws.next().await.unwrap().unwrap(),
+        Message::binary(vec![1, 2, 3])
+    );
+
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while h.sockets.is_open(row) {
+        assert!(Instant::now() < deadline, "closed, it is no longer open");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(
+        h.sockets
+            .send(row, Toward::Server, Said::Text("late".into())),
+        Err(NotSent::NotOpen)
+    );
+    drop(conn);
+
+    let (_, conn, dir) = h.finish(1).await;
+    let messages: Vec<(bool, String, i64)> = {
+        let mut stmt = conn
+            .prepare("SELECT from_client, kind, bytes FROM messages WHERE flow_id = ?1 AND kind != 'close' ORDER BY id")
+            .unwrap();
+        stmt.query_map([row], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .skip(1)
+            .collect()
+    };
+    assert_eq!(
+        messages,
+        [
+            (false, "text".to_owned(), 14),
+            (true, "binary".to_owned(), 3),
+            (false, "binary".to_owned(), 3),
+        ],
+        "after the hello: sent to the app, sent to the server, its echo"
+    );
     clean_up(conn, dir);
 }
 

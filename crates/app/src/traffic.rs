@@ -352,6 +352,8 @@ pub struct Traffic {
     pub(crate) layouts_menu: bool,
     /// The name to keep the layout in use under.
     pub layout_name: Entity<TextInput>,
+    /// A message to send into the open socket the inspector shows.
+    pub socket_message: Entity<TextInput>,
     /// The list of keyboard shortcuts is open over the window.
     shortcuts_open: bool,
     /// The slow network's fields, once the Rules screen has been shown.
@@ -378,6 +380,22 @@ impl Traffic {
         let device_name = cx.new(|cx| TextInput::said(|| tr!("A name, as iPhone test"), cx));
         let host_filter = cx.new(|cx| TextInput::said(|| tr!("Filter"), cx));
         let layout_name = cx.new(|cx| TextInput::said(|| tr!("A name, as Phone"), cx));
+        let socket_message = cx.new(|cx| {
+            TextInput::said(
+                || {
+                    let keys = if cfg!(target_os = "macos") {
+                        "⌘↩"
+                    } else {
+                        "Ctrl+Enter"
+                    };
+                    tr!("A message to send; {keys} sends it", keys = keys)
+                },
+                cx,
+            )
+            .multiline(1, 6)
+        });
+        cx.subscribe(&socket_message, |_, _, _: &Changed, cx| cx.notify())
+            .detach();
         cx.subscribe(&layout_name, |_, _, _: &Changed, cx| cx.notify())
             .detach();
         cx.subscribe(&host_filter, |_, _, _: &Changed, cx| cx.notify())
@@ -477,6 +495,7 @@ impl Traffic {
             columns_menu: false,
             layouts_menu: false,
             layout_name,
+            socket_message,
             shortcuts_open: false,
             network_form: None,
             ids: None,

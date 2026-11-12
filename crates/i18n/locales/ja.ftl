@@ -670,6 +670,18 @@ t51e7624c = まだメッセージはありません
 # {said} kept, of {size}
 t3558745a = { $size } 中 { $said } を保持
 
+# The socket has closed.
+t8d883a0f = ソケットは閉じられました。
+
+# Too many are still waiting to go. Try again.
+tbea55dfd = 送信待ちが多すぎます。もう一度お試しください。
+
+# To the server
+te1ef193a = サーバーへ
+
+# To the app
+t1bcabce4 = アプリへ
+
 # Layouts
 t17809004 = レイアウト
 
@@ -1833,6 +1845,9 @@ t19f89214 = 名前（例: iPhone テスト）
 
 # A name, as Phone
 tfce439bf = 名前（例：Phone）
+
+# A message to send; {keys} sends it
+tf9d9c09b = 送信するメッセージ（{ $keys } で送信）
 
 # The search index: {e}
 te3c971c9 = 検索インデックス: { $e }

@@ -12,6 +12,7 @@ use crate::apps::Apps;
 use crate::ca::CRL_PATH;
 use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
+use crate::sockets::{Inbox, Registered, Sockets};
 use crate::throttle::{Conditions, Direction, Network};
 use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of, edit_body, edit_query};
 use crate::upstream::{BoxError, TimedConnector, TlsFailure, Upstream};
@@ -238,6 +239,7 @@ pub struct FlowHandler {
     network: Arc<Network>,
     relay: Arc<crate::relay::Relay>,
     connector: TimedConnector,
+    sockets: Arc<Sockets>,
     /// What slowed the request this clone is handling, to slow its response too.
     slowed: Option<Conditions>,
     /// Headers rules set, or take out, on the response of the request this
@@ -270,6 +272,8 @@ pub struct Controls {
     pub relay: Arc<crate::relay::Relay>,
     /// What connects to servers, for the WebSockets the proxy opens itself.
     pub connector: TimedConnector,
+    /// The WebSockets open now, for the window to send into.
+    pub sockets: Arc<Sockets>,
 }
 
 impl FlowHandler {
@@ -295,6 +299,7 @@ impl FlowHandler {
             network: controls.network,
             relay: controls.relay,
             connector: controls.connector,
+            sockets: controls.sockets,
             slowed: None,
             response_headers: Vec::new(),
             response_status: None,
@@ -1017,12 +1022,31 @@ impl FlowHandler {
                 WebSocketStream::from_raw_socket(TokioIo::new(upgraded), Role::Server, None).await;
             let (client_sink, client_stream) = client.split();
             let (server_sink, server_stream) = server.split();
-            tokio::spawn(
-                handler
-                    .clone()
-                    .pump(flow.clone(), true, client_stream, server_sink),
-            );
-            handler.pump(flow, false, server_stream, client_sink).await;
+            // Open to messages from the window while both ways go.
+            let (registered, to_server, to_app) = match flow.as_ref().and_then(|flow| flow.stream())
+            {
+                Some(stream) => {
+                    let (registered, to_server, to_app) = handler.sockets.open(stream);
+                    (Some(registered), Some(to_server), Some(to_app))
+                }
+                None => (None, None, None),
+            };
+            tokio::spawn(handler.clone().pump(
+                flow.clone(),
+                true,
+                client_stream,
+                server_sink,
+                (to_server, registered.clone()),
+            ));
+            handler
+                .pump(
+                    flow,
+                    false,
+                    server_stream,
+                    client_sink,
+                    (to_app, registered),
+                )
+                .await;
         });
         res
     }
@@ -1065,6 +1089,9 @@ impl FlowHandler {
         from_client: bool,
         mut stream: impl Stream<Item = Result<WsMessage, tungstenite::Error>> + Unpin + Send + 'static,
         sink: impl Sink<WsMessage, Error = tungstenite::Error> + Unpin + Send + 'static,
+        // What the window sends this way, and the socket's place among those
+        // open, kept while this way goes.
+        (mut inbox, _registered): (Option<Inbox>, Option<Arc<Registered>>),
     ) {
         let recorded = flow.as_ref().and_then(|flow| flow.stream());
         // A socket's calls are in its messages, so its row cannot be named
@@ -1081,18 +1108,30 @@ impl FlowHandler {
             Some(conditions) => Out::slow(sink, conditions),
             None => Out::Now(Box::pin(sink)),
         };
-        while let Some(message) = stream.next().await {
-            let message = match message {
-                Ok(message) => message,
-                Err(e) => {
-                    tracing::debug!("WebSocket message: {e}");
-                    out.send(&self.network, direction, WsMessage::Close(None))
-                        .await;
-                    break;
-                }
+        loop {
+            // What comes, or what the window sends; it is written down the same.
+            let (message, sent) = tokio::select! {
+                biased;
+                next = stream.next() => match next {
+                    None => break,
+                    Some(Ok(message)) => (message, false),
+                    Some(Err(e)) => {
+                        tracing::debug!("WebSocket message: {e}");
+                        out.send(&self.network, direction, WsMessage::Close(None))
+                            .await;
+                        break;
+                    }
+                },
+                Some(message) = next_sent(&mut inbox) => (message, true),
             };
             if let Some(recorded) = &recorded {
                 note_message(recorded, from_client, &message);
+            }
+            if sent {
+                if !out.send(&self.network, direction, message).await {
+                    break;
+                }
+                continue;
             }
             if let (Some(seen), Some(flow), Some(recorded)) = (look.as_mut(), &flow, &recorded) {
                 *seen += 1;
@@ -1106,6 +1145,14 @@ impl FlowHandler {
             }
         }
         out.end().await;
+    }
+}
+
+/// The next message the window sends, or never, for a socket it cannot send into.
+async fn next_sent(inbox: &mut Option<Inbox>) -> Option<WsMessage> {
+    match inbox {
+        Some(inbox) => inbox.recv().await,
+        None => std::future::pending().await,
     }
 }
 
