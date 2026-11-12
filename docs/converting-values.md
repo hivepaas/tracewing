@@ -1,9 +1,10 @@
 # Converting values
 
 The design, and where it stands. Built: `crates/convert` — the registry, the
-phase one converters and their tests — the readings in the body view's
-right-click menu, and the reading chosen drawn beside the value it was read
-from. What is not built yet is marked **to come** below.
+phase one converters and their tests — the readings in the right-click menu of
+a body and of the headers, cookies, query and form fields, and the reading
+chosen drawn where the value is. What is not built yet is marked **to come**
+below.
 
 A response says `1763000000`, or `eyJhbGciOiJIUzI1NiJ9…`, or `H4sIAAAAAAAA…`.
 Pretty shows all three faithfully and the reader learns nothing from any of them.
@@ -57,13 +58,19 @@ Four shapes, by what the converter returned:
 | Shape | Drawn as | |
 |---|---|---|
 | One line (a time, a size, a decoded integer) | after the value, dim, on the same row | built |
-| Named fields (a JWT's claims, a traceparent's parts) | folded under the row, as JWTs are drawn now | to come: for now the fields are said on one line after the value, cut to what a line can spare |
+| Named fields (a JWT's claims, a traceparent's parts) | folded under the row, as JWTs are drawn now | built under a header, a cookie and a query or form field; in a body, where a line is a line, they are said on one line after the value, cut to what it can spare |
 | A body (JSON out of base64, protobuf out of gzip) | its own pane, with Pretty, Raw and Hex, folds and all | to come: for now the size and what it holds are said after the value |
 | An image, or bytes | a thumbnail, or a hex dump, in that pane | to come |
 
-What is drawn is kept by the piece it was read from, and a click on it takes it
-away again, as does `Clear what was read`. Another mode is another text, so
-Pretty, Raw and Hex each start with nothing drawn.
+What is drawn in a body is kept by the piece it was read from, and a click on
+it takes it away again, as does `Clear what was read`. Another mode is another
+text, so Pretty, Raw and Hex each start with nothing drawn.
+
+Under a field it is kept by the field and the value instead of by where they
+sat, because rows move as a flow is chosen or a side is switched. That also
+means the same header in the next flow says itself again, which is the small
+version of the remembered rules below. What was unpacked is not kept whole:
+one line says what it holds until there is a pane to open it in.
 
 A reading is never part of the body. It is not in `selected_text()`, not in
 `Copy all`, not in a saved body, not in Copy as cURL. The menu carries
@@ -229,13 +236,15 @@ four at most, and reads the key off the selected line
 as the first converter; what is left in the app under that name is the clock
 the crate does without.
 
+`Selection` now carries the field each piece is the value of, so a header's
+own name reaches the converters: a `Date` is read as an HTTP-date because the
+field says `date`, not because the text was guessed at. The same thing is what
+the underline and the remembered rules will ask.
+
 **To come:** the pane for a `Bytes` reading — which means writing the bytes
 beside the body's own file and opening them as a body, the way
 `detail::json_file` already does for MessagePack and Protobuf — the dim
-underline, remembered rules, the keyboard, and the same menu in headers,
-cookies, query and form fields. That last one wants `Selection` to carry the
-field a piece was drawn under, which is the same thing the underline and the
-rules need to know, so the three go together.
+underline, remembered rules, and the keyboard.
 
 ## Limits, and what this will not do
 
