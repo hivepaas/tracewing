@@ -480,6 +480,14 @@ answered. `WS_BENCH=100000`, the same machine, three rounds each, taken in turn:
 
 The same, within what runs differ by.
 
+On a slow network a socket's messages wait as other flows' bodies do: each goes when the
+shared link would have it through, half a round trip after, from a queue between reading
+and sending, so that five sent together arrive together a round trip later. On any other
+network a message goes on at once. A first try sent every message through that queue and
+a timer whatever the network, and each waited for the timer's next millisecond: the
+benchmark above went past ten minutes where it takes one, which no test noticed. Without
+the queue it is 49,300–50,500 round trips/s recording off and 45,800–47,400 on.
+
 ## A request's body no server reads (`crates/proxy/src/capture.rs`, 2026-11-12)
 
 A request's body is written down as it goes on to the server. A server that answers

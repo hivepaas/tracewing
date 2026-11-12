@@ -783,13 +783,11 @@ impl HttpHandler for FlowHandler {
             Some(End::Remote(to)) => send_elsewhere(&mut req, &to),
             _ => {}
         }
-        // A slow network, for what goes on to a server. Upgrades are left as they are.
-        self.slowed = (!is_websocket(&req))
-            .then(|| {
-                self.network
-                    .for_host(request_host(&req).unwrap_or_default())
-            })
-            .flatten();
+        // A slow network, for what goes on to a server, a WebSocket's
+        // messages too.
+        self.slowed = self
+            .network
+            .for_host(request_host(&req).unwrap_or_default());
         if let Some(conditions) = &self.slowed {
             Network::half_latency(conditions).await;
             if let Some(flow) = &flow {
@@ -968,6 +966,9 @@ impl FlowHandler {
             Ok(both) => both,
             // Refused: the client is told as the server told it.
             Err(tungstenite::Error::Http(answer)) => {
+                if let Some(conditions) = &self.slowed {
+                    Network::half_latency(conditions).await;
+                }
                 let (parts, body) = answer.into_parts();
                 let res = Response::from_parts(parts, Body::from(body.unwrap_or_default()));
                 let flow = flow;
@@ -1002,6 +1003,10 @@ impl FlowHandler {
         if let Some(flow) = &flow {
             flow.on_response(&res);
             flow.opened_as("websocket", Some(101));
+        }
+        // The answer's half of a slow round trip.
+        if let Some(conditions) = &self.slowed {
+            Network::half_latency(conditions).await;
         }
         let handler = self.clone();
         tokio::spawn(async move {
@@ -1049,13 +1054,17 @@ impl FlowHandler {
     }
 
     /// Carries one way's messages, each written down on its way. Either side
-    /// ending ends it; the row is written when the other lets go too.
+    /// ending ends it; the row is written when the other lets go too. On a
+    /// slow network each message is let go when the link would have it
+    /// through, half a round trip after: a queue between reading and sending,
+    /// so that the latency delays messages without slowing how many go. On
+    /// any other, a message goes on at once, as it came.
     async fn pump(
         self,
         flow: Option<Arc<Flow>>,
         from_client: bool,
         mut stream: impl Stream<Item = Result<WsMessage, tungstenite::Error>> + Unpin + Send + 'static,
-        mut sink: impl Sink<WsMessage, Error = tungstenite::Error> + Unpin + Send + 'static,
+        sink: impl Sink<WsMessage, Error = tungstenite::Error> + Unpin + Send + 'static,
     ) {
         let recorded = flow.as_ref().and_then(|flow| flow.stream());
         // A socket's calls are in its messages, so its row cannot be named
@@ -1063,39 +1072,115 @@ impl FlowHandler {
         // JSON-RPC says so straight away, and one that never will should not
         // pay for the looking all its life.
         let mut look = flow.is_some().then_some(0usize);
+        let direction = if from_client {
+            Direction::Up
+        } else {
+            Direction::Down
+        };
+        let mut out = match self.slowed.clone() {
+            Some(conditions) => Out::slow(sink, conditions),
+            None => Out::Now(Box::pin(sink)),
+        };
         while let Some(message) = stream.next().await {
-            match message {
-                Ok(message) => {
-                    if let Some(recorded) = &recorded {
-                        note_message(recorded, from_client, &message);
-                    }
-                    if let (Some(seen), Some(flow), Some(recorded)) =
-                        (look.as_mut(), &flow, &recorded)
-                    {
-                        *seen += 1;
-                        let found = name_the_call(flow, recorded, from_client, &message);
-                        if found || *seen >= RPC_LOOK_AT {
-                            look = None;
-                        }
-                    }
-                    let closing = message.is_close();
-                    match sink.send(message).await {
-                        Err(tungstenite::Error::ConnectionClosed) | Ok(()) => {}
-                        Err(e) => tracing::debug!("WebSocket send: {e}"),
-                    }
-                    if closing {
-                        // The other side's close comes back the other way.
-                        continue;
-                    }
-                }
+            let message = match message {
+                Ok(message) => message,
                 Err(e) => {
                     tracing::debug!("WebSocket message: {e}");
-                    let _ = sink.send(WsMessage::Close(None)).await;
+                    out.send(&self.network, direction, WsMessage::Close(None))
+                        .await;
                     break;
                 }
+            };
+            if let Some(recorded) = &recorded {
+                note_message(recorded, from_client, &message);
+            }
+            if let (Some(seen), Some(flow), Some(recorded)) = (look.as_mut(), &flow, &recorded) {
+                *seen += 1;
+                let found = name_the_call(flow, recorded, from_client, &message);
+                if found || *seen >= RPC_LOOK_AT {
+                    look = None;
+                }
+            }
+            if !out.send(&self.network, direction, message).await {
+                break;
             }
         }
-        let _ = sink.close().await;
+        out.end().await;
+    }
+}
+
+type WsSink = Pin<Box<dyn Sink<WsMessage, Error = tungstenite::Error> + Send>>;
+
+/// Where one way's messages go: on at once, or through a slow link.
+enum Out {
+    Now(WsSink),
+    Slow {
+        conditions: Conditions,
+        queue: tokio::sync::mpsc::Sender<(tokio::time::Instant, WsMessage)>,
+        sending: tokio::task::JoinHandle<()>,
+    },
+}
+
+impl Out {
+    fn slow(
+        sink: impl Sink<WsMessage, Error = tungstenite::Error> + Unpin + Send + 'static,
+        conditions: Conditions,
+    ) -> Self {
+        let (queue, mut queued) =
+            tokio::sync::mpsc::channel::<(tokio::time::Instant, WsMessage)>(1024);
+        let sending = tokio::spawn(async move {
+            let mut sink = sink;
+            while let Some((at, message)) = queued.recv().await {
+                if at > tokio::time::Instant::now() {
+                    tokio::time::sleep_until(at).await;
+                }
+                match sink.send(message).await {
+                    Err(tungstenite::Error::ConnectionClosed) | Ok(()) => {}
+                    Err(e) => tracing::debug!("WebSocket send: {e}"),
+                }
+            }
+            let _ = sink.close().await;
+        });
+        Self::Slow {
+            conditions,
+            queue,
+            sending,
+        }
+    }
+
+    /// Sends `message` on, or queues it for when it is due. False if the
+    /// other side is gone.
+    async fn send(&mut self, network: &Network, direction: Direction, message: WsMessage) -> bool {
+        match self {
+            Self::Now(sink) => {
+                match sink.send(message).await {
+                    Err(tungstenite::Error::ConnectionClosed) | Ok(()) => {}
+                    Err(e) => tracing::debug!("WebSocket send: {e}"),
+                }
+                true
+            }
+            Self::Slow {
+                conditions, queue, ..
+            } => {
+                let through = network.send(direction, message.len(), conditions);
+                let half = std::time::Duration::from_millis(u64::from(conditions.latency_ms) / 2);
+                let at = tokio::time::Instant::from_std(through) + half;
+                queue.send((at, message)).await.is_ok()
+            }
+        }
+    }
+
+    /// What is queued still goes, then the end.
+    async fn end(self) {
+        match self {
+            Self::Now(mut sink) => {
+                let _ = sink.close().await;
+            }
+            Self::Slow { queue, sending, .. } => {
+                drop(queue);
+                let _ = sending.await;
+            }
+        }
     }
 }
 
