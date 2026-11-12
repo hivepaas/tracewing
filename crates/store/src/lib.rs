@@ -4,6 +4,7 @@
 pub mod abi;
 pub mod app;
 pub mod binjson;
+pub mod bitcoin;
 pub mod charles;
 pub mod decode;
 pub mod graphql;
