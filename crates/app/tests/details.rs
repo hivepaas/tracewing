@@ -680,7 +680,10 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "72-grpc-named");
     window
-        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Settings, cx))
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Decoding, cx);
+        })
         .unwrap();
     cx.run_until_parked();
     window
@@ -813,7 +816,10 @@ fn fields_pictures_saved_bodies_and_refused_certificates() {
     // A server that offers gRPC reflection says what its files are; they are
     // kept beside the others. This one has the older version only.
     window
-        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Settings, cx))
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Decoding, cx);
+        })
         .unwrap();
     cx.run_until_parked();
     window

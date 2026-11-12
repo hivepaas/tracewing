@@ -727,6 +727,24 @@ ta0639745 = ペイロード
 # The simulator did not take it: {why}
 t7f8fa9c0 = シミュレーターが受け付けませんでした：{ $why }
 
+# General
+t5561fd0b = 一般
+
+# Network
+t6974ad65 = ネットワーク
+
+# Certificates
+tb88e4cd9 = 証明書
+
+# Decoding
+t5f8586f8 = デコード
+
+# Storage
+t34eddf06 = ストレージ
+
+# AI tools
+t294d7ea4 = AI ツール
+
 # Light
 t8ad2f8cf = ライト
 
@@ -1438,9 +1456,6 @@ t3f1c9b5a = 読み取れる値に下線を引く
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = 読み取りのある値 — 時刻、トークン、圧縮されたもの — に下線を引き、右クリックする価値があることを示します。オフでも読み取りはありますが、何も知らせません。
 
-# AI tools
-t294d7ea4 = AI ツール
-
 # Let AI tools see tokens and cookies
 te1d26d3c = AI ツールにトークンと Cookie の参照を許可
 
@@ -1555,29 +1570,32 @@ ta8606963 = { $key }: "{ $text }" は整数ではありません
 # {key}: must not be negative
 t9c4debaa = { $key }: 負の値は指定できません
 
-# After a restart
-t58dcea2d = 再起動後
-
-# Every setting is back to its default.
-t763785e7 = すべての設定を既定値に戻しました。
-
-# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
-t69f2bb4d = { $n } 件の変更は tracewing の再起動後に有効になります。
-
-# Settings
-t4b058728 = 設定
-
-# Undo
-t71fd4acf = 元に戻す
-
-# Back to defaults
-ta3162a13 = デフォルトに戻す
+# Appearance
+t31018b9f = 外観
 
 # Hosts not to decrypt
 tb457f0b3 = 復号しないホスト
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 1 行に 1 つ: ホスト、またはそのホストと配下すべてを表す *.example.com。これらのトラフィックは中身を読まずに通過します。このリストはすぐに適用されます。
+
+# Settings
+t4b058728 = 設定
+
+# After a restart
+t58dcea2d = 再起動後
+
+# Every setting here is back to its default.
+td0200095 = ここの設定はすべて既定値に戻りました。
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = { $n } 件の変更は tracewing の再起動後に有効になります。
+
+# Undo
+t71fd4acf = 元に戻す
+
+# Back to defaults
+ta3162a13 = デフォルトに戻す
 
 # Fields always read a certain way
 tb6e892b1 = 常に同じ読み方をするフィールド

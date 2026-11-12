@@ -727,6 +727,24 @@ ta0639745 = 载荷
 # The simulator did not take it: {why}
 t7f8fa9c0 = 模拟器未接受：{ $why }
 
+# General
+t5561fd0b = 通用
+
+# Network
+t6974ad65 = 网络
+
+# Certificates
+tb88e4cd9 = 证书
+
+# Decoding
+t5f8586f8 = 解码
+
+# Storage
+t34eddf06 = 存储
+
+# AI tools
+t294d7ea4 = AI 工具
+
 # Light
 t8ad2f8cf = 浅色
 
@@ -1438,9 +1456,6 @@ t3f1c9b5a = 给可解读的值加下划线
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = 背后有解读结果的值——时间、令牌、压缩过的内容——会加下划线，提示值得右键点一下。关闭后解读仍在，只是没有提示。
 
-# AI tools
-t294d7ea4 = AI 工具
-
 # Let AI tools see tokens and cookies
 te1d26d3c = 允许 AI 工具查看令牌和 Cookie
 
@@ -1555,29 +1570,32 @@ ta8606963 = { $key }：“{ $text }” 不是整数
 # {key}: must not be negative
 t9c4debaa = { $key }：不能为负数
 
-# After a restart
-t58dcea2d = 重启后生效
-
-# Every setting is back to its default.
-t763785e7 = 所有设置已恢复为默认值。
-
-# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
-t69f2bb4d = { $n } 项更改将在重新启动 tracewing 后生效。
-
-# Settings
-t4b058728 = 设置
-
-# Undo
-t71fd4acf = 撤销
-
-# Back to defaults
-ta3162a13 = 恢复默认值
+# Appearance
+t31018b9f = 外观
 
 # Hosts not to decrypt
 tb457f0b3 = 不解密的主机
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 每行一个：主机名，或 *.example.com（匹配该域名及其所有子域名）。这些主机的流量将直接通过，不被读取。此列表立即生效。
+
+# Settings
+t4b058728 = 设置
+
+# After a restart
+t58dcea2d = 重启后生效
+
+# Every setting here is back to its default.
+td0200095 = 此处的所有设置已恢复默认。
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = { $n } 项更改将在重新启动 tracewing 后生效。
+
+# Undo
+t71fd4acf = 撤销
+
+# Back to defaults
+ta3162a13 = 恢复默认值
 
 # Fields always read a certain way
 tb6e892b1 = 始终按固定方式解读的字段

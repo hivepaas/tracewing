@@ -764,6 +764,24 @@ ta0639745 = Payload
 # The simulator did not take it: {why}
 t7f8fa9c0 = Il simulatore non l'ha accettato: { $why }
 
+# General
+t5561fd0b = Generali
+
+# Network
+t6974ad65 = Rete
+
+# Certificates
+tb88e4cd9 = Certificati
+
+# Decoding
+t5f8586f8 = Decodifica
+
+# Storage
+t34eddf06 = Archiviazione
+
+# AI tools
+t294d7ea4 = Strumenti di IA
+
 # Light
 t8ad2f8cf = Chiaro
 
@@ -1559,9 +1577,6 @@ t3f1c9b5a = Sottolinea ciò che si può leggere
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = Un valore dietro cui c'è una lettura — un'ora, un token, qualcosa di compresso — viene sottolineato, così un clic destro vale la pena. Spento, le letture ci sono ancora; nulla lo dice.
 
-# AI tools
-t294d7ea4 = Strumenti di IA
-
 # Let AI tools see tokens and cookies
 te1d26d3c = Consenti agli strumenti di IA di vedere token e cookie
 
@@ -1676,11 +1691,23 @@ ta8606963 = { $key }: "{ $text }" non è un numero intero
 # {key}: must not be negative
 t9c4debaa = { $key }: non deve essere negativo
 
+# Appearance
+t31018b9f = Aspetto
+
+# Hosts not to decrypt
+tb457f0b3 = Host da non decifrare
+
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = Uno per riga: un host, oppure *.example.com per quell'host e tutto ciò che sta sotto. Il loro traffico passa senza essere letto. Questo elenco si applica subito.
+
+# Settings
+t4b058728 = Impostazioni
+
 # After a restart
 t58dcea2d = Dopo il riavvio
 
-# Every setting is back to its default.
-t763785e7 = Tutte le impostazioni sono tornate ai valori predefiniti.
+# Every setting here is back to its default.
+td0200095 = Ogni impostazione qui è tornata al valore predefinito.
 
 # {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
 t69f2bb4d =
@@ -1690,20 +1717,11 @@ t69f2bb4d =
        *[other] { $n } modifiche hanno effetto al prossimo avvio di tracewing.
     }
 
-# Settings
-t4b058728 = Impostazioni
-
 # Undo
 t71fd4acf = Ripristina
 
 # Back to defaults
 ta3162a13 = Ripristina i valori predefiniti
-
-# Hosts not to decrypt
-tb457f0b3 = Host da non decifrare
-
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
-t38e21213 = Uno per riga: un host, oppure *.example.com per quell'host e tutto ciò che sta sotto. Il loro traffico passa senza essere letto. Questo elenco si applica subito.
 
 # Fields always read a certain way
 tb6e892b1 = Campi letti sempre allo stesso modo

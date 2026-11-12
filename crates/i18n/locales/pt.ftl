@@ -764,6 +764,24 @@ ta0639745 = Payload
 # The simulator did not take it: {why}
 t7f8fa9c0 = O simulador não o aceitou: { $why }
 
+# General
+t5561fd0b = Geral
+
+# Network
+t6974ad65 = Rede
+
+# Certificates
+tb88e4cd9 = Certificados
+
+# Decoding
+t5f8586f8 = Decodificação
+
+# Storage
+t34eddf06 = Armazenamento
+
+# AI tools
+t294d7ea4 = Ferramentas de IA
+
 # Light
 t8ad2f8cf = Claro
 
@@ -1559,9 +1577,6 @@ t3f1c9b5a = Sublinhar o que pode ser lido
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = Um valor com uma leitura por trás — uma hora, um token, algo compactado — fica sublinhado, para que clicar com o botão direito valha a pena. Desligado, as leituras continuam lá; nada avisa.
 
-# AI tools
-t294d7ea4 = Ferramentas de IA
-
 # Let AI tools see tokens and cookies
 te1d26d3c = Permitir que ferramentas de IA vejam tokens e cookies
 
@@ -1676,11 +1691,23 @@ ta8606963 = { $key }: "{ $text }" não é um número inteiro
 # {key}: must not be negative
 t9c4debaa = { $key }: não pode ser negativo
 
+# Appearance
+t31018b9f = Aparência
+
+# Hosts not to decrypt
+tb457f0b3 = Hosts a não descriptografar
+
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = Um por linha: um host, ou *.example.com para ele e tudo abaixo dele. O tráfego deles passa sem ser lido. Esta lista vale na hora.
+
+# Settings
+t4b058728 = Configurações
+
 # After a restart
 t58dcea2d = Após reiniciar
 
-# Every setting is back to its default.
-t763785e7 = Todas as configurações voltaram ao padrão.
+# Every setting here is back to its default.
+td0200095 = Cada configuração aqui voltou ao padrão.
 
 # {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
 t69f2bb4d =
@@ -1690,20 +1717,11 @@ t69f2bb4d =
        *[other] { $n } alterações valem quando o tracewing for reiniciado.
     }
 
-# Settings
-t4b058728 = Configurações
-
 # Undo
 t71fd4acf = Desfazer
 
 # Back to defaults
 ta3162a13 = Restaurar padrões
-
-# Hosts not to decrypt
-tb457f0b3 = Hosts a não descriptografar
-
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
-t38e21213 = Um por linha: um host, ou *.example.com para ele e tudo abaixo dele. O tráfego deles passa sem ser lido. Esta lista vale na hora.
 
 # Fields always read a certain way
 tb6e892b1 = Campos sempre lidos de certa forma

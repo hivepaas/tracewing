@@ -727,6 +727,24 @@ ta0639745 = Payload
 # The simulator did not take it: {why}
 t7f8fa9c0 = Simulator tidak menerimanya: { $why }
 
+# General
+t5561fd0b = Umum
+
+# Network
+t6974ad65 = Jaringan
+
+# Certificates
+tb88e4cd9 = Sertifikat
+
+# Decoding
+t5f8586f8 = Dekode
+
+# Storage
+t34eddf06 = Penyimpanan
+
+# AI tools
+t294d7ea4 = Alat AI
+
 # Light
 t8ad2f8cf = Terang
 
@@ -1438,9 +1456,6 @@ t3f1c9b5a = Garis bawahi yang bisa dibaca
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = Nilai yang punya hasil baca di baliknya — waktu, token, sesuatu yang terkompresi — digarisbawahi, supaya klik kanan di situ sepadan. Mati, hasil bacanya tetap ada; tidak ada yang memberitahu.
 
-# AI tools
-t294d7ea4 = Alat AI
-
 # Let AI tools see tokens and cookies
 te1d26d3c = Izinkan alat AI melihat token dan cookie
 
@@ -1555,29 +1570,32 @@ ta8606963 = { $key }: "{ $text }" bukan bilangan bulat
 # {key}: must not be negative
 t9c4debaa = { $key }: tidak boleh negatif
 
-# After a restart
-t58dcea2d = Setelah mulai ulang
-
-# Every setting is back to its default.
-t763785e7 = Semua setelan kembali ke bawaannya.
-
-# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
-t69f2bb4d = { $n } perubahan berlaku saat tracewing dimulai ulang.
-
-# Settings
-t4b058728 = Setelan
-
-# Undo
-t71fd4acf = Urungkan
-
-# Back to defaults
-ta3162a13 = Kembalikan ke default
+# Appearance
+t31018b9f = Tampilan
 
 # Hosts not to decrypt
 tb457f0b3 = Host yang tidak didekripsi
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = Satu per baris: host, atau *.example.com untuk host itu dan semua di bawahnya. Lalu lintasnya lewat tanpa dibaca. Daftar ini langsung berlaku.
+
+# Settings
+t4b058728 = Setelan
+
+# After a restart
+t58dcea2d = Setelah mulai ulang
+
+# Every setting here is back to its default.
+td0200095 = Setiap pengaturan di sini kembali ke bawaannya.
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = { $n } perubahan berlaku saat tracewing dimulai ulang.
+
+# Undo
+t71fd4acf = Urungkan
+
+# Back to defaults
+ta3162a13 = Kembalikan ke default
 
 # Fields always read a certain way
 tb6e892b1 = Bidang yang selalu dibaca dengan cara tertentu

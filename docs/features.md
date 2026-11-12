@@ -97,6 +97,7 @@ keyboard.
 | Resize panels by dragging the dividers; hide the sidebar or the inspector | Beta | Free |
 | Request and response as tabs, side by side, or one above the other | Beta | Free |
 | The layout is kept and restored at the next start | Beta | Free |
+| Settings in parts, a menu beside the one open: General (language, look), Network, Certificates, Decoding, Storage, AI tools; Back to defaults for the part open; the part last open is kept | Beta | Free |
 | The inspector in a window of its own, for a second display: the toolbar's window button; closing that window puts it back | Beta | Free |
 | Named layouts to switch between (for example "Phone" and "API"): the toolbar's layouts button keeps the panels, their sizes, the columns shown and the inspector's own window under a name | Beta | Free |
 

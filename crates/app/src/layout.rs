@@ -51,6 +51,41 @@ pub enum Sides {
     Stacked,
 }
 
+/// The part of Settings open, as its menu names them.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SettingsSection {
+    #[default]
+    General,
+    Network,
+    Certificates,
+    Decoding,
+    Storage,
+    Ai,
+}
+
+impl SettingsSection {
+    pub const ALL: [Self; 6] = [
+        Self::General,
+        Self::Network,
+        Self::Certificates,
+        Self::Decoding,
+        Self::Storage,
+        Self::Ai,
+    ];
+
+    pub fn name(self) -> String {
+        match self {
+            Self::General => tr!("General"),
+            Self::Network => tr!("Network"),
+            Self::Certificates => tr!("Certificates"),
+            Self::Decoding => tr!("Decoding"),
+            Self::Storage => tr!("Storage"),
+            Self::Ai => tr!("AI tools"),
+        }
+    }
+}
+
 /// The look the window wears.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -109,6 +144,8 @@ pub struct Layout {
     pub inspector_window: Option<WindowState>,
     /// Arrangements kept under a name, as "Phone" and "API", in the order kept.
     pub named: Vec<Named>,
+    /// The part of Settings last open.
+    pub settings_section: SettingsSection,
 }
 
 /// Where the panels are and how large, which columns show: what a named
@@ -160,6 +197,7 @@ impl Default for Layout {
             detached: false,
             inspector_window: None,
             named: Vec::new(),
+            settings_section: SettingsSection::default(),
         }
     }
 }

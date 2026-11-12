@@ -6,6 +6,7 @@
 use crate::{
     colors::colors,
     input::TextInput,
+    layout::{Appearance, SettingsSection},
     traffic::Traffic,
     widgets::{Reachable, eyebrow},
 };
@@ -37,10 +38,12 @@ fn row(key: &'static str, label: String, help: String, unit: &'static str) -> Ro
     }
 }
 
-/// The settings by group, said in the language in use.
-fn groups() -> Vec<(String, Vec<Row>)> {
+/// The settings by group, each in its part of Settings, said in the language
+/// in use.
+fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
     vec![
         (
+            SettingsSection::Network,
             tr!("Other devices"),
             vec![row(
                 "other_devices",
@@ -53,6 +56,7 @@ fn groups() -> Vec<(String, Vec<Row>)> {
             )],
         ),
         (
+            SettingsSection::Certificates,
             tr!("Servers"),
             vec![row(
                 "os_roots",
@@ -66,6 +70,7 @@ fn groups() -> Vec<(String, Vec<Row>)> {
             )],
         ),
         (
+            SettingsSection::Decoding,
             tr!("Reading values"),
             vec![row(
                 "mark_readings",
@@ -79,6 +84,7 @@ fn groups() -> Vec<(String, Vec<Row>)> {
             )],
         ),
         (
+            SettingsSection::Ai,
             tr!("AI tools"),
             vec![
                 row(
@@ -103,6 +109,7 @@ fn groups() -> Vec<(String, Vec<Row>)> {
             ],
         ),
         (
+            SettingsSection::Network,
             tr!("HTTP/3"),
             vec![row(
                 "hide_http3",
@@ -116,6 +123,7 @@ fn groups() -> Vec<(String, Vec<Row>)> {
             )],
         ),
         (
+            SettingsSection::Storage,
             tr!("Sessions"),
             vec![
                 row(
@@ -141,6 +149,7 @@ fn groups() -> Vec<(String, Vec<Row>)> {
             ],
         ),
         (
+            SettingsSection::Storage,
             tr!("Bodies"),
             vec![
                 row(
@@ -180,6 +189,7 @@ fn groups() -> Vec<(String, Vec<Row>)> {
             ],
         ),
         (
+            SettingsSection::Storage,
             tr!("Search"),
             vec![
                 row(
@@ -203,6 +213,7 @@ fn groups() -> Vec<(String, Vec<Row>)> {
             ],
         ),
         (
+            SettingsSection::Storage,
             tr!("Under heavy traffic"),
             vec![
                 row(
@@ -256,7 +267,7 @@ impl SettingsPage {
     pub fn new(settings: &StorageSettings, cx: &mut Context<Traffic>) -> Self {
         let table = toml::Value::try_from(settings).expect("settings are plain values");
         let mut fields = Vec::new();
-        for (_, rows) in groups() {
+        for (_, _, rows) in groups() {
             for row in rows {
                 let value = &table[row.key];
                 let field = match value {
@@ -478,10 +489,27 @@ impl Traffic {
         self.save_settings(cx);
     }
 
-    /// Every setting back to its default, written, with a way back.
+    /// Every setting of the part of Settings open back to its default,
+    /// written, with a way back.
     pub fn reset_settings(&mut self, cx: &mut Context<Self>) {
         let before = self.settings_page.as_ref().map(|page| page.stored.clone());
-        self.replace_settings(&StorageSettings::default(), cx);
+        let Some(now) = before.clone() else {
+            return;
+        };
+        let section = self.layout.settings_section;
+        let keys: Vec<&str> = groups()
+            .into_iter()
+            .filter(|(at, _, _)| *at == section)
+            .flat_map(|(_, _, rows)| rows.into_iter().map(|row| row.key))
+            .collect();
+        let defaults =
+            toml::Value::try_from(StorageSettings::default()).expect("settings are plain values");
+        let mut table = toml::Value::try_from(&now).expect("settings are plain values");
+        for key in keys {
+            table[key] = defaults[key].clone();
+        }
+        let reset = table.try_into().unwrap_or(now);
+        self.replace_settings(&reset, cx);
         if let (Some(page), Some(before)) = (&mut self.settings_page, before)
             && page.stored != before
         {
@@ -516,6 +544,13 @@ impl Traffic {
     /// Puts the cursor in a number field. For tests.
     #[doc(hidden)]
     pub fn focus_setting(&mut self, key: &str, window: &mut Window, cx: &mut Context<Self>) {
+        // Its part open, as a field is only reached where it is shown.
+        if let Some((section, _, _)) = groups()
+            .into_iter()
+            .find(|(_, _, rows)| rows.iter().any(|row| row.key == key))
+        {
+            self.layout.settings_section = section;
+        }
         let Some(page) = &self.settings_page else {
             return;
         };
@@ -545,6 +580,138 @@ impl Traffic {
         }
     }
 
+    /// Opens a part of Settings, kept for next time.
+    pub fn show_settings_section(&mut self, section: SettingsSection, cx: &mut Context<Self>) {
+        self.layout.settings_section = section;
+        if let Some(page) = &mut self.settings_page {
+            // What was said was about the part left.
+            page.undo = None;
+            page.problem = None;
+            page.editing = None;
+        }
+        self.save_layout();
+        cx.notify();
+    }
+
+    /// The look: the system's, light or dark, as the title bar's switch has it.
+    fn render_appearance(&self, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let chosen = self.layout.appearance;
+        let chip = |look: Appearance| {
+            let on = look == chosen;
+            div()
+                .id(("appearance", look as usize))
+                .h(px(30.))
+                .px(px(12.))
+                .rounded(px(15.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .reachable()
+                .text_size(px(12.5))
+                .font_weight(FontWeight::BOLD)
+                .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
+                .when(!on, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
+                .child(look.name())
+                .on_click(
+                    cx.listener(move |this, _, window, cx| this.set_appearance(look, window, cx)),
+                )
+        };
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(8.))
+            .p(px(14.))
+            .rounded(px(22.))
+            .bg(rgb(c.surface))
+            .child(eyebrow(tr!("Appearance")).px(px(6.)))
+            .child(
+                div()
+                    .px(px(6.))
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .gap(px(6.))
+                    .children([Appearance::System, Appearance::Light, Appearance::Dark].map(chip)),
+            )
+    }
+
+    /// The hosts whose traffic goes through unread.
+    fn render_no_decrypt(&self) -> gpui::Div {
+        let c = colors();
+        let page = self.settings_page.as_ref().expect("made");
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(8.))
+            .p(px(14.))
+            .rounded(px(22.))
+            .bg(rgb(c.surface))
+            .child(eyebrow(tr!("Hosts not to decrypt")).px(px(6.)))
+            .child(
+                div()
+                    .px(px(6.))
+                    .text_size(px(12.))
+                    .text_color(rgb(c.muted))
+                    .child(tr!("One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.")),
+            )
+            .child(
+                div()
+                    .p(px(10.))
+                    .rounded(px(12.))
+                    .bg(rgb(c.input))
+                    .font_family(crate::MONO_FONT)
+                    .font_features(gpui::FontFeatures::disable_ligatures())
+                    .child(page.no_decrypt.clone()),
+            )
+    }
+
+    /// The menu of Settings' parts.
+    fn render_settings_menu(&self, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let open = self.layout.settings_section;
+        let items = SettingsSection::ALL.into_iter().map(|section| {
+            let on = section == open;
+            div()
+                .id(("settings-section", section as usize))
+                .h(px(38.))
+                .px(px(14.))
+                .rounded(px(19.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .reachable()
+                .when(on, |d| {
+                    d.bg(rgb(c.tonal))
+                        .text_color(rgb(c.on_tonal))
+                        .font_weight(FontWeight::BOLD)
+                })
+                .when(!on, |d| {
+                    d.font_weight(FontWeight::MEDIUM)
+                        .hover(|d| d.bg(rgb(c.surface)))
+                })
+                .child(section.name())
+                .on_click(
+                    cx.listener(move |this, _, _, cx| this.show_settings_section(section, cx)),
+                )
+        });
+        div()
+            .w(px(200.))
+            .flex_shrink_0()
+            .flex()
+            .flex_col()
+            .gap(px(2.))
+            .child(
+                div()
+                    .px(px(14.))
+                    .pb(px(10.))
+                    .text_size(px(20.))
+                    .font_weight(FontWeight::BOLD)
+                    .child(tr!("Settings")),
+            )
+            .children(items)
+    }
+
     pub(crate) fn render_settings(
         &mut self,
         window: &mut Window,
@@ -555,15 +722,44 @@ impl Traffic {
             self.open_settings(cx);
         }
         self.watch_fields(window, cx);
-        let language = self.render_language(cx);
-        let protos = self.render_protos(cx);
-        let abis = self.render_abis(cx);
-        let trusted = self.render_trusted(cx);
-        let relay = self.render_relay(cx);
-        let tls_keys = self.render_tls_keys(cx);
-        let client_certs = self.render_client_certs(cx);
-        let company_ca = self.render_company_ca(cx);
-        let readings = self.render_readings(cx);
+        let section = self.layout.settings_section;
+        let menu = self.render_settings_menu(cx);
+        // What the part open shows besides its settings, before them or after.
+        let (before, after): (Vec<gpui::AnyElement>, Vec<gpui::AnyElement>) = match section {
+            SettingsSection::General => (
+                vec![
+                    self.render_language(cx).into_any_element(),
+                    self.render_appearance(cx).into_any_element(),
+                ],
+                Vec::new(),
+            ),
+            SettingsSection::Network => (
+                Vec::new(),
+                vec![
+                    self.render_relay(cx).into_any_element(),
+                    self.render_no_decrypt().into_any_element(),
+                ],
+            ),
+            SettingsSection::Certificates => (
+                Vec::new(),
+                vec![
+                    self.render_trusted(cx).into_any_element(),
+                    self.render_client_certs(cx).into_any_element(),
+                    self.render_company_ca(cx).into_any_element(),
+                    self.render_tls_keys(cx).into_any_element(),
+                ],
+            ),
+            SettingsSection::Decoding => (
+                vec![
+                    self.render_protos(cx).into_any_element(),
+                    self.render_abis(cx).into_any_element(),
+                    self.render_readings(cx).into_any_element(),
+                ],
+                Vec::new(),
+            ),
+            SettingsSection::Storage => (Vec::new(), Vec::new()),
+            SettingsSection::Ai => (Vec::new(), vec![self.render_ai_tools().into_any_element()]),
+        };
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);
         // A problem shows under the setting being changed, or else at the top.
@@ -575,7 +771,22 @@ impl Traffic {
                 .map(|(_, field)| field)
                 .expect("every row has a field")
         };
-        let groups = groups().into_iter().map(|(title, rows)| {
+        let shown: Vec<(String, Vec<Row>)> = groups()
+            .into_iter()
+            .filter(|(at, _, _)| *at == section)
+            .map(|(_, title, rows)| (title, rows))
+            .collect();
+        let has_rows = !shown.is_empty();
+        // Those waiting for a restart that this part holds.
+        let waiting_here = waiting
+            .iter()
+            .filter(|key| {
+                shown
+                    .iter()
+                    .any(|(_, rows)| rows.iter().any(|row| row.key == **key))
+            })
+            .count();
+        let groups = shown.into_iter().map(|(title, rows)| {
             div()
                 .flex()
                 .flex_col()
@@ -715,11 +926,11 @@ impl Traffic {
         let status = match (&page.problem, problem_under) {
             (Some(problem), None) => Some((problem.clone(), c.error)),
             _ if page.undo.is_some() => {
-                Some((tr!("Every setting is back to its default."), c.muted))
+                Some((tr!("Every setting here is back to its default."), c.muted))
             }
-            _ if !waiting.is_empty() => Some((
+            _ if waiting_here > 0 => Some((
                 tr_n!(
-                    waiting.len(),
+                    waiting_here,
                     "{n} change takes effect when tracewing starts again.",
                     "{n} changes take effect when tracewing starts again."
                 ),
@@ -728,9 +939,11 @@ impl Traffic {
             _ => None,
         };
         let undo = page.undo.is_some();
-        div()
-            .id("settings")
+        let content = div()
+            // Each part keeps where it was scrolled to.
+            .id(("settings", section as usize))
             .flex_1()
+            .min_w_0()
             .min_h_0()
             .overflow_y_scroll()
             .flex()
@@ -743,11 +956,12 @@ impl Traffic {
                     .flex_wrap()
                     .items_center()
                     .gap(px(10.))
+                    .min_h(px(36.))
                     .child(
                         div()
                             .text_size(px(20.))
                             .font_weight(FontWeight::BOLD)
-                            .child(tr!("Settings")),
+                            .child(section.name()),
                     )
                     .child(div().flex_1())
                     .children(status.map(|(text, color)| div().text_color(rgb(color)).child(text)))
@@ -758,49 +972,24 @@ impl Traffic {
                             ),
                         )
                     })
-                    .when(!undo, |d| {
+                    .when(!undo && has_rows, |d| {
                         d.child(
                             button("settings-defaults", tr!("Back to defaults"), false)
                                 .on_click(cx.listener(|this, _, _, cx| this.reset_settings(cx))),
                         )
                     }),
             )
-            .child(language)
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(px(8.))
-                    .p(px(14.))
-                    .rounded(px(22.))
-                    .bg(rgb(c.surface))
-                    .child(eyebrow(tr!("Hosts not to decrypt")).px(px(6.)))
-                    .child(
-                        div()
-                            .px(px(6.))
-                            .text_size(px(12.))
-                            .text_color(rgb(c.muted))
-                            .child(tr!("One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.")),
-                    )
-                    .child(
-                        div()
-                            .p(px(10.))
-                            .rounded(px(12.))
-                            .bg(rgb(c.input))
-                            .font_family(crate::MONO_FONT)
-.font_features(gpui::FontFeatures::disable_ligatures())
-                            .child(page.no_decrypt.clone()),
-                    ),
-            )
-            .child(relay)
-            .child(trusted)
-            .child(client_certs)
-            .child(company_ca)
-            .child(tls_keys)
-            .child(protos)
-            .child(abis)
-            .child(readings)
+            .children(before)
             .children(groups)
+            .children(after);
+        div()
+            .flex_1()
+            .min_h_0()
+            .flex()
+            .flex_row()
+            .gap(px(10.))
+            .child(menu)
+            .child(content)
     }
 
     /// The fields that are always read a certain way, to look over and to
@@ -1198,7 +1387,7 @@ mod tests {
             .collect();
         let mut rows: Vec<&str> = groups()
             .into_iter()
-            .flat_map(|(_, rows)| rows.into_iter().map(|row| row.key))
+            .flat_map(|(_, _, rows)| rows.into_iter().map(|row| row.key))
             .collect();
         keys.sort_unstable();
         rows.sort_unstable();

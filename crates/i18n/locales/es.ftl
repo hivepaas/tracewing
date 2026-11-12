@@ -764,6 +764,24 @@ ta0639745 = Payload
 # The simulator did not take it: {why}
 t7f8fa9c0 = El simulador no lo aceptó: { $why }
 
+# General
+t5561fd0b = General
+
+# Network
+t6974ad65 = Red
+
+# Certificates
+tb88e4cd9 = Certificados
+
+# Decoding
+t5f8586f8 = Decodificación
+
+# Storage
+t34eddf06 = Almacenamiento
+
+# AI tools
+t294d7ea4 = Herramientas de IA
+
 # Light
 t8ad2f8cf = Claro
 
@@ -1559,9 +1577,6 @@ t3f1c9b5a = Subrayar lo que se puede leer
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = Un valor con una lectura detrás —una hora, un token, algo comprimido— se subraya, para que valga la pena hacer clic derecho en él. Desactivado, las lecturas siguen ahí; nada lo indica.
 
-# AI tools
-t294d7ea4 = Herramientas de IA
-
 # Let AI tools see tokens and cookies
 te1d26d3c = Permitir que las herramientas de IA vean tokens y cookies
 
@@ -1676,11 +1691,23 @@ ta8606963 = { $key }: "{ $text }" no es un número entero
 # {key}: must not be negative
 t9c4debaa = { $key }: no debe ser negativo
 
+# Appearance
+t31018b9f = Apariencia
+
+# Hosts not to decrypt
+tb457f0b3 = Hosts que no descifrar
+
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = Uno por línea: un host, o *.example.com para él y todo lo que hay debajo. Su tráfico pasa sin leerse. Esta lista se aplica al instante.
+
+# Settings
+t4b058728 = Ajustes
+
 # After a restart
 t58dcea2d = Tras reiniciar
 
-# Every setting is back to its default.
-t763785e7 = Todos los ajustes han vuelto a su valor predeterminado.
+# Every setting here is back to its default.
+td0200095 = Cada ajuste de aquí vuelve a su valor predeterminado.
 
 # {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
 t69f2bb4d =
@@ -1690,20 +1717,11 @@ t69f2bb4d =
        *[other] { $n } cambios se aplican al reiniciar tracewing.
     }
 
-# Settings
-t4b058728 = Ajustes
-
 # Undo
 t71fd4acf = Deshacer
 
 # Back to defaults
 ta3162a13 = Restablecer valores predeterminados
-
-# Hosts not to decrypt
-tb457f0b3 = Hosts que no descifrar
-
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
-t38e21213 = Uno por línea: un host, o *.example.com para él y todo lo que hay debajo. Su tráfico pasa sin leerse. Esta lista se aplica al instante.
 
 # Fields always read a certain way
 tb6e892b1 = Campos leídos siempre de una manera
