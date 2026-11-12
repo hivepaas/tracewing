@@ -13,6 +13,12 @@ t0a4220dc = { $size } { $format } · JSON { $count }줄
 # The first {count} rows are shown.
 t16aa1c6d = 처음 { $count }행만 표시합니다.
 
+# Forget how {field} is read
+tdb2d6aa8 = { $field } 읽는 방식 잊기
+
+# Always read {field} this way
+tc75725b1 = { $field }를 항상 이렇게 읽기
+
 # Clear what was read
 tdd38ff77 = 읽은 내용 지우기
 

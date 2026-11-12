@@ -45,6 +45,7 @@ pub mod qr;
 pub mod reading;
 pub mod reflection;
 pub mod relay_view;
+pub mod remembered;
 pub mod rpc_view;
 pub mod rules_page;
 pub mod select;

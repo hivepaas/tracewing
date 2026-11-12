@@ -13,6 +13,12 @@ t0a4220dc = { $size } { $format } · { $count } dòng JSON
 # The first {count} rows are shown.
 t16aa1c6d = Chỉ hiện { $count } dòng đầu tiên.
 
+# Forget how {field} is read
+tdb2d6aa8 = Quên cách đọc { $field }
+
+# Always read {field} this way
+tc75725b1 = Luôn đọc { $field } theo cách này
+
 # Clear what was read
 tdd38ff77 = Bỏ phần đã đọc
 

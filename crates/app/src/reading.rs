@@ -31,6 +31,32 @@ pub fn of(text: &str, field: Option<&str>) -> Vec<Reading> {
     tracewing_convert::readings(&Input::new(text, now, offset).under(field))
 }
 
+/// The one reading a remembered rule asks for, if the value still reads that
+/// way.
+pub fn read_as(id: &str, text: &str, field: Option<&str>) -> Option<Reading> {
+    if text.len() > tracewing_convert::MAX_INPUT {
+        return None;
+    }
+    let (now, offset) = here();
+    tracewing_convert::read_as(id, &Input::new(text, now, offset).under(field)).map(small)
+}
+
+/// The field and the value a laid-out line holds: the `created_at` and the
+/// `1763000000` of `  "created_at": 1763000000,`.
+pub fn field_and_value(line: &str) -> Option<(&str, &str)> {
+    let open = line.find('"')?;
+    let rest = &line[open + 1..];
+    let close = rest.find('"')?;
+    let field = &rest[..close];
+    let after = rest[close + 1..].strip_prefix(':')?.trim_start();
+    let value = after
+        .trim_end()
+        .trim_end_matches(',')
+        .trim_end()
+        .trim_matches('"');
+    (!field.is_empty() && !value.is_empty()).then_some((field, value))
+}
+
 /// The readings as menu items: what each says, and `pick` with that reading
 /// when it is chosen, which is what draws it beside the value. The ones the
 /// registry ranked lower go under `Read as`.
@@ -137,6 +163,31 @@ mod tests {
         assert!(matches!(kept.shown, Shown::Line(_)));
         assert_eq!(kept.beside(), json.beside());
         assert_eq!(kept.id, "base64");
+    }
+
+    #[test]
+    fn a_line_gives_up_its_field_and_its_value() {
+        assert_eq!(
+            field_and_value(r#"  "created_at": 1763000000,"#),
+            Some(("created_at", "1763000000"))
+        );
+        assert_eq!(
+            field_and_value(r#"  "name": "Chi Pham""#),
+            Some(("name", "Chi Pham"))
+        );
+        assert_eq!(field_and_value("  {"), None);
+        assert_eq!(field_and_value(r#"  "orders": ["#), Some(("orders", "[")));
+        assert_eq!(
+            field_and_value(r#"  "note": null,"#),
+            Some(("note", "null"))
+        );
+    }
+
+    #[test]
+    fn a_remembered_reading_is_found_for_a_new_value() {
+        let found = read_as("unix-s", "1794492800", Some("created_at")).unwrap();
+        assert_eq!(found.id, "unix-s");
+        assert!(read_as("unix-s", "not a time", Some("created_at")).is_none());
     }
 
     #[test]

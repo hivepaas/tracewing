@@ -25,6 +25,12 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Показаны только первые { $count } строк.
 
+# Forget how {field} is read
+tdb2d6aa8 = Забыть, как читается { $field }
+
+# Always read {field} this way
+tc75725b1 = Всегда читать { $field } так
+
 # Clear what was read
 tdd38ff77 = Убрать прочитанное
 

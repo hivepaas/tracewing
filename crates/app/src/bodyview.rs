@@ -8,6 +8,7 @@ use crate::{
     colors::colors,
     flows::size_text,
     reading,
+    remembered::Remembered,
     select::{self, COPY_MAX, Copied, Selection, Spot},
     syntax::Syntax,
     table::{self, Table},
@@ -186,6 +187,14 @@ pub struct BodyView {
     /// drawn after that piece's text. Emptied where the text changes under
     /// them, since a piece then means another line.
     drawn: BTreeMap<u64, Reading>,
+    /// How fields are always read, shared with the inspector so that a rule
+    /// remembered in either is kept by both.
+    rules: Rc<RefCell<Remembered>>,
+    /// The host this body came from, which rules are remembered against.
+    host: SharedString,
+    /// What those rules read, by piece, and the rules' version they were read
+    /// at: a frame must not read every line again on every draw.
+    by_rule: RefCell<(u64, HashMap<u64, Option<Reading>>)>,
     /// CSV or TSV read as a table, which [`BodyMode::Table`] shows.
     table: Option<Arc<Table>>,
     table_scroll: UniformListScrollHandle,
@@ -219,6 +228,9 @@ impl BodyView {
             focus,
             readings: Vec::new(),
             drawn: BTreeMap::new(),
+            rules: Rc::new(RefCell::new(Remembered::default())),
+            host: SharedString::default(),
+            by_rule: RefCell::new((0, HashMap::new())),
             table: None,
             table_scroll: UniformListScrollHandle::new(),
         }
@@ -461,6 +473,57 @@ impl BodyView {
         cx.notify();
     }
 
+    /// The rules to read this body's fields by, and the host they are
+    /// remembered against. Given by the inspector as the view is made.
+    pub fn set_rules(&mut self, rules: Rc<RefCell<Remembered>>, host: impl Into<SharedString>) {
+        self.rules = rules;
+        self.host = host.into();
+        self.by_rule.borrow_mut().1.clear();
+    }
+
+    /// The rules, to remember one or to forget one from the menu.
+    pub fn rules(&self) -> &Rc<RefCell<Remembered>> {
+        &self.rules
+    }
+
+    /// What is drawn beside the piece `key` of a line that reads `line`: the
+    /// reading chosen for it, else the one a remembered rule asks for.
+    pub fn reading_at(&self, key: u64, line: &str) -> Option<Reading> {
+        self.drawn
+            .get(&key)
+            .cloned()
+            .or_else(|| self.ruled(key, line))
+    }
+
+    /// What a remembered rule reads of this line, worked out once for each
+    /// line and kept until the rules change.
+    fn ruled(&self, key: u64, line: &str) -> Option<Reading> {
+        let (id, version) = {
+            let rules = self.rules.borrow();
+            if rules.is_empty() {
+                return None;
+            }
+            let (field, _) = reading::field_and_value(line)?;
+            (
+                rules.reading_for(&self.host, field)?.to_owned(),
+                rules.version(),
+            )
+        };
+        {
+            let mut kept = self.by_rule.borrow_mut();
+            if kept.0 != version {
+                kept.0 = version;
+                kept.1.clear();
+            } else if let Some(found) = kept.1.get(&key) {
+                return found.clone();
+            }
+        }
+        let (field, value) = reading::field_and_value(line)?;
+        let found = reading::read_as(&id, value, Some(field));
+        self.by_rule.borrow_mut().1.insert(key, found.clone());
+        found
+    }
+
     /// Takes away everything that was drawn beside a value.
     pub fn clear_readings(&mut self, cx: &mut Context<Self>) {
         self.drawn.clear();
@@ -640,6 +703,7 @@ impl BodyView {
         }
         self.mode = mode;
         self.drawn.clear();
+        self.by_rule.borrow_mut().1.clear();
         self.place = Place::default();
         self.row_counts.borrow_mut().clear();
         self.folds = Folds::default();
@@ -736,6 +800,9 @@ impl BodyView {
             shown.depth as f32 * INDENT_W
         };
         let number = number.map(|n| n.to_string()).unwrap_or_default();
+        // What the reader chose to see here, or what a rule says this field
+        // is always read as.
+        let note = self.reading_at(key, &shown.text);
         let highlights: Vec<_> = if self.hex() {
             Vec::new()
         } else {
@@ -834,7 +901,10 @@ impl BodyView {
         }
         // What the reader asked to see of this piece: the time a number is,
         // the claims a token makes. A click on it takes it away again.
-        if let Some(reading) = self.drawn.get(&key) {
+        if let Some(reading) = note {
+            // A reading chosen here is taken away with a click. One a rule
+            // asks for is not: it goes when the rule is forgotten.
+            let chosen = self.drawn.contains_key(&key);
             row = row.child(
                 div()
                     .id(("reading", key))
@@ -842,15 +912,17 @@ impl BodyView {
                     .ml_1()
                     .px_1()
                     .rounded_sm()
-                    .cursor_pointer()
                     .bg(rgb(colors().chip))
                     .text_color(rgb(colors().muted))
                     .child(reading.beside())
-                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        this.drawn.remove(&key);
-                        cx.notify();
-                    })),
+                    .when(chosen, |d| {
+                        d.cursor_pointer()
+                            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                this.drawn.remove(&key);
+                                cx.notify();
+                            }))
+                    }),
             );
         }
         row
@@ -1150,6 +1222,53 @@ impl BodyView {
                     cx.notify();
                 });
             }));
+            // Always, and never again: a rule for the field this value sits
+            // under, on the host this body came from.
+            if let Some(field) = self.selected_field() {
+                let known = self
+                    .rules
+                    .borrow()
+                    .reading_for(&self.host, &field)
+                    .is_some();
+                let chosen = self
+                    .select
+                    .bounds()
+                    .and_then(|(start, _)| self.drawn.get(&start.piece))
+                    .or_else(|| self.readings.first())
+                    .map(|reading| reading.id);
+                let rule_me = me.clone();
+                items.push(if known {
+                    select::Item::new(
+                        "forget-reading",
+                        tr!("Forget how {field} is read", field = field.as_str()),
+                        Some(Rc::new(move |_: &mut Window, cx: &mut gpui::App| {
+                            let _ = rule_me.update(cx, |this, cx| {
+                                let host = this.host.clone();
+                                let _ = this.rules.borrow_mut().forget(&host, &field);
+                                this.by_rule.borrow_mut().1.clear();
+                                this.close_menu();
+                                cx.notify();
+                            });
+                        }) as select::Act),
+                    )
+                } else {
+                    select::Item::new(
+                        "remember-reading",
+                        tr!("Always read {field} this way", field = field.as_str()),
+                        chosen.map(|id| {
+                            Rc::new(move |_: &mut Window, cx: &mut gpui::App| {
+                                let _ = rule_me.update(cx, |this, cx| {
+                                    let host = this.host.clone();
+                                    let _ = this.rules.borrow_mut().remember(&host, &field, id);
+                                    this.by_rule.borrow_mut().1.clear();
+                                    this.close_menu();
+                                    cx.notify();
+                                });
+                            }) as select::Act
+                        }),
+                    )
+                });
+            }
             if !self.drawn.is_empty() {
                 let clear = me.clone();
                 items.push(select::Item::new(

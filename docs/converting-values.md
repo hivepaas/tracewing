@@ -2,9 +2,9 @@
 
 The design, and where it stands. Built: `crates/convert` — the registry, the
 phase one converters and their tests — the readings in the right-click menu of
-a body and of the headers, cookies, query and form fields, and the reading
-chosen drawn where the value is. What is not built yet is marked **to come**
-below.
+a body and of the headers, cookies, query and form fields, the reading chosen
+drawn where the value is, and rules remembered per host and field. What is not
+built yet is marked **to come** below.
 
 A response says `1763000000`, or `eyJhbGciOiJIUzI1NiJ9…`, or `H4sIAAAAAAAA…`.
 Pretty shows all three faithfully and the reader learns nothing from any of them.
@@ -83,16 +83,17 @@ with a certain or likely reading carry a dim dotted underline, worked out only
 for the lines on screen, and switched off by a setting for anyone who finds it
 noisy.
 
-### Remembering the choice
+### Remembering the choice — built
 
 Without this the feature is a toy: every request of the same endpoint would be
 read by hand again.
 
-After a reading is chosen, the menu offers to keep it:
-
-- this value, for as long as the flow is open;
-- every `created_at` from this host;
-- every `created_at`, everywhere.
+Once a reading is drawn, the menu offers `Always read created_at this way`, and
+afterwards `Forget how created_at is read`. A rule is a host, a field and the
+**name** of the reading — `unix-ms`, `http-date`, `base64>gzip>json` — never the
+reading itself: the next value is read again from scratch
+([`read_as`](../crates/convert/src/lib.rs)). Where a field stops reading that
+way, nothing is drawn, which is the honest answer rather than a stale one.
 
 The key is the field's name and the host, not a JSON path. A body is indexed by
 line so that 50 MB opens without freezing ([`body.rs`](../crates/app/src/body.rs)),
@@ -101,8 +102,29 @@ the line's tokens. Field name also generalises the way a reader expects — the
 same `expires_at` on six endpoints is the same thing — where a path does not. A
 path prefix can narrow a rule later if one name turns out to mean two things.
 
-Rules are listed in Settings and removable there, like the ABI and `.proto`
-choices.
+The rules live in `readings.toml` in the data folder, beside `devices.toml`,
+and are shared by the body view and the inspector, so remembering in one is
+remembered in the other:
+
+```toml
+[[rule]]
+host = "api.example.com"
+field = "createdat"
+read_as = "unix-ms"
+```
+
+A field's name is kept with its spelling taken out, as the converters match it:
+`Created-At`, `created_at` and `createdAt` are one field, and `X-Created-At` is
+another. A rule with an empty host would apply everywhere; nothing writes one
+yet, and the menu offers the host it is on.
+
+What a rule reads is worked out once per value and kept until the rules change,
+which a version counter on the rules says. A frame looks things up; it does not
+read them again.
+
+**To come:** the list of rules in Settings, to read and to forget from
+somewhere other than the value itself, and the third scope — every host — which
+the store already understands.
 
 ### Chains
 
@@ -244,7 +266,7 @@ the underline and the remembered rules will ask.
 **To come:** the pane for a `Bytes` reading — which means writing the bytes
 beside the body's own file and opening them as a body, the way
 `detail::json_file` already does for MessagePack and Protobuf — the dim
-underline, remembered rules, and the keyboard.
+underline, the rules listed in Settings, and the keyboard.
 
 ## Limits, and what this will not do
 
@@ -273,8 +295,12 @@ and MCP store.
 
 ## Open questions
 
-- Do remembered rules belong to the session, like a layout, or to the app, like
-  the ABI choices? Probably the app, with the session able to override.
+- Settled: remembered rules belong to the app, in `readings.toml`, as the ABI
+  and `.proto` choices do. Whether a session may override one is still open,
+  and nothing needs it yet.
+- A reading a rule asks for is drawn but cannot be clicked away, since the next
+  draw would bring it back; only forgetting the rule removes it. A reader who
+  wants it gone once has to forget the rule and remember it again.
 - Does a `Fields` reading that runs long belong folded under the row, or in the
   inspector's own pane? Folding a 40-claim token under one line will read badly.
 - `Cache-Control` is said by joining fragments with commas — `kept 2h 30m`,

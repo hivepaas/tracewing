@@ -286,6 +286,16 @@ pub fn readings(input: &Input) -> Vec<Reading> {
     readings_within(input, BUDGET)
 }
 
+/// The reading `id` makes of `input`, if that is still what the value is.
+///
+/// A remembered rule names a reading rather than keeping it, so this finds it
+/// again for the next value of that field. Where the value no longer reads
+/// that way — a field that held milliseconds now holding a word — there is
+/// nothing to draw, which is the honest answer and not a stale one.
+pub fn read_as(id: &str, input: &Input) -> Option<Reading> {
+    readings(input).into_iter().find(|found| found.id == id)
+}
+
 /// Every reading of `input`, best first, giving up after `budget`. A chain is
 /// followed as far as [`MAX_DEPTH`], and no converter runs twice in one chain.
 pub fn readings_within(input: &Input, budget: Duration) -> Vec<Reading> {
@@ -466,6 +476,24 @@ mod tests {
         let time = by_id(&certain, "unix-s").unwrap();
         assert_eq!(time.confidence, Confidence::Certain);
         assert!(!time.beside().contains("(Unix seconds)"));
+    }
+
+    #[test]
+    fn a_remembered_reading_is_found_again() {
+        let input = Input::new("1794492800000", NOW, TZ).under(Some("created_at"));
+        let found = read_as("unix-ms", &input).unwrap();
+        assert_eq!(found.beside(), "2026-11-12 21:13:20 (+07:00), in 0 s");
+        // A chain is named by where it ends, and found again whole.
+        let packed = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            br#"{"a":1,"b":2}"#,
+        );
+        let inside = Input::new(&packed, NOW, TZ);
+        let json = read_as("json", &inside).unwrap();
+        assert_eq!(json.chain, ["base64", "json"]);
+        // And what the value is not reads as nothing at all.
+        assert!(read_as("unix-ms", &Input::new("a word", NOW, TZ)).is_none());
+        assert!(read_as("no-such-reading", &input).is_none());
     }
 
     #[test]
