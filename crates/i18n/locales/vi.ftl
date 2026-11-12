@@ -1186,6 +1186,12 @@ t482173e8 = Tạm dừng message của socket gửi tới ứng dụng
 # Run a script
 t65a52970 = Chạy một script
 
+# Ask the server with HTTP/1.1
+t86d04e51 = Hỏi server bằng HTTP/1.1
+
+# Ask the server with HTTP/2
+tf90c44e9 = Hỏi server bằng HTTP/2
+
 # Status to answer with, like 403
 t8f3ebb6c = Status trả về, như 403
 
@@ -1251,6 +1257,9 @@ tad048e53 = Status { $status }
 
 # Run {path}
 t2f9fde3f = Chạy { $path }
+
+# Ask the server with {version}
+t0a50b346 = Hỏi server bằng { $version }
 
 # Request body: {replace}
 te4856c36 = Body của request: { $replace }

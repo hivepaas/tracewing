@@ -5,6 +5,7 @@
 
 use crate::client_certs::ClientCerts;
 use crate::relay::{Kind as RelayKind, Relay, Route};
+use crate::traffic_rules::TrafficRules;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use http::Uri;
 use hudsucker::rustls::{
@@ -27,7 +28,7 @@ use std::{
     net::{IpAddr, SocketAddr},
     pin::Pin,
     sync::{
-        Arc, Mutex,
+        Arc, Mutex, RwLock,
         atomic::{AtomicBool, AtomicI64, Ordering},
     },
     task::{Context, Poll},
@@ -193,6 +194,9 @@ pub struct TimedConnector {
     relay: Arc<Relay>,
     /// Certificates for servers that ask the client for one.
     client_certs: Arc<ClientCerts>,
+    /// Looked at as a connection is made, for a rule that says which
+    /// version to ask that host with.
+    traffic_rules: Arc<RwLock<TrafficRules>>,
 }
 
 impl TimedConnector {
@@ -202,6 +206,7 @@ impl TimedConnector {
         verifier: Arc<dyn ServerCertVerifier>,
         relay: Arc<Relay>,
         client_certs: Arc<ClientCerts>,
+        traffic_rules: Arc<RwLock<TrafficRules>>,
     ) -> Self {
         config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
         Self {
@@ -210,6 +215,30 @@ impl TimedConnector {
             next_id: Arc::new(AtomicI64::new(1)),
             relay,
             client_certs,
+            traffic_rules,
+        }
+    }
+
+    /// The TLS to agree with where `uri` points: what a rule says to ask
+    /// that host with, or both versions as usual.
+    fn config_for(&self, uri: &Uri) -> Arc<ClientConfig> {
+        let Some(host) = uri.host() else {
+            return Arc::clone(&self.config);
+        };
+        let secure = uri.scheme_str() != Some("http");
+        let port = uri.port_u16().unwrap_or(if secure { 443 } else { 80 });
+        let asked = self
+            .traffic_rules
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .ask_host_with(host, port);
+        match asked {
+            None => Arc::clone(&self.config),
+            Some(version) => {
+                let mut config = (*self.config).clone();
+                config.alpn_protocols = version.alpn();
+                Arc::new(config)
+            }
         }
     }
 
@@ -260,7 +289,7 @@ impl tower_service::Service<Uri> for TimedConnector {
     }
 
     fn call(&mut self, uri: Uri) -> Self::Future {
-        let (config, verifier) = (Arc::clone(&self.config), Arc::clone(&self.verifier));
+        let (config, verifier) = (self.config_for(&uri), Arc::clone(&self.verifier));
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let route = uri.host().and_then(|host| {
             self.relay

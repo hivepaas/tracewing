@@ -1345,6 +1345,12 @@ t482173e8 = Призупиняти повідомлення сокета зас�
 # Run a script
 t65a52970 = Запустити скрипт
 
+# Ask the server with HTTP/1.1
+t86d04e51 = Запитувати сервер через HTTP/1.1
+
+# Ask the server with HTTP/2
+tf90c44e9 = Запитувати сервер через HTTP/2
+
 # Status to answer with, like 403
 t8f3ebb6c = Статус для відповіді, наприклад 403
 
@@ -1410,6 +1416,9 @@ tad048e53 = Статус { $status }
 
 # Run {path}
 t2f9fde3f = Запустити { $path }
+
+# Ask the server with {version}
+t0a50b346 = Запитувати сервер через { $version }
 
 # Request body: {replace}
 te4856c36 = Тіло запиту: { $replace }

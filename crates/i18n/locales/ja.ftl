@@ -1186,6 +1186,12 @@ t482173e8 = アプリへのソケットメッセージを一時停止
 # Run a script
 t65a52970 = スクリプトを実行
 
+# Ask the server with HTTP/1.1
+t86d04e51 = サーバーに HTTP/1.1 で尋ねる
+
+# Ask the server with HTTP/2
+tf90c44e9 = サーバーに HTTP/2 で尋ねる
+
 # Status to answer with, like 403
 t8f3ebb6c = 応答するステータス（例: 403）
 
@@ -1251,6 +1257,9 @@ tad048e53 = ステータス { $status }
 
 # Run {path}
 t2f9fde3f = { $path } を実行
+
+# Ask the server with {version}
+t0a50b346 = サーバーに { $version } で尋ねる
 
 # Request body: {replace}
 te4856c36 = リクエストボディ: { $replace }

@@ -1281,6 +1281,12 @@ t482173e8 = Socket-Nachrichten an die App anhalten
 # Run a script
 t65a52970 = Ein Skript ausführen
 
+# Ask the server with HTTP/1.1
+t86d04e51 = Den Server mit HTTP/1.1 fragen
+
+# Ask the server with HTTP/2
+tf90c44e9 = Den Server mit HTTP/2 fragen
+
 # Status to answer with, like 403
 t8f3ebb6c = Status für die Antwort, z. B. 403
 
@@ -1346,6 +1352,9 @@ tad048e53 = Status { $status }
 
 # Run {path}
 t2f9fde3f = { $path } ausführen
+
+# Ask the server with {version}
+t0a50b346 = Den Server mit { $version } fragen
 
 # Request body: {replace}
 te4856c36 = Anfrage-Body: { $replace }

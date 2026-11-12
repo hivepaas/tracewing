@@ -23,7 +23,7 @@ use tracewing_proxy::{
     rules::HostRules,
     run_proxy,
     throttle::{Conditions, Network},
-    traffic_rules::{Action, TrafficRule, TrafficRules},
+    traffic_rules::{Action, AskWith, TrafficRule, TrafficRules},
 };
 use tracewing_store::{
     search,
@@ -3255,6 +3255,59 @@ fn rule(url: &str, action: Action) -> TrafficRule {
         url: url.to_owned(),
         method: String::new(),
         action,
+    }
+}
+
+/// Which version the server is asked with, which ALPN alone settles: the
+/// rule pins it, and the origin says which it saw.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_rule_settles_the_version_a_server_is_asked_with() {
+    for (version, expected) in [
+        (AskWith::Http1, "version=HTTP/1.1\n"),
+        (AskWith::Http2, "version=HTTP/2.0\n"),
+    ] {
+        let h = Harness::start("ask-server-with").await;
+        let port = h.origin.rsplit(':').next().unwrap().to_owned();
+        // Set before the first request: the version is agreed as the
+        // connection is made, and a connection already made is kept to be
+        // used again.
+        *h.traffic_rules.write().unwrap() = TrafficRules {
+            rules: vec![rule(
+                &format!("localhost:{port}"),
+                Action::AskServerWith { version },
+            )],
+        };
+        let echoed = h
+            .client(false)
+            .get(format!("{}/echo", h.origin))
+            .send()
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+        assert!(
+            echoed.starts_with(expected),
+            "asked with {version:?}: {echoed}"
+        );
+
+        let (_, conn, dir) = h.finish(1).await;
+        let (rule_name, server): (Option<String>, Option<String>) = conn
+            .query_row("SELECT rule, server_version FROM flows", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .unwrap();
+        assert_eq!(
+            rule_name.as_deref(),
+            Some(format!("rule for localhost:{port}").as_str()),
+            "the flow says which rule touched it"
+        );
+        assert_eq!(
+            server.as_deref(),
+            Some(expected.trim_end().trim_start_matches("version=")),
+            "and the version the server answered with"
+        );
+        clean_up(conn, dir);
     }
 }
 

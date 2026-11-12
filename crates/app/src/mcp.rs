@@ -833,7 +833,10 @@ fn tools() -> Value {
                 {\"action\":\"pause_messages_to_server\"}, {\"action\":\"pause_messages_to_app\"} \
                 (these hold traffic on tracewing's Paused screen until the user lets it go), \
                 {\"action\":\"script\",\"path\":\"/full/path/to/script.js\"} (runs its \
-                onRequest(request) and onResponse(request, response) on matching traffic). \
+                onRequest(request) and onResponse(request, response) on matching traffic), \
+                {\"action\":\"ask_server_with\",\"version\":\"http1\"} or \"http2\" (which \
+                version tracewing asks that server with; `url` must be a host with no path, \
+                and a cleartext connection is HTTP/1.1 whatever it says). \
                 Only if the user allowed AI tools to act, in Settings.",
             "inputSchema": {
                 "type": "object",
