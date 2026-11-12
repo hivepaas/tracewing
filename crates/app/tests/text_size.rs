@@ -1,11 +1,14 @@
 //! The text size chosen in Settings: the window grows with it, rows and
-//! all, and the list and the body still scroll a row at a time.
+//! all, and the list and the body still scroll a row at a time. And the
+//! rail's logo, which leads to About.
 //!
 //! `cargo test --release -p tracewing --features headless --test text_size`
 
 #![cfg(all(feature = "headless", target_os = "linux"))]
 
-use gpui::{AppContext as _, Entity, HeadlessAppContext, WindowHandle, px, size};
+use gpui::{AppContext as _, Entity, HeadlessAppContext, WindowHandle, point, px, size};
+
+mod common;
 use std::{
     path::PathBuf,
     sync::Arc,
@@ -150,6 +153,22 @@ fn the_window_grows_with_the_text_size() {
     cx.run_until_parked();
     shot(&mut cx, main.into(), "108-settings-text-size");
 
+    // The rail's logo leads to About, the last part of Settings.
+    main.update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+    cx.run_until_parked();
+    let logo = point(px(52.), px(36.));
+    common::drag(&mut cx, main, logo, logo);
+    main.update(&mut cx, |view, _, _| {
+        assert_eq!(view.screen, Screen::Settings)
+    })
+    .unwrap();
+    let kept = tracewing::layout::Layout::load(&dir.join("layout.toml"));
+    assert_eq!(
+        kept.settings_section,
+        tracewing::layout::SettingsSection::About
+    );
+
     // The design's again: nothing is kept for it.
     main.update(&mut cx, |view, _, cx| view.set_text_size(Some(13), cx))
         .unwrap();
@@ -160,6 +179,8 @@ fn the_window_grows_with_the_text_size() {
     .unwrap();
     let kept = tracewing::layout::Layout::load(&dir.join("layout.toml"));
     assert_eq!(kept.text_size, None);
+    cx.run_until_parked();
+    shot(&mut cx, main.into(), "109-about");
 
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);

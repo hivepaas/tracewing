@@ -1,6 +1,123 @@
 # tracewing in Korean. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# Free software
+t731220a4 = 자유 소프트웨어
+
+# Under the GNU General Public License, version 3 or later
+t4e98bf3c = GNU 일반 공중 사용 허가서 버전 3 이상에 따름
+
+# View license
+tfc21d38b = 라이선스 보기
+
+# Made by HivePaaS
+t10c7007a = HivePaaS 제작
+
+# Built in Rust, on GPUI
+t49e74c86 = Rust와 GPUI로 제작
+
+# Source code
+tf6a49f4d = 소스 코드
+
+# Something wrong?
+t610dfb6f = 문제가 있나요?
+
+# Tell us, with the version above
+ta3e29034 = 위의 버전과 함께 알려 주세요
+
+# Report a problem
+t7b1728e7 = 문제 신고
+
+# What changed
+te8345543 = 변경 내용
+
+# Every release, and what is new in it
+t8e6f2052 = 모든 릴리스와 새로운 기능
+
+# Release notes
+tc52ab62f = 릴리스 노트
+
+# © {year} HivePaaS. The tracewing name and logo are trademarks of HivePaaS.
+t14b291a4 = © { $year } HivePaaS. tracewing 이름과 로고는 HivePaaS의 상표입니다.
+
+# Copied
+t8dc21305 = 복사됨
+
+# Copy version info
+t3d37483c = 버전 정보 복사
+
+# Version {version} · {os} {arch}
+t6bead5ae = 버전 { $version } · { $os } { $arch }
+
+# A native HTTP(S) debugging proxy that keeps up with big sessions.
+t86e5ad3e = 큰 세션도 거뜬히 처리하는 네이티브 HTTP(S) 디버깅 프록시.
+
+# More from HivePaaS
+tb25cf729 = HivePaaS의 다른 제품
+
+# Free and open source, like tracewing.
+tb730ab28 = tracewing처럼 무료 오픈 소스입니다.
+
+# A self-hosted platform for your apps, built on Docker Swarm: an open-source alternative to Heroku, Render and Coolify.
+tc9d13419 = Docker Swarm 기반으로 앱을 직접 호스팅하는 플랫폼입니다. Heroku, Render, Coolify의 오픈 소스 대안입니다.
+
+# 300+ one-click apps
+t6a770b0a = 원클릭 앱 300개 이상
+
+# Deploy on push
+tb0bfc3e9 = push 시 자동 배포
+
+# Pull request previews
+t4e4180fc = 풀 리퀘스트 미리보기
+
+# Automatic TLS
+t9e9776ed = 자동 TLS
+
+# Live logs and metrics
+tebe3a172 = 실시간 로그와 메트릭
+
+# Apache-2.0
+t0274f036 = Apache-2.0
+
+# Visit hivepaas.com
+t0632975a = hivepaas.com 방문
+
+# A fast, native SSH client for Linux, macOS and Windows.
+t0f4c758a = Linux, macOS, Windows용 빠른 네이티브 SSH 클라이언트입니다.
+
+# SSH and SFTP
+t0f8af34d = SSH와 SFTP
+
+# Follows your ssh_config
+tc1c4446d = ssh_config 지원
+
+# A real terminal
+tae9bcfa8 = 진짜 터미널
+
+# GPL-3.0-or-later
+t8622a5c1 = GPL-3.0-or-later
+
+# Visit shellwing.app
+t1d2ed540 = shellwing.app 방문
+
+# A file archiver that puts every core to work and opens archives safely.
+t5d2a9fa0 = 모든 코어를 활용하고 압축 파일을 안전하게 여는 파일 압축 프로그램.
+
+# ZIP, 7z, RAR and tar
+t4d2518b8 = ZIP, 7z, RAR, tar
+
+# Every core at work
+t553f5ef1 = 모든 코어 활용
+
+# Safe by default
+t3ffc07c8 = 기본부터 안전
+
+# Browse S3, WebDAV and SFTP
+t61def008 = S3, WebDAV, SFTP 탐색
+
+# Visit packwing.app
+t11cbc28f = packwing.app 방문
+
 # … {count} line {closer} | … {count} lines {closer}
 t2ba67348 = … { $count }줄 { $closer }
 
@@ -541,9 +658,6 @@ tf5910557 = 다시 보내기
 # Edit and send
 tf837e542 = 편집 후 보내기
 
-# Copied
-t8dc21305 = 복사됨
-
 # Copy as cURL
 t866d1e3e = cURL로 복사
 
@@ -744,6 +858,9 @@ t34eddf06 = 저장 공간
 
 # AI tools
 t294d7ea4 = AI 도구
+
+# About
+t58e096de = 설명
 
 # Light
 t8ad2f8cf = 라이트
@@ -2637,9 +2754,6 @@ tb79773df = Server-Timing
 
 # Took
 tcea1562e = 소요 시간
-
-# About
-t58e096de = 설명
 
 # Scheme
 t9c9083a2 = 스킴

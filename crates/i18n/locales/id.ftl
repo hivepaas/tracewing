@@ -1,6 +1,123 @@
 # tracewing in Indonesian. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# Free software
+t731220a4 = Perangkat lunak bebas
+
+# Under the GNU General Public License, version 3 or later
+t4e98bf3c = Di bawah GNU General Public License, versi 3 atau lebih baru
+
+# View license
+tfc21d38b = Lihat lisensi
+
+# Made by HivePaaS
+t10c7007a = Dibuat oleh HivePaaS
+
+# Built in Rust, on GPUI
+t49e74c86 = Dibuat dengan Rust, di atas GPUI
+
+# Source code
+tf6a49f4d = Kode sumber
+
+# Something wrong?
+t610dfb6f = Ada masalah?
+
+# Tell us, with the version above
+ta3e29034 = Beri tahu kami, sertakan versi di atas
+
+# Report a problem
+t7b1728e7 = Laporkan masalah
+
+# What changed
+te8345543 = Yang berubah
+
+# Every release, and what is new in it
+t8e6f2052 = Setiap rilis, dan apa yang baru di dalamnya
+
+# Release notes
+tc52ab62f = Catatan rilis
+
+# © {year} HivePaaS. The tracewing name and logo are trademarks of HivePaaS.
+t14b291a4 = © { $year } HivePaaS. Nama dan logo tracewing adalah merek dagang HivePaaS.
+
+# Copied
+t8dc21305 = Disalin
+
+# Copy version info
+t3d37483c = Salin info versi
+
+# Version {version} · {os} {arch}
+t6bead5ae = Versi { $version } · { $os } { $arch }
+
+# A native HTTP(S) debugging proxy that keeps up with big sessions.
+t86e5ad3e = Proxy debugging HTTP(S) native yang tetap lancar pada sesi besar.
+
+# More from HivePaaS
+tb25cf729 = Lainnya dari HivePaaS
+
+# Free and open source, like tracewing.
+tb730ab28 = Gratis dan open source, seperti tracewing.
+
+# A self-hosted platform for your apps, built on Docker Swarm: an open-source alternative to Heroku, Render and Coolify.
+tc9d13419 = Platform self-hosted untuk aplikasi Anda, dibangun di atas Docker Swarm: alternatif open source untuk Heroku, Render, dan Coolify.
+
+# 300+ one-click apps
+t6a770b0a = 300+ aplikasi sekali klik
+
+# Deploy on push
+tb0bfc3e9 = Deploy saat push
+
+# Pull request previews
+t4e4180fc = Pratinjau pull request
+
+# Automatic TLS
+t9e9776ed = TLS otomatis
+
+# Live logs and metrics
+tebe3a172 = Log dan metrik langsung
+
+# Apache-2.0
+t0274f036 = Apache-2.0
+
+# Visit hivepaas.com
+t0632975a = Kunjungi hivepaas.com
+
+# A fast, native SSH client for Linux, macOS and Windows.
+t0f4c758a = Klien SSH native yang cepat untuk Linux, macOS, dan Windows.
+
+# SSH and SFTP
+t0f8af34d = SSH dan SFTP
+
+# Follows your ssh_config
+tc1c4446d = Mengikuti ssh_config Anda
+
+# A real terminal
+tae9bcfa8 = Terminal sungguhan
+
+# GPL-3.0-or-later
+t8622a5c1 = GPL-3.0-or-later
+
+# Visit shellwing.app
+t1d2ed540 = Kunjungi shellwing.app
+
+# A file archiver that puts every core to work and opens archives safely.
+t5d2a9fa0 = Pengarsip berkas yang memanfaatkan setiap inti prosesor dan membuka arsip dengan aman.
+
+# ZIP, 7z, RAR and tar
+t4d2518b8 = ZIP, 7z, RAR, dan tar
+
+# Every core at work
+t553f5ef1 = Semua inti bekerja
+
+# Safe by default
+t3ffc07c8 = Aman sejak awal
+
+# Browse S3, WebDAV and SFTP
+t61def008 = Jelajahi S3, WebDAV, dan SFTP
+
+# Visit packwing.app
+t11cbc28f = Kunjungi packwing.app
+
 # … {count} line {closer} | … {count} lines {closer}
 t2ba67348 = … { $count } baris { $closer }
 
@@ -541,9 +658,6 @@ tf5910557 = Kirim ulang
 # Edit and send
 tf837e542 = Edit dan kirim
 
-# Copied
-t8dc21305 = Disalin
-
 # Copy as cURL
 t866d1e3e = Salin sebagai cURL
 
@@ -744,6 +858,9 @@ t34eddf06 = Penyimpanan
 
 # AI tools
 t294d7ea4 = Alat AI
+
+# About
+t58e096de = Keterangan
 
 # Light
 t8ad2f8cf = Terang
@@ -2637,9 +2754,6 @@ tb79773df = Server-Timing
 
 # Took
 tcea1562e = Lama
-
-# About
-t58e096de = Keterangan
 
 # Scheme
 t9c9083a2 = Skema

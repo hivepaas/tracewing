@@ -22,7 +22,7 @@ use crate::{
     settings_page::SettingsPage,
     shortcuts::{self, Action, PAGE, action_of},
     system::{CaState, ProxySwitch, SystemState},
-    widgets::{Reachable, eyebrow, icon, section_badge, status_colors},
+    widgets::{Reachable, eyebrow, icon, section_badge, status_colors, tip},
 };
 use crate::{
     compare_page::ComparePage,
@@ -286,6 +286,8 @@ pub struct Traffic {
     pub(crate) layout: Layout,
     /// How much larger than the design the window draws, as last drawn.
     ui_scale: f32,
+    /// Whether About's Copy version info says it did, for a moment.
+    pub(crate) about_copied: bool,
     flows: Option<Flows>,
     jobs: Sender<Job>,
     done: Receiver<Done>,
@@ -508,6 +510,7 @@ impl Traffic {
             settings_left: None,
             layout,
             ui_scale: 1.,
+            about_copied: false,
             layout_path,
             flows: None,
             jobs: job_tx,
@@ -2390,16 +2393,22 @@ impl Traffic {
             .flex_col()
             .items_center()
             .gap(ui(14.))
+            // The logo leads to About.
             .child(
                 div()
+                    .id("rail-about")
                     .size(ui(44.))
                     .mb(ui(4.))
                     .rounded(ui(15.))
                     .flex()
                     .items_center()
                     .justify_center()
+                    .cursor_pointer()
+                    .reachable()
+                    .tooltip(tip(tr!("About")))
                     .bg(rgb(c.accent))
-                    .child(icon("logo", 24., c.on_accent)),
+                    .child(icon("logo", 24., c.on_accent))
+                    .on_click(cx.listener(|this, _, _, cx| this.show_about(cx))),
             )
             .child(item("rail-setup", tr!("Set up"), "setup", Screen::Setup))
             .child(item(

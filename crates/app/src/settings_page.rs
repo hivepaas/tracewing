@@ -824,6 +824,7 @@ impl Traffic {
             ),
             SettingsSection::Storage => (Vec::new(), Vec::new()),
             SettingsSection::Ai => (Vec::new(), vec![self.render_ai_tools().into_any_element()]),
+            SettingsSection::About => (vec![self.render_about(cx).into_any_element()], Vec::new()),
         };
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);

@@ -1,6 +1,123 @@
 # tracewing in traditional Chinese. Each message is found by its English, the
 # comment above it; scripts/i18n.py keeps this file in step with the code.
 
+# Free software
+t731220a4 = 自由軟體
+
+# Under the GNU General Public License, version 3 or later
+t4e98bf3c = 依 GNU 通用公共授權條款第 3 版（或更新版本）授權
+
+# View license
+tfc21d38b = 檢視授權
+
+# Made by HivePaaS
+t10c7007a = 由 HivePaaS 開發
+
+# Built in Rust, on GPUI
+t49e74c86 = 以 Rust 打造，基於 GPUI
+
+# Source code
+tf6a49f4d = 原始碼
+
+# Something wrong?
+t610dfb6f = 發現問題？
+
+# Tell us, with the version above
+ta3e29034 = 請告訴我們，並附上上方的版本
+
+# Report a problem
+t7b1728e7 = 回報問題
+
+# What changed
+te8345543 = 更新內容
+
+# Every release, and what is new in it
+t8e6f2052 = 每個版本及其新增內容
+
+# Release notes
+tc52ab62f = 版本資訊
+
+# © {year} HivePaaS. The tracewing name and logo are trademarks of HivePaaS.
+t14b291a4 = © { $year } HivePaaS。tracewing 名稱與標誌為 HivePaaS 的商標。
+
+# Copied
+t8dc21305 = 已複製
+
+# Copy version info
+t3d37483c = 複製版本資訊
+
+# Version {version} · {os} {arch}
+t6bead5ae = 版本 { $version } · { $os } { $arch }
+
+# A native HTTP(S) debugging proxy that keeps up with big sessions.
+t86e5ad3e = 原生 HTTP(S) 除錯代理，大型工作階段也跟得上。
+
+# More from HivePaaS
+tb25cf729 = HivePaaS 的更多產品
+
+# Free and open source, like tracewing.
+tb730ab28 = 與 tracewing 一樣，免費且開放原始碼。
+
+# A self-hosted platform for your apps, built on Docker Swarm: an open-source alternative to Heroku, Render and Coolify.
+tc9d13419 = 以 Docker Swarm 打造、可自行架設的應用程式平台：Heroku、Render 和 Coolify 的開放原始碼替代方案。
+
+# 300+ one-click apps
+t6a770b0a = 300+ 一鍵安裝應用程式
+
+# Deploy on push
+tb0bfc3e9 = 推送即部署
+
+# Pull request previews
+t4e4180fc = Pull Request 預覽
+
+# Automatic TLS
+t9e9776ed = 自動 TLS
+
+# Live logs and metrics
+tebe3a172 = 即時記錄與指標
+
+# Apache-2.0
+t0274f036 = Apache-2.0
+
+# Visit hivepaas.com
+t0632975a = 前往 hivepaas.com
+
+# A fast, native SSH client for Linux, macOS and Windows.
+t0f4c758a = 快速的原生 SSH 用戶端，支援 Linux、macOS 和 Windows。
+
+# SSH and SFTP
+t0f8af34d = SSH 與 SFTP
+
+# Follows your ssh_config
+tc1c4446d = 遵循你的 ssh_config
+
+# A real terminal
+tae9bcfa8 = 真正的終端機
+
+# GPL-3.0-or-later
+t8622a5c1 = GPL-3.0-or-later
+
+# Visit shellwing.app
+t1d2ed540 = 前往 shellwing.app
+
+# A file archiver that puts every core to work and opens archives safely.
+t5d2a9fa0 = 讓每個核心都投入運作、安全開啟封存檔的檔案壓縮工具。
+
+# ZIP, 7z, RAR and tar
+t4d2518b8 = ZIP、7z、RAR 和 tar
+
+# Every core at work
+t553f5ef1 = 每個核心都在工作
+
+# Safe by default
+t3ffc07c8 = 預設即安全
+
+# Browse S3, WebDAV and SFTP
+t61def008 = 瀏覽 S3、WebDAV 和 SFTP
+
+# Visit packwing.app
+t11cbc28f = 前往 packwing.app
+
 # … {count} line {closer} | … {count} lines {closer}
 t2ba67348 = … { $count } 行 { $closer }
 
@@ -541,9 +658,6 @@ tf5910557 = 重新傳送
 # Edit and send
 tf837e542 = 編輯後傳送
 
-# Copied
-t8dc21305 = 已複製
-
 # Copy as cURL
 t866d1e3e = 複製為 cURL
 
@@ -744,6 +858,9 @@ t34eddf06 = 儲存
 
 # AI tools
 t294d7ea4 = AI 工具
+
+# About
+t58e096de = 說明
 
 # Light
 t8ad2f8cf = 淺色
@@ -2637,9 +2754,6 @@ tb79773df = Server-Timing
 
 # Took
 tcea1562e = 耗時
-
-# About
-t58e096de = 說明
 
 # Scheme
 t9c9083a2 = 協定

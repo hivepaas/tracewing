@@ -62,16 +62,18 @@ pub enum SettingsSection {
     Decoding,
     Storage,
     Ai,
+    About,
 }
 
 impl SettingsSection {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::General,
         Self::Network,
         Self::Certificates,
         Self::Decoding,
         Self::Storage,
         Self::Ai,
+        Self::About,
     ];
 
     pub fn name(self) -> String {
@@ -82,6 +84,7 @@ impl SettingsSection {
             Self::Decoding => tr!("Decoding"),
             Self::Storage => tr!("Storage"),
             Self::Ai => tr!("AI tools"),
+            Self::About => tr!("About"),
         }
     }
 }
