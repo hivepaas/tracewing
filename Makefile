@@ -16,10 +16,10 @@ FEATURES ?=
 APP := -p tracewing $(if $(FEATURES),--features $(FEATURES))
 
 .DEFAULT_GOAL := help
-.PHONY: help debug release build build-debug test test-window lint fmt playground clean
+.PHONY: help debug release build build-debug test test-window lint fmt playground playground-trust clean
 
 help: ## List the targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-18s %s\n", $$1, $$2}'
 
 debug: ## Build and run the debug version: quicker to build, slower to run
 	$(CARGO) run $(APP)
@@ -46,8 +46,11 @@ lint: ## Check the format and run clippy, as CI does
 fmt: ## Format the code
 	$(CARGO) fmt --all
 
-playground: ## Run a server to try tracewing on: http://localhost:10000 lists its paths
+playground: ## Run a server to try tracewing on: http://localhost:10000 and https://localhost:10443
 	$(CARGO) run --release -p tracewing-dev --bin tracewing-dev -- playground
+
+playground-trust: ## The same, its authority trusted by tracewing first (once; restart tracewing)
+	$(CARGO) run --release -p tracewing-dev --bin tracewing-dev -- playground --trust
 
 clean: ## Remove what was built
 	$(CARGO) clean
