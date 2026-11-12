@@ -357,3 +357,200 @@ fn a_header_is_read_under_its_own_name() {
         .unwrap();
     assert_eq!(drawn, 0);
 }
+
+/// A rule remembered for a field reads the next flow's value by itself, in
+/// the headers and in a body, and is on the disk for the next run.
+#[test]
+fn what_is_remembered_reads_itself_next_time() {
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir = std::env::temp_dir().join(format!("tracewing-reading-rules-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let listener = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let port = listener.local_addr().unwrap().port();
+    runtime.spawn(tracewing_dev::playground::serve(listener));
+    let engine = Engine::start(EngineOptions {
+        data_dir: dir.clone(),
+        settings: StorageSettings {
+            disk_reserve_mib: 1,
+            ..StorageSettings::default()
+        },
+        rules: Default::default(),
+        traffic_rules: Default::default(),
+        ports: 20_370..20_380,
+        extra_roots: Vec::new(),
+        key_store: Default::default(),
+        find_apps: false,
+    })
+    .unwrap();
+    while !dir.join("ca.pem").exists() {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+
+    let text = Arc::new(gpui_wgpu::CosmicTextSystem::new(tracewing::FONT));
+    let mut cx = HeadlessAppContext::with_platform(text, Arc::new(tracewing::Assets), || {
+        gpui_platform::current_headless_renderer()
+    });
+    cx.update(tracewing::load_fonts);
+    let data_dir = dir.clone();
+    let window: WindowHandle<Traffic> = cx
+        .open_window(size(px(1440.), px(900.)), move |window, cx| {
+            cx.new(|cx| Traffic::new(engine, &data_dir, window, cx))
+        })
+        .unwrap();
+
+    // Two flows from the same host: a rule for the first reads the second.
+    get(&mut cx, window, &format!("http://localhost:{port}/json"));
+    get(&mut cx, window, &format!("http://localhost:{port}/json"));
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Traffic, cx);
+            view.select_place(0, cx);
+            view.set_part(Part::Headers, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+
+    // Nothing is read until a rule says so.
+    let date = window
+        .update(&mut cx, |view, _, _| {
+            let sel = &view.inspector.select;
+            (0..12u64).find_map(|piece| {
+                let field = sel.field_of(piece)?;
+                field
+                    .eq_ignore_ascii_case("date")
+                    .then(|| sel.text_of(piece))?
+            })
+        })
+        .unwrap()
+        .expect("the answer carries a Date header");
+    let before = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector.reading_under("date", &date).is_some()
+        })
+        .unwrap();
+    assert!(!before, "nothing is read before a rule says to");
+
+    // Remember it, as the menu's `Always read date this way` does.
+    window
+        .update(&mut cx, |view, _, cx| {
+            let host = view.inspector.host();
+            view.inspector
+                .remembered
+                .borrow_mut()
+                .remember(&host, "date", "http-date")
+                .unwrap();
+            cx.notify();
+        })
+        .unwrap();
+    cx.run_until_parked();
+
+    // The other flow's own Date, which was never chosen, reads itself.
+    window
+        .update(&mut cx, |view, _, cx| view.select_place(1, cx))
+        .unwrap();
+    cx.run_until_parked();
+    let (other_date, reading) = window
+        .update(&mut cx, |view, _, _| {
+            let sel = &view.inspector.select;
+            let date = (0..12u64)
+                .find_map(|piece| {
+                    let field = sel.field_of(piece)?;
+                    field
+                        .eq_ignore_ascii_case("date")
+                        .then(|| sel.text_of(piece))?
+                })
+                .expect("the second answer carries a Date header too");
+            let reading = view.inspector.reading_under("date", &date);
+            (date, reading)
+        })
+        .unwrap();
+    let reading = reading.expect("a remembered field reads itself");
+    assert_eq!(reading.id, "http-date");
+    assert_eq!(
+        window
+            .update(&mut cx, |view, _, _| view.inspector.readings_drawn())
+            .unwrap(),
+        0,
+        "it is the rule that read it, not a choice"
+    );
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "85-reading-remembered");
+
+    // A body's field is read by a rule too.
+    window
+        .update(&mut cx, |view, _, cx| view.set_part(Part::Body, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the body laid out", |view, cx| {
+        let BodyState::Shown(body) = &view.inspector.body else {
+            return false;
+        };
+        body.read(cx).body().lines() > 3
+    });
+    let (line, text) = window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            let body = body.read(cx).body();
+            let lines = body.read_whole(0..body.lines().min(400));
+            lines
+                .iter()
+                .enumerate()
+                .find_map(|(line, text)| {
+                    text.contains("\"total\":")
+                        .then(|| (line as u64, text.clone()))
+                })
+                .expect("the orders carry a total")
+        })
+        .unwrap();
+    let before = window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            body.read(cx).reading_at(line, &text).is_some()
+        })
+        .unwrap();
+    assert!(!before, "nothing is read in a body before a rule says to");
+    window
+        .update(&mut cx, |view, _, cx| {
+            let host = view.inspector.host();
+            view.inspector
+                .remembered
+                .borrow_mut()
+                .remember(&host, "total", "size")
+                .unwrap();
+            cx.notify();
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let after = window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            body.read(cx).reading_at(line, &text)
+        })
+        .unwrap()
+        .expect("a remembered field is read in a body as well");
+    assert_eq!(after.id, "size");
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "86-reading-remembered-in-a-body");
+
+    // And it is on the disk for the next run.
+    let kept = std::fs::read_to_string(dir.join("readings.toml")).unwrap();
+    assert!(kept.contains("read_as = \"http-date\""), "{kept}");
+    assert!(kept.contains("field = \"date\""), "{kept}");
+    assert!(
+        !other_date.is_empty() && kept.contains("read_as = \"size\""),
+        "{kept}"
+    );
+}

@@ -21,6 +21,12 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Nur die ersten { $count } Zeilen werden gezeigt.
 
+# Forget how {field} is read
+tdb2d6aa8 = { $field } nicht mehr so lesen
+
+# Always read {field} this way
+tc75725b1 = { $field } immer so lesen
+
 # Clear what was read
 tdd38ff77 = Gelesenes entfernen
 

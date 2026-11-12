@@ -13,6 +13,8 @@ t0a4220dc =
        *[other] { $size } { $format } · { $count } lines of JSON
     }
 t16aa1c6d = The first { $count } rows are shown.
+tdb2d6aa8 = Forget how { $field } is read
+tc75725b1 = Always read { $field } this way
 tdd38ff77 = Clear what was read
 t3849d44e = Unfold all
 t51332550 =

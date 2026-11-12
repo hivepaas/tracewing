@@ -13,6 +13,12 @@ t0a4220dc = { $size } { $format } · JSON { $count } 行
 # The first {count} rows are shown.
 t16aa1c6d = 最初の { $count } 行のみ表示しています。
 
+# Forget how {field} is read
+tdb2d6aa8 = { $field } の読み方を忘れる
+
+# Always read {field} this way
+tc75725b1 = { $field } を常にこの読み方にする
+
 # Clear what was read
 tdd38ff77 = 読んだものを消す
 

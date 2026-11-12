@@ -7,7 +7,7 @@ use crate::{
     colors::colors,
     connection::Certificate,
     cookies,
-    detail::{BodyFacts, Detail, Phase, Side, body_file},
+    detail::{BodyFacts, Detail, Phase, Side, body_file, host_and_path},
     devices::device_of,
     fields::{self, Field, Value as FieldValue},
     flows::{size_text, time_text},
@@ -16,6 +16,7 @@ use crate::{
     layout::Sides,
     messages::MessagesState,
     reading,
+    remembered::Remembered,
     select::{self, Copied, Selection},
     snippets::{self, Language},
     traffic::Traffic,
@@ -27,6 +28,7 @@ use gpui::{
     px, relative, rgb,
 };
 use std::{
+    cell::RefCell,
     collections::HashMap,
     rc::Rc,
     sync::Arc,
@@ -124,6 +126,12 @@ pub struct InspectorState {
     read_from: Option<(SharedString, SharedString)>,
     /// The readings chosen, by [`drawn_key`].
     drawn: HashMap<String, Reading>,
+    /// How fields are always read, once a reader has said so. Shared with the
+    /// body views, so that remembering in one is remembered in the other.
+    pub remembered: Rc<RefCell<Remembered>>,
+    /// What those rules read, by [`drawn_key`], and the rules' version they
+    /// were read at: a frame must not read a value again on every draw.
+    by_rule: RefCell<(u64, HashMap<String, Option<Reading>>)>,
 }
 
 /// What a drawn reading is kept under: the field and the value it was read
@@ -180,6 +188,51 @@ impl InspectorState {
             return None;
         }
         self.drawn.get(&drawn_key(field, value))
+    }
+
+    /// The host of the flow shown. Rules are remembered against it, since the
+    /// `created_at` of one API is not the `created_at` of another.
+    pub fn host(&self) -> String {
+        self.detail
+            .as_ref()
+            .map(|detail| host_and_path(&detail.url).0.to_owned())
+            .unwrap_or_default()
+    }
+
+    /// What a remembered rule reads under this field, worked out once for
+    /// each value and kept until the rules change.
+    fn ruled(&self, field: &str, value: &str) -> Option<Reading> {
+        let (id, version) = {
+            let rules = self.remembered.borrow();
+            if rules.is_empty() {
+                return None;
+            }
+            (
+                rules.reading_for(&self.host(), field)?.to_owned(),
+                rules.version(),
+            )
+        };
+        let key = drawn_key(field, value);
+        {
+            let mut kept = self.by_rule.borrow_mut();
+            if kept.0 != version {
+                kept.0 = version;
+                kept.1.clear();
+            } else if let Some(found) = kept.1.get(&key) {
+                return found.clone();
+            }
+        }
+        let found = reading::read_as(&id, value, Some(field));
+        self.by_rule.borrow_mut().1.insert(key, found.clone());
+        found
+    }
+
+    /// What is drawn under a field: the reading chosen for it, else the one a
+    /// remembered rule asks for.
+    pub fn reading_under(&self, field: &str, value: &str) -> Option<Reading> {
+        self.drawn_under(field, value)
+            .cloned()
+            .or_else(|| self.ruled(field, value))
     }
 
     fn slot(&mut self, other: bool) -> &mut BodyState {
@@ -354,6 +407,10 @@ impl Traffic {
                         Ok(body) => BodyState::Shown({
                             let focus = this.focus.clone();
                             let mode = this.inspector.body_mode;
+                            // The rules this body's fields are read by, and
+                            // the host they are remembered against.
+                            let rules = this.inspector.remembered.clone();
+                            let host = this.inspector.host();
                             // MessagePack, CBOR or Protobuf, shown as the JSON made of it.
                             let json = json.and_then(|(json, name)| {
                                 Some((Body::open(&json).ok()?, name))
@@ -368,6 +425,7 @@ impl Traffic {
                                     }
                                     None => BodyView::new(body, content_type.as_deref(), focus, cx),
                                 };
+                                view.set_rules(rules, host);
                                 view.set_mode(mode, cx);
                                 if let Some(table) = table {
                                     view.set_table(table, cx);
@@ -1425,6 +1483,57 @@ impl Traffic {
                     r4(cx);
                 },
             ));
+            // Always, and never again: a rule for this field on this host.
+            if let Some((field, value)) = self.inspector.read_from.clone() {
+                let host = self.inspector.host();
+                let known = self
+                    .inspector
+                    .remembered
+                    .borrow()
+                    .reading_for(&host, &field)
+                    .is_some();
+                let chosen = self
+                    .inspector
+                    .drawn_under(&field, &value)
+                    .or_else(|| self.inspector.readings.first())
+                    .map(|reading| reading.id);
+                let (ruled, rule_me) = (sel.clone(), me.clone());
+                let item = if known {
+                    select::Item::new(
+                        "forget-reading",
+                        tr!("Forget how {field} is read", field = field.as_ref()),
+                        Some(Rc::new(move |_: &mut gpui::Window, cx: &mut gpui::App| {
+                            let _ = rule_me.update(cx, |this, cx| {
+                                let host = this.inspector.host();
+                                let _ =
+                                    this.inspector.remembered.borrow_mut().forget(&host, &field);
+                                cx.notify();
+                            });
+                            ruled.set_menu(None);
+                        }) as select::Act),
+                    )
+                } else {
+                    select::Item::new(
+                        "remember-reading",
+                        tr!("Always read {field} this way", field = field.as_ref()),
+                        chosen.map(|id| {
+                            Rc::new(move |_: &mut gpui::Window, cx: &mut gpui::App| {
+                                let _ = rule_me.update(cx, |this, cx| {
+                                    let host = this.inspector.host();
+                                    let _ = this
+                                        .inspector
+                                        .remembered
+                                        .borrow_mut()
+                                        .remember(&host, &field, id);
+                                    cx.notify();
+                                });
+                                ruled.set_menu(None);
+                            }) as select::Act
+                        }),
+                    )
+                };
+                items.push(item);
+            }
             if !self.inspector.drawn.is_empty() {
                 let (cleared, clear_me) = (sel.clone(), me.clone());
                 items.push(select::Item::new(
@@ -2097,8 +2206,8 @@ fn render_headers(
                     .child(sel.piece_under(name.clone(), value.clone(), ": ", Vec::new()))
                     .children(Jwt::find(value).map(|jwt| render_jwt(jwt, sel)))
                     .children(
-                        read.drawn_under(name, value)
-                            .map(|reading| render_reading(reading, sel)),
+                        read.reading_under(name, value)
+                            .map(|reading| render_reading(&reading, sel)),
                     ),
             )
     };
@@ -2155,7 +2264,7 @@ fn render_fields(found: Vec<Field>, sel: &Selection, read: &InspectorState) -> i
             let field_name = field.name.clone();
             let name = sel.piece(field.name, "\n", Vec::new());
             let drawn = match &field.value {
-                FieldValue::Text(text) => read.drawn_under(&field_name, text).cloned(),
+                FieldValue::Text(text) => read.reading_under(&field_name, text),
                 FieldValue::File { .. } => None,
             };
             let value = match field.value {
@@ -2238,7 +2347,7 @@ fn render_cookies(
         .text_size(px(12.))
         .children(found.into_iter().map(|cookie| {
             let jwt = Jwt::find(&cookie.value);
-            let drawn = read.drawn_under(&cookie.name, &cookie.value).cloned();
+            let drawn = read.reading_under(&cookie.name, &cookie.value);
             let cookie_name = cookie.name.clone();
             div()
                 .flex()

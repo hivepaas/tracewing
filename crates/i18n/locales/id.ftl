@@ -13,6 +13,12 @@ t0a4220dc = { $size } { $format } · { $count } baris JSON
 # The first {count} rows are shown.
 t16aa1c6d = Hanya { $count } baris pertama yang ditampilkan.
 
+# Forget how {field} is read
+tdb2d6aa8 = Lupakan cara { $field } dibaca
+
+# Always read {field} this way
+tc75725b1 = Selalu baca { $field } seperti ini
+
 # Clear what was read
 tdd38ff77 = Hapus yang sudah dibaca
 

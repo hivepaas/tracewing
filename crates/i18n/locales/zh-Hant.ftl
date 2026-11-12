@@ -13,6 +13,12 @@ t0a4220dc = { $size } { $format } · { $count } 行 JSON
 # The first {count} rows are shown.
 t16aa1c6d = 只顯示前 { $count } 列。
 
+# Forget how {field} is read
+tdb2d6aa8 = 忘記 { $field } 的解讀方式
+
+# Always read {field} this way
+tc75725b1 = 一律按這種方式解讀 { $field }
+
 # Clear what was read
 tdd38ff77 = 清除已解讀的內容
 

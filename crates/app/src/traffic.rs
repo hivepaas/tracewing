@@ -551,7 +551,14 @@ impl Traffic {
             follow: true,
             look_for_bottom: false,
             selected: None,
-            inspector: InspectorState::default(),
+            inspector: {
+                let mut inspector = InspectorState::default();
+                // How fields are read, as this machine's reader said before.
+                inspector.remembered = std::rc::Rc::new(std::cell::RefCell::new(
+                    crate::remembered::Remembered::load(&data_dir.join("readings.toml")),
+                ));
+                inspector
+            },
             drag: None,
             content: Rc::new(Cell::new(Bounds::default())),
             list: Rc::new(Cell::new(Bounds::default())),
