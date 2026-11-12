@@ -66,7 +66,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | JSON-RPC: the method as a column (`eth_call` for an Ethereum node, `getAccountInfo` for Solana, `tools/call` for MCP over HTTP), the other calls of a batch counted, and a call that failed marked although it answered 200; a socket named by the calls in its messages, while it is still open | Beta | Free |
 | Solana read as Solana: addresses and signatures as the base58 they are, lamports as SOL, well-known programs by name, and the transaction `sendTransaction` carries laid out from its base64, of either shape: the one from before SIMD-0385 and the one after it | Beta | Free |
 | Bitcoin read as Bitcoin: satoshis as BTC, and the transaction `sendrawtransaction` carries laid out from its hex, with its txid worked out from its own bytes and every output's address written the way the chain writes it, base58 or bech32 or bech32m | Beta | Free |
-| WebSocket: send a message of your own into an open socket, to the server or to the app, from the inspector's Messages; it is listed with the others | Beta | Pro |
+| WebSocket: send a message of your own into an open socket, to the server or to the app, from the inspector's Messages; it is listed with the others; a call written out in it — `balanceOf(0xd8dA…)` — sent as the calldata it stands for, as in Compose | Beta | Pro |
 | WebSocket: breakpoints on messages, each way by a rule ("Pause a socket's messages to the server" or "to the app"): each held on the Paused screen, to send on as it came, changed, or not at all | Beta | Pro |
 | gRPC and protobuf: decoded with a `.proto` file or without one, and editable | 1.x | Pro |
 | HTTP/3 | 2.0 | Pro |
