@@ -889,8 +889,8 @@ tc67dfdb1 = 다른 프록시 거치기
 # Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
 t84509e00 = 회사 네트워크가 자체 프록시를 통해서만 밖으로 나가게 할 때, tracewing은 그 프록시를 거쳐 서버로 갑니다. 앱은 계속 tracewing으로 트래픽을 보냅니다. 사용자 이름과 비밀번호는 http://이름:비밀번호@proxy:8080처럼 주소에 쓰며 relay.toml에 그대로 저장됩니다. 비워 두면 tracewing은 서버로 바로 갑니다.
 
-# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host. WebSockets go straight for now.
-te1c6df83 = 바로 연결할 호스트(NO_PROXY 방식): example.com은 그 호스트와 하위 전부, *는 모든 호스트. WebSocket은 당분간 바로 연결됩니다.
+# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
+tcbc7d298 = 바로 연결할 호스트(NO_PROXY 방식): example.com은 그 호스트와 하위 전부, *는 모든 호스트.
 
 # Sent by the server, not asked for
 td717c770 = 서버가 스스로 보낸 것이며 요청에 대한 응답이 아닙니다

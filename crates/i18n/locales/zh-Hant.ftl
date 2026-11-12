@@ -889,8 +889,8 @@ tc67dfdb1 = 經由另一個代理
 # Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
 t84509e00 = 當公司網路只允許透過其自身代理存取外部時，tracewing 會經由該代理連線伺服器。應用程式仍將流量傳送到 tracewing。使用者名稱與密碼寫在位址中，例如 http://名稱:密碼@proxy:8080，並原樣儲存在 relay.toml 中。留空時 tracewing 直接連線伺服器。
 
-# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host. WebSockets go straight for now.
-te1c6df83 = 直接連線的主機（同 NO_PROXY 寫法）：example.com 表示它及其下所有主機，* 表示所有主機。WebSocket 目前仍直接連線。
+# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
+tcbc7d298 = 直接連線的主機（同 NO_PROXY 寫法）：example.com 表示它及其下所有主機，* 表示所有主機。
 
 # Sent by the server, not asked for
 td717c770 = 伺服器主動傳送，並非對請求的回覆

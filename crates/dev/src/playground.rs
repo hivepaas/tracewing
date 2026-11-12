@@ -757,11 +757,11 @@ fn websocket(mut req: Request<Incoming>, options: WsOptions) -> Response<OriginB
             body("text/plain; charset=utf-8", "No WebSocket for you.\n"),
         );
     }
+    // As UTF-8, to show a value that is not ASCII as it was sent.
     let header_of = |name: &str| {
         req.headers()
             .get(name)
-            .and_then(|v| v.to_str().ok())
-            .map(str::to_owned)
+            .map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned())
     };
     let protocol = header_of("sec-websocket-protocol")
         .and_then(|offered| offered.split(',').next().map(|p| p.trim().to_owned()))

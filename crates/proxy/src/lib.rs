@@ -27,7 +27,6 @@ use hudsucker::{
         crypto::{CryptoProvider, aws_lc_rs},
         pki_types::{CertificateDer, pem::PemObject},
     },
-    tokio_tungstenite::Connector,
 };
 use rules::HostRules;
 use std::{
@@ -192,8 +191,7 @@ pub async fn run_proxy(
     // latency jumps to ~40 ms. Linux copies the flag to accepted sockets.
     socket2::SockRef::from(&listener).set_tcp_nodelay(true)?;
     let (upstream_tls, verifier) = upstream_tls(&opts.extra_roots, opts.settings.os_roots)?;
-    let connector =
-        upstream::TimedConnector::new(upstream_tls.clone(), verifier, Arc::clone(&opts.relay));
+    let connector = upstream::TimedConnector::new(upstream_tls, verifier, Arc::clone(&opts.relay));
 
     let handler = FlowHandler::new(
         recorder,
@@ -213,6 +211,7 @@ pub async fn run_proxy(
             live: Arc::clone(&opts.live),
             network: opts.network,
             relay: Arc::clone(&opts.relay),
+            connector: connector.clone(),
         },
     );
     let stop_limit = opts.stop_limit;
@@ -226,7 +225,6 @@ pub async fn run_proxy(
             ca: ca.clone(),
             connector: connector.clone(),
             handler: handler.clone(),
-            upstream_tls: upstream_tls.clone(),
         };
         tokio::spawn(serve_other_devices(
             serve,
@@ -240,8 +238,6 @@ pub async fn run_proxy(
         .with_ca(ca)
         .with_http_connector(connector)
         .with_http_handler(handler.clone())
-        .with_websocket_handler(handler)
-        .with_websocket_connector(Connector::Rustls(Arc::new(upstream_tls)))
         .with_graceful_shutdown(async move {
             shutdown.await;
             let _ = lan_stop_tx.send(true);
@@ -329,7 +325,6 @@ struct LanServe {
     ca: ca::SharedCa,
     connector: upstream::TimedConnector,
     handler: FlowHandler,
-    upstream_tls: ClientConfig,
 }
 
 /// How often the addresses this machine has on its networks are looked at
@@ -372,10 +367,6 @@ async fn serve_other_devices(
                         .with_ca(serve.ca.clone())
                         .with_http_connector(serve.connector.clone())
                         .with_http_handler(serve.handler.clone())
-                        .with_websocket_handler(serve.handler.clone())
-                        .with_websocket_connector(Connector::Rustls(Arc::new(
-                            serve.upstream_tls.clone(),
-                        )))
                         .with_graceful_shutdown(async move {
                             let _ = stopped.await;
                         })

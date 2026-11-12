@@ -32,7 +32,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Hosts not to decrypt, tunneled untouched (Apple and Windows Update to start with) | Beta | Free |
 | Take offers of HTTP/3 (`Alt-Svc`) out of responses, so apps stay on HTTP/2 | Beta | Free |
 | Block UDP 443 so that clients fall back from HTTP/3 to HTTP/2 | Beta | Free |
-| Go through another proxy, as a company's network asks: HTTP (HTTPS through CONNECT, plain HTTP passed on whole) or SOCKS5, with a user name and password, and hosts to reach straight as `NO_PROXY` has them; the server's name left to the proxy to look up.; set in Settings, kept in `relay.toml`, applied to the next connection. WebSockets still go straight | Beta | Free |
+| Go through another proxy, as a company's network asks: HTTP (HTTPS through CONNECT, plain HTTP passed on whole) or SOCKS5, with a user name and password, and hosts to reach straight as `NO_PROXY` has them; the server's name left to the proxy to look up.; set in Settings, kept in `relay.toml`, applied to the next connection | Beta | Free |
 | Go through a company proxy with NTLM or Kerberos | 1.x | Pro |
 | WireGuard mode: phones send everything through tracewing with the stock WireGuard app | 1.x | Pro |
 | Capture one app without proxy settings: Network Extension on macOS, WinDivert or WFP on Windows, eBPF on Linux | 2.0 | Pro |
@@ -61,7 +61,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | HTTP/1.1 and HTTP/2, both sides | Gate 0 | Free |
 | Server-sent events and JSON lines (NDJSON, JSON Lines, JSON text sequences), packed (gzip, Brotli, zstd, deflate) or not, listed as they start and cut into messages as they arrive | Beta | Free |
 | Any other response still going after 2 s (long polls, logs as they are written, big downloads) listed while it lasts | Beta | Free |
-| WebSocket: see every message | Beta | Free |
+| WebSocket: see every message; opened to the server by tracewing itself, so it goes as other connections go (a relay too) and its row knows its connection, the subprotocol the server takes is the client's, and a server's refusal reaches the client | Beta | Free |
 | GraphQL: the operation name as a column (shown on request), queries laid out and colored, and variables formatted, batches and persisted queries too | Beta | Free |
 | JSON-RPC: the method as a column (`eth_call` for an Ethereum node, `getAccountInfo` for Solana, `tools/call` for MCP over HTTP), the other calls of a batch counted, and a call that failed marked although it answered 200; a socket named by the calls in its messages, while it is still open | Beta | Free |
 | WebSocket: breakpoints and sending messages | 1.x | Pro |

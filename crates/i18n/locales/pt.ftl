@@ -959,8 +959,8 @@ tc67dfdb1 = Passar por outro proxy
 # Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
 t84509e00 = Quando a rede de uma empresa só deixa sair pelo próprio proxy, o tracewing chega aos servidores por ele. Os apps continuam mandando o tráfego para o tracewing. Usuário e senha vão no endereço, como http://nome:senha@proxy:8080, e ficam guardados como escritos no relay.toml. Vazio, o tracewing vai direto aos servidores.
 
-# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host. WebSockets go straight for now.
-te1c6df83 = Hosts acessados direto, como o NO_PROXY os escreve: example.com é ele e tudo abaixo dele, * é qualquer host. Por enquanto, WebSockets vão direto.
+# Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
+tcbc7d298 = Hosts acessados direto, como o NO_PROXY os escreve: example.com é ele e tudo abaixo dele, * é qualquer host.
 
 # Sent by the server, not asked for
 td717c770 = Enviado pelo servidor, sem ter sido pedido
