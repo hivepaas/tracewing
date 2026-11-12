@@ -40,6 +40,7 @@ pub mod paused_page;
 pub mod placement;
 pub mod protos_view;
 pub mod qr;
+pub mod reading;
 pub mod reflection;
 pub mod relay_view;
 pub mod rpc_view;

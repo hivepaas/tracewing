@@ -689,21 +689,6 @@ t114f9980 = Header
 # Payload
 ta0639745 = Payload
 
-# Expires
-tc7aa0523 = Läuft ab
-
-# Issued
-tb1835ecc = Ausgestellt
-
-# Not before
-td10dacd9 = Nicht vor
-
-# in {amount}
-tfda57c3e = in { $amount }
-
-# {amount} ago
-t5f968014 = vor { $amount }
-
 # Light
 t8ad2f8cf = Hell
 
@@ -1016,6 +1001,9 @@ t70ff68f9 =
         [one] und { $count } weitere: tippen, um einzugrenzen
        *[other] und { $count } weitere: tippen, um einzugrenzen
     }
+
+# Nothing to read in this
+t92a8694c = Hierin ist nichts zu lesen
 
 # Write the server's address first
 t4f68f91a = Zuerst die Adresse des Servers eingeben
@@ -2188,3 +2176,247 @@ t4ab0ecb4 = Tastenkürzel { $keys }
 
 # Columns
 tea156fdc = Spalten
+
+# base64url
+tadfc8ac3 = base64url
+
+# base64
+tf04e6eba = base64
+
+# Hex
+t613f34ea = Hex
+
+# Percent-encoded
+t7c7bb5a9 = Prozentkodiert
+
+# Escaped text
+t195b3db9 = Escapter Text
+
+# HTML entities
+t54958ecb = HTML-Entities
+
+# Version
+t5dcdd537 = Version
+
+# Variant
+t8433b026 = Variante
+
+# UUID
+t257b8832 = UUID
+
+# ULID
+tf19e9db9 = ULID
+
+# ObjectId
+t427abd77 = ObjectId
+
+# Counter
+tfc0f33c3 = Zähler
+
+# KSUID
+te30e0b47 = KSUID
+
+# Worker
+tde5c1a77 = Worker
+
+# Sequence
+t64cec188 = Sequenz
+
+# Snowflake
+te00a2b87 = Snowflake
+
+# JSON, {n} fields
+tc6a0fbd2 = JSON, { $n } Felder
+
+# JSON, {n} items
+t06f5832d = JSON, { $n } Einträge
+
+# JSON in a string
+tc69f7572 = JSON in einer Zeichenkette
+
+# Expires
+tc7aa0523 = Läuft ab
+
+# Issued
+tb1835ecc = Ausgestellt
+
+# Not before
+td10dacd9 = Nicht vor
+
+# Algorithm
+t9945210a = Algorithmus
+
+# State
+t1deca496 = Zustand
+
+# expired
+t338eb632 = abgelaufen
+
+# JWT
+t6076261e = JWT
+
+# {n} row | {n} rows
+td8d653d6 =
+    { $n ->
+        [one] { $n } Zeile
+       *[other] { $n } Zeilen
+    }
+
+# In hex and binary
+tc31ef85f = In Hex und Binär
+
+# Bits set
+tb67e8e09 = Gesetzte Bits
+
+# As a size
+ta9175b27 = Als Größe
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# in {amount}
+tfda57c3e = in { $amount }
+
+# {amount} ago
+t5f968014 = vor { $amount }
+
+# Unix seconds
+t6edf5796 = Unix-Sekunden
+
+# Unix milliseconds
+t0d28f4b7 = Unix-Millisekunden
+
+# Unix microseconds
+tc705fe24 = Unix-Mikrosekunden
+
+# Unix nanoseconds
+t235cb430 = Unix-Nanosekunden
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, ohne Zone: als UTC gelesen
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Seconds
+t7e12f48a = Sekunden
+
+# Trace context
+ta58c7c95 = Trace-Kontext
+
+# Trace
+t26f8e74e = Trace
+
+# Span
+taba837e1 = Span
+
+# Sampled
+t7e4a1d99 = Erfasst
+
+# yes
+t4e9f3590 = ja
+
+# no
+t62366ffa = nein
+
+# Parent span
+t3cf3f9c3 = Eltern-Span
+
+# B3 trace
+tb4f9b9bb = B3-Trace
+
+# Began
+t3a1b8566 = Begann
+
+# Amazon trace
+t122e82a4 = Amazon-Trace
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Took
+tcea1562e = Dauer
+
+# About
+t58e096de = Beschreibung
+
+# Scheme
+t9c9083a2 = Schema
+
+# Port
+te2c53cc6 = Port
+
+# User
+te0a63e12 = Benutzer
+
+# {n} fields
+t98976d50 = { $n } Felder
+
+# Fragment
+t7889e7fd = Fragment
+
+# Query fields
+t2f58f1e0 = Query-Felder
+
+# Field
+t0fb83d07 = Feld
+
+# Value
+td147f96a = Wert
+
+# Basic authentication
+te161b66b = Basic-Authentifizierung
+
+# Password
+t2cc30838 = Passwort
+
+# never kept
+t83c57deb = nie gespeichert
+
+# kept {span}
+t01f67b47 = { $span } gespeichert
+
+# kept {span} by shared caches
+t5af054c4 = { $span } von gemeinsamen Caches gespeichert
+
+# by the browser only
+tfb7516b7 = nur vom Browser
+
+# by anyone
+t86fe63fe = von allen
+
+# checked every time
+t02076cba = jedes Mal geprüft
+
+# not used once stale
+t0f7f5bf9 = nicht mehr genutzt, wenn veraltet
+
+# never checked again
+tc01144d0 = nie wieder geprüft
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Statuscode
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI, {media}
+t514d8ddb = data:-URI, { $media }

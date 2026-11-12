@@ -689,21 +689,6 @@ t114f9980 = Başlık
 # Payload
 ta0639745 = Payload
 
-# Expires
-tc7aa0523 = Bitiş
-
-# Issued
-tb1835ecc = Veriliş
-
-# Not before
-td10dacd9 = Geçerlilik başlangıcı
-
-# in {amount}
-tfda57c3e = { $amount } sonra
-
-# {amount} ago
-t5f968014 = { $amount } önce
-
 # Light
 t8ad2f8cf = Açık
 
@@ -1016,6 +1001,9 @@ t70ff68f9 =
         [one] ve { $count } tane daha: daraltmak için yazın
        *[other] ve { $count } tane daha: daraltmak için yazın
     }
+
+# Nothing to read in this
+t92a8694c = Burada okunacak bir şey yok
 
 # Write the server's address first
 t4f68f91a = Önce sunucunun adresini yazın
@@ -2152,3 +2140,247 @@ t4ab0ecb4 = Kısayollar { $keys }
 
 # Columns
 tea156fdc = Sütunlar
+
+# base64url
+tadfc8ac3 = base64url
+
+# base64
+tf04e6eba = base64
+
+# Hex
+t613f34ea = Hex
+
+# Percent-encoded
+t7c7bb5a9 = Yüzde kodlu
+
+# Escaped text
+t195b3db9 = Kaçışlı metin
+
+# HTML entities
+t54958ecb = HTML varlıkları
+
+# Version
+t5dcdd537 = Sürüm
+
+# Variant
+t8433b026 = Varyant
+
+# UUID
+t257b8832 = UUID
+
+# ULID
+tf19e9db9 = ULID
+
+# ObjectId
+t427abd77 = ObjectId
+
+# Counter
+tfc0f33c3 = Sayaç
+
+# KSUID
+te30e0b47 = KSUID
+
+# Worker
+tde5c1a77 = Worker
+
+# Sequence
+t64cec188 = Sıra
+
+# Snowflake
+te00a2b87 = Snowflake
+
+# JSON, {n} fields
+tc6a0fbd2 = JSON, { $n } alan
+
+# JSON, {n} items
+t06f5832d = JSON, { $n } öğe
+
+# JSON in a string
+tc69f7572 = Bir dizedeki JSON
+
+# Expires
+tc7aa0523 = Bitiş
+
+# Issued
+tb1835ecc = Veriliş
+
+# Not before
+td10dacd9 = Geçerlilik başlangıcı
+
+# Algorithm
+t9945210a = Algoritma
+
+# State
+t1deca496 = Durum
+
+# expired
+t338eb632 = süresi geçmiş
+
+# JWT
+t6076261e = JWT
+
+# {n} row | {n} rows
+td8d653d6 =
+    { $n ->
+        [one] { $n } satır
+       *[other] { $n } satır
+    }
+
+# In hex and binary
+tc31ef85f = Hex ve ikilik olarak
+
+# Bits set
+tb67e8e09 = Ayarlı bitler
+
+# As a size
+ta9175b27 = Boyut olarak
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# in {amount}
+tfda57c3e = { $amount } sonra
+
+# {amount} ago
+t5f968014 = { $amount } önce
+
+# Unix seconds
+t6edf5796 = Unix saniye
+
+# Unix milliseconds
+t0d28f4b7 = Unix milisaniye
+
+# Unix microseconds
+tc705fe24 = Unix mikrosaniye
+
+# Unix nanoseconds
+t235cb430 = Unix nanosaniye
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, saat dilimi yok: UTC olarak okundu
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Seconds
+t7e12f48a = Saniye
+
+# Trace context
+ta58c7c95 = İzleme bağlamı
+
+# Trace
+t26f8e74e = İzleme
+
+# Span
+taba837e1 = Span
+
+# Sampled
+t7e4a1d99 = Örneklendi
+
+# yes
+t4e9f3590 = evet
+
+# no
+t62366ffa = hayır
+
+# Parent span
+t3cf3f9c3 = Üst span
+
+# B3 trace
+tb4f9b9bb = B3 izlemesi
+
+# Began
+t3a1b8566 = Başladı
+
+# Amazon trace
+t122e82a4 = Amazon izlemesi
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Took
+tcea1562e = Süre
+
+# About
+t58e096de = Açıklama
+
+# Scheme
+t9c9083a2 = Şema
+
+# Port
+te2c53cc6 = Port
+
+# User
+te0a63e12 = Kullanıcı
+
+# {n} fields
+t98976d50 = { $n } alan
+
+# Fragment
+t7889e7fd = Parça
+
+# Query fields
+t2f58f1e0 = Sorgu alanları
+
+# Field
+t0fb83d07 = Alan
+
+# Value
+td147f96a = Değer
+
+# Basic authentication
+te161b66b = Basic kimlik doğrulama
+
+# Password
+t2cc30838 = Şifre
+
+# never kept
+t83c57deb = hiç saklanmaz
+
+# kept {span}
+t01f67b47 = { $span } saklanır
+
+# kept {span} by shared caches
+t5af054c4 = paylaşılan önbelleklerde { $span } saklanır
+
+# by the browser only
+tfb7516b7 = yalnızca tarayıcı tarafından
+
+# by anyone
+t86fe63fe = herkes tarafından
+
+# checked every time
+t02076cba = her seferinde doğrulanır
+
+# not used once stale
+t0f7f5bf9 = eskiyince kullanılmaz
+
+# never checked again
+tc01144d0 = bir daha doğrulanmaz
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Durum kodu
+
+# Cookie
+tbdbabadf = Çerez
+
+# data: URI, {media}
+t514d8ddb = data: URI, { $media }

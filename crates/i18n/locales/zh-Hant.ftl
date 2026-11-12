@@ -658,21 +658,6 @@ t114f9980 = 標頭
 # Payload
 ta0639745 = 酬載
 
-# Expires
-tc7aa0523 = 到期時間
-
-# Issued
-tb1835ecc = 簽發時間
-
-# Not before
-td10dacd9 = 生效時間
-
-# in {amount}
-tfda57c3e = { $amount }後
-
-# {amount} ago
-t5f968014 = { $amount }前
-
 # Light
 t8ad2f8cf = 淺色
 
@@ -957,6 +942,9 @@ t134c9a06 = 自動（gRPC 路徑或 messageType）
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = 還有 { $count } 個：輸入以縮小範圍
+
+# Nothing to read in this
+t92a8694c = 這裡沒有可解讀的內容
 
 # Write the server's address first
 t4f68f91a = 請先填寫伺服器位址
@@ -2073,3 +2061,246 @@ t4ab0ecb4 = 快速鍵 { $keys }
 
 # Columns
 tea156fdc = 欄位
+
+# base64url
+tadfc8ac3 = base64url
+
+# base64
+tf04e6eba = base64
+
+# Hex
+t613f34ea = 十六進位
+
+# Percent-encoded
+t7c7bb5a9 = 百分號編碼
+
+# Escaped text
+t195b3db9 = 轉義文字
+
+# HTML entities
+t54958ecb = HTML 實體
+
+# Version
+t5dcdd537 = 版本
+
+# Variant
+t8433b026 = 變體
+
+# UUID
+t257b8832 = UUID
+
+# ULID
+tf19e9db9 = ULID
+
+# ObjectId
+t427abd77 = ObjectId
+
+# Counter
+tfc0f33c3 = 計數器
+
+# KSUID
+te30e0b47 = KSUID
+
+# Worker
+tde5c1a77 = 工作節點
+
+# Sequence
+t64cec188 = 序號
+
+# Snowflake
+te00a2b87 = Snowflake
+
+# JSON, {n} fields
+tc6a0fbd2 = JSON，{ $n } 個欄位
+
+# JSON, {n} items
+t06f5832d = JSON，{ $n } 個項目
+
+# JSON in a string
+tc69f7572 = 字串裡的 JSON
+
+# Expires
+tc7aa0523 = 到期時間
+
+# Issued
+tb1835ecc = 簽發時間
+
+# Not before
+td10dacd9 = 生效時間
+
+# Algorithm
+t9945210a = 演算法
+
+# State
+t1deca496 = 狀態
+
+# expired
+t338eb632 = 已過期
+
+# JWT
+t6076261e = JWT
+
+# {n} row | {n} rows
+td8d653d6 =
+    { $n ->
+       *[other] { $n } 行
+    }
+
+# In hex and binary
+tc31ef85f = 十六進位與二進位
+
+# Bits set
+tb67e8e09 = 已設定的位元
+
+# As a size
+ta9175b27 = 作為大小
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# in {amount}
+tfda57c3e = { $amount }後
+
+# {amount} ago
+t5f968014 = { $amount }前
+
+# Unix seconds
+t6edf5796 = Unix 秒
+
+# Unix milliseconds
+t0d28f4b7 = Unix 毫秒
+
+# Unix microseconds
+tc705fe24 = Unix 微秒
+
+# Unix nanoseconds
+t235cb430 = Unix 奈秒
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601，無時區：按 UTC 解讀
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Seconds
+t7e12f48a = 秒
+
+# Trace context
+ta58c7c95 = 追蹤內容
+
+# Trace
+t26f8e74e = 追蹤
+
+# Span
+taba837e1 = 跨度
+
+# Sampled
+t7e4a1d99 = 已取樣
+
+# yes
+t4e9f3590 = 是
+
+# no
+t62366ffa = 否
+
+# Parent span
+t3cf3f9c3 = 父跨度
+
+# B3 trace
+tb4f9b9bb = B3 追蹤
+
+# Began
+t3a1b8566 = 開始於
+
+# Amazon trace
+t122e82a4 = Amazon 追蹤
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Took
+tcea1562e = 耗時
+
+# About
+t58e096de = 說明
+
+# Scheme
+t9c9083a2 = 協定
+
+# Port
+te2c53cc6 = 通訊埠
+
+# User
+te0a63e12 = 使用者
+
+# {n} fields
+t98976d50 = { $n } 個欄位
+
+# Fragment
+t7889e7fd = 片段
+
+# Query fields
+t2f58f1e0 = 查詢欄位
+
+# Field
+t0fb83d07 = 欄位
+
+# Value
+td147f96a = 值
+
+# Basic authentication
+te161b66b = Basic 驗證
+
+# Password
+t2cc30838 = 密碼
+
+# never kept
+t83c57deb = 從不快取
+
+# kept {span}
+t01f67b47 = 快取 { $span }
+
+# kept {span} by shared caches
+t5af054c4 = 共用快取中快取 { $span }
+
+# by the browser only
+tfb7516b7 = 僅瀏覽器
+
+# by anyone
+t86fe63fe = 任何人
+
+# checked every time
+t02076cba = 每次都驗證
+
+# not used once stale
+t0f7f5bf9 = 過期後不再使用
+
+# never checked again
+tc01144d0 = 不再驗證
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = 狀態碼
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI, {media}
+t514d8ddb = data: URI，{ $media }
