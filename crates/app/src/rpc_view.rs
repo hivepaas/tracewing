@@ -251,6 +251,13 @@ fn asked(call: &jsonrpc::Call, abi: &Abi) -> Vec<Line> {
                 lines.extend(raw_transaction(&raw, abi));
             }
         }
+        // A transaction the node is asked to sign itself, as a dev chain
+        // does with its unlocked accounts. It is not signed yet, so `from`
+        // is the account named rather than one worked out from a signature,
+        // and there is nothing to check it against.
+        "eth_sendTransaction" | "eth_signTransaction" => {
+            lines.extend(unsigned_transaction(at(0), abi));
+        }
         "eth_getLogs" | "eth_newFilter" => {
             let filter = at(0);
             let field = |name: &str| filter.and_then(|f| f.get(name));
@@ -978,6 +985,52 @@ fn calldata(data: &str, abi: &Abi) -> Vec<Line> {
                 count = bytes.len().saturating_sub(4)
             ),
         )),
+    }
+    lines
+}
+
+/// A transaction as it is given to a node to sign: the fields it names, the
+/// amounts as amounts, and its `data` read as the call it is. The ones it
+/// leaves out are the node's to fill in, so they are not shown as missing.
+fn unsigned_transaction(object: Option<&serde_json::Value>, abi: &Abi) -> Vec<Line> {
+    let text = |name: &str| {
+        object
+            .and_then(|o| o.get(name))
+            .and_then(|v| v.as_str())
+            .map(str::to_owned)
+    };
+    let mut lines = Vec::new();
+    lines.extend(text("from").map(|from| Line::code("from", address(&from))));
+    lines.push(match text("to") {
+        Some(to) => Line::code("to", address(&to)),
+        None => Line::said("to", tr!("none: it makes a contract")),
+    });
+    // Shown even where it is nought, as a signed transaction's is: that it
+    // sends no ether is worth reading, and the same transaction should read
+    // the same whichever way it is being sent.
+    lines.extend(
+        text("value")
+            .and_then(|value| web3::quantity_bytes(&value))
+            .map(|wei| Line::said("value", web3::ether(&wei))),
+    );
+    // As digits, as a signed transaction's are: these come as hex here and
+    // as numbers out of the RLP there, and the same transaction should not
+    // read two ways. The hex is in the body for anyone who wants it.
+    for name in ["nonce", "gas"] {
+        lines.extend(text(name).map(|hex| {
+            let shown = web3::quantity(&hex).map_or(hex.clone(), |number| number.to_string());
+            Line::said(name, shown)
+        }));
+    }
+    for name in ["gasPrice", "maxFeePerGas", "maxPriorityFeePerGas"] {
+        lines.extend(
+            text(name)
+                .and_then(|hex| web3::quantity(&hex))
+                .map(|wei| Line::said(name, web3::gwei(wei))),
+        );
+    }
+    if let Some(data) = text("data").or_else(|| text("input")) {
+        lines.extend(calldata(&data, abi));
     }
     lines
 }
@@ -1776,6 +1829,57 @@ mod tests {
                 .count(),
             3,
             "each one said: {lines:?}"
+        );
+    }
+
+    /// The same real transaction twice: once as a node is asked to sign it,
+    /// as a dev chain does, and once as it went signed. Every field the two
+    /// share has to read the same, which is also what keeps the written
+    /// envelope of the one honest to the captured bytes of the other.
+    #[test]
+    fn a_transaction_a_node_is_asked_to_sign_reads_like_the_signed_one() {
+        let unsigned = of(
+            sample!("send_transaction.req.json"),
+            sample!("send_transaction.res.json"),
+        );
+        let signed = of(sample!("send_raw.req.json"), b"");
+        assert_eq!(unsigned.sections[0].title, "eth_sendTransaction");
+        let (asked, was) = (lines(&unsigned.sections[0]), lines(&signed.sections[0]));
+        for label in [
+            // Named by the account, not worked out from a signature: there
+            // is no signature yet. The same address either way.
+            "from",
+            "to",
+            "value",
+            "nonce",
+            "gas",
+            "maxFeePerGas",
+            "maxPriorityFeePerGas",
+            // And its calldata reads as the same call.
+            "selector",
+            "arguments",
+        ] {
+            let one = asked.iter().find(|(said, _)| *said == label);
+            let other = was.iter().find(|(said, _)| *said == label);
+            assert_eq!(one, other, "{label}");
+            assert!(one.is_some(), "{label} is in neither: {asked:?}");
+        }
+        // What only a signed one carries, which this cannot have.
+        assert!(was.iter().any(|(said, _)| *said == "type"));
+        assert!(
+            !asked.iter().any(|(said, _)| *said == "type"),
+            "nothing is signed yet: {asked:?}"
+        );
+        // The node answers with the hash it gave the transaction it signed:
+        // the same hash the chain knows it by.
+        let answer = &unsigned.sections[1];
+        assert_eq!(answer.title, "Answer");
+        let chain: serde_json::Value =
+            serde_json::from_slice(sample!("tx.res.json")).expect("the sample is JSON");
+        assert_eq!(
+            answer.lines[0].value,
+            chain["result"]["hash"].as_str().expect("a hash"),
+            "the hash the chain knows it by"
         );
     }
 

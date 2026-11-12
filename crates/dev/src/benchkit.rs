@@ -286,6 +286,9 @@ pub fn rpc_reply(body: &[u8], fail: bool) -> Bytes {
             "eth_blockNumber" => "0x192bbde".to_owned(),
             "eth_getBalance" => "0x506a9d72ec36d56a".to_owned(),
             "eth_sendRawTransaction" => format!("0x{}", "ab".repeat(32)),
+            // A node with unlocked accounts signs it itself, as a dev chain
+            // does, and answers with the hash it gave it.
+            "eth_sendTransaction" | "eth_signTransaction" => format!("0x{}", "cd".repeat(32)),
             // A handle, not a number: it is given back to eth_unsubscribe.
             "eth_subscribe" => SUBSCRIPTION.to_owned(),
             "eth_unsubscribe" => "true".to_owned(),
