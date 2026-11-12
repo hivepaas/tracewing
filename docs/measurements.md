@@ -480,12 +480,17 @@ answered. `WS_BENCH=100000`, the same machine, three rounds each, taken in turn:
 
 The same, within what runs differ by.
 
-## Known gaps
+## A request's body no server reads (`crates/proxy/src/capture.rs`, 2026-11-12)
 
-- A request's body is written down as it goes on to the server. A server that answers
-  before reading it, as one refusing an upload may, can have the rest let go unsent,
-  and then the flow does not have what the client sent either: over HTTP/2, a body sent
-  200 ms after the answer was kept as none (`req_bytes` 0, not complete).
+A request's body is written down as it goes on to the server. A server that answers
+before reading it, as one refusing an upload may, had the rest let go unsent, and the
+flow had nothing of it: over HTTP/2, a body sent 200 ms after the answer was kept as
+none (`req_bytes` 0, not complete). Now the rest is read on from the client and written
+down, up to 16 MiB more and for 10 s, and is complete if it ends by then. A 32 MiB
+upload to a server that answers at once is cut there and said to be; the client has
+its answer at once all the same.
+
+## Known gaps
 
 - hudsucker always offers `h2, http/1.1` to the client instead of mirroring
   what the origin chose, and builds leaves from the SNI/`CONNECT` host only.
