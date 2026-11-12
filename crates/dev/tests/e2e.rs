@@ -33,6 +33,9 @@ use tracewing_store::{
 
 struct Harness {
     ws_port: u16,
+    /// The playground, plain and over TLS, its authority trusted.
+    playground_port: u16,
+    playground_tls_port: u16,
     recording: Arc<AtomicBool>,
     rules: Arc<RwLock<HostRules>>,
     traffic_rules: Arc<RwLock<TrafficRules>>,
@@ -89,6 +92,15 @@ impl Harness {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
 
+        let plain = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let playground_port = plain.local_addr().unwrap().port();
+        tokio::spawn(tracewing_dev::playground::serve(plain));
+        let state = dir.join("playground");
+        let playground_ca = tracewing_dev::playground::authority(&state).unwrap();
+        let secure = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let playground_tls_port = secure.local_addr().unwrap().port();
+        tokio::spawn(async move { tracewing_dev::playground::serve_tls(secure, &state).await });
+
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let proxy_url = format!("http://{}", listener.local_addr().unwrap());
         let (stop, stopped) = oneshot::channel::<()>();
@@ -111,7 +123,7 @@ impl Harness {
                 key_store: Default::default(),
                 session: dir.join("session"),
                 settings,
-                extra_roots: vec![origin_ca, ws_ca],
+                extra_roots: vec![origin_ca, ws_ca, playground_ca],
                 queue: 10_000,
                 stats_every: None,
                 shared: Default::default(),
@@ -139,6 +151,8 @@ impl Harness {
 
         Self {
             ws_port,
+            playground_port,
+            playground_tls_port,
             recording,
             rules,
             traffic_rules,
@@ -2353,6 +2367,282 @@ async fn servers_are_reached_through_socks5_or_passed_by() {
     res.bytes().await.unwrap();
     assert_eq!(seen.lock().unwrap().len(), 1, "not through the relay");
     let (_, conn, dir) = h.finish(2).await;
+    clean_up(conn, dir);
+}
+
+/// The playground's `/ws` through the proxy, over TLS or not.
+async fn playground_ws(
+    h: &Harness,
+    secure: bool,
+    path: &str,
+    headers: &[(&str, &str)],
+) -> Result<
+    (benchkit::AnyWebSocket, http::Response<Option<Vec<u8>>>),
+    hudsucker::tokio_tungstenite::tungstenite::Error,
+> {
+    let proxy: std::net::SocketAddr = h.proxy_url.trim_start_matches("http://").parse().unwrap();
+    let port = if secure {
+        h.playground_tls_port
+    } else {
+        h.playground_port
+    };
+    benchkit::websocket_ask(
+        proxy,
+        &h.dir.join("ca/ca.pem"),
+        &benchkit::WsAsk {
+            secure,
+            host: "localhost",
+            port,
+            path,
+            headers,
+        },
+    )
+    .await
+}
+
+fn json_of(message: &hudsucker::tokio_tungstenite::tungstenite::Message) -> serde_json::Value {
+    serde_json::from_str(message.to_text().unwrap()).unwrap()
+}
+
+/// What the client sends with its upgrade reaches the server, over TLS and
+/// not: its origin, cookies and own headers.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_websockets_headers_reach_the_server() {
+    use hudsucker::futures::StreamExt;
+    let h = Harness::start("ws-headers").await;
+    for secure in [true, false] {
+        let (mut ws, _) = playground_ws(
+            &h,
+            secure,
+            "/ws?ticks=0",
+            &[
+                ("origin", "https://app.example"),
+                ("cookie", "session=abc"),
+                ("x-test", "order-42"),
+            ],
+        )
+        .await
+        .unwrap();
+        let hello = json_of(&ws.next().await.unwrap().unwrap());
+        assert_eq!(hello["origin"], "https://app.example", "secure: {secure}");
+        assert_eq!(hello["cookie"], "session=abc");
+        assert_eq!(hello["x_test"], "order-42");
+        ws.close(None).await.unwrap();
+        while ws.next().await.is_some() {}
+    }
+    let (_, conn, dir) = h.finish(2).await;
+    clean_up(conn, dir);
+}
+
+/// The subprotocol the server takes is the one the client is told of.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "hudsucker answers the upgrade before the server does, so the client \
+            is never told the subprotocol: fixed by the proxy's own WebSocket path"]
+async fn a_websockets_subprotocol_is_agreed_end_to_end() {
+    use hudsucker::futures::StreamExt;
+    let h = Harness::start("ws-protocol").await;
+    let (mut ws, answer) = playground_ws(
+        &h,
+        true,
+        "/ws?ticks=0",
+        &[("sec-websocket-protocol", "chat.v2, chat.v1")],
+    )
+    .await
+    .unwrap();
+    let hello = json_of(&ws.next().await.unwrap().unwrap());
+    assert_eq!(hello["protocol"], "chat.v2", "the server took the first");
+    assert_eq!(
+        answer
+            .headers()
+            .get("sec-websocket-protocol")
+            .map(|v| v.to_str().unwrap()),
+        Some("chat.v2"),
+        "and the client is told"
+    );
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+    let (_, conn, dir) = h.finish(1).await;
+    clean_up(conn, dir);
+}
+
+/// Large binary messages both ways, and a ping answered.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_websocket_carries_large_messages_and_pings() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::tungstenite::Message,
+    };
+    const MIB: usize = 1 << 20;
+    let h = Harness::start("ws-large").await;
+    let (mut ws, _) = playground_ws(&h, true, &format!("/ws?ticks=0&big={MIB}"), &[])
+        .await
+        .unwrap();
+    assert!(ws.next().await.unwrap().unwrap().is_text(), "the hello");
+    let big = ws.next().await.unwrap().unwrap();
+    let expected: Vec<u8> = (0..MIB).map(|i| (i % 251) as u8).collect();
+    assert_eq!(big.into_data().to_vec(), expected, "from the server");
+    let sent: Vec<u8> = (0..MIB).map(|i| (i % 13) as u8).collect();
+    ws.send(Message::binary(sent.clone())).await.unwrap();
+    assert_eq!(
+        ws.next().await.unwrap().unwrap().into_data().to_vec(),
+        sent,
+        "to it and back"
+    );
+    ws.send(Message::Ping(b"are you there".to_vec().into()))
+        .await
+        .unwrap();
+    let pong = ws.next().await.unwrap().unwrap();
+    assert_eq!(pong, Message::Pong(b"are you there".to_vec().into()));
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+    let (_, conn, dir) = h.finish(1).await;
+    clean_up(conn, dir);
+}
+
+/// A close's code and reason go through, whichever side closes first, and
+/// the socket's row says it ended.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_websockets_close_and_its_code_go_through() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::tungstenite::{
+            Message,
+            protocol::{CloseFrame, frame::coding::CloseCode},
+        },
+    };
+    let h = Harness::start("ws-close").await;
+    // The server closes.
+    let (mut ws, _) = playground_ws(&h, true, "/ws?ticks=0&close=4000", &[])
+        .await
+        .unwrap();
+    assert!(ws.next().await.unwrap().unwrap().is_text());
+    let closed = ws.next().await.unwrap().unwrap();
+    match closed {
+        Message::Close(Some(frame)) => {
+            assert_eq!(u16::from(frame.code), 4000);
+            assert_eq!(frame.reason.as_str(), "bye");
+        }
+        other => panic!("not a close: {other:?}"),
+    }
+    while ws.next().await.is_some() {}
+    // The client closes, and the server's echo of it comes back.
+    let (mut ws, _) = playground_ws(&h, false, "/ws?ticks=0", &[]).await.unwrap();
+    assert!(ws.next().await.unwrap().unwrap().is_text());
+    ws.send(Message::Close(Some(CloseFrame {
+        code: CloseCode::from(4001),
+        reason: "done".into(),
+    })))
+    .await
+    .unwrap();
+    let mut echoed = None;
+    while let Some(Ok(message)) = ws.next().await {
+        if let Message::Close(frame) = message {
+            echoed = frame;
+        }
+    }
+    assert_eq!(echoed.map(|f| u16::from(f.code)), Some(4001));
+    let (_, conn, dir) = h.finish(2).await;
+    let open: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM flows WHERE kind = 'websocket' AND open",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(open, 0, "both rows say they ended");
+    clean_up(conn, dir);
+}
+
+/// Many sockets at once, each its own messages, and each recorded.
+#[tokio::test(flavor = "multi_thread")]
+async fn many_websockets_at_once_keep_to_themselves() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::tungstenite::Message,
+    };
+    const SOCKETS: usize = 20;
+    let h = Harness::start("ws-many").await;
+    let mut tasks = Vec::new();
+    for n in 0..SOCKETS {
+        let (mut ws, _) = playground_ws(&h, n % 2 == 0, "/ws?ticks=0", &[])
+            .await
+            .unwrap();
+        tasks.push(tokio::spawn(async move {
+            assert!(ws.next().await.unwrap().unwrap().is_text());
+            for i in 0..10 {
+                let text = format!("socket {n} message {i}");
+                ws.send(Message::text(text.clone())).await.unwrap();
+                assert_eq!(ws.next().await.unwrap().unwrap(), Message::text(text));
+            }
+            ws.close(None).await.unwrap();
+            while ws.next().await.is_some() {}
+        }));
+    }
+    for task in tasks {
+        task.await.unwrap();
+    }
+    let (_, conn, dir) = h.finish(SOCKETS as i64).await;
+    let messages: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM messages WHERE kind = 'text'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        messages,
+        (SOCKETS * (1 + 10 * 2)) as i64,
+        "hello, then each way"
+    );
+    clean_up(conn, dir);
+}
+
+/// Not recording, a socket works all the same.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_websocket_works_while_nothing_is_recorded() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::tungstenite::Message,
+    };
+    let h = Harness::start("ws-paused").await;
+    h.recording
+        .store(false, std::sync::atomic::Ordering::Relaxed);
+    let (mut ws, _) = playground_ws(&h, true, "/ws?ticks=0", &[]).await.unwrap();
+    assert!(ws.next().await.unwrap().unwrap().is_text());
+    ws.send(Message::text("still here")).await.unwrap();
+    assert_eq!(
+        ws.next().await.unwrap().unwrap(),
+        Message::text("still here")
+    );
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+    let (_, conn, dir) = h.finish(0).await;
+    clean_up(conn, dir);
+}
+
+/// A server that will not upgrade: the client is told so, with its status.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "hudsucker answers 101 before the server does, so a refusal never \
+            reaches the client: fixed by the proxy's own WebSocket path"]
+async fn a_websocket_the_server_refuses_is_refused() {
+    use hudsucker::tokio_tungstenite::tungstenite::Error;
+    let h = Harness::start("ws-refused").await;
+    for secure in [true, false] {
+        match playground_ws(&h, secure, "/ws?refuse=403", &[]).await {
+            Err(Error::Http(answer)) => assert_eq!(answer.status(), 403, "secure: {secure}"),
+            Err(other) => panic!("secure: {secure}: {other}"),
+            Ok(_) => panic!("secure: {secure}: an upgrade the server refused"),
+        }
+    }
+    let (_, conn, dir) = h.finish(2).await;
+    let statuses: Vec<Option<u16>> = conn
+        .prepare("SELECT status FROM flows ORDER BY id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(statuses, [Some(403), Some(403)]);
     clean_up(conn, dir);
 }
 

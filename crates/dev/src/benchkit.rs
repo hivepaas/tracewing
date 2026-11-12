@@ -863,6 +863,89 @@ pub async fn websocket_through_proxy(
     Ok(ws)
 }
 
+/// Anything a WebSocket can go over: TLS or not.
+pub trait Io: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send {}
+impl<T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send> Io for T {}
+
+pub type AnyWebSocket = hudsucker::tokio_tungstenite::WebSocketStream<Box<dyn Io>>;
+
+/// A WebSocket to open through the proxy.
+pub struct WsAsk<'a> {
+    /// `wss://` if true: TLS with the proxy's certificate inside the tunnel.
+    pub secure: bool,
+    pub host: &'a str,
+    pub port: u16,
+    pub path: &'a str,
+    /// Sent with the upgrade, `Sec-WebSocket-Protocol` among them if wanted.
+    pub headers: &'a [(&'a str, &'a str)],
+}
+
+/// Opens a WebSocket through the proxy as a browser does, CONNECT then the
+/// upgrade inside, with TLS in between for `wss://`. Gives the socket and the
+/// server's answer to the upgrade; an upgrade refused is an error carrying
+/// the answer.
+pub async fn websocket_ask(
+    proxy: std::net::SocketAddr,
+    proxy_ca: &Path,
+    ask: &WsAsk<'_>,
+) -> Result<
+    (AnyWebSocket, http::Response<Option<Vec<u8>>>),
+    hudsucker::tokio_tungstenite::tungstenite::Error,
+> {
+    use hudsucker::tokio_tungstenite::tungstenite::{Error, client::IntoClientRequest};
+    let io = |e: std::io::Error| Error::Io(e);
+    let mut tcp = tokio::net::TcpStream::connect(proxy).await.map_err(io)?;
+    let (host, port) = (ask.host, ask.port);
+    let connect = format!("CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\n\r\n");
+    tcp.write_all(connect.as_bytes()).await.map_err(io)?;
+    let mut reply = Vec::new();
+    while !reply.ends_with(b"\r\n\r\n") {
+        let mut byte = [0];
+        tcp.read_exact(&mut byte).await.map_err(io)?;
+        reply.push(byte[0]);
+    }
+    if !reply.starts_with(b"HTTP/1.1 200") {
+        return Err(io(std::io::Error::other("CONNECT refused")));
+    }
+    let stream: Box<dyn Io> = if ask.secure {
+        let mut roots = hudsucker::rustls::RootCertStore::empty();
+        for cert in
+            CertificateDer::pem_file_iter(proxy_ca).map_err(|e| io(std::io::Error::other(e)))?
+        {
+            roots
+                .add(cert.map_err(|e| io(std::io::Error::other(e)))?)
+                .map_err(|e| io(std::io::Error::other(e)))?;
+        }
+        let config = hudsucker::rustls::ClientConfig::builder_with_provider(Arc::new(
+            tracewing_proxy::crypto_provider(),
+        ))
+        .with_safe_default_protocol_versions()
+        .map_err(|e| io(std::io::Error::other(e)))?
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+        let name =
+            ServerName::try_from(host.to_owned()).map_err(|e| io(std::io::Error::other(e)))?;
+        Box::new(
+            tokio_rustls::TlsConnector::from(Arc::new(config))
+                .connect(name, tcp)
+                .await
+                .map_err(io)?,
+        )
+    } else {
+        Box::new(tcp)
+    };
+    let scheme = if ask.secure { "wss" } else { "ws" };
+    let mut request = format!("{scheme}://{host}:{port}{}", ask.path).into_client_request()?;
+    for (name, value) in ask.headers {
+        request.headers_mut().append(
+            http::HeaderName::from_bytes(name.as_bytes())
+                .map_err(|e| io(std::io::Error::other(e)))?,
+            http::HeaderValue::from_str(value).map_err(|e| io(std::io::Error::other(e)))?,
+        );
+    }
+    hudsucker::tokio_tungstenite::client_async(request, stream).await
+}
+
 /// A CA and a `localhost`/`127.0.0.1` leaf for the origin.
 fn origin_tls(ca_out: &Path) -> Result<ServerConfig> {
     let ca_key = KeyPair::generate()?;
