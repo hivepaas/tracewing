@@ -539,7 +539,10 @@ fn what_is_remembered_reads_itself_next_time() {
 
     // Settings lists what is remembered, to look over and to forget.
     window
-        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Settings, cx))
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Decoding, cx);
+        })
         .unwrap();
     cx.run_until_parked();
     shot(&mut cx, window.into(), "89-readings-in-settings");

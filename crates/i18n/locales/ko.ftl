@@ -727,6 +727,24 @@ ta0639745 = 페이로드
 # The simulator did not take it: {why}
 t7f8fa9c0 = 시뮬레이터가 받아들이지 않았습니다: { $why }
 
+# General
+t5561fd0b = 일반
+
+# Network
+t6974ad65 = 네트워크
+
+# Certificates
+tb88e4cd9 = 인증서
+
+# Decoding
+t5f8586f8 = 디코딩
+
+# Storage
+t34eddf06 = 저장 공간
+
+# AI tools
+t294d7ea4 = AI 도구
+
 # Light
 t8ad2f8cf = 라이트
 
@@ -1438,9 +1456,6 @@ t3f1c9b5a = 읽을 수 있는 값에 밑줄
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = 해석할 수 있는 값 — 시각, 토큰, 압축된 것 — 에 밑줄을 그어 마우스 오른쪽 클릭할 가치가 있음을 알립니다. 끄면 해석은 그대로 있지만 아무것도 알려주지 않습니다.
 
-# AI tools
-t294d7ea4 = AI 도구
-
 # Let AI tools see tokens and cookies
 te1d26d3c = AI 도구가 토큰과 쿠키를 볼 수 있도록 허용
 
@@ -1555,29 +1570,32 @@ ta8606963 = { $key }: "{ $text }"은(는) 정수가 아닙니다
 # {key}: must not be negative
 t9c4debaa = { $key }: 음수일 수 없습니다
 
-# After a restart
-t58dcea2d = 다시 시작한 후
-
-# Every setting is back to its default.
-t763785e7 = 모든 설정이 기본값으로 돌아갔습니다.
-
-# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
-t69f2bb4d = 변경 { $n }개는 tracewing을 다시 시작하면 적용됩니다.
-
-# Settings
-t4b058728 = 설정
-
-# Undo
-t71fd4acf = 실행 취소
-
-# Back to defaults
-ta3162a13 = 기본값으로 되돌리기
+# Appearance
+t31018b9f = 모양
 
 # Hosts not to decrypt
 tb457f0b3 = 복호화하지 않을 호스트
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 한 줄에 하나씩: 호스트, 또는 그 호스트와 모든 하위 호스트를 뜻하는 *.example.com. 이 호스트들의 트래픽은 내용을 읽지 않고 통과합니다. 이 목록은 바로 적용됩니다.
+
+# Settings
+t4b058728 = 설정
+
+# After a restart
+t58dcea2d = 다시 시작한 후
+
+# Every setting here is back to its default.
+td0200095 = 여기의 모든 설정이 기본값으로 돌아갔습니다.
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = 변경 { $n }개는 tracewing을 다시 시작하면 적용됩니다.
+
+# Undo
+t71fd4acf = 실행 취소
+
+# Back to defaults
+ta3162a13 = 기본값으로 되돌리기
 
 # Fields always read a certain way
 tb6e892b1 = 항상 같은 방식으로 읽는 필드

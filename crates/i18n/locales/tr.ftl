@@ -758,6 +758,24 @@ ta0639745 = Payload
 # The simulator did not take it: {why}
 t7f8fa9c0 = Simülatör onu kabul etmedi: { $why }
 
+# General
+t5561fd0b = Genel
+
+# Network
+t6974ad65 = Ağ
+
+# Certificates
+tb88e4cd9 = Sertifikalar
+
+# Decoding
+t5f8586f8 = Çözümleme
+
+# Storage
+t34eddf06 = Depolama
+
+# AI tools
+t294d7ea4 = Yapay zekâ araçları
+
 # Light
 t8ad2f8cf = Açık
 
@@ -1509,9 +1527,6 @@ t3f1c9b5a = Okunabilenin altını çiz
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = Arkasında bir okuma olan bir değer — bir zaman, bir token, sıkıştırılmış bir şey — altı çizili gösterilir, böylece üzerine sağ tıklamak değer. Kapalıyken okumalar yine vardır; hiçbir şey bunu söylemez.
 
-# AI tools
-t294d7ea4 = Yapay zekâ araçları
-
 # Let AI tools see tokens and cookies
 te1d26d3c = Yapay zekâ araçlarının token'ları ve çerezleri görmesine izin ver
 
@@ -1626,11 +1641,23 @@ ta8606963 = { $key }: "{ $text }" bir tam sayı değil
 # {key}: must not be negative
 t9c4debaa = { $key }: negatif olamaz
 
+# Appearance
+t31018b9f = Görünüm
+
+# Hosts not to decrypt
+tb457f0b3 = Şifresi çözülmeyecek host'lar
+
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = Satır başına bir tane: bir host, ya da kendisi ve altındaki her şey için *.example.com. Bunların trafiği okunmadan geçer. Bu liste hemen uygulanır.
+
+# Settings
+t4b058728 = Ayarlar
+
 # After a restart
 t58dcea2d = Yeniden başlatınca
 
-# Every setting is back to its default.
-t763785e7 = Tüm ayarlar varsayılanlarına döndü.
+# Every setting here is back to its default.
+td0200095 = Buradaki her ayar varsayılanına döndü.
 
 # {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
 t69f2bb4d =
@@ -1639,20 +1666,11 @@ t69f2bb4d =
        *[other] { $n } değişiklik tracewing yeniden başladığında etkili olur.
     }
 
-# Settings
-t4b058728 = Ayarlar
-
 # Undo
 t71fd4acf = Geri al
 
 # Back to defaults
 ta3162a13 = Varsayılanlara dön
-
-# Hosts not to decrypt
-tb457f0b3 = Şifresi çözülmeyecek host'lar
-
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
-t38e21213 = Satır başına bir tane: bir host, ya da kendisi ve altındaki her şey için *.example.com. Bunların trafiği okunmadan geçer. Bu liste hemen uygulanır.
 
 # Fields always read a certain way
 tb6e892b1 = Her zaman belli bir şekilde okunan alanlar

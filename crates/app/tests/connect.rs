@@ -361,6 +361,7 @@ fn the_system_proxy_and_the_settings_from_the_window() {
     window
         .update(&mut cx, |view, _, cx| {
             view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Storage, cx);
         })
         .unwrap();
     cx.run_until_parked();
@@ -407,16 +408,28 @@ fn the_system_proxy_and_the_settings_from_the_window() {
     let written = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();
     assert_eq!(written.session_max_mib, 512);
     assert!(written.other_devices);
-    cx.run_until_parked();
-    save_shot(&mut cx, window.into(), "12-settings-saved");
-    // Back to defaults is written at once, and can be undone.
     window
         .update(&mut cx, |view, _, cx| {
+            view.show_settings_section(tracewing::layout::SettingsSection::Network, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
+    save_shot(&mut cx, window.into(), "12-settings-saved");
+    // Back to defaults, for the part open only, is written at once, and can
+    // be undone.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.show_settings_section(tracewing::layout::SettingsSection::Storage, cx);
             view.reset_settings(cx);
+            let reset = StorageSettings::load(&data_dir.join("settings.toml")).unwrap();
             assert_eq!(
-                StorageSettings::load(&data_dir.join("settings.toml")).unwrap(),
-                StorageSettings::default()
+                reset.session_max_mib,
+                StorageSettings::default().session_max_mib
             );
+            assert!(reset.other_devices, "another part's is left as it was");
+            view.undo_reset_settings(cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Network, cx);
+            view.reset_settings(cx);
             assert!(!view.engine.other_devices.is_on());
             view.undo_reset_settings(cx);
             assert!(!view.engine.live.hide_http3(), "undone at once too");
@@ -504,6 +517,11 @@ fn the_system_proxy_and_the_settings_from_the_window() {
         Some("vi")
     );
     // In Vietnamese, the window says its words in it.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.show_settings_section(tracewing::layout::SettingsSection::General, cx)
+        })
+        .unwrap();
     cx.run_until_parked();
     save_shot(&mut cx, window.into(), "72-settings-vi");
     window

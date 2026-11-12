@@ -288,6 +288,12 @@ t05f8b533 = JWT · signature not checked
 t114f9980 = Header
 ta0639745 = Payload
 t7f8fa9c0 = The simulator did not take it: { $why }
+t5561fd0b = General
+t6974ad65 = Network
+tb88e4cd9 = Certificates
+t5f8586f8 = Decoding
+t34eddf06 = Storage
+t294d7ea4 = AI tools
 t8ad2f8cf = Light
 t45570065 = Dark
 t8f3184bc = System
@@ -617,7 +623,6 @@ t1705bfb4 = Servers with a certificate from an authority installed on this compu
 t53722007 = Reading values
 t3f1c9b5a = Underline what can be read
 t9e1ebac7 = A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
-t294d7ea4 = AI tools
 te1d26d3c = Let AI tools see tokens and cookies
 tb496980f = AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
 t663de1ba = Let AI tools add rules and send requests
@@ -656,18 +661,19 @@ t07b9de08 = Memory for large bodies waiting to be written
 tfe61a4f3 = Past this, large bodies stop being kept.
 ta8606963 = { $key }: "{ $text }" is not a whole number
 t9c4debaa = { $key }: must not be negative
+t31018b9f = Appearance
+tb457f0b3 = Hosts not to decrypt
+t38e21213 = One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t4b058728 = Settings
 t58dcea2d = After a restart
-t763785e7 = Every setting is back to its default.
+td0200095 = Every setting here is back to its default.
 t69f2bb4d =
     { $n ->
         [one] { $n } change takes effect when tracewing starts again.
        *[other] { $n } changes take effect when tracewing starts again.
     }
-t4b058728 = Settings
 t71fd4acf = Undo
 ta3162a13 = Back to defaults
-tb457f0b3 = Hosts not to decrypt
-t38e21213 = One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 tb6e892b1 = Fields always read a certain way
 t176e5171 = A value read in the inspector can be kept that way for its field, and every later flow from that host reads itself. They are kept in readings.toml in the data folder.
 t9e58a80c = Nothing is remembered yet.

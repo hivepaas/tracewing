@@ -784,6 +784,24 @@ ta0639745 = Payload
 # The simulator did not take it: {why}
 t7f8fa9c0 = Симулятор його не прийняв: { $why }
 
+# General
+t5561fd0b = Загальні
+
+# Network
+t6974ad65 = Мережа
+
+# Certificates
+tb88e4cd9 = Сертифікати
+
+# Decoding
+t5f8586f8 = Декодування
+
+# Storage
+t34eddf06 = Зберігання
+
+# AI tools
+t294d7ea4 = Інструменти ШІ
+
 # Light
 t8ad2f8cf = Світла
 
@@ -1621,9 +1639,6 @@ t3f1c9b5a = Підкреслювати те, що читається
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = Значення, за яким стоїть прочитання — час, токен, щось запаковане, — підкреслюється, щоб правий клік по ньому мав сенс. Вимкнено — прочитання лишаються, але ніщо про це не каже.
 
-# AI tools
-t294d7ea4 = Інструменти ШІ
-
 # Let AI tools see tokens and cookies
 te1d26d3c = Дозволити інструментам ШІ бачити токени й cookie
 
@@ -1738,11 +1753,23 @@ ta8606963 = { $key }: "{ $text }" не є цілим числом
 # {key}: must not be negative
 t9c4debaa = { $key }: не може бути від’ємним
 
+# Appearance
+t31018b9f = Вигляд
+
+# Hosts not to decrypt
+tb457f0b3 = Хости, які не розшифровувати
+
+# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
+t38e21213 = По одному в рядку: хост або *.example.com для нього й усього під ним. Їхній трафік проходить непрочитаним. Список застосовується одразу.
+
+# Settings
+t4b058728 = Налаштування
+
 # After a restart
 t58dcea2d = Після перезапуску
 
-# Every setting is back to its default.
-t763785e7 = Усі налаштування повернуто до типових значень.
+# Every setting here is back to its default.
+td0200095 = Усі налаштування тут повернуто до типових.
 
 # {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
 t69f2bb4d =
@@ -1753,20 +1780,11 @@ t69f2bb4d =
        *[other] { $n } зміни наберуть чинності після перезапуску tracewing.
     }
 
-# Settings
-t4b058728 = Налаштування
-
 # Undo
 t71fd4acf = Відмінити
 
 # Back to defaults
 ta3162a13 = Відновити типові
-
-# Hosts not to decrypt
-tb457f0b3 = Хости, які не розшифровувати
-
-# One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
-t38e21213 = По одному в рядку: хост або *.example.com для нього й усього під ним. Їхній трафік проходить непрочитаним. Список застосовується одразу.
 
 # Fields always read a certain way
 tb6e892b1 = Поля, які завжди читаються певним чином

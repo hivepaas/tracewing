@@ -727,6 +727,24 @@ ta0639745 = 酬載
 # The simulator did not take it: {why}
 t7f8fa9c0 = 模擬器未接受：{ $why }
 
+# General
+t5561fd0b = 一般
+
+# Network
+t6974ad65 = 網路
+
+# Certificates
+tb88e4cd9 = 憑證
+
+# Decoding
+t5f8586f8 = 解碼
+
+# Storage
+t34eddf06 = 儲存
+
+# AI tools
+t294d7ea4 = AI 工具
+
 # Light
 t8ad2f8cf = 淺色
 
@@ -1438,9 +1456,6 @@ t3f1c9b5a = 為可解讀的值加底線
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = 背後有解讀結果的值——時間、權杖、壓縮過的內容——會加底線，提示值得按右鍵看看。關閉後解讀仍在，只是沒有提示。
 
-# AI tools
-t294d7ea4 = AI 工具
-
 # Let AI tools see tokens and cookies
 te1d26d3c = 允許 AI 工具檢視權杖和 Cookie
 
@@ -1555,29 +1570,32 @@ ta8606963 = { $key }：「{ $text }」不是整數
 # {key}: must not be negative
 t9c4debaa = { $key }：不可為負數
 
-# After a restart
-t58dcea2d = 重新啟動後生效
-
-# Every setting is back to its default.
-t763785e7 = 所有設定已恢復為預設值。
-
-# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
-t69f2bb4d = { $n } 項變更將在重新啟動 tracewing 後生效。
-
-# Settings
-t4b058728 = 設定
-
-# Undo
-t71fd4acf = 復原
-
-# Back to defaults
-ta3162a13 = 還原為預設值
+# Appearance
+t31018b9f = 外觀
 
 # Hosts not to decrypt
 tb457f0b3 = 不解密的主機
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 每行一個：主機名稱，或 *.example.com（符合該網域及其所有子網域）。這些主機的流量將直接通過，不會被讀取。此清單立即生效。
+
+# Settings
+t4b058728 = 設定
+
+# After a restart
+t58dcea2d = 重新啟動後生效
+
+# Every setting here is back to its default.
+td0200095 = 此處的所有設定已恢復預設。
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = { $n } 項變更將在重新啟動 tracewing 後生效。
+
+# Undo
+t71fd4acf = 復原
+
+# Back to defaults
+ta3162a13 = 還原為預設值
 
 # Fields always read a certain way
 tb6e892b1 = 一律按固定方式解讀的欄位

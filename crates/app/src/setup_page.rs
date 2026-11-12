@@ -927,9 +927,12 @@ impl Traffic {
             let text = other_devices_text(on, port, None);
             return aside(tr!("Other devices"), text).when(!on, |d| {
                 d.child(
-                    button("setup-devices", tr!("Open settings"), false).on_click(
-                        cx.listener(|this, _, _, cx| this.set_screen(Screen::Settings, cx)),
-                    ),
+                    button("setup-devices", tr!("Open settings"), false).on_click(cx.listener(
+                        |this, _, _, cx| {
+                            this.show_settings_section(crate::layout::SettingsSection::Network, cx);
+                            this.set_screen(Screen::Settings, cx)
+                        },
+                    )),
                 )
             });
         };
@@ -1322,13 +1325,17 @@ impl Traffic {
         )
         .when(other_devices, |d| {
             d.child(
-                button("setup-done-devices", tr!("Open settings"), false)
-                    .on_click(cx.listener(|this, _, _, cx| this.set_screen(Screen::Settings, cx))),
+                button("setup-done-devices", tr!("Open settings"), false).on_click(cx.listener(
+                    |this, _, _, cx| {
+                        this.show_settings_section(crate::layout::SettingsSection::Network, cx);
+                        this.set_screen(Screen::Settings, cx)
+                    },
+                )),
             )
         })
     }
 
-    fn render_ai_tools(&self) -> Div {
+    pub(crate) fn render_ai_tools(&self) -> Div {
         let exe = std::env::current_exe()
             .map(|p| p.display().to_string())
             .unwrap_or_else(|_| "tracewing".to_owned());

@@ -727,6 +727,24 @@ ta0639745 = Payload
 # The simulator did not take it: {why}
 t7f8fa9c0 = Simulator không nhận: { $why }
 
+# General
+t5561fd0b = Chung
+
+# Network
+t6974ad65 = Mạng
+
+# Certificates
+tb88e4cd9 = Chứng chỉ
+
+# Decoding
+t5f8586f8 = Giải mã
+
+# Storage
+t34eddf06 = Lưu trữ
+
+# AI tools
+t294d7ea4 = Công cụ AI
+
 # Light
 t8ad2f8cf = Sáng
 
@@ -1438,9 +1456,6 @@ t3f1c9b5a = Gạch chân cái đọc được
 # A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
 t9e1ebac7 = Giá trị có thể đọc được — một thời điểm, một token, một thứ đã nén — sẽ được gạch chân, để biết là đáng click chuột phải vào đó. Tắt thì các reading vẫn còn, chỉ là không có gì báo.
 
-# AI tools
-t294d7ea4 = Công cụ AI
-
 # Let AI tools see tokens and cookies
 te1d26d3c = Cho công cụ AI thấy token và cookie
 
@@ -1555,29 +1570,32 @@ ta8606963 = { $key }: "{ $text }" không phải là số nguyên
 # {key}: must not be negative
 t9c4debaa = { $key }: không được là số âm
 
-# After a restart
-t58dcea2d = Sau khi khởi động lại
-
-# Every setting is back to its default.
-t763785e7 = Mọi cài đặt đã về mặc định.
-
-# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
-t69f2bb4d = { $n } thay đổi sẽ có hiệu lực khi tracewing khởi động lại.
-
-# Settings
-t4b058728 = Cài đặt
-
-# Undo
-t71fd4acf = Hoàn tác
-
-# Back to defaults
-ta3162a13 = Trở về mặc định
+# Appearance
+t31018b9f = Giao diện
 
 # Hosts not to decrypt
 tb457f0b3 = Host không giải mã
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = Mỗi dòng một mục: một host, hoặc *.example.com cho host đó và mọi host bên dưới. Traffic của chúng đi qua mà không bị đọc. Danh sách này áp dụng ngay.
+
+# Settings
+t4b058728 = Cài đặt
+
+# After a restart
+t58dcea2d = Sau khi khởi động lại
+
+# Every setting here is back to its default.
+td0200095 = Mọi cài đặt ở đây đã về mặc định.
+
+# {n} change takes effect when tracewing starts again. | {n} changes take effect when tracewing starts again.
+t69f2bb4d = { $n } thay đổi sẽ có hiệu lực khi tracewing khởi động lại.
+
+# Undo
+t71fd4acf = Hoàn tác
+
+# Back to defaults
+ta3162a13 = Trở về mặc định
 
 # Fields always read a certain way
 tb6e892b1 = Các field luôn đọc theo một cách

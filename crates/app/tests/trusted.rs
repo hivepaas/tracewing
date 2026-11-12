@@ -151,6 +151,7 @@ fn servers_of_a_trusted_authority_are_trusted() {
     window
         .update(&mut cx, |view, _, cx| {
             view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Certificates, cx);
             let names: Vec<&str> = view.trusted.good.iter().map(|a| a.name.as_str()).collect();
             assert_eq!(names, ["tracewing playground CA"]);
             let bad: Vec<&str> = view.trusted.bad.iter().map(|(f, _)| f.as_str()).collect();
@@ -167,6 +168,7 @@ fn servers_of_a_trusted_authority_are_trusted() {
         .update(&mut cx, |view, _, cx| {
             view.set_screen(Screen::Traffic, cx);
             view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Certificates, cx);
             assert_eq!(view.trusted.good.len(), 2);
             assert_ne!(view.trusted.paths(), view.engine.extra_roots);
         })
@@ -208,6 +210,7 @@ fn servers_of_a_trusted_authority_are_trusted() {
     window
         .update(&mut cx, |view, _, cx| {
             view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Certificates, cx);
             // Nothing chosen: it says what is missing.
             view.add_client_cert(cx);
             let form = view.client_cert_form.as_ref().unwrap();
@@ -231,7 +234,10 @@ fn servers_of_a_trusted_authority_are_trusted() {
     let (status, problem) = ask(&mut cx);
     assert_eq!(status, Some(200), "{problem:?}");
     window
-        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Settings, cx))
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Certificates, cx);
+        })
         .unwrap();
     cx.run_until_parked();
     cx.update_window(window.into(), |_, window, cx| {
@@ -347,6 +353,7 @@ fn servers_of_a_trusted_authority_are_trusted() {
     window
         .update(&mut cx, |view, _, cx| {
             view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Certificates, cx);
             view.switch_tls_keys(cx);
             assert!(view.engine.tls_keys.path().is_none());
             view.switch_tls_keys(cx);

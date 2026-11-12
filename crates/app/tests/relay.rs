@@ -118,6 +118,7 @@ fn a_relay_written_in_settings_is_used_and_kept() {
     window
         .update(&mut cx, |view, _, cx| {
             view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Network, cx);
         })
         .unwrap();
     cx.run_until_parked();
@@ -196,6 +197,7 @@ fn a_relay_written_in_settings_is_used_and_kept() {
     window
         .update(&mut cx, |view, _, cx| {
             view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Network, cx);
             let proxy = view.relay_fields.as_ref().unwrap().proxy.clone();
             set(&proxy, "proxy.corp:8080", cx);
             view.apply_relay(cx);
