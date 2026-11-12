@@ -1273,11 +1273,17 @@ te5d065fe = Приостанавливать сообщения сокета с�
 # Pause a socket's messages to the app
 t482173e8 = Приостанавливать сообщения сокета приложению
 
+# Run a script
+t65a52970 = Запустить скрипт
+
 # Status to answer with, like 403
 t8f3ebb6c = Статус ответа, например 403
 
 # Full path of a file or folder
 t9fb9ae4c = Полный путь к файлу или папке
+
+# Full path of a .js file with onRequest or onResponse
+t01bacb53 = Полный путь к файлу .js с onRequest или onResponse
 
 # Where to, like http://localhost:3000
 tdfedd004 = Куда, например http://localhost:3000
@@ -1333,6 +1339,9 @@ tf2e7bf27 = Query: без { $name }
 # Status {status}
 tad048e53 = Статус { $status }
 
+# Run {path}
+t2f9fde3f = Запустить { $path }
+
 # Request body: {replace}
 te4856c36 = Тело запроса: { $replace }
 
@@ -1374,6 +1383,27 @@ t32a3ce94 = Не удалось прочитать { $path }: { $e }
 
 # Nothing was imported: {e}
 tb9f7257a = Ничего не импортировано: { $e }
+
+# Failed: {why}
+tfce667e2 = Ошибка: { $why }
+
+# Ran once. Last said: {last} | Ran {n} times. Last said: {last}
+t3e82a85a =
+    { $n ->
+        [one] Запущен { $n } раз. Последний вывод: { $last }
+        [few] Запущен { $n } раза. Последний вывод: { $last }
+        [many] Запущен { $n } раз. Последний вывод: { $last }
+       *[other] Запущен { $n } раза. Последний вывод: { $last }
+    }
+
+# Ran once. | Ran {n} times.
+t47b9c718 =
+    { $n ->
+        [one] Запущен { $n } раз.
+        [few] Запущен { $n } раза.
+        [many] Запущен { $n } раз.
+       *[other] Запущен { $n } раза.
+    }
 
 # Edit
 tc2c76cb1 = Изменить

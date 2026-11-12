@@ -12,6 +12,7 @@ use crate::apps::Apps;
 use crate::ca::CRL_PATH;
 use crate::pause::{self, Pauses, Read, Stage, Verdict};
 use crate::rules::HostRules;
+use crate::script::{OnRequest, Scripts};
 use crate::sockets::{Inbox, Registered, Sockets};
 use crate::throttle::{Conditions, Direction, Network};
 use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of, edit_body, edit_query};
@@ -240,6 +241,11 @@ pub struct FlowHandler {
     relay: Arc<crate::relay::Relay>,
     connector: TimedConnector,
     sockets: Arc<Sockets>,
+    scripts: Arc<Scripts>,
+    /// The scripts with an `onResponse` to run on the response of the request
+    /// this clone is handling, and that request as it went.
+    response_scripts: Vec<PathBuf>,
+    script_request: Option<pause::Message>,
     /// What slowed the request this clone is handling, to slow its response too.
     slowed: Option<Conditions>,
     /// Headers rules set, or take out, on the response of the request this
@@ -274,6 +280,8 @@ pub struct Controls {
     pub connector: TimedConnector,
     /// The WebSockets open now, for the window to send into.
     pub sockets: Arc<Sockets>,
+    /// The scripts rules run.
+    pub scripts: Arc<Scripts>,
 }
 
 impl FlowHandler {
@@ -300,6 +308,9 @@ impl FlowHandler {
             relay: controls.relay,
             connector: controls.connector,
             sockets: controls.sockets,
+            scripts: controls.scripts,
+            response_scripts: Vec::new(),
+            script_request: None,
             slowed: None,
             response_headers: Vec::new(),
             response_status: None,
@@ -737,6 +748,16 @@ impl HttpHandler for FlowHandler {
         if !dropped && plan.end.is_none() {
             req = rewrite_request(req, &plan.query, &plan.request_body, streams).await;
         }
+        // Scripts, after the rules' edits and before the flow starts, so that
+        // it shows what went. One may answer by itself.
+        self.response_scripts.clear();
+        self.script_request = None;
+        let mut scripted_answer = None;
+        if !dropped && plan.end.is_none() && !streams && !plan.scripts.is_empty() {
+            // As it is now, a breakpoint's edits and all.
+            let url = full_url(&req);
+            (req, scripted_answer) = self.run_request_scripts(req, &plan.scripts, &url).await;
+        }
         // Paused: traffic goes through as if nothing were watching, rules and all.
         let recording = self.recording.load(Ordering::Relaxed);
         let flow =
@@ -750,6 +771,10 @@ impl HttpHandler for FlowHandler {
         }
         if dropped {
             return self.answer_as_rule(flow, pause::dropped()).into();
+        }
+        if let Some(answer) = scripted_answer {
+            self.response_scripts.clear();
+            return self.answer_as_rule(flow, answer).into();
         }
         for (name, value) in plan.request_headers {
             match value {
@@ -861,6 +886,7 @@ impl HttpHandler for FlowHandler {
         if let Some(flow) = &flow {
             let_its_program_be_found(flow).await;
         }
+        let res = self.run_response_scripts(res).await;
         let res = match self.pause_response.take() {
             // Events and upgrades go on for as long as they last.
             Some(held)
@@ -1186,6 +1212,96 @@ impl FlowHandler {
 }
 
 impl FlowHandler {
+    /// Runs each script's `onRequest` on the request, in the rules' order, and
+    /// keeps those with an `onResponse` for its response. A body too big to
+    /// hold goes on as it is, the scripts not run. An answer a script gives
+    /// ends it there.
+    async fn run_request_scripts(
+        &mut self,
+        req: Request<Body>,
+        scripts: &[(String, PathBuf)],
+        url: &str,
+    ) -> (Request<Body>, Option<Response<Body>>) {
+        let mut hooks = Vec::new();
+        for (_, path) in scripts {
+            hooks.push((path, self.scripts.hooks(path).await));
+        }
+        if hooks
+            .iter()
+            .all(|(_, (request, response))| !request && !response)
+        {
+            return (req, None);
+        }
+        let held = match pause::request_message(req, url.to_owned()).await {
+            Read::Held(held) => held,
+            Read::Passed(req) => return (req, None),
+        };
+        let mut message = held.message.clone();
+        for (path, (on_request, on_response)) in hooks {
+            if on_response {
+                self.response_scripts.push(path.clone());
+            }
+            if !on_request {
+                continue;
+            }
+            match self.scripts.on_request(path, &message).await {
+                OnRequest::Unchanged => {}
+                OnRequest::Changed(changed) => {
+                    // One that cannot be sent is passed over, and said.
+                    match pause::request_from(changed.clone()) {
+                        Ok(_) => message = changed,
+                        Err(why) => tracing::warn!("{}: {why}", path.display()),
+                    }
+                }
+                OnRequest::Answer(answer) => {
+                    if let Ok(res) = pause::response_from(answer) {
+                        return (held.unchanged(), Some(res));
+                    }
+                }
+            }
+        }
+        self.script_request = Some(message.clone());
+        if message == held.message {
+            return (held.unchanged(), None);
+        }
+        match pause::request_from(message) {
+            Ok(req) => (req, None),
+            Err(_) => (held.unchanged(), None),
+        }
+    }
+
+    /// Runs the request's scripts' `onResponse` on its response. Events and
+    /// upgrades go on as they are, as does a body too big to hold.
+    async fn run_response_scripts(&mut self, res: Response<Body>) -> Response<Body> {
+        let scripts = std::mem::take(&mut self.response_scripts);
+        let Some(request) = self.script_request.take() else {
+            return res;
+        };
+        if scripts.is_empty()
+            || stream_cut(&res).is_some()
+            || res.status() == StatusCode::SWITCHING_PROTOCOLS
+        {
+            return res;
+        }
+        let held = match pause::response_message(res, &request.method, &request.url).await {
+            Read::Held(held) => held,
+            Read::Passed(res) => return res,
+        };
+        let mut message = held.message.clone();
+        for path in &scripts {
+            if let Some(changed) = self.scripts.on_response(path, &request, &message).await {
+                match pause::response_from(changed.clone()) {
+                    Ok(_) => message = changed,
+                    Err(why) => tracing::warn!("{}: {why}", path.display()),
+                }
+            }
+        }
+        if message == held.message {
+            return held.unchanged();
+        }
+        pause::response_from(message).unwrap_or_else(|_| held.unchanged())
+    }
+
     /// Holds a socket's text or binary message until the window says what to
     /// send in its place, if anything. Control frames, and a message too big
     /// to hold, go on as they are.

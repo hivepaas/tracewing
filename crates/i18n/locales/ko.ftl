@@ -1114,11 +1114,17 @@ te5d065fe = 서버로 가는 소켓 메시지 일시 중지
 # Pause a socket's messages to the app
 t482173e8 = 앱으로 가는 소켓 메시지 일시 중지
 
+# Run a script
+t65a52970 = 스크립트 실행
+
 # Status to answer with, like 403
 t8f3ebb6c = 응답할 상태 코드(예: 403)
 
 # Full path of a file or folder
 t9fb9ae4c = 파일 또는 폴더의 전체 경로
+
+# Full path of a .js file with onRequest or onResponse
+t01bacb53 = onRequest 또는 onResponse가 있는 .js 파일의 전체 경로
 
 # Where to, like http://localhost:3000
 tdfedd004 = 보낼 곳(예: http://localhost:3000)
@@ -1174,6 +1180,9 @@ tf2e7bf27 = 쿼리: { $name } 없음
 # Status {status}
 tad048e53 = 상태 { $status }
 
+# Run {path}
+t2f9fde3f = { $path } 실행
+
 # Request body: {replace}
 te4856c36 = 요청 본문: { $replace }
 
@@ -1212,6 +1221,15 @@ t32a3ce94 = { $path } 파일을 읽을 수 없습니다: { $e }
 
 # Nothing was imported: {e}
 tb9f7257a = 아무것도 가져오지 못했습니다: { $e }
+
+# Failed: {why}
+tfce667e2 = 실패: { $why }
+
+# Ran once. Last said: {last} | Ran {n} times. Last said: {last}
+t3e82a85a = { $n }번 실행. 마지막 출력: { $last }
+
+# Ran once. | Ran {n} times.
+t47b9c718 = { $n }번 실행.
 
 # Edit
 tc2c76cb1 = 편집

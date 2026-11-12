@@ -1221,11 +1221,17 @@ te5d065fe = Pausar los mensajes del socket al servidor
 # Pause a socket's messages to the app
 t482173e8 = Pausar los mensajes del socket a la app
 
+# Run a script
+t65a52970 = Ejecutar un script
+
 # Status to answer with, like 403
 t8f3ebb6c = Estado con el que responder, como 403
 
 # Full path of a file or folder
 t9fb9ae4c = Ruta completa de un archivo o carpeta
+
+# Full path of a .js file with onRequest or onResponse
+t01bacb53 = Ruta completa de un archivo .js con onRequest u onResponse
 
 # Where to, like http://localhost:3000
 tdfedd004 = Destino, como http://localhost:3000
@@ -1281,6 +1287,9 @@ tf2e7bf27 = Consulta: sin { $name }
 # Status {status}
 tad048e53 = Estado { $status }
 
+# Run {path}
+t2f9fde3f = Ejecutar { $path }
+
 # Request body: {replace}
 te4856c36 = Cuerpo de la solicitud: { $replace }
 
@@ -1320,6 +1329,25 @@ t32a3ce94 = No se pudo leer { $path }: { $e }
 
 # Nothing was imported: {e}
 tb9f7257a = No se importó nada: { $e }
+
+# Failed: {why}
+tfce667e2 = Falló: { $why }
+
+# Ran once. Last said: {last} | Ran {n} times. Last said: {last}
+t3e82a85a =
+    { $n ->
+        [one] Se ejecutó una vez. Última salida: { $last }
+        [many] Se ejecutó { $n } veces. Última salida: { $last }
+       *[other] Se ejecutó { $n } veces. Última salida: { $last }
+    }
+
+# Ran once. | Ran {n} times.
+t47b9c718 =
+    { $n ->
+        [one] Se ejecutó una vez.
+        [many] Se ejecutó { $n } veces.
+       *[other] Se ejecutó { $n } veces.
+    }
 
 # Edit
 tc2c76cb1 = Editar

@@ -823,7 +823,9 @@ fn tools() -> Value {
                 (an empty `find` replaces the whole body), the same for replace_response_body, \
                 {\"action\":\"pause_request\"}, {\"action\":\"pause_response\"}, \
                 {\"action\":\"pause_messages_to_server\"}, {\"action\":\"pause_messages_to_app\"} \
-                (these hold traffic on tracewing's Paused screen until the user lets it go). \
+                (these hold traffic on tracewing's Paused screen until the user lets it go), \
+                {\"action\":\"script\",\"path\":\"/full/path/to/script.js\"} (runs its \
+                onRequest(request) and onResponse(request, response) on matching traffic). \
                 Only if the user allowed AI tools to act, in Settings.",
             "inputSchema": {
                 "type": "object",

@@ -1114,11 +1114,17 @@ te5d065fe = 暂停发往服务器的套接字消息
 # Pause a socket's messages to the app
 t482173e8 = 暂停发往应用的套接字消息
 
+# Run a script
+t65a52970 = 运行脚本
+
 # Status to answer with, like 403
 t8f3ebb6c = 要返回的状态码，如 403
 
 # Full path of a file or folder
 t9fb9ae4c = 文件或文件夹的完整路径
+
+# Full path of a .js file with onRequest or onResponse
+t01bacb53 = 含 onRequest 或 onResponse 的 .js 文件的完整路径
 
 # Where to, like http://localhost:3000
 tdfedd004 = 目标地址，如 http://localhost:3000
@@ -1174,6 +1180,9 @@ tf2e7bf27 = 查询：去掉 { $name }
 # Status {status}
 tad048e53 = 状态码 { $status }
 
+# Run {path}
+t2f9fde3f = 运行 { $path }
+
 # Request body: {replace}
 te4856c36 = 请求正文：{ $replace }
 
@@ -1212,6 +1221,15 @@ t32a3ce94 = 无法读取 { $path }：{ $e }
 
 # Nothing was imported: {e}
 tb9f7257a = 未导入任何内容：{ $e }
+
+# Failed: {why}
+tfce667e2 = 失败：{ $why }
+
+# Ran once. Last said: {last} | Ran {n} times. Last said: {last}
+t3e82a85a = 已运行 { $n } 次。最后输出：{ $last }
+
+# Ran once. | Ran {n} times.
+t47b9c718 = 已运行 { $n } 次。
 
 # Edit
 tc2c76cb1 = 编辑
