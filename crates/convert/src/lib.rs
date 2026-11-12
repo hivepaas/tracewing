@@ -286,6 +286,21 @@ pub fn readings(input: &Input) -> Vec<Reading> {
     readings_within(input, BUDGET)
 }
 
+/// Whether `text` is worth running the converters over, by its shape alone.
+///
+/// A view with a thousand values on it asks this of each before it reads any,
+/// so it has to be cheap and it has to let through everything a converter
+/// could want: prose is what it turns away. It is a sieve, not an answer —
+/// plenty of what passes reads as nothing.
+pub fn could_read(text: &str) -> bool {
+    let text = text.trim().trim_matches('"');
+    if !(8..=MAX_INPUT).contains(&text.len()) {
+        return false;
+    }
+    // Spaces mean words, except in the one time format written with them.
+    !text.contains(char::is_whitespace) || text.ends_with(" GMT")
+}
+
 /// The reading `id` makes of `input`, if that is still what the value is.
 ///
 /// A remembered rule names a reading rather than keeping it, so this finds it
@@ -476,6 +491,21 @@ mod tests {
         let time = by_id(&certain, "unix-s").unwrap();
         assert_eq!(time.confidence, Confidence::Certain);
         assert!(!time.beside().contains("(Unix seconds)"));
+    }
+
+    #[test]
+    fn prose_is_turned_away_before_anything_is_read() {
+        assert!(could_read("1794492800"));
+        assert!(could_read("eyJhbGciOiJIUzI1NiJ9.eyJhIjoxfQ.sig"));
+        assert!(could_read("\"2026-11-12T14:13:20Z\""));
+        assert!(could_read("Thu, 12 Nov 2026 15:20:02 GMT"));
+        assert!(!could_read("42"));
+        assert!(!could_read("Chi Pham"));
+        assert!(!could_read("the quick brown fox"));
+        assert!(!could_read(""));
+        assert!(!could_read(&"a".repeat(MAX_INPUT + 1)));
+        // What it lets through is not promised to read as anything.
+        assert!(could_read("aaaaaaaaaa"));
     }
 
     #[test]

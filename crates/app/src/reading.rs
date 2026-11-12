@@ -6,9 +6,9 @@
 
 use crate::select::{Act, Item};
 use chrono::Offset as _;
-use gpui::{App, ClipboardItem, Window};
+use gpui::{App, ClipboardItem, HighlightStyle, UnderlineStyle, Window, px, rgb};
 use std::rc::Rc;
-use tracewing_convert::{Input, Reading, Shown};
+use tracewing_convert::{Confidence, Input, Reading, Shown};
 use tracewing_i18n::tr;
 
 /// How many readings a menu offers at once. Past a few it is a list to read,
@@ -39,6 +39,29 @@ pub fn read_as(id: &str, text: &str, field: Option<&str>) -> Option<Reading> {
     }
     let (now, offset) = here();
     tracewing_convert::read_as(id, &Input::new(text, now, offset).under(field)).map(small)
+}
+
+/// How a value with a reading behind it is marked: an underline faint enough
+/// to be a hint rather than a mistake.
+pub fn underlined() -> HighlightStyle {
+    HighlightStyle {
+        underline: Some(UnderlineStyle {
+            thickness: px(1.),
+            color: Some(rgb(crate::colors::colors().faint).into()),
+            wavy: false,
+        }),
+        ..Default::default()
+    }
+}
+
+/// Whether a value is worth saying something about: it has a reading that is
+/// more than a guess. A number is a size and a mask of bits and a number in
+/// hex, and underlining every number would say nothing at all.
+pub fn worth_marking(text: &str, field: Option<&str>) -> bool {
+    tracewing_convert::could_read(text)
+        && of(text, field)
+            .iter()
+            .any(|reading| reading.confidence > Confidence::Possible)
 }
 
 /// The field and the value a laid-out line holds: the `created_at` and the
@@ -163,6 +186,18 @@ mod tests {
         assert!(matches!(kept.shown, Shown::Line(_)));
         assert_eq!(kept.beside(), json.beside());
         assert_eq!(kept.id, "base64");
+    }
+
+    #[test]
+    fn what_is_worth_marking_is_more_than_a_guess() {
+        // A time, a token and a cookie are marked.
+        assert!(worth_marking("1794492800", Some("created_at")));
+        assert!(worth_marking("Thu, 12 Nov 2026 15:20:02 GMT", Some("date")));
+        assert!(worth_marking("eyJhIjoxfQ", None));
+        // A number that is merely a number is not.
+        assert!(!worth_marking("868617", Some("total")));
+        assert!(!worth_marking("Chi Pham", Some("customer")));
+        assert!(!worth_marking("true", Some("paid")));
     }
 
     #[test]

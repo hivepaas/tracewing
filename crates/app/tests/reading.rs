@@ -437,6 +437,24 @@ fn what_is_remembered_reads_itself_next_time() {
         })
         .unwrap();
     assert!(!before, "nothing is read before a rule says to");
+    // It is underlined, though: that is how a reader learns there is
+    // something here to read at all.
+    let marked = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector.marks_of("date", &date, false).len()
+        })
+        .unwrap();
+    assert_eq!(marked, 1, "a Date header says it can be read");
+    let plain = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector
+                .marks_of("content-type", "application/json", false)
+                .len()
+        })
+        .unwrap();
+    assert_eq!(plain, 0, "and a content type does not");
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "87-reading-underlined");
 
     // Remember it, as the menu's `Always read date this way` does.
     window
