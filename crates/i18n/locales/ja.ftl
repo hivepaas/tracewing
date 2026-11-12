@@ -871,6 +871,9 @@ tb629329e = サーバーの応答は { $code } でした: gRPC リフレクシ�
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = サーバーから何も返ってきませんでした: gRPC リフレクションがないのかもしれません
 
+# Sent by the server, not asked for
+td717c770 = サーバーが自分から送ったもので、要求への返答ではありません
+
 # any
 t2c29f04d = 任意
 

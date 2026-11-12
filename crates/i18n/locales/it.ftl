@@ -941,6 +941,9 @@ tb629329e = Il server ha risposto { $code }: forse non offre la reflection gRPC.
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Il server non ha risposto nulla: forse non offre la reflection gRPC
 
+# Sent by the server, not asked for
+td717c770 = Inviato dal server, senza che sia stato chiesto
+
 # any
 t2c29f04d = qualsiasi
 

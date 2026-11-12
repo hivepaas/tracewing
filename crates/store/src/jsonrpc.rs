@@ -55,10 +55,17 @@ pub struct Call {
 /// What a request calls, each call of a batch on its own. Empty when the
 /// request is not JSON-RPC.
 pub fn calls(http_method: &str, content_type: Option<&str>, body: &[u8]) -> Vec<Call> {
-    if !http_method.eq_ignore_ascii_case("POST")
-        || !content_type.is_some_and(is_json)
-        || !holds(body, b"\"method\"")
-    {
+    if !http_method.eq_ignore_ascii_case("POST") || !content_type.is_some_and(is_json) {
+        return Vec::new();
+    }
+    calls_in(body)
+}
+
+/// The calls a message holds, where there is no HTTP around it to say what it
+/// is: a WebSocket carries JSON-RPC with no content type and no method, and a
+/// call or a notification a message.
+pub fn calls_in(body: &[u8]) -> Vec<Call> {
+    if !holds(body, b"\"method\"") {
         return Vec::new();
     }
     let read = |value: &Value| {
@@ -93,7 +100,15 @@ pub struct Fault {
 /// it is longer than [`FAULT_MAX`]. Worth calling only for a flow whose
 /// request [`method`] named, so that other JSON is not parsed twice.
 pub fn faults(content_type: Option<&str>, body: &[u8]) -> Vec<Fault> {
-    if body.len() > FAULT_MAX || !content_type.is_some_and(is_json) || !holds(body, b"\"error\"") {
+    if !content_type.is_some_and(is_json) {
+        return Vec::new();
+    }
+    faults_in(body)
+}
+
+/// The failures a message carries, where there is no HTTP around it.
+pub fn faults_in(body: &[u8]) -> Vec<Fault> {
+    if body.len() > FAULT_MAX || !holds(body, b"\"error\"") {
         return Vec::new();
     }
     let read = |value: &Value| {
@@ -309,6 +324,25 @@ mod tests {
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].code, -32602);
         assert_eq!(found[0].data, None);
+    }
+
+    #[test]
+    fn a_message_with_no_http_around_it_is_read_the_same_way() {
+        // A WebSocket sends a call a message, with nothing to say what it is:
+        // a subscription asked for, then what it sends back.
+        let asked = br#"{"jsonrpc":"2.0","id":1,"method":"eth_subscribe","params":["newHeads"]}"#;
+        let asking = calls_in(asked);
+        assert_eq!(asking[0].method, "eth_subscribe");
+        assert_eq!(asking[0].id, Some(serde_json::json!(1)));
+        let sent = br#"{"jsonrpc":"2.0","method":"eth_subscription",
+                        "params":{"subscription":"0xcd0c3e8af5","result":{}}}"#;
+        assert_eq!(calls_in(sent)[0].method, "eth_subscription");
+        assert!(calls_in(br#"{"jsonrpc":"2.0","id":1,"result":"0x1"}"#).is_empty());
+        let failed = br#"{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"no"}}"#;
+        assert_eq!(faults_in(failed)[0].code, -32601);
+        // The ones that take HTTP still want it.
+        assert!(calls("POST", None, asked).is_empty());
+        assert!(faults(None, failed).is_empty());
     }
 
     #[test]

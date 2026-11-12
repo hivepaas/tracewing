@@ -871,6 +871,9 @@ tb629329e = Server trả lời { $code }: có thể nó không có gRPC reflecti
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Server không trả lời gì: có thể nó không có gRPC reflection
 
+# Sent by the server, not asked for
+td717c770 = Server tự gửi, không phải trả lời yêu cầu nào
+
 # any
 t2c29f04d = bất kỳ
 

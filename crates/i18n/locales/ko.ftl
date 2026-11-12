@@ -871,6 +871,9 @@ tb629329e = 서버가 { $code }(으)로 응답했습니다: gRPC 리플렉션을
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = 서버가 아무것도 보내지 않았습니다: gRPC 리플렉션을 제공하지 않을 수 있습니다
 
+# Sent by the server, not asked for
+td717c770 = 서버가 스스로 보낸 것이며 요청에 대한 응답이 아닙니다
+
 # any
 t2c29f04d = 모두
 

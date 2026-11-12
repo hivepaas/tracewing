@@ -929,6 +929,9 @@ tb629329e = Sunucu { $code } yanıtını verdi: gRPC reflection sunmuyor olabili
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Sunucu hiçbir şey göndermedi: gRPC reflection sunmuyor olabilir
 
+# Sent by the server, not asked for
+td717c770 = Sunucunun kendiliğinden gönderdiği, istenmiş değil
+
 # any
 t2c29f04d = herhangi
 

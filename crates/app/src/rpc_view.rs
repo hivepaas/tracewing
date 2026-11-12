@@ -29,6 +29,9 @@ const CALLS_SHOWN: usize = 50;
 /// Past this many arguments the rest are counted: a call that takes more is
 /// one the Body part reads better.
 const ARGUMENTS_SHOWN: usize = 24;
+/// The most of a socket's messages read for this. A socket that has said
+/// more than this has said it in the Messages part, which reads them all.
+const MESSAGES_MAX: i64 = 200;
 /// How many problems of one ABI source are shown in Settings.
 const PROBLEMS_SHOWN: usize = 3;
 
@@ -114,10 +117,101 @@ pub fn shown(
         }
         .or_else(|| (!batch).then(|| replies.first()).flatten());
         if let Some(answer) = answer {
-            out.sections.push(answered(answer, abi));
+            out.sections.push(answered(answer, abi, &call.method));
         }
     }
     out
+}
+
+/// What the calls in a socket's messages hold. A WebSocket carries JSON-RPC
+/// with no HTTP around it: a call a message, the reply somewhere after it
+/// with the same id, and notifications the server sends of its own, which
+/// have no id because nothing asked for each one.
+///
+/// `messages` are in the order they went, each said to be from the client or
+/// not.
+pub fn shown_messages(messages: &[(bool, Vec<u8>)], abi: &Abi) -> Shown {
+    let mut out = Shown::default();
+    // The server messages that answer a call, so that what is left over is
+    // what the server said of its own accord.
+    let mut answered_at = vec![false; messages.len()];
+    let mut pairs: Vec<(usize, Option<usize>, jsonrpc::Call)> = Vec::new();
+    for (at, (from_client, data)) in messages.iter().enumerate() {
+        if !from_client {
+            continue;
+        }
+        for call in jsonrpc::calls_in(data) {
+            let reply = call.id.as_ref().and_then(|id| {
+                messages
+                    .iter()
+                    .enumerate()
+                    .skip(at + 1)
+                    .find(|(n, (from, data))| !from && !answered_at[*n] && answers(data, id))
+                    .map(|(n, _)| n)
+            });
+            if let Some(n) = reply {
+                answered_at[n] = true;
+            }
+            pairs.push((at, reply, call));
+        }
+    }
+    // Back in the order they went, with each call's reply after it.
+    let mut shown = 0usize;
+    for (at, (from_client, data)) in messages.iter().enumerate() {
+        let here: Vec<&(usize, Option<usize>, jsonrpc::Call)> =
+            pairs.iter().filter(|(from, _, _)| *from == at).collect();
+        if *from_client {
+            for (_, reply, call) in here {
+                shown += 1;
+                if shown > CALLS_SHOWN {
+                    out.more += 1;
+                    continue;
+                }
+                out.sections.push(Section {
+                    title: call.method.clone(),
+                    note: None,
+                    lines: asked(call, abi),
+                });
+                if let Some(n) = reply
+                    && let Ok(value) = serde_json::from_slice(&messages[*n].1)
+                {
+                    out.sections.push(answered(&value, abi, &call.method));
+                }
+            }
+            continue;
+        }
+        if answered_at[at] {
+            continue;
+        }
+        // The server, of its own accord: what a subscription sends.
+        for call in jsonrpc::calls_in(data) {
+            shown += 1;
+            if shown > CALLS_SHOWN {
+                out.more += 1;
+                continue;
+            }
+            out.sections.push(Section {
+                title: call.method.clone(),
+                note: Some(tr!("Sent by the server, not asked for")),
+                lines: asked(&call, abi),
+            });
+        }
+    }
+    out
+}
+
+/// Whether a message is the reply to `id`.
+fn answers(data: &[u8], id: &serde_json::Value) -> bool {
+    let Ok(value) = serde_json::from_slice::<serde_json::Value>(data) else {
+        return false;
+    };
+    let is_reply = |one: &serde_json::Value| {
+        one.get("id") == Some(id) && (one.get("result").is_some() || one.get("error").is_some())
+    };
+    match &value {
+        serde_json::Value::Array(batch) => batch.iter().any(is_reply),
+        one => is_reply(one),
+    }
 }
 
 /// What one call asks for, by what its method does with its params.
@@ -178,6 +272,58 @@ fn asked(call: &jsonrpc::Call, abi: &Abi) -> Vec<Line> {
                 }
             }
         }
+        "eth_subscribe" => {
+            lines.extend(text_at(0).map(|what| Line::said("kind", what)));
+            if let Some(filter) = at(1) {
+                lines.extend(
+                    filter
+                        .get("address")
+                        .and_then(|v| v.as_str())
+                        .map(|a| Line::code("address", address(a))),
+                );
+                if let Some(topics) = filter.get("topics").and_then(|t| t.as_array()) {
+                    for (n, topic) in topics.iter().enumerate() {
+                        if let Some(hex) = topic.as_str() {
+                            lines.push(Line::code(&format!("topic {n}"), topic_text(hex, abi, n)));
+                        }
+                    }
+                }
+            }
+        }
+        "eth_unsubscribe" => {
+            lines.extend(text_at(0).map(|id| Line::code("subscription", id)));
+        }
+        // What a subscription sends: the id it belongs to, then the block or
+        // the log itself.
+        "eth_subscription" => {
+            let field = |name: &str| params.and_then(|p| p.get(name));
+            lines.extend(
+                field("subscription")
+                    .and_then(|v| v.as_str())
+                    .map(|id| Line::code("subscription", id)),
+            );
+            let result = field("result");
+            let said = |name: &str| result.and_then(|r| r.get(name)).and_then(|v| v.as_str());
+            // A block has a number, which reads as one; a hash does not.
+            lines.extend(said("number").map(|n| Line::code("block", block_text(n))));
+            lines.extend(said("hash").map(|hash| Line::code("hash", hash)));
+            lines.extend(
+                result
+                    .and_then(|r| r.get("address"))
+                    .and_then(|v| v.as_str())
+                    .map(|a| Line::code("address", address(a))),
+            );
+            if let Some(topics) = result
+                .and_then(|r| r.get("topics"))
+                .and_then(|t| t.as_array())
+            {
+                for (n, topic) in topics.iter().enumerate() {
+                    if let Some(hex) = topic.as_str() {
+                        lines.push(Line::code(&format!("topic {n}"), topic_text(hex, abi, n)));
+                    }
+                }
+            }
+        }
         "eth_getBalance" | "eth_getTransactionCount" | "eth_getCode" => {
             lines.extend(text_at(0).map(|who| Line::code("address", address(&who))));
             lines.extend(text_at(1).map(|block| Line::said("block", block_text(&block))));
@@ -211,7 +357,8 @@ fn asked(call: &jsonrpc::Call, abi: &Abi) -> Vec<Line> {
 }
 
 /// What the reply to one call holds: what came back, or why it did not.
-fn answered(answer: &serde_json::Value, abi: &Abi) -> Section {
+/// `method` is the call that asked, which is what says how to read a result.
+fn answered(answer: &serde_json::Value, abi: &Abi, method: &str) -> Section {
     if let Some(error) = answer.get("error") {
         let code = error.get("code").and_then(serde_json::Value::as_i64);
         let mut lines = Vec::new();
@@ -236,7 +383,7 @@ fn answered(answer: &serde_json::Value, abi: &Abi) -> Section {
     let mut lines = Vec::new();
     match answer.get("result") {
         Some(serde_json::Value::String(hex)) => {
-            lines.push(Line::code("result", number_text(hex)));
+            lines.push(Line::code("result", result_text(method, hex)));
         }
         Some(serde_json::Value::Array(list)) => {
             lines.push(Line::said(
@@ -267,6 +414,34 @@ fn answered(answer: &serde_json::Value, abi: &Abi) -> Section {
         title: tr!("Answer"),
         note: None,
         lines,
+    }
+}
+
+/// What a result holds, which only the call that asked can say: a block
+/// number is a number, a subscription's id is a handle that means nothing as
+/// digits, and a hash is neither. Hex is left as it came unless the method is
+/// one whose answer is a quantity.
+fn result_text(method: &str, hex: &str) -> String {
+    match method {
+        "eth_getBalance" => match web3::quantity_bytes(hex) {
+            Some(wei) => web3::ether(&wei),
+            None => hex.to_owned(),
+        },
+        "eth_gasPrice" | "eth_maxPriorityFeePerGas" | "eth_blobBaseFee" => {
+            match web3::quantity(hex) {
+                Some(wei) => web3::gwei(wei),
+                None => hex.to_owned(),
+            }
+        }
+        "eth_blockNumber"
+        | "eth_chainId"
+        | "eth_getTransactionCount"
+        | "eth_estimateGas"
+        | "eth_getBlockTransactionCountByNumber"
+        | "net_version"
+        // A word of data, whose digits are what the contract answered.
+        | "eth_call" => number_text(hex),
+        _ => hex.to_owned(),
     }
 }
 
@@ -494,6 +669,10 @@ impl Traffic {
         let Some(detail) = &self.inspector.detail else {
             return;
         };
+        if detail.kind == "websocket" {
+            self.load_rpc_messages(cx);
+            return;
+        }
         if detail.rpc.is_none() {
             return;
         }
@@ -519,6 +698,57 @@ impl Traffic {
                     // Reads the disk the first time, so not on the UI thread.
                     let abi = abis.abi();
                     shown(&method, content_type.as_deref(), &request, &response, &abi)
+                })
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                if this.inspector.detail.as_ref().map(|d| d.id) == Some(id) {
+                    this.inspector.rpc = Some(read);
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
+    }
+
+    /// The same for a socket, whose calls are its messages. The list of them
+    /// is read here, where the session's database is; only their bytes are
+    /// read on another thread.
+    fn load_rpc_messages(&mut self, cx: &mut Context<Self>) {
+        let Some(detail) = &self.inspector.detail else {
+            return;
+        };
+        let id = detail.id;
+        let Some(flows) = self.flows() else {
+            return;
+        };
+        let stored = match session::stored_messages(flows.conn(), id, 0, MESSAGES_MAX) {
+            Ok(stored) => stored,
+            Err(_) => return,
+        };
+        let places: Vec<(bool, Option<session::LogPlace>)> = stored
+            .iter()
+            .filter(|message| matches!(message.kind.as_str(), "text" | "binary"))
+            .map(|message| (message.from_client, message.place))
+            .collect();
+        if places.is_empty() {
+            return;
+        }
+        let session = self.session_dir().to_owned();
+        let abis = Arc::clone(&self.abis);
+        cx.spawn(async move |this, cx| {
+            let read = cx
+                .background_spawn(async move {
+                    let mut reader = BodyReader::new(&session);
+                    let messages: Vec<(bool, Vec<u8>)> = places
+                        .into_iter()
+                        .map(|(from_client, place)| {
+                            let data = place
+                                .and_then(|place| reader.read_place(place).ok())
+                                .unwrap_or_default();
+                            (from_client, data)
+                        })
+                        .collect();
+                    shown_messages(&messages, &abis.abi())
                 })
                 .await;
             let _ = this.update(cx, |this, cx| {
@@ -885,6 +1115,14 @@ mod tests {
         )
     }
 
+    fn titles(shown: &Shown) -> Vec<&str> {
+        shown
+            .sections
+            .iter()
+            .map(|section| section.title.as_str())
+            .collect()
+    }
+
     /// The label and value of each line, for reading an expectation whole.
     fn lines(section: &Section) -> Vec<(&str, &str)> {
         section
@@ -1025,6 +1263,92 @@ mod tests {
                 ("param 1", "0xde0b6b3a7640000 = 1000000000000000000"),
             ]
         );
+    }
+
+    /// A socket as a dapp uses one: subscribe, what came back, then what the
+    /// server sends of its own until it is told to stop.
+    #[test]
+    fn a_sockets_calls_are_read_from_its_messages() {
+        let messages: Vec<(bool, Vec<u8>)> = [
+            (true, r#"{"jsonrpc":"2.0","id":1,"method":"eth_subscribe","params":["newHeads"]}"#),
+            (false, r#"{"jsonrpc":"2.0","id":1,"result":"0xcd0c3e8af5"}"#),
+            (false, r#"{"jsonrpc":"2.0","method":"eth_subscription","params":{"subscription":"0xcd0c3e8af5","result":{"number":"0x192bbde","hash":"0x7dde"}}}"#),
+            (true, r#"{"jsonrpc":"2.0","id":2,"method":"eth_unsubscribe","params":["0xcd0c3e8af5"]}"#),
+            (false, r#"{"jsonrpc":"2.0","id":2,"result":true}"#),
+        ]
+        .into_iter()
+        .map(|(from_client, text)| (from_client, text.as_bytes().to_vec()))
+        .collect();
+        let shown = shown_messages(&messages, &Abi::default());
+        assert_eq!(
+            titles(&shown),
+            [
+                "eth_subscribe",
+                "Answer",
+                "eth_subscription",
+                "eth_unsubscribe",
+                "Answer",
+            ],
+            "in the order they went, each reply after the call it answers"
+        );
+        assert_eq!(lines(&shown.sections[0]), [("kind", "newHeads")]);
+        assert_eq!(shown.sections[1].lines[0].value, "0xcd0c3e8af5");
+        // What the server sent without being asked for that one.
+        let sent = &shown.sections[2];
+        assert_eq!(
+            sent.note.as_deref(),
+            Some("Sent by the server, not asked for")
+        );
+        assert_eq!(
+            lines(sent),
+            [
+                ("subscription", "0xcd0c3e8af5"),
+                ("block", "26,393,566"),
+                ("hash", "0x7dde"),
+            ]
+        );
+        assert_eq!(
+            lines(&shown.sections[3]),
+            [("subscription", "0xcd0c3e8af5")]
+        );
+    }
+
+    #[test]
+    fn a_socket_that_says_something_else_has_nothing_to_show() {
+        let messages = [(true, b"hello".to_vec()), (false, b"{}".to_vec())];
+        assert!(
+            shown_messages(&messages, &Abi::default())
+                .sections
+                .is_empty()
+        );
+    }
+
+    /// A reply is matched by its id, not by what came next.
+    #[test]
+    fn a_reply_out_of_order_still_finds_its_call() {
+        let messages: Vec<(bool, Vec<u8>)> = [
+            (
+                true,
+                r#"{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber"}"#,
+            ),
+            (true, r#"{"jsonrpc":"2.0","id":2,"method":"eth_chainId"}"#),
+            (false, r#"{"jsonrpc":"2.0","id":2,"result":"0x1"}"#),
+            (false, r#"{"jsonrpc":"2.0","id":1,"result":"0x192bbde"}"#),
+        ]
+        .into_iter()
+        .map(|(from_client, text)| (from_client, text.as_bytes().to_vec()))
+        .collect();
+        let shown = shown_messages(&messages, &Abi::default());
+        assert_eq!(
+            titles(&shown),
+            ["eth_blockNumber", "Answer", "eth_chainId", "Answer"]
+        );
+        assert_eq!(
+            shown.sections[1].lines[0].value, "0x192bbde = 26393566",
+            "the block number went with the call that asked for it"
+        );
+        // `0x1 = 1` would be saying it twice, so the hex stands alone.
+        assert_eq!(shown.sections[3].lines[0].value, "0x1");
     }
 
     #[test]
