@@ -63,7 +63,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Any other response still going after 2 s (long polls, logs as they are written, big downloads) listed while it lasts | Beta | Free |
 | WebSocket: see every message | Beta | Free |
 | GraphQL: the operation name as a column (shown on request), queries laid out and colored, and variables formatted, batches and persisted queries too | Beta | Free |
-| JSON-RPC: the method as a column (`eth_call` for an Ethereum node, `getAccountInfo` for Solana, `tools/call` for MCP over HTTP), the other calls of a batch counted, and a call that failed marked although it answered 200 | Beta | Free |
+| JSON-RPC: the method as a column (`eth_call` for an Ethereum node, `getAccountInfo` for Solana, `tools/call` for MCP over HTTP), the other calls of a batch counted, and a call that failed marked although it answered 200; a socket named by the calls in its messages, while it is still open | Beta | Free |
 | WebSocket: breakpoints and sending messages | 1.x | Pro |
 | gRPC and protobuf: decoded with a `.proto` file or without one, and editable | 1.x | Pro |
 | HTTP/3 | 2.0 | Pro |

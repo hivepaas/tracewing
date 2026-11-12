@@ -434,6 +434,15 @@ by the same writer thread as flows.
 All 400,002 messages of the two recorded runs were kept: two for each round trip, and
 the two closes. `WS_BENCH=100000` repeats it.
 
+Naming a socket by the calls in its messages (`crates/proxy/src/capture.rs`, 2026-11-12)
+looks at the first 20 messages of each side and then stops, so what it costs is a
+constant per socket rather than a cost per message, and the row is written again once,
+not once a message. Measured both ways, with the looking and without it, every run of either build lands
+between about 44,000 and 48,000 round trips/s, and a single build's runs vary by more
+than the two builds differ: the spread is what this machine can tell apart, and the
+cost of the looking is under it. A run taken while the machine was busy building fell
+to 42,700, which says the same thing about the spread.
+
 ## The program behind a quick request (`crates/proxy/src/capture.rs`, 2026-11-12)
 
 curl asks once and is gone as soon as it is answered. Finding the program behind a

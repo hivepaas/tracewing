@@ -319,11 +319,10 @@ fn json_rpc_calls_are_read_in_the_inspector() {
         .update(&mut cx, |view, _, cx| {
             let detail = view.inspector.detail.as_ref().unwrap();
             assert_eq!(detail.kind, "websocket");
-            assert_eq!(detail.rpc, None, "a socket is not one request's call");
-            assert!(
-                view.offers_rpc(detail),
-                "and yet the part is there, because its messages hold calls"
-            );
+            // Named from its messages while it was still open, so the list
+            // and the box can find it like any other call.
+            assert_eq!(detail.rpc.as_deref(), Some("eth_subscribe"));
+            assert!(view.offers_rpc(detail));
             view.set_part(Part::Rpc, cx);
         })
         .unwrap();

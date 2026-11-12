@@ -1935,6 +1935,106 @@ async fn a_stream_is_searched_by_what_it_said_once_over() {
 }
 
 /// A WebSocket has a row from its upgrade, and each message on it, both ways.
+/// A socket carries its calls in its messages, so nothing could name its row
+/// when it opened. It is named while it is still open, which is when anyone
+/// looking for it needs it — a dapp's socket stays open for the session.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_sockets_row_is_named_while_it_is_still_open() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::tungstenite::Message,
+    };
+    let h = Harness::start("ws-rpc").await;
+    let proxy: std::net::SocketAddr = h.proxy_url.trim_start_matches("http://").parse().unwrap();
+    let open = async |path: &str| {
+        benchkit::websocket_through_proxy(
+            proxy,
+            &h.dir.join("ca/ca.pem"),
+            "localhost",
+            h.ws_port,
+            path,
+        )
+        .await
+        .unwrap()
+    };
+    let subscribe = r#"{"jsonrpc":"2.0","id":1,"method":"eth_subscribe","params":["newHeads"]}"#;
+
+    let mut ws = open("/rpc").await;
+    ws.send(Message::text(subscribe)).await.unwrap();
+    // The answer, then what the subscription sends of its own.
+    ws.next().await.unwrap().unwrap();
+    ws.next().await.unwrap().unwrap();
+
+    let conn = Connection::open(h.dir.join("session/flows.db")).unwrap();
+    type SocketRow = (Option<String>, Option<i64>, bool);
+    let named = async |conn: &Connection, done: fn(&SocketRow) -> bool| -> SocketRow {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            let row: SocketRow = conn
+                .query_row(
+                    "SELECT rpc, rpc_error, open FROM flows WHERE kind = 'websocket' ORDER BY id DESC LIMIT 1",
+                    [],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                )
+                .ok()
+                .unwrap_or((None, None, false));
+            if done(&row) || Instant::now() > deadline {
+                return row;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    };
+    let (rpc, error, still_open) = named(&conn, |row| row.0.is_some()).await;
+    assert_eq!(rpc.as_deref(), Some("eth_subscribe"));
+    assert_eq!(error, None, "nothing failed");
+    assert!(still_open, "named while it is going, not at its end");
+    drop(conn);
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+
+    // A socket whose calls fail: the reply says so, and the row says it too,
+    // where its 101 says nothing is wrong.
+    let mut failing = open("/rpc?fail=1").await;
+    failing.send(Message::text(subscribe)).await.unwrap();
+    failing.next().await.unwrap().unwrap();
+    let conn = Connection::open(h.dir.join("session/flows.db")).unwrap();
+    // Both halves, each learnt by the side of the socket that saw it.
+    let (rpc, error, _) = named(&conn, |row| row.0.is_some() && row.1.is_some()).await;
+    assert_eq!(rpc.as_deref(), Some("eth_subscribe"));
+    assert_eq!(error, Some(3), "the call reverted, over a socket");
+    drop(conn);
+    failing.close(None).await.unwrap();
+    while failing.next().await.is_some() {}
+
+    // One that says something else is left alone.
+    let mut chat = open("/chat").await;
+    chat.send(Message::text("xin chào")).await.unwrap();
+    chat.next().await.unwrap().unwrap();
+    chat.close(None).await.unwrap();
+    while chat.next().await.is_some() {}
+
+    let (_, conn, dir) = h.finish(3).await;
+    let rows: Vec<(Option<String>, Option<i64>)> = {
+        let mut stmt = conn
+            .prepare("SELECT rpc, rpc_error FROM flows WHERE kind = 'websocket' ORDER BY id")
+            .unwrap();
+        stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    assert_eq!(
+        rows,
+        [
+            (Some("eth_subscribe".to_owned()), None),
+            (Some("eth_subscribe".to_owned()), Some(3)),
+            (None, None),
+        ],
+        "the chat socket says nothing, and is not made to"
+    );
+    clean_up(conn, dir);
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn websocket_messages_are_recorded_both_ways() {
     use hudsucker::{
