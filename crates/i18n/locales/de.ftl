@@ -1447,6 +1447,12 @@ te1d26d3c = KI-Tools Tokens und Cookies sehen lassen
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
 tb496980f = KI-Tools lesen den aufgezeichneten Traffic über den MCP-Server von tracewing. Wenn aus, werden die Werte von Authorization, Cookie und Set-Cookie aus dem weggelassen, was sie erhalten. Gilt sofort.
 
+# Let AI tools add rules and send requests
+t663de1ba = KI-Werkzeuge Regeln hinzufügen und Anfragen senden lassen
+
+# Through the MCP server, an AI tool may then add and remove rules, which change traffic as yours do, and send requests through tracewing, again or changed, which reach their servers. Off, it can only read. Applies at once.
+t46d53486 = Über den MCP-Server darf ein KI-Werkzeug dann Regeln hinzufügen und entfernen, die den Verkehr wie Ihre ändern, und Anfragen über tracewing senden, erneut oder geändert, die ihre Server erreichen. Aus, kann es nur lesen. Gilt sofort.
+
 # HTTP/3
 tfec0f477 = HTTP/3
 

@@ -1348,6 +1348,12 @@ te1d26d3c = Cho công cụ AI thấy token và cookie
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
 tb496980f = Công cụ AI đọc traffic đã ghi qua MCP server của tracewing. Khi tắt, giá trị của Authorization, Cookie và Set-Cookie không được đưa cho chúng. Áp dụng ngay.
 
+# Let AI tools add rules and send requests
+t663de1ba = Cho công cụ AI thêm rule và gửi request
+
+# Through the MCP server, an AI tool may then add and remove rules, which change traffic as yours do, and send requests through tracewing, again or changed, which reach their servers. Off, it can only read. Applies at once.
+t46d53486 = Qua MCP server, công cụ AI khi đó có thể thêm và xoá rule, vốn thay đổi traffic như rule của bạn, và gửi request qua tracewing, gửi lại hoặc đã sửa, tới tận server thật. Tắt thì nó chỉ đọc được. Áp dụng ngay.
+
 # HTTP/3
 tfec0f477 = HTTP/3
 

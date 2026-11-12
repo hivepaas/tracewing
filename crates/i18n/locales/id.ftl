@@ -1348,6 +1348,12 @@ te1d26d3c = Izinkan alat AI melihat token dan cookie
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
 tb496980f = Alat AI membaca lalu lintas yang direkam lewat server MCP tracewing. Jika mati, nilai Authorization, Cookie, dan Set-Cookie tidak disertakan dalam yang mereka terima. Langsung berlaku.
 
+# Let AI tools add rules and send requests
+t663de1ba = Izinkan alat AI menambah aturan dan mengirim permintaan
+
+# Through the MCP server, an AI tool may then add and remove rules, which change traffic as yours do, and send requests through tracewing, again or changed, which reach their servers. Off, it can only read. Applies at once.
+t46d53486 = Melalui server MCP, alat AI lalu boleh menambah dan menghapus aturan, yang mengubah lalu lintas seperti aturan Anda, dan mengirim permintaan lewat tracewing, ulang atau diubah, yang sampai ke servernya. Jika mati, ia hanya bisa membaca. Langsung berlaku.
+
 # HTTP/3
 tfec0f477 = HTTP/3
 

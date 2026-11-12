@@ -1348,6 +1348,12 @@ te1d26d3c = 允許 AI 工具檢視權杖和 Cookie
 # AI tools read recorded traffic through tracewing's MCP server. Off, the values of Authorization, Cookie and Set-Cookie are left out of what they get. Applies at once.
 tb496980f = AI 工具透過 tracewing 的 MCP 伺服器讀取已錄製的流量。關閉時，提供給它們的內容不含 Authorization、Cookie 和 Set-Cookie 的值。立即生效。
 
+# Let AI tools add rules and send requests
+t663de1ba = 允許 AI 工具新增規則和傳送請求
+
+# Through the MCP server, an AI tool may then add and remove rules, which change traffic as yours do, and send requests through tracewing, again or changed, which reach their servers. Off, it can only read. Applies at once.
+t46d53486 = 透過 MCP 伺服器，AI 工具可以新增和刪除規則（像你的規則一樣改變流量），並透過 tracewing 重新傳送或修改後傳送請求（會到達真實伺服器）。關閉時只能讀取。立即生效。
+
 # HTTP/3
 tfec0f477 = HTTP/3
 

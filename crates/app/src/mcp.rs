@@ -2,10 +2,14 @@
 //! `tracewing mcp`, which an AI tool starts and talks to over stdin and stdout,
 //! a JSON-RPC message a line.
 //!
-//! It only reads: the sessions on the disk, the one recording now among them,
-//! with the same filter as the window's box. Tokens and cookies are left out
+//! It reads the sessions on the disk, the one recording now among them, with
+//! the same filter as the window's box. Tokens and cookies are left out
 //! unless Settings say an AI tool may see them; the tool cannot ask for them
-//! itself.
+//! itself. Only if Settings allow that too may it add and remove rules, and
+//! send requests through the running proxy, which records them.
+
+use crate::compose;
+use tracewing_proxy::traffic_rules::{Action, TrafficRule, TrafficRules};
 
 use crate::{
     detail::{BodyFacts, Detail, Side},
@@ -51,7 +55,11 @@ as tracewing's search box, then get_flow for one request's headers, bodies and t
 or compare_flows for what differs between two, as between a call that failed and one \
 that did not. \
 Values of credential headers and cookies are removed unless the user allowed them in \
-tracewing's Settings.";
+tracewing's Settings. \
+If the user allowed it in Settings too, add_rule and remove_rule change tracewing's rules \
+(block, mock from a file, send elsewhere, set headers, pause...), which apply to the next \
+request, and send_request sends a request through tracewing, a recorded one again or \
+changed, and gives its answer. list_rules shows the rules.";
 
 /// Runs until stdin closes.
 pub fn serve(data_dir: &Path) -> Result<()> {
@@ -136,6 +144,10 @@ impl Server {
             "list_flows" => self.list_flows(&args),
             "get_flow" => self.get_flow(&args),
             "compare_flows" => self.compare_flows(&args),
+            "list_rules" => self.list_rules(),
+            "add_rule" => self.add_rule(&args),
+            "remove_rule" => self.remove_rule(&args),
+            "send_request" => self.send_request(&args),
             _ => return Err((-32602, format!("there is no tool {name}"))),
         };
         Ok(match outcome {
@@ -162,6 +174,24 @@ impl Server {
     fn secrets_allowed(&self) -> bool {
         StorageSettings::load(&self.data_dir.join("settings.toml"))
             .is_ok_and(|settings| settings.ai_secrets)
+    }
+
+    /// Whether Settings let an AI tool change rules and send requests, read
+    /// at each call.
+    fn may_act(&self) -> Result<()> {
+        let allowed = StorageSettings::load(&self.data_dir.join("settings.toml"))
+            .is_ok_and(|settings| settings.ai_actions);
+        if !allowed {
+            bail!(
+                "tracewing's Settings do not let AI tools change rules or send requests. \
+                 The user can allow it under AI tools"
+            );
+        }
+        Ok(())
+    }
+
+    fn rules_path(&self) -> PathBuf {
+        self.data_dir.join("traffic-rules.toml")
     }
 
     /// The session asked for by its id, or the newest.
@@ -332,7 +362,193 @@ impl Server {
     }
 }
 
+/// What an AI tool's rule is called, so that the user can tell it from theirs.
+const RULE_MARK: &str = "AI: ";
+
 impl Server {
+    fn list_rules(&self) -> Result<Value> {
+        let rules = TrafficRules::load(&self.rules_path())?;
+        let listed: Vec<Value> = rules.rules.iter().map(rule_json).collect();
+        Ok(json!({ "rules": listed }))
+    }
+
+    fn add_rule(&self, args: &Value) -> Result<Value> {
+        self.may_act()?;
+        let text = |key: &str| args.get(key).and_then(Value::as_str).map(str::trim);
+        let name = text("name").context("add_rule needs a name for the rule")?;
+        let url = text("url").context("add_rule needs the URL pattern it matches")?;
+        let action: Action = serde_json::from_value(
+            args.get("action")
+                .cloned()
+                .context("add_rule needs what the rule does, as `action`")?,
+        )
+        .context("`action` is not one tracewing knows; see the tool's description")?;
+        let name = if name.starts_with(RULE_MARK) {
+            name.to_owned()
+        } else {
+            format!("{RULE_MARK}{name}")
+        };
+        let rule = TrafficRule {
+            name,
+            enabled: true,
+            url: url.to_owned(),
+            method: text("method").unwrap_or_default().to_owned(),
+            action,
+        };
+        rule.check()?;
+        let path = self.rules_path();
+        let mut rules = TrafficRules::load(&path)?;
+        if rules.rules.iter().any(|r| r.name == rule.name) {
+            bail!("there is a rule called \"{}\" already", rule.name);
+        }
+        rules.rules.push(rule.clone());
+        rules.save(&path)?;
+        Ok(json!({
+            "added": rule_json(&rule),
+            "note": "tracewing applies it from the next request; its Rules screen lists it",
+        }))
+    }
+
+    fn remove_rule(&self, args: &Value) -> Result<Value> {
+        self.may_act()?;
+        let name = args
+            .get("name")
+            .and_then(Value::as_str)
+            .context("remove_rule needs the rule's name, as list_rules gives it")?;
+        let path = self.rules_path();
+        let mut rules = TrafficRules::load(&path)?;
+        let before = rules.rules.len();
+        rules.rules.retain(|rule| rule.name != name);
+        if rules.rules.len() == before {
+            bail!("there is no rule called \"{name}\"");
+        }
+        rules.save(&path)?;
+        Ok(json!({ "removed": name }))
+    }
+
+    /// Sends a request through the running proxy, which records it: a flow
+    /// again, or one written here, changed as `args` say.
+    fn send_request(&self, args: &Value) -> Result<Value> {
+        self.may_act()?;
+        let mut message = match args.get("id").and_then(Value::as_i64) {
+            Some(id) => {
+                let dir = self.session(args)?;
+                let conn = open(&dir)?;
+                let detail = Detail::load(&conn, &dir, id)
+                    .with_context(|| format!("there is no flow {id} in this session"))?;
+                let facts = &detail.request;
+                let body = facts
+                    .stored
+                    .exists()
+                    .then(|| {
+                        BodyReader::new(&dir)
+                            .unpacked(&facts.stored, tracewing_proxy::pause::HOLD_MAX)
+                    })
+                    .flatten();
+                let whole = !facts.shed
+                    && !facts.lost
+                    && (facts.bytes == 0 || body.is_some())
+                    && facts.bytes as usize <= tracewing_proxy::pause::HOLD_MAX;
+                compose::from_flow(
+                    &detail.method,
+                    &detail.url,
+                    detail.headers(Side::Request).unwrap_or_default(),
+                    body,
+                    whole,
+                )?
+            }
+            None => tracewing_proxy::pause::Message {
+                method: "GET".to_owned(),
+                url: String::new(),
+                status: 0,
+                headers: Vec::new(),
+                body: Vec::new(),
+            },
+        };
+        if let Some(method) = args.get("method").and_then(Value::as_str) {
+            message.method = method.trim().to_ascii_uppercase();
+        }
+        if let Some(url) = args.get("url").and_then(Value::as_str) {
+            message.url = url.trim().to_owned();
+        }
+        if message.url.is_empty() {
+            bail!("send_request needs a flow's `id` to send again, or a `url`");
+        }
+        if let Some(headers) = args.get("headers") {
+            let headers = headers
+                .as_object()
+                .context("`headers` is an object of names, each a value or null")?;
+            for (name, value) in headers {
+                message
+                    .headers
+                    .retain(|(had, _)| !had.eq_ignore_ascii_case(name));
+                match value {
+                    Value::Null => {}
+                    Value::String(value) => message.headers.push((name.clone(), value.clone())),
+                    other => message.headers.push((name.clone(), other.to_string())),
+                }
+            }
+        }
+        if let Some(body) = args.get("body") {
+            message.body = match body {
+                Value::String(text) => text.clone().into_bytes(),
+                Value::Null => Vec::new(),
+                // JSON written as JSON is sent as its text.
+                other => other.to_string().into_bytes(),
+            };
+        }
+        let address =
+            std::fs::read_to_string(self.data_dir.join(crate::engine::PROXY_ADDRESS_FILE))
+                .ok()
+                .and_then(|text| text.trim().parse::<std::net::SocketAddr>().ok())
+                .context("tracewing is not running, so there is nothing to send through")?;
+        let (_keep, stop) = compose::stopper();
+        let answer = compose::send(address, &self.data_dir.join("ca.pem"), &message, stop)?
+            .context("the request was stopped")?;
+        let secrets = self.secrets_allowed();
+        let headers: Vec<Value> = answer
+            .headers
+            .iter()
+            .map(|(name, value)| {
+                let secret = SECRET_HEADERS.contains(&name.to_ascii_lowercase().as_str());
+                json!([name, if secret && !secrets { REMOVED } else { value }])
+            })
+            .collect();
+        let max = args
+            .get("max_body_bytes")
+            .and_then(Value::as_u64)
+            .unwrap_or(BODY_DEFAULT)
+            .min(BODY_MAX) as usize;
+        let shown = &answer.body[..answer.body.len().min(max)];
+        let (body, note) = match std::str::from_utf8(shown) {
+            Ok(text) => (
+                Some(text.to_owned()),
+                (answer.body.len() > max)
+                    .then(|| format!("only the first {max} bytes; {} came", answer.bytes)),
+            ),
+            Err(e) if e.error_len().is_none() => (
+                Some(String::from_utf8_lossy(&shown[..e.valid_up_to()]).into_owned()),
+                Some(format!(
+                    "only the first {} bytes; {} came",
+                    e.valid_up_to(),
+                    answer.bytes
+                )),
+            ),
+            Err(_) => (None, Some(format!("binary, {} bytes", answer.bytes))),
+        };
+        Ok(json!({
+            "method": message.method,
+            "url": message.url,
+            "status": answer.status,
+            "version": answer.version,
+            "took_ms": answer.took.as_secs_f64() * 1000.0,
+            "headers": headers,
+            "body": body,
+            "body_note": note,
+            "recorded": "tracewing recorded it in the session it records now: list_flows finds it",
+        }))
+    }
+
     fn compare_flows(&self, args: &Value) -> Result<Value> {
         use crate::compare::{self, Change, Pair};
         let dir = self.session(args)?;
@@ -581,7 +797,91 @@ fn tools() -> Value {
             },
             "annotations": { "readOnlyHint": true },
         },
+        {
+            "name": "list_rules",
+            "description": "tracewing's rules, in the order they apply, each with what it does as \
+                add_rule takes it.",
+            "inputSchema": { "type": "object", "properties": {} },
+            "annotations": { "readOnlyHint": true },
+        },
+        {
+            "name": "add_rule",
+            "description": "Adds a rule, which applies to the next request whose URL fits `url`: \
+                api.example.com/v1/* (`*` is anything; no scheme). Its name gets \"AI: \" in front. \
+                `action` is an object with an `action` field and its own, one of: \
+                {\"action\":\"block\",\"status\":403}, \
+                {\"action\":\"map_local\",\"path\":\"/full/path/to/file.json\"}, \
+                {\"action\":\"map_remote\",\"to\":\"http://localhost:3000\"}, \
+                {\"action\":\"set_request_header\",\"header\":\"x-a\",\"value\":\"1\"}, \
+                {\"action\":\"set_response_header\",\"header\":\"x-a\",\"value\":\"1\"}, \
+                {\"action\":\"remove_request_header\",\"header\":\"x-a\"}, \
+                {\"action\":\"remove_response_header\",\"header\":\"x-a\"}, \
+                {\"action\":\"set_status\",\"status\":500}, \
+                {\"action\":\"set_query\",\"name\":\"page\",\"value\":\"2\"}, \
+                {\"action\":\"remove_query\",\"name\":\"page\"}, \
+                {\"action\":\"replace_request_body\",\"find\":\"a\",\"replace\":\"b\"} \
+                (an empty `find` replaces the whole body), the same for replace_response_body, \
+                {\"action\":\"pause_request\"}, {\"action\":\"pause_response\"}, \
+                {\"action\":\"pause_messages_to_server\"}, {\"action\":\"pause_messages_to_app\"} \
+                (these hold traffic on tracewing's Paused screen until the user lets it go). \
+                Only if the user allowed AI tools to act, in Settings.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string" },
+                    "url": { "type": "string" },
+                    "method": { "type": "string", "description": "Only this method; every method if left out." },
+                    "action": { "type": "object" },
+                },
+                "required": ["name", "url", "action"],
+            },
+            "annotations": { "readOnlyHint": false, "destructiveHint": false, "idempotentHint": false },
+        },
+        {
+            "name": "remove_rule",
+            "description": "Removes the rule of that name, as list_rules gives it. Only if the \
+                user allowed AI tools to act, in Settings.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "name": { "type": "string" } },
+                "required": ["name"],
+            },
+            "annotations": { "readOnlyHint": false, "destructiveHint": true, "idempotentHint": true },
+        },
+        {
+            "name": "send_request",
+            "description": "Sends a request through tracewing, which records it and applies its \
+                rules: the flow `id` again, or a new one to `url`. `method`, `url`, `headers` \
+                (an object; a value sets a header in place of any of that name, null removes it) \
+                and `body` (text) change what is sent. Gives the answer: status, headers, body as \
+                text. It reaches the real server: do not send what changes data unless the user \
+                asked. Only if the user allowed AI tools to act, in Settings, and tracewing is running.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "session": { "type": "string", "description": "The session of `id`; the newest if left out." },
+                    "id": { "type": "integer", "description": "A recorded flow to send again." },
+                    "method": { "type": "string" },
+                    "url": { "type": "string" },
+                    "headers": { "type": "object" },
+                    "body": { "type": "string" },
+                    "max_body_bytes": { "type": "integer", "maximum": BODY_MAX, "default": BODY_DEFAULT },
+                },
+            },
+            "annotations": { "readOnlyHint": false, "destructiveHint": true, "openWorldHint": true },
+        },
     ])
+}
+
+/// A rule as an AI tool reads it, its action as `add_rule` takes it.
+fn rule_json(rule: &TrafficRule) -> Value {
+    json!({
+        "name": rule.name,
+        "enabled": rule.enabled,
+        "url": rule.url,
+        "method": rule.method,
+        "action": serde_json::to_value(&rule.action).unwrap_or(Value::Null),
+    })
 }
 
 fn session_id(dir: &Path) -> String {
@@ -817,7 +1117,16 @@ mod tests {
             .collect();
         assert_eq!(
             names,
-            ["list_sessions", "list_flows", "get_flow", "compare_flows"]
+            [
+                "list_sessions",
+                "list_flows",
+                "get_flow",
+                "compare_flows",
+                "list_rules",
+                "add_rule",
+                "remove_rule",
+                "send_request"
+            ]
         );
     }
 
