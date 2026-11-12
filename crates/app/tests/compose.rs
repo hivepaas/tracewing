@@ -17,6 +17,7 @@ use std::{
 use tracewing::{
     engine::{Engine, EngineOptions},
     input::TextInput,
+    rpc_view::Shown,
     traffic::{Screen, Traffic},
 };
 use tracewing_dev::benchkit;
@@ -56,6 +57,20 @@ fn shot(cx: &mut HeadlessAppContext, window: gpui::AnyWindowHandle, name: &str) 
 
 fn type_in(input: &Entity<TextInput>, text: &str, cx: &mut gpui::Context<Traffic>) {
     input.update(cx, |input, cx| input.set_text(text, 0..0, cx));
+}
+
+/// The lines of the inspector's JSON-RPC part, as label and value.
+fn lines(shown: &Shown) -> Vec<(&str, &str)> {
+    shown
+        .sections
+        .iter()
+        .flat_map(|section| {
+            section
+                .lines
+                .iter()
+                .map(|line| (line.label.as_str(), line.value.as_str()))
+        })
+        .collect()
 }
 
 fn answer(view: &Traffic) -> Option<(u16, usize)> {
@@ -225,6 +240,76 @@ fn requests_composed_in_the_window_go_through() {
         })
         .unwrap();
     wait_for(&mut cx, window, "both flows", |view| view.count() == 2);
+
+    // A call written out in the body is sent as the calldata it stands for,
+    // and the inspector reads that calldata back as the same call.
+    let rpc = format!("https://localhost:{origin_port}/rpc");
+    let whose = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Compose, cx);
+            let page = view.compose_page.as_ref().unwrap();
+            let (method, url_field, headers, body) = (
+                page.method.clone(),
+                page.url.clone(),
+                page.headers.clone(),
+                page.body.clone(),
+            );
+            type_in(&method, "POST", cx);
+            type_in(&url_field, &rpc, cx);
+            type_in(&headers, "content-type: application/json", cx);
+            type_in(
+                &body,
+                &format!(
+                    r#"{{"jsonrpc":"2.0","id":9,"method":"eth_call","params":[{{"to":"{whose}","data":"balanceOf({whose})"}},"latest"]}}"#
+                ),
+                cx,
+            );
+            view.send_composed(cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the call's answer", |view| {
+        answer(view).is_some()
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let page = view.compose_page.as_ref().unwrap();
+            assert_eq!(page.calls, ["balanceOf(address)"], "worked out on sending");
+            assert_eq!(page.problem, None);
+            assert_eq!(
+                page.left_out,
+                Vec::<String>::new(),
+                "nothing written that the client works out"
+            );
+        })
+        .unwrap();
+    shot(&mut cx, window.into(), "36-compose-calldata");
+
+    // What went on the wire: the proxy recorded it, and the inspector reads
+    // the calldata back as the call that was written.
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the call's flow", |view| view.count() == 3);
+    window
+        .update(&mut cx, |view, _, cx| view.select_place(2, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the call read back", |view| {
+        view.inspector
+            .rpc
+            .as_ref()
+            .is_some_and(|shown| lines(shown).contains(&("function", "balanceOf(address)")))
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let shown = view.inspector.rpc.as_ref().unwrap();
+            assert!(
+                lines(shown).contains(&("address", whose)),
+                "the value as it was written: {:?}",
+                lines(shown)
+            );
+        })
+        .unwrap();
 
     // A send can be stopped, and then nothing of it reaches the page. The
     // test executor runs background work on this thread, so the stop has to

@@ -389,6 +389,181 @@ fn tuple(
     )
 }
 
+/// A call written out the way it reads, to be sent: a name and the values it
+/// is called with, as `balanceOf(0xd8dA5e…)`. Where the name is overloaded,
+/// or is not one an ABI or [`FUNCTIONS`] knows, the types are written with it
+/// and the values follow in brackets of their own:
+/// `transfer(address,uint256)(0xd8dA5e…, 1000000)`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Written<'a> {
+    pub name: &'a str,
+    /// The types as they were written, brackets and all: `(address,uint256)`.
+    /// `None` where the name was written on its own.
+    pub types: Option<&'a str>,
+    /// The values, brackets and all: `(0xd8dA5e…, 1000000)`.
+    pub values: &'a str,
+}
+
+/// Reads a call written out. `None` for text that is not one, hex among it.
+pub fn written(call: &str) -> Option<Written<'_>> {
+    let call = call.trim();
+    let open = call.find('(')?;
+    let name = call[..open].trim();
+    if name.is_empty()
+        || !name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')
+    {
+        return None;
+    }
+    let first = open + group(&call[open..])?;
+    let rest = call[first..].trim();
+    if rest.is_empty() {
+        return Some(Written {
+            name,
+            types: None,
+            values: &call[open..first],
+        });
+    }
+    // Types written out, so the values are in the brackets after them.
+    if group(rest)? != rest.len() {
+        return None;
+    }
+    Some(Written {
+        name,
+        types: Some(&call[open..first]),
+        values: rest,
+    })
+}
+
+/// How far the brackets opening `text` reach: the index just past the one
+/// that closes them. Brackets inside quotes are text, not brackets.
+fn group(text: &str) -> Option<usize> {
+    let bytes = text.as_bytes();
+    if bytes.first() != Some(&b'(') {
+        return None;
+    }
+    let mut depth = 0usize;
+    let mut quote: Option<u8> = None;
+    for (at, byte) in bytes.iter().enumerate() {
+        match (quote, byte) {
+            (Some(open), byte) if *byte == open => quote = None,
+            (Some(_), _) => {}
+            (None, b'"' | b'\'') => quote = Some(*byte),
+            (None, b'(') => depth += 1,
+            (None, b')') => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(at + 1);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Why a written call could not be turned into calldata. The words for each
+/// are the window's to write: this crate holds no translations.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Trouble {
+    /// Not a call: not `name(…)`.
+    NotACall,
+    /// No signature is known by that name.
+    Unknown(String),
+    /// The name stands for more than one of them, which are these: the call
+    /// has to say which, by writing the types out.
+    Overloaded(Vec<String>),
+    /// What was written in place of types is not types.
+    Types(String),
+    /// The values do not fit the types: the signature, then what alloy made
+    /// of the values.
+    Values(String, String),
+}
+
+/// What a written call came to: the signature it was taken to mean, and the
+/// bytes to send.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Calldata {
+    /// As the four bytes were taken from it: `balanceOf(address)`.
+    pub signature: String,
+    pub data: Vec<u8>,
+}
+
+/// The calldata a written call stands for: the four bytes its signature
+/// hashes to, and the words of its values, as a call's `data` carries them.
+///
+/// `signatures` gives every signature a bare name could mean. An ABI the
+/// user chose knows more names than [`FUNCTIONS`] does, and this is how they
+/// reach in here without this module knowing about them; [`known_signatures`]
+/// is the ones every chain shares.
+///
+/// Types are read before the four bytes are taken from them, so a call
+/// written `transfer(address, uint)` hashes the same as `transfer(address,uint256)`,
+/// which is what the four bytes have to be.
+pub fn calldata(call: &str, signatures: &dyn Fn(&str) -> Vec<String>) -> Result<Calldata, Trouble> {
+    let Some(written) = written(call) else {
+        return Err(Trouble::NotACall);
+    };
+    let types = match written.types {
+        Some(types) => types.to_owned(),
+        None => {
+            let mut found = signatures(written.name);
+            found.sort();
+            found.dedup();
+            match found.len() {
+                0 => return Err(Trouble::Unknown(written.name.to_owned())),
+                1 => {
+                    let only = found.remove(0);
+                    let open = only.find('(').ok_or(Trouble::NotACall)?;
+                    only[open..].to_owned()
+                }
+                _ => return Err(Trouble::Overloaded(found)),
+            }
+        }
+    };
+    let kind: DynSolType = types
+        .parse()
+        .map_err(|e: alloy_dyn_abi::Error| Trouble::Types(e.to_string()))?;
+    if !matches!(kind, DynSolType::Tuple(_)) {
+        return Err(Trouble::Types(types));
+    }
+    // As the signature has to be written for its hash: no spaces, and
+    // `uint` and `int` in full.
+    let signature = format!("{}{}", written.name, type_text(&kind));
+    let value = kind
+        .coerce_str(written.values)
+        .map_err(|e| Trouble::Values(signature.clone(), e.to_string()))?;
+    let mut data = selector_of(&signature).to_vec();
+    data.extend(value.abi_encode_params());
+    Ok(Calldata { signature, data })
+}
+
+/// A type as a signature writes it. Alloy writes a tuple of one with a comma
+/// after it, Rust's way — `(address,)` — which hashes to four bytes no node
+/// would know.
+fn type_text(kind: &DynSolType) -> String {
+    match kind {
+        DynSolType::Tuple(each) => {
+            let each: Vec<String> = each.iter().map(type_text).collect();
+            format!("({})", each.join(","))
+        }
+        DynSolType::Array(of) => format!("{}[]", type_text(of)),
+        DynSolType::FixedArray(of, len) => format!("{}[{len}]", type_text(of)),
+        plain => plain.sol_type_name().into_owned(),
+    }
+}
+
+/// Every signature in [`FUNCTIONS`] that goes by `name`.
+pub fn known_signatures(name: &str) -> Vec<String> {
+    FUNCTIONS
+        .iter()
+        .map(|(signature, _)| *signature)
+        .filter(|signature| name_of(signature) == name)
+        .map(str::to_owned)
+        .collect()
+}
+
 /// What a log holds: its first topic says which event it is, the topics
 /// after it hold the parameters marked `indexed`, and the rest are in its
 /// data.
@@ -1235,5 +1410,104 @@ mod tests {
         array.truncate(array.len() - 32);
         assert_eq!(arguments("f(uint256[])", &array), None);
         assert_eq!(arguments("f(nosuchtype)", &word("01")), None);
+    }
+    #[test]
+    fn a_written_call_is_the_calldata_it_reads_as() {
+        // The real call captured in the sample, read as the window shows it,
+        // written back out, and sent again: the same bytes it came as.
+        let data = bytes_of(&field(
+            sample!("call_balanceof.req.json"),
+            &["params", "0", "data"],
+        ))
+        .unwrap();
+        let shown = arguments("balanceOf(address)", &data).unwrap();
+        let written = format!("balanceOf({})", shown[0].text);
+        let encoded = calldata(&written, &known_signatures).unwrap();
+        assert_eq!(encoded.data, data);
+        assert_eq!(encoded.signature, "balanceOf(address)");
+
+        // A call with nothing in brackets is its four bytes and no more.
+        assert_eq!(
+            calldata("totalSupply()", &known_signatures).unwrap().data,
+            selector_of("totalSupply()").to_vec()
+        );
+    }
+
+    #[test]
+    fn a_call_can_write_its_own_types() {
+        let whole = "transfer(0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045, 1000000)";
+        let known = calldata(whole, &known_signatures).unwrap().data;
+        // Written out, with spaces and `uint` short, for a name no table
+        // here knows: the same bytes, since the types are read before the
+        // four bytes are taken from them.
+        let types = "transfer(address, uint)(0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045, 1000000)";
+        assert_eq!(calldata(types, &|_| Vec::new()).unwrap().data, known);
+        assert_eq!(&known[..4], &selector_of("transfer(address,uint256)")[..]);
+
+        // A tuple of one, inside and out: written as a signature writes it,
+        // not with the comma after it that alloy's own name has.
+        let nested = calldata("f((uint256))((42))", &|_| Vec::new())
+            .unwrap()
+            .data;
+        assert_eq!(&nested[..4], &selector_of("f((uint256))")[..]);
+        let one = calldata("f(uint256)(42)", &|_| Vec::new()).unwrap().data;
+        assert_eq!(&one[..4], &selector_of("f(uint256)")[..]);
+    }
+
+    #[test]
+    fn a_call_that_cannot_be_written_says_why() {
+        // Overloaded: which one it is has to be written out.
+        let both = calldata("safeTransferFrom(0x00, 0x00, 1)", &known_signatures);
+        let Err(Trouble::Overloaded(found)) = both else {
+            panic!("{both:?}");
+        };
+        assert_eq!(
+            found,
+            known_signatures("safeTransferFrom"),
+            "every one of them, to choose from"
+        );
+        assert!(found.len() > 1);
+
+        assert_eq!(
+            calldata("frobnicate(1)", &known_signatures),
+            Err(Trouble::Unknown("frobnicate".to_owned()))
+        );
+        assert_eq!(
+            calldata("0x70a08231", &known_signatures),
+            Err(Trouble::NotACall)
+        );
+        assert!(matches!(
+            calldata("balanceOf(not an address)", &known_signatures),
+            Err(Trouble::Values(signature, _)) if signature == "balanceOf(address)"
+        ));
+        assert!(matches!(
+            calldata("f(nosuchtype)(1)", &known_signatures),
+            Err(Trouble::Types(_))
+        ));
+    }
+
+    #[test]
+    fn what_is_written_as_a_call_and_what_is_not() {
+        let call = written("balanceOf(0x00)").unwrap();
+        assert_eq!(
+            (call.name, call.types, call.values),
+            ("balanceOf", None, "(0x00)")
+        );
+        let call = written(" transfer(address,uint256) (0x00, 1) ").unwrap();
+        assert_eq!(
+            (call.name, call.types, call.values),
+            ("transfer", Some("(address,uint256)"), "(0x00, 1)")
+        );
+        // Brackets inside quotes are text, so the values are not cut there.
+        let call = written(r#"mint("a(b)", 1)"#).unwrap();
+        assert_eq!(call.values, r#"("a(b)", 1)"#);
+
+        // Hex calldata, as it is sent, is not a written call.
+        assert_eq!(written("0x70a08231000000"), None);
+        assert_eq!(written(""), None);
+        assert_eq!(written("balanceOf"), None, "no brackets");
+        assert_eq!(written("balanceOf(0x00"), None, "not closed");
+        assert_eq!(written("balance Of(0x00)"), None, "not a name");
+        assert_eq!(written("balanceOf(0x00) and more"), None);
     }
 }

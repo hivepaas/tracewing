@@ -151,6 +151,24 @@ tacdcf5cb = "{ $method }" không phải là một method
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = body của request không được giữ đầy đủ, nên không gửi lại được
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = Không đặt được { $call } vào body dưới dạng calldata. Hãy viết nó thành hex, hoặc để tracewing viết body.
+
+# That is not a call written out.
+tc159f8f5 = Đó không phải một lời gọi được viết ra.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Ở đây không biết lời gọi nào tên { $name }. Hãy viết kèm kiểu tham số, như transfer(address,uint256)(…), hoặc thêm ABI của nó ở ABI của contract trong Cài đặt.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } ứng với nhiều lời gọi: { $found }. Hãy viết kèm kiểu tham số, như { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } không phải kiểu mà một lời gọi có thể dùng.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Các giá trị không khớp { $signature }: { $why }
+
 # name: value, one a line
 t4df37bea = tên: giá trị, mỗi dòng một header
 
@@ -165,6 +183,15 @@ t3220a10a = Body không phải một { $message }: { $e }
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, viết dưới dạng JSON: khi gửi sẽ là Protobuf.
+
+# Written out in the body and sent as calldata: {calls}
+tcaecdf04 = Được viết ra trong body và gửi dưới dạng calldata: { $calls }
+
+# {names} is the client's to work out, so what was written for it did not go. | {names} are the client's to work out, so what was written for them did not go.
+te85cbcea =
+    { $n ->
+       *[other] { $names } do client tự quyết định, nên giá trị viết cho chúng không được gửi đi.
+    }
 
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Đã dừng: chưa đọc phản hồi nào. Phần đã tới server hiện trong Traffic.

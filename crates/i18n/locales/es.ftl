@@ -182,6 +182,24 @@ tacdcf5cb = "{ $method }" no es un método
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = el cuerpo de su solicitud no se guardó completo, así que no se puede volver a enviar
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = No se pudo poner { $call } en el cuerpo como calldata. Escríbela como hex, o deja que tracewing escriba el cuerpo.
+
+# That is not a call written out.
+tc159f8f5 = Eso no es una llamada escrita.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Aquí no se conoce ninguna llamada de nombre { $name }. Escribe sus tipos junto a ella, como transfer(address,uint256)(…), o añade su ABI en ABIs de contratos, en Ajustes.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } es más de una llamada: { $found }. Escribe los tipos junto a ella, como { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } no son tipos con los que se pueda escribir una llamada.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Los valores no encajan con { $signature }: { $why }
+
 # name: value, one a line
 t4df37bea = nombre: valor, uno por línea
 
@@ -196,6 +214,16 @@ t3220a10a = El cuerpo no es un { $message }: { $e }
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, escrito como JSON: se envía como Protobuf.
+
+# Written out in the body and sent as calldata: {calls}
+tcaecdf04 = Escrito en el cuerpo y enviado como calldata: { $calls }
+
+# {names} is the client's to work out, so what was written for it did not go. | {names} are the client's to work out, so what was written for them did not go.
+te85cbcea =
+    { $n ->
+        [one] { $names } lo decide el cliente, así que lo que se escribió para él no se envió.
+       *[other] { $names } los decide el cliente, así que lo que se escribió para ellos no se envió.
+    }
 
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Detenido: no se leyó ninguna respuesta. Lo que llegó al servidor aparece en Traffic.

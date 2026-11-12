@@ -122,7 +122,7 @@ keyboard.
 | Feature | Milestone | Plan |
 |---|---|---|
 | Breakpoints on requests and responses: edit, then send on | Beta | Free |
-| Compose a request; replay one, edited or not; stop one on its way, which closes its connection rather than wait out the ten minutes a breakpoint is given | Beta | Free |
+| Compose a request; replay one, edited or not; stop one on its way, which closes its connection rather than wait out the ten minutes a breakpoint is given; a call written out in a JSON-RPC body — `balanceOf(0xd8dA…)` — sent as the calldata it stands for, by the calls every chain shares or by an ABI chosen in Settings; the headers the client works out for itself named, so what was written for them is not taken for what went | Beta | Free |
 | Compare two flows side by side (Ctrl/⌘-click a second row, "Compare with…", or "Compare with the call before" to the same method, host and path): method, URL, status, sizes and time; query and headers matched by name; bodies line by line, JSON (and what MessagePack, CBOR and Protobuf hold) written with its keys in order first, the words that changed in a line marked, the same lines folded; or JSON by field, only the fields that differ under the objects and arrays that hold them, items with an id matched by it | Beta | Free |
 | Rules: map to a local file or folder, map to another host (a WebSocket too, written as `ws://` or `http://`), set or remove headers, change the body (find and replace, or all of it), the status or the query, block | Beta | Free: 3 on at once; Pro: no limit |
 | Slow network: bandwidth, latency, packet loss, for WebSocket messages too | 1.0 | Pro |

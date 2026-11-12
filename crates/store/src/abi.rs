@@ -111,6 +111,21 @@ impl Abi {
         Some(self.functions.get(&four)?.signature.as_str())
     }
 
+    /// Every signature it holds that goes by `name`, in order. More than
+    /// one where the name is overloaded, which is when a call written out
+    /// has to say the types itself.
+    pub fn signatures(&self, name: &str) -> Vec<String> {
+        let mut found: Vec<String> = self
+            .functions
+            .values()
+            .map(|call| call.signature.as_str())
+            .filter(|signature| crate::web3::name_of(signature) == name)
+            .map(str::to_owned)
+            .collect();
+        found.sort();
+        found
+    }
+
     /// The types that function answers with, as `(uint256)`.
     pub fn returns(&self, data: &[u8]) -> Option<&str> {
         let four: [u8; 4] = data.get(..4)?.try_into().ok()?;
@@ -498,6 +513,17 @@ mod tests {
             abi.function(&web3::selector_of("transfer(address,uint256)")),
             Some("transfer(address,uint256)")
         );
+        // And found by name, for a call written out to be sent.
+        assert_eq!(abi.signatures("transfer"), ["transfer(address,uint256)"]);
+        assert_eq!(
+            abi.signatures("aggregate3"),
+            ["aggregate3((address,bool,bytes)[])"]
+        );
+        assert!(
+            abi.signatures("Transfer").is_empty(),
+            "an event is not a call"
+        );
+        assert!(abi.signatures("nosuch").is_empty());
         assert_eq!(
             abi.event(&web3::topic_of("Transfer(address,address,uint256)")),
             Some("Transfer(address,address,uint256)")

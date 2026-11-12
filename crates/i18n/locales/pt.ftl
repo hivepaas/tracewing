@@ -182,6 +182,24 @@ tacdcf5cb = "{ $method }" não é um método
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = o corpo da requisição não foi guardado inteiro, então ela não pode ser reenviada
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = Não foi possível colocar { $call } no corpo como calldata. Escreva em hexadecimal, ou deixe o tracewing escrever o corpo.
+
+# That is not a call written out.
+tc159f8f5 = Isso não é uma chamada escrita por extenso.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Nenhuma chamada de nome { $name } é conhecida aqui. Escreva os tipos junto, como transfer(address,uint256)(…), ou adicione o ABI dela em ABIs de contratos, nas Configurações.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } é mais de uma chamada: { $found }. Escreva os tipos junto, como { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } não são tipos com que se possa escrever uma chamada.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Os valores não encaixam em { $signature }: { $why }
+
 # name: value, one a line
 t4df37bea = nome: valor, um por linha
 
@@ -196,6 +214,16 @@ t3220a10a = O corpo não é um { $message }: { $e }
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, escrito como JSON: é enviado como Protobuf.
+
+# Written out in the body and sent as calldata: {calls}
+tcaecdf04 = Escrita no corpo e enviada como calldata: { $calls }
+
+# {names} is the client's to work out, so what was written for it did not go. | {names} are the client's to work out, so what was written for them did not go.
+te85cbcea =
+    { $n ->
+        [one] { $names } é o cliente que define, então o que foi escrito para ele não foi enviado.
+       *[other] { $names } são o cliente que define, então o que foi escrito para eles não foi enviado.
+    }
 
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Parado: nenhuma resposta foi lida. O que chegou ao servidor aparece em Traffic.

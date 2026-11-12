@@ -190,6 +190,24 @@ tacdcf5cb = "{ $method }" не є методом
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = тіло запиту не збережено повністю, тому його не можна надіслати знову
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = { $call } не вдалося записати в тіло як calldata. Напишіть її в hex або дайте tracewing написати тіло.
+
+# That is not a call written out.
+tc159f8f5 = Це не виклик, записаний словами.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Виклик з іменем { $name } тут невідомий. Напишіть разом із ним типи, як transfer(address,uint256)(…), або додайте його ABI у розділі «ABI контрактів» у Налаштуваннях.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } — це більше ніж один виклик: { $found }. Напишіть разом із ним типи, як { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } — це не типи, якими можна записати виклик.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Значення не підходять до { $signature }: { $why }
+
 # name: value, one a line
 t4df37bea = назва: значення, по одному в рядку
 
@@ -204,6 +222,18 @@ t3220a10a = Тіло не є { $message }: { $e }
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, записаний як JSON: надсилається як Protobuf.
+
+# Written out in the body and sent as calldata: {calls}
+tcaecdf04 = Записано в тілі й надіслано як calldata: { $calls }
+
+# {names} is the client's to work out, so what was written for it did not go. | {names} are the client's to work out, so what was written for them did not go.
+te85cbcea =
+    { $n ->
+        [one] { $names } клієнт задає сам, тому написане для нього не пішло.
+        [few] { $names } клієнт задає сам, тому написане для них не пішло.
+        [many] { $names } клієнт задає сам, тому написане для них не пішло.
+       *[other] { $names } клієнт задає сам, тому написане для них не пішло.
+    }
 
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Зупинено: відповідь не прочитано. Те, що дійшло до сервера, видно в Traffic.

@@ -151,6 +151,24 @@ tacdcf5cb = "{ $method }" bukan metode
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = body permintaannya tidak disimpan utuh, jadi tidak bisa dikirim ulang
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = { $call } tidak bisa dimasukkan ke body sebagai calldata. Tulis sebagai hex, atau biarkan tracewing menulis body-nya.
+
+# That is not a call written out.
+tc159f8f5 = Itu bukan panggilan yang dituliskan.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Tidak ada panggilan bernama { $name } di sini. Tulis juga tipenya, seperti transfer(address,uint256)(…), atau tambahkan ABI-nya di ABI kontrak pada Setelan.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } merujuk ke lebih dari satu panggilan: { $found }. Tulis juga tipenya, seperti { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } bukan tipe yang bisa dipakai menulis panggilan.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Nilai-nilainya tidak cocok dengan { $signature }: { $why }
+
 # name: value, one a line
 t4df37bea = nama: nilai, satu per baris
 
@@ -165,6 +183,15 @@ t3220a10a = Body bukan { $message }: { $e }
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, ditulis sebagai JSON: dikirim sebagai Protobuf.
+
+# Written out in the body and sent as calldata: {calls}
+tcaecdf04 = Dituliskan di body dan dikirim sebagai calldata: { $calls }
+
+# {names} is the client's to work out, so what was written for it did not go. | {names} are the client's to work out, so what was written for them did not go.
+te85cbcea =
+    { $n ->
+       *[other] { $names } ditentukan sendiri oleh klien, jadi yang dituliskan untuknya tidak terkirim.
+    }
 
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Dihentikan: tidak ada jawaban yang dibaca. Apa yang sampai ke server tampil di Traffic.
