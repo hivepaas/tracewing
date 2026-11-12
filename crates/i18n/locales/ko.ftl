@@ -151,6 +151,24 @@ tacdcf5cb = "{ $method }"은(는) 메서드가 아닙니다
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = 요청 본문이 온전히 보관되지 않아 다시 보낼 수 없습니다
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = { $call }을 calldata로 본문에 넣을 수 없습니다. 16진수로 쓰거나, tracewing이 본문을 쓰게 하세요.
+
+# That is not a call written out.
+tc159f8f5 = 그것은 풀어 쓴 호출이 아닙니다.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = { $name }(이)라는 호출은 여기서 알지 못합니다. transfer(address,uint256)(…)처럼 타입도 함께 쓰거나, 설정의 컨트랙트 ABI에서 ABI를 추가하세요.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name }은(는) 둘 이상의 호출입니다: { $found }. { $first }(…)처럼 타입도 함께 쓰세요.
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types }은(는) 호출을 쓸 수 있는 타입이 아닙니다.
+
+# The values do not fit {signature}: {why}
+t14015b69 = 값이 { $signature }에 맞지 않습니다: { $why }
+
 # name: value, one a line
 t4df37bea = 이름: 값, 한 줄에 하나씩
 
@@ -165,6 +183,15 @@ t3220a10a = 본문이 { $message }이(가) 아닙니다: { $e }
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }을(를) JSON으로 씁니다. 보낼 때는 Protobuf로 갑니다.
+
+# Written out in the body and sent as calldata: {calls}
+tcaecdf04 = 본문에 풀어 써서 calldata로 보냈습니다: { $calls }
+
+# {names} is the client's to work out, so what was written for it did not go. | {names} are the client's to work out, so what was written for them did not go.
+te85cbcea =
+    { $n ->
+       *[other] { $names }은(는) 클라이언트가 정하므로, 적어 둔 값은 보내지지 않았습니다.
+    }
 
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = 중지됨: 응답을 읽지 않았습니다. 서버에 도달한 내용은 Traffic에 표시됩니다.

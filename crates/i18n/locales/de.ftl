@@ -176,6 +176,24 @@ tacdcf5cb = „{ $method }“ ist keine Methode
 # its request body was not kept whole, so it cannot be sent again
 t1f9e5368 = der Body der Anfrage wurde nicht vollständig gespeichert, daher kann sie nicht erneut gesendet werden
 
+# {call} could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+t1d03e346 = { $call } konnte nicht als Calldata in den Body geschrieben werden. Schreibe sie als Hex, oder lass tracewing den Body schreiben.
+
+# That is not a call written out.
+tc159f8f5 = Das ist kein ausgeschriebener Aufruf.
+
+# No call named {name} is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t61568d43 = Hier ist kein Aufruf namens { $name } bekannt. Schreibe die Typen dazu, als transfer(address,uint256)(…), oder füge sein ABI unter Vertrags-ABIs in den Einstellungen hinzu.
+
+# {name} is more than one call: {found}. Write the types with it, as {first}(…).
+t48b75c8d = { $name } ist mehr als ein Aufruf: { $found }. Schreibe die Typen dazu, als { $first }(…).
+
+# {types} are not types a call can be written with.
+t544218b9 = { $types } sind keine Typen, mit denen ein Aufruf geschrieben werden kann.
+
+# The values do not fit {signature}: {why}
+t14015b69 = Die Werte passen nicht zu { $signature }: { $why }
+
 # name: value, one a line
 t4df37bea = Name: Wert, einer pro Zeile
 
@@ -190,6 +208,16 @@ t3220a10a = Der Body ist kein { $message }: { $e }
 
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, als JSON geschrieben: gesendet wird Protobuf.
+
+# Written out in the body and sent as calldata: {calls}
+tcaecdf04 = Im Body ausgeschrieben und als Calldata gesendet: { $calls }
+
+# {names} is the client's to work out, so what was written for it did not go. | {names} are the client's to work out, so what was written for them did not go.
+te85cbcea =
+    { $n ->
+        [one] { $names } wird vom Client selbst bestimmt, deshalb ging nicht, was dafür geschrieben wurde.
+       *[other] { $names } werden vom Client selbst bestimmt, deshalb ging nicht, was dafür geschrieben wurde.
+    }
 
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Angehalten: keine Antwort wurde gelesen. Was den Server erreicht hat, steht in Traffic.

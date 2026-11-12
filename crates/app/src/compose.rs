@@ -15,14 +15,28 @@ use tracewing_store::decode::{self, Encoding};
 /// Long enough for a breakpoint on the way, which holds it too.
 const WAIT_MAX: Duration = Duration::from_secs(10 * 60);
 
-/// Headers the client works out for itself.
-const LEFT_OUT: [&str; 5] = [
+/// Headers the client works out for itself, so what is written for them is
+/// not what goes.
+pub const LEFT_OUT: [&str; 5] = [
     "content-length",
     "host",
     "connection",
     "proxy-connection",
     "transfer-encoding",
 ];
+
+/// Which of `headers` the client works out for itself, in the order they
+/// were written: what the window tells the user was not sent as written.
+pub fn left_out(headers: &[(String, String)]) -> Vec<String> {
+    let mut found: Vec<String> = Vec::new();
+    for (name, _) in headers {
+        let name = name.trim().to_ascii_lowercase();
+        if LEFT_OUT.contains(&name.as_str()) && !found.contains(&name) {
+            found.push(name);
+        }
+    }
+    found
+}
 
 /// What came back.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -255,6 +269,20 @@ mod tests {
         assert!(took < Duration::from_secs(5), "it waited {took:?}");
         let _ = held.join();
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_headers_the_client_works_out_are_named() {
+        let headers = [
+            ("Content-Type", "application/json"),
+            ("Host", "a.test"),
+            (" content-length ", "7"),
+            ("host", "again"),
+            ("x-mine", "1"),
+        ]
+        .map(|(name, value)| (name.to_owned(), value.to_owned()));
+        assert_eq!(left_out(&headers), ["host", "content-length"]);
+        assert!(left_out(&headers[..1]).is_empty());
     }
 
     #[test]

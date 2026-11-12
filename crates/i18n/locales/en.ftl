@@ -78,11 +78,23 @@ te519d36e = Swap
 t644042d2 = Back to Traffic
 tacdcf5cb = "{ $method }" is not a method
 t1f9e5368 = its request body was not kept whole, so it cannot be sent again
+t1d03e346 = { $call } could not be put in the body as calldata. Write it as hex, or let tracewing write the body.
+tc159f8f5 = That is not a call written out.
+t61568d43 = No call named { $name } is known here. Write its types with it, as transfer(address,uint256)(…), or add its ABI under Contract ABIs in Settings.
+t48b75c8d = { $name } is more than one call: { $found }. Write the types with it, as { $first }(…).
+t544218b9 = { $types } are not types a call can be written with.
+t14015b69 = The values do not fit { $signature }: { $why }
 t4df37bea = name: value, one a line
 t550b0a98 = No flow is chosen
 t296762f8 = This flow: { $e }
 t3220a10a = The body is not a { $message }: { $e }
 t83b6cd6e = Protobuf { $message }, written as JSON: it is sent as Protobuf.
+tcaecdf04 = Written out in the body and sent as calldata: { $calls }
+te85cbcea =
+    { $n ->
+        [one] { $names } is the client's to work out, so what was written for it did not go.
+       *[other] { $names } are the client's to work out, so what was written for them did not go.
+    }
 t5a78825c = Stopped: no answer was read. What reached the server shows in Traffic.
 te946e7bf = Sending…
 tf28e14cf = Send
