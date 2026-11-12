@@ -17,6 +17,7 @@ use tracewing_proxy::{
     capture::Check,
     lan::OtherDevices,
     pause::Pauses,
+    relay::{Relay, RelaySettings},
     rules::HostRules,
     run_proxy,
     throttle::{Conditions, Network},
@@ -73,6 +74,8 @@ pub struct Engine {
     /// The authorities trusted for servers besides the public and the
     /// system's, as the proxy was started with them.
     pub extra_roots: Vec<PathBuf>,
+    /// Another proxy that connections to servers go through, as a company's.
+    pub relay: Arc<Relay>,
     stop: Option<oneshot::Sender<()>>,
     thread: Option<JoinHandle<()>>,
 }
@@ -96,6 +99,12 @@ impl Engine {
         let traffic_rules = Arc::new(RwLock::new(opts.traffic_rules));
         // A file that cannot be read leaves the network as it is.
         let conditions = Conditions::load(&opts.data_dir.join(THROTTLE_FILE)).unwrap_or_default();
+        // The same for a relay: connections go straight, and Settings says why.
+        let relay = Arc::new(
+            RelaySettings::load(&opts.data_dir)
+                .and_then(|settings| Relay::new(&settings))
+                .unwrap_or_default(),
+        );
         let network = Arc::new(Network::new(conditions));
         let (stop, stopped) = oneshot::channel::<()>();
         let proxy = ProxyOptions {
@@ -121,6 +130,7 @@ impl Engine {
             stop_limit: std::time::Duration::from_secs(2),
             live: Arc::clone(&live),
             other_devices: Some(Arc::clone(&other_devices)),
+            relay: Arc::clone(&relay),
         };
         let thread = {
             let failure = Arc::clone(&failure);
@@ -159,6 +169,7 @@ impl Engine {
             other_devices,
             live,
             extra_roots: opts.extra_roots,
+            relay,
             stop: Some(stop),
             thread: Some(thread),
         })

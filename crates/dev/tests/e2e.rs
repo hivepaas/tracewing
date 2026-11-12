@@ -41,6 +41,7 @@ struct Harness {
     network: Arc<Network>,
     other_devices: Arc<OtherDevices>,
     live: Arc<Live>,
+    relay: Arc<tracewing_proxy::relay::Relay>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -101,6 +102,7 @@ impl Harness {
         let network = Arc::new(Network::default());
         let other_devices = Arc::new(OtherDevices::new(false));
         let live = Arc::new(Live::default());
+        let relay = Arc::new(tracewing_proxy::relay::Relay::default());
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -125,6 +127,7 @@ impl Harness {
                 stop_limit: Duration::from_secs(1),
                 live: Arc::clone(&live),
                 other_devices: Some(Arc::clone(&other_devices)),
+                relay: Arc::clone(&relay),
             },
             async {
                 let _ = stopped.await;
@@ -147,6 +150,7 @@ impl Harness {
             dir,
             proxy_url,
             origin: format!("https://localhost:{origin_port}"),
+            relay,
             stop,
             proxy,
         }
@@ -2122,6 +2126,133 @@ async fn what_is_for_the_proxy_alone_goes_no_further() {
         request.iter().any(|(n, _)| n == "proxy-connection"),
         "the flow shows what the client sent: {request:?}"
     );
+    clean_up(conn, dir);
+}
+
+/// A company's proxy, with a password: HTTPS through a tunnel it makes, and
+/// plain HTTP passed to it whole, the password with both; neither name looked
+/// up here. A wrong password is said in the flow.
+#[tokio::test(flavor = "multi_thread")]
+async fn servers_are_reached_through_a_company_proxy() {
+    use tracewing_dev::fake_relay;
+    use tracewing_proxy::relay::RelaySettings;
+    let h = Harness::start("relay-http").await;
+    let plain = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let plain_port = plain.local_addr().unwrap().port();
+    tokio::spawn(tracewing_dev::playground::serve(plain));
+    let corp = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let corp_port = corp.local_addr().unwrap().port();
+    let seen = fake_relay::Seen::default();
+    tokio::spawn(fake_relay::serve_http(
+        corp,
+        Some(("an".to_owned(), "p@ss".to_owned())),
+        Arc::clone(&seen),
+    ));
+    let through = |password: &str| RelaySettings {
+        proxy: format!("http://an:{password}@127.0.0.1:{corp_port}"),
+        bypass: String::new(),
+    };
+    h.relay.set(&through("p%40ss")).unwrap();
+
+    let client = h.client(false);
+    let secure = client
+        .get(format!("{}/json?size=10", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(secure.status(), 200);
+    secure.bytes().await.unwrap();
+    let plain = client
+        .get(format!("http://localhost:{plain_port}/json"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(plain.status(), 200);
+    plain.bytes().await.unwrap();
+    let origin_port = h.origin.rsplit(':').next().unwrap().to_owned();
+    assert_eq!(
+        *seen.lock().unwrap(),
+        [
+            format!("CONNECT localhost:{origin_port} auth=yes"),
+            format!("GET http://localhost:{plain_port}/json auth=yes"),
+        ]
+    );
+
+    // A wrong password: the relay says no, and so does the flow. A change
+    // applies to connections made after it, so this one is to another name.
+    h.relay.set(&through("wrong")).unwrap();
+    let refused = client
+        .get(format!("https://127.0.0.1:{origin_port}/json?size=1"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(refused.status(), 502);
+    refused.bytes().await.unwrap();
+
+    let (_, conn, dir) = h.finish(3).await;
+    let error: String = conn
+        .query_row("SELECT error FROM flows WHERE error IS NOT NULL", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert!(
+        error.contains("refused the user name and password"),
+        "{error}"
+    );
+    clean_up(conn, dir);
+}
+
+/// A SOCKS5 proxy, with a password, and hosts passed by.
+#[tokio::test(flavor = "multi_thread")]
+async fn servers_are_reached_through_socks5_or_passed_by() {
+    use tracewing_dev::fake_relay;
+    use tracewing_proxy::relay::RelaySettings;
+    let h = Harness::start("relay-socks").await;
+    let corp = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let corp_port = corp.local_addr().unwrap().port();
+    let seen = fake_relay::Seen::default();
+    tokio::spawn(fake_relay::serve_socks5(
+        corp,
+        Some(("an".to_owned(), "pw".to_owned())),
+        Arc::clone(&seen),
+    ));
+    h.relay
+        .set(&RelaySettings {
+            proxy: format!("socks5://an:pw@127.0.0.1:{corp_port}"),
+            bypass: String::new(),
+        })
+        .unwrap();
+    let res = h
+        .client(false)
+        .get(format!("{}/json?size=10", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    res.bytes().await.unwrap();
+    let origin_port = h.origin.rsplit(':').next().unwrap().to_owned();
+    assert_eq!(
+        *seen.lock().unwrap(),
+        [format!("SOCKS5 localhost:{origin_port} auth=yes")]
+    );
+
+    // localhost passed by: the next connection goes straight.
+    h.relay
+        .set(&RelaySettings {
+            proxy: format!("socks5://an:pw@127.0.0.1:{corp_port}"),
+            bypass: "localhost".to_owned(),
+        })
+        .unwrap();
+    let res = h
+        .client(true)
+        .get(format!("{}/json?size=10&n=2", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    res.bytes().await.unwrap();
+    assert_eq!(seen.lock().unwrap().len(), 1, "not through the relay");
+    let (_, conn, dir) = h.finish(2).await;
     clean_up(conn, dir);
 }
 
