@@ -7,6 +7,8 @@
 #![cfg(all(feature = "headless", target_os = "linux"))]
 
 use gpui::{AppContext as _, HeadlessAppContext, WindowHandle, px, size};
+use hudsucker::futures::{SinkExt as _, StreamExt as _};
+use hudsucker::tokio_tungstenite::tungstenite::Message;
 use std::{
     path::PathBuf,
     process::Command,
@@ -101,6 +103,16 @@ fn json_rpc_calls_are_read_in_the_inspector() {
     while !origin_ca.exists() {
         std::thread::sleep(Duration::from_millis(5));
     }
+    let ws_ca = dir.join("ws-ca.pem");
+    let ws_origin = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let ws_port = ws_origin.local_addr().unwrap().port();
+    let ca_out = ws_ca.clone();
+    runtime.spawn(async move { benchkit::serve_ws_origin(ws_origin, &ca_out).await });
+    while !ws_ca.exists() {
+        std::thread::sleep(Duration::from_millis(5));
+    }
     let engine = Engine::start(EngineOptions {
         data_dir: dir.clone(),
         settings: StorageSettings {
@@ -110,7 +122,7 @@ fn json_rpc_calls_are_read_in_the_inspector() {
         rules: Default::default(),
         traffic_rules: Default::default(),
         ports: 20_270..20_280,
-        extra_roots: vec![origin_ca],
+        extra_roots: vec![origin_ca, ws_ca],
         key_store: Default::default(),
         find_apps: true,
     })
@@ -265,6 +277,83 @@ fn json_rpc_calls_are_read_in_the_inspector() {
         })
         .unwrap();
     shot(&mut cx, window.into(), "94-rpc-named-by-abi");
+
+    // A socket: its calls are messages, not a body, so nothing above would
+    // have found them.
+    let proxy_ca = dir.join("ca.pem");
+    let mut ws = runtime
+        .block_on(benchkit::websocket_through_proxy(
+            proxy,
+            &proxy_ca,
+            "localhost",
+            ws_port,
+            "/rpc",
+        ))
+        .unwrap();
+    runtime
+        .block_on(async {
+            ws.send(Message::text(
+                r#"{"jsonrpc":"2.0","id":1,"method":"eth_subscribe","params":["newHeads"]}"#,
+            ))
+            .await?;
+            // The answer, then what the subscription sends of its own.
+            ws.next().await.unwrap()?;
+            ws.next().await.unwrap()
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the socket's row", |view| {
+        view.count() == 3
+    });
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(2, cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the socket's messages read", |view| {
+        view.inspector
+            .rpc
+            .as_ref()
+            .is_some_and(|shown| shown.sections.len() >= 3)
+    });
+    window
+        .update(&mut cx, |view, _, cx| {
+            let detail = view.inspector.detail.as_ref().unwrap();
+            assert_eq!(detail.kind, "websocket");
+            assert_eq!(detail.rpc, None, "a socket is not one request's call");
+            assert!(
+                view.offers_rpc(detail),
+                "and yet the part is there, because its messages hold calls"
+            );
+            view.set_part(Part::Rpc, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    window
+        .update(&mut cx, |view, _, _| {
+            let shown = view.inspector.rpc.as_ref().unwrap();
+            assert_eq!(
+                titles(shown)[..3],
+                ["eth_subscribe", "Answer", "eth_subscription"]
+            );
+            let lines = lines(shown);
+            for said in [
+                ("kind", "newHeads"),
+                ("subscription", "0xcd0c3e8af590364c09d0fa6a1210faf5"),
+                ("block", "26,393,566"),
+            ] {
+                assert!(lines.contains(&said), "{said:?} in {lines:?}");
+            }
+            assert!(
+                shown.sections[2]
+                    .note
+                    .as_deref()
+                    .is_some_and(|note| note.contains("not asked for")),
+                "what the server sent without being asked each time"
+            );
+        })
+        .unwrap();
+    shot(&mut cx, window.into(), "95-rpc-socket");
+    runtime.block_on(async { ws.close(None).await }).ok();
 
     std::fs::remove_dir_all(&dir).ok();
 }

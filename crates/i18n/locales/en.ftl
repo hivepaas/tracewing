@@ -369,6 +369,7 @@ tdca19bdc = The server sent no files for its services
 t345fdb40 = The server answered { $status }: it may not offer gRPC reflection
 tb629329e = The server answered { $code }: it may not offer gRPC reflection. { $message }
 t6bbb6207 = The server answered nothing: it may not offer gRPC reflection
+td717c770 = Sent by the server, not asked for
 t2c29f04d = any
 t5579c3d4 = Failed
 ta74e5f73 = The server answered 200: a call that fails says so in the body.

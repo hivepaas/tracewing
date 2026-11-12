@@ -871,6 +871,9 @@ tb629329e = 伺服器回應 { $code }：它可能不提供 gRPC 反射。{ $mess
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = 伺服器沒有回應任何內容：它可能不提供 gRPC 反射
 
+# Sent by the server, not asked for
+td717c770 = 伺服器主動傳送，並非對請求的回覆
+
 # any
 t2c29f04d = 任意
 

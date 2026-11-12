@@ -871,6 +871,9 @@ tb629329e = Server menjawab { $code }: mungkin tidak menyediakan gRPC reflection
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Server tidak menjawab apa-apa: mungkin tidak menyediakan gRPC reflection
 
+# Sent by the server, not asked for
+td717c770 = Dikirim server, bukan jawaban atas permintaan
+
 # any
 t2c29f04d = apa saja
 

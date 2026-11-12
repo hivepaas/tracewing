@@ -253,6 +253,9 @@ pub(crate) fn reflection_answer(body: &[u8]) -> Response<OriginBody> {
 /// bytes of "ERC20: transfer amount exceeds balance".
 const REVERTED: &str = "0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002645524332303a207472616e7366657220616d6f756e7420657863656564732062616c616e63650000000000000000000000000000000000000000000000000000";
 
+/// The subscription the origin hands out, and sends under.
+const SUBSCRIPTION: &str = "0xcd0c3e8af590364c09d0fa6a1210faf5";
+
 /// What a node answers the calls in `body`: a result each, or, with `fail`,
 /// a reverted call — which answers **200** like every other, and says what
 /// went wrong in the body. A batch is answered with a batch.
@@ -283,6 +286,9 @@ pub fn rpc_reply(body: &[u8], fail: bool) -> Bytes {
             "eth_blockNumber" => "0x192bbde".to_owned(),
             "eth_getBalance" => "0x506a9d72ec36d56a".to_owned(),
             "eth_sendRawTransaction" => format!("0x{}", "ab".repeat(32)),
+            // A handle, not a number: it is given back to eth_unsubscribe.
+            "eth_subscribe" => SUBSCRIPTION.to_owned(),
+            "eth_unsubscribe" => "true".to_owned(),
             // 39.192124 of a token with six decimals, as a balance comes.
             "eth_call" => format!("0x{:064x}", 39_192_124u64),
             _ => "0x1".to_owned(),
@@ -755,8 +761,43 @@ pub async fn serve_ws_origin(listener: TcpListener, ca_out: &Path) -> Result<()>
                 if message.is_close() {
                     break;
                 }
-                if (message.is_text() || message.is_binary()) && ws.send(message).await.is_err() {
+                if !message.is_text() && !message.is_binary() {
+                    continue;
+                }
+                // A JSON-RPC call is answered as a node answers one, and a
+                // subscription is followed by what it subscribed to. Anything
+                // else is sent back as it came.
+                let data = message.clone().into_data();
+                let calls = tracewing_store::jsonrpc::calls_in(&data);
+                if calls.is_empty() {
+                    if ws.send(message).await.is_err() {
+                        break;
+                    }
+                    continue;
+                }
+                let reply = String::from_utf8_lossy(&rpc_reply(&data, false)).into_owned();
+                if ws
+                    .send(hudsucker::tokio_tungstenite::tungstenite::Message::text(
+                        reply,
+                    ))
+                    .await
+                    .is_err()
+                {
                     break;
+                }
+                if calls.iter().any(|call| call.method == "eth_subscribe") {
+                    let sent = format!(
+                        r#"{{"jsonrpc":"2.0","method":"eth_subscription","params":{{"subscription":"{SUBSCRIPTION}","result":{{"number":"0x192bbde","hash":"0x7dded073c97474ced7e600795a8a03e928b44de8e0bb056b1d65032871691e1d"}}}}}}"#
+                    );
+                    if ws
+                        .send(hudsucker::tokio_tungstenite::tungstenite::Message::text(
+                            sent,
+                        ))
+                        .await
+                        .is_err()
+                    {
+                        break;
+                    }
                 }
             }
         });

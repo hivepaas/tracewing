@@ -973,6 +973,9 @@ tb629329e = Сервер відповів { $code }: можливо, він не
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Сервер нічого не відповів: можливо, він не має gRPC reflection
 
+# Sent by the server, not asked for
+td717c770 = Надіслано сервером самостійно, не у відповідь на запит
+
 # any
 t2c29f04d = будь-який
 

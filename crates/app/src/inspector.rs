@@ -151,6 +151,9 @@ impl Traffic {
                     self.inspector.select.clear();
                 }
                 self.inspector.part = match (stream, self.inspector.part) {
+                    // A socket's calls are in its messages, so the RPC part
+                    // reads them too: it is kept when it was chosen.
+                    (true, Part::Rpc) => Part::Rpc,
                     (true, _) => Part::Messages,
                     (_, Part::Llm) if a_call => Part::Llm,
                     (false, Part::Messages | Part::Llm) => Part::Body,
@@ -760,6 +763,17 @@ impl Traffic {
     }
 
     /// The parts the chosen flow has tabs for, in the tabs' order.
+    /// Whether the flow has JSON-RPC to show: a request that named a call,
+    /// or a socket whose messages turned out to hold some.
+    pub fn offers_rpc(&self, detail: &Detail) -> bool {
+        detail.rpc.is_some()
+            || self
+                .inspector
+                .rpc
+                .as_ref()
+                .is_some_and(|shown| !shown.sections.is_empty())
+    }
+
     pub fn parts_offered(&self) -> Vec<Part> {
         let Some(detail) = &self.inspector.detail else {
             return Vec::new();
@@ -779,7 +793,7 @@ impl Traffic {
         if detail.graphql.is_some() {
             parts.push(Part::GraphQl);
         }
-        if detail.rpc.is_some() {
+        if self.offers_rpc(detail) {
             parts.push(Part::Rpc);
         }
         parts.extend([Part::Body, Part::Headers]);
@@ -886,7 +900,7 @@ impl Traffic {
             .when(detail.graphql.is_some(), |d| {
                 d.child(tab("part-graphql", "GraphQL".to_owned(), Part::GraphQl))
             })
-            .when(detail.rpc.is_some(), |d| {
+            .when(self.offers_rpc(detail), |d| {
                 d.child(tab("part-rpc", "RPC".to_owned(), Part::Rpc))
             })
             .child(tab("part-body", tr!("Body"), Part::Body))
