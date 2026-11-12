@@ -7,11 +7,12 @@
 //! What to show is worked out by [`shown`], which touches no window: the view
 //! only draws what it returns.
 
+use crate::text_size::ui;
 use crate::{colors::colors, select::Selection, traffic::Traffic, widgets::Reachable};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use gpui::{
     AppContext as _, Context, ElementId, FontWeight, IntoElement, PathPromptOptions, SharedString,
-    div, prelude::*, px, rgb,
+    div, prelude::*, rgb,
 };
 use std::{path::PathBuf, sync::Arc};
 use tracewing_i18n::{tr, tr_n};
@@ -1312,10 +1313,10 @@ impl Traffic {
             .id("rpc")
             .size_full()
             .overflow_y_scroll()
-            .p(px(14.))
+            .p(ui(14.))
             .flex()
             .flex_col()
-            .gap(px(4.));
+            .gap(ui(4.));
         let Some(shown) = &self.inspector.rpc else {
             return view.child(
                 div()
@@ -1331,8 +1332,8 @@ impl Traffic {
         for (at, section) in shown.sections.iter().enumerate() {
             view = view.child(
                 div()
-                    .when(at > 0, |d| d.pt(px(12.)))
-                    .text_size(px(11.))
+                    .when(at > 0, |d| d.pt(ui(12.)))
+                    .text_size(ui(11.))
                     .font_weight(FontWeight::BOLD)
                     .text_color(rgb(c.muted))
                     // Left as it is: a method name is what a reader looks
@@ -1345,8 +1346,8 @@ impl Traffic {
             );
             view = view.children(section.note.clone().map(|note| {
                 div()
-                    .pb(px(2.))
-                    .text_size(px(12.))
+                    .pb(ui(2.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(sel.piece(note, "\n", Vec::new()))
             }));
@@ -1357,7 +1358,7 @@ impl Traffic {
                     .when(line.code, |d| {
                         d.font_family(crate::MONO_FONT)
                             .font_features(gpui::FontFeatures::disable_ligatures())
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                     })
                     .child(sel.piece(line.value.clone(), "\n", Vec::new()));
                 view = view.child(
@@ -1365,11 +1366,11 @@ impl Traffic {
                         .flex()
                         .flex_row()
                         .items_start()
-                        .gap(px(10.))
-                        .py(px(1.))
+                        .gap(ui(10.))
+                        .py(ui(1.))
                         .child(
                             div()
-                                .w(px(150.))
+                                .w(ui(150.))
                                 .flex_shrink_0()
                                 .text_color(rgb(c.muted))
                                 .child(sel.piece(line.label.clone(), "\t", Vec::new())),
@@ -1379,7 +1380,7 @@ impl Traffic {
             }
         }
         if shown.more > 0 {
-            view = view.child(div().pt(px(12.)).text_color(rgb(c.muted)).child(sel.piece(
+            view = view.child(div().pt(ui(12.)).text_color(rgb(c.muted)).child(sel.piece(
                 tr!("and {count} more calls", count = shown.more),
                 "\n\n",
                 Vec::new(),
@@ -1475,14 +1476,14 @@ impl Traffic {
         let button = |id: &'static str, label: String| {
             div()
                 .id(id)
-                .h(px(32.))
-                .px(px(14.))
-                .rounded(px(16.))
+                .h(ui(32.))
+                .px(ui(14.))
+                .rounded(ui(16.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .font_weight(FontWeight::BOLD)
                 .bg(rgb(c.chip))
                 .text_color(rgb(c.on_chip))
@@ -1530,9 +1531,9 @@ impl Traffic {
                 .flex()
                 .flex_row()
                 .items_start()
-                .gap(px(10.))
-                .p(px(10.))
-                .rounded(px(12.))
+                .gap(ui(10.))
+                .p(ui(10.))
+                .rounded(ui(12.))
                 .bg(rgb(c.input))
                 .child(
                     div()
@@ -1540,17 +1541,17 @@ impl Traffic {
                         .min_w_0()
                         .flex()
                         .flex_col()
-                        .gap(px(2.))
+                        .gap(ui(2.))
                         .child(
                             div()
                                 .font_family(crate::MONO_FONT)
                                 .font_features(gpui::FontFeatures::disable_ligatures())
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .child(path.display().to_string()),
                         )
                         .child(
                             div()
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .text_color(rgb(c.muted))
                                 .child(summary),
                         )
@@ -1558,12 +1559,12 @@ impl Traffic {
                             div()
                                 .font_family(crate::MONO_FONT)
                                 .font_features(gpui::FontFeatures::disable_ligatures())
-                                .text_size(px(11.5))
+                                .text_size(ui(11.5))
                                 .text_color(rgb(c.error))
                                 .child(problem)
                         }))
                         .when(more > 0, |d| {
-                            d.child(div().text_size(px(11.5)).text_color(rgb(c.error)).child(
+                            d.child(div().text_size(ui(11.5)).text_color(rgb(c.error)).child(
                                 tr_n!(
                                     more,
                                     "and {count} more problem",
@@ -1577,14 +1578,14 @@ impl Traffic {
                     div()
                         .id(ElementId::NamedInteger("abi-remove".into(), i as u64))
                         .flex_shrink_0()
-                        .h(px(28.))
-                        .px(px(12.))
-                        .rounded(px(14.))
+                        .h(ui(28.))
+                        .px(ui(12.))
+                        .rounded(ui(14.))
                         .flex()
                         .items_center()
                         .cursor_pointer()
                         .reachable()
-                        .text_size(px(12.))
+                        .text_size(ui(12.))
                         .font_weight(FontWeight::BOLD)
                         .bg(rgb(c.chip))
                         .text_color(rgb(c.on_chip))
@@ -1597,23 +1598,23 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(crate::widgets::eyebrow(tr!("Contract ABIs")).px(px(6.)))
+            .child(crate::widgets::eyebrow(tr!("Contract ABIs")).px(ui(6.)))
             .child(
                 div()
-                    .px(px(6.))
-                    .text_size(px(12.))
+                    .px(ui(6.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(tr!("Folders or files of ABI JSON, as solc, Hardhat and Foundry write it, to name the functions, events and errors in a JSON-RPC call instead of showing four bytes. They are read again when they change. Nothing is sent anywhere: a signature is worked out from the ABI on this machine.")),
             )
             .children(rows)
             .children(self.abis_problem.clone().map(|problem| {
                 div()
-                    .px(px(6.))
-                    .text_size(px(12.))
+                    .px(ui(6.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.error))
                     .child(problem)
             }))
@@ -1623,7 +1624,7 @@ impl Traffic {
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(
                         button("abis-add-folder", tr!("Add a folder…"))
                             .on_click(cx.listener(|this, _, _, cx| this.ask_for_abis(true, cx))),

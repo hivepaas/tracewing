@@ -2,6 +2,7 @@
 //! variables. Its body says it as JSON with the query in one escaped string,
 //! which reads as nothing at all.
 
+use crate::text_size::ui;
 use crate::{
     body::{Token, tokens},
     bodyview::highlight,
@@ -9,7 +10,7 @@ use crate::{
     select::Selection,
     traffic::Traffic,
 };
-use gpui::{Context, FontWeight, HighlightStyle, IntoElement, div, prelude::*, px, rgb};
+use gpui::{Context, FontWeight, HighlightStyle, IntoElement, div, prelude::*, rgb};
 use std::ops::Range;
 use tracewing_i18n::tr;
 use tracewing_store::{graphql, session::BodyReader};
@@ -62,10 +63,10 @@ impl Traffic {
             .id("graphql")
             .size_full()
             .overflow_y_scroll()
-            .p(px(14.))
+            .p(ui(14.))
             .flex()
             .flex_col()
-            .gap(px(8.));
+            .gap(ui(8.));
         let Some(sent) = &self.inspector.graphql else {
             return view.child(
                 div()
@@ -81,20 +82,20 @@ impl Traffic {
         let code = |text: String, highlights: Vec<(Range<usize>, HighlightStyle)>| {
             div()
                 .w_full()
-                .px(px(12.))
-                .py(px(8.))
-                .rounded(px(12.))
+                .px(ui(12.))
+                .py(ui(8.))
+                .rounded(ui(12.))
                 .bg(rgb(c.input))
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .child(sel.piece(text, "\n", highlights))
         };
         // A title, said in the copy as it is: it shows in capitals.
         let section = |title: String| {
             div()
-                .pt(px(6.))
-                .text_size(px(11.))
+                .pt(ui(6.))
+                .text_size(ui(11.))
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(c.muted))
                 .child(sel.piece(title.to_uppercase(), "\n\n", Vec::new()))
@@ -116,7 +117,7 @@ impl Traffic {
             };
             view = view.child(
                 div()
-                    .when(at > 0, |d| d.pt(px(10.)))
+                    .when(at > 0, |d| d.pt(ui(10.)))
                     .font_weight(FontWeight::BOLD)
                     .child(sel.piece(title, if at == 0 { "" } else { "\n\n" }, Vec::new())),
             );

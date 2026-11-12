@@ -2,6 +2,7 @@
 //! the panels are and how large, which columns show. The toolbar's layouts
 //! button keeps the one in use under a name and goes back to one.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     layout::Layout,
@@ -91,7 +92,7 @@ impl Traffic {
             )
             .when(open, |d| {
                 d.child(
-                    div().absolute().top(px(40.)).left_0().child(deferred(
+                    div().absolute().top(ui(40.)).left_0().child(deferred(
                         anchored()
                             .anchor(Anchor::TopLeft)
                             .snap_to_window_with_margin(px(8.))
@@ -110,20 +111,20 @@ impl Traffic {
             let (used, forgotten) = (name.clone(), name.clone());
             div()
                 .id(SharedString::from(format!("layout-{i}")))
-                .h(px(30.))
-                .pl(px(10.))
-                .pr(px(4.))
-                .rounded(px(8.))
+                .h(ui(30.))
+                .pl(ui(10.))
+                .pr(ui(4.))
+                .rounded(ui(8.))
                 .flex()
                 .flex_row()
                 .items_center()
-                .gap(px(8.))
+                .gap(ui(8.))
                 .cursor_pointer()
                 .reachable()
                 .hover(|d| d.bg(rgb(c.tonal)))
                 .child(
                     div()
-                        .w(px(14.))
+                        .w(ui(14.))
                         .flex_shrink_0()
                         .children(on.then(|| icon("check", 14., c.text))),
                 )
@@ -131,8 +132,8 @@ impl Traffic {
                 .child(
                     div()
                         .id(SharedString::from(format!("forget-layout-{i}")))
-                        .size(px(24.))
-                        .rounded(px(6.))
+                        .size(ui(24.))
+                        .rounded(ui(6.))
                         .flex()
                         .items_center()
                         .justify_center()
@@ -150,24 +151,24 @@ impl Traffic {
         div()
             .id("layouts-list")
             .occlude()
-            .w(px(260.))
-            .p(px(6.))
-            .rounded(px(14.))
+            .w(ui(260.))
+            .p(ui(6.))
+            .rounded(ui(14.))
             .border_1()
             .border_color(rgb(c.line))
             .bg(rgb(c.surface))
             .shadow_lg()
             .flex()
             .flex_col()
-            .text_size(px(13.))
+            .text_size(ui(13.))
             .font_weight(FontWeight::NORMAL)
             .text_color(rgb(c.text))
-            .child(eyebrow(tr!("Layouts")).px(px(10.)).py(px(4.)))
+            .child(eyebrow(tr!("Layouts")).px(ui(10.)).py(ui(4.)))
             .when(empty, |d| {
                 d.child(
                     div()
-                        .px(px(10.))
-                        .py(px(4.))
+                        .px(ui(10.))
+                        .py(ui(4.))
                         .text_color(rgb(c.muted))
                         .child(tr!(
                             "Keep the panels as they are now under a name, to come back to them."
@@ -175,22 +176,22 @@ impl Traffic {
                 )
             })
             .children(rows)
-            .child(div().h(px(1.)).my(px(4.)).bg(rgb(c.line)))
+            .child(div().h(ui(1.)).my(ui(4.)).bg(rgb(c.line)))
             .child(
                 div()
-                    .p(px(4.))
+                    .p(ui(4.))
                     .flex()
                     .flex_row()
                     .items_center()
-                    .gap(px(6.))
+                    .gap(ui(6.))
                     .child(
                         div()
                             .id("layout-name")
                             .flex_1()
                             .min_w_0()
-                            .h(px(28.))
-                            .px(px(10.))
-                            .rounded(px(10.))
+                            .h(ui(28.))
+                            .px(ui(10.))
+                            .rounded(ui(10.))
                             .flex()
                             .items_center()
                             .bg(rgb(c.input))
@@ -208,16 +209,16 @@ impl Traffic {
                     .child(
                         div()
                             .id("keep-layout")
-                            .h(px(28.))
-                            .px(px(12.))
-                            .rounded(px(14.))
+                            .h(ui(28.))
+                            .px(ui(12.))
+                            .rounded(ui(14.))
                             .flex()
                             .items_center()
                             .cursor_pointer()
                             .reachable()
                             .bg(rgb(c.chip))
                             .text_color(rgb(c.on_chip))
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .font_weight(FontWeight::BOLD)
                             .child(tr!("Keep"))
                             .on_click(cx.listener(|this, _, _, cx| this.keep_layout(cx))),

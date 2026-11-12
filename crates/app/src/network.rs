@@ -1,6 +1,7 @@
 //! The slow network, from the Rules screen: on or off, a preset, or numbers of
 //! one's own. Applies from the next request, and is kept in `throttle.toml`.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     engine::THROTTLE_FILE,
@@ -8,7 +9,7 @@ use crate::{
     traffic::{Screen, Traffic},
     widgets::{Reachable, eyebrow},
 };
-use gpui::{AppContext as _, Context, Div, Entity, FontWeight, div, prelude::*, px, rgb};
+use gpui::{AppContext as _, Context, Div, Entity, FontWeight, div, prelude::*, rgb};
 use tracewing_i18n::tr;
 use tracewing_proxy::throttle::{Conditions, PRESETS};
 
@@ -216,14 +217,14 @@ impl Traffic {
         let chip = |id: &'static str, label: String, chosen: bool| {
             div()
                 .id(id)
-                .h(px(30.))
-                .px(px(12.))
-                .rounded(px(15.))
+                .h(ui(30.))
+                .px(ui(12.))
+                .rounded(ui(15.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .font_weight(FontWeight::BOLD)
                 .when(chosen, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
                 .when(!chosen, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
@@ -238,20 +239,20 @@ impl Traffic {
             div()
                 .flex()
                 .flex_col()
-                .gap(px(3.))
-                .when(wide, |d| d.flex_1().min_w(px(260.)))
-                .when(!wide, |d| d.w(px(130.)))
+                .gap(ui(3.))
+                .when(wide, |d| d.flex_1().min_w(ui(260.)))
+                .when(!wide, |d| d.w(ui(130.)))
                 .child(
                     div()
-                        .text_size(px(11.5))
+                        .text_size(ui(11.5))
                         .text_color(rgb(c.muted))
                         .child(label),
                 )
                 .child(
                     div()
-                        .h(px(36.))
-                        .px(px(12.))
-                        .rounded(px(12.))
+                        .h(ui(36.))
+                        .px(ui(12.))
+                        .rounded(ui(12.))
                         .flex()
                         .items_center()
                         .bg(rgb(c.input))
@@ -261,9 +262,9 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(10.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(10.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
             .child(
                 div()
@@ -271,21 +272,21 @@ impl Traffic {
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(10.))
+                    .gap(ui(10.))
                     .child(eyebrow(tr!("Slow network")))
                     .child(
                         div()
                             .id("network-on")
-                            .w(px(44.))
-                            .h(px(24.))
-                            .p(px(3.))
-                            .rounded(px(12.))
+                            .w(ui(44.))
+                            .h(ui(24.))
+                            .p(ui(3.))
+                            .rounded(ui(12.))
                             .flex()
                             .cursor_pointer()
                             .reachable()
                             .when(on, |d| d.bg(rgb(c.accent)).justify_end())
                             .when(!on, |d| d.bg(rgb(c.input)))
-                            .child(div().size(px(18.)).rounded(px(9.)).bg(rgb(if on {
+                            .child(div().size(ui(18.)).rounded(ui(9.)).bg(rgb(if on {
                                 c.on_accent
                             } else {
                                 c.muted
@@ -303,7 +304,7 @@ impl Traffic {
                     .flex()
                     .flex_row()
                     .flex_wrap()
-                    .gap(px(6.))
+                    .gap(ui(6.))
                     .children(presets)
                     .child(
                         chip("Custom", tr!("Custom"), on && conditions.name == "Custom")
@@ -316,7 +317,7 @@ impl Traffic {
                     .flex_row()
                     .flex_wrap()
                     .items_end()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(field(tr!("Latency, ms"), latency, false))
                     .child(field(tr!("Down, kbit/s"), down, false))
                     .child(field(tr!("Up, kbit/s"), up, false))
@@ -327,7 +328,7 @@ impl Traffic {
                             .on_click(cx.listener(|this, _, _, cx| this.apply_network_form(cx))),
                     ),
             )
-            .child(div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+            .child(div().text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                 "Applies from the next request. Latency is added to each round trip; the \
                  speed is a link that every slowed flow shares; a lost piece waits to be \
                  sent again, as TCP does. Hosts left alone are not slowed."
@@ -345,9 +346,9 @@ impl Traffic {
         Some(
             div()
                 .id("network-chip")
-                .h(px(40.))
-                .px(px(16.))
-                .rounded(px(20.))
+                .h(ui(40.))
+                .px(ui(16.))
+                .rounded(ui(20.))
                 .flex()
                 .items_center()
                 .cursor_pointer()

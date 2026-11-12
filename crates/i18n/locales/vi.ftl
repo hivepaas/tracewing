@@ -1570,6 +1570,15 @@ ta8606963 = { $key }: "{ $text }" không phải là số nguyên
 # {key}: must not be negative
 t9c4debaa = { $key }: không được là số âm
 
+# {size} (default)
+t5606e442 = { $size } (mặc định)
+
+# Text size
+t2c041143 = Cỡ chữ
+
+# In px, for the text of lists and bodies. Everything grows with it. Applies at once.
+tb8052ae6 = Tính bằng px, cho chữ trong danh sách và nội dung. Mọi thứ to lên theo. Áp dụng ngay.
+
 # Appearance
 t31018b9f = Giao diện
 

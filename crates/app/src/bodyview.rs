@@ -3,6 +3,7 @@
 //! pixel offset in an `f32` can tell apart: `uniform_list`'s step grows to 8 px at
 //! 6 million lines of 20 px.
 
+use crate::text_size::ui;
 use crate::{
     body::{Body, Kind, Line, Token},
     colors::colors,
@@ -180,6 +181,9 @@ pub struct BodyView {
     folds: Folds,
     mode: BodyMode,
     sub: f32,
+    /// How much larger than the design the window draws: rows are this much
+    /// taller, as the text in them is.
+    scale: f32,
     dragging: bool,
     /// Where the view was last drawn: the height sets the scroll range, and a drag
     /// on the bar is measured from its top.
@@ -233,6 +237,7 @@ impl BodyView {
             original: None,
             syntax,
             top: 0,
+            scale: 1.,
             place: Place::default(),
             cols: 80,
             row_counts: RefCell::default(),
@@ -381,7 +386,7 @@ impl BodyView {
 
     /// The rows a view holds whole.
     fn rows_in_height(&self) -> u64 {
-        (self.height() / LINE_HEIGHT).floor().max(1.) as u64
+        (self.height() / self.line_h()).floor().max(1.) as u64
     }
 
     /// The highest place wrapped text can be shown from.
@@ -396,7 +401,7 @@ impl BodyView {
     fn scroll_wrapped(&mut self, dy: f64) {
         let lines = self.lines();
         let last = self.last_place();
-        let line_height = f64::from(LINE_HEIGHT);
+        let line_height = f64::from(self.line_h());
         let mut place = self.place;
         let mut y = f64::from(self.sub) + dy;
         {
@@ -803,29 +808,34 @@ impl BodyView {
         self.folds.rows(self.lines())
     }
 
+    /// A row's height as drawn now.
+    fn line_h(&self) -> f32 {
+        LINE_HEIGHT * self.scale
+    }
+
     fn height(&self) -> f32 {
         f32::from(self.bounds.get().size.height)
     }
 
     /// The largest position with a full view below it, in pixels.
     pub fn max_position(&self) -> f64 {
-        (self.rows() as f64 * f64::from(LINE_HEIGHT) - f64::from(self.height())).max(0.)
+        (self.rows() as f64 * f64::from(self.line_h()) - f64::from(self.height())).max(0.)
     }
 
     /// Moves the top of the view to `y` pixels into the content, clamped.
     pub fn set_position(&mut self, y: f64) {
         let y = y.clamp(0., self.max_position());
-        let line_height = f64::from(LINE_HEIGHT);
+        let line_height = f64::from(self.line_h());
         self.top = (y / line_height) as u64;
         self.sub = (y - self.top as f64 * line_height) as f32;
     }
 
     fn position(&self) -> f64 {
-        self.top as f64 * f64::from(LINE_HEIGHT) + f64::from(self.sub)
+        self.top as f64 * f64::from(self.line_h()) + f64::from(self.sub)
     }
 
     fn on_wheel(&mut self, event: &ScrollWheelEvent, _: &mut Window, cx: &mut Context<Self>) {
-        let delta = f64::from(f32::from(event.delta.pixel_delta(px(LINE_HEIGHT)).y));
+        let delta = f64::from(f32::from(event.delta.pixel_delta(px(self.line_h())).y));
         if self.wrapping() {
             self.scroll_wrapped(-delta);
         } else {
@@ -857,10 +867,11 @@ impl BodyView {
         let text_system = window.text_system();
         let font = text_system.resolve_font(&gpui::font(crate::MONO_FONT));
         let char_w = text_system
-            .advance(font, px(12.), 'm')
+            .advance(font, px(12. * self.scale), 'm')
             .map_or(7.2, |size| f32::from(size.width))
             .max(1.);
-        let width = f32::from(self.bounds.get().size.width) - BAR_W - GUTTER_W - FOLD_W - 8.;
+        let width =
+            f32::from(self.bounds.get().size.width) - BAR_W - (GUTTER_W + FOLD_W + 8.) * self.scale;
         let cols = ((width / char_w).floor() as usize).max(8);
         if cols != self.cols {
             self.cols = cols;
@@ -909,7 +920,7 @@ impl BodyView {
         let text: SharedString = shown.text.into();
         let folded = matches!(mark, FoldMark::Folded(..));
         let mut row = div()
-            .h(px(LINE_HEIGHT))
+            .h(ui(LINE_HEIGHT))
             .flex()
             .flex_row()
             .items_center()
@@ -917,7 +928,7 @@ impl BodyView {
             .overflow_hidden()
             .child(
                 div()
-                    .w(px(GUTTER_W))
+                    .w(ui(GUTTER_W))
                     .flex_shrink_0()
                     .pr_1()
                     .flex()
@@ -928,14 +939,14 @@ impl BodyView {
             .child({
                 let toggle = div()
                     .id(("fold", line))
-                    .w(px(FOLD_W))
-                    .h(px(LINE_HEIGHT))
+                    .w(ui(FOLD_W))
+                    .h(ui(LINE_HEIGHT))
                     .flex_shrink_0()
                     .flex()
                     .items_center()
                     .justify_center()
-                    .text_size(px(FOLD_TEXT))
-                    .line_height(px(LINE_HEIGHT))
+                    .text_size(ui(FOLD_TEXT))
+                    .line_height(ui(LINE_HEIGHT))
                     .text_color(rgb(colors().faint));
                 match &mark {
                     FoldMark::None => toggle,
@@ -952,7 +963,7 @@ impl BodyView {
                         .on_click(cx.listener(move |this, _, _, cx| this.toggle_fold(line, cx))),
                 }
             })
-            .child(div().w(px(indent)).flex_shrink_0())
+            .child(div().w(ui(indent)).flex_shrink_0())
             .child(
                 // The note below stays in view however long the text is. A fold's
                 // note follows the text, as the closer it stands for would.
@@ -1170,12 +1181,12 @@ impl BodyView {
             .flex_col()
             .font_family(crate::MONO_FONT)
             .font_features(gpui::FontFeatures::disable_ligatures())
-            .text_size(px(12.))
+            .text_size(ui(12.))
             .when(table.cut, |d| {
                 d.child(
                     div()
-                        .px(px(10.))
-                        .pb(px(4.))
+                        .px(ui(10.))
+                        .pb(ui(4.))
                         .text_color(rgb(c.muted))
                         .font_family(crate::FONT)
                         .child(tr!(
@@ -1211,7 +1222,7 @@ impl BodyView {
                 let head = row == 0;
                 div()
                     .id(("table-row", row))
-                    .h(px(LINE_HEIGHT))
+                    .h(ui(LINE_HEIGHT))
                     .flex()
                     .flex_row()
                     .items_center()
@@ -1219,9 +1230,9 @@ impl BodyView {
                     .when(!head && row % 2 == 0, |d| d.bg(rgb(c.code)))
                     .child(
                         div()
-                            .w(px(number_w))
+                            .w(ui(number_w))
                             .flex_shrink_0()
-                            .pr(px(8.))
+                            .pr(ui(8.))
                             .flex()
                             .justify_end()
                             .text_color(rgb(c.faint))
@@ -1229,10 +1240,10 @@ impl BodyView {
                     )
                     .children(table.widths.iter().enumerate().map(|(i, width)| {
                         div()
-                            .w(px(*width as f32 * TABLE_CHAR_W + 14.))
+                            .w(ui(*width as f32 * TABLE_CHAR_W + 14.))
                             .h_full()
                             .flex_shrink_0()
-                            .px(px(7.))
+                            .px(ui(7.))
                             .flex()
                             .items_center()
                             .overflow_hidden()
@@ -1254,7 +1265,8 @@ impl BodyView {
     fn render_text(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         // Enough for any size of the panel; what does not fit is clipped.
-        let in_view = (f32::from(window.viewport_size().height) / LINE_HEIGHT).ceil() as u64 + 1;
+        self.scale = crate::text_size::scale(window);
+        let in_view = (f32::from(window.viewport_size().height) / self.line_h()).ceil() as u64 + 1;
         let list_height = self.height();
         let lines = self.lines();
         let wrapping = self.wrapping();
@@ -1267,14 +1279,18 @@ impl BodyView {
             let rows_at_top = self.rows_of(self.place.line) as u64;
             (
                 self.wrapped_rows_in_view(in_view, cx),
-                thumb_size(list_height, lines.saturating_mul(rows_at_top)),
+                thumb_size(
+                    list_height,
+                    lines.saturating_mul(rows_at_top),
+                    self.line_h(),
+                ),
                 self.wrapped_share(),
             )
         } else {
             let max = self.max_position();
             (
                 self.rows_in_view(in_view, cx),
-                thumb_size(list_height, self.folds.rows(lines)),
+                thumb_size(list_height, self.folds.rows(lines), self.line_h()),
                 if max > 0. { self.position() / max } else { 0. },
             )
         };
@@ -1420,7 +1436,7 @@ impl BodyView {
             .text_color(rgb(c.text))
             .font_family(crate::MONO_FONT)
             .font_features(gpui::FontFeatures::disable_ligatures())
-            .text_size(px(12.))
+            .text_size(ui(12.))
             .cursor(gpui::CursorStyle::IBeam)
             .on_scroll_wheel(cx.listener(Self::on_wheel))
             .on_mouse_down(
@@ -1497,8 +1513,8 @@ impl BodyView {
                             .absolute()
                             .top(px(thumb_top))
                             .h(px(thumb))
-                            .left(px(2.))
-                            .right(px(2.))
+                            .left(ui(2.))
+                            .right(ui(2.))
                             .rounded_sm()
                             .bg(rgb(c.splitter)),
                     ),
@@ -1506,8 +1522,8 @@ impl BodyView {
     }
 }
 
-fn thumb_size(list_height: f32, lines: u64) -> f32 {
-    let content = lines as f32 * LINE_HEIGHT;
+fn thumb_size(list_height: f32, lines: u64, line_h: f32) -> f32 {
+    let content = lines as f32 * line_h;
     if content <= list_height {
         list_height
     } else {

@@ -3,11 +3,12 @@
 //! press, a drag or a double click finds the piece and the character under the
 //! mouse; the selection then runs from one spot to another, across pieces.
 
+use crate::text_size::ui;
 use crate::{colors::colors, input::word_around};
 use gpui::{
     AnyElement, App, Bounds, ElementId, GlobalElementId, HighlightStyle, InspectorElementId,
     LayoutId, MouseButton, MouseMoveEvent, MouseUpEvent, Pixels, Point, SharedString, StyledText,
-    TextLayout, Window, anchored, canvas, combine_highlights, deferred, div, prelude::*, px, rgb,
+    TextLayout, Window, anchored, canvas, combine_highlights, deferred, div, prelude::*, rgb,
 };
 use std::{cell::RefCell, collections::BTreeMap, ops::Range, rc::Rc};
 use tracewing_i18n::tr;
@@ -468,25 +469,25 @@ pub fn render_menu(
         anchored().position(at).child(
             div()
                 .id("copy-menu")
-                .min_w(px(160.))
-                .p(px(4.))
+                .min_w(ui(160.))
+                .p(ui(4.))
                 .flex()
                 .flex_col()
-                .rounded(px(10.))
+                .rounded(ui(10.))
                 .bg(rgb(c.surface))
                 .border_1()
                 .border_color(rgb(c.splitter))
                 .shadow_lg()
                 .font_family(crate::FONT)
-                .text_size(px(13.))
+                .text_size(ui(13.))
                 .on_mouse_down_out(move |_, window, cx| on_close(window, cx))
                 .children(items.into_iter().enumerate().map(|(nth, item)| {
                     let enabled = item.act.is_some();
                     div()
                         .id((item.id, nth))
-                        .px(px(12.))
-                        .py(px(5.))
-                        .rounded(px(8.))
+                        .px(ui(12.))
+                        .py(ui(5.))
+                        .rounded(ui(8.))
                         .text_color(rgb(if enabled { c.text } else { c.faint }))
                         .when(enabled, |d| d.cursor_pointer().hover(|s| s.bg(rgb(c.chip))))
                         .child(item.label)

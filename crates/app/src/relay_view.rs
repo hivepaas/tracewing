@@ -2,13 +2,14 @@
 //! to servers go through, as a company's network asks. Kept in `relay.toml`;
 //! applied to the next connection.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     input::TextInput,
     traffic::Traffic,
     widgets::{Reachable, eyebrow},
 };
-use gpui::{AppContext as _, Context, Entity, FontWeight, div, prelude::*, px, rgb};
+use gpui::{AppContext as _, Context, Entity, FontWeight, div, prelude::*, rgb};
 use tracewing_i18n::tr;
 use tracewing_proxy::{
     ca_key::{KeyPlace, OsKeychain},
@@ -152,9 +153,9 @@ impl Traffic {
         );
         let field = |input: Entity<TextInput>| {
             div()
-                .px(px(12.))
-                .py(px(8.))
-                .rounded(px(12.))
+                .px(ui(12.))
+                .py(ui(8.))
+                .rounded(ui(12.))
                 .bg(rgb(c.input))
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
@@ -162,19 +163,19 @@ impl Traffic {
         };
         let note = |text: String| {
             div()
-                .px(px(6.))
-                .text_size(px(12.))
+                .px(ui(6.))
+                .text_size(ui(12.))
                 .text_color(rgb(c.muted))
                 .child(text)
         };
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow(tr!("Go through another proxy")).px(px(6.)))
+            .child(eyebrow(tr!("Go through another proxy")).px(ui(6.)))
             .child(note(tr!(
                 "Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers."
             )))
@@ -185,7 +186,7 @@ impl Traffic {
             .child(field(bypass))
             .children(said.map(|(ok, text)| {
                 div()
-                    .px(px(6.))
+                    .px(ui(6.))
                     .text_color(rgb(if ok { c.text } else { c.error }))
                     .child(text)
             }))
@@ -193,14 +194,14 @@ impl Traffic {
                 div().flex().flex_row().child(
                     div()
                         .id("relay-apply")
-                        .h(px(32.))
-                        .px(px(14.))
-                        .rounded(px(16.))
+                        .h(ui(32.))
+                        .px(ui(14.))
+                        .rounded(ui(16.))
                         .flex()
                         .items_center()
                         .cursor_pointer()
                         .reachable()
-                        .text_size(px(12.5))
+                        .text_size(ui(12.5))
                         .font_weight(FontWeight::BOLD)
                         .bg(rgb(c.accent))
                         .text_color(rgb(c.on_accent))

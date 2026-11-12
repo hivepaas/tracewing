@@ -2,6 +2,7 @@
 //! one chosen in the body viewer. Everything about a message but its text is held in
 //! memory, a few dozen bytes each; the text is read as a row comes into view.
 
+use crate::text_size::ui;
 use crate::{
     body::Body,
     bodyview::{BodyView, summary},
@@ -12,7 +13,7 @@ use crate::{
 };
 use gpui::{
     Context, Div, Entity, FontWeight, ScrollStrategy, SharedString, Stateful,
-    UniformListScrollHandle, div, prelude::*, px, rgb, uniform_list,
+    UniformListScrollHandle, div, prelude::*, rgb, uniform_list,
 };
 use std::{collections::HashMap, ops::Range};
 use tracewing_i18n::tr;
@@ -158,7 +159,7 @@ impl Traffic {
         let session_dir = self.session_dir().to_owned();
         let Some(state) = self.inspector.messages.as_mut() else {
             return range
-                .map(|place| div().id(("message", place as u64)).h(px(ROW_HEIGHT)))
+                .map(|place| div().id(("message", place as u64)).h(ui(ROW_HEIGHT)))
                 .collect();
         };
         if state.previews.len() > PREVIEWS_MAX {
@@ -171,8 +172,8 @@ impl Traffic {
             .map(|place| {
                 let row = div()
                     .id(("message", place as u64))
-                    .h(px(ROW_HEIGHT))
-                    .px(px(6.));
+                    .h(ui(ROW_HEIGHT))
+                    .px(ui(6.));
                 let Some(message) = state.list.get(place) else {
                     return row;
                 };
@@ -201,16 +202,16 @@ impl Traffic {
                 row.flex()
                     .flex_row()
                     .items_center()
-                    .gap(px(8.))
-                    .rounded(px(8.))
+                    .gap(ui(8.))
+                    .rounded(ui(8.))
                     .cursor_pointer()
                     .when(chosen, |d| d.bg(rgb(c.selected_row)))
                     .font_family(crate::MONO_FONT)
                     .font_features(gpui::FontFeatures::disable_ligatures())
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .child(
                         div()
-                            .w(px(12.))
+                            .w(ui(12.))
                             .flex_shrink_0()
                             .font_weight(FontWeight::BOLD)
                             .text_color(rgb(color))
@@ -218,14 +219,14 @@ impl Traffic {
                     )
                     .child(
                         div()
-                            .w(px(64.))
+                            .w(ui(64.))
                             .flex_shrink_0()
                             .text_color(rgb(c.muted))
                             .child(time_text(message.at_us - first_at)),
                     )
                     .child(
                         div()
-                            .w(px(58.))
+                            .w(ui(58.))
                             .flex_shrink_0()
                             .text_color(rgb(c.muted))
                             .child(size_text(message.bytes)),
@@ -298,7 +299,7 @@ impl Traffic {
                 }
             });
             div()
-                .h(px(240.))
+                .h(ui(240.))
                 .flex_shrink_0()
                 .flex()
                 .flex_col()
@@ -306,9 +307,9 @@ impl Traffic {
                 .border_color(rgb(c.line))
                 .children(status.map(|status| {
                     div()
-                        .px(px(10.))
-                        .py(px(4.))
-                        .text_size(px(12.))
+                        .px(ui(10.))
+                        .py(ui(4.))
+                        .text_size(ui(12.))
                         .text_color(rgb(c.muted))
                         .child(status)
                 }))
@@ -320,7 +321,7 @@ impl Traffic {
                         .children(note.map(|note| {
                             div()
                                 .size_full()
-                                .p(px(14.))
+                                .p(ui(14.))
                                 .text_color(rgb(c.muted))
                                 .child(note)
                         })),
@@ -331,7 +332,7 @@ impl Traffic {
             .size_full()
             .flex()
             .flex_col()
-            .pt(px(6.))
+            .pt(ui(6.))
             .child(list)
             .children(sending)
             .children(viewer)
@@ -409,14 +410,14 @@ impl Traffic {
         let chip = |id: &'static str, label: String, on: bool| {
             div()
                 .id(id)
-                .h(px(26.))
-                .px(px(10.))
-                .rounded(px(13.))
+                .h(ui(26.))
+                .px(ui(10.))
+                .rounded(ui(13.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .font_weight(FontWeight::BOLD)
                 .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
                 .when(!on, |d| d.text_color(rgb(c.muted)))
@@ -429,18 +430,18 @@ impl Traffic {
                 .flex_shrink_0()
                 .border_t_1()
                 .border_color(rgb(c.line))
-                .px(px(10.))
-                .py(px(8.))
+                .px(ui(10.))
+                .py(ui(8.))
                 .flex()
                 .flex_col()
-                .gap(px(6.))
+                .gap(ui(6.))
                 .when(open, |d| {
                     d.child(
                         div()
                             .flex()
                             .flex_row()
                             .items_center()
-                            .gap(px(4.))
+                            .gap(ui(4.))
                             .child(
                                 chip(
                                     "send-to-server",
@@ -463,18 +464,18 @@ impl Traffic {
                             .flex()
                             .flex_row()
                             .items_end()
-                            .gap(px(8.))
+                            .gap(ui(8.))
                             .child(
                                 div()
                                     .id("socket-message")
                                     .flex_1()
                                     .min_w_0()
-                                    .px(px(10.))
-                                    .py(px(6.))
-                                    .rounded(px(10.))
+                                    .px(ui(10.))
+                                    .py(ui(6.))
+                                    .rounded(ui(10.))
                                     .bg(rgb(c.input))
                                     .font_family(crate::MONO_FONT)
-                                    .text_size(px(12.5))
+                                    .text_size(ui(12.5))
                                     .child(self.socket_message.clone())
                                     .on_key_down(cx.listener(
                                         |this, event: &gpui::KeyDownEvent, _, cx| {
@@ -489,16 +490,16 @@ impl Traffic {
                             .child(
                                 div()
                                     .id("send-socket-message")
-                                    .h(px(30.))
-                                    .px(px(14.))
-                                    .rounded(px(15.))
+                                    .h(ui(30.))
+                                    .px(ui(14.))
+                                    .rounded(ui(15.))
                                     .flex()
                                     .items_center()
                                     .cursor_pointer()
                                     .reachable()
                                     .bg(rgb(c.accent))
                                     .text_color(rgb(c.on_accent))
-                                    .text_size(px(12.5))
+                                    .text_size(ui(12.5))
                                     .font_weight(FontWeight::BOLD)
                                     .child(tr!("Send"))
                                     .on_click(
@@ -508,10 +509,10 @@ impl Traffic {
                     )
                 })
                 .children(
-                    problem.map(|why| div().text_size(px(12.)).text_color(rgb(c.error)).child(why)),
+                    problem.map(|why| div().text_size(ui(12.)).text_color(rgb(c.error)).child(why)),
                 )
                 .children((!calls.is_empty()).then(|| {
-                    div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                    div().text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                         "Written out in the body and sent as calldata: {calls}",
                         calls = calls.join(", ")
                     ))

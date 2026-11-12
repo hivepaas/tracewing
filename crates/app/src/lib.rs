@@ -58,6 +58,7 @@ pub mod snippets;
 pub mod syntax;
 pub mod system;
 pub mod table;
+pub mod text_size;
 pub mod traffic;
 pub mod trusted;
 pub mod widgets;

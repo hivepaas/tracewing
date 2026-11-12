@@ -1,6 +1,7 @@
 //! The `.proto` files chosen in Settings, which name the fields of Protobuf
 //! and gRPC bodies.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     detail::{Side, host_and_path},
@@ -8,9 +9,7 @@ use crate::{
     traffic::Traffic,
     widgets::{Reachable, eyebrow},
 };
-use gpui::{
-    Context, ElementId, FontWeight, PathPromptOptions, SharedString, div, prelude::*, px, rgb,
-};
+use gpui::{Context, ElementId, FontWeight, PathPromptOptions, SharedString, div, prelude::*, rgb};
 use std::{path::PathBuf, sync::Arc};
 use tracewing_i18n::{tr, tr_n};
 use tracewing_store::schema::Schema;
@@ -176,14 +175,14 @@ impl Traffic {
         let button = |id: &'static str, label: String| {
             div()
                 .id(id)
-                .h(px(32.))
-                .px(px(14.))
-                .rounded(px(16.))
+                .h(ui(32.))
+                .px(ui(14.))
+                .rounded(ui(16.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .font_weight(FontWeight::BOLD)
                 .bg(rgb(c.chip))
                 .text_color(rgb(c.on_chip))
@@ -225,9 +224,9 @@ impl Traffic {
                 .flex()
                 .flex_row()
                 .items_start()
-                .gap(px(10.))
-                .p(px(10.))
-                .rounded(px(12.))
+                .gap(ui(10.))
+                .p(ui(10.))
+                .rounded(ui(12.))
                 .bg(rgb(c.input))
                 .child(
                     div()
@@ -235,17 +234,17 @@ impl Traffic {
                         .min_w_0()
                         .flex()
                         .flex_col()
-                        .gap(px(2.))
+                        .gap(ui(2.))
                         .child(
                             div()
                                 .font_family(crate::MONO_FONT)
                                 .font_features(gpui::FontFeatures::disable_ligatures())
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .child(path.display().to_string()),
                         )
                         .child(
                             div()
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .text_color(rgb(c.muted))
                                 .child(summary),
                         )
@@ -253,12 +252,12 @@ impl Traffic {
                             div()
                                 .font_family(crate::MONO_FONT)
                                 .font_features(gpui::FontFeatures::disable_ligatures())
-                                .text_size(px(11.5))
+                                .text_size(ui(11.5))
                                 .text_color(rgb(c.error))
                                 .child(problem)
                         }))
                         .when(more > 0, |d| {
-                            d.child(div().text_size(px(11.5)).text_color(rgb(c.error)).child(
+                            d.child(div().text_size(ui(11.5)).text_color(rgb(c.error)).child(
                                 tr_n!(
                                     more,
                                     "and {count} more problem",
@@ -272,14 +271,14 @@ impl Traffic {
                     div()
                         .id(ElementId::NamedInteger("proto-remove".into(), i as u64))
                         .flex_shrink_0()
-                        .h(px(28.))
-                        .px(px(12.))
-                        .rounded(px(14.))
+                        .h(ui(28.))
+                        .px(ui(12.))
+                        .rounded(ui(14.))
                         .flex()
                         .items_center()
                         .cursor_pointer()
                         .reachable()
-                        .text_size(px(12.))
+                        .text_size(ui(12.))
                         .font_weight(FontWeight::BOLD)
                         .bg(rgb(c.chip))
                         .text_color(rgb(c.on_chip))
@@ -295,23 +294,23 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow(tr!("Protobuf schemas")).px(px(6.)))
+            .child(eyebrow(tr!("Protobuf schemas")).px(ui(6.)))
             .child(
                 div()
-                    .px(px(6.))
-                    .text_size(px(12.))
+                    .px(ui(6.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(tr!("Folders of .proto files, or descriptor sets made with protoc -o, to show Protobuf and gRPC bodies with their fields by name. A gRPC call finds its messages by its path; other Protobuf by the messageType its type names. They are read again when they change.")),
             )
             .children(rows)
             .children(self.protos_problem.clone().map(|problem| {
                 div()
-                    .px(px(6.))
-                    .text_size(px(12.))
+                    .px(ui(6.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.error))
                     .child(problem)
             }))
@@ -321,7 +320,7 @@ impl Traffic {
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(
                         button("protos-add-folder", tr!("Add a folder…"))
                             .on_click(cx.listener(|this, _, _, cx| this.ask_for_protos(true, cx))),
@@ -341,7 +340,7 @@ impl Traffic {
                     .when(busy, |d| {
                         d.child(
                             div()
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .text_color(rgb(c.muted))
                                 .child(tr!("Reading…")),
                         )
@@ -349,9 +348,9 @@ impl Traffic {
             )
             .child(
                 div()
-                    .px(px(6.))
-                    .pt(px(4.))
-                    .text_size(px(12.))
+                    .px(ui(6.))
+                    .pt(ui(4.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(tr!("Or ask a server that offers gRPC reflection for its files. https:// goes through tracewing; http:// is gRPC with no TLS, straight to the server.")),
             )
@@ -360,20 +359,20 @@ impl Traffic {
                     .flex()
                     .flex_row()
                     .items_center()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(
                         div()
                             .flex_1()
                             .min_w_0()
-                            .h(px(32.))
-                            .px(px(12.))
-                            .rounded(px(16.))
+                            .h(ui(32.))
+                            .px(ui(12.))
+                            .rounded(ui(16.))
                             .flex()
                             .items_center()
                             .bg(rgb(c.input))
                             .font_family(crate::MONO_FONT)
                             .font_features(gpui::FontFeatures::disable_ligatures())
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .on_key_down(cx.listener(|this, ev: &gpui::KeyDownEvent, _, cx| {
                                 if ev.keystroke.key == "enter" {
                                     this.fetch_protos(cx);
@@ -395,8 +394,8 @@ impl Traffic {
                     Err(text) => (text, c.error),
                 };
                 div()
-                    .px(px(6.))
-                    .text_size(px(12.))
+                    .px(ui(6.))
+                    .text_size(ui(12.))
                     .text_color(rgb(color))
                     .child(text)
             }))
@@ -469,16 +468,16 @@ impl Traffic {
         Some(
             div()
                 .id("read-as")
-                .h(px(28.))
-                .px(px(10.))
-                .rounded(px(14.))
+                .h(ui(28.))
+                .px(ui(10.))
+                .rounded(ui(14.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
                 .when(open, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
                 .when(!open, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .font_weight(FontWeight::BOLD)
                 .child(label)
                 .on_click(cx.listener(|this, _, window, cx| this.toggle_read_as(window, cx))),
@@ -501,14 +500,14 @@ impl Traffic {
         let line = |id: ElementId, label: SharedString, on: bool| {
             div()
                 .id(id)
-                .px(px(10.))
-                .py(px(5.))
-                .rounded(px(8.))
+                .px(ui(10.))
+                .py(ui(5.))
+                .rounded(ui(8.))
                 .cursor_pointer()
                 .reachable()
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
                 .hover(|d| d.bg(rgb(c.chip)))
                 .child(label)
@@ -530,8 +529,8 @@ impl Traffic {
                 .size_full()
                 .flex()
                 .flex_col()
-                .gap(px(8.))
-                .p(px(12.))
+                .gap(ui(8.))
+                .p(ui(12.))
                 .on_key_down(cx.listener(|this, ev: &gpui::KeyDownEvent, _, cx| {
                     if ev.keystroke.key == "escape" {
                         this.inspector.read_as = None;
@@ -541,19 +540,19 @@ impl Traffic {
                 }))
                 .child(
                     div()
-                        .h(px(30.))
-                        .px(px(10.))
-                        .rounded(px(15.))
+                        .h(ui(30.))
+                        .px(ui(10.))
+                        .rounded(ui(15.))
                         .flex()
                         .items_center()
                         .bg(rgb(c.input))
-                        .text_size(px(12.5))
+                        .text_size(ui(12.5))
                         .child(div().flex_1().min_w_0().child(input)),
                 )
                 .child(
                     div()
-                        .px(px(4.))
-                        .text_size(px(12.))
+                        .px(ui(4.))
+                        .text_size(ui(12.))
                         .text_color(rgb(c.muted))
                         .child(where_),
                 )
@@ -565,7 +564,7 @@ impl Traffic {
                         .overflow_y_scroll()
                         .flex()
                         .flex_col()
-                        .gap(px(1.))
+                        .gap(ui(1.))
                         .child(
                             line(
                                 "read-as-found".into(),
@@ -594,9 +593,9 @@ impl Traffic {
                         .when(more > 0, |d| {
                             d.child(
                                 div()
-                                    .px(px(10.))
-                                    .py(px(5.))
-                                    .text_size(px(12.))
+                                    .px(ui(10.))
+                                    .py(ui(5.))
+                                    .text_size(ui(12.))
                                     .text_color(rgb(c.muted))
                                     .child(tr_n!(
                                         more,

@@ -1570,6 +1570,15 @@ ta8606963 = { $key }: "{ $text }"은(는) 정수가 아닙니다
 # {key}: must not be negative
 t9c4debaa = { $key }: 음수일 수 없습니다
 
+# {size} (default)
+t5606e442 = { $size } (기본값)
+
+# Text size
+t2c041143 = 글자 크기
+
+# In px, for the text of lists and bodies. Everything grows with it. Applies at once.
+tb8052ae6 = px 단위로, 목록과 본문의 글자 크기입니다. 나머지도 함께 커집니다. 바로 적용됩니다.
+
 # Appearance
 t31018b9f = 모양
 

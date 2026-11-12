@@ -1570,6 +1570,15 @@ ta8606963 = { $key }: "{ $text }" bukan bilangan bulat
 # {key}: must not be negative
 t9c4debaa = { $key }: tidak boleh negatif
 
+# {size} (default)
+t5606e442 = { $size } (bawaan)
+
+# Text size
+t2c041143 = Ukuran teks
+
+# In px, for the text of lists and bodies. Everything grows with it. Applies at once.
+tb8052ae6 = Dalam px, untuk teks daftar dan isi. Semuanya ikut membesar. Langsung berlaku.
+
 # Appearance
 t31018b9f = Tampilan
 

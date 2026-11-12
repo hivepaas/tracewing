@@ -1,6 +1,7 @@
 //! The inspector: one flow, in full. Bodies are unpacked to a file on a background
 //! thread and mapped from there, so a body of any size opens without a pause.
 
+use crate::text_size::ui;
 use crate::{
     body::Body,
     bodyview::{BodyMode, BodyView},
@@ -700,13 +701,13 @@ impl Traffic {
             .flex()
             .flex_row()
             .items_center()
-            .gap(px(6.))
+            .gap(ui(6.))
             .when(!detached, |row| {
                 row.child(
                     div()
                         .id("inspector-handle")
-                        .size(px(28.))
-                        .rounded(px(10.))
+                        .size(ui(28.))
+                        .rounded(ui(10.))
                         .flex()
                         .items_center()
                         .justify_center()
@@ -724,11 +725,11 @@ impl Traffic {
             .child(eyebrow(tr!("Inspector")));
         let panel = div()
             .size_full()
-            .p(px(14.))
-            .rounded(px(22.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .flex()
             .flex_col()
-            .gap(px(12.))
+            .gap(ui(12.))
             .overflow_hidden()
             .bg(rgb(c.surface))
             .child(handle);
@@ -775,12 +776,12 @@ impl Traffic {
             .flex_row()
             .flex_shrink_0()
             .items_center()
-            .gap(px(10.))
+            .gap(ui(10.))
             .child(
                 div()
                     .flex_1()
                     .min_w_0()
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(text),
             )
@@ -788,16 +789,16 @@ impl Traffic {
                 div()
                     .id("make-rule")
                     .flex_shrink_0()
-                    .h(px(28.))
-                    .px(px(10.))
-                    .rounded(px(14.))
+                    .h(ui(28.))
+                    .px(ui(10.))
+                    .rounded(ui(14.))
                     .flex()
                     .items_center()
                     .cursor_pointer()
                     .reachable()
                     .bg(rgb(c.chip))
                     .text_color(rgb(c.on_chip))
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .font_weight(FontWeight::BOLD)
                     .child(tr!("Make a rule"))
                     .on_click(cx.listener(move |view, _, _, cx| {
@@ -808,16 +809,16 @@ impl Traffic {
                 div()
                     .id("decrypt-choice")
                     .flex_shrink_0()
-                    .h(px(28.))
-                    .px(px(10.))
-                    .rounded(px(14.))
+                    .h(ui(28.))
+                    .px(ui(10.))
+                    .rounded(ui(14.))
                     .flex()
                     .items_center()
                     .cursor_pointer()
                     .reachable()
                     .bg(rgb(c.chip))
                     .text_color(rgb(c.on_chip))
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .font_weight(FontWeight::BOLD)
                     .child(if left_alone {
                         tr!("Decrypt this host")
@@ -848,8 +849,8 @@ impl Traffic {
             div()
                 .id(id)
                 .flex_1()
-                .h(px(30.))
-                .rounded(px(14.))
+                .h(ui(30.))
+                .rounded(ui(14.))
                 .flex()
                 .items_center()
                 .justify_center()
@@ -866,9 +867,9 @@ impl Traffic {
             let on = sides == this;
             div()
                 .id(id)
-                .size(px(30.))
+                .size(ui(30.))
                 .flex_shrink_0()
-                .rounded(px(14.))
+                .rounded(ui(14.))
                 .flex()
                 .items_center()
                 .justify_center()
@@ -883,9 +884,9 @@ impl Traffic {
             .flex()
             .flex_row()
             .flex_shrink_0()
-            .gap(px(4.))
-            .p(px(4.))
-            .rounded(px(18.))
+            .gap(ui(4.))
+            .p(ui(4.))
+            .rounded(ui(18.))
             .bg(rgb(c.code))
             // Both shown, each pane says which it is.
             .when(sides == Sides::Tabs, |d| {
@@ -896,8 +897,8 @@ impl Traffic {
                 d.child(
                     div()
                         .flex_1()
-                        .h(px(30.))
-                        .px(px(12.))
+                        .h(ui(30.))
+                        .px(ui(12.))
                         .flex()
                         .items_center()
                         .font_weight(FontWeight::BOLD)
@@ -905,7 +906,7 @@ impl Traffic {
                         .child(tr!("Request and response")),
                 )
             })
-            .child(div().w(px(1.)).my(px(6.)).bg(rgb(c.line)))
+            .child(div().w(ui(1.)).my(ui(6.)).bg(rgb(c.line)))
             .child(switch(
                 "sides-tabs",
                 "tabs",
@@ -1004,14 +1005,14 @@ impl Traffic {
             let on = mode == to;
             div()
                 .id(id)
-                .h(px(24.))
-                .px(px(10.))
-                .rounded(px(12.))
+                .h(ui(24.))
+                .px(ui(10.))
+                .rounded(ui(12.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .font_weight(FontWeight::BOLD)
                 .when(on, |d| d.bg(rgb(c.tab_on)).text_color(rgb(c.text)))
                 .when(!on, |d| d.text_color(rgb(c.muted)))
@@ -1022,8 +1023,8 @@ impl Traffic {
             div()
                 .flex()
                 .flex_row()
-                .p(px(2.))
-                .rounded(px(14.))
+                .p(ui(2.))
+                .rounded(ui(14.))
                 .bg(rgb(c.chip))
                 .when(table, |d| {
                     d.child(half("body-as-table", tr!("Table"), BodyMode::Table))
@@ -1141,7 +1142,7 @@ impl Traffic {
                 .reachable()
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(if on { c.text } else { c.muted }))
-                .pb(px(3.))
+                .pb(ui(3.))
                 .border_b_2()
                 .border_color(rgb(if on { c.link } else { c.surface }))
                 .child(label)
@@ -1154,9 +1155,9 @@ impl Traffic {
             .flex_wrap()
             .flex_shrink_0()
             .items_center()
-            .gap_x(px(14.))
-            .gap_y(px(8.))
-            .text_size(px(12.5))
+            .gap_x(ui(14.))
+            .gap_y(ui(8.))
+            .text_size(ui(12.5))
             .when(
                 self.inspector.llm.is_some()
                     || self
@@ -1217,7 +1218,7 @@ impl Traffic {
             .child(div().flex_1())
             .children(summary_text.map(|text| {
                 div()
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(text)
             }))
@@ -1229,16 +1230,16 @@ impl Traffic {
                     d.child(
                         div()
                             .id("save-body")
-                            .h(px(28.))
-                            .px(px(10.))
-                            .rounded(px(14.))
+                            .h(ui(28.))
+                            .px(ui(10.))
+                            .rounded(ui(14.))
                             .flex()
                             .items_center()
                             .cursor_pointer()
                             .reachable()
                             .bg(rgb(c.chip))
                             .text_color(rgb(c.on_chip))
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .font_weight(FontWeight::BOLD)
                             .child(tr!("Save body"))
                             .on_click(cx.listener(|view, _, _, cx| view.ask_save_body(cx))),
@@ -1251,16 +1252,16 @@ impl Traffic {
                     let small = |id: &'static str, label: String| {
                         div()
                             .id(id)
-                            .h(px(28.))
-                            .px(px(10.))
-                            .rounded(px(14.))
+                            .h(ui(28.))
+                            .px(ui(10.))
+                            .rounded(ui(14.))
                             .flex()
                             .items_center()
                             .cursor_pointer()
                             .reachable()
                             .bg(rgb(c.chip))
                             .text_color(rgb(c.on_chip))
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .font_weight(FontWeight::BOLD)
                             .child(label)
                     };
@@ -1269,7 +1270,7 @@ impl Traffic {
                             .flex()
                             .flex_row()
                             .flex_wrap()
-                            .gap(px(6.))
+                            .gap(ui(6.))
                             .child(
                                 small("send-again", tr!("Send again")).on_click(
                                     cx.listener(|view, _, _, cx| view.send_flow_again(cx)),
@@ -1321,9 +1322,9 @@ impl Traffic {
         let item = |language: Language| {
             div()
                 .id(ElementId::Name(format!("copy-as-{language:?}").into()))
-                .h(px(30.))
-                .px(px(10.))
-                .rounded(px(8.))
+                .h(ui(30.))
+                .px(ui(10.))
+                .rounded(ui(8.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
@@ -1337,23 +1338,23 @@ impl Traffic {
             .child(
                 div()
                     .id("copy-as")
-                    .h(px(28.))
-                    .px(px(10.))
-                    .rounded(px(14.))
+                    .h(ui(28.))
+                    .px(ui(10.))
+                    .rounded(ui(14.))
                     .flex()
                     .items_center()
                     .cursor_pointer()
                     .reachable()
                     .bg(rgb(if open { c.tonal } else { c.chip }))
                     .text_color(rgb(if open { c.on_tonal } else { c.on_chip }))
-                    .text_size(px(12.))
+                    .text_size(ui(12.))
                     .font_weight(FontWeight::BOLD)
                     .child(tr!("Copy as…"))
                     .on_click(cx.listener(move |view, _, _, cx| view.set_copy_menu(!open, cx))),
             )
             .when(open, |d| {
                 d.child(
-                    div().absolute().top(px(32.)).left_0().child(deferred(
+                    div().absolute().top(ui(32.)).left_0().child(deferred(
                         anchored()
                             .anchor(Anchor::TopLeft)
                             .snap_to_window_with_margin(px(8.))
@@ -1361,16 +1362,16 @@ impl Traffic {
                                 div()
                                     .id("copy-as-list")
                                     .occlude()
-                                    .w(px(190.))
-                                    .p(px(6.))
-                                    .rounded(px(14.))
+                                    .w(ui(190.))
+                                    .p(ui(6.))
+                                    .rounded(ui(14.))
                                     .border_1()
                                     .border_color(rgb(c.line))
                                     .bg(rgb(c.surface))
                                     .shadow_lg()
                                     .flex()
                                     .flex_col()
-                                    .text_size(px(13.))
+                                    .text_size(ui(13.))
                                     .text_color(rgb(c.text))
                                     .children(Language::ALL.into_iter().map(item))
                                     .on_mouse_down_out(
@@ -1392,7 +1393,7 @@ impl Traffic {
         let well = div()
             .flex_1()
             .min_h_0()
-            .rounded(px(16.))
+            .rounded(ui(16.))
             .overflow_hidden()
             .bg(rgb(c.code));
         let sel = self.inspector.select.clone();
@@ -1472,7 +1473,7 @@ impl Traffic {
             let well = div()
                 .flex_1()
                 .min_h_0()
-                .rounded(px(16.))
+                .rounded(ui(16.))
                 .overflow_hidden()
                 .bg(rgb(c.code))
                 .border_1()
@@ -1517,7 +1518,7 @@ impl Traffic {
                     .min_h_0()
                     .flex()
                     .flex_col()
-                    .gap(px(6.))
+                    .gap(ui(6.))
                     .on_mouse_down(
                         MouseButton::Left,
                         cx.listener(move |view, _, _, cx| view.choose_side(side, cx)),
@@ -1530,8 +1531,8 @@ impl Traffic {
                         div()
                             .flex()
                             .flex_row()
-                            .gap(px(8.))
-                            .text_size(px(12.))
+                            .gap(ui(8.))
+                            .text_size(ui(12.))
                             .child(
                                 div()
                                     .font_weight(FontWeight::BOLD)
@@ -1547,7 +1548,7 @@ impl Traffic {
             .flex_1()
             .min_h_0()
             .flex()
-            .gap(px(8.))
+            .gap(ui(8.))
             .map(|d| {
                 if self.layout.sides == Sides::Stacked {
                     d.flex_col()
@@ -1564,7 +1565,7 @@ impl Traffic {
 fn picture_well(path: std::path::PathBuf) -> AnyElement {
     div()
         .size_full()
-        .p(px(12.))
+        .p(ui(12.))
         .flex()
         .items_center()
         .justify_center()
@@ -1585,11 +1586,11 @@ fn picture_well(path: std::path::PathBuf) -> AnyElement {
 
 fn body_well(well: Div, state: &BodyState) -> Div {
     match state {
-        BodyState::Shown(view) => well.py(px(8.)).child(view.clone()),
+        BodyState::Shown(view) => well.py(ui(8.)).child(view.clone()),
         BodyState::Image(path, _) => well.child(
             div()
                 .size_full()
-                .p(px(12.))
+                .p(ui(12.))
                 .flex()
                 .items_center()
                 .justify_center()
@@ -1679,22 +1680,22 @@ impl Traffic {
                     .flex()
                     .flex_row()
                     .items_center()
-                    .gap(px(8.))
-                    .px(px(12.))
-                    .pt(px(10.))
-                    .pb(px(6.))
+                    .gap(ui(8.))
+                    .px(ui(12.))
+                    .pt(ui(10.))
+                    .pb(ui(6.))
                     .child(eyebrow(tr!("Read from {from}", from = from.as_ref())))
                     .child(chip(label, c.chip, c.on_chip))
                     .child(div().flex_1())
                     .child(
                         div()
                             .id("close-opened")
-                            .px(px(10.))
-                            .py(px(4.))
+                            .px(ui(10.))
+                            .py(ui(4.))
                             .rounded_full()
                             .cursor_pointer()
                             .reachable()
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .font_weight(FontWeight::BOLD)
                             .bg(rgb(c.chip))
                             .text_color(rgb(c.on_chip))
@@ -1704,7 +1705,7 @@ impl Traffic {
                             })),
                     ),
             )
-            .child(div().flex_1().min_h_0().py(px(4.)).child(shown))
+            .child(div().flex_1().min_h_0().py(ui(4.)).child(shown))
     }
 
     /// The next reading of what is selected, wherever the selection is: in a
@@ -2002,7 +2003,7 @@ fn write_copied(copied: Copied, cx: &mut gpui::App) -> bool {
 fn note(text: impl Into<SharedString>) -> Div {
     div()
         .size_full()
-        .p(px(16.))
+        .p(ui(16.))
         .flex()
         .items_center()
         .justify_center()
@@ -2017,16 +2018,16 @@ fn render_title(detail: &Detail) -> impl IntoElement {
         .flex_row()
         .flex_shrink_0()
         .items_start()
-        .gap(px(10.))
+        .gap(ui(10.))
         .child(
             div()
                 .flex_shrink_0()
-                .px(px(9.))
-                .py(px(3.))
-                .rounded(px(8.))
+                .px(ui(9.))
+                .py(ui(3.))
+                .rounded(ui(8.))
                 .bg(rgb(c.tonal))
                 .text_color(rgb(c.on_tonal))
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .font_weight(FontWeight::BOLD)
                 .child(detail.method.clone()),
         )
@@ -2034,11 +2035,11 @@ fn render_title(detail: &Detail) -> impl IntoElement {
             div()
                 .flex_1()
                 .min_w_0()
-                .max_h(px(58.))
+                .max_h(ui(58.))
                 .overflow_hidden()
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .line_height(relative(1.5))
                 .child(detail.url.clone()),
         )
@@ -2069,7 +2070,7 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
             .flex()
             .flex_row()
             .flex_shrink_0()
-            .gap(px(6.))
+            .gap(ui(6.))
             .child(plain(tr!("Tunnel, not decrypted")));
     }
     let size = size_chip_text(&detail.request, &detail.response);
@@ -2078,7 +2079,7 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
         .flex_row()
         .flex_wrap()
         .flex_shrink_0()
-        .gap(px(6.))
+        .gap(ui(6.))
         .child(chip(status_text(detail.status), ground, ink))
         .children(detail.grpc_status.map(|code| {
             let (ground, ink) = status_colors(Some(crate::grpc::as_http(code)));
@@ -2088,7 +2089,7 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
                 text.push_str(&message);
             }
             // A message can be long: it wraps, as an error does.
-            chip(text, ground, ink).max_w_full().rounded(px(12.))
+            chip(text, ground, ink).max_w_full().rounded(ui(12.))
         }))
         .children(
             detail
@@ -2114,7 +2115,7 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
             // wrong: this is what says it. The message is in the body.
             let (ground, ink) = status_colors(Some(500));
             let text = format!("RPC {}", tracewing_store::jsonrpc::code_text(code));
-            chip(text, ground, ink).max_w_full().rounded(px(12.))
+            chip(text, ground, ink).max_w_full().rounded(ui(12.))
         }))
         .child(plain(detail.protocols()))
         .children(if detail.open {
@@ -2132,7 +2133,7 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
                 .map(|error| {
                     chip(error, c.error_ground, c.error)
                         .max_w_full()
-                        .rounded(px(12.))
+                        .rounded(ui(12.))
                 }),
         )
 }
@@ -2170,19 +2171,19 @@ fn render_timing(detail: &Detail) -> Option<impl IntoElement> {
             .flex()
             .flex_row()
             .items_center()
-            .gap(px(10.))
-            .text_size(px(12.))
+            .gap(ui(10.))
+            .text_size(ui(12.))
             .child(
                 div()
-                    .w(px(64.))
+                    .w(ui(64.))
                     .text_color(rgb(c.muted))
                     .child(phase.name()),
             )
             .child(
                 div()
                     .flex_1()
-                    .h(px(8.))
-                    .rounded(px(4.))
+                    .h(ui(8.))
+                    .rounded(ui(4.))
                     .relative()
                     .overflow_hidden()
                     .bg(rgb(c.track))
@@ -2193,14 +2194,14 @@ fn render_timing(detail: &Detail) -> Option<impl IntoElement> {
                             .bottom_0()
                             .left(relative(phase.start as f32 / total as f32))
                             .w(relative(phase.len as f32 / total as f32))
-                            .min_w(px(3.))
-                            .rounded(px(4.))
+                            .min_w(ui(3.))
+                            .rounded(ui(4.))
                             .bg(rgb(color(phase.label))),
                     ),
             )
             .child(
                 div()
-                    .w(px(70.))
+                    .w(ui(70.))
                     .flex()
                     .justify_end()
                     .font_weight(FontWeight::BOLD)
@@ -2219,16 +2220,16 @@ fn render_timing(detail: &Detail) -> Option<impl IntoElement> {
             .flex()
             .flex_col()
             .flex_shrink_0()
-            .gap(px(5.))
-            .px(px(12.))
-            .py(px(10.))
-            .rounded(px(16.))
+            .gap(ui(5.))
+            .px(ui(12.))
+            .py(ui(10.))
+            .rounded(ui(16.))
             .bg(rgb(c.code))
             .children(phases.into_iter().map(bar))
             .children(reused.map(|text| {
                 div()
-                    .pt(px(2.))
-                    .text_size(px(11.5))
+                    .pt(ui(2.))
+                    .text_size(ui(11.5))
                     .text_color(rgb(c.muted))
                     .child(text)
             })),
@@ -2254,7 +2255,7 @@ fn render_connection(
         div()
             .flex()
             .flex_row()
-            .gap(px(10.))
+            .gap(ui(10.))
             .child(
                 div()
                     .w(relative(0.26))
@@ -2271,9 +2272,9 @@ fn render_connection(
     };
     let heading = |text: String| {
         div()
-            .pt(px(6.))
+            .pt(ui(6.))
             .font_family(crate::FONT)
-            .text_size(px(11.))
+            .text_size(ui(11.))
             .font_weight(FontWeight::BOLD)
             .text_color(rgb(c.muted))
             .child(sel.piece(text, "\n\n", Vec::new()))
@@ -2290,13 +2291,13 @@ fn render_connection(
         .id("connection")
         .size_full()
         .overflow_y_scroll()
-        .p(px(12.))
+        .p(ui(12.))
         .flex()
         .flex_col()
-        .gap(px(6.))
+        .gap(ui(6.))
         .font_family(crate::MONO_FONT)
         .font_features(gpui::FontFeatures::disable_ligatures())
-        .text_size(px(12.))
+        .text_size(ui(12.))
         .child(heading(tr!("CLIENT")))
         .child(row(tr!("App"), app))
         .children(naming.map(|input| {
@@ -2304,7 +2305,7 @@ fn render_connection(
                 .flex()
                 .flex_row()
                 .items_center()
-                .gap(px(10.))
+                .gap(ui(10.))
                 .child(
                     div()
                         .w(relative(0.26))
@@ -2317,10 +2318,10 @@ fn render_connection(
                         .id("device-name")
                         .flex_1()
                         .min_w_0()
-                        .max_w(px(320.))
-                        .h(px(28.))
-                        .px(px(10.))
-                        .rounded(px(10.))
+                        .max_w(ui(320.))
+                        .h(ui(28.))
+                        .px(ui(10.))
+                        .rounded(ui(10.))
                         .flex()
                         .items_center()
                         .bg(rgb(c.input))
@@ -2388,8 +2389,8 @@ fn render_connection(
     let known = |text: String| (!text.is_empty()).then_some(text);
     list.children(tls.error.map(|error| {
         div()
-            .p(px(10.))
-            .rounded(px(10.))
+            .p(ui(10.))
+            .rounded(ui(10.))
             .bg(rgb(c.error_ground))
             .text_color(rgb(c.error))
             .font_family(crate::FONT)
@@ -2444,12 +2445,12 @@ fn render_certificate(cert: Certificate, now: i64, sel: &Selection) -> impl Into
     };
     let line = |text: String| div().child(sel.piece(text, "\n", Vec::new()));
     div()
-        .p(px(10.))
-        .rounded(px(10.))
+        .p(ui(10.))
+        .rounded(ui(10.))
         .bg(rgb(c.surface))
         .flex()
         .flex_col()
-        .gap(px(3.))
+        .gap(ui(3.))
         .child(
             div()
                 .font_family(crate::FONT)
@@ -2509,7 +2510,7 @@ fn render_headers(
         div()
             .flex()
             .flex_row()
-            .gap(px(10.))
+            .gap(ui(10.))
             .child(
                 div()
                     .w(relative(0.34))
@@ -2537,20 +2538,20 @@ fn render_headers(
         .id("headers")
         .size_full()
         .overflow_y_scroll()
-        .p(px(12.))
+        .p(ui(12.))
         .flex()
         .flex_col()
-        .gap(px(4.))
+        .gap(ui(4.))
         .font_family(crate::MONO_FONT)
         .font_features(gpui::FontFeatures::disable_ligatures())
-        .text_size(px(12.))
+        .text_size(ui(12.))
         .children(headers.iter().map(row))
         .when(!trailers.is_empty(), |d| {
             d.child(
                 div()
-                    .pt(px(10.))
+                    .pt(ui(10.))
                     .font_family(crate::FONT)
-                    .text_size(px(11.5))
+                    .text_size(ui(11.5))
                     .font_weight(FontWeight::BOLD)
                     .text_color(rgb(c.muted))
                     .child(sel.piece(tr!("Trailers, sent after the body"), "\n", Vec::new())),
@@ -2575,13 +2576,13 @@ fn render_fields(found: Vec<Field>, sel: &Selection, read: &InspectorState) -> i
         .id("fields")
         .size_full()
         .overflow_y_scroll()
-        .p(px(12.))
+        .p(ui(12.))
         .flex()
         .flex_col()
-        .gap(px(4.))
+        .gap(ui(4.))
         .font_family(crate::MONO_FONT)
         .font_features(gpui::FontFeatures::disable_ligatures())
-        .text_size(px(12.))
+        .text_size(ui(12.))
         .children(found.into_iter().map(|field| {
             let field_name = field.name.clone();
             let name = sel.piece(field.name, "\n", Vec::new());
@@ -2611,7 +2612,7 @@ fn render_fields(found: Vec<Field>, sel: &Selection, read: &InspectorState) -> i
             div()
                 .flex()
                 .flex_row()
-                .gap(px(10.))
+                .gap(ui(10.))
                 .child(
                     div()
                         .w(relative(0.34))
@@ -2660,13 +2661,13 @@ fn render_cookies(
         .id("cookies")
         .size_full()
         .overflow_y_scroll()
-        .p(px(12.))
+        .p(ui(12.))
         .flex()
         .flex_col()
-        .gap(px(8.))
+        .gap(ui(8.))
         .font_family(crate::MONO_FONT)
         .font_features(gpui::FontFeatures::disable_ligatures())
-        .text_size(px(12.))
+        .text_size(ui(12.))
         .children(found.into_iter().map(|cookie| {
             let jwt = Jwt::find(&cookie.value);
             let drawn = read.reading_under(&cookie.name, &cookie.value);
@@ -2674,7 +2675,7 @@ fn render_cookies(
             div()
                 .flex()
                 .flex_row()
-                .gap(px(10.))
+                .gap(ui(10.))
                 .child(
                     div()
                         .w(relative(0.34))
@@ -2688,7 +2689,7 @@ fn render_cookies(
                         .min_w_0()
                         .flex()
                         .flex_col()
-                        .gap(px(2.))
+                        .gap(ui(2.))
                         .child({
                             let marks = read.marks_of(
                                 &cookie_name,
@@ -2699,7 +2700,7 @@ fn render_cookies(
                         })
                         .when(!cookie.attributes.is_empty(), |d| {
                             d.child(
-                                div().text_size(px(11.5)).text_color(rgb(c.muted)).child(
+                                div().text_size(ui(11.5)).text_color(rgb(c.muted)).child(
                                     sel.piece(cookie.attributes.join("; "), "; ", Vec::new()),
                                 ),
                             )
@@ -2720,7 +2721,7 @@ fn render_reading(reading: &Reading, sel: &Selection) -> Div {
         div()
             .flex()
             .flex_row()
-            .gap(px(8.))
+            .gap(ui(8.))
             .child(
                 div()
                     .w(relative(0.3))
@@ -2748,13 +2749,13 @@ fn render_reading(reading: &Reading, sel: &Selection) -> Div {
         Shown::Bytes { .. } => vec![line(reading.beside())],
     };
     div()
-        .mt(px(6.))
-        .p(px(10.))
-        .rounded(px(10.))
+        .mt(ui(6.))
+        .p(ui(10.))
+        .rounded(ui(10.))
         .bg(rgb(c.surface))
         .flex()
         .flex_col()
-        .gap(px(2.))
+        .gap(ui(2.))
         .child(
             div()
                 .font_family(crate::FONT)
@@ -2777,19 +2778,19 @@ fn render_jwt(jwt: Jwt, sel: &Selection) -> Div {
     };
     let label = |text: String| {
         div()
-            .mt(px(4.))
-            .text_size(px(11.))
+            .mt(ui(4.))
+            .text_size(ui(11.))
             .text_color(rgb(c.muted))
             .child(sel.piece(text, "\n", Vec::new()))
     };
     div()
-        .mt(px(6.))
-        .p(px(10.))
-        .rounded(px(10.))
+        .mt(ui(6.))
+        .p(ui(10.))
+        .rounded(ui(10.))
         .bg(rgb(c.surface))
         .flex()
         .flex_col()
-        .gap(px(2.))
+        .gap(ui(2.))
         .child(
             div()
                 .font_family(crate::FONT)

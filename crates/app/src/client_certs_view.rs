@@ -2,15 +2,14 @@
 //! a PEM certificate and its key for the hosts a pattern names. Each applies
 //! to the next connection; the files stay where they are.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     input::TextInput,
     traffic::Traffic,
     widgets::{Reachable, eyebrow},
 };
-use gpui::{
-    AppContext as _, Context, Entity, FontWeight, PathPromptOptions, div, prelude::*, px, rgb,
-};
+use gpui::{AppContext as _, Context, Entity, FontWeight, PathPromptOptions, div, prelude::*, rgb};
 use std::path::PathBuf;
 use tracewing_i18n::tr;
 use tracewing_proxy::client_certs::{ClientCert, ClientCertSettings};
@@ -142,14 +141,14 @@ impl Traffic {
         let button = |id: &'static str, label: String| {
             div()
                 .id(id)
-                .h(px(32.))
-                .px(px(14.))
-                .rounded(px(16.))
+                .h(ui(32.))
+                .px(ui(14.))
+                .rounded(ui(16.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .font_weight(FontWeight::BOLD)
                 .bg(rgb(c.chip))
                 .text_color(rgb(c.on_chip))
@@ -162,11 +161,11 @@ impl Traffic {
             };
             let problem = problems.get(at).cloned().flatten();
             div()
-                .px(px(6.))
+                .px(ui(6.))
                 .flex()
                 .flex_row()
                 .items_center()
-                .gap(px(10.))
+                .gap(ui(10.))
                 .child(
                     div()
                         .flex_1()
@@ -177,18 +176,18 @@ impl Traffic {
                             div()
                                 .flex()
                                 .flex_row()
-                                .gap(px(10.))
+                                .gap(ui(10.))
                                 .child(div().font_weight(FontWeight::BOLD).child(cert.host.clone()))
                                 .child(
                                     div()
-                                        .text_size(px(12.))
+                                        .text_size(ui(12.))
                                         .text_color(rgb(c.muted))
                                         .child(files),
                                 ),
                         )
                         .children(problem.map(|why| {
                             div()
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .text_color(rgb(c.error))
                                 .child(tr!("Not used: {why}", why = why))
                         })),
@@ -196,14 +195,14 @@ impl Traffic {
                 .child(
                     div()
                         .id(("remove-client-cert", at))
-                        .h(px(28.))
-                        .px(px(12.))
-                        .rounded(px(14.))
+                        .h(ui(28.))
+                        .px(ui(12.))
+                        .rounded(ui(14.))
                         .flex()
                         .items_center()
                         .cursor_pointer()
                         .reachable()
-                        .text_size(px(12.))
+                        .text_size(ui(12.))
                         .font_weight(FontWeight::BOLD)
                         .bg(rgb(c.chip))
                         .text_color(rgb(c.on_chip))
@@ -215,24 +214,24 @@ impl Traffic {
         });
         let chosen = |path: &Option<PathBuf>, none: String| {
             div()
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .text_color(rgb(c.muted))
                 .child(path.as_deref().map(file_name).unwrap_or(none))
         };
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow(tr!("Client certificates")).px(px(6.)))
-            .child(div().px(px(6.)).text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+            .child(eyebrow(tr!("Client certificates")).px(ui(6.)))
+            .child(div().px(ui(6.)).text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                 "For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection."
             )))
             .children(rows)
             .when(settings.certs.is_empty(), |d| {
-                d.child(div().px(px(6.)).text_color(rgb(c.muted)).child(tr!("None yet.")))
+                d.child(div().px(ui(6.)).text_color(rgb(c.muted)).child(tr!("None yet.")))
             })
             .child(
                 div()
@@ -240,14 +239,14 @@ impl Traffic {
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(
                         div()
                             .id("client-cert-host")
-                            .w(px(340.))
-                            .h(px(32.))
-                            .px(px(10.))
-                            .rounded(px(12.))
+                            .w(ui(340.))
+                            .h(ui(32.))
+                            .px(ui(10.))
+                            .rounded(ui(12.))
                             .flex()
                             .items_center()
                             .bg(rgb(c.input))
@@ -273,7 +272,7 @@ impl Traffic {
             )
             .children(form.problem.clone().map(|why| {
                 div()
-                    .px(px(6.))
+                    .px(ui(6.))
                     .text_color(rgb(c.error))
                     .child(why)
             }))

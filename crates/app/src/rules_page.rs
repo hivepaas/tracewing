@@ -1,6 +1,7 @@
 //! The rules screen: what changes traffic on its way. They apply from the next
 //! request, and a flow says which rules touched it.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     input::TextInput,
@@ -9,7 +10,7 @@ use crate::{
 };
 use gpui::{
     AppContext as _, Context, Div, Entity, FontWeight, PathPromptOptions, Stateful, div,
-    prelude::*, px, rgb,
+    prelude::*, rgb,
 };
 use std::path::{Path, PathBuf};
 use tracewing_i18n::{tr, tr_n};
@@ -730,14 +731,14 @@ impl Traffic {
             div()
                 .id(id)
                 .flex_shrink_0()
-                .h(px(28.))
-                .px(px(12.))
-                .rounded(px(14.))
+                .h(ui(28.))
+                .px(ui(12.))
+                .rounded(ui(14.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .font_weight(FontWeight::BOLD)
                 .bg(rgb(c.chip))
                 .text_color(rgb(c.on_chip))
@@ -760,25 +761,25 @@ impl Traffic {
                 .flex_row()
                 .flex_wrap()
                 .items_center()
-                .gap(px(12.))
-                .px(px(14.))
-                .py(px(10.))
-                .rounded(px(18.))
+                .gap(ui(12.))
+                .px(ui(14.))
+                .py(ui(10.))
+                .rounded(ui(18.))
                 .bg(rgb(c.surface))
                 .child(
                     div()
                         .id(("rule-on", key))
-                        .w(px(44.))
-                        .h(px(24.))
-                        .p(px(3.))
+                        .w(ui(44.))
+                        .h(ui(24.))
+                        .p(ui(3.))
                         .flex_shrink_0()
-                        .rounded(px(12.))
+                        .rounded(ui(12.))
                         .flex()
                         .cursor_pointer()
                         .reachable()
                         .when(rule.enabled, |d| d.bg(rgb(c.accent)).justify_end())
                         .when(!rule.enabled, |d| d.bg(rgb(c.input)))
-                        .child(div().size(px(18.)).rounded(px(9.)).bg(rgb(if rule.enabled {
+                        .child(div().size(ui(18.)).rounded(ui(9.)).bg(rgb(if rule.enabled {
                             c.on_accent
                         } else {
                             c.muted
@@ -788,13 +789,13 @@ impl Traffic {
                 .child(
                     div()
                         .flex_1()
-                        .min_w(px(260.))
+                        .min_w(ui(260.))
                         .flex()
                         .flex_col()
                         .child(div().font_weight(FontWeight::BOLD).child(rule.name.clone()))
                         .child(
                             div()
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .text_color(rgb(c.muted))
                                 .font_family(crate::MONO_FONT)
                                 .font_features(gpui::FontFeatures::disable_ligatures())
@@ -810,7 +811,7 @@ impl Traffic {
                         )
                         .child(
                             div()
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .text_color(rgb(c.muted))
                                 .child(action_text(&rule.action)),
                         )
@@ -840,7 +841,7 @@ impl Traffic {
                             };
                             Some(
                                 div()
-                                    .text_size(px(12.))
+                                    .text_size(ui(12.))
                                     .text_color(rgb(color))
                                     .font_family(crate::MONO_FONT)
                                     .font_features(gpui::FontFeatures::disable_ligatures())
@@ -863,10 +864,10 @@ impl Traffic {
         let field = |input: &Entity<TextInput>, mono: bool| {
             div()
                 .flex_1()
-                .min_w(px(220.))
-                .h(px(36.))
-                .px(px(12.))
-                .rounded(px(12.))
+                .min_w(ui(220.))
+                .h(ui(36.))
+                .px(ui(12.))
+                .rounded(ui(12.))
                 .flex()
                 .items_center()
                 .bg(rgb(c.input))
@@ -883,14 +884,14 @@ impl Traffic {
             let on = kind == current;
             div()
                 .id(("rule-kind", kind as u64))
-                .h(px(30.))
-                .px(px(12.))
-                .rounded(px(15.))
+                .h(ui(30.))
+                .px(ui(12.))
+                .rounded(ui(15.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .font_weight(FontWeight::BOLD)
                 .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
                 .when(!on, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
@@ -900,9 +901,9 @@ impl Traffic {
         let form = div()
             .flex()
             .flex_col()
-            .gap(px(10.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(10.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
             .child(eyebrow(if page.editing.is_some() {
                 tr!("Change this rule")
@@ -914,7 +915,7 @@ impl Traffic {
                     .flex()
                     .flex_row()
                     .flex_wrap()
-                    .gap(px(6.))
+                    .gap(ui(6.))
                     .children(kinds),
             )
             .child(
@@ -922,15 +923,15 @@ impl Traffic {
                     .flex()
                     .flex_row()
                     .flex_wrap()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(field(&page.name, false))
                     .child(field(&page.url, true))
-                    .child(div().w(px(220.)).flex().child(field(&page.method, true))),
+                    .child(div().w(ui(220.)).flex().child(field(&page.method, true))),
             )
             .when_some(first_hint, |d, first_hint| {
                 d.child(
                     div()
-                        .text_size(px(12.))
+                        .text_size(ui(12.))
                         .text_color(rgb(c.muted))
                         .child(first_hint),
                 )
@@ -939,7 +940,7 @@ impl Traffic {
                         .flex()
                         .flex_row()
                         .flex_wrap()
-                        .gap(px(8.))
+                        .gap(ui(8.))
                         .child(field(&page.first, true))
                         .when(second_hint.is_some() && !current.takes_a_body(), |d| {
                             d.child(field(&page.second, true))
@@ -949,9 +950,9 @@ impl Traffic {
                     d.child(
                         div()
                             .w_full()
-                            .px(px(12.))
-                            .py(px(8.))
-                            .rounded(px(12.))
+                            .px(ui(12.))
+                            .py(ui(8.))
+                            .rounded(ui(12.))
                             .bg(rgb(c.input))
                             .font_family(crate::MONO_FONT)
                             .font_features(gpui::FontFeatures::disable_ligatures())
@@ -960,7 +961,7 @@ impl Traffic {
                 })
             })
             .when(no_fields, |d| {
-                d.child(div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                d.child(div().text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                     "It waits under Paused until you send it on, changed or not."
                 )))
             })
@@ -973,13 +974,13 @@ impl Traffic {
                 div()
                     .flex()
                     .flex_row()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(
                         div()
                             .id("rule-save")
-                            .h(px(36.))
-                            .px(px(16.))
-                            .rounded(px(18.))
+                            .h(ui(36.))
+                            .px(ui(16.))
+                            .rounded(ui(18.))
                             .flex()
                             .items_center()
                             .cursor_pointer()
@@ -998,9 +999,9 @@ impl Traffic {
                         d.child(
                             div()
                                 .id("rule-cancel")
-                                .h(px(36.))
-                                .px(px(16.))
-                                .rounded(px(18.))
+                                .h(ui(36.))
+                                .px(ui(16.))
+                                .rounded(ui(18.))
                                 .flex()
                                 .items_center()
                                 .cursor_pointer()
@@ -1020,15 +1021,15 @@ impl Traffic {
             .overflow_y_scroll()
             .flex()
             .flex_col()
-            .gap(px(8.))
+            .gap(ui(8.))
             .child(
                 div()
                     .flex()
                     .flex_col()
-                    .pb(px(4.))
+                    .pb(ui(4.))
                     .child(
                         div()
-                            .text_size(px(20.))
+                            .text_size(ui(20.))
                             .font_weight(FontWeight::BOLD)
                             .child(tr!("Rules")),
                     )
@@ -1042,7 +1043,7 @@ impl Traffic {
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(
                         small(("import-rules", 0), tr!("Import rules…"))
                             .on_click(cx.listener(|this, _, _, cx| this.ask_import_rules(cx))),
@@ -1055,7 +1056,7 @@ impl Traffic {
                     })
                     .children(note.map(|(note, failed)| {
                         div()
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .text_color(rgb(if failed { c.error } else { c.muted }))
                             .child(note)
                     })),

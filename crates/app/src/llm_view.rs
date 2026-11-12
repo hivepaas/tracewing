@@ -1,6 +1,7 @@
 //! The inspector's LLM part: a call to a model, as a conversation and an
 //! answer instead of JSON and a few hundred events.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     flows::group_digits,
@@ -11,7 +12,7 @@ use crate::{
     widgets::Reachable,
 };
 use gpui::{
-    AppContext as _, ClipboardItem, Context, FontWeight, IntoElement, div, prelude::*, px, rgb,
+    AppContext as _, ClipboardItem, Context, FontWeight, IntoElement, div, prelude::*, rgb,
 };
 use tracewing_i18n::{tr, tr_n};
 use tracewing_store::session::{BodyReader, StoredBody};
@@ -119,7 +120,7 @@ impl Traffic {
         let Some((provider, call)) = &self.inspector.llm else {
             return div()
                 .id("llm")
-                .p(px(16.))
+                .p(ui(16.))
                 .text_color(rgb(c.muted))
                 .child(tr!("Reading the call…"));
         };
@@ -127,9 +128,9 @@ impl Traffic {
         let block = |text: String, muted: bool| {
             div()
                 .w_full()
-                .px(px(12.))
-                .py(px(8.))
-                .rounded(px(12.))
+                .px(ui(12.))
+                .py(ui(8.))
+                .rounded(ui(12.))
                 .bg(rgb(c.surface))
                 .text_color(rgb(if muted { c.muted } else { c.text }))
                 .child(piece(text, "\n"))
@@ -137,20 +138,20 @@ impl Traffic {
         let code = |text: String| {
             div()
                 .w_full()
-                .px(px(12.))
-                .py(px(8.))
-                .rounded(px(12.))
+                .px(ui(12.))
+                .py(ui(8.))
+                .rounded(ui(12.))
                 .bg(rgb(c.input))
                 .font_family(crate::MONO_FONT)
                 .font_features(gpui::FontFeatures::disable_ligatures())
-                .text_size(px(12.))
+                .text_size(ui(12.))
                 .child(piece(text, "\n"))
         };
         // A title, said in the copy as it is: the eyebrow shows it in capitals.
         let section = |title: String| {
             div()
-                .pt(px(6.))
-                .text_size(px(11.))
+                .pt(ui(6.))
+                .text_size(ui(11.))
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(c.muted))
                 .child(piece(title.to_uppercase(), "\n\n"))
@@ -159,7 +160,7 @@ impl Traffic {
         let mut answer = div()
             .flex()
             .flex_col()
-            .gap(px(8.))
+            .gap(ui(8.))
             .child(section(tr!("Answer")));
         if let Some(error) = &call.error {
             answer = answer.child(
@@ -216,10 +217,10 @@ impl Traffic {
             div()
                 .flex()
                 .flex_col()
-                .gap(px(3.))
+                .gap(ui(3.))
                 .child(
                     div()
-                        .text_size(px(11.))
+                        .text_size(ui(11.))
                         .font_weight(FontWeight::BOLD)
                         .text_color(rgb(c.muted))
                         .child(piece(message.role.to_uppercase(), "\n\n")),
@@ -231,38 +232,38 @@ impl Traffic {
             .id("llm")
             .size_full()
             .overflow_y_scroll()
-            .p(px(14.))
+            .p(ui(14.))
             .flex()
             .flex_col()
-            .gap(px(10.))
-            .text_size(px(13.))
+            .gap(ui(10.))
+            .text_size(ui(13.))
             .child(
                 div()
                     .flex()
                     .flex_row()
                     .flex_wrap()
                     .items_center()
-                    .gap(px(6.))
+                    .gap(ui(6.))
                     .children(summary(*provider, call).into_iter().map(|fact| {
                         div()
-                            .px(px(10.))
-                            .py(px(3.))
-                            .rounded(px(12.))
+                            .px(ui(10.))
+                            .py(ui(3.))
+                            .rounded(ui(12.))
                             .bg(rgb(c.chip))
                             .text_color(rgb(c.on_chip))
-                            .text_size(px(12.))
+                            .text_size(ui(12.))
                             .child(fact)
                     }))
                     .when(!answer_text.is_empty(), |d| {
                         d.child(
                             div()
                                 .id("copy-answer")
-                                .px(px(10.))
-                                .py(px(3.))
-                                .rounded(px(12.))
+                                .px(ui(10.))
+                                .py(ui(3.))
+                                .rounded(ui(12.))
                                 .cursor_pointer()
                                 .reachable()
-                                .text_size(px(12.))
+                                .text_size(ui(12.))
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(rgb(c.link))
                                 .child(tr!("Copy the answer"))

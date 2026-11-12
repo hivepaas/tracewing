@@ -1,12 +1,13 @@
 //! Settings' CA signed by the company: a request (CSR) to give IT, what IT
 //! sends back taken in, and back to tracewing's own. Each from the next start.
 
+use crate::text_size::ui;
 use crate::{
     colors::colors,
     traffic::Traffic,
     widgets::{Reachable, eyebrow},
 };
-use gpui::{Context, FontWeight, PathPromptOptions, div, prelude::*, px, rgb};
+use gpui::{Context, FontWeight, PathPromptOptions, div, prelude::*, rgb};
 use std::path::{Path, PathBuf};
 use tracewing_i18n::tr;
 use tracewing_proxy::company_ca;
@@ -100,14 +101,14 @@ impl Traffic {
         let button = |id: &'static str, label: String| {
             div()
                 .id(id)
-                .h(px(32.))
-                .px(px(14.))
-                .rounded(px(16.))
+                .h(ui(32.))
+                .px(ui(14.))
+                .rounded(ui(16.))
                 .flex()
                 .items_center()
                 .cursor_pointer()
                 .reachable()
-                .text_size(px(12.5))
+                .text_size(ui(12.5))
                 .font_weight(FontWeight::BOLD)
                 .bg(rgb(c.chip))
                 .text_color(rgb(c.on_chip))
@@ -132,21 +133,21 @@ impl Traffic {
         div()
             .flex()
             .flex_col()
-            .gap(px(8.))
-            .p(px(14.))
-            .rounded(px(22.))
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
             .bg(rgb(c.surface))
-            .child(eyebrow(tr!("Certificate signed by your company")).px(px(6.)))
-            .child(div().px(px(6.)).text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+            .child(eyebrow(tr!("Certificate signed by your company")).px(ui(6.)))
+            .child(div().px(ui(6.)).text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
                 "Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install."
             )))
-            .children(now.map(|now| div().px(px(6.)).child(now)))
+            .children(now.map(|now| div().px(ui(6.)).child(now)))
             .child(
                 div()
                     .flex()
                     .flex_row()
                     .flex_wrap()
-                    .gap(px(8.))
+                    .gap(ui(8.))
                     .child(
                         button("company-request", tr!("Make the request (CSR)…")).on_click(
                             cx.listener(|this, _, _, cx| this.ask_save_company_request(cx)),
@@ -165,7 +166,7 @@ impl Traffic {
             )
             .children(self.company_ca_note.clone().map(|(note, failed)| {
                 div()
-                    .px(px(6.))
+                    .px(ui(6.))
                     .text_color(rgb(if failed { c.error } else { c.text }))
                     .child(note)
             }))
