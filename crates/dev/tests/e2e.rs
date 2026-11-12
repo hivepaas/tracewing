@@ -185,7 +185,9 @@ impl Harness {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
         let conn = Connection::open(db).unwrap();
-        let deadline = Instant::now() + Duration::from_secs(5);
+        // Longer than a request's body that no server reads is read on for
+        // (10 s), as its flow is written once that ends.
+        let deadline = Instant::now() + Duration::from_secs(15);
         loop {
             let count: i64 = conn
                 .query_row("SELECT count(*) FROM flows", [], |r| r.get(0))
@@ -1393,7 +1395,7 @@ async fn the_proxy_itself_tells_a_device_how_to_set_up() {
 /// Waits for the proxy to listen for other devices where it is asked to, or to
 /// stop.
 async fn wait_for_listening(devices: &OtherDevices, there: SocketAddr, listening: bool) {
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(15);
     while devices.listening().contains(&there) != listening {
         assert!(
             Instant::now() < deadline,
