@@ -1738,9 +1738,10 @@ impl Traffic {
             .p(px(4.))
             .rounded(px(20.))
             .bg(rgb(c.surface))
-            .children(Kind::ALL.into_iter().map(|kind| {
+            .items_center()
+            .children(Kind::ALL.into_iter().flat_map(|kind| {
                 let on = kind == current;
-                div()
+                let tab = div()
                     .id(("kind", kind as u64))
                     .h(px(32.))
                     .px(px(12.))
@@ -1755,6 +1756,16 @@ impl Traffic {
                     .when(!on, |d| d.text_color(rgb(c.muted)))
                     .child(kind.label())
                     .on_click(cx.listener(move |this, _, _, cx| this.set_kind(kind, cx)))
+                    .into_any_element();
+                let line = kind.ends_group().then(|| {
+                    div()
+                        .w(px(1.))
+                        .h(px(18.))
+                        .mx(px(2.))
+                        .bg(rgb(c.line))
+                        .into_any_element()
+                });
+                std::iter::once(tab).chain(line)
             }))
     }
 
