@@ -11,6 +11,7 @@
 //! signature directory is never asked, which would send what the user's
 //! wallet is doing to a stranger.
 
+use alloy_dyn_abi::{DynSolType, DynSolValue};
 use sha3::{Digest, Keccak256};
 use std::{collections::HashMap, sync::OnceLock};
 
@@ -300,97 +301,114 @@ pub struct Argument {
     pub text: String,
 }
 
-/// The types a signature names: `address` and `uint256` for
-/// `transfer(address,uint256)`. `None` for a list this does not read, as one
-/// with a tuple in it is.
-pub fn parameters(signature: &str) -> Option<Vec<&str>> {
-    let open = signature.find('(')?;
-    let list = signature[open + 1..].strip_suffix(')')?;
-    if list.contains('(') {
-        // A tuple's parts are a list of their own, laid out by rules this
-        // does not follow.
-        return None;
-    }
-    if list.is_empty() {
-        return Some(Vec::new());
-    }
-    Some(list.split(',').collect())
-}
+/// How deep a value is laid out before what is left is counted instead: a
+/// call that nests deeper than this is one the Body part reads better.
+const DEPTH_MAX: usize = 3;
+/// How many of a list's items are laid out before the rest are counted.
+const ITEMS_SHOWN: usize = 8;
 
 /// What the words after the four bytes hold, by the types the signature
-/// names. `None` when the call is not laid out as the signature says, or
-/// holds a type this does not read.
+/// names. `None` when the signature does not read, or the words are not laid
+/// out as it says.
+///
+/// Calldata inside the call — what a multicall carries — is named by the
+/// calls every chain shares. [`arguments_named`] takes an ABI's names too.
 pub fn arguments(signature: &str, data: &[u8]) -> Option<Vec<Argument>> {
-    let types = parameters(signature)?;
-    let words = data.get(4..)?;
-    let mut out = Vec::with_capacity(types.len());
-    for (i, kind) in types.iter().enumerate() {
-        let head = words.get(i * 32..i * 32 + 32)?;
-        out.push(Argument {
-            kind: (*kind).to_owned(),
-            text: argument_text(kind, head, words)?,
-        });
-    }
-    Some(out)
+    arguments_named(signature, data, &|data| {
+        known_function(data).map(str::to_owned)
+    })
 }
 
-/// One argument: from its own word, or, for a type of no set length, from
-/// where that word points.
-fn argument_text(kind: &str, head: &[u8], words: &[u8]) -> Option<String> {
-    if let Some(inner) = kind.strip_suffix("[]") {
-        let at = word_usize(head)?;
-        let count = word_usize(words.get(at..at + 32)?)?;
-        return Some(items_text(inner, count));
+/// The same, where `name` says what a `bytes` of calldata calls: an ABI the
+/// user chose knows more names than [`FUNCTIONS`] does, and this is how they
+/// reach in here without this module knowing about them.
+pub fn arguments_named(
+    signature: &str,
+    data: &[u8],
+    name: &dyn Fn(&[u8]) -> Option<String>,
+) -> Option<Vec<Argument>> {
+    let open = signature.find('(')?;
+    let kind: DynSolType = signature[open..].parse().ok()?;
+    let DynSolType::Tuple(types) = &kind else {
+        return None;
+    };
+    if types.is_empty() {
+        return Some(Vec::new());
     }
-    if let Some((inner, count)) = kind
-        .strip_suffix(']')
-        .and_then(|rest| rest.rsplit_once('['))
-        .and_then(|(inner, count)| count.parse::<usize>().ok().map(|n| (inner, n)))
-    {
-        return Some(items_text(inner, count));
-    }
-    match kind {
-        "address" => Some(address_text(head.get(12..32)?)),
-        "bool" => Some(match head.last()? {
-            0 => "false".to_owned(),
-            _ => "true".to_owned(),
-        }),
-        "string" | "bytes" => {
-            let at = word_usize(head)?;
-            let len = word_usize(words.get(at..at + 32)?)?;
-            let bytes = words.get(at + 32..at + 32 + len)?;
-            Some(match kind {
-                "string" => String::from_utf8_lossy(bytes).into_owned(),
-                _ => format!("{} bytes: {}", len, hex_text(&bytes[..len.min(16)])),
+    let DynSolValue::Tuple(values) = kind.abi_decode_params(data.get(4..)?).ok()? else {
+        return None;
+    };
+    Some(
+        types
+            .iter()
+            .zip(values.iter())
+            .map(|(kind, value)| Argument {
+                kind: kind.sol_type_name().into_owned(),
+                text: value_text(value, 0, name),
             })
+            .collect(),
+    )
+}
+
+/// One value as it reads: an address with the capitals that check it, a
+/// number as digits however long, a list or a tuple with its parts inside.
+fn value_text(value: &DynSolValue, depth: usize, name: &dyn Fn(&[u8]) -> Option<String>) -> String {
+    match value {
+        // Alloy writes an address with EIP-55's capitals, as this does.
+        DynSolValue::Address(address) => address.to_string(),
+        DynSolValue::Bool(yes) => yes.to_string(),
+        DynSolValue::Uint(number, _) => number.to_string(),
+        DynSolValue::Int(number, _) => number.to_string(),
+        DynSolValue::FixedBytes(bytes, size) => hex_text(&bytes[..*size.min(&32)]),
+        DynSolValue::Bytes(bytes) => calldata_text(bytes, name),
+        DynSolValue::String(text) => text.clone(),
+        DynSolValue::Array(items) | DynSolValue::FixedArray(items) => {
+            list_text(items, depth, name, '[', ']')
         }
-        _ if kind.starts_with("uint") => Some(digits(head)),
-        _ if kind.starts_with("int") => Some(match head.first()? & 0x80 {
-            // Two's complement: what is left to count up to nothing.
-            0 => digits(head),
-            _ => {
-                let mut flipped: Vec<u8> = head.iter().map(|byte| !byte).collect();
-                for byte in flipped.iter_mut().rev() {
-                    *byte = byte.wrapping_add(1);
-                    if *byte != 0 {
-                        break;
-                    }
-                }
-                format!("-{}", digits(&flipped))
-            }
-        }),
-        _ if kind.starts_with("bytes") => {
-            let len: usize = kind.trim_start_matches("bytes").parse().ok()?;
-            Some(hex_text(head.get(..len.min(32))?))
-        }
-        _ => None,
+        DynSolValue::Tuple(items) => list_text(items, depth, name, '(', ')'),
+        other => other.sol_type_name().unwrap_or_default().into_owned(),
     }
 }
 
-fn items_text(kind: &str, count: usize) -> String {
+/// A `bytes` is often calldata of its own: a multicall carries one a call.
+/// Said by the name it calls where that is known, since the hex of it says
+/// nothing.
+fn calldata_text(bytes: &[u8], name: &dyn Fn(&[u8]) -> Option<String>) -> String {
+    let count = bytes.len();
+    match name(bytes) {
+        Some(signature) => format!("{signature}, {count} bytes"),
+        None if count >= 4 => format!("{}…, {count} bytes", hex_text(&bytes[..4])),
+        None => format!("{count} bytes"),
+    }
+}
+
+fn list_text(
+    items: &[DynSolValue],
+    depth: usize,
+    name: &dyn Fn(&[u8]) -> Option<String>,
+    open: char,
+    close: char,
+) -> String {
+    if depth >= DEPTH_MAX {
+        return items_text(items.len());
+    }
+    let shown: Vec<String> = items
+        .iter()
+        .take(ITEMS_SHOWN)
+        .map(|item| value_text(item, depth + 1, name))
+        .collect();
+    let more = items.len().saturating_sub(ITEMS_SHOWN);
+    let rest = match more {
+        0 => String::new(),
+        more => format!(", … {more} more"),
+    };
+    format!("{open}{}{rest}{close}", shown.join(", "))
+}
+
+fn items_text(count: usize) -> String {
     match count {
-        1 => format!("1 {kind}"),
-        n => format!("{n} {kind}s"),
+        1 => "1 item".to_owned(),
+        n => format!("{n} items"),
     }
 }
 
@@ -490,6 +508,83 @@ fn items(mut payload: &[u8]) -> Option<Vec<Item<'_>>> {
     Some(out)
 }
 
+/// A list's payload: what is inside its header.
+fn list_payload(input: &[u8]) -> Option<&[u8]> {
+    let (&first, rest) = input.split_first()?;
+    match first {
+        0xc0..=0xf7 => rest.get(..usize::from(first - 0xc0)),
+        0xf8..=0xff => {
+            let (len, rest) = long_length(rest, usize::from(first - 0xf7))?;
+            rest.get(..len)
+        }
+        _ => None,
+    }
+}
+
+/// Where the `n`th item of a payload begins, counted from its start. The
+/// items of a transaction are laid out one after another, so this says where
+/// the signed part of one ends without encoding anything again.
+fn field_at(payload: &[u8], n: usize) -> Option<usize> {
+    let mut rest = payload;
+    for _ in 0..n {
+        let (_, next) = Item::read(rest)?;
+        rest = next;
+    }
+    Some(payload.len() - rest.len())
+}
+
+/// The header of a list that long.
+fn list_header(len: usize) -> Vec<u8> {
+    if len <= 55 {
+        return vec![0xc0 + len as u8];
+    }
+    let be = len.to_be_bytes();
+    let from = be.iter().position(|byte| *byte != 0).unwrap_or(0);
+    let mut out = vec![0xf7 + (be.len() - from) as u8];
+    out.extend(&be[from..]);
+    out
+}
+
+/// A number, as RLP sends one: big-endian with no leading zeros, and a
+/// nothing of its own for zero.
+fn rlp_number(value: u128) -> Vec<u8> {
+    if value == 0 {
+        return vec![0x80];
+    }
+    let be = value.to_be_bytes();
+    let from = be.iter().position(|byte| *byte != 0).unwrap_or(0);
+    let body = &be[from..];
+    if body.len() == 1 && body[0] < 0x80 {
+        return body.to_vec();
+    }
+    let mut out = vec![0x80 + body.len() as u8];
+    out.extend(body);
+    out
+}
+
+/// A 32-byte word from bytes RLP stripped the leading zeros off.
+fn padded(bytes: &[u8]) -> Option<[u8; 32]> {
+    if bytes.len() > 32 {
+        return None;
+    }
+    let mut out = [0u8; 32];
+    out[32 - bytes.len()..].copy_from_slice(bytes);
+    Some(out)
+}
+
+/// Who signed a transaction, from the hash of what was signed and the
+/// signature over it: the public key is recovered from the two, and the
+/// address is the end of its hash.
+fn sender(hash: &[u8], r: &[u8], s: &[u8], parity: u8) -> Option<String> {
+    use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
+    let signature = Signature::from_scalars(padded(r)?, padded(s)?).ok()?;
+    let id = RecoveryId::from_byte(parity)?;
+    let key = VerifyingKey::recover_from_prehash(hash, &signature, id).ok()?;
+    let point = key.to_encoded_point(false);
+    let hashed = Keccak256::digest(point.as_bytes().get(1..)?);
+    Some(address_text(hashed.get(12..)?))
+}
+
 /// A signed transaction, as `eth_sendRawTransaction` carries it: RLP, with a
 /// byte in front since EIP-2718 saying which kind it is.
 ///
@@ -500,6 +595,10 @@ pub struct Transaction {
     /// `0` for the kind with no byte in front, then `1` (EIP-2930),
     /// `2` (EIP-1559), `3` (blobs), `4` (EIP-7702).
     pub kind: u8,
+    /// Who signed it, worked out from the signature: a transaction does not
+    /// carry its sender, so this is the only way anyone knows. `None` when
+    /// the signature does not recover, as a made-up one does not.
+    pub from: Option<String>,
     pub chain_id: Option<u128>,
     pub nonce: u128,
     /// `None` when it makes a contract instead of calling one.
@@ -518,6 +617,40 @@ pub struct Transaction {
     pub access_list: usize,
     /// How many blobs it carries (EIP-4844).
     pub blobs: usize,
+}
+
+/// Who signed it: the last three fields are the signature, and what was
+/// signed is everything before them, put back the way the signer had it.
+/// `None` when the signature does not recover, which a made-up one will not.
+fn sender_of(kind: u8, rlp: &[u8], fields: &[Item<'_>], chain_id: Option<u128>) -> Option<String> {
+    let at = fields.len().checked_sub(3)?;
+    let (r, s) = (fields.get(at + 1)?.bytes()?, fields.get(at + 2)?.bytes()?);
+    let v = fields.get(at)?.number()?;
+    let parity = match kind {
+        // EIP-155 folded the chain into `v`; before it, `v` was 27 or 28.
+        0 if v >= 35 => ((v - 35) % 2) as u8,
+        0 if v == 27 || v == 28 => (v - 27) as u8,
+        0 => return None,
+        _ if v <= 1 => v as u8,
+        _ => return None,
+    };
+    let payload = list_payload(rlp)?;
+    let signed = payload.get(..field_at(payload, at)?)?;
+    let mut body = signed.to_vec();
+    if kind == 0 {
+        // What EIP-155 adds to what is signed, and nothing before it.
+        if let Some(chain) = chain_id {
+            body.extend(rlp_number(chain));
+            body.extend([0x80, 0x80]);
+        }
+    }
+    let mut message = Vec::with_capacity(body.len() + 11);
+    if kind != 0 {
+        message.push(kind);
+    }
+    message.extend(list_header(body.len()));
+    message.extend(&body);
+    sender(&Keccak256::digest(&message), r, s, parity)
 }
 
 impl Transaction {
@@ -595,6 +728,7 @@ impl Transaction {
         tx.to = (!to.is_empty()).then(|| address_text(to));
         tx.value = bytes(value_at)?.to_vec();
         tx.data = bytes(data_at)?.to_vec();
+        tx.from = sender_of(kind, rlp, fields, tx.chain_id);
         Some(tx)
     }
 
@@ -753,9 +887,38 @@ mod tests {
         assert_eq!(tx.data.len(), 772);
         assert_eq!(tx.access_list, 0);
         assert_eq!(tx.blobs, 0);
+        // A transaction does not carry who sent it: this is worked out from
+        // the signature, and the node says the same.
+        assert_eq!(
+            tx.from.as_deref(),
+            Some(address_text(&bytes_of(&node("from")).unwrap()).as_str())
+        );
         // What it calls is not one every chain has: an ABI would name it.
         assert_eq!(tx.function(), None);
         assert_eq!(hex_text(&tx.data[..4]), "0x09c5eabe");
+    }
+
+    /// The kind from before EIP-2718 signs something else: the chain goes in
+    /// what is signed, not in a byte in front. Also real, also checked
+    /// against the node.
+    #[test]
+    fn a_transaction_of_the_older_kind_reads_too() {
+        let raw = field(sample!("send_raw_legacy.req.json"), &["params", "0"]);
+        let tx = Transaction::decode(&bytes_of(&raw).unwrap()).expect("a transaction");
+        let node = |name: &str| field(sample!("tx_legacy.res.json"), &["result", name]);
+        let number = |name: &str| quantity(&node(name)).expect("a quantity");
+        assert_eq!(tx.kind, 0);
+        assert_eq!(tx.nonce, number("nonce"));
+        assert_eq!(tx.gas_price, Some(number("gasPrice")));
+        assert_eq!(tx.max_fee, None, "that kind has no such thing");
+        // `v` is 35 or 36 above twice the chain, which is where it is kept.
+        assert_eq!(tx.chain_id, Some(1));
+        assert!(number("v") >= 35, "EIP-155, so the chain is signed over");
+        assert_eq!(
+            tx.from.as_deref(),
+            Some(address_text(&bytes_of(&node("from")).unwrap()).as_str()),
+            "recovered over what EIP-155 says is signed"
+        );
     }
 
     #[test]
@@ -813,12 +976,40 @@ mod tests {
         assert_eq!(args[0].text, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
         assert_eq!(args[1].kind, "uint256");
         assert_eq!(args[1].text.len(), 78);
-        assert_eq!(parameters("totalSupply()"), Some(Vec::new()));
         assert_eq!(
-            parameters("aggregate3((address,bool,bytes)[])"),
-            None,
-            "a tuple is laid out by rules this does not follow"
+            arguments("totalSupply()", &selector_of("totalSupply()")),
+            Some(Vec::new())
         );
+        assert_eq!(arguments("notasignature", b""), None);
+    }
+
+    /// A real `aggregate3`, captured from mainnet: an array of tuples, each
+    /// holding calldata of its own. This is what the hand-written decoder
+    /// could not read at all.
+    #[test]
+    fn a_multicall_reads_down_to_the_calls_inside_it() {
+        let data = field(sample!("multicall.req.json"), &["params", "0", "data"]);
+        let calldata = bytes_of(&data).unwrap();
+        assert_eq!(calldata.len(), 4772);
+        let signature = known_function(&calldata).expect("a call every chain shares");
+        assert_eq!(signature, "aggregate3((address,bool,bytes)[])");
+        let args = arguments(signature, &calldata).expect("it reads");
+        assert_eq!(args.len(), 1);
+        assert_eq!(args[0].kind, "(address,bool,bytes)[]");
+        // Each call inside: where it goes, whether it may fail, and what it
+        // calls there.
+        // One call: where it goes, that it may fail, and the calldata it
+        // carries there, which is most of the 4,772 bytes.
+        assert_eq!(
+            args[0].text,
+            "[(0xE37A2663Cc9c119BA41572C40fAb0bbb23a5402f, true, 0x0a883a99…, 4516 bytes)]"
+        );
+        // An ABI of the user's reaches in through the closure.
+        let named = arguments_named(signature, &calldata, &|data| {
+            (data.len() >= 4).then(|| format!("seen({})", hex_text(&data[..4])))
+        })
+        .unwrap();
+        assert!(named[0].text.contains("seen(0x"), "{}", named[0].text);
     }
 
     #[test]
@@ -840,12 +1031,19 @@ mod tests {
         // Two's complement: -1 is every bit set.
         assert_eq!(one("int256", &"f".repeat(64)), "-1");
         assert_eq!(one("int256", "02"), "2");
-        // A list says how many it holds; what is in it is for the view.
+        // A list reads as its items, which the words after the count hold.
         let mut array = selector_of("f(uint256[])").to_vec();
         array.extend(bytes_of(&format!("0x{:0>64x}", 32)).unwrap());
         array.extend(bytes_of(&format!("0x{:0>64x}", 3)).unwrap());
+        for item in [7u64, 8, 9] {
+            array.extend(bytes_of(&format!("0x{item:0>64x}")).unwrap());
+        }
         let args = arguments("f(uint256[])", &array).unwrap();
-        assert_eq!(args[0].text, "3 uint256s");
+        assert_eq!(args[0].text, "[7, 8, 9]");
+        // A list that says it holds more than it does does not read at all,
+        // where the hand-written one took the count on trust.
+        array.truncate(array.len() - 32);
+        assert_eq!(arguments("f(uint256[])", &array), None);
         assert_eq!(arguments("f(nosuchtype)", &word("01")), None);
     }
 }
