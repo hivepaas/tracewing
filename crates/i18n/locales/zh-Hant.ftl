@@ -223,6 +223,12 @@ t296762f8 = 此流量紀錄：{ $e }
 # The body is not a {message}: {e}
 t3220a10a = 本文不是 { $message }：{ $e }
 
+# The body of {bytes} bytes was too large to keep when the window last closed, so this request came back without it.
+t781059cd = { $bytes } 位元組的內容在上次關閉視窗時過大，無法保留，所以這個請求回來時沒有內容。
+
+# This request came back without its body: the body it had was bytes that are not the text shown for them, and writing the text down would have sent something else.
+t5e2cb6ff = 這個請求回來時沒有內容：原來的內容是位元組，與為它顯示的文字並不相同，記下文字會導致下次送出另一樣東西。
+
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }，以 JSON 撰寫：傳送時為 Protobuf。
 

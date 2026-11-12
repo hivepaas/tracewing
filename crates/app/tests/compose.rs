@@ -15,6 +15,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tracewing::{
+    compose::Kept,
     compose_page::signature_trouble,
     engine::{Engine, EngineOptions},
     input::TextInput,
@@ -428,6 +429,58 @@ fn requests_composed_in_the_window_go_through() {
         })
         .unwrap();
     shot(&mut cx, window.into(), "36-compose-stopped");
+
+    // What is being composed is kept between runs: the window writes it
+    // down, and a start takes it up where it was left.
+    window
+        .update(&mut cx, |view, _, cx| {
+            let page = view.compose_page.as_ref().unwrap();
+            let (method, url_field, headers, body) = (
+                page.method.clone(),
+                page.url.clone(),
+                page.headers.clone(),
+                page.body.clone(),
+            );
+            type_in(&method, "PATCH", cx);
+            type_in(&url_field, "https://kept.test/x", cx);
+            type_in(&headers, "x-kept: yes", cx);
+            type_in(&body, r#"{"half":"written"}"#, cx);
+            view.save_composed(cx);
+        })
+        .unwrap();
+    let kept = Kept::load(&dir.join("compose.toml"));
+    assert_eq!(
+        (
+            kept.method.as_str(),
+            kept.url.as_str(),
+            kept.headers.as_str(),
+            kept.body.as_str()
+        ),
+        (
+            "PATCH",
+            "https://kept.test/x",
+            "x-kept: yes",
+            r#"{"half":"written"}"#
+        )
+    );
+    assert_eq!(kept.body_left, None);
+    window
+        .update(&mut cx, |view, _, cx| {
+            // A new request clears the editor, and is written down as well.
+            view.new_compose(cx);
+            let page = view.compose_page.as_ref().unwrap();
+            assert_eq!(page.url.read(cx).text(), "");
+            assert!(Kept::load(&dir.join("compose.toml")).url.is_empty());
+
+            view.use_kept(&kept, cx);
+            let page = view.compose_page.as_ref().unwrap();
+            assert_eq!(page.method.read(cx).text(), "PATCH");
+            assert_eq!(page.url.read(cx).text(), "https://kept.test/x");
+            assert_eq!(page.headers.read(cx).text(), "x-kept: yes");
+            assert_eq!(page.body.read(cx).text(), r#"{"half":"written"}"#);
+            assert_eq!(page.body_left, None);
+        })
+        .unwrap();
 
     std::fs::remove_dir_all(&dir).ok();
 }

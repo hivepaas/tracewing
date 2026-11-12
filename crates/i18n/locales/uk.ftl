@@ -262,6 +262,12 @@ t296762f8 = Цей потік: { $e }
 # The body is not a {message}: {e}
 t3220a10a = Тіло не є { $message }: { $e }
 
+# The body of {bytes} bytes was too large to keep when the window last closed, so this request came back without it.
+t781059cd = Тіло на { $bytes } байт було завелике, щоб зберегти його під час останнього закриття вікна, тому цей запит повернувся без нього.
+
+# This request came back without its body: the body it had was bytes that are not the text shown for them, and writing the text down would have sent something else.
+t5e2cb6ff = Цей запит повернувся без тіла: тіло було байтами, а не тим текстом, який для них показували, і зберегти текст означало б надіслати інше.
+
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, записаний як JSON: надсилається як Protobuf.
 

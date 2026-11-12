@@ -262,6 +262,12 @@ t296762f8 = Этот поток: { $e }
 # The body is not a {message}: {e}
 t3220a10a = Тело не является { $message }: { $e }
 
+# The body of {bytes} bytes was too large to keep when the window last closed, so this request came back without it.
+t781059cd = Тело в { $bytes } байт было слишком велико, чтобы сохранить его при последнем закрытии окна, поэтому запрос вернулся без него.
+
+# This request came back without its body: the body it had was bytes that are not the text shown for them, and writing the text down would have sent something else.
+t5e2cb6ff = Этот запрос вернулся без тела: тело было байтами, а не тем текстом, который для них показывали, и сохранить текст значило бы отправить другое.
+
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, записанный как JSON: отправляется как Protobuf.
 

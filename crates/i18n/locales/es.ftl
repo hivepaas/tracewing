@@ -254,6 +254,12 @@ t296762f8 = Este flow: { $e }
 # The body is not a {message}: {e}
 t3220a10a = El cuerpo no es un { $message }: { $e }
 
+# The body of {bytes} bytes was too large to keep when the window last closed, so this request came back without it.
+t781059cd = El cuerpo de { $bytes } bytes era demasiado grande para guardarlo cuando se cerró la ventana, así que esta petición vuelve sin él.
+
+# This request came back without its body: the body it had was bytes that are not the text shown for them, and writing the text down would have sent something else.
+t5e2cb6ff = Esta petición vuelve sin su cuerpo: eran bytes que no son el texto que se muestra para ellos, y guardar el texto habría enviado otra cosa.
+
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, escrito como JSON: se envía como Protobuf.
 

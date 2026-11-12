@@ -254,6 +254,12 @@ t296762f8 = Ce flow : { $e }
 # The body is not a {message}: {e}
 t3220a10a = Le corps n’est pas un { $message } : { $e }
 
+# The body of {bytes} bytes was too large to keep when the window last closed, so this request came back without it.
+t781059cd = Le corps de { $bytes } octets était trop grand pour être conservé à la dernière fermeture de la fenêtre, cette requête revient donc sans lui.
+
+# This request came back without its body: the body it had was bytes that are not the text shown for them, and writing the text down would have sent something else.
+t5e2cb6ff = Cette requête revient sans son corps : c'étaient des octets qui ne sont pas le texte affiché pour eux, et conserver le texte aurait envoyé autre chose.
+
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, écrit en JSON : il est envoyé en Protobuf.
 

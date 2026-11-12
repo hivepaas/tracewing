@@ -248,6 +248,12 @@ t296762f8 = Bu akış: { $e }
 # The body is not a {message}: {e}
 t3220a10a = Gövde bir { $message } değil: { $e }
 
+# The body of {bytes} bytes was too large to keep when the window last closed, so this request came back without it.
+t781059cd = { $bytes } baytlık gövde, pencere son kapandığında saklanamayacak kadar büyüktü; bu yüzden bu istek gövdesi olmadan geri geldi.
+
+# This request came back without its body: the body it had was bytes that are not the text shown for them, and writing the text down would have sent something else.
+t5e2cb6ff = Bu istek gövdesi olmadan geri geldi: gövde, onun için gösterilen metin olmayan baytlardı ve metni saklamak başka bir şey göndermek olurdu.
+
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, JSON olarak yazılır: Protobuf olarak gönderilir.
 
