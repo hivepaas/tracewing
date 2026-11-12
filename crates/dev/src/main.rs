@@ -339,6 +339,7 @@ async fn main() -> Result<()> {
                     tls_keys: Arc::new(tracewing_proxy::key_log::TlsKeys::from_env()),
                     sockets: Default::default(),
                     client_certs,
+                    scripts: Default::default(),
                 },
                 async move {
                     match exit_after {

@@ -257,6 +257,9 @@ pub struct Traffic {
     pub(crate) rules_seen: Option<std::time::SystemTime>,
     /// When it was last looked at.
     pub(crate) rules_looked: Instant,
+    /// The scripts' logs as last drawn, to draw the Rules screen again as
+    /// they grow.
+    scripts_seen: u64,
     pub paused_page: Option<PausedPage>,
     pub compose_page: Option<ComposePage>,
     pub compare_page: Option<ComparePage>,
@@ -481,6 +484,7 @@ impl Traffic {
                 .and_then(|m| m.modified())
                 .ok(),
             rules_looked: Instant::now(),
+            scripts_seen: 0,
             paused_page: None,
             compose_page: None,
             compare_page: None,
@@ -865,6 +869,11 @@ impl Traffic {
         if self.rules_looked.elapsed() >= Duration::from_millis(500) {
             self.rules_looked = Instant::now();
             changed |= self.read_rules_again();
+            let scripts = self.engine.scripts.version();
+            if self.screen == Screen::Rules && scripts != self.scripts_seen {
+                self.scripts_seen = scripts;
+                changed = true;
+            }
         }
         if let Some(flows) = &self.flows {
             let bounds = flows.bounds().ok().flatten();

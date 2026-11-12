@@ -71,6 +71,11 @@ pub enum Action {
     PauseMessagesToServer,
     /// The same for each the server sends, before the app gets it.
     PauseMessagesToApp,
+    /// Runs a JavaScript file's `onRequest` and `onResponse` on it: see
+    /// [`crate::script`].
+    Script {
+        path: PathBuf,
+    },
 }
 
 fn yes() -> bool {
@@ -121,6 +126,8 @@ pub struct Plan {
     /// The rule that holds a WebSocket's messages each way, if one does.
     pub pause_to_server: Option<String>,
     pub pause_to_app: Option<String>,
+    /// The scripts to run on it, in the rules' order, each with its rule's name.
+    pub scripts: Vec<(String, PathBuf)>,
 }
 
 #[derive(Debug)]
@@ -270,7 +277,7 @@ impl TrafficRule {
                     bail!("{status} is not a status");
                 }
             }
-            Action::MapLocal { path } => {
+            Action::MapLocal { path } | Action::Script { path } => {
                 if !path.is_absolute() {
                     bail!("{} needs to be a full path", path.display());
                 }
@@ -486,6 +493,10 @@ impl TrafficRules {
                 }
                 Action::PauseMessagesToApp => {
                     plan.pause_to_app.get_or_insert_with(|| rule.name.clone());
+                    true
+                }
+                Action::Script { path } => {
+                    plan.scripts.push((rule.name.clone(), path.clone()));
                     true
                 }
                 _ => false,

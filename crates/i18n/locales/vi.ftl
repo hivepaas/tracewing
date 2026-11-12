@@ -1126,11 +1126,17 @@ te5d065fe = Tạm dừng message của socket gửi tới server
 # Pause a socket's messages to the app
 t482173e8 = Tạm dừng message của socket gửi tới ứng dụng
 
+# Run a script
+t65a52970 = Chạy một script
+
 # Status to answer with, like 403
 t8f3ebb6c = Status trả về, như 403
 
 # Full path of a file or folder
 t9fb9ae4c = Đường dẫn đầy đủ của một file hoặc thư mục
+
+# Full path of a .js file with onRequest or onResponse
+t01bacb53 = Đường dẫn đầy đủ tới file .js có onRequest hoặc onResponse
 
 # Where to, like http://localhost:3000
 tdfedd004 = Gửi tới đâu, như http://localhost:3000
@@ -1186,6 +1192,9 @@ tf2e7bf27 = Query: không có { $name }
 # Status {status}
 tad048e53 = Status { $status }
 
+# Run {path}
+t2f9fde3f = Chạy { $path }
+
 # Request body: {replace}
 te4856c36 = Body của request: { $replace }
 
@@ -1224,6 +1233,15 @@ t32a3ce94 = Không đọc được { $path }: { $e }
 
 # Nothing was imported: {e}
 tb9f7257a = Không nhập được gì: { $e }
+
+# Failed: {why}
+tfce667e2 = Lỗi: { $why }
+
+# Ran once. Last said: {last} | Ran {n} times. Last said: {last}
+t3e82a85a = Đã chạy { $n } lần. Dòng cuối: { $last }
+
+# Ran once. | Ran {n} times.
+t47b9c718 = Đã chạy { $n } lần.
 
 # Edit
 tc2c76cb1 = Sửa

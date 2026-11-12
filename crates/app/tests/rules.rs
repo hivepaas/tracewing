@@ -252,6 +252,66 @@ fn rules_made_in_the_window_change_traffic() {
         })
         .unwrap();
 
+    // A script's rule: it answers by itself, and the rule says what it logged.
+    let script = dir.join("flags.js");
+    std::fs::write(
+        &script,
+        r#"function onRequest(request) {
+             console.log("asked for", request.url);
+             return { response: { status: 200, headers: { "content-type": "application/json" },
+                                  body: JSON.stringify({ newCheckout: true }) } };
+           }"#,
+    )
+    .unwrap();
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.clear_rule_form(cx);
+            view.set_rule_kind(RuleKind::Script, cx);
+            view.fill_rule(
+                "Feature flags",
+                "api.test/flags",
+                &script.display().to_string(),
+                "",
+                cx,
+            );
+            view.save_rule(cx);
+            assert_eq!(
+                view.traffic_rules().rules[2].action,
+                Action::Script {
+                    path: script.clone()
+                }
+            );
+        })
+        .unwrap();
+    assert_eq!(
+        get("https://api.test/flags"),
+        (200, r#"{"newCheckout":true}"#.to_owned())
+    );
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while view_log(&mut cx, window, &script).lines.is_empty() {
+        assert!(std::time::Instant::now() < deadline, "the script's log");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    window.update(&mut cx, |view, _, cx| view.look(cx)).unwrap();
+    cx.run_until_parked();
+    // Down to the rule.
+    cx.update_window(window.into(), |_, window, cx| {
+        window.dispatch_event(
+            gpui::PlatformInput::ScrollWheel(gpui::ScrollWheelEvent {
+                position: gpui::point(px(900.), px(600.)),
+                delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(-900.))),
+                ..Default::default()
+            }),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "104-rule-script");
+    window
+        .update(&mut cx, |view, _, cx| view.delete_rule(2, cx))
+        .unwrap();
+
     // A slow network: a preset, then numbers of one's own, then off again.
     window
         .update(&mut cx, |view, _, cx| {
@@ -289,6 +349,16 @@ fn rules_made_in_the_window_change_traffic() {
     drop(cx);
     runtime.shutdown_background();
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+fn view_log(
+    cx: &mut HeadlessAppContext,
+    window: WindowHandle<Traffic>,
+    script: &std::path::Path,
+) -> tracewing_proxy::script::ScriptLog {
+    window
+        .update(cx, |view, _, _| view.engine.scripts.log(script))
+        .unwrap()
 }
 
 fn mock_path(view: &Traffic) -> String {

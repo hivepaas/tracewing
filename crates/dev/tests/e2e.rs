@@ -48,6 +48,7 @@ struct Harness {
     tls_keys: Arc<tracewing_proxy::key_log::TlsKeys>,
     sockets: Arc<tracewing_proxy::sockets::Sockets>,
     client_certs: Arc<tracewing_proxy::client_certs::ClientCerts>,
+    scripts: Arc<tracewing_proxy::script::Scripts>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -121,6 +122,7 @@ impl Harness {
         let tls_keys = Arc::new(tracewing_proxy::key_log::TlsKeys::default());
         let sockets = Arc::new(tracewing_proxy::sockets::Sockets::default());
         let client_certs = Arc::new(tracewing_proxy::client_certs::ClientCerts::default());
+        let scripts = Arc::new(tracewing_proxy::script::Scripts::default());
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -149,6 +151,7 @@ impl Harness {
                 tls_keys: Arc::clone(&tls_keys),
                 sockets: Arc::clone(&sockets),
                 client_certs: Arc::clone(&client_certs),
+                scripts: Arc::clone(&scripts),
             },
             async {
                 let _ = stopped.await;
@@ -177,6 +180,7 @@ impl Harness {
             tls_keys,
             sockets,
             client_certs,
+            scripts,
             stop,
             proxy,
         }
@@ -3505,6 +3509,107 @@ async fn first_held<T>(pauses: &Pauses, client: &tokio::task::JoinHandle<T>) -> 
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     panic!("nothing was held in 30 s");
+}
+
+/// A rule's script changes a request and its response, answers one by itself,
+/// and, broken, leaves traffic as it was.
+#[tokio::test(flavor = "multi_thread")]
+async fn scripts_change_traffic_and_a_broken_one_leaves_it_alone() {
+    let h = Harness::start("scripts").await;
+    let script = h.dir.join("change.js");
+    std::fs::write(
+        &script,
+        r#"
+        function onRequest(request) {
+          if (request.url.includes("/mock")) {
+            return { response: { status: 404, headers: { "content-type": "text/plain" },
+                                 body: "mocked by " + request.method } };
+          }
+          request.headers["x-script"] = "yes";
+          request.body = request.body.toUpperCase();
+          console.log("sent", request.method, request.url);
+        }
+        function onResponse(request, response) {
+          const echoed = JSON.parse(response.body);
+          response.body = JSON.stringify({ server_saw: echoed.headers["x-script"],
+                                           body: echoed.body });
+          response.headers["x-changed"] = "1";
+        }
+        "#,
+    )
+    .unwrap();
+    let broken = h.dir.join("broken.js");
+    std::fs::write(&broken, "function onRequest(r) { r.nope.nope = 1; }").unwrap();
+    h.traffic_rules.write().unwrap().rules.extend([
+        rule(
+            "*/echo*",
+            Action::Script {
+                path: script.clone(),
+            },
+        ),
+        rule(
+            "*/mock*",
+            Action::Script {
+                path: script.clone(),
+            },
+        ),
+        rule(
+            "*/text*",
+            Action::Script {
+                path: broken.clone(),
+            },
+        ),
+    ]);
+    let client = h.client(true);
+    let base = format!("http://localhost:{}", h.playground_port);
+
+    let res = client
+        .post(format!("{base}/echo"))
+        .body("hello")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.headers()["x-changed"], "1");
+    let got: serde_json::Value = serde_json::from_str(&res.text().await.unwrap()).unwrap();
+    assert_eq!(
+        got["server_saw"], "yes",
+        "the server had the script's header"
+    );
+    assert_eq!(got["body"], "HELLO", "and its body");
+
+    let res = client.get(format!("{base}/mock")).send().await.unwrap();
+    assert_eq!(res.status(), 404);
+    assert_eq!(res.text().await.unwrap(), "mocked by GET");
+
+    let res = client.get(format!("{base}/text")).send().await.unwrap();
+    assert_eq!(res.status(), 200, "a broken script changes nothing");
+    assert!(!res.text().await.unwrap().is_empty());
+
+    let log = |path: &std::path::Path| {
+        // Its scripts are the harness's own, kept by the proxy.
+        h.scripts.log(path)
+    };
+    assert!(
+        log(&script)
+            .lines
+            .iter()
+            .any(|l| l.starts_with("sent POST"))
+    );
+    assert_eq!(log(&script).error, None);
+    assert!(log(&broken).error.unwrap().starts_with("TypeError"));
+
+    let (_, conn, dir) = h.finish(3).await;
+    let bodies: Vec<(String, i64)> = {
+        let mut stmt = conn
+            .prepare("SELECT path, req_bytes FROM flows ORDER BY id")
+            .unwrap();
+        stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+    assert_eq!(bodies[0], ("/echo".to_owned(), 5), "the flow has what went");
+    clean_up(conn, dir);
 }
 
 /// The next thing held, whatever is waiting for it.

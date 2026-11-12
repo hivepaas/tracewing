@@ -493,8 +493,10 @@ t40ecc39b = Pause the request
 t18a34799 = Pause the response
 te5d065fe = Pause a socket's messages to the server
 t482173e8 = Pause a socket's messages to the app
+t65a52970 = Run a script
 t8f3ebb6c = Status to answer with, like 403
 t9fb9ae4c = Full path of a file or folder
+t01bacb53 = Full path of a .js file with onRequest or onResponse
 tdfedd004 = Where to, like http://localhost:3000
 t80793085 = Header's name
 t43968778 = Its value
@@ -513,6 +515,7 @@ t23960a2e = Response: no { $header }
 t0ee6c1c0 = Query: { $name }={ $value }
 tf2e7bf27 = Query: no { $name }
 tad048e53 = Status { $status }
+t2f9fde3f = Run { $path }
 te4856c36 = Request body: { $replace }
 t8600dc42 = Response body: { $replace }
 taec471a9 = Request body: { $find } → { $replace }
@@ -529,6 +532,17 @@ te7ac257f = The rules were not written: { $e }
 t573e0af4 = Import
 t32a3ce94 = { $path } could not be read: { $e }
 tb9f7257a = Nothing was imported: { $e }
+tfce667e2 = Failed: { $why }
+t3e82a85a =
+    { $n ->
+        [one] Ran once. Last said: { $last }
+       *[other] Ran { $n } times. Last said: { $last }
+    }
+t47b9c718 =
+    { $n ->
+        [one] Ran once.
+       *[other] Ran { $n } times.
+    }
 tc2c76cb1 = Edit
 t5797ea6a = Delete
 t9160f393 = Change this rule

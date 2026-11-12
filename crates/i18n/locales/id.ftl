@@ -1126,11 +1126,17 @@ te5d065fe = Jeda pesan soket ke server
 # Pause a socket's messages to the app
 t482173e8 = Jeda pesan soket ke aplikasi
 
+# Run a script
+t65a52970 = Jalankan skrip
+
 # Status to answer with, like 403
 t8f3ebb6c = Status untuk menjawab, seperti 403
 
 # Full path of a file or folder
 t9fb9ae4c = Path lengkap file atau folder
+
+# Full path of a .js file with onRequest or onResponse
+t01bacb53 = Jalur lengkap file .js dengan onRequest atau onResponse
 
 # Where to, like http://localhost:3000
 tdfedd004 = Tujuan, seperti http://localhost:3000
@@ -1186,6 +1192,9 @@ tf2e7bf27 = Query: tanpa { $name }
 # Status {status}
 tad048e53 = Status { $status }
 
+# Run {path}
+t2f9fde3f = Jalankan { $path }
+
 # Request body: {replace}
 te4856c36 = Body permintaan: { $replace }
 
@@ -1224,6 +1233,15 @@ t32a3ce94 = { $path } tidak bisa dibaca: { $e }
 
 # Nothing was imported: {e}
 tb9f7257a = Tidak ada yang diimpor: { $e }
+
+# Failed: {why}
+tfce667e2 = Gagal: { $why }
+
+# Ran once. Last said: {last} | Ran {n} times. Last said: {last}
+t3e82a85a = Sudah jalan { $n } kali. Terakhir: { $last }
+
+# Ran once. | Ran {n} times.
+t47b9c718 = Sudah jalan { $n } kali.
 
 # Edit
 tc2c76cb1 = Edit

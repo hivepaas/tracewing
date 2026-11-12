@@ -22,6 +22,7 @@ use tracewing_proxy::{
     relay::{Relay, RelaySettings},
     rules::HostRules,
     run_proxy,
+    script::Scripts,
     sockets::Sockets,
     throttle::{Conditions, Network},
     traffic_rules::TrafficRules,
@@ -136,6 +137,8 @@ pub struct Engine {
     pub sockets: Arc<Sockets>,
     /// Certificates to show servers that ask the client for one.
     pub client_certs: Arc<ClientCerts>,
+    /// The scripts rules run, with what each has logged.
+    pub scripts: Arc<Scripts>,
     stop: Option<oneshot::Sender<()>>,
     thread: Option<JoinHandle<()>>,
 }
@@ -179,6 +182,7 @@ impl Engine {
         // Where it listens, for `tracewing mcp` to send requests through.
         let address_file = opts.data_dir.join(PROXY_ADDRESS_FILE);
         let _ = std::fs::write(&address_file, addr.to_string());
+        let scripts = Arc::new(Scripts::default());
         let (stop, stopped) = oneshot::channel::<()>();
         let proxy = ProxyOptions {
             listener: None,
@@ -207,6 +211,7 @@ impl Engine {
             tls_keys: Arc::clone(&tls_keys),
             sockets: Arc::clone(&sockets),
             client_certs: Arc::clone(&client_certs),
+            scripts: Arc::clone(&scripts),
         };
         let thread = {
             let failure = Arc::clone(&failure);
@@ -250,6 +255,7 @@ impl Engine {
             tls_keys,
             sockets,
             client_certs,
+            scripts,
             stop: Some(stop),
             thread: Some(thread),
         })

@@ -11,6 +11,7 @@ pub mod lan;
 pub mod pause;
 pub mod relay;
 pub mod rules;
+pub mod script;
 pub mod sockets;
 pub mod throttle;
 pub mod traffic_rules;
@@ -115,6 +116,8 @@ pub struct ProxyOptions {
     pub sockets: Arc<sockets::Sockets>,
     /// Certificates to show servers that ask the client for one.
     pub client_certs: Arc<client_certs::ClientCerts>,
+    /// The scripts rules run, with what each has logged.
+    pub scripts: Arc<script::Scripts>,
 }
 
 #[derive(Debug)]
@@ -229,6 +232,7 @@ pub async fn run_proxy(
             relay: Arc::clone(&opts.relay),
             connector: connector.clone(),
             sockets: Arc::clone(&opts.sockets),
+            scripts: Arc::clone(&opts.scripts),
         },
     );
     let stop_limit = opts.stop_limit;

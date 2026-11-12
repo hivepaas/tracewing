@@ -1285,11 +1285,17 @@ te5d065fe = Призупиняти повідомлення сокета сер�
 # Pause a socket's messages to the app
 t482173e8 = Призупиняти повідомлення сокета застосунку
 
+# Run a script
+t65a52970 = Запустити скрипт
+
 # Status to answer with, like 403
 t8f3ebb6c = Статус для відповіді, наприклад 403
 
 # Full path of a file or folder
 t9fb9ae4c = Повний шлях до файлу або папки
+
+# Full path of a .js file with onRequest or onResponse
+t01bacb53 = Повний шлях до файлу .js з onRequest або onResponse
 
 # Where to, like http://localhost:3000
 tdfedd004 = Куди, наприклад http://localhost:3000
@@ -1345,6 +1351,9 @@ tf2e7bf27 = Query: без { $name }
 # Status {status}
 tad048e53 = Статус { $status }
 
+# Run {path}
+t2f9fde3f = Запустити { $path }
+
 # Request body: {replace}
 te4856c36 = Тіло запиту: { $replace }
 
@@ -1386,6 +1395,27 @@ t32a3ce94 = Не вдалося прочитати { $path }: { $e }
 
 # Nothing was imported: {e}
 tb9f7257a = Нічого не імпортовано: { $e }
+
+# Failed: {why}
+tfce667e2 = Помилка: { $why }
+
+# Ran once. Last said: {last} | Ran {n} times. Last said: {last}
+t3e82a85a =
+    { $n ->
+        [one] Запущено { $n } раз. Останній вивід: { $last }
+        [few] Запущено { $n } рази. Останній вивід: { $last }
+        [many] Запущено { $n } разів. Останній вивід: { $last }
+       *[other] Запущено { $n } рази. Останній вивід: { $last }
+    }
+
+# Ran once. | Ran {n} times.
+t47b9c718 =
+    { $n ->
+        [one] Запущено { $n } раз.
+        [few] Запущено { $n } рази.
+        [many] Запущено { $n } разів.
+       *[other] Запущено { $n } рази.
+    }
 
 # Edit
 tc2c76cb1 = Змінити

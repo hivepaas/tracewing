@@ -34,10 +34,11 @@ pub enum RuleKind {
     PauseResponse,
     PauseMessagesToServer,
     PauseMessagesToApp,
+    Script,
 }
 
 impl RuleKind {
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 17] = [
         Self::Block,
         Self::MapLocal,
         Self::MapRemote,
@@ -54,6 +55,7 @@ impl RuleKind {
         Self::PauseResponse,
         Self::PauseMessagesToServer,
         Self::PauseMessagesToApp,
+        Self::Script,
     ];
 
     /// Its second field is a body, written over several lines.
@@ -79,6 +81,7 @@ impl RuleKind {
             Self::PauseResponse => tr!("Pause the response"),
             Self::PauseMessagesToServer => tr!("Pause a socket's messages to the server"),
             Self::PauseMessagesToApp => tr!("Pause a socket's messages to the app"),
+            Self::Script => tr!("Run a script"),
         }
     }
 
@@ -87,6 +90,10 @@ impl RuleKind {
         match self {
             Self::Block => (Some(tr!("Status to answer with, like 403")), None),
             Self::MapLocal => (Some(tr!("Full path of a file or folder")), None),
+            Self::Script => (
+                Some(tr!("Full path of a .js file with onRequest or onResponse")),
+                None,
+            ),
             Self::MapRemote => (Some(tr!("Where to, like http://localhost:3000")), None),
             Self::RequestHeader | Self::ResponseHeader => {
                 (Some(tr!("Header's name")), Some(tr!("Its value")))
@@ -118,6 +125,9 @@ impl RuleKind {
                     .map_err(|_| tr!("\"{first}\" is not a status", first = first))?,
             },
             Self::MapLocal => Action::MapLocal {
+                path: PathBuf::from(first),
+            },
+            Self::Script => Action::Script {
                 path: PathBuf::from(first),
             },
             Self::MapRemote => Action::MapRemote {
@@ -199,6 +209,7 @@ fn action_text(action: &Action) -> String {
         Action::PauseResponse => tr!("Pause the response"),
         Action::PauseMessagesToServer => tr!("Pause a socket's messages to the server"),
         Action::PauseMessagesToApp => tr!("Pause a socket's messages to the app"),
+        Action::Script { path } => tr!("Run {path}", path = path.display().to_string()),
     }
 }
 
@@ -270,6 +281,7 @@ fn fields_of(action: &Action) -> (RuleKind, String, String) {
             String::new(),
         ),
         Action::PauseMessagesToApp => (RuleKind::PauseMessagesToApp, String::new(), String::new()),
+        Action::Script { path } => (RuleKind::Script, path.display().to_string(), String::new()),
     }
 }
 
@@ -703,7 +715,17 @@ impl Traffic {
                 .text_color(rgb(c.on_chip))
                 .child(label)
         };
+        // What each script has said, under its rule.
+        let script_logs: Vec<Option<tracewing_proxy::script::ScriptLog>> = rules
+            .rules
+            .iter()
+            .map(|rule| match &rule.action {
+                Action::Script { path } => Some(self.engine.scripts.log(path)),
+                _ => None,
+            })
+            .collect();
         let list = rules.rules.iter().enumerate().map(|(at, rule)| {
+            let script_log = script_logs[at].clone();
             let key = at as u64;
             div()
                 .flex()
@@ -763,7 +785,43 @@ impl Traffic {
                                 .text_size(px(12.))
                                 .text_color(rgb(c.muted))
                                 .child(action_text(&rule.action)),
-                        ),
+                        )
+                        .children(script_log.and_then(|log| {
+                            let (line, color) = match (&log.error, log.lines.last()) {
+                                (Some(why), _) => (
+                                    tr!(
+                                        "Failed: {why}",
+                                        why = why.lines().next().unwrap_or_default()
+                                    ),
+                                    c.error,
+                                ),
+                                (None, Some(last)) => (
+                                    tr_n!(
+                                        log.calls as usize,
+                                        "Ran once. Last said: {last}",
+                                        "Ran {n} times. Last said: {last}",
+                                        last = last.as_str()
+                                    ),
+                                    c.muted,
+                                ),
+                                (None, None) if log.calls > 0 => (
+                                    tr_n!(log.calls as usize, "Ran once.", "Ran {n} times."),
+                                    c.muted,
+                                ),
+                                (None, None) => return None,
+                            };
+                            Some(
+                                div()
+                                    .text_size(px(12.))
+                                    .text_color(rgb(color))
+                                    .font_family(crate::MONO_FONT)
+                                    .font_features(gpui::FontFeatures::disable_ligatures())
+                                    .overflow_hidden()
+                                    .text_ellipsis()
+                                    .whitespace_nowrap()
+                                    .child(line),
+                            )
+                        })),
                 )
                 .child(
                     small(("rule-edit", key), tr!("Edit"))
@@ -1051,6 +1109,7 @@ mod tests {
             (RuleKind::PauseResponse, "", ""),
             (RuleKind::PauseMessagesToServer, "", ""),
             (RuleKind::PauseMessagesToApp, "", ""),
+            (RuleKind::Script, "/tmp/change.js", ""),
         ] {
             let action = kind.action(first, second).unwrap();
             assert_eq!(
