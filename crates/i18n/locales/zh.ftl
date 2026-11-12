@@ -796,8 +796,17 @@ t1f3f6dd2 = 请求
 # RESPONSE
 tc85f77de = 响应
 
+# MESSAGE TO THE SERVER
+t270a6209 = 发往服务器的消息
+
+# MESSAGE TO THE APP
+t7d928b05 = 发往应用的消息
+
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
 tf9ab4327 = 没有已暂停的项。在“规则”页面添加“暂停”规则，即可在此拦停流量。
+
+# {kind} on {url}
+t1204e859 = { $url } 上的 { $kind }
 
 # for {method} {url}
 t093a86f6 = 针对 { $method } { $url }
@@ -807,6 +816,15 @@ tc840fed6 = 服务器收到之前的请求
 
 # The response, before the app gets it
 t6683d72a = 应用收到之前的响应
+
+# A socket's message, before the server gets it
+tda2ebc5d = 套接字消息，在服务器收到之前
+
+# A socket's message, before the app gets it
+tbce07e9d = 套接字消息，在应用收到之前
+
+# Message
+tae0ed984 = 消息
 
 # Send as it came
 tb593e730 = 按原样发送
@@ -1065,6 +1083,12 @@ t40ecc39b = 暂停请求
 
 # Pause the response
 t18a34799 = 暂停响应
+
+# Pause a socket's messages to the server
+te5d065fe = 暂停发往服务器的套接字消息
+
+# Pause a socket's messages to the app
+t482173e8 = 暂停发往应用的套接字消息
 
 # Status to answer with, like 403
 t8f3ebb6c = 要返回的状态码，如 403

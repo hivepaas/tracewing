@@ -836,8 +836,17 @@ t1f3f6dd2 = REQUÊTE
 # RESPONSE
 tc85f77de = RÉPONSE
 
+# MESSAGE TO THE SERVER
+t270a6209 = MESSAGE VERS LE SERVEUR
+
+# MESSAGE TO THE APP
+t7d928b05 = MESSAGE VERS L'APP
+
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
 tf9ab4327 = Rien n'est en pause. Ajoutez une règle de pause dans l'écran Règles pour arrêter le trafic ici.
+
+# {kind} on {url}
+t1204e859 = { $kind } sur { $url }
 
 # for {method} {url}
 t093a86f6 = pour { $method } { $url }
@@ -847,6 +856,15 @@ tc840fed6 = La requête, avant que le serveur ne la reçoive
 
 # The response, before the app gets it
 t6683d72a = La réponse, avant que l'app ne la reçoive
+
+# A socket's message, before the server gets it
+tda2ebc5d = Un message du socket, avant que le serveur ne le reçoive
+
+# A socket's message, before the app gets it
+tbce07e9d = Un message du socket, avant que l'app ne le reçoive
+
+# Message
+tae0ed984 = Message
 
 # Send as it came
 tb593e730 = Envoyer tel quel
@@ -1172,6 +1190,12 @@ t40ecc39b = Mettre la requête en pause
 
 # Pause the response
 t18a34799 = Mettre la réponse en pause
+
+# Pause a socket's messages to the server
+te5d065fe = Mettre en pause les messages du socket vers le serveur
+
+# Pause a socket's messages to the app
+t482173e8 = Mettre en pause les messages du socket vers l'app
 
 # Status to answer with, like 403
 t8f3ebb6c = Statut de la réponse, comme 403

@@ -158,7 +158,9 @@ impl Traffic {
         let paused = page.current().ok_or_else(|| tr!("Nothing is paused"))?;
         let read = |input: &Entity<TextInput>| input.read(cx).text().to_owned();
         let mut message = paused.message.clone();
-        message.headers = parse_headers(&read(&page.headers))?;
+        if !paused.stage.is_message() {
+            message.headers = parse_headers(&read(&page.headers))?;
+        }
         if !page.binary_body {
             message.body = read(&page.body).into_bytes();
         }
@@ -176,6 +178,8 @@ impl Traffic {
                     .map_err(|_| tr!("\"{status}\" is not a status", status = status.trim()))?;
                 pause::response_from(message.clone())?;
             }
+            // A socket's message is only its text.
+            Stage::ToServer | Stage::ToApp => {}
         }
         Ok((paused.id, paused.stage, message))
     }
@@ -253,6 +257,14 @@ impl Traffic {
             let stage = match paused.stage {
                 Stage::Request => tr!("REQUEST"),
                 Stage::Response => tr!("RESPONSE"),
+                Stage::ToServer => tr!("MESSAGE TO THE SERVER"),
+                Stage::ToApp => tr!("MESSAGE TO THE APP"),
+            };
+            // A socket's message by its start, as its URL is the socket's.
+            let line = if paused.stage.is_message() {
+                crate::messages::preview_text(&paused.message.body)
+            } else {
+                format!("{} {}", paused.message.method, paused.message.url)
             };
             let at = chrono::DateTime::<chrono::Local>::from(paused.since).format("%H:%M:%S");
             div()
@@ -282,7 +294,7 @@ impl Traffic {
                         .overflow_hidden()
                         .text_ellipsis()
                         .whitespace_nowrap()
-                        .child(format!("{} {}", paused.message.method, paused.message.url)),
+                        .child(line),
                 )
                 .child(
                     div()
@@ -305,7 +317,23 @@ impl Traffic {
                 ))
                 .into_any_element(),
             Some(paused) => {
+                let socket_line = || {
+                    div()
+                        .font_family(crate::MONO_FONT)
+                        .font_features(gpui::FontFeatures::disable_ligatures())
+                        .text_size(px(12.))
+                        .text_color(rgb(c.muted))
+                        .overflow_hidden()
+                        .text_ellipsis()
+                        .whitespace_nowrap()
+                        .child(tr!(
+                            "{kind} on {url}",
+                            kind = &paused.message.method,
+                            url = &paused.message.url
+                        ))
+                };
                 let first_line = match paused.stage {
+                    Stage::ToServer | Stage::ToApp => socket_line(),
                     Stage::Request => div()
                         .flex()
                         .flex_row()
@@ -351,11 +379,20 @@ impl Traffic {
                     .child(eyebrow(match paused.stage {
                         Stage::Request => tr!("The request, before the server gets it"),
                         Stage::Response => tr!("The response, before the app gets it"),
+                        Stage::ToServer => {
+                            tr!("A socket's message, before the server gets it")
+                        }
+                        Stage::ToApp => tr!("A socket's message, before the app gets it"),
                     }))
                     .child(first_line)
-                    .child(eyebrow(tr!("Headers")))
-                    .child(field(&page.headers))
-                    .child(eyebrow(tr!("Body")))
+                    .when(!paused.stage.is_message(), |d| {
+                        d.child(eyebrow(tr!("Headers")))
+                            .child(field(&page.headers))
+                            .child(eyebrow(tr!("Body")))
+                    })
+                    .when(paused.stage.is_message(), |d| {
+                        d.child(eyebrow(tr!("Message")))
+                    })
                     .child(field(&page.body))
                     .children(
                         page.problem

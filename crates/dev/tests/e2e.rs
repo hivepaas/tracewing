@@ -3442,6 +3442,115 @@ async fn first_held<T>(pauses: &Pauses, client: &tokio::task::JoinHandle<T>) -> 
     panic!("nothing was held in 30 s");
 }
 
+/// The next thing held, whatever is waiting for it.
+async fn next_held(pauses: &Pauses) -> Paused {
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while Instant::now() < deadline {
+        if let Some(held) = pauses.held().into_iter().next() {
+            return held;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    panic!("nothing was held in 30 s");
+}
+
+/// A socket's messages held each way: let go as they came, changed, or
+/// dropped; what is written down is what went on.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_sockets_messages_hold_until_let_go() {
+    use hudsucker::{
+        futures::{SinkExt, StreamExt},
+        tokio_tungstenite::tungstenite::Message,
+    };
+    let h = Harness::start("ws-breakpoints").await;
+    h.traffic_rules.write().unwrap().rules.extend([
+        rule("*/ws*", Action::PauseMessagesToServer),
+        rule("*/ws*", Action::PauseMessagesToApp),
+    ]);
+    let (mut ws, _) = playground_ws(&h, false, "/ws?ticks=0", &[]).await.unwrap();
+
+    // The server's hello, held before the app has it.
+    let hello = next_held(&h.pauses).await;
+    assert_eq!(hello.stage, Stage::ToApp);
+    assert_eq!(hello.rule, "rule for */ws*");
+    assert_eq!(hello.message.method, "text");
+    assert!(
+        hello.message.url.ends_with("/ws?ticks=0"),
+        "{}",
+        hello.message.url
+    );
+    assert!(hello.message.headers.is_empty());
+    h.pauses
+        .decide(hello.id, Verdict::Send(hello.message.clone()));
+    assert!(ws.next().await.unwrap().unwrap().is_text());
+
+    // Changed on its way to the server, and its echo again on its way back.
+    ws.send(Message::text("edit me")).await.unwrap();
+    let up = next_held(&h.pauses).await;
+    assert_eq!(up.stage, Stage::ToServer);
+    assert_eq!(up.message.body, b"edit me");
+    let mut edited = up.message.clone();
+    edited.body = b"edited".to_vec();
+    h.pauses.decide(up.id, Verdict::Send(edited));
+    let echo = next_held(&h.pauses).await;
+    assert_eq!(echo.stage, Stage::ToApp);
+    assert_eq!(echo.message.body, b"edited", "the server had the edit");
+    let mut twice = echo.message.clone();
+    twice.body = b"twice".to_vec();
+    h.pauses.decide(echo.id, Verdict::Send(twice));
+    assert_eq!(ws.next().await.unwrap().unwrap(), Message::text("twice"));
+
+    // Dropped: the server never has it, so nothing comes back for it.
+    ws.send(Message::text("drop me")).await.unwrap();
+    let dropped = next_held(&h.pauses).await;
+    assert_eq!(dropped.message.body, b"drop me");
+    h.pauses.decide(dropped.id, Verdict::Drop);
+    // Binary stays binary, though it is not text.
+    ws.send(Message::binary(vec![0, 159, 146, 150]))
+        .await
+        .unwrap();
+    let up = next_held(&h.pauses).await;
+    assert_eq!(up.message.method, "binary");
+    h.pauses.decide(up.id, Verdict::Send(up.message.clone()));
+    let echo = next_held(&h.pauses).await;
+    h.pauses.release_all();
+    assert_eq!(echo.message.body, [0, 159, 146, 150], "not \"drop me\"");
+    assert_eq!(
+        ws.next().await.unwrap().unwrap(),
+        Message::binary(vec![0, 159, 146, 150])
+    );
+
+    // The rules gone, the next messages go straight through.
+    h.traffic_rules.write().unwrap().rules.clear();
+    ws.close(None).await.unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        h.pauses.release_all();
+        match tokio::time::timeout(Duration::from_millis(50), ws.next()).await {
+            Ok(None) => break,
+            _ => assert!(Instant::now() < deadline, "the close"),
+        }
+    }
+
+    let (_, conn, dir) = h.finish(1).await;
+    let written: Vec<(bool, i64)> = {
+        let mut stmt = conn
+            .prepare("SELECT from_client, bytes FROM messages WHERE kind IN ('text', 'binary') ORDER BY id")
+            .unwrap();
+        stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .skip(1)
+            .collect()
+    };
+    assert_eq!(
+        written,
+        [(true, 6), (false, 5), (true, 4), (false, 4)],
+        "after the hello: edited, twice, then binary both ways; nothing dropped"
+    );
+    clean_up(conn, dir);
+}
+
 /// Breakpoints through the real proxy: a request changed on its way, a response
 /// changed on its way back, and one dropped.
 #[tokio::test(flavor = "multi_thread")]

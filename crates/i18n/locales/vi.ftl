@@ -796,8 +796,17 @@ t1f3f6dd2 = REQUEST
 # RESPONSE
 tc85f77de = RESPONSE
 
+# MESSAGE TO THE SERVER
+t270a6209 = MESSAGE TỚI SERVER
+
+# MESSAGE TO THE APP
+t7d928b05 = MESSAGE TỚI ỨNG DỤNG
+
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
 tf9ab4327 = Không có gì đang tạm dừng. Hãy thêm quy tắc Tạm dừng ở trang Quy tắc để dừng traffic ở đây.
+
+# {kind} on {url}
+t1204e859 = { $kind } trên { $url }
 
 # for {method} {url}
 t093a86f6 = cho { $method } { $url }
@@ -807,6 +816,15 @@ tc840fed6 = Request, trước khi server nhận
 
 # The response, before the app gets it
 t6683d72a = Response, trước khi app nhận
+
+# A socket's message, before the server gets it
+tda2ebc5d = Message của socket, trước khi server nhận
+
+# A socket's message, before the app gets it
+tbce07e9d = Message của socket, trước khi ứng dụng nhận
+
+# Message
+tae0ed984 = Message
 
 # Send as it came
 tb593e730 = Gửi nguyên như khi đến
@@ -1065,6 +1083,12 @@ t40ecc39b = Tạm dừng request
 
 # Pause the response
 t18a34799 = Tạm dừng response
+
+# Pause a socket's messages to the server
+te5d065fe = Tạm dừng message của socket gửi tới server
+
+# Pause a socket's messages to the app
+t482173e8 = Tạm dừng message của socket gửi tới ứng dụng
 
 # Status to answer with, like 403
 t8f3ebb6c = Status trả về, như 403

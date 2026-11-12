@@ -862,8 +862,17 @@ t1f3f6dd2 = ЗАПИТ
 # RESPONSE
 tc85f77de = ВІДПОВІДЬ
 
+# MESSAGE TO THE SERVER
+t270a6209 = ПОВІДОМЛЕННЯ СЕРВЕРУ
+
+# MESSAGE TO THE APP
+t7d928b05 = ПОВІДОМЛЕННЯ ЗАСТОСУНКУ
+
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
 tf9ab4327 = Нічого не призупинено. Додайте правило «Призупинити» на екрані «Правила», щоб зупиняти трафік тут.
+
+# {kind} on {url}
+t1204e859 = { $kind } у { $url }
 
 # for {method} {url}
 t093a86f6 = для { $method } { $url }
@@ -873,6 +882,15 @@ tc840fed6 = Запит до того, як його отримає сервер
 
 # The response, before the app gets it
 t6683d72a = Відповідь до того, як її отримає застосунок
+
+# A socket's message, before the server gets it
+tda2ebc5d = Повідомлення сокета до того, як його отримає сервер
+
+# A socket's message, before the app gets it
+tbce07e9d = Повідомлення сокета до того, як його отримає застосунок
+
+# Message
+tae0ed984 = Повідомлення
 
 # Send as it came
 tb593e730 = Надіслати без змін
@@ -1224,6 +1242,12 @@ t40ecc39b = Призупинити запит
 
 # Pause the response
 t18a34799 = Призупинити відповідь
+
+# Pause a socket's messages to the server
+te5d065fe = Призупиняти повідомлення сокета серверу
+
+# Pause a socket's messages to the app
+t482173e8 = Призупиняти повідомлення сокета застосунку
 
 # Status to answer with, like 403
 t8f3ebb6c = Статус для відповіді, наприклад 403

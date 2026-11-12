@@ -796,8 +796,17 @@ t1f3f6dd2 = 請求
 # RESPONSE
 tc85f77de = 回應
 
+# MESSAGE TO THE SERVER
+t270a6209 = 傳給伺服器的訊息
+
+# MESSAGE TO THE APP
+t7d928b05 = 傳給應用程式的訊息
+
 # Nothing is paused. Add a Pause rule on the Rules screen to stop traffic here.
 tf9ab4327 = 沒有暫停的項目。在「規則」頁面新增「暫停」規則，即可在此攔下流量。
+
+# {kind} on {url}
+t1204e859 = { $url } 上的 { $kind }
 
 # for {method} {url}
 t093a86f6 = 針對 { $method } { $url }
@@ -807,6 +816,15 @@ tc840fed6 = 伺服器收到之前的請求
 
 # The response, before the app gets it
 t6683d72a = App 收到之前的回應
+
+# A socket's message, before the server gets it
+tda2ebc5d = 通訊端訊息，在伺服器收到之前
+
+# A socket's message, before the app gets it
+tbce07e9d = 通訊端訊息，在應用程式收到之前
+
+# Message
+tae0ed984 = 訊息
 
 # Send as it came
 tb593e730 = 原樣傳送
@@ -1065,6 +1083,12 @@ t40ecc39b = 暫停請求
 
 # Pause the response
 t18a34799 = 暫停回應
+
+# Pause a socket's messages to the server
+te5d065fe = 暫停傳給伺服器的通訊端訊息
+
+# Pause a socket's messages to the app
+t482173e8 = 暫停傳給應用程式的通訊端訊息
 
 # Status to answer with, like 403
 t8f3ebb6c = 要回應的狀態碼，例如 403
