@@ -871,6 +871,15 @@ tb629329e = Server menjawab { $code }: mungkin tidak menyediakan gRPC reflection
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Server tidak menjawab apa-apa: mungkin tidak menyediakan gRPC reflection
 
+# The password is kept in the system's keychain.
+t3a48373c = Kata sandi disimpan di keychain sistem.
+
+# The password is kept in relay.toml, which only you can read.
+tf84cb18b = Kata sandi disimpan di relay.toml, yang hanya bisa Anda baca.
+
+# The password is kept in relay.toml, which only you can read: the keychain cannot be used ({why}).
+t5a08b6d0 = Kata sandi disimpan di relay.toml, yang hanya bisa Anda baca: keychain tidak bisa dipakai ({ $why }).
+
 # New connections go through the {kind} proxy {address}.
 tb5f1ef96 = Koneksi baru melewati proxy { $kind } { $address }.
 
@@ -886,8 +895,8 @@ tb945a053 = http://proxy.example.com:8080 atau socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Lewat proxy lain
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
-t84509e00 = Jika jaringan perusahaan hanya mengizinkan keluar lewat proxy-nya sendiri, tracewing meneruskan ke server lewat proxy itu. Aplikasi tetap mengirim traffic ke tracewing. Nama pengguna dan kata sandi ditulis di alamat, seperti http://nama:sandi@proxy:8080, dan disimpan apa adanya di relay.toml. Jika kosong, tracewing langsung ke server.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
+t5c30a22f = Jika jaringan perusahaan hanya mengizinkan keluar lewat proxy-nya sendiri, tracewing meneruskan ke server lewat proxy itu. Aplikasi tetap mengirim traffic ke tracewing. Nama pengguna dan kata sandi ditulis di alamat, seperti http://nama:sandi@proxy:8080; kata sandi lalu disimpan di keychain sistem dan tidak ditampilkan lagi. Jika kosong, tracewing langsung ke server.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Host yang dihubungi langsung, seperti aturan NO_PROXY: example.com berarti host itu dan semua di bawahnya, * berarti semua host.

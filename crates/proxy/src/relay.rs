@@ -5,7 +5,12 @@
 //!
 //! The server's name goes to the relay as it is, for the relay to look up:
 //! inside a company, its own DNS often cannot answer for the internet.
+//!
+//! A password written in the address is kept in the system's keychain, as the
+//! CA's key is, and `relay.toml` keeps the address without it. Where there is
+//! no keychain it stays in the file, which only this user can read.
 
+use crate::ca_key::{KeyPlace, KeyStore, Secrets};
 use anyhow::{Context as _, Result, bail};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde::{Deserialize, Serialize};
@@ -65,9 +70,170 @@ impl RelaySettings {
     pub fn save(&self, data_dir: &Path) -> Result<()> {
         Route::parse(self)?;
         let path = data_dir.join(FILE);
-        std::fs::write(&path, toml::to_string(self)?)
+        write_private(&path, &toml::to_string(self)?)
             .with_context(|| format!("write {}", path.display()))
     }
+
+    /// The same, the address without its password.
+    pub fn without_password(&self) -> Self {
+        Self {
+            proxy: split_password(&self.proxy).0,
+            bypass: self.bypass.clone(),
+        }
+    }
+
+    /// Saves it, its password in the keychain when `store` says to and the
+    /// keychain takes it, else in the file. Says where the password went, if
+    /// there is one.
+    pub fn save_kept(
+        &self,
+        data_dir: &Path,
+        store: KeyStore,
+        secrets: &dyn Secrets,
+    ) -> Result<Option<KeyPlace>> {
+        Route::parse(self)?;
+        let (bare, password) = split_password(&self.proxy);
+        let Some(password) = password else {
+            self.save(data_dir)?;
+            // A user with no password written may have one kept already.
+            let kept = store == KeyStore::System
+                && user_of(&bare).is_some()
+                && secrets.get(&entry_name(&bare)).ok().flatten().is_some();
+            return Ok(kept.then_some(KeyPlace::Keychain));
+        };
+        let why = match store {
+            KeyStore::File => None,
+            KeyStore::System => match keep(&entry_name(&bare), &password, secrets) {
+                Ok(()) => {
+                    self.without_password().save(data_dir)?;
+                    return Ok(Some(KeyPlace::Keychain));
+                }
+                Err(why) => Some(why),
+            },
+        };
+        self.save(data_dir)?;
+        Ok(Some(KeyPlace::File { why }))
+    }
+
+    /// What `relay.toml` says, with the password from the keychain put back.
+    /// A password still in the file moves to the keychain when `store` says
+    /// to. Gives the settings to use, and where the password is.
+    pub fn load_kept(
+        data_dir: &Path,
+        store: KeyStore,
+        secrets: &dyn Secrets,
+    ) -> Result<(Self, Option<KeyPlace>)> {
+        let written = Self::load(data_dir)?;
+        let (bare, password) = split_password(&written.proxy);
+        match (store, password) {
+            (KeyStore::File, password) => {
+                let place = password.map(|_| KeyPlace::File { why: None });
+                Ok((written, place))
+            }
+            (KeyStore::System, Some(password)) => {
+                let place = match keep(&entry_name(&bare), &password, secrets) {
+                    Ok(()) => {
+                        written.without_password().save(data_dir)?;
+                        KeyPlace::Keychain
+                    }
+                    Err(why) => KeyPlace::File { why: Some(why) },
+                };
+                Ok((written, Some(place)))
+            }
+            (KeyStore::System, None) if user_of(&bare).is_some() => {
+                match secrets.get(&entry_name(&bare)) {
+                    Ok(Some(password)) => Ok((
+                        Self {
+                            proxy: with_password(&bare, &password),
+                            bypass: written.bypass,
+                        },
+                        Some(KeyPlace::Keychain),
+                    )),
+                    _ => Ok((written, None)),
+                }
+            }
+            (KeyStore::System, None) => Ok((written, None)),
+        }
+    }
+}
+
+/// The keychain's entry for a relay's password: by its address without it.
+fn entry_name(bare: &str) -> String {
+    format!("relay {bare}")
+}
+
+/// Puts `password` in the keychain, and checks it comes back.
+fn keep(name: &str, password: &str, secrets: &dyn Secrets) -> Result<(), String> {
+    secrets.set(name, password)?;
+    match secrets.get(name)? {
+        Some(back) if back == password => Ok(()),
+        _ => Err("the keychain did not give the password back".to_owned()),
+    }
+}
+
+/// Where the user name starts and the address ends, in a URL's authority.
+fn authority_span(url: &str) -> Option<(usize, usize)> {
+    let start = url.find("://")? + 3;
+    let end = url[start..].find('/').map_or(url.len(), |at| start + at);
+    Some((start, end))
+}
+
+/// The user name written in a URL, if any.
+fn user_of(url: &str) -> Option<&str> {
+    let (start, end) = authority_span(url)?;
+    let (user, _) = url[start..end].rsplit_once('@')?;
+    Some(user.split_once(':').map_or(user, |(name, _)| name))
+}
+
+/// The URL without its password, and the password, decoded, if one is written.
+fn split_password(url: &str) -> (String, Option<String>) {
+    let Some((start, end)) = authority_span(url) else {
+        return (url.to_owned(), None);
+    };
+    let authority = &url[start..end];
+    let Some((user, host)) = authority.rsplit_once('@') else {
+        return (url.to_owned(), None);
+    };
+    let Some((name, password)) = user.split_once(':') else {
+        return (url.to_owned(), None);
+    };
+    let bare = format!("{}{name}@{host}{}", &url[..start], &url[end..]);
+    (bare, Some(decode(password)))
+}
+
+/// `url`, which has a user name and no password, with `password` written in.
+fn with_password(url: &str, password: &str) -> String {
+    let Some((start, end)) = authority_span(url) else {
+        return url.to_owned();
+    };
+    let Some((name, host)) = url[start..end].rsplit_once('@') else {
+        return url.to_owned();
+    };
+    let encoded: String = password
+        .bytes()
+        .map(|b| {
+            if b.is_ascii_alphanumeric() || b"-._~".contains(&b) {
+                (b as char).to_string()
+            } else {
+                format!("%{b:02X}")
+            }
+        })
+        .collect();
+    format!("{}{name}:{encoded}@{host}{}", &url[..start], &url[end..])
+}
+
+/// Writes `text` where only this user can read it.
+fn write_private(path: &Path, text: &str) -> std::io::Result<()> {
+    use std::io::Write as _;
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+    let mut file = options.open(path)?;
+    // A file from before keeps its mode through open: set it.
+    #[cfg(unix)]
+    file.set_permissions(std::os::unix::fs::PermissionsExt::from_mode(0o600))?;
+    file.write_all(text.as_bytes())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -430,6 +596,119 @@ fn decode(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ca_key::MemoryKeychain;
+
+    fn temp(name: &str) -> std::path::PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("tracewing-relay-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn settings(proxy: &str) -> RelaySettings {
+        RelaySettings {
+            proxy: proxy.to_owned(),
+            bypass: "localhost".to_owned(),
+        }
+    }
+
+    #[test]
+    fn passwords_are_taken_out_of_an_address_and_put_back() {
+        assert_eq!(
+            split_password("http://an:p%40ss@proxy:8080/"),
+            ("http://an@proxy:8080/".to_owned(), Some("p@ss".to_owned()))
+        );
+        assert_eq!(
+            split_password("http://an@proxy:8080"),
+            ("http://an@proxy:8080".to_owned(), None)
+        );
+        assert_eq!(
+            split_password("socks5://proxy"),
+            ("socks5://proxy".to_owned(), None)
+        );
+        assert_eq!(user_of("http://an@proxy:8080"), Some("an"));
+        assert_eq!(user_of("http://proxy:8080"), None);
+        let back = with_password("http://an@proxy:8080", "p@ss:wörd");
+        assert_eq!(back, "http://an:p%40ss%3Aw%C3%B6rd@proxy:8080");
+        assert_eq!(split_password(&back).1.as_deref(), Some("p@ss:wörd"));
+    }
+
+    #[test]
+    fn a_password_goes_to_the_keychain_and_comes_back() {
+        let dir = temp("kept");
+        let keychain = MemoryKeychain::default();
+        let place = settings("http://an:secret@proxy:8080")
+            .save_kept(&dir, KeyStore::System, &keychain)
+            .unwrap();
+        assert_eq!(place, Some(KeyPlace::Keychain));
+        let file = std::fs::read_to_string(dir.join(FILE)).unwrap();
+        assert!(!file.contains("secret"), "{file}");
+        assert!(file.contains("http://an@proxy:8080"), "{file}");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            let mode = std::fs::metadata(dir.join(FILE))
+                .unwrap()
+                .permissions()
+                .mode();
+            assert_eq!(mode & 0o777, 0o600, "this user's alone");
+        }
+        let (used, place) = RelaySettings::load_kept(&dir, KeyStore::System, &keychain).unwrap();
+        assert_eq!(used.proxy, "http://an:secret@proxy:8080");
+        assert_eq!(place, Some(KeyPlace::Keychain));
+        // Applied again as shown, with no password: the kept one stays.
+        let place = settings("http://an@proxy:8080")
+            .save_kept(&dir, KeyStore::System, &keychain)
+            .unwrap();
+        assert_eq!(place, Some(KeyPlace::Keychain));
+        let (used, _) = RelaySettings::load_kept(&dir, KeyStore::System, &keychain).unwrap();
+        assert_eq!(used.proxy, "http://an:secret@proxy:8080");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_password_in_the_file_moves_to_the_keychain_or_stays_and_says_why() {
+        let dir = temp("moved");
+        settings("http://an:old@proxy:8080").save(&dir).unwrap();
+        let keychain = MemoryKeychain::default();
+        let (used, place) = RelaySettings::load_kept(&dir, KeyStore::System, &keychain).unwrap();
+        assert_eq!(used.proxy, "http://an:old@proxy:8080");
+        assert_eq!(place, Some(KeyPlace::Keychain));
+        assert!(
+            !std::fs::read_to_string(dir.join(FILE))
+                .unwrap()
+                .contains("old")
+        );
+
+        // No keychain: it stays, and why is said.
+        settings("http://an:pw@proxy:8080").save(&dir).unwrap();
+        let none = MemoryKeychain {
+            broken: true,
+            ..MemoryKeychain::default()
+        };
+        let (used, place) = RelaySettings::load_kept(&dir, KeyStore::System, &none).unwrap();
+        assert_eq!(used.proxy, "http://an:pw@proxy:8080");
+        assert!(
+            matches!(place, Some(KeyPlace::File { why: Some(_) })),
+            "{place:?}"
+        );
+        let place = settings("http://an:pw2@proxy:8080")
+            .save_kept(&dir, KeyStore::System, &none)
+            .unwrap();
+        assert!(matches!(place, Some(KeyPlace::File { why: Some(_) })));
+        assert!(
+            std::fs::read_to_string(dir.join(FILE))
+                .unwrap()
+                .contains("pw2")
+        );
+
+        // Tests and tools never touch a keychain.
+        let (used, place) = RelaySettings::load_kept(&dir, KeyStore::File, &none).unwrap();
+        assert_eq!(used.proxy, "http://an:pw2@proxy:8080");
+        assert_eq!(place, Some(KeyPlace::File { why: None }));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     fn route(proxy: &str, bypass: &str) -> Route {
         Route::parse(&RelaySettings {

@@ -871,6 +871,15 @@ tb629329e = 服务器返回 { $code }：它可能不提供 gRPC 反射。{ $mess
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = 服务器没有返回任何内容：它可能不提供 gRPC 反射
 
+# The password is kept in the system's keychain.
+t3a48373c = 密码保存在系统钥匙串中。
+
+# The password is kept in relay.toml, which only you can read.
+tf84cb18b = 密码保存在 relay.toml 中，只有你能读取。
+
+# The password is kept in relay.toml, which only you can read: the keychain cannot be used ({why}).
+t5a08b6d0 = 密码保存在 relay.toml 中，只有你能读取：无法使用钥匙串（{ $why }）。
+
 # New connections go through the {kind} proxy {address}.
 tb5f1ef96 = 新连接经由 { $kind } 代理 { $address }。
 
@@ -886,8 +895,8 @@ tb945a053 = http://proxy.example.com:8080 或 socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = 经由另一个代理
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
-t84509e00 = 当公司网络只允许通过其自身代理访问外部时，tracewing 会经由该代理连接服务器。应用仍将流量发送到 tracewing。用户名和密码写在地址中，例如 http://名称:密码@proxy:8080，并按原样保存在 relay.toml 中。留空时 tracewing 直接连接服务器。
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
+t5c30a22f = 当公司网络只允许通过其自身代理访问外部时，tracewing 会经由该代理连接服务器。应用仍将流量发送到 tracewing。用户名和密码写在地址中，例如 http://名称:密码@proxy:8080；之后密码保存在系统钥匙串中，不再显示。留空时 tracewing 直接连接服务器。
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = 直接连接的主机（同 NO_PROXY 写法）：example.com 表示它及其下所有主机，* 表示所有主机。

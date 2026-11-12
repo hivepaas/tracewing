@@ -871,6 +871,15 @@ tb629329e = 서버가 { $code }(으)로 응답했습니다: gRPC 리플렉션을
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = 서버가 아무것도 보내지 않았습니다: gRPC 리플렉션을 제공하지 않을 수 있습니다
 
+# The password is kept in the system's keychain.
+t3a48373c = 비밀번호는 시스템 키체인에 보관됩니다.
+
+# The password is kept in relay.toml, which only you can read.
+tf84cb18b = 비밀번호는 relay.toml에 보관되며 본인만 읽을 수 있습니다.
+
+# The password is kept in relay.toml, which only you can read: the keychain cannot be used ({why}).
+t5a08b6d0 = 비밀번호는 relay.toml에 보관되며 본인만 읽을 수 있습니다. 키체인을 쓸 수 없습니다({ $why }).
+
 # New connections go through the {kind} proxy {address}.
 tb5f1ef96 = 새 연결은 { $kind } 프록시 { $address }를 거칩니다.
 
@@ -886,8 +895,8 @@ tb945a053 = http://proxy.example.com:8080 또는 socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = 다른 프록시 거치기
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
-t84509e00 = 회사 네트워크가 자체 프록시를 통해서만 밖으로 나가게 할 때, tracewing은 그 프록시를 거쳐 서버로 갑니다. 앱은 계속 tracewing으로 트래픽을 보냅니다. 사용자 이름과 비밀번호는 http://이름:비밀번호@proxy:8080처럼 주소에 쓰며 relay.toml에 그대로 저장됩니다. 비워 두면 tracewing은 서버로 바로 갑니다.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
+t5c30a22f = 회사 네트워크가 자체 프록시를 통해서만 밖으로 나가게 할 때, tracewing은 그 프록시를 거쳐 서버로 갑니다. 앱은 계속 tracewing으로 트래픽을 보냅니다. 사용자 이름과 비밀번호는 http://이름:비밀번호@proxy:8080처럼 주소에 씁니다. 비밀번호는 그 뒤 시스템 키체인에 보관되며 다시 표시되지 않습니다. 비워 두면 tracewing은 서버로 바로 갑니다.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = 바로 연결할 호스트(NO_PROXY 방식): example.com은 그 호스트와 하위 전부, *는 모든 호스트.

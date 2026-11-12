@@ -101,9 +101,13 @@ impl Engine {
         let conditions = Conditions::load(&opts.data_dir.join(THROTTLE_FILE)).unwrap_or_default();
         // The same for a relay: connections go straight, and Settings says why.
         let relay = Arc::new(
-            RelaySettings::load(&opts.data_dir)
-                .and_then(|settings| Relay::new(&settings))
-                .unwrap_or_default(),
+            RelaySettings::load_kept(
+                &opts.data_dir,
+                opts.key_store,
+                &tracewing_proxy::ca_key::OsKeychain,
+            )
+            .and_then(|(settings, _)| Relay::new(&settings))
+            .unwrap_or_default(),
         );
         let network = Arc::new(Network::new(conditions));
         let (stop, stopped) = oneshot::channel::<()>();

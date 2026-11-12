@@ -973,6 +973,15 @@ tb629329e = Сервер ответил { $code }: возможно, у него
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Сервер ничего не ответил: возможно, у него нет gRPC reflection
 
+# The password is kept in the system's keychain.
+t3a48373c = Пароль хранится в системной связке ключей.
+
+# The password is kept in relay.toml, which only you can read.
+tf84cb18b = Пароль хранится в relay.toml, который можете читать только вы.
+
+# The password is kept in relay.toml, which only you can read: the keychain cannot be used ({why}).
+t5a08b6d0 = Пароль хранится в relay.toml, который можете читать только вы: связку ключей использовать нельзя ({ $why }).
+
 # New connections go through the {kind} proxy {address}.
 tb5f1ef96 = Новые соединения идут через { $kind }-прокси { $address }.
 
@@ -988,8 +997,8 @@ tb945a053 = http://proxy.example.com:8080 или socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Идти через другой прокси
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
-t84509e00 = Если сеть компании выпускает наружу только через свой прокси, tracewing идёт к серверам через него. Приложения по-прежнему отправляют трафик в tracewing. Имя пользователя и пароль пишутся в адресе, как http://имя:пароль@proxy:8080, и хранятся как есть в relay.toml. Пусто — tracewing идёт к серверам напрямую.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
+t5c30a22f = Если сеть компании выпускает наружу только через свой прокси, tracewing идёт к серверам через него. Приложения по-прежнему отправляют трафик в tracewing. Имя пользователя и пароль пишутся в адресе, как http://имя:пароль@proxy:8080; затем пароль хранится в системной связке ключей и больше не показывается. Пусто — tracewing идёт к серверам напрямую.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Хосты, к которым идти напрямую, как в NO_PROXY: example.com — он сам и всё под ним, * — любой хост.

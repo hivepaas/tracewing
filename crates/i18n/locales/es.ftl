@@ -941,6 +941,15 @@ tb629329e = El servidor respondió { $code }: puede que no ofrezca reflexión gR
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = El servidor no respondió nada: puede que no ofrezca reflexión gRPC
 
+# The password is kept in the system's keychain.
+t3a48373c = La contraseña se guarda en el llavero del sistema.
+
+# The password is kept in relay.toml, which only you can read.
+tf84cb18b = La contraseña se guarda en relay.toml, que solo tú puedes leer.
+
+# The password is kept in relay.toml, which only you can read: the keychain cannot be used ({why}).
+t5a08b6d0 = La contraseña se guarda en relay.toml, que solo tú puedes leer: no se puede usar el llavero ({ $why }).
+
 # New connections go through the {kind} proxy {address}.
 tb5f1ef96 = Las conexiones nuevas pasan por el proxy { $kind } { $address }.
 
@@ -956,8 +965,8 @@ tb945a053 = http://proxy.example.com:8080 o socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Pasar por otro proxy
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, and are kept as written in relay.toml. Empty, tracewing goes straight to servers.
-t84509e00 = Cuando la red de una empresa no deja salir nada salvo por su propio proxy, tracewing llega a los servidores a través de él. Las apps siguen enviando su tráfico a tracewing. El usuario y la contraseña van en la dirección, como http://nombre:contraseña@proxy:8080, y se guardan tal cual en relay.toml. Vacío, tracewing va directo a los servidores.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
+t5c30a22f = Cuando la red de una empresa no deja salir nada salvo por su propio proxy, tracewing llega a los servidores a través de él. Las apps siguen enviando su tráfico a tracewing. El usuario y la contraseña van en la dirección, como http://nombre:contraseña@proxy:8080; la contraseña se guarda luego en el llavero del sistema y no se vuelve a mostrar. Vacío, tracewing va directo a los servidores.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Hosts a los que se llega directamente, como los escribe NO_PROXY: example.com es él y todo lo que hay debajo, * es cualquier host.
