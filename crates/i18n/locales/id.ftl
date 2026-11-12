@@ -1180,6 +1180,12 @@ t482173e8 = Jeda pesan soket ke aplikasi
 # Run a script
 t65a52970 = Jalankan skrip
 
+# Ask the server with HTTP/1.1
+t86d04e51 = Tanya server dengan HTTP/1.1
+
+# Ask the server with HTTP/2
+tf90c44e9 = Tanya server dengan HTTP/2
+
 # Status to answer with, like 403
 t8f3ebb6c = Status untuk menjawab, seperti 403
 
@@ -1245,6 +1251,9 @@ tad048e53 = Status { $status }
 
 # Run {path}
 t2f9fde3f = Jalankan { $path }
+
+# Ask the server with {version}
+t0a50b346 = Tanya server dengan { $version }
 
 # Request body: {replace}
 te4856c36 = Body permintaan: { $replace }

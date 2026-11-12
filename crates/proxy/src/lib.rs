@@ -211,6 +211,7 @@ pub async fn run_proxy(
         verifier,
         Arc::clone(&opts.relay),
         Arc::clone(&opts.client_certs),
+        Arc::clone(&opts.traffic_rules),
     );
 
     let handler = FlowHandler::new(

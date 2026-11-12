@@ -76,6 +76,40 @@ pub enum Action {
     Script {
         path: PathBuf,
     },
+    /// Asks the server with this version, by offering it alone when the TLS
+    /// is agreed. It matches a host, not a path: the connection is made
+    /// before any path is known, so the rule's URL must be a host alone.
+    /// A cleartext leg is HTTP/1.1 whatever this says, and a WebSocket's
+    /// upgrade is HTTP/1.1's own.
+    AskServerWith {
+        version: AskWith,
+    },
+}
+
+/// Which version to ask a server with.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AskWith {
+    Http1,
+    Http2,
+}
+
+impl AskWith {
+    /// What to offer when the TLS is agreed: the one, and nothing else, so a
+    /// server that will not speak it fails rather than quietly falling back.
+    pub fn alpn(self) -> Vec<Vec<u8>> {
+        match self {
+            AskWith::Http1 => vec![b"http/1.1".to_vec()],
+            AskWith::Http2 => vec![b"h2".to_vec()],
+        }
+    }
+
+    pub fn text(self) -> &'static str {
+        match self {
+            AskWith::Http1 => "HTTP/1.1",
+            AskWith::Http2 => "HTTP/2",
+        }
+    }
 }
 
 fn yes() -> bool {
@@ -172,6 +206,14 @@ fn normal_pattern(url: &str) -> String {
     } else {
         format!("{url}/*")
     }
+}
+
+/// The host part of a pattern: what comes before the first `/`, with any
+/// scheme already gone. Lower case, as patterns are compared.
+fn host_pattern(url: &str) -> String {
+    let url = url.trim().to_ascii_lowercase();
+    let url = url.split_once("://").map_or(url.as_str(), |(_, rest)| rest);
+    url.split('/').next().unwrap_or("").to_owned()
 }
 
 /// What the `*` at the end of a pattern matched, without the query.
@@ -302,6 +344,14 @@ impl TrafficRule {
                     bail!("a query parameter needs a name");
                 }
             }
+            Action::AskServerWith { .. } => {
+                if normal_pattern(&self.url) != format!("{}/*", host_pattern(&self.url)) {
+                    bail!(
+                        "a rule that asks a server with a version matches a host, \
+                         so its URL cannot have a path"
+                    );
+                }
+            }
             Action::ReplaceRequestBody { .. }
             | Action::ReplaceResponseBody { .. }
             | Action::PauseRequest
@@ -420,6 +470,30 @@ impl TrafficRules {
 
     /// What the rules make of a request to `host/path?query`. A rule that has gone
     /// bad in its file is passed over, rather than stop traffic.
+    /// The version to ask `host` with, where a rule says so: the first that
+    /// fits. Looked up as a connection is made, which is why it goes by host
+    /// and port alone and not by anything in the request.
+    pub fn ask_host_with(&self, host: &str, port: u16) -> Option<AskWith> {
+        let host = host
+            .trim()
+            .trim_start_matches('[')
+            .trim_end_matches(']')
+            .to_ascii_lowercase();
+        let with_port = format!("{host}:{port}");
+        self.rules.iter().find_map(|rule| {
+            let Action::AskServerWith { version } = &rule.action else {
+                return None;
+            };
+            if !rule.enabled {
+                return None;
+            }
+            let pattern = host_pattern(&rule.url);
+            let fits = glob_fits(pattern.as_bytes(), host.as_bytes())
+                || glob_fits(pattern.as_bytes(), with_port.as_bytes());
+            fits.then_some(*version)
+        })
+    }
+
     pub fn plan(&self, method: &str, target: &str) -> Plan {
         let target = target.to_ascii_lowercase();
         let mut plan = Plan::default();
@@ -499,6 +573,11 @@ impl TrafficRules {
                     plan.scripts.push((rule.name.clone(), path.clone()));
                     true
                 }
+                // The connection was made before this, by host, through
+                // `ask_host_with`. Named here so the flow says the rule
+                // touched it, as every other rule's does. A rule of this
+                // kind matches a host alone, so the two always agree.
+                Action::AskServerWith { .. } => true,
                 _ => false,
             };
             if touched {
@@ -830,6 +909,57 @@ path = "mocks/c"
             rules: vec![block(url)],
         };
         rules.plan("GET", target).end.is_some()
+    }
+
+    #[test]
+    fn the_version_to_ask_a_server_with_goes_by_host() {
+        let asking = |url: &str| TrafficRules {
+            rules: vec![rule(
+                url,
+                Action::AskServerWith {
+                    version: AskWith::Http1,
+                },
+            )],
+        };
+        let rules = asking("api.test");
+        assert_eq!(rules.ask_host_with("api.test", 443), Some(AskWith::Http1));
+        assert_eq!(rules.ask_host_with("API.test", 443), Some(AskWith::Http1));
+        assert_eq!(rules.ask_host_with("other.test", 443), None);
+        // A host inside brackets is an IPv6 address as a URL writes it.
+        assert_eq!(
+            asking("::1").ask_host_with("[::1]", 443),
+            Some(AskWith::Http1)
+        );
+
+        // A port in the pattern is matched against host and port together,
+        // since a host alone has none to compare.
+        let ported = asking("localhost:8080");
+        assert_eq!(
+            ported.ask_host_with("localhost", 8080),
+            Some(AskWith::Http1)
+        );
+        assert_eq!(ported.ask_host_with("localhost", 9090), None);
+        assert_eq!(
+            asking("*.test").ask_host_with("api.test", 443),
+            Some(AskWith::Http1)
+        );
+
+        // Turned off is not asked for.
+        let mut off = asking("api.test");
+        off.rules[0].enabled = false;
+        assert_eq!(off.ask_host_with("api.test", 443), None);
+
+        // The flow says which rule touched it, as every other rule's does.
+        let plan = asking("api.test").plan("GET", "api.test/v1/me");
+        assert_eq!(plan.names, ["rule api.test"]);
+
+        // It matches a host, so a path in the pattern is not a rule at all:
+        // the connection is made before any path is known.
+        let with_path = asking("api.test/v1/*");
+        let problem = with_path.rules[0].check().unwrap_err().to_string();
+        assert!(problem.contains("cannot have a path"), "{problem}");
+        assert!(asking("api.test").rules[0].check().is_ok());
+        assert!(asking("https://api.test").rules[0].check().is_ok());
     }
 
     #[test]

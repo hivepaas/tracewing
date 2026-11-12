@@ -511,6 +511,8 @@ t18a34799 = Pause the response
 te5d065fe = Pause a socket's messages to the server
 t482173e8 = Pause a socket's messages to the app
 t65a52970 = Run a script
+t86d04e51 = Ask the server with HTTP/1.1
+tf90c44e9 = Ask the server with HTTP/2
 t8f3ebb6c = Status to answer with, like 403
 t9fb9ae4c = Full path of a file or folder
 t01bacb53 = Full path of a .js file with onRequest or onResponse
@@ -533,6 +535,7 @@ t0ee6c1c0 = Query: { $name }={ $value }
 tf2e7bf27 = Query: no { $name }
 tad048e53 = Status { $status }
 t2f9fde3f = Run { $path }
+t0a50b346 = Ask the server with { $version }
 te4856c36 = Request body: { $replace }
 t8600dc42 = Response body: { $replace }
 taec471a9 = Request body: { $find } → { $replace }

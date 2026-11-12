@@ -1180,6 +1180,12 @@ t482173e8 = 暫停傳給應用程式的通訊端訊息
 # Run a script
 t65a52970 = 執行指令碼
 
+# Ask the server with HTTP/1.1
+t86d04e51 = 用 HTTP/1.1 詢問伺服器
+
+# Ask the server with HTTP/2
+tf90c44e9 = 用 HTTP/2 詢問伺服器
+
 # Status to answer with, like 403
 t8f3ebb6c = 要回應的狀態碼，例如 403
 
@@ -1245,6 +1251,9 @@ tad048e53 = 狀態碼 { $status }
 
 # Run {path}
 t2f9fde3f = 執行 { $path }
+
+# Ask the server with {version}
+t0a50b346 = 用 { $version } 詢問伺服器
 
 # Request body: {replace}
 te4856c36 = 請求本文：{ $replace }

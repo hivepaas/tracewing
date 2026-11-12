@@ -1180,6 +1180,12 @@ t482173e8 = 暂停发往应用的套接字消息
 # Run a script
 t65a52970 = 运行脚本
 
+# Ask the server with HTTP/1.1
+t86d04e51 = 用 HTTP/1.1 询问服务器
+
+# Ask the server with HTTP/2
+tf90c44e9 = 用 HTTP/2 询问服务器
+
 # Status to answer with, like 403
 t8f3ebb6c = 要返回的状态码，如 403
 
@@ -1245,6 +1251,9 @@ tad048e53 = 状态码 { $status }
 
 # Run {path}
 t2f9fde3f = 运行 { $path }
+
+# Ask the server with {version}
+t0a50b346 = 用 { $version } 询问服务器
 
 # Request body: {replace}
 te4856c36 = 请求正文：{ $replace }

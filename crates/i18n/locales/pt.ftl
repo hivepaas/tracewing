@@ -1287,6 +1287,12 @@ t482173e8 = Pausar as mensagens do socket para o app
 # Run a script
 t65a52970 = Executar um script
 
+# Ask the server with HTTP/1.1
+t86d04e51 = Perguntar ao servidor com HTTP/1.1
+
+# Ask the server with HTTP/2
+tf90c44e9 = Perguntar ao servidor com HTTP/2
+
 # Status to answer with, like 403
 t8f3ebb6c = Status da resposta, como 403
 
@@ -1352,6 +1358,9 @@ tad048e53 = Status { $status }
 
 # Run {path}
 t2f9fde3f = Executar { $path }
+
+# Ask the server with {version}
+t0a50b346 = Perguntar ao servidor com { $version }
 
 # Request body: {replace}
 te4856c36 = Corpo da requisição: { $replace }

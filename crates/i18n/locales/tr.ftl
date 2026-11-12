@@ -1239,6 +1239,12 @@ t482173e8 = Soketin uygulamaya iletilerini duraklat
 # Run a script
 t65a52970 = Bir betik çalıştır
 
+# Ask the server with HTTP/1.1
+t86d04e51 = Sunucuya HTTP/1.1 ile sor
+
+# Ask the server with HTTP/2
+tf90c44e9 = Sunucuya HTTP/2 ile sor
+
 # Status to answer with, like 403
 t8f3ebb6c = Yanıt durum kodu, örneğin 403
 
@@ -1304,6 +1310,9 @@ tad048e53 = Durum { $status }
 
 # Run {path}
 t2f9fde3f = { $path } çalıştır
+
+# Ask the server with {version}
+t0a50b346 = Sunucuya { $version } ile sor
 
 # Request body: {replace}
 te4856c36 = İstek gövdesi: { $replace }

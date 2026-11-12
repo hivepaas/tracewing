@@ -13,7 +13,9 @@ use gpui::{
 };
 use std::path::{Path, PathBuf};
 use tracewing_i18n::{tr, tr_n};
-use tracewing_proxy::traffic_rules::{Action, Imported, TrafficRule, TrafficRules, export_set};
+use tracewing_proxy::traffic_rules::{
+    Action, AskWith, Imported, TrafficRule, TrafficRules, export_set,
+};
 
 /// What a rule does, as the form asks it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -35,10 +37,12 @@ pub enum RuleKind {
     PauseMessagesToServer,
     PauseMessagesToApp,
     Script,
+    AskServerWithHttp1,
+    AskServerWithHttp2,
 }
 
 impl RuleKind {
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 19] = [
         Self::Block,
         Self::MapLocal,
         Self::MapRemote,
@@ -56,6 +60,8 @@ impl RuleKind {
         Self::PauseMessagesToServer,
         Self::PauseMessagesToApp,
         Self::Script,
+        Self::AskServerWithHttp1,
+        Self::AskServerWithHttp2,
     ];
 
     /// Its second field is a body, written over several lines.
@@ -82,6 +88,8 @@ impl RuleKind {
             Self::PauseMessagesToServer => tr!("Pause a socket's messages to the server"),
             Self::PauseMessagesToApp => tr!("Pause a socket's messages to the app"),
             Self::Script => tr!("Run a script"),
+            Self::AskServerWithHttp1 => tr!("Ask the server with HTTP/1.1"),
+            Self::AskServerWithHttp2 => tr!("Ask the server with HTTP/2"),
         }
     }
 
@@ -111,7 +119,9 @@ impl RuleKind {
             Self::PauseRequest
             | Self::PauseResponse
             | Self::PauseMessagesToServer
-            | Self::PauseMessagesToApp => (None, None),
+            | Self::PauseMessagesToApp
+            | Self::AskServerWithHttp1
+            | Self::AskServerWithHttp2 => (None, None),
         }
     }
 
@@ -172,6 +182,12 @@ impl RuleKind {
             Self::PauseResponse => Action::PauseResponse,
             Self::PauseMessagesToServer => Action::PauseMessagesToServer,
             Self::PauseMessagesToApp => Action::PauseMessagesToApp,
+            Self::AskServerWithHttp1 => Action::AskServerWith {
+                version: AskWith::Http1,
+            },
+            Self::AskServerWithHttp2 => Action::AskServerWith {
+                version: AskWith::Http2,
+            },
         })
     }
 }
@@ -210,6 +226,10 @@ fn action_text(action: &Action) -> String {
         Action::PauseMessagesToServer => tr!("Pause a socket's messages to the server"),
         Action::PauseMessagesToApp => tr!("Pause a socket's messages to the app"),
         Action::Script { path } => tr!("Run {path}", path = path.display().to_string()),
+        Action::AskServerWith { version } => tr!(
+            "Ask the server with {version}",
+            version = version.text().to_owned()
+        ),
     }
 }
 
@@ -282,6 +302,14 @@ fn fields_of(action: &Action) -> (RuleKind, String, String) {
         ),
         Action::PauseMessagesToApp => (RuleKind::PauseMessagesToApp, String::new(), String::new()),
         Action::Script { path } => (RuleKind::Script, path.display().to_string(), String::new()),
+        Action::AskServerWith { version } => (
+            match version {
+                AskWith::Http1 => RuleKind::AskServerWithHttp1,
+                AskWith::Http2 => RuleKind::AskServerWithHttp2,
+            },
+            String::new(),
+            String::new(),
+        ),
     }
 }
 

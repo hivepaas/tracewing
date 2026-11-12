@@ -1180,6 +1180,12 @@ t482173e8 = 앱으로 가는 소켓 메시지 일시 중지
 # Run a script
 t65a52970 = 스크립트 실행
 
+# Ask the server with HTTP/1.1
+t86d04e51 = 서버에 HTTP/1.1로 요청
+
+# Ask the server with HTTP/2
+tf90c44e9 = 서버에 HTTP/2로 요청
+
 # Status to answer with, like 403
 t8f3ebb6c = 응답할 상태 코드(예: 403)
 
@@ -1245,6 +1251,9 @@ tad048e53 = 상태 { $status }
 
 # Run {path}
 t2f9fde3f = { $path } 실행
+
+# Ask the server with {version}
+t0a50b346 = 서버에 { $version }로 요청
 
 # Request body: {replace}
 te4856c36 = 요청 본문: { $replace }
