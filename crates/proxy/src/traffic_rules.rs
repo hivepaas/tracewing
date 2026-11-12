@@ -227,15 +227,24 @@ fn header_name(name: &str) -> Result<HeaderName> {
         .with_context(|| format!("\"{name}\" cannot be a header's name"))
 }
 
+/// Where a request is sent instead. `ws://` and `wss://` are taken as the
+/// `http://` and `https://` a WebSocket's upgrade starts as.
 fn remote_uri(to: &str) -> Result<Uri> {
     let uri: Uri = to
         .trim()
         .parse()
         .with_context(|| format!("\"{to}\" is not a URL"))?;
-    if uri.authority().is_none() || !matches!(uri.scheme_str(), Some("http" | "https")) {
+    let scheme = match uri.scheme_str() {
+        Some("http" | "ws") => "http",
+        Some("https" | "wss") => "https",
+        _ => bail!("\"{to}\" needs to be like https://host or http://localhost:3000"),
+    };
+    if uri.authority().is_none() {
         bail!("\"{to}\" needs to be like https://host or http://localhost:3000");
     }
-    Ok(uri)
+    let mut parts = uri.into_parts();
+    parts.scheme = Some(scheme.parse().expect("a scheme"));
+    Ok(Uri::from_parts(parts)?)
 }
 
 impl TrafficRule {
@@ -532,6 +541,18 @@ pub fn edit_body(body: Vec<u8>, edits: &[(String, String)]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_websocket_can_be_sent_elsewhere_by_ws_or_http() {
+        assert_eq!(
+            remote_uri("ws://localhost:3000").unwrap(),
+            "http://localhost:3000/"
+        );
+        assert_eq!(remote_uri("wss://api.dev").unwrap(), "https://api.dev/");
+        assert_eq!(remote_uri(" https://api.dev ").unwrap(), "https://api.dev/");
+        assert!(remote_uri("ftp://x").is_err());
+        assert!(remote_uri("ws:///nohost").is_err());
+    }
 
     fn named(name: &str, url: &str, action: Action) -> TrafficRule {
         TrafficRule {
