@@ -3161,16 +3161,18 @@ async fn first_held<T>(pauses: &Pauses, client: &tokio::task::JoinHandle<T>) -> 
 async fn breakpoints_hold_until_let_go() {
     let h = Harness::start("breakpoints").await;
     h.traffic_rules.write().unwrap().rules.extend([
-        rule("*/json?size=5*", Action::PauseRequest),
+        rule("*/echo?size=5*", Action::PauseRequest),
         rule("*/json?size=6*", Action::PauseResponse),
         rule("*/json?size=7*", Action::PauseRequest),
     ]);
     let client = h.client(false);
 
-    // The request: sent to another size, with another body.
+    // The request: sent to another size, with another body. To /echo, which
+    // reads the body before it answers: a body a server does not read can be
+    // let go before it is sent, and then no one has it.
     let sent = tokio::spawn({
         let client = client.clone();
-        let url = format!("{}/json?size=50", h.origin);
+        let url = format!("{}/echo?size=50", h.origin);
         async move {
             client
                 .post(url)
@@ -3178,24 +3180,28 @@ async fn breakpoints_hold_until_let_go() {
                 .send()
                 .await
                 .unwrap()
-                .bytes()
+                .text()
                 .await
                 .unwrap()
         }
     });
     let held = first_held(&h.pauses, &sent).await;
     assert_eq!(held.stage, Stage::Request);
-    assert_eq!(held.rule, "rule for */json?size=5*");
+    assert_eq!(held.rule, "rule for */echo?size=5*");
     assert_eq!(held.message.method, "POST");
     assert_eq!(held.message.body, b"as sent");
     let mut edited = held.message.clone();
     edited.url = edited.url.replace("size=50", "size=90");
     edited.body = b"as edited".to_vec();
     assert!(h.pauses.decide(held.id, Verdict::Send(edited)));
-    assert_eq!(
-        sent.await.unwrap().len(),
-        90,
-        "the edited URL was asked for"
+    let echoed = sent.await.unwrap();
+    assert!(
+        echoed.starts_with("query=size=90\n"),
+        "the edited URL was asked for: {echoed}"
+    );
+    assert!(
+        echoed.ends_with("body=as edited"),
+        "with the edited body: {echoed}"
     );
 
     // The response: another status and body.
@@ -3240,7 +3246,7 @@ async fn breakpoints_hold_until_let_go() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    assert_eq!(rows[0].0, "/json?size=90", "what was sent is on record");
+    assert_eq!(rows[0].0, "/echo?size=90", "what was sent is on record");
     assert_eq!(rows[1].1, Some(201), "what the client got is on record");
     assert_eq!(
         (rows[2].1, rows[2].2.as_deref()),
@@ -3249,7 +3255,7 @@ async fn breakpoints_hold_until_let_go() {
     );
     let edited: i64 = conn
         .query_row(
-            "SELECT id FROM flows WHERE path = '/json?size=90'",
+            "SELECT id FROM flows WHERE path = '/echo?size=90'",
             [],
             |r| r.get(0),
         )
