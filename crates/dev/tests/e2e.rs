@@ -3311,6 +3311,76 @@ async fn breakpoints_hold_until_let_go() {
     clean_up(conn, dir);
 }
 
+/// A server that answers before reading a request's body: the client's
+/// body is read on and kept all the same, as it was sent.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_body_the_server_does_not_read_is_kept() {
+    let h = Harness::start("unread-body").await;
+    let client = h.client(false);
+    let late = hudsucker::futures::stream::once(async {
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        Ok::<_, std::io::Error>(hyper::body::Frame::data(bytes::Bytes::from_static(
+            b"sent late",
+        )))
+    });
+    let res = client
+        .post(format!("{}/json?size=10", h.origin))
+        .body(reqwest::Body::wrap(http_body_util::StreamBody::new(late)))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200, "answered before the body came");
+    res.bytes().await.unwrap();
+    let (_, conn, dir) = h.finish(1).await;
+    let (bytes, complete, error): (i64, bool, Option<String>) = conn
+        .query_row(
+            "SELECT req_bytes, req_complete, error FROM flows",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!((bytes, complete, error), (9, true, None));
+    assert_eq!(request_of(&conn, &dir, 1).unwrap(), b"sent late");
+    clean_up(conn, dir);
+}
+
+/// A large upload a server will not read is read on only so far, and the
+/// client still has its answer.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_unread_upload_is_read_on_only_so_far() {
+    const MIB: usize = 1 << 20;
+    let h = Harness::start("unread-upload").await;
+    let client = h.client(false);
+    let chunks = hudsucker::futures::stream::iter((0..32).map(|_| {
+        Ok::<_, std::io::Error>(hyper::body::Frame::data(bytes::Bytes::from(vec![
+            b'u';
+            MIB
+        ])))
+    }));
+    let started = std::time::Instant::now();
+    let res = client
+        .post(format!("{}/json?size=10", h.origin))
+        .body(reqwest::Body::wrap(http_body_util::StreamBody::new(chunks)))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    res.bytes().await.unwrap();
+    let (_, conn, dir) = h.finish(1).await;
+    assert!(started.elapsed() < Duration::from_secs(10), "not held up");
+    let (bytes, complete, error): (i64, bool, Option<String>) = conn
+        .query_row(
+            "SELECT req_bytes, req_complete, error FROM flows",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap();
+    assert!(bytes as usize <= 18 * MIB, "read on so far: {bytes}");
+    assert!(!complete, "and said to be cut");
+    assert_eq!(error, None, "which is no error of the flow");
+    clean_up(conn, dir);
+}
+
 /// Paused, rules still apply: they are about the app under test, not the recording.
 #[tokio::test(flavor = "multi_thread")]
 async fn rules_apply_while_paused() {
