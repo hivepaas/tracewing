@@ -2781,6 +2781,49 @@ async fn a_websocket_knows_its_connection() {
     clean_up(conn, dir);
 }
 
+/// A rule sends a WebSocket elsewhere, as it does any request: the socket
+/// opens to the other server, and its row says which rule did it.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_websocket_is_sent_elsewhere_by_a_rule() {
+    use hudsucker::futures::StreamExt;
+    let h = Harness::start("ws-remote").await;
+    h.traffic_rules.write().unwrap().rules.push(rule(
+        &format!("localhost:{}/ws*", h.ws_port),
+        Action::MapRemote {
+            to: format!("ws://localhost:{}", h.playground_port),
+        },
+    ));
+    let proxy: std::net::SocketAddr = h.proxy_url.trim_start_matches("http://").parse().unwrap();
+    // To the echo server, which says nothing first; the playground says hello.
+    let (mut ws, _) = benchkit::websocket_ask(
+        proxy,
+        &h.dir.join("ca/ca.pem"),
+        &benchkit::WsAsk {
+            secure: true,
+            host: "localhost",
+            port: h.ws_port,
+            path: "/ws?ticks=0",
+            headers: &[],
+        },
+    )
+    .await
+    .unwrap();
+    let hello = json_of(&ws.next().await.unwrap().unwrap());
+    assert_eq!(hello["hello"], "tracewing playground");
+    ws.close(None).await.unwrap();
+    while ws.next().await.is_some() {}
+    let ws_port = h.ws_port;
+    let (_, conn, dir) = h.finish(1).await;
+    let (kind, rule_name): (String, Option<String>) = conn
+        .query_row("SELECT kind, rule FROM flows", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .unwrap();
+    assert_eq!(kind, "websocket");
+    assert_eq!(rule_name, Some(format!("rule for localhost:{ws_port}/ws*")));
+    clean_up(conn, dir);
+}
+
 /// Dropping the oldest flows takes their messages along.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_full_session_drops_messages_with_their_flows() {

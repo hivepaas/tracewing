@@ -779,8 +779,8 @@ impl HttpHandler for FlowHandler {
                 let res = answer_from_file(file).await;
                 return self.answer_as_rule(flow, res).into();
             }
-            // Not a WebSocket: hudsucker ties its messages to the URL it was asked for.
-            Some(End::Remote(to)) if !is_websocket(&req) => send_elsewhere(&mut req, &to),
+            // A WebSocket too: the proxy opens it to wherever the request points.
+            Some(End::Remote(to)) => send_elsewhere(&mut req, &to),
             _ => {}
         }
         // A slow network, for what goes on to a server. Upgrades are left as they are.
