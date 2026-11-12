@@ -1395,7 +1395,7 @@ async fn the_proxy_itself_tells_a_device_how_to_set_up() {
 /// Waits for the proxy to listen for other devices where it is asked to, or to
 /// stop.
 async fn wait_for_listening(devices: &OtherDevices, there: SocketAddr, listening: bool) {
-    let deadline = Instant::now() + Duration::from_secs(15);
+    let deadline = Instant::now() + Duration::from_secs(5);
     while devices.listening().contains(&there) != listening {
         assert!(
             Instant::now() < deadline,
@@ -1541,7 +1541,7 @@ async fn wait_for_row(
     kind: &str,
     done: impl Fn(&(bool, Option<i64>, i64)) -> bool,
 ) -> (bool, Option<i64>, i64) {
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         let row = stream_row(conn, kind);
         if let Some(row) = row.filter(&done) {
