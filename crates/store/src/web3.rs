@@ -148,32 +148,37 @@ pub fn topic_of(signature: &str) -> [u8; 32] {
 /// The calls that nearly every chain has, as their text. The four bytes are
 /// worked out from it, so what is written here can be read and checked; four
 /// bytes written by hand could be wrong and nobody would see it.
-pub const FUNCTIONS: &[&str] = &[
-    // ERC-20.
-    "transfer(address,uint256)",
-    "transferFrom(address,address,uint256)",
-    "approve(address,uint256)",
-    "balanceOf(address)",
-    "allowance(address,address)",
-    "totalSupply()",
-    "decimals()",
-    "symbol()",
-    "name()",
-    "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+pub const FUNCTIONS: &[(&str, &str)] = &[
+    // ERC-20, with what each answers: without that, a number a call came
+    // back with is only a word of hex.
+    ("transfer(address,uint256)", "(bool)"),
+    ("transferFrom(address,address,uint256)", "(bool)"),
+    ("approve(address,uint256)", "(bool)"),
+    ("balanceOf(address)", "(uint256)"),
+    ("allowance(address,address)", "(uint256)"),
+    ("totalSupply()", "(uint256)"),
+    ("decimals()", "(uint8)"),
+    ("symbol()", "(string)"),
+    ("name()", "(string)"),
+    (
+        "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+        "()",
+    ),
     // ERC-721 and ERC-1155.
-    "ownerOf(uint256)",
-    "safeTransferFrom(address,address,uint256)",
-    "safeTransferFrom(address,address,uint256,bytes)",
-    "setApprovalForAll(address,bool)",
-    "isApprovedForAll(address,address)",
-    "tokenURI(uint256)",
-    "uri(uint256)",
+    ("ownerOf(uint256)", "(address)"),
+    ("safeTransferFrom(address,address,uint256)", "()"),
+    ("safeTransferFrom(address,address,uint256,bytes)", "()"),
+    ("setApprovalForAll(address,bool)", "()"),
+    ("isApprovedForAll(address,address)", "(bool)"),
+    ("tokenURI(uint256)", "(string)"),
+    ("uri(uint256)", "(string)"),
+    ("balanceOfBatch(address[],uint256[])", "(uint256[])"),
     // Wrapped ether.
-    "deposit()",
-    "withdraw(uint256)",
+    ("deposit()", "()"),
+    ("withdraw(uint256)", "()"),
     // What a wallet asks a node for, through a contract.
-    "multicall(bytes[])",
-    "aggregate3((address,bool,bytes)[])",
+    ("multicall(bytes[])", "(bytes[])"),
+    ("aggregate3((address,bool,bytes)[])", "((bool,bytes)[])"),
 ];
 
 /// The events that nearly every chain has, as their text.
@@ -191,11 +196,21 @@ pub const EVENTS: &[&str] = &[
 /// The function those four bytes name, if it is one of [`FUNCTIONS`]. The
 /// `data` of a call may be passed whole: only its first four bytes are read.
 pub fn known_function(data: &[u8]) -> Option<&'static str> {
-    static TABLE: OnceLock<HashMap<[u8; 4], &'static str>> = OnceLock::new();
+    Some(known(data)?.0)
+}
+
+/// The types that call answers with, as `(uint256)`, for reading what came
+/// back. `()` for one that answers with nothing.
+pub fn known_returns(data: &[u8]) -> Option<&'static str> {
+    Some(known(data)?.1)
+}
+
+fn known(data: &[u8]) -> Option<(&'static str, &'static str)> {
+    static TABLE: OnceLock<HashMap<[u8; 4], (&'static str, &'static str)>> = OnceLock::new();
     let table = TABLE.get_or_init(|| {
         FUNCTIONS
             .iter()
-            .map(|signature| (selector_of(signature), *signature))
+            .map(|(signature, returns)| (selector_of(signature), (*signature, *returns)))
             .collect()
     });
     let four: [u8; 4] = data.get(..4)?.try_into().ok()?;
@@ -328,19 +343,43 @@ pub fn arguments_named(
     name: &dyn Fn(&[u8]) -> Option<String>,
 ) -> Option<Vec<Argument>> {
     let open = signature.find('(')?;
-    let kind: DynSolType = signature[open..].parse().ok()?;
-    let DynSolType::Tuple(types) = &kind else {
+    // Past the four bytes that said which function it is.
+    tuple(&signature[open..], data.get(4..)?, name)
+}
+
+/// What a call answered, by the types it answers with: `(uint256)` and the
+/// word it sent back make a number. `None` when the two do not fit.
+pub fn returned(types: &str, data: &[u8]) -> Option<Vec<Argument>> {
+    returned_named(types, data, &|data| known_function(data).map(str::to_owned))
+}
+
+/// The same, where `name` says what a `bytes` that came back calls.
+pub fn returned_named(
+    types: &str,
+    data: &[u8],
+    name: &dyn Fn(&[u8]) -> Option<String>,
+) -> Option<Vec<Argument>> {
+    tuple(types, data, name)
+}
+
+/// The values a tuple of `types` holds, laid out in `data` from its start.
+fn tuple(
+    types: &str,
+    data: &[u8],
+    name: &dyn Fn(&[u8]) -> Option<String>,
+) -> Option<Vec<Argument>> {
+    let kind: DynSolType = types.parse().ok()?;
+    let DynSolType::Tuple(each) = &kind else {
         return None;
     };
-    if types.is_empty() {
+    if each.is_empty() {
         return Some(Vec::new());
     }
-    let DynSolValue::Tuple(values) = kind.abi_decode_params(data.get(4..)?).ok()? else {
+    let DynSolValue::Tuple(values) = kind.abi_decode_params(data).ok()? else {
         return None;
     };
     Some(
-        types
-            .iter()
+        each.iter()
             .zip(values.iter())
             .map(|(kind, value)| Argument {
                 kind: kind.sol_type_name().into_owned(),
@@ -348,6 +387,88 @@ pub fn arguments_named(
             })
             .collect(),
     )
+}
+
+/// What a log holds: its first topic says which event it is, the topics
+/// after it hold the parameters marked `indexed`, and the rest are in its
+/// data.
+///
+/// `indexed` says which parameters those are, as an ABI knows. Without one,
+/// the first as many as there are topics left are taken to be the indexed
+/// ones, which is how every event in [`EVENTS`] is written.
+pub fn event_arguments(
+    signature: &str,
+    indexed: Option<&[bool]>,
+    topics: &[Vec<u8>],
+    data: &[u8],
+) -> Option<Vec<Argument>> {
+    let open = signature.find('(')?;
+    let types: Vec<&str> = match signature[open + 1..].strip_suffix(')')? {
+        "" => Vec::new(),
+        list => split_types(list),
+    };
+    let topics = topics.get(1..)?;
+    let is_indexed: Vec<bool> = match indexed {
+        Some(said) if said.len() == types.len() => said.to_vec(),
+        // Not said: the ones in front, as many as there are topics.
+        _ => (0..types.len()).map(|at| at < topics.len()).collect(),
+    };
+    if is_indexed.iter().filter(|yes| **yes).count() != topics.len() {
+        return None;
+    }
+    let rest: Vec<&str> = types
+        .iter()
+        .zip(&is_indexed)
+        .filter(|(_, yes)| !**yes)
+        .map(|(kind, _)| *kind)
+        .collect();
+    let mut in_data = tuple(&format!("({})", rest.join(",")), data, &|data| {
+        known_function(data).map(str::to_owned)
+    })?
+    .into_iter();
+    let mut from_topics = topics.iter();
+    let mut out = Vec::with_capacity(types.len());
+    for (kind, yes) in types.iter().zip(&is_indexed) {
+        out.push(match yes {
+            // A topic is one word: a value that does not fit one is kept as
+            // the hash of it, which is all the log has.
+            true => Argument {
+                kind: (*kind).to_owned(),
+                text: topic_value(kind, from_topics.next()?),
+            },
+            false => in_data.next()?,
+        });
+    }
+    Some(out)
+}
+
+/// An indexed value, from the one word a topic is.
+fn topic_value(kind: &str, topic: &[u8]) -> String {
+    match tuple(&format!("({kind})"), topic, &|_| None) {
+        Some(read) => read.first().map(|one| one.text.clone()).unwrap_or_default(),
+        // A string or bytes is indexed by its hash, not by itself.
+        None => hex_text(topic),
+    }
+}
+
+/// A type list, split where the commas between its types are: the ones
+/// inside a tuple's own brackets are not those.
+fn split_types(list: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let (mut depth, mut start) = (0usize, 0usize);
+    for (at, byte) in list.bytes().enumerate() {
+        match byte {
+            b'(' | b'[' => depth += 1,
+            b')' | b']' => depth = depth.saturating_sub(1),
+            b',' if depth == 0 => {
+                out.push(&list[start..at]);
+                start = at + 1;
+            }
+            _ => {}
+        }
+    }
+    out.push(&list[start..]);
+    out
 }
 
 /// One value as it reads: an address with the capitals that check it, a
@@ -901,6 +1022,75 @@ mod tests {
     /// The kind from before EIP-2718 signs something else: the chain goes in
     /// what is signed, not in a byte in front. Also real, also checked
     /// against the node.
+    /// The word a call comes back with means nothing until the types it
+    /// answers with say so. Both the call and its answer are real.
+    #[test]
+    fn what_a_call_answered_is_read_by_the_types_it_answers_with() {
+        let data = field(sample!("call_balanceof.req.json"), &["params", "0", "data"]);
+        let calldata = bytes_of(&data).unwrap();
+        let types = known_returns(&calldata).expect("the list says what it answers");
+        assert_eq!(types, "(uint256)");
+        let answer = field(sample!("call_balanceof.res.json"), &["result"]);
+        let read = returned(types, &bytes_of(&answer).unwrap()).expect("it reads");
+        assert_eq!(read.len(), 1);
+        assert_eq!(read[0].kind, "uint256");
+        assert_eq!(read[0].text, "39192124");
+        // A call that answers with nothing has nothing to read.
+        assert_eq!(returned("()", b""), Some(Vec::new()));
+        assert_eq!(returned("(uint256)", b"\x01"), None, "not a whole word");
+    }
+
+    /// A log's parameters are in two places: the indexed ones are topics,
+    /// the rest are in the data. This is a real ERC-20 Transfer.
+    #[test]
+    fn a_log_is_read_out_of_its_topics_and_its_data() {
+        let at = |name: &str| field(sample!("receipt.res.json"), &["result", "logs", "0", name]);
+        let topics: Vec<Vec<u8>> = (0..3)
+            .map(|n| {
+                bytes_of(&field(
+                    sample!("receipt.res.json"),
+                    &["result", "logs", "0", "topics", &n.to_string()],
+                ))
+                .unwrap()
+            })
+            .collect();
+        let data = bytes_of(&at("data")).unwrap();
+        let signature = known_event(&topics[0]).expect("an event every chain has");
+        assert_eq!(signature, "Transfer(address,address,uint256)");
+        let read = event_arguments(signature, None, &topics, &data).expect("it reads");
+        assert_eq!(
+            read.iter()
+                .map(|one| (one.kind.as_str(), one.text.as_str()))
+                .collect::<Vec<_>>(),
+            [
+                ("address", "0x000000000004444c5dc75cB358380D2e3dE08A90"),
+                // The same address the transaction test reads, so alloy's
+                // capitals and this module's agree about EIP-55.
+                ("address", "0x0000000aa232009084Bd71A5797d089AA4Edfad4"),
+                // Not indexed, so this one was in the data.
+                ("uint256", "856819229"),
+            ]
+        );
+        // An ABI that says which are indexed is believed over the guess.
+        let said = event_arguments(signature, Some(&[true, true, false]), &topics, &data);
+        assert_eq!(said, Some(read));
+        // One that does not fit the topics is not forced to.
+        assert_eq!(
+            event_arguments(signature, Some(&[false, false, false]), &topics, &data),
+            None
+        );
+    }
+
+    #[test]
+    fn a_type_list_splits_where_its_own_commas_are() {
+        assert_eq!(split_types("address,uint256"), ["address", "uint256"]);
+        assert_eq!(
+            split_types("(address,bool)[],uint256"),
+            ["(address,bool)[]", "uint256"],
+            "the commas inside the tuple are not the list's"
+        );
+    }
+
     #[test]
     fn a_transaction_of_the_older_kind_reads_too() {
         let raw = field(sample!("send_raw_legacy.req.json"), &["params", "0"]);
