@@ -2029,6 +2029,15 @@ t31eaddb7 = Atajos de teclado
 # Close
 tcd86acc3 = Cerrar
 
+# The signature in this body now works out to {now}, not {was}: it is no longer the transaction that was signed. tracewing holds no keys, so it cannot sign the new one.
+td0d9c66b = La firma de este cuerpo ahora da { $now }, no { $was }: ya no es la transacción que se firmó. tracewing no guarda claves, así que no puede firmar la nueva.
+
+# What this body carries no longer reads as a signed transaction. tracewing holds no keys, so it cannot sign it again.
+td97ae94b = Lo que lleva este cuerpo ya no se lee como una transacción firmada. tracewing no guarda claves, así que no puede volver a firmarla.
+
+# This body carries a signed transaction and its bytes have changed. The signatures are over the bytes as they were, and tracewing can neither check them nor make new ones.
+ta6e69f9a = Este cuerpo lleva una transacción firmada y sus bytes han cambiado. Las firmas son sobre los bytes tal como estaban, y tracewing no puede comprobarlas ni crear otras.
+
 # The certificate: {e}
 t0235648c = El certificado: { $e }
 

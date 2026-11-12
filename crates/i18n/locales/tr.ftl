@@ -1978,6 +1978,15 @@ t31eaddb7 = Klavye kısayolları
 # Close
 tcd86acc3 = Kapat
 
+# The signature in this body now works out to {now}, not {was}: it is no longer the transaction that was signed. tracewing holds no keys, so it cannot sign the new one.
+td0d9c66b = Bu gövdedeki imza artık { $was } değil { $now } çıkıyor: imzalanmış olan işlem değil bu. tracewing anahtar tutmaz, yenisini imzalayamaz.
+
+# What this body carries no longer reads as a signed transaction. tracewing holds no keys, so it cannot sign it again.
+td97ae94b = Bu gövdenin taşıdığı şey artık imzalı bir işlem olarak okunmuyor. tracewing anahtar tutmaz, onu yeniden imzalayamaz.
+
+# This body carries a signed transaction and its bytes have changed. The signatures are over the bytes as they were, and tracewing can neither check them nor make new ones.
+ta6e69f9a = Bu gövde imzalı bir işlem taşıyor ve baytları değişti. İmzalar baytların eski hâli üzerinedir; tracewing onları ne doğrulayabilir ne de yenisini üretebilir.
+
 # The certificate: {e}
 t0235648c = Sertifika: { $e }
 

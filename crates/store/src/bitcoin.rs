@@ -13,6 +13,18 @@ use sha2::{Digest, Sha256};
 /// How many satoshis make one bitcoin.
 pub const DECIMALS: usize = 8;
 
+/// The bytes of a hex string as Bitcoin's RPC writes it: no `0x` in front of
+/// it, which is what tells it from Ethereum's and why
+/// [`crate::web3::bytes_of`] will not read it.
+pub fn bytes_of(hex: &str) -> Option<Vec<u8>> {
+    if hex.is_empty() || !hex.len().is_multiple_of(2) {
+        return None;
+    }
+    (0..hex.len() / 2)
+        .map(|at| u8::from_str_radix(hex.get(at * 2..at * 2 + 2)?, 16).ok())
+        .collect()
+}
+
 /// `0.00661128 BTC`, from the satoshis as they came.
 pub fn btc(satoshis: u64) -> String {
     format!(

@@ -577,7 +577,7 @@ fn bitcoin_asked(method: &str, params: Option<&serde_json::Value>) -> Vec<Line> 
 /// A signed transaction, out of the one hex string `sendrawtransaction`
 /// carries.
 fn bitcoin_transaction(raw: &str) -> Vec<Line> {
-    let Some(bytes) = hex_of(raw) else {
+    let Some(bytes) = bitcoin::bytes_of(raw) else {
         return vec![Line::code("transaction", raw.to_owned())];
     };
     let Some(tx) = bitcoin::Transaction::decode(&bytes) else {
@@ -623,16 +623,6 @@ fn bitcoin_transaction(raw: &str) -> Vec<Line> {
         ));
     }
     lines
-}
-
-/// Plain hex, with no `0x` in front: Bitcoin writes it that way.
-fn hex_of(text: &str) -> Option<Vec<u8>> {
-    if !text.len().is_multiple_of(2) || text.is_empty() {
-        return None;
-    }
-    (0..text.len() / 2)
-        .map(|at| u8::from_str_radix(text.get(at * 2..at * 2 + 2)?, 16).ok())
-        .collect()
 }
 
 /// What a Solana call asks for. Its addresses are base58 rather than hex, and

@@ -1903,6 +1903,15 @@ t31eaddb7 = 鍵盤快速鍵
 # Close
 tcd86acc3 = 關閉
 
+# The signature in this body now works out to {now}, not {was}: it is no longer the transaction that was signed. tracewing holds no keys, so it cannot sign the new one.
+td0d9c66b = 這個內容裡的簽章現在算出來是 { $now }，不是 { $was }：它已經不是當初被簽的那筆交易。tracewing 不持有私鑰，無法為新的簽章。
+
+# What this body carries no longer reads as a signed transaction. tracewing holds no keys, so it cannot sign it again.
+td97ae94b = 這個內容攜帶的東西已經讀不出一筆已簽章的交易。tracewing 不持有私鑰，無法重新簽章。
+
+# This body carries a signed transaction and its bytes have changed. The signatures are over the bytes as they were, and tracewing can neither check them nor make new ones.
+ta6e69f9a = 這個內容攜帶一筆已簽章的交易，而它的位元組已經變了。簽章是針對原來的位元組的，tracewing 既無法驗證也無法重新產生。
+
 # The certificate: {e}
 t0235648c = 憑證：{ $e }
 
