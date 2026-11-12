@@ -107,6 +107,38 @@ pub struct Layout {
     pub detached: bool,
     /// Where that window was when last seen.
     pub inspector_window: Option<WindowState>,
+    /// Arrangements kept under a name, as "Phone" and "API", in the order kept.
+    pub named: Vec<Named>,
+}
+
+/// Where the panels are and how large, which columns show: what a named
+/// layout keeps. Not the look, the language, nor where the window is.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Arrangement {
+    pub place: Place,
+    pub sidebar_shown: bool,
+    pub inspector_shown: bool,
+    pub sidebar_w: f32,
+    pub inspector_w: f32,
+    pub inspector_h: f32,
+    pub columns: Columns,
+    pub sides: Sides,
+    pub detached: bool,
+}
+
+impl Default for Arrangement {
+    fn default() -> Self {
+        Layout::default().arrangement()
+    }
+}
+
+/// An arrangement and its name.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Named {
+    pub name: String,
+    #[serde(default)]
+    pub arrangement: Arrangement,
 }
 
 impl Default for Layout {
@@ -127,6 +159,7 @@ impl Default for Layout {
             sides: Sides::default(),
             detached: false,
             inspector_window: None,
+            named: Vec::new(),
         }
     }
 }
@@ -145,6 +178,90 @@ impl Layout {
             let _ = std::fs::write(path, text);
         }
     }
+
+    /// The panels as they are now.
+    pub fn arrangement(&self) -> Arrangement {
+        Arrangement {
+            place: self.place,
+            sidebar_shown: self.sidebar_shown,
+            inspector_shown: self.inspector_shown,
+            sidebar_w: self.sidebar_w,
+            inspector_w: self.inspector_w,
+            inspector_h: self.inspector_h,
+            columns: self.columns.clone(),
+            sides: self.sides,
+            detached: self.detached,
+        }
+    }
+
+    /// Puts the panels as `arrangement` has them.
+    pub fn arrange(&mut self, arrangement: &Arrangement) {
+        let Arrangement {
+            place,
+            sidebar_shown,
+            inspector_shown,
+            sidebar_w,
+            inspector_w,
+            inspector_h,
+            columns,
+            sides,
+            detached,
+        } = arrangement.clone();
+        self.place = place;
+        self.sidebar_shown = sidebar_shown;
+        self.inspector_shown = inspector_shown;
+        self.sidebar_w = sidebar_w;
+        self.inspector_w = inspector_w;
+        self.inspector_h = inspector_h;
+        self.columns = columns;
+        self.sides = sides;
+        self.detached = detached;
+    }
+
+    /// Keeps the panels as they are now under `name`, in place of one of that
+    /// name, whatever its case. False for a name that is only spaces.
+    pub fn keep_as(&mut self, name: &str) -> bool {
+        let name = name.trim();
+        if name.is_empty() {
+            return false;
+        }
+        let arrangement = self.arrangement();
+        match self.named.iter_mut().find(|n| same_name(&n.name, name)) {
+            Some(named) => {
+                named.name = name.to_owned();
+                named.arrangement = arrangement;
+            }
+            None => self.named.push(Named {
+                name: name.to_owned(),
+                arrangement,
+            }),
+        }
+        true
+    }
+
+    pub fn forget(&mut self, name: &str) {
+        self.named.retain(|n| !same_name(&n.name, name));
+    }
+
+    pub fn named_arrangement(&self, name: &str) -> Option<Arrangement> {
+        self.named
+            .iter()
+            .find(|n| same_name(&n.name, name))
+            .map(|n| n.arrangement.clone())
+    }
+
+    /// The name of a layout the panels are in now, if they are in one.
+    pub fn current_name(&self) -> Option<&str> {
+        let now = self.arrangement();
+        self.named
+            .iter()
+            .find(|n| n.arrangement == now)
+            .map(|n| n.name.as_str())
+    }
+}
+
+fn same_name(a: &str, b: &str) -> bool {
+    a.trim().to_lowercase() == b.trim().to_lowercase()
 }
 
 #[cfg(test)]
@@ -188,6 +305,45 @@ mod tests {
         layout.save(&path);
         assert_eq!(Layout::load(&path), layout);
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_named_layout_comes_back_as_it_was_kept() {
+        let mut layout = Layout {
+            place: Place::Below,
+            sidebar_shown: false,
+            ..Layout::default()
+        };
+        assert!(layout.keep_as("  Phone "));
+        assert!(!layout.keep_as("   "));
+        assert_eq!(layout.current_name(), Some("Phone"));
+
+        layout.place = Place::Beside;
+        layout.sidebar_shown = true;
+        layout.inspector_w = 600.;
+        assert_eq!(layout.current_name(), None);
+        layout.keep_as("API");
+
+        // The same name, whatever its case, is kept over.
+        layout.sides = Sides::Beside;
+        layout.keep_as("api");
+        assert_eq!(layout.named.len(), 2);
+        assert_eq!(layout.named[1].name, "api");
+
+        let phone = layout.named_arrangement("PHONE").unwrap();
+        layout.arrange(&phone);
+        assert_eq!(layout.place, Place::Below);
+        assert!(!layout.sidebar_shown);
+        assert_eq!(layout.sides, Sides::Tabs);
+        assert_eq!(layout.current_name(), Some("Phone"));
+
+        // Kept in the file, and read back.
+        let text = toml::to_string(&layout).unwrap();
+        assert_eq!(toml::from_str::<Layout>(&text).unwrap(), layout);
+
+        layout.forget("phone");
+        assert_eq!(layout.named.len(), 1);
+        assert_eq!(layout.current_name(), None);
     }
 
     #[test]

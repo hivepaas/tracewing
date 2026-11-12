@@ -96,7 +96,7 @@ keyboard.
 | Request and response as tabs, side by side, or one above the other | Beta | Free |
 | The layout is kept and restored at the next start | Beta | Free |
 | The inspector in a window of its own, for a second display: the toolbar's window button; closing that window puts it back | Beta | Free |
-| Named layouts to switch between (for example "Phone" and "API") | 1.x | Free |
+| Named layouts to switch between (for example "Phone" and "API"): the toolbar's layouts button keeps the panels, their sizes, the columns shown and the inspector's own window under a name | Beta | Free |
 
 ## The inspector
 

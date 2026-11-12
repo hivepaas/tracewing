@@ -664,6 +664,15 @@ t51e7624c = Chưa có tin nhắn
 # {said} kept, of {size}
 t3558745a = Giữ { $said } trong { $size }
 
+# Layouts
+t17809004 = Bố cục
+
+# Keep the panels as they are now under a name, to come back to them.
+t2b6aeb69 = Lưu cách sắp xếp các khung hiện tại dưới một tên, để quay lại sau.
+
+# Keep
+t555cbe68 = Lưu
+
 # {what}: {text} is not a whole number
 t2a8515ce = { $what }: { $text } không phải là số nguyên
 
@@ -1803,6 +1812,9 @@ t00d0cf30 = host:, status:4xx, hoặc chữ trong body
 
 # A name, as iPhone test
 t19f89214 = Một cái tên, như iPhone test
+
+# A name, as Phone
+tfce439bf = Tên, ví dụ Phone
 
 # The search index: {e}
 te3c971c9 = Chỉ mục tìm kiếm: { $e }

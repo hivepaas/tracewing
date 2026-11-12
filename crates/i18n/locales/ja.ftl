@@ -664,6 +664,15 @@ t51e7624c = まだメッセージはありません
 # {said} kept, of {size}
 t3558745a = { $size } 中 { $said } を保持
 
+# Layouts
+t17809004 = レイアウト
+
+# Keep the panels as they are now under a name, to come back to them.
+t2b6aeb69 = 今のパネルの配置に名前を付けて保存し、あとで戻せます。
+
+# Keep
+t555cbe68 = 保存
+
 # {what}: {text} is not a whole number
 t2a8515ce = { $what }: { $text } は整数ではありません
 
@@ -1803,6 +1812,9 @@ t00d0cf30 = host:、status:4xx、またはボディ内のテキスト
 
 # A name, as iPhone test
 t19f89214 = 名前（例: iPhone テスト）
+
+# A name, as Phone
+tfce439bf = 名前（例：Phone）
 
 # The search index: {e}
 te3c971c9 = 検索インデックス: { $e }
