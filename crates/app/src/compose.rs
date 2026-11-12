@@ -39,6 +39,34 @@ pub fn left_out(headers: &[(String, String)]) -> Vec<String> {
     found
 }
 
+/// Which version the client asks with. It settles the leg from here to
+/// tracewing, which is the one that is recorded; what the server is asked
+/// with is settled between tracewing and the server, as it is for every
+/// other flow.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Speak {
+    /// Offer both and take what is agreed, as a browser does.
+    #[default]
+    Agreed,
+    Http1,
+    /// Without asking first: `h2` over TLS, `h2c` in the clear.
+    Http2,
+}
+
+impl Speak {
+    /// For the chips, in the order they are drawn.
+    pub const EVERY: [Speak; 3] = [Speak::Agreed, Speak::Http1, Speak::Http2];
+
+    /// What it is called in the window.
+    pub fn text(self) -> String {
+        match self {
+            Speak::Agreed => tr!("As agreed"),
+            Speak::Http1 => "HTTP/1.1".to_owned(),
+            Speak::Http2 => "HTTP/2".to_owned(),
+        }
+    }
+}
+
 /// The most of a body kept between runs. A request with more in it than
 /// this is still sent whole: only what is written down for next time stops
 /// here, since the file is read at every start.
@@ -68,19 +96,29 @@ pub struct Kept {
     pub body: String,
     /// Set where the body was left out, with why.
     pub body_left: Option<BodyLeft>,
+    /// The version chosen for the client to ask with.
+    pub speak: Speak,
 }
 
 impl Kept {
     /// What is kept where `method` and `url` were typed, and `body` is the
     /// text of the body field. `bytes` is what the request would send, where
     /// that is not the text itself.
-    pub fn of(method: &str, url: &str, headers: &str, body: &str, bytes: Option<&[u8]>) -> Self {
+    pub fn of(
+        method: &str,
+        url: &str,
+        headers: &str,
+        body: &str,
+        bytes: Option<&[u8]>,
+        speak: Speak,
+    ) -> Self {
         let mut kept = Self {
             method: method.to_owned(),
             url: url.to_owned(),
             headers: headers.to_owned(),
             body: String::new(),
             body_left: None,
+            speak,
         };
         match bytes {
             // The text stands for other bytes: see `BodyLeft::NotText`.
@@ -151,6 +189,7 @@ pub fn send(
     proxy: SocketAddr,
     ca_pem: &Path,
     message: &Message,
+    speak: Speak,
     stop: Stopped,
 ) -> Result<Option<Answer>> {
     let ca = std::fs::read(ca_pem).with_context(|| format!("read {}", ca_pem.display()))?;
@@ -158,8 +197,13 @@ pub fn send(
         .proxy(reqwest::Proxy::all(format!("http://{proxy}"))?)
         .tls_certs_merge([reqwest::Certificate::from_pem(&ca)?])
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(WAIT_MAX)
-        .build()?;
+        .timeout(WAIT_MAX);
+    let client = match speak {
+        Speak::Agreed => client,
+        Speak::Http1 => client.http1_only(),
+        Speak::Http2 => client.http2_prior_knowledge(),
+    }
+    .build()?;
     let method =
         reqwest::Method::from_bytes(message.method.trim().as_bytes()).with_context(|| {
             tr!(
@@ -340,7 +384,7 @@ mod tests {
             drop(stop);
         });
         let started = Instant::now();
-        let answer = send(proxy, &dir.join("ca.pem"), &message, stopped).unwrap();
+        let answer = send(proxy, &dir.join("ca.pem"), &message, Speak::Agreed, stopped).unwrap();
         let took = started.elapsed();
 
         assert!(answer.is_none(), "a stopped send has no answer");
@@ -364,11 +408,17 @@ mod tests {
             "content-type: application/json",
             r#"{"made":"here"}"#,
             None,
+            Speak::Http1,
         );
         kept.save(&path);
         assert_eq!(Kept::load(&path), kept, "as it was left");
         assert_eq!(kept.body, r#"{"made":"here"}"#);
         assert_eq!(kept.body_left, None);
+        assert_eq!(
+            kept.speak,
+            Speak::Http1,
+            "the version chosen comes back too"
+        );
         assert!(!kept.is_empty());
 
         // A body read back from a session: the editor shows text, the
@@ -376,19 +426,33 @@ mod tests {
         // something else next time, so the body is left out and says so.
         let shown = "hello\u{fffd}";
         let bytes = [b'h', b'e', b'l', b'l', b'o', 0xff];
-        let kept = Kept::of("POST", "https://a.test/x", "", shown, Some(&bytes));
+        let kept = Kept::of(
+            "POST",
+            "https://a.test/x",
+            "",
+            shown,
+            Some(&bytes),
+            Speak::Agreed,
+        );
         assert_eq!(kept.body, "");
         assert_eq!(kept.body_left, Some(BodyLeft::NotText));
         assert_eq!(kept.url, "https://a.test/x", "the rest is still kept");
         // The same bytes as the text: nothing is in the way of keeping it.
         let text = "hello";
-        let kept = Kept::of("POST", "https://a.test/x", "", text, Some(text.as_bytes()));
+        let kept = Kept::of(
+            "POST",
+            "https://a.test/x",
+            "",
+            text,
+            Some(text.as_bytes()),
+            Speak::Agreed,
+        );
         assert_eq!((kept.body.as_str(), kept.body_left), (text, None));
 
         // Too long to write down, which the window says rather than coming
         // back with half a request.
         let big = "x".repeat(BODY_KEPT + 1);
-        let kept = Kept::of("POST", "https://a.test/x", "", &big, None);
+        let kept = Kept::of("POST", "https://a.test/x", "", &big, None, Speak::Agreed);
         assert_eq!(kept.body, "");
         assert_eq!(kept.body_left, Some(BodyLeft::TooBig(big.len() as u64)));
         kept.save(&path);

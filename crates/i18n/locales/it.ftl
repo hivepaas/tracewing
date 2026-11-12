@@ -275,6 +275,9 @@ te519d36e = Scambia
 # Back to Traffic
 t644042d2 = Torna a Traffic
 
+# As agreed
+td3a1f5f7 = Come concordato
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" non è un metodo
 
@@ -312,8 +315,14 @@ te85cbcea =
        *[other] { $names } li decide il client, quindi quello che è stato scritto non è partito.
     }
 
+# {version} is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.
+t4916bc86 = { $version } è la versione con cui viene interrogato tracewing. Quella con cui viene interrogato il server la decidono tracewing e il server, come per ogni altro flusso.
+
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Fermato: nessuna risposta è stata letta. Ciò che è arrivato al server compare in Traffic.
+
+# Ask with
+tb5209e72 = Interroga con
 
 # Sending…
 te946e7bf = Invio…

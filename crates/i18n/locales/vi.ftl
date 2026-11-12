@@ -244,6 +244,9 @@ te519d36e = Đổi chỗ
 # Back to Traffic
 t644042d2 = Về Traffic
 
+# As agreed
+td3a1f5f7 = Theo thoả thuận
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" không phải là một method
 
@@ -280,8 +283,14 @@ te85cbcea =
        *[other] { $names } do client tự quyết định, nên giá trị viết cho chúng không được gửi đi.
     }
 
+# {version} is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.
+t4916bc86 = { $version } là phiên bản dùng để hỏi tracewing. Phiên bản dùng để hỏi server do tracewing và server tự thoả thuận, như với mọi flow khác.
+
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Đã dừng: chưa đọc phản hồi nào. Phần đã tới server hiện trong Traffic.
+
+# Ask with
+tb5209e72 = Hỏi bằng
 
 # Sending…
 te946e7bf = Đang gửi…

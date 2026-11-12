@@ -109,6 +109,7 @@ td57a0a54 = Compare
 t71ce2de9 = #{ $a } beside #{ $b }: what only #{ $a } has is red, what only #{ $b } has is green.
 te519d36e = Swap
 t644042d2 = Back to Traffic
+td3a1f5f7 = As agreed
 tacdcf5cb = "{ $method }" is not a method
 t1f9e5368 = its request body was not kept whole, so it cannot be sent again
 t4df37bea = name: value, one a line
@@ -124,7 +125,9 @@ te85cbcea =
         [one] { $names } is the client's to work out, so what was written for it did not go.
        *[other] { $names } are the client's to work out, so what was written for them did not go.
     }
+t4916bc86 = { $version } is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.
 t5a78825c = Stopped: no answer was read. What reached the server shows in Traffic.
+tb5209e72 = Ask with
 te946e7bf = Sending…
 tf28e14cf = Send
 t4b7f7705 = Stop

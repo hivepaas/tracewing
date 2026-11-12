@@ -3762,7 +3762,7 @@ async fn breakpoints_hold_until_let_go() {
     assert!(h.pauses.decide(held.id, Verdict::Send(edited)));
     let echoed = sent.await.unwrap();
     assert!(
-        echoed.starts_with("query=size=90\n"),
+        echoed.contains("\nquery=size=90\n"),
         "the edited URL was asked for: {echoed}"
     );
     assert!(

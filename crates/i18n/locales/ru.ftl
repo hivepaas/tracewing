@@ -283,6 +283,9 @@ te519d36e = Поменять местами
 # Back to Traffic
 t644042d2 = Назад в Traffic
 
+# As agreed
+td3a1f5f7 = Как договорятся
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" — не метод
 
@@ -322,8 +325,14 @@ te85cbcea =
        *[other] { $names } клиент задаёт сам, поэтому написанное для них не ушло.
     }
 
+# {version} is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.
+t4916bc86 = { $version } — это то, чем спрашивают tracewing. Чем спрашивают сервер, договариваются tracewing и сервер, как и в любом другом потоке.
+
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Остановлено: ответ не прочитан. То, что дошло до сервера, видно в Traffic.
+
+# Ask with
+tb5209e72 = Спрашивать
 
 # Sending…
 te946e7bf = Отправка…

@@ -269,6 +269,9 @@ te519d36e = Yer değiştir
 # Back to Traffic
 t644042d2 = Traffic'e dön
 
+# As agreed
+td3a1f5f7 = Anlaşıldığı gibi
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }" bir metot değil
 
@@ -306,8 +309,14 @@ te85cbcea =
        *[other] { $names } istemcinin kendi belirlediği başlıklar, bu yüzden onlar için yazılanlar gitmedi.
     }
 
+# {version} is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.
+t4916bc86 = { $version }, tracewing'e sorulurken kullanılandır. Sunucuya sorulurken kullanılan, diğer her akışta olduğu gibi tracewing ile sunucu arasında kararlaştırılır.
+
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = Durduruldu: yanıt okunmadı. Sunucuya ulaşan kısım Traffic'te görünür.
+
+# Ask with
+tb5209e72 = Şununla sor
 
 # Sending…
 te946e7bf = Gönderiliyor…

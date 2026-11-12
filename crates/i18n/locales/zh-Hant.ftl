@@ -244,6 +244,9 @@ te519d36e = 交換
 # Back to Traffic
 t644042d2 = 返回 Traffic
 
+# As agreed
+td3a1f5f7 = 依協商結果
+
 # "{method}" is not a method
 tacdcf5cb = 「{ $method }」不是有效的方法
 
@@ -280,8 +283,14 @@ te85cbcea =
        *[other] { $names } 由用戶端自行決定，所以為它們寫的值沒有送出。
     }
 
+# {version} is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.
+t4916bc86 = { $version } 是用來詢問 tracewing 的版本。用來詢問伺服器的版本由 tracewing 與伺服器自行商定，和其他流量一樣。
+
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = 已停止：未讀取任何回應。已送達伺服器的部分會顯示在 Traffic 中。
+
+# Ask with
+tb5209e72 = 詢問方式
 
 # Sending…
 te946e7bf = 正在傳送…

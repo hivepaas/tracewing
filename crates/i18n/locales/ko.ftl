@@ -244,6 +244,9 @@ te519d36e = 바꾸기
 # Back to Traffic
 t644042d2 = Traffic으로 돌아가기
 
+# As agreed
+td3a1f5f7 = 합의된 대로
+
 # "{method}" is not a method
 tacdcf5cb = "{ $method }"은(는) 메서드가 아닙니다
 
@@ -280,8 +283,14 @@ te85cbcea =
        *[other] { $names }은(는) 클라이언트가 정하므로, 적어 둔 값은 보내지지 않았습니다.
     }
 
+# {version} is how tracewing is asked. What the server is asked with is settled between tracewing and the server, as it is for every other flow.
+t4916bc86 = { $version }은 tracewing에 요청할 때 쓰는 버전입니다. 서버에 요청할 때 쓰는 버전은 다른 플로우와 마찬가지로 tracewing과 서버 사이에서 정해집니다.
+
 # Stopped: no answer was read. What reached the server shows in Traffic.
 t5a78825c = 중지됨: 응답을 읽지 않았습니다. 서버에 도달한 내용은 Traffic에 표시됩니다.
+
+# Ask with
+tb5209e72 = 요청 방식
 
 # Sending…
 te946e7bf = 보내는 중…
