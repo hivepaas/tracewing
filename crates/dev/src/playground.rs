@@ -76,6 +76,10 @@ pub const ROUTES: &[(&str, &str)] = &[
     ("/redirect", "Redirects 3 times, then JSON (?n=N)"),
     ("/cookies", "Sets cookies, and says which came"),
     ("/auth", "401 unless a header Authorization: Bearer … comes"),
+    (
+        "/hop",
+        "Headers for the next hop alone, which a proxy must not pass on",
+    ),
     ("/echo", "Any method: says what came, body and all"),
     ("/ws.html", "A page to talk to /ws"),
     ("/ws", "WebSocket: echoes, and ticks each second (?ticks=N)"),
@@ -201,6 +205,20 @@ async fn route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallibl
         }
         "/cookies" => cookies(&req),
         "/auth" => auth(&req),
+        "/hop" => {
+            let mut response = body("application/json", r#"{"hop":true}"#);
+            let headers = response.headers_mut();
+            for (name, value) in [
+                ("connection", "keep-alive, X-Hop"),
+                ("x-hop", "1"),
+                ("keep-alive", "timeout=5"),
+                ("proxy-authenticate", "Basic realm=\"playground\""),
+                ("x-end", "1"),
+            ] {
+                headers.insert(name, HeaderValue::from_static(value));
+            }
+            response
+        }
         "/echo" => echo(req).await,
         "/rpc" => {
             let fail = query.iter().any(|(key, _)| key == "fail");
