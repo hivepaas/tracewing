@@ -319,6 +319,43 @@ async fn each_flow_knows_the_program_that_sent_it() {
     clean_up(conn, dir);
 }
 
+/// A program that asks once and is gone as soon as it is answered, as curl
+/// is, is found all the same, though the server answers at once.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_program_gone_once_answered_is_found() {
+    let h = Harness::start("quick-apps").await;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(tracewing_dev::playground::serve(listener));
+    let out = h.dir.join("curl-out");
+    const CALLS: usize = 5;
+    for _ in 0..CALLS {
+        let ran = tokio::process::Command::new("curl")
+            .args(["-s", "--noproxy", "", "-x", &h.proxy_url, "-o"])
+            .arg(&out)
+            .arg(format!("http://127.0.0.1:{port}/json"))
+            .status()
+            .await;
+        match ran {
+            Ok(status) => assert!(status.success(), "curl: {status}"),
+            Err(e) => {
+                eprintln!("no curl here ({e}): skipped");
+                return;
+            }
+        }
+    }
+    let (_, conn, dir) = h.finish(CALLS as i64).await;
+    let apps: Vec<Option<String>> = conn
+        .prepare("SELECT app FROM flows ORDER BY id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(apps, vec![Some("curl".to_owned()); CALLS]);
+    clean_up(conn, dir);
+}
+
 /// Server-sent events must pass through as they are produced, not after the
 /// whole response has been buffered.
 #[tokio::test(flavor = "multi_thread")]
