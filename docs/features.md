@@ -151,7 +151,7 @@ keyboard.
 
 | Feature | Milestone | Plan |
 |---|---|---|
-| An MCP server: AI tools can list and search flows | 1.0 | Free |
+| An MCP server: AI tools can list and search flows, read one whole, and compare two (only what differs; a JSON body by the paths of its fields; the call before when no second is named) | 1.0 | Free |
 | An MCP server that can also add rules and replay requests | 1.x | Pro |
 | A view for LLM API traffic: streamed tokens and tool calls put together | 1.0 | Free |
 | A command line: capture without a window, export | 1.x | Pro |

@@ -207,3 +207,140 @@ fn ai_tools_read_the_traffic() {
     drop(engine);
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// compare_flows: only what differs between two calls, a body's JSON by the
+/// paths of its fields, and the call before when no second is given.
+#[test]
+fn ai_tools_compare_two_flows() {
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir = std::env::temp_dir().join(format!("tracewing-mcp-compare-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let listener = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let port = listener.local_addr().unwrap().port();
+    runtime.spawn(tracewing_dev::playground::serve(listener));
+    let engine = Engine::start(EngineOptions {
+        data_dir: dir.clone(),
+        settings: StorageSettings {
+            disk_reserve_mib: 1,
+            ..StorageSettings::default()
+        },
+        rules: Default::default(),
+        traffic_rules: Default::default(),
+        ports: 20_290..20_300,
+        extra_roots: Vec::new(),
+        key_store: Default::default(),
+        find_apps: false,
+    })
+    .unwrap();
+    let proxy = engine.addr;
+    let post = |query: &str, token: &str, body: &str| {
+        let out = Command::new("curl")
+            .args(["-sS", "-o", "/dev/null", "--noproxy", "", "--proxy"])
+            .arg(format!("http://{proxy}"))
+            .args(["-H", &format!("authorization: Bearer {token}")])
+            .args(["-H", "content-type: application/json", "--data", body])
+            .arg(format!("http://localhost:{port}/echo?{query}"))
+            .output()
+            .expect("curl");
+        assert!(out.status.success(), "{out:?}");
+    };
+    post(
+        "page=1&lang=vi",
+        "one",
+        r#"{"user":42,"items":[{"id":1,"p":1}],"note":"first"}"#,
+    );
+    post(
+        "page=2",
+        "two",
+        r#"{"note":"second","items":[{"id":1,"p":2}],"user":42}"#,
+    );
+    let server = Server::new(&dir);
+    until("two flows", || {
+        call(&server, "list_flows", json!({}))["flows"]
+            .as_array()
+            .is_some_and(|f| f.len() == 2)
+    });
+    let flows = call(&server, "list_flows", json!({}));
+    let (newest, oldest) = (
+        flows["flows"][0]["id"].clone(),
+        flows["flows"][1]["id"].clone(),
+    );
+
+    // No `b`: the call before, to the same method, host and path.
+    let compared = call(&server, "compare_flows", json!({ "a": newest }));
+    assert_eq!(compared["b_is_the_call_before"], true);
+    assert_eq!(compared["b"], oldest);
+    let fields: Vec<&str> = compared["differs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| d["field"].as_str().unwrap())
+        .collect();
+    assert!(fields.contains(&"url"), "{fields:?}");
+    assert!(!fields.contains(&"method"), "the same method is not said");
+    let query: Vec<(&str, &str)> = compared["query"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| (p["name"].as_str().unwrap(), p["change"].as_str().unwrap()))
+        .collect();
+    assert_eq!(query, [("page", "changed"), ("lang", "only_b")]);
+
+    // A token's value stays out, though that it changed is said.
+    let headers = compared["request"]["headers"].as_array().unwrap();
+    let token = headers
+        .iter()
+        .find(|h| h["name"] == "authorization")
+        .expect("the token changed");
+    assert_eq!(
+        (token["a"].as_str(), token["b"].as_str()),
+        (Some("(removed)"), Some("(removed)"))
+    );
+    // In headers, as get_flow leaves it out; the echo's body says it, as
+    // get_flow's would.
+    assert!(
+        !compared["request"]["headers"]
+            .to_string()
+            .contains("Bearer")
+    );
+
+    // The JSON by field, whatever its keys' order.
+    let body = &compared["request"]["body"];
+    assert_eq!(body["fields_differ"], 2);
+    let paths: Vec<(&str, &str, &str)> = body["fields"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| {
+            (
+                f["path"].as_str().unwrap(),
+                f["a"].as_str().unwrap(),
+                f["b"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        paths,
+        [
+            ("items[id: 1].p", "2", "1"),
+            ("note", "\"second\"", "\"first\"")
+        ]
+    );
+    assert_eq!(compared["response"]["body"]["same"], false);
+
+    // The first has no call before it.
+    let message = json!({ "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                          "params": { "name": "compare_flows", "arguments": { "a": oldest } } });
+    let reply = server.handle_line(&message.to_string()).remove(0);
+    assert_eq!(reply["result"]["isError"], true, "{reply}");
+
+    drop(engine);
+    let _ = std::fs::remove_dir_all(&dir);
+}

@@ -568,6 +568,29 @@ fn id_field(a: &[serde_json::Value], b: &[serde_json::Value]) -> Option<&'static
     })
 }
 
+/// Each field that differs with its path from the top, as `user.name` or
+/// `items[3].price`: what the tree says, a line each.
+pub fn field_paths(nodes: &[Node]) -> Vec<(String, &Node)> {
+    let mut above: Vec<&str> = Vec::new();
+    let mut out = Vec::new();
+    for node in nodes {
+        above.truncate(node.depth);
+        let mut path = String::new();
+        for key in above.iter().copied().chain([node.key.as_str()]) {
+            if !path.is_empty() && !key.starts_with('[') {
+                path.push('.');
+            }
+            path.push_str(key);
+        }
+        if node.inside.is_some() {
+            above.push(&node.key);
+        } else {
+            out.push((path, node));
+        }
+    }
+    out
+}
+
 /// The nodes shown: all but those under a node in `closed`.
 pub fn shown_nodes(nodes: &[Node], closed: &HashSet<usize>) -> Vec<usize> {
     let mut out = Vec::with_capacity(nodes.len());
@@ -590,6 +613,26 @@ pub fn shown_nodes(nodes: &[Node], closed: &HashSet<usize>) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fields_are_named_by_their_path() {
+        let a = serde_json::json!({"user": {"name": "An", "tags": ["a"]}, "items": [{"id": 1, "p": 1}], "v": 1});
+        let b = serde_json::json!({"user": {"name": "Bình", "tags": ["a", "b"]}, "items": [{"id": 1, "p": 2}], "v": 2});
+        let tree = diff_tree(&a, &b);
+        let paths: Vec<(String, Change)> = field_paths(&tree)
+            .into_iter()
+            .map(|(path, node)| (path, node.change))
+            .collect();
+        assert_eq!(
+            paths,
+            [
+                ("items[id: 1].p".to_owned(), Change::Changed),
+                ("user.name".to_owned(), Change::Changed),
+                ("user.tags[1]".to_owned(), Change::Added),
+                ("v".to_owned(), Change::Changed),
+            ]
+        );
+    }
 
     #[test]
     fn what_changed_in_a_line_is_found_word_by_word() {
