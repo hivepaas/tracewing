@@ -32,6 +32,8 @@ const ARGUMENTS_SHOWN: usize = 24;
 /// The most of a socket's messages read for this. A socket that has said
 /// more than this has said it in the Messages part, which reads them all.
 const MESSAGES_MAX: i64 = 200;
+/// How many of a reply's logs are said one by one.
+const LOGS_SHOWN: usize = 12;
 /// How many problems of one ABI source are shown in Settings.
 const PROBLEMS_SHOWN: usize = 3;
 
@@ -117,7 +119,7 @@ pub fn shown(
         }
         .or_else(|| (!batch).then(|| replies.first()).flatten());
         if let Some(answer) = answer {
-            out.sections.push(answered(answer, abi, &call.method));
+            out.sections.push(answered(answer, abi, call));
         }
     }
     out
@@ -175,7 +177,7 @@ pub fn shown_messages(messages: &[(bool, Vec<u8>)], abi: &Abi) -> Shown {
                 if let Some(n) = reply
                     && let Ok(value) = serde_json::from_slice(&messages[*n].1)
                 {
-                    out.sections.push(answered(&value, abi, &call.method));
+                    out.sections.push(answered(&value, abi, call));
                 }
             }
             continue;
@@ -358,7 +360,8 @@ fn asked(call: &jsonrpc::Call, abi: &Abi) -> Vec<Line> {
 
 /// What the reply to one call holds: what came back, or why it did not.
 /// `method` is the call that asked, which is what says how to read a result.
-fn answered(answer: &serde_json::Value, abi: &Abi, method: &str) -> Section {
+fn answered(answer: &serde_json::Value, abi: &Abi, call: &jsonrpc::Call) -> Section {
+    let method = call.method.as_str();
     if let Some(error) = answer.get("error") {
         let code = error.get("code").and_then(serde_json::Value::as_i64);
         let mut lines = Vec::new();
@@ -384,6 +387,9 @@ fn answered(answer: &serde_json::Value, abi: &Abi, method: &str) -> Section {
     match answer.get("result") {
         Some(serde_json::Value::String(hex)) => {
             lines.push(Line::code("result", result_text(method, hex)));
+            // A call to a contract answers in words whose meaning is in the
+            // function's own types, which an ABI has and the hex has not.
+            lines.extend(answered_by_types(call, abi, hex));
         }
         Some(serde_json::Value::Array(list)) => {
             lines.push(Line::said(
@@ -395,6 +401,7 @@ fn answered(answer: &serde_json::Value, abi: &Abi, method: &str) -> Section {
                     count = list.len()
                 ),
             ));
+            lines.extend(logs_in(list, abi));
         }
         Some(serde_json::Value::Object(fields)) => {
             lines.push(Line::said(
@@ -406,6 +413,10 @@ fn answered(answer: &serde_json::Value, abi: &Abi, method: &str) -> Section {
                     count = fields.len()
                 ),
             ));
+            // A receipt carries the logs of what the transaction did.
+            if let Some(logs) = fields.get("logs").and_then(|l| l.as_array()) {
+                lines.extend(logs_in(logs, abi));
+            }
         }
         Some(other) => lines.push(Line::code("result", other.to_string())),
         None => {}
@@ -415,6 +426,92 @@ fn answered(answer: &serde_json::Value, abi: &Abi, method: &str) -> Section {
         note: None,
         lines,
     }
+}
+
+/// What an `eth_call` came back with, read by the types the function it
+/// called answers with. Nothing when the function is not one that is known,
+/// which is where an ABI of the user's says more than the shared list.
+fn answered_by_types(call: &jsonrpc::Call, abi: &Abi, hex: &str) -> Vec<Line> {
+    if call.method != "eth_call" {
+        return Vec::new();
+    }
+    let data = call
+        .params
+        .as_ref()
+        .and_then(|params| params.get(0))
+        .and_then(|object| object.get("data").or_else(|| object.get("input")))
+        .and_then(|data| data.as_str())
+        .and_then(web3::bytes_of)
+        .unwrap_or_default();
+    let types = abi
+        .returns(&data)
+        .map(str::to_owned)
+        .or_else(|| web3::known_returns(&data).map(str::to_owned));
+    let Some(types) = types.filter(|types| types != "()") else {
+        return Vec::new();
+    };
+    let Some(bytes) = web3::bytes_of(hex) else {
+        return Vec::new();
+    };
+    let name = |data: &[u8]| {
+        abi.function(data)
+            .map(str::to_owned)
+            .or_else(|| web3::known_function(data).map(str::to_owned))
+    };
+    web3::returned_named(&types, &bytes, &name)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|one| Line::code(&one.kind, one.text))
+        .collect()
+}
+
+/// The logs in a reply, each said by the event it is. A log's topics and its
+/// data are two halves of one thing, and neither reads alone.
+fn logs_in(list: &[serde_json::Value], abi: &Abi) -> Vec<Line> {
+    let mut lines = Vec::new();
+    for log in list.iter().take(LOGS_SHOWN) {
+        let topics: Vec<Vec<u8>> = log
+            .get("topics")
+            .and_then(|topics| topics.as_array())
+            .map(|topics| {
+                topics
+                    .iter()
+                    .filter_map(|topic| topic.as_str().and_then(web3::bytes_of))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let Some(first) = topics.first() else {
+            continue;
+        };
+        let Some(signature) = abi.event(first).or_else(|| web3::known_event(first)) else {
+            continue;
+        };
+        let data = log
+            .get("data")
+            .and_then(|data| data.as_str())
+            .and_then(web3::bytes_of)
+            .unwrap_or_default();
+        let said = web3::event_arguments(signature, abi.indexed(first), &topics, &data)
+            .map(|read| {
+                read.iter()
+                    .map(|one| one.text.clone())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_default();
+        lines.push(Line::code(
+            web3::name_of(signature),
+            match said.is_empty() {
+                true => signature.to_owned(),
+                false => format!("({said})"),
+            },
+        ));
+    }
+    let more = list.len().saturating_sub(LOGS_SHOWN);
+    if more > 0 {
+        lines.push(Line::said("", tr!("and {count} more", count = more)));
+    }
+    lines
 }
 
 /// What a result holds, which only the call that asked can say: a block
@@ -1166,6 +1263,72 @@ mod tests {
             answer.lines[0].value,
             "0x000000000000000000000000000000000000000000000000000000000256063c = 39192124",
             "the hex stays, and what it comes to is said"
+        );
+    }
+
+    /// The word an eth_call comes back with means nothing on its own. The
+    /// function it called says what it is.
+    #[test]
+    fn what_a_call_answered_is_read_as_what_it_asked_for() {
+        let shown = of(
+            sample!("call_balanceof.req.json"),
+            sample!("call_balanceof.res.json"),
+        );
+        let answer = &shown.sections[1];
+        assert_eq!(
+            lines(answer),
+            [
+                (
+                    "result",
+                    "0x000000000000000000000000000000000000000000000000000000000256063c = 39192124"
+                ),
+                // balanceOf answers with a uint256, which the shared list
+                // knows without any ABI.
+                ("uint256", "39192124"),
+            ]
+        );
+    }
+
+    /// A receipt's logs are what the transaction actually did; before this
+    /// they were counted and left at that.
+    #[test]
+    fn the_logs_of_a_reply_say_which_event_each_one_is() {
+        let asked = br#"{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt",
+                         "params":["0xc0e96fa11b3d298c3f37b7fc2fc43dc8ac11d9e0fab3f3d3816d8b2497757b6e"]}"#;
+        let shown = of(asked, sample!("receipt.res.json"));
+        let answer = &shown.sections[1];
+        let lines = lines(answer);
+        assert!(
+            lines.iter().any(|(label, _)| *label == "result"),
+            "{lines:?}"
+        );
+        // Two real USDC Transfers, each out of its topics and its data.
+        assert_eq!(
+            lines
+                .iter()
+                .filter(|(label, _)| *label == "Transfer")
+                .map(|(_, value)| *value)
+                .collect::<Vec<_>>(),
+            [
+                "(0x000000000004444c5dc75cB358380D2e3dE08A90, 0x0000000aa232009084Bd71A5797d089AA4Edfad4, 856819229)",
+                "(0x000000000004444c5dc75cB358380D2e3dE08A90, 0x0000000aa232009084Bd71A5797d089AA4Edfad4, 360010611832)",
+            ]
+        );
+    }
+
+    #[test]
+    fn the_logs_a_filter_came_back_with_are_read_too() {
+        let shown = of(sample!("get_logs.req.json"), sample!("get_logs.res.json"));
+        let answer = &shown.sections[1];
+        let lines = lines(answer);
+        assert_eq!(lines[0], ("result", "3 items"));
+        assert_eq!(
+            lines
+                .iter()
+                .filter(|(label, _)| *label == "Transfer")
+                .count(),
+            3,
+            "each one said: {lines:?}"
         );
     }
 

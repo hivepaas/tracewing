@@ -28,10 +28,27 @@ const LOOK_EVERY: Duration = Duration::from_secs(2);
 /// What was read from the sources: the names, by what a call carries.
 #[derive(Debug, Default)]
 pub struct Abi {
-    functions: HashMap<[u8; 4], String>,
-    events: HashMap<[u8; 32], String>,
+    functions: HashMap<[u8; 4], Call>,
+    events: HashMap<[u8; 32], Event>,
     errors: HashMap<[u8; 4], String>,
     pub sources: Vec<Source>,
+}
+
+/// A function: what it is called with, and what it answers with, which is
+/// what says how to read the word a call came back with.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Call {
+    signature: String,
+    /// As `(uint256)`, the shape [`crate::web3::returned`] takes.
+    returns: String,
+}
+
+/// An event: its signature, and which of its parameters are `indexed` and
+/// so are topics rather than data.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Event {
+    signature: String,
+    indexed: Vec<bool>,
 }
 
 /// One source: what was read from it, and what could not be.
@@ -91,13 +108,26 @@ impl Abi {
     /// call may be passed whole: only its first four bytes are read.
     pub fn function(&self, data: &[u8]) -> Option<&str> {
         let four: [u8; 4] = data.get(..4)?.try_into().ok()?;
-        self.functions.get(&four).map(String::as_str)
+        Some(self.functions.get(&four)?.signature.as_str())
+    }
+
+    /// The types that function answers with, as `(uint256)`.
+    pub fn returns(&self, data: &[u8]) -> Option<&str> {
+        let four: [u8; 4] = data.get(..4)?.try_into().ok()?;
+        Some(self.functions.get(&four)?.returns.as_str())
     }
 
     /// The signature of the event that first topic names.
     pub fn event(&self, topic: &[u8]) -> Option<&str> {
         let whole: [u8; 32] = topic.get(..32)?.try_into().ok()?;
-        self.events.get(&whole).map(String::as_str)
+        Some(self.events.get(&whole)?.signature.as_str())
+    }
+
+    /// Which of that event's parameters are `indexed`, in the order it
+    /// names them: the ones that are are topics, the rest are in the data.
+    pub fn indexed(&self, topic: &[u8]) -> Option<&[bool]> {
+        let whole: [u8; 32] = topic.get(..32)?.try_into().ok()?;
+        Some(&self.events.get(&whole)?.indexed)
     }
 
     /// The signature of the custom error those four bytes name, which is
@@ -124,12 +154,20 @@ impl Abi {
             match entry.get("type").and_then(Value::as_str) {
                 Some("function") => {
                     let four = selector_of(&signature);
-                    let new = self.functions.insert(four, signature).is_none();
+                    let call = Call {
+                        signature,
+                        returns: returns_of(entry),
+                    };
+                    let new = self.functions.insert(four, call).is_none();
                     source.functions += usize::from(new);
                 }
                 Some("event") => {
                     let topic = topic_of(&signature);
-                    let new = self.events.insert(topic, signature).is_none();
+                    let event = Event {
+                        signature,
+                        indexed: indexed_of(entry),
+                    };
+                    let new = self.events.insert(topic, event).is_none();
                     source.events += usize::from(new);
                 }
                 Some("error") => {
@@ -172,6 +210,32 @@ fn signature_of(entry: &Value) -> Option<String> {
         Some(_) => None,
     };
     Some(format!("{name}({})", types?.join(",")))
+}
+
+/// The types an entry answers with, as a bracketed list. `()` when it says
+/// none, which is what a function that answers with nothing has.
+fn returns_of(entry: &Value) -> String {
+    let types: Option<Vec<String>> = match entry.get("outputs") {
+        Some(Value::Array(outputs)) => outputs.iter().map(type_of).collect(),
+        _ => Some(Vec::new()),
+    };
+    format!("({})", types.unwrap_or_default().join(","))
+}
+
+/// Which of an event's parameters are `indexed`, in the order it names them.
+fn indexed_of(entry: &Value) -> Vec<bool> {
+    match entry.get("inputs") {
+        Some(Value::Array(inputs)) => inputs
+            .iter()
+            .map(|input| {
+                input
+                    .get("indexed")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false)
+            })
+            .collect(),
+        _ => Vec::new(),
+    }
 }
 
 /// One input's type. A tuple is written as the types in it, keeping whatever
@@ -443,6 +507,20 @@ mod tests {
             Some("InsufficientBalance(uint256,uint256)")
         );
         assert_eq!(abi.function(b"\x00\x00\x00\x00"), None);
+        // What it answers with, and which of an event's are topics: both
+        // were thrown away before, and both are what reads a reply.
+        assert_eq!(
+            abi.returns(&web3::selector_of("transfer(address,uint256)")),
+            Some("(bool)")
+        );
+        assert_eq!(
+            abi.returns(&web3::selector_of("totalSupply()")),
+            Some("(uint256)")
+        );
+        assert_eq!(
+            abi.indexed(&web3::topic_of("Transfer(address,address,uint256)")),
+            Some(&[true, true, false][..])
+        );
         let source = &abi.sources[0];
         assert_eq!(source.files, 2, "the one that is not an ABI is not read");
         assert_eq!(
