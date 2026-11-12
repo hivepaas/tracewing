@@ -17,7 +17,7 @@ use std::{path::PathBuf, sync::Arc};
 use tracewing_i18n::{tr, tr_n};
 use tracewing_store::{
     abi::Abi,
-    jsonrpc, session,
+    bitcoin, jsonrpc, session,
     session::BodyReader,
     solana,
     web3::{self, Revert, Transaction},
@@ -350,6 +350,10 @@ fn asked(call: &jsonrpc::Call, abi: &Abi) -> Vec<Line> {
             if !said.is_empty() {
                 return said;
             }
+            let said = bitcoin_asked(&call.method, params);
+            if !said.is_empty() {
+                return said;
+            }
             if let Some(serde_json::Value::Array(list)) = params {
                 for (n, param) in list.iter().enumerate() {
                     let label = format!("param {n}");
@@ -540,6 +544,95 @@ fn object_lines(
         "eth_getBlockByNumber" | "eth_getBlockByHash" => block_lines(fields),
         _ => solana_result(method, fields),
     }
+}
+
+/// What a Bitcoin Core call asks for. Its methods are lower case, which is
+/// what tells them from Solana's camelCase ones.
+fn bitcoin_asked(method: &str, params: Option<&serde_json::Value>) -> Vec<Line> {
+    let at = |n: usize| params.and_then(|params| params.get(n));
+    let text_at = |n: usize| at(n).and_then(|one| one.as_str());
+    match method {
+        "sendrawtransaction" | "testmempoolaccept" => {
+            let raw = text_at(0).or_else(|| {
+                at(0)
+                    .and_then(|list| list.get(0))
+                    .and_then(|one| one.as_str())
+            });
+            raw.map(bitcoin_transaction).unwrap_or_default()
+        }
+        "getrawtransaction" | "gettransaction" | "getmempoolentry" => text_at(0)
+            .map(|txid| vec![Line::code("txid", txid.to_owned())])
+            .unwrap_or_default(),
+        "getblock" | "getblockheader" | "getblockstats" => text_at(0)
+            .map(|hash| vec![Line::code("blockhash", hash.to_owned())])
+            .unwrap_or_default(),
+        "getblockhash" => at(0)
+            .and_then(|height| height.as_u64())
+            .map(|height| vec![Line::said("height", crate::flows::group_digits(height))])
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    }
+}
+
+/// A signed transaction, out of the one hex string `sendrawtransaction`
+/// carries.
+fn bitcoin_transaction(raw: &str) -> Vec<Line> {
+    let Some(bytes) = hex_of(raw) else {
+        return vec![Line::code("transaction", raw.to_owned())];
+    };
+    let Some(tx) = bitcoin::Transaction::decode(&bytes) else {
+        return vec![Line::said(
+            "transaction",
+            tr_n!(
+                bytes.len(),
+                "{count} byte that does not read as one",
+                "{count} bytes that do not read as one",
+                count = bytes.len()
+            ),
+        )];
+    };
+    let mut lines = vec![
+        Line::code("txid", tx.txid.clone()),
+        Line::said("version", tx.version.to_string()),
+    ];
+    lines.push(Line::said(
+        "inputs",
+        tr_n!(
+            tx.inputs.len(),
+            "{count} item",
+            "{count} items",
+            count = tx.inputs.len()
+        ),
+    ));
+    for out in tx.outputs.iter().take(LOGS_SHOWN) {
+        let said = match &out.address {
+            Some(address) => format!("{}, {}", bitcoin::btc(out.satoshis), address),
+            None => format!("{}, {}", bitcoin::btc(out.satoshis), out.kind),
+        };
+        lines.push(Line::code("output", said));
+    }
+    let more = tx.outputs.len().saturating_sub(LOGS_SHOWN);
+    if more > 0 {
+        lines.push(Line::said("", tr!("and {count} more", count = more)));
+    }
+    lines.push(Line::said("paid", bitcoin::btc(tx.paid())));
+    if tx.locktime > 0 {
+        lines.push(Line::said(
+            "locktime",
+            crate::flows::group_digits(u64::from(tx.locktime)),
+        ));
+    }
+    lines
+}
+
+/// Plain hex, with no `0x` in front: Bitcoin writes it that way.
+fn hex_of(text: &str) -> Option<Vec<u8>> {
+    if !text.len().is_multiple_of(2) || text.is_empty() {
+        return None;
+    }
+    (0..text.len() / 2)
+        .map(|at| u8::from_str_radix(text.get(at * 2..at * 2 + 2)?, 16).ok())
+        .collect()
 }
 
 /// What a Solana call asks for. Its addresses are base58 rather than hex, and
@@ -1800,6 +1893,91 @@ mod tests {
         ($name:literal) => {
             include_bytes!(concat!("../../store/testdata/solana/", $name))
         };
+    }
+
+    macro_rules! bitcoin_sample {
+        ($name:literal) => {
+            include_bytes!(concat!("../../store/testdata/bitcoin/", $name))
+        };
+    }
+
+    /// Bitcoin Core speaks the same JSON-RPC, and what it carries is one hex
+    /// string with every input and output inside it. These are real.
+    #[test]
+    fn a_bitcoin_transaction_is_laid_out() {
+        let shown = of(bitcoin_sample!("segwit.req.json"), b"");
+        assert_eq!(shown.sections[0].title, "sendrawtransaction");
+        let asked = lines(&shown.sections[0]);
+        assert!(
+            asked.contains(&(
+                "txid",
+                "ae1e6ca447b1abb8d898b05dfb8e02e9c8826800474ad4db20f7b0535c3a238b"
+            )),
+            "worked out from the bytes: {asked:?}"
+        );
+        assert!(asked.contains(&("inputs", "1 item")), "{asked:?}");
+        // The addresses are read out of the chain's own answer rather than
+        // written here: a bech32 string is not something to type from memory.
+        let chain: serde_json::Value =
+            serde_json::from_slice(bitcoin_sample!("segwit.tx.json")).expect("JSON");
+        let paying: Vec<String> = chain["vout"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|out| {
+                format!(
+                    "{}, {}",
+                    tracewing_store::bitcoin::btc(out["value"].as_u64().unwrap()),
+                    out["scriptpubkey_address"].as_str().unwrap()
+                )
+            })
+            .collect();
+        assert_eq!(
+            asked
+                .iter()
+                .filter(|(label, _)| *label == "output")
+                .map(|(_, value)| value.to_string())
+                .collect::<Vec<_>>(),
+            paying
+        );
+        let total: u64 = chain["vout"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|out| out["value"].as_u64().unwrap())
+            .sum();
+        let paid = tracewing_store::bitcoin::btc(total);
+        assert!(asked.contains(&("paid", paid.as_str())), "{asked:?}");
+    }
+
+    #[test]
+    fn a_bitcoin_address_of_every_kind_is_written_out() {
+        let kinds = [("legacy_and_script.req.json", '1'), ("p2sh.req.json", '3')];
+        for (sample, first) in kinds {
+            let raw = std::fs::read(format!(
+                "{}/../store/testdata/bitcoin/{sample}",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+            .expect("the sample");
+            let shown = of(&raw, b"");
+            let asked = lines(&shown.sections[0]);
+            assert!(
+                asked
+                    .iter()
+                    .any(|(label, value)| *label == "output"
+                        && value.contains(&format!(", {first}"))),
+                "an address starting {first}: {asked:?}"
+            );
+        }
+        // Taproot, whose address checksums by a constant of its own.
+        let shown = of(bitcoin_sample!("taproot.req.json"), b"");
+        let asked = lines(&shown.sections[0]);
+        assert!(
+            asked
+                .iter()
+                .any(|(label, value)| *label == "output" && value.contains(", bc1p")),
+            "{asked:?}"
+        );
     }
 
     /// Solana speaks the same JSON-RPC, and nothing of its own was read: an
