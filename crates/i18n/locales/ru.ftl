@@ -25,6 +25,9 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Показаны только первые { $count } строк.
 
+# Clear what was read
+tdd38ff77 = Убрать прочитанное
+
 # Unfold all
 t3849d44e = Развернуть всё
 
@@ -1089,6 +1092,12 @@ t70ff68f9 =
         [many] и ещё { $count }: введите, чтобы сузить
        *[other] и ещё { $count }: введите, чтобы сузить
     }
+
+# Read as
+t8c0f1d8b = Прочитать как
+
+# Copy reading
+td38c5cc8 = Копировать прочитанное
 
 # Nothing to read in this
 t92a8694c = Здесь нечего прочесть

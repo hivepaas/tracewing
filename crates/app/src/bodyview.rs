@@ -182,6 +182,10 @@ pub struct BodyView {
     /// What the selection was read as, worked out when the right-click menu
     /// opened: a frame must not read the selection again on every draw.
     readings: Vec<Reading>,
+    /// The readings the reader chose to see, by the piece each was read from,
+    /// drawn after that piece's text. Emptied where the text changes under
+    /// them, since a piece then means another line.
+    drawn: BTreeMap<u64, Reading>,
     /// CSV or TSV read as a table, which [`BodyMode::Table`] shows.
     table: Option<Arc<Table>>,
     table_scroll: UniformListScrollHandle,
@@ -214,6 +218,7 @@ impl BodyView {
             select: Selection::default(),
             focus,
             readings: Vec::new(),
+            drawn: BTreeMap::new(),
             table: None,
             table_scroll: UniformListScrollHandle::new(),
         }
@@ -432,7 +437,7 @@ impl BodyView {
     /// The selection read, as far as it is worth reading: past
     /// [`tracewing_convert::MAX_INPUT`] a selection is something to copy, not
     /// a value to make sense of.
-    fn read_selection(&self) -> Vec<Reading> {
+    pub fn read_selection(&self) -> Vec<Reading> {
         let Some((start, end)) = self.select.bounds() else {
             return Vec::new();
         };
@@ -445,6 +450,26 @@ impl BodyView {
             return Vec::new();
         };
         reading::of(&text, self.selected_field().as_deref())
+    }
+
+    /// Draws `reading` after the piece the selection starts in, which is what
+    /// choosing it from the menu does.
+    pub fn draw_reading(&mut self, reading: Reading, cx: &mut Context<Self>) {
+        if let Some((start, _)) = self.select.bounds() {
+            self.drawn.insert(start.piece, reading);
+        }
+        cx.notify();
+    }
+
+    /// Takes away everything that was drawn beside a value.
+    pub fn clear_readings(&mut self, cx: &mut Context<Self>) {
+        self.drawn.clear();
+        cx.notify();
+    }
+
+    /// How many readings are drawn.
+    pub fn readings_drawn(&self) -> usize {
+        self.drawn.len()
     }
 
     fn copy_all(&mut self, cx: &mut Context<Self>) {
@@ -614,6 +639,7 @@ impl BodyView {
             self.raw = Some(raw);
         }
         self.mode = mode;
+        self.drawn.clear();
         self.place = Place::default();
         self.row_counts.borrow_mut().clear();
         self.folds = Folds::default();
@@ -804,6 +830,27 @@ impl BodyView {
                     .pl_2()
                     .text_color(rgb(colors().faint))
                     .child(tr!("… {size} more", size = size_text(shown.cut))),
+            );
+        }
+        // What the reader asked to see of this piece: the time a number is,
+        // the claims a token makes. A click on it takes it away again.
+        if let Some(reading) = self.drawn.get(&key) {
+            row = row.child(
+                div()
+                    .id(("reading", key))
+                    .flex_shrink_0()
+                    .ml_1()
+                    .px_1()
+                    .rounded_sm()
+                    .cursor_pointer()
+                    .bg(rgb(colors().chip))
+                    .text_color(rgb(colors().muted))
+                    .child(reading.beside())
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.drawn.remove(&key);
+                        cx.notify();
+                    })),
             );
         }
         row
@@ -1087,15 +1134,35 @@ impl BodyView {
                 },
             );
             // What the selection turned out to be: a time, a token, something
-            // packed. The reading itself is drawn where the value is; from
-            // here it can be copied.
-            let shut = me.clone();
-            items.extend(reading::items(&self.readings, move |_, cx| {
-                let _ = shut.update(cx, |this, cx| {
+            // packed. Choosing one draws it after the value it was read from;
+            // `Copy reading` takes the whole of it instead.
+            let pick = me.clone();
+            items.extend(reading::items(&self.readings, move |reading, _, cx| {
+                let _ = pick.update(cx, |this, cx| {
+                    this.draw_reading(reading, cx);
+                    this.close_menu();
+                });
+            }));
+            let copied = me.clone();
+            items.extend(reading::copy_item(&self.readings, move |_, cx| {
+                let _ = copied.update(cx, |this, cx| {
                     this.close_menu();
                     cx.notify();
                 });
             }));
+            if !self.drawn.is_empty() {
+                let clear = me.clone();
+                items.push(select::Item::new(
+                    "clear-readings",
+                    tr!("Clear what was read"),
+                    Some(Rc::new(move |_: &mut Window, cx: &mut gpui::App| {
+                        let _ = clear.update(cx, |this, cx| {
+                            this.clear_readings(cx);
+                            this.close_menu();
+                        });
+                    }) as select::Act),
+                ));
+            }
             if !self.folds.is_empty() {
                 items.push(select::Item::new(
                     "unfold-all",

@@ -23,6 +23,9 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Só as primeiras { $count } linhas são mostradas.
 
+# Clear what was read
+tdd38ff77 = Remover o que foi lido
+
 # Unfold all
 t3849d44e = Expandir tudo
 
@@ -1055,6 +1058,12 @@ t70ff68f9 =
         [many] e mais { $count }: digite para filtrar
        *[other] e mais { $count }: digite para filtrar
     }
+
+# Read as
+t8c0f1d8b = Ler como
+
+# Copy reading
+td38c5cc8 = Copiar a leitura
 
 # Nothing to read in this
 t92a8694c = Nada a interpretar aqui

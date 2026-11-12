@@ -13,6 +13,7 @@ t0a4220dc =
        *[other] { $size } { $format } · { $count } lines of JSON
     }
 t16aa1c6d = The first { $count } rows are shown.
+tdd38ff77 = Clear what was read
 t3849d44e = Unfold all
 t51332550 =
     { $n ->
@@ -410,6 +411,8 @@ t70ff68f9 =
         [one] and { $count } more: type to narrow them
        *[other] and { $count } more: type to narrow them
     }
+t8c0f1d8b = Read as
+td38c5cc8 = Copy reading
 t92a8694c = Nothing to read in this
 t4f68f91a = Write the server's address first
 t8c4d03a6 = "{ $address }" is not a server's address

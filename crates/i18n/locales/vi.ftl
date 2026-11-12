@@ -13,6 +13,9 @@ t0a4220dc = { $size } { $format } · { $count } dòng JSON
 # The first {count} rows are shown.
 t16aa1c6d = Chỉ hiện { $count } dòng đầu tiên.
 
+# Clear what was read
+tdd38ff77 = Bỏ phần đã đọc
+
 # Unfold all
 t3849d44e = Mở hết
 
@@ -984,6 +987,12 @@ t134c9a06 = Tự động (path gRPC hoặc messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = và { $count } message khác: gõ để thu hẹp
+
+# Read as
+t8c0f1d8b = Đọc như
+
+# Copy reading
+td38c5cc8 = Copy phần đã đọc
 
 # Nothing to read in this
 t92a8694c = Không đọc được gì ở đây

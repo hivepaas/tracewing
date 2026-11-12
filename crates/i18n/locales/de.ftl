@@ -21,6 +21,9 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Nur die ersten { $count } Zeilen werden gezeigt.
 
+# Clear what was read
+tdd38ff77 = Gelesenes entfernen
+
 # Unfold all
 t3849d44e = Alles aufklappen
 
@@ -1043,6 +1046,12 @@ t70ff68f9 =
         [one] und { $count } weitere: tippen, um einzugrenzen
        *[other] und { $count } weitere: tippen, um einzugrenzen
     }
+
+# Read as
+t8c0f1d8b = Lesen als
+
+# Copy reading
+td38c5cc8 = Gelesenes kopieren
 
 # Nothing to read in this
 t92a8694c = Hierin ist nichts zu lesen

@@ -13,6 +13,9 @@ t0a4220dc = { $size } { $format } · { $count } baris JSON
 # The first {count} rows are shown.
 t16aa1c6d = Hanya { $count } baris pertama yang ditampilkan.
 
+# Clear what was read
+tdd38ff77 = Hapus yang sudah dibaca
+
 # Unfold all
 t3849d44e = Buka semua
 
@@ -984,6 +987,12 @@ t134c9a06 = Otomatis (path gRPC atau messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = dan { $count } lagi: ketik untuk mempersempit
+
+# Read as
+t8c0f1d8b = Baca sebagai
+
+# Copy reading
+td38c5cc8 = Salin hasil baca
 
 # Nothing to read in this
 t92a8694c = Tidak ada yang bisa dibaca di sini

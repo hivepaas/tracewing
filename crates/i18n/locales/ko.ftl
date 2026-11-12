@@ -13,6 +13,9 @@ t0a4220dc = { $size } { $format } · JSON { $count }줄
 # The first {count} rows are shown.
 t16aa1c6d = 처음 { $count }행만 표시합니다.
 
+# Clear what was read
+tdd38ff77 = 읽은 내용 지우기
+
 # Unfold all
 t3849d44e = 모두 펼치기
 
@@ -984,6 +987,12 @@ t134c9a06 = 자동 (gRPC 경로 또는 messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = { $count }개 더 있음: 입력해서 좁히기
+
+# Read as
+t8c0f1d8b = 다른 해석
+
+# Copy reading
+td38c5cc8 = 읽은 내용 복사
 
 # Nothing to read in this
 t92a8694c = 여기서 읽을 것이 없습니다
