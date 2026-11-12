@@ -1,8 +1,9 @@
 # Converting values
 
-The design, and where it stands. `crates/convert` is built: the registry, the
-phase one converters and their tests, and the readings in the body view's
-right-click menu. What is not built yet is marked **to come** below.
+The design, and where it stands. Built: `crates/convert` — the registry, the
+phase one converters and their tests — the readings in the body view's
+right-click menu, and the reading chosen drawn beside the value it was read
+from. What is not built yet is marked **to come** below.
 
 A response says `1763000000`, or `eyJhbGciOiJIUzI1NiJ9…`, or `H4sIAAAAAAAA…`.
 Pretty shows all three faithfully and the reader learns nothing from any of them.
@@ -30,26 +31,39 @@ first item is the answer:
 ```
   Copy
   Copy all
-  ─────────────────────────────
+  ─────────────────────────────────────────────
   2026-11-12 21:13:20  (Unix milliseconds)     ← one click, draws it
-  Read as ▸                                    ← every other reading
-  Always read this field this way ▸
+  342 KiB  (As a size)
+  Copy reading                                 ← the best one, whole
+  Read as                                      ← the ones ranked lower
+  0x53e30  0b1010001111100110000  (In hex and binary)
+  Clear what was read
 ```
 
-`Read as ▸` holds the readings the registry found but did not rank first, then
-the full list by group for when it found nothing. The keyboard cycles readings
-on a selection, so a wrong guess costs one key, not a trip through a menu.
+`Read as` holds the readings the registry found but did not rank first: four
+are offered above it and six under it, which is as many as a menu can hold
+without becoming a list to read. It is a heading in the one menu rather than a
+submenu, because the menu this app draws has no second level and one is not
+worth building for ten items.
+
+**To come:** the keyboard cycling readings on a selection, so a wrong guess
+costs one key rather than another trip through the menu, and
+`Always read this field this way ▸` for the rules below.
 
 ### Where the reading is drawn
 
 Four shapes, by what the converter returned:
 
-| Shape | Drawn as |
-|---|---|
-| One line (a time, a size, a decoded integer) | after the value, dim, on the same row |
-| Named fields (a JWT's claims, a traceparent's parts) | folded under the row, as JWTs are drawn now |
-| A body (JSON out of base64, protobuf out of gzip) | its own pane, with Pretty, Raw and Hex, folds and all |
-| An image, or bytes | a thumbnail, or a hex dump, in that pane |
+| Shape | Drawn as | |
+|---|---|---|
+| One line (a time, a size, a decoded integer) | after the value, dim, on the same row | built |
+| Named fields (a JWT's claims, a traceparent's parts) | folded under the row, as JWTs are drawn now | to come: for now the fields are said on one line after the value, cut to what a line can spare |
+| A body (JSON out of base64, protobuf out of gzip) | its own pane, with Pretty, Raw and Hex, folds and all | to come: for now the size and what it holds are said after the value |
+| An image, or bytes | a thumbnail, or a hex dump, in that pane | to come |
+
+What is drawn is kept by the piece it was read from, and a click on it takes it
+away again, as does `Clear what was read`. Another mode is another text, so
+Pretty, Raw and Hex each start with nothing drawn.
 
 A reading is never part of the body. It is not in `selected_text()`, not in
 `Copy all`, not in a saved body, not in Copy as cURL. The menu carries
@@ -215,10 +229,13 @@ four at most, and reads the key off the selected line
 as the first converter; what is left in the app under that name is the clock
 the crate does without.
 
-**To come:** the reading drawn where the value is rather than copied from the
-menu, the pane for a `Bytes` reading, `Read as ▸` and the dim underline,
-remembered rules, the keyboard cycling readings, and the same menu in headers,
-cookies, query and form fields.
+**To come:** the pane for a `Bytes` reading — which means writing the bytes
+beside the body's own file and opening them as a body, the way
+`detail::json_file` already does for MessagePack and Protobuf — the dim
+underline, remembered rules, the keyboard, and the same menu in headers,
+cookies, query and form fields. That last one wants `Selection` to carry the
+field a piece was drawn under, which is the same thing the underline and the
+rules need to know, so the three go together.
 
 ## Limits, and what this will not do
 

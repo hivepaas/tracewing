@@ -442,10 +442,10 @@ pub fn render_menu(
                 .font_family(crate::FONT)
                 .text_size(px(13.))
                 .on_mouse_down_out(move |_, window, cx| on_close(window, cx))
-                .children(items.into_iter().map(|item| {
+                .children(items.into_iter().enumerate().map(|(nth, item)| {
                     let enabled = item.act.is_some();
                     div()
-                        .id(item.id)
+                        .id((item.id, nth))
                         .px(px(12.))
                         .py(px(5.))
                         .rounded(px(8.))

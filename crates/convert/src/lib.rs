@@ -102,8 +102,8 @@ impl Reading {
         }
     }
 
-    /// The one line a menu shows: what it says, and what read it.
-    pub fn summary(&self) -> String {
+    /// What the reading says, and nothing about how it was read.
+    fn said(&self) -> String {
         let what = match &self.shown {
             Shown::Line(line) => line.clone(),
             Shown::Fields(fields) => fields
@@ -114,8 +114,22 @@ impl Reading {
             Shown::Table { rows, .. } => tr_rows(rows.len()),
             Shown::Bytes { bytes, .. } => numbers::bytes_size(bytes.len() as u64),
         };
-        let what = cut(&what, 64);
-        format!("{what}  ({})", self.label)
+        cut(&what, 64)
+    }
+
+    /// The one line drawn beside the value. A guess says what read it as
+    /// well: `10d 1h` beside a price must not look like a fact, and seeing
+    /// `(Seconds)` is how a reader knows to pick another reading.
+    pub fn beside(&self) -> String {
+        match self.confidence {
+            Confidence::Possible => self.summary(),
+            _ => self.said(),
+        }
+    }
+
+    /// The one line a menu shows: what it says, and what read it.
+    pub fn summary(&self) -> String {
+        format!("{}  ({})", self.said(), self.label)
     }
 
     /// The text `Copy reading` puts on the clipboard.
@@ -233,7 +247,6 @@ const CONVERTERS: &[Converter] = &[
     times::unix,
     times::iso,
     times::http_date,
-    times::duration,
     ids::uuid,
     ids::ulid,
     ids::object_id,
@@ -262,9 +275,10 @@ const CONVERTERS: &[Converter] = &[
     encodings::percent,
     encodings::unicode_escapes,
     encodings::entities,
+    numbers::size,
     numbers::radix,
     numbers::flags,
-    numbers::size,
+    times::duration,
 ];
 
 /// Every reading of `input`, best first, within [`BUDGET`].
@@ -417,6 +431,41 @@ mod tests {
             seen.dedup();
             seen.len() == was
         }));
+    }
+
+    #[test]
+    fn a_reading_says_itself_beside_the_value_and_in_a_menu() {
+        let found = read_under("exp", "1794492800");
+        let reading = by_id(&found, "unix-s").unwrap();
+        assert_eq!(reading.beside(), "2026-11-12 21:13:20 (+07:00), in 0 s");
+        assert_eq!(
+            reading.summary(),
+            "2026-11-12 21:13:20 (+07:00), in 0 s  (Unix seconds)"
+        );
+        // What runs long is cut to the width a line can spare.
+        let token = read(&format!("eyJhbGciOiJIUzI1NiJ9.{}.sig", "eyJzdWIiOiJhIn0"));
+        if let Some(jwt) = by_id(&token, "jwt") {
+            assert!(jwt.beside().chars().count() <= 65, "{}", jwt.beside());
+        }
+    }
+
+    #[test]
+    fn a_guess_drawn_beside_a_value_says_it_is_a_guess() {
+        // A price is not a span of seconds, and `10d 1h` beside it would read
+        // as though it were.
+        let found = read("868617");
+        let span = by_id(&found, "duration").unwrap();
+        assert_eq!(span.confidence, Confidence::Possible);
+        assert_eq!(span.beside(), "10d 1h  (Seconds)");
+        assert_ne!(
+            found[0].id, "duration",
+            "a guess about a span leads nothing"
+        );
+        // What is certain says itself and no more.
+        let certain = read_under("created_at", "1794492800");
+        let time = by_id(&certain, "unix-s").unwrap();
+        assert_eq!(time.confidence, Confidence::Certain);
+        assert!(!time.beside().contains("(Unix seconds)"));
     }
 
     #[test]

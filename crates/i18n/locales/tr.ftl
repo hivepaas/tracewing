@@ -21,6 +21,9 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Yalnızca ilk { $count } satır gösteriliyor.
 
+# Clear what was read
+tdd38ff77 = Okunanları kaldır
+
 # Unfold all
 t3849d44e = Tümünü aç
 
@@ -1007,6 +1010,12 @@ t70ff68f9 =
         [one] ve { $count } tane daha: daraltmak için yazın
        *[other] ve { $count } tane daha: daraltmak için yazın
     }
+
+# Read as
+t8c0f1d8b = Şu olarak oku
+
+# Copy reading
+td38c5cc8 = Okunanı kopyala
 
 # Nothing to read in this
 t92a8694c = Burada okunacak bir şey yok

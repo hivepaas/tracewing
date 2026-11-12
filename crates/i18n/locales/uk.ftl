@@ -25,6 +25,9 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Показано лише перші { $count } рядків.
 
+# Clear what was read
+tdd38ff77 = Прибрати прочитане
+
 # Unfold all
 t3849d44e = Розгорнути все
 
@@ -1053,6 +1056,12 @@ t70ff68f9 =
         [many] і ще { $count }: введіть, щоб звузити
        *[other] і ще { $count }: введіть, щоб звузити
     }
+
+# Read as
+t8c0f1d8b = Прочитати як
+
+# Copy reading
+td38c5cc8 = Копіювати прочитане
 
 # Nothing to read in this
 t92a8694c = Тут нічого прочитати

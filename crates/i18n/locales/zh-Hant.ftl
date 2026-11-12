@@ -13,6 +13,9 @@ t0a4220dc = { $size } { $format } · { $count } 行 JSON
 # The first {count} rows are shown.
 t16aa1c6d = 只顯示前 { $count } 列。
 
+# Clear what was read
+tdd38ff77 = 清除已解讀的內容
+
 # Unfold all
 t3849d44e = 全部展開
 
@@ -948,6 +951,12 @@ t134c9a06 = 自動（gRPC 路徑或 messageType）
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = 還有 { $count } 個：輸入以縮小範圍
+
+# Read as
+t8c0f1d8b = 按其他方式解讀
+
+# Copy reading
+td38c5cc8 = 複製解讀結果
 
 # Nothing to read in this
 t92a8694c = 這裡沒有可解讀的內容

@@ -13,6 +13,9 @@ t0a4220dc = { $size } { $format } · JSON { $count } 行
 # The first {count} rows are shown.
 t16aa1c6d = 最初の { $count } 行のみ表示しています。
 
+# Clear what was read
+tdd38ff77 = 読んだものを消す
+
 # Unfold all
 t3849d44e = すべて展開
 
@@ -948,6 +951,12 @@ t134c9a06 = 自動（gRPC のパスまたは messageType）
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = ほかに { $count } 件: 入力して絞り込み
+
+# Read as
+t8c0f1d8b = 別の読み方
+
+# Copy reading
+td38c5cc8 = 読んだ内容をコピー
 
 # Nothing to read in this
 t92a8694c = ここに読めるものはありません
