@@ -135,6 +135,10 @@ pub struct InspectorState {
     /// Which values are worth underlining, by [`drawn_key`]. The same reason,
     /// and the same answer kept.
     marks: RefCell<HashMap<String, bool>>,
+    /// Whether values with a reading behind them are underlined, as Settings
+    /// says. Shared with the body views, and set as the inspector draws, so
+    /// that the switch takes hold at once.
+    pub marks_on: reading::MarksOn,
     /// A reading being looked at as a body of its own, which the body pane
     /// shows until it is closed.
     pub opened: Option<Opened>,
@@ -266,7 +270,7 @@ impl InspectorState {
         value: &str,
         shown: bool,
     ) -> Vec<(std::ops::Range<usize>, gpui::HighlightStyle)> {
-        if shown || value.is_empty() {
+        if shown || value.is_empty() || !self.marks_on.get() {
             return Vec::new();
         }
         let key = drawn_key(field, value);
@@ -475,6 +479,7 @@ impl Traffic {
                             // the host they are remembered against.
                             let rules = this.inspector.remembered.clone();
                             let host = this.inspector.host();
+                            let marks_on = this.inspector.marks_on.clone();
                             // A body view cannot open a pane of its own, so
                             // it asks the window to.
                             let opens = {
@@ -499,7 +504,7 @@ impl Traffic {
                                     }
                                     None => BodyView::new(body, content_type.as_deref(), focus, cx),
                                 };
-                                view.set_rules(rules, host);
+                                view.set_rules(rules, host, marks_on);
                                 view.on_open_reading(opens);
                                 view.set_mode(mode, cx);
                                 if let Some(table) = table {
@@ -1338,6 +1343,11 @@ impl Traffic {
 
     fn render_part(&mut self, detail: &Detail, cx: &mut Context<Self>) -> Div {
         let c = colors();
+        // What Settings says about the underline, taken as the pane draws, so
+        // that the switch takes hold without anything being told.
+        self.inspector
+            .marks_on
+            .set(self.engine.settings.mark_readings);
         let well = div()
             .flex_1()
             .min_h_0()
@@ -2738,6 +2748,10 @@ mod tests {
         assert!(state.marks_of("x", "", false).is_empty());
         // The answer is kept, and the same the second time.
         assert_eq!(state.marks_of("date", date, false).len(), 1);
+        // And Settings can say not to mark anything at all.
+        let quiet = InspectorState::default();
+        quiet.marks_on.set(false);
+        assert!(quiet.marks_of("date", date, false).is_empty());
     }
 
     #[test]

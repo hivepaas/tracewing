@@ -41,6 +41,30 @@ pub fn read_as(id: &str, text: &str, field: Option<&str>) -> Option<Reading> {
     tracewing_convert::read_as(id, &Input::new(text, now, offset).under(field)).map(small)
 }
 
+/// Whether values with a reading behind them are underlined, as Settings
+/// says. Shared between the inspector and the body views so that the switch
+/// takes hold at once, and on until something says otherwise: a plain
+/// `Cell<bool>` would start off, which is the wrong way round for a hint
+/// whose whole point is to be seen.
+#[derive(Clone)]
+pub struct MarksOn(std::rc::Rc<std::cell::Cell<bool>>);
+
+impl Default for MarksOn {
+    fn default() -> Self {
+        Self(std::rc::Rc::new(std::cell::Cell::new(true)))
+    }
+}
+
+impl MarksOn {
+    pub fn get(&self) -> bool {
+        self.0.get()
+    }
+
+    pub fn set(&self, on: bool) {
+        self.0.set(on);
+    }
+}
+
 /// How a value with a reading behind it is marked: an underline faint enough
 /// to be a hint rather than a mistake.
 pub fn underlined() -> HighlightStyle {

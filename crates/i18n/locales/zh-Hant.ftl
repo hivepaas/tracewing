@@ -1429,6 +1429,15 @@ tfea2d91b = 信任這台電腦信任的憑證
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
 t1705bfb4 = 對於持有這台電腦上已安裝的憑證授權單位（例如公司自己的 CA）所簽發憑證的伺服器，將像這台電腦的瀏覽器一樣正常連線。關閉時，僅信任公開的憑證授權單位。重新啟動 tracewing 後生效。
 
+# Reading values
+t53722007 = 解讀值
+
+# Underline what can be read
+t3f1c9b5a = 為可解讀的值加底線
+
+# A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
+t9e1ebac7 = 背後有解讀結果的值——時間、權杖、壓縮過的內容——會加底線，提示值得按右鍵看看。關閉後解讀仍在，只是沒有提示。
+
 # AI tools
 t294d7ea4 = AI 工具
 
@@ -1569,6 +1578,24 @@ tb457f0b3 = 不解密的主機
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 每行一個：主機名稱，或 *.example.com（符合該網域及其所有子網域）。這些主機的流量將直接通過，不會被讀取。此清單立即生效。
+
+# Fields always read a certain way
+tb6e892b1 = 一律按固定方式解讀的欄位
+
+# A value read in the inspector can be kept that way for its field, and every later flow from that host reads itself. They are kept in readings.toml in the data folder.
+t176e5171 = 在檢查器中解讀過的值可以為該欄位固定下來，之後該主機的每個流都會自行解讀。它們保存在資料夾中的 readings.toml。
+
+# Nothing is remembered yet.
+t9e58a80c = 還沒有記住任何內容。
+
+# {reading} · every host
+tb54bdd97 = { $reading } · 所有主機
+
+# {reading} · {host}
+t58858d86 = { $reading } · { $host }
+
+# Forget
+t6e3fab8c = 忘記
 
 # Authorities trusted for servers
 t0a308a8a = 為伺服器信任的憑證授權單位

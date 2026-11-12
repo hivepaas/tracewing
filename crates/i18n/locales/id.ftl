@@ -1429,6 +1429,15 @@ tfea2d91b = Percayai apa yang dipercayai komputer ini
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
 t1705bfb4 = Server dengan sertifikat dari otoritas yang terpasang di komputer ini, seperti milik perusahaan sendiri, dijangkau seperti browser di komputer ini menjangkaunya. Jika mati, hanya otoritas publik yang dipercaya. Berlaku saat tracewing dimulai ulang.
 
+# Reading values
+t53722007 = Membaca nilai
+
+# Underline what can be read
+t3f1c9b5a = Garis bawahi yang bisa dibaca
+
+# A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
+t9e1ebac7 = Nilai yang punya hasil baca di baliknya — waktu, token, sesuatu yang terkompresi — digarisbawahi, supaya klik kanan di situ sepadan. Mati, hasil bacanya tetap ada; tidak ada yang memberitahu.
+
 # AI tools
 t294d7ea4 = Alat AI
 
@@ -1569,6 +1578,24 @@ tb457f0b3 = Host yang tidak didekripsi
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = Satu per baris: host, atau *.example.com untuk host itu dan semua di bawahnya. Lalu lintasnya lewat tanpa dibaca. Daftar ini langsung berlaku.
+
+# Fields always read a certain way
+tb6e892b1 = Bidang yang selalu dibaca dengan cara tertentu
+
+# A value read in the inspector can be kept that way for its field, and every later flow from that host reads itself. They are kept in readings.toml in the data folder.
+t176e5171 = Nilai yang dibaca di inspektur bisa disimpan begitu untuk bidangnya, dan setiap alur berikutnya dari host itu membaca dirinya sendiri. Disimpan di readings.toml dalam folder data.
+
+# Nothing is remembered yet.
+t9e58a80c = Belum ada yang diingat.
+
+# {reading} · every host
+tb54bdd97 = { $reading } · semua host
+
+# {reading} · {host}
+t58858d86 = { $reading } · { $host }
+
+# Forget
+t6e3fab8c = Lupakan
 
 # Authorities trusted for servers
 t0a308a8a = Otoritas yang dipercaya untuk server

@@ -1500,6 +1500,15 @@ tfea2d91b = Bu bilgisayarın güvendiklerine güven
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
 t1705bfb4 = Bu bilgisayarda yüklü bir sertifika yetkilisinden (örneğin şirketin kendi CA'sından) sertifika almış sunuculara, bu bilgisayarın tarayıcıları nasıl ulaşıyorsa öyle ulaşılır. Kapalıyken yalnızca genel yetkililere güvenilir. tracewing yeniden başladığında etkili olur.
 
+# Reading values
+t53722007 = Değerleri okuma
+
+# Underline what can be read
+t3f1c9b5a = Okunabilenin altını çiz
+
+# A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
+t9e1ebac7 = Arkasında bir okuma olan bir değer — bir zaman, bir token, sıkıştırılmış bir şey — altı çizili gösterilir, böylece üzerine sağ tıklamak değer. Kapalıyken okumalar yine vardır; hiçbir şey bunu söylemez.
+
 # AI tools
 t294d7ea4 = Yapay zekâ araçları
 
@@ -1644,6 +1653,24 @@ tb457f0b3 = Şifresi çözülmeyecek host'lar
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = Satır başına bir tane: bir host, ya da kendisi ve altındaki her şey için *.example.com. Bunların trafiği okunmadan geçer. Bu liste hemen uygulanır.
+
+# Fields always read a certain way
+tb6e892b1 = Her zaman belli bir şekilde okunan alanlar
+
+# A value read in the inspector can be kept that way for its field, and every later flow from that host reads itself. They are kept in readings.toml in the data folder.
+t176e5171 = İnceleyicide okunan bir değer, alanı için öyle saklanabilir; o sunucudan gelen sonraki her akış kendini okur. readings.toml içinde, veri klasöründe tutulur.
+
+# Nothing is remembered yet.
+t9e58a80c = Henüz bir şey hatırlanmıyor.
+
+# {reading} · every host
+tb54bdd97 = { $reading } · her sunucu
+
+# {reading} · {host}
+t58858d86 = { $reading } · { $host }
+
+# Forget
+t6e3fab8c = Unut
 
 # Authorities trusted for servers
 t0a308a8a = Sunucular için güvenilen sertifika yetkilileri

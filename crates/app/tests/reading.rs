@@ -502,6 +502,49 @@ fn what_is_remembered_reads_itself_next_time() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "85-reading-remembered");
 
+    // Settings lists what is remembered, to look over and to forget.
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Settings, cx))
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "89-readings-in-settings");
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+    cx.run_until_parked();
+
+    // And it can say not to underline anything.
+    let marked = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector
+                .marks_of("content-length", "869000000", false)
+                .len()
+        })
+        .unwrap();
+    assert_eq!(marked, 1, "a number that is a time is marked");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.engine.settings.mark_readings = false;
+            cx.notify();
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let marked = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector
+                .marks_of("content-length", "869000001", false)
+                .len()
+        })
+        .unwrap();
+    assert_eq!(marked, 0, "and Settings can say to mark nothing");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.engine.settings.mark_readings = true;
+            cx.notify();
+        })
+        .unwrap();
+    cx.run_until_parked();
+
     // A body's field is read by a rule too.
     window
         .update(&mut cx, |view, _, cx| view.set_part(Part::Body, cx))

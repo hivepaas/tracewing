@@ -1429,6 +1429,15 @@ tfea2d91b = 이 컴퓨터가 신뢰하는 인증서 신뢰
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
 t1705bfb4 = 이 컴퓨터에 설치된 인증 기관(예: 회사 자체 인증 기관)의 인증서를 가진 서버에는 이 컴퓨터의 브라우저와 같은 방식으로 연결합니다. 끄면 공인 인증 기관만 신뢰합니다. tracewing을 다시 시작하면 적용됩니다.
 
+# Reading values
+t53722007 = 값 해석
+
+# Underline what can be read
+t3f1c9b5a = 읽을 수 있는 값에 밑줄
+
+# A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
+t9e1ebac7 = 해석할 수 있는 값 — 시각, 토큰, 압축된 것 — 에 밑줄을 그어 마우스 오른쪽 클릭할 가치가 있음을 알립니다. 끄면 해석은 그대로 있지만 아무것도 알려주지 않습니다.
+
 # AI tools
 t294d7ea4 = AI 도구
 
@@ -1569,6 +1578,24 @@ tb457f0b3 = 복호화하지 않을 호스트
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 한 줄에 하나씩: 호스트, 또는 그 호스트와 모든 하위 호스트를 뜻하는 *.example.com. 이 호스트들의 트래픽은 내용을 읽지 않고 통과합니다. 이 목록은 바로 적용됩니다.
+
+# Fields always read a certain way
+tb6e892b1 = 항상 같은 방식으로 읽는 필드
+
+# A value read in the inspector can be kept that way for its field, and every later flow from that host reads itself. They are kept in readings.toml in the data folder.
+t176e5171 = 인스펙터에서 읽은 값은 해당 필드의 읽는 방식으로 저장할 수 있고, 이후 그 호스트의 모든 플로는 스스로 읽습니다. 데이터 폴더의 readings.toml에 있습니다.
+
+# Nothing is remembered yet.
+t9e58a80c = 아직 기억된 것이 없습니다.
+
+# {reading} · every host
+tb54bdd97 = { $reading } · 모든 호스트
+
+# {reading} · {host}
+t58858d86 = { $reading } · { $host }
+
+# Forget
+t6e3fab8c = 잊기
 
 # Authorities trusted for servers
 t0a308a8a = 서버에 신뢰하는 인증 기관

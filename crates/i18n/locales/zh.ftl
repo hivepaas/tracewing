@@ -1429,6 +1429,15 @@ tfea2d91b = 信任本机信任的证书
 # Servers with a certificate from an authority installed on this computer, such as a company's own, are reached as this computer's browsers reach them. Off, only the public authorities are trusted. Takes effect when tracewing starts again.
 t1705bfb4 = 对于持有本机已安装的证书颁发机构（例如公司自己的 CA）所颁发证书的服务器，将像本机浏览器一样正常访问。关闭时，仅信任公共证书颁发机构。重新启动 tracewing 后生效。
 
+# Reading values
+t53722007 = 解读值
+
+# Underline what can be read
+t3f1c9b5a = 给可解读的值加下划线
+
+# A value with a reading behind it — a time, a token, something packed — is underlined, so that a right click on it is worth trying. Off, the readings are still there; nothing says so.
+t9e1ebac7 = 背后有解读结果的值——时间、令牌、压缩过的内容——会加下划线，提示值得右键点一下。关闭后解读仍在，只是没有提示。
+
 # AI tools
 t294d7ea4 = AI 工具
 
@@ -1569,6 +1578,24 @@ tb457f0b3 = 不解密的主机
 
 # One a line: a host, or *.example.com for it and everything under it. Their traffic goes through unread. This list applies at once.
 t38e21213 = 每行一个：主机名，或 *.example.com（匹配该域名及其所有子域名）。这些主机的流量将直接通过，不被读取。此列表立即生效。
+
+# Fields always read a certain way
+tb6e892b1 = 始终按固定方式解读的字段
+
+# A value read in the inspector can be kept that way for its field, and every later flow from that host reads itself. They are kept in readings.toml in the data folder.
+t176e5171 = 在检查器中解读过的值可以为该字段固定下来，此后该主机的每个流都会自行解读。它们保存在数据文件夹的 readings.toml 中。
+
+# Nothing is remembered yet.
+t9e58a80c = 还没有记住任何内容。
+
+# {reading} · every host
+tb54bdd97 = { $reading } · 所有主机
+
+# {reading} · {host}
+t58858d86 = { $reading } · { $host }
+
+# Forget
+t6e3fab8c = 忘记
 
 # Authorities trusted for servers
 t0a308a8a = 为服务器信任的证书颁发机构
