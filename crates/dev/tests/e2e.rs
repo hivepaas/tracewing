@@ -203,7 +203,7 @@ impl Harness {
         let conn = Connection::open(db).unwrap();
         // Longer than a request's body that no server reads is read on for
         // (10 s), as its flow is written once that ends.
-        let deadline = Instant::now() + Duration::from_secs(15);
+        let deadline = Instant::now() + WAIT_FOR;
         loop {
             let count: i64 = conn
                 .query_row("SELECT count(*) FROM flows", [], |r| r.get(0))
@@ -218,6 +218,17 @@ impl Harness {
         (summary, conn, self.dir)
     }
 }
+
+/// How long a poll waits for something the proxy does behind the request:
+/// a row written, a body indexed, a socket closed.
+///
+/// Generous on purpose. These tests contend with each other for the machine
+/// — sixty-odd of them, each with its own multi-threaded runtime — and a
+/// margin that is comfortable on an idle machine is a coin toss under that
+/// load. Nothing waits this long while it is working: every poll leaves as
+/// soon as what it waits for arrives, so the cost of the margin is paid only
+/// by a test that was going to fail anyway.
+const WAIT_FOR: Duration = Duration::from_secs(60);
 
 /// client_version, path, status, resp_bytes, resp_truncated
 type FlowRow = (String, String, Option<i64>, i64, i64);
@@ -860,9 +871,18 @@ async fn a_full_session_drops_its_oldest_flows() {
     )
     .await;
     let client = h.client(false);
-    // 240 MB in all, some in the log and most in files of their own.
-    for i in 0..1200 {
-        let size = if i % 2 == 0 { 32_000 } else { 370_000 };
+    // 240 MB in all, some in the log (under `log_max`, 64 KiB) and most in
+    // files of their own.
+    //
+    // Few and large rather than many and small. What this test is for is a
+    // session past its size dropping its oldest flows, not round trips, and
+    // round trips are what cost: each one pays scheduling latency while the
+    // rest of the suite is on the machine, and 1200 of them took 46 s
+    // alongside the others against 2.6 s alone — the whole suite's wall
+    // time, since every other test here is done inside five seconds.
+    const FLOWS: usize = 120;
+    for i in 0..FLOWS {
+        let size = if i % 2 == 0 { 32_000 } else { 4_000_000 };
         let body = client
             .get(format!("{}/json?size={size}", h.origin))
             .send()
@@ -889,7 +909,7 @@ async fn a_full_session_drops_its_oldest_flows() {
         })
         .unwrap();
     assert!(first > 1, "the oldest went");
-    assert_eq!(count, 1200 - summary.trimmed as i64);
+    assert_eq!(count, FLOWS as i64 - summary.trimmed as i64);
     assert!(
         response_of(&conn, &dir, last).is_some(),
         "the newest is there"
@@ -897,8 +917,10 @@ async fn a_full_session_drops_its_oldest_flows() {
     let files = std::fs::read_dir(session::files_dir(&session_dir))
         .unwrap()
         .count();
+    // Sixty bodies went to files of their own, and 64 MiB holds about
+    // sixteen of them: the rest must have gone with their flows.
     assert!(
-        files < 200,
+        files < 20,
         "files of dropped flows are gone too, {files} left"
     );
     clean_up(conn, dir);
@@ -1365,7 +1387,9 @@ async fn an_open_stream_does_not_hold_up_a_stop() {
     let started = Instant::now();
     let (_, conn, dir) = h.finish(0).await;
     assert!(
-        started.elapsed() < Duration::from_secs(4),
+        // It must not hang on the open stream; a hang is far past this,
+        // and the margin is for a machine the rest of the suite is on.
+        started.elapsed() < Duration::from_secs(10),
         "took {:?}",
         started.elapsed()
     );
@@ -1530,7 +1554,7 @@ async fn the_proxy_itself_tells_a_device_how_to_set_up() {
 /// Waits for the proxy to listen for other devices where it is asked to, or to
 /// stop.
 async fn wait_for_listening(devices: &OtherDevices, there: SocketAddr, listening: bool) {
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + WAIT_FOR;
     while devices.listening().contains(&there) != listening {
         assert!(
             Instant::now() < deadline,
@@ -1630,7 +1654,7 @@ fn a_session_survives_being_killed() {
         .spawn()
         .unwrap();
     let body_written = session_dir.join("bodies/00000001.log");
-    let deadline = Instant::now() + Duration::from_secs(30);
+    let deadline = Instant::now() + WAIT_FOR;
     while std::fs::metadata(&body_written).map_or(0, |m| m.len()) < 20 << 20 {
         assert!(Instant::now() < deadline, "nothing written");
         std::thread::sleep(Duration::from_millis(20));
@@ -1676,7 +1700,7 @@ async fn wait_for_row(
     kind: &str,
     done: impl Fn(&(bool, Option<i64>, i64)) -> bool,
 ) -> (bool, Option<i64>, i64) {
-    let deadline = Instant::now() + Duration::from_secs(15);
+    let deadline = Instant::now() + WAIT_FOR;
     loop {
         let row = stream_row(conn, kind);
         if let Some(row) = row.filter(&done) {
@@ -1764,8 +1788,11 @@ async fn a_slow_network_slows_what_it_applies_to() {
         .unwrap();
     let down = started.elapsed();
     assert_eq!(body.len(), 100_000);
+    // That it was slowed is the lower bound's to say. The upper one only
+    // says it was not slowed absurdly, so it can afford the margin that a
+    // loaded machine needs.
     assert!(down >= Duration::from_millis(1150), "down in {down:?}");
-    assert!(down < Duration::from_secs(6), "down in {down:?}");
+    assert!(down < Duration::from_secs(12), "down in {down:?}");
 
     // 25 KB up at 50 KB a second, to a server that reads it all first.
     let started = Instant::now();
@@ -1965,7 +1992,7 @@ async fn packed_streams_show_as_they_come() {
             )
             .ok()
         };
-        let deadline = Instant::now() + Duration::from_secs(10);
+        let deadline = Instant::now() + WAIT_FOR;
         loop {
             if open(&conn).is_some_and(|(open, messages)| open && messages >= 1) {
                 break;
@@ -2019,7 +2046,7 @@ async fn a_slow_response_is_listed_while_it_lasts() {
         .unwrap();
     let conn = Connection::open(session_dir.join("flows.db")).unwrap();
     let started = Instant::now();
-    let deadline = started + Duration::from_secs(10);
+    let deadline = started + WAIT_FOR;
     let listed = loop {
         let row: Option<(bool, String)> = conn
             .query_row("SELECT open, kind FROM flows WHERE id = 2", [], |r| {
@@ -2074,7 +2101,7 @@ async fn a_stream_is_searched_by_what_it_said_once_over() {
         .await
         .unwrap();
     // The index has seen the open row: its URL is found.
-    let deadline = Instant::now() + Duration::from_secs(30);
+    let deadline = Instant::now() + WAIT_FOR;
     while search::find(&session_dir, "urls", "stream", 1).unwrap_or_default() != [1] {
         assert!(Instant::now() < deadline, "the open row was never indexed");
         tokio::time::sleep(Duration::from_millis(20)).await;
@@ -2123,7 +2150,7 @@ async fn a_sockets_row_is_named_while_it_is_still_open() {
     let conn = Connection::open(h.dir.join("session/flows.db")).unwrap();
     type SocketRow = (Option<String>, Option<i64>, bool);
     let named = async |conn: &Connection, done: fn(&SocketRow) -> bool| -> SocketRow {
-        let deadline = Instant::now() + Duration::from_secs(5);
+        let deadline = Instant::now() + WAIT_FOR;
         loop {
             let row: SocketRow = conn
                 .query_row(
@@ -2714,7 +2741,7 @@ async fn a_message_sent_from_the_window_goes_into_the_socket() {
 
     // Its row, once written, is the one to send into.
     let conn = Connection::open(h.dir.join("session/flows.db")).unwrap();
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + WAIT_FOR;
     let row = loop {
         let row: Option<i64> = conn
             .query_row(
@@ -2754,7 +2781,7 @@ async fn a_message_sent_from_the_window_goes_into_the_socket() {
 
     ws.close(None).await.unwrap();
     while ws.next().await.is_some() {}
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + WAIT_FOR;
     while h.sockets.is_open(row) {
         assert!(Instant::now() < deadline, "closed, it is no longer open");
         tokio::time::sleep(Duration::from_millis(10)).await;
@@ -3618,7 +3645,7 @@ async fn rules_rewrite_both_ways() {
 /// seconds on a busy CI runner (its leaf certificate is made then), so the
 /// wait is long, but it ends as soon as there is something.
 async fn first_held<T>(pauses: &Pauses, client: &tokio::task::JoinHandle<T>) -> Paused {
-    let deadline = Instant::now() + Duration::from_secs(30);
+    let deadline = Instant::now() + WAIT_FOR;
     while Instant::now() < deadline {
         if let Some(held) = pauses.held().into_iter().next() {
             return held;
@@ -3735,7 +3762,7 @@ async fn scripts_change_traffic_and_a_broken_one_leaves_it_alone() {
 
 /// The next thing held, whatever is waiting for it.
 async fn next_held(pauses: &Pauses) -> Paused {
-    let deadline = Instant::now() + Duration::from_secs(30);
+    let deadline = Instant::now() + WAIT_FOR;
     while Instant::now() < deadline {
         if let Some(held) = pauses.held().into_iter().next() {
             return held;
@@ -3814,7 +3841,7 @@ async fn a_sockets_messages_hold_until_let_go() {
     // The rules gone, the next messages go straight through.
     h.traffic_rules.write().unwrap().rules.clear();
     ws.close(None).await.unwrap();
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + WAIT_FOR;
     loop {
         h.pauses.release_all();
         match tokio::time::timeout(Duration::from_millis(50), ws.next()).await {
