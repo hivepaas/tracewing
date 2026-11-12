@@ -468,9 +468,16 @@ fn calldata(data: &str, abi: &Abi) -> Vec<Line> {
             },
         )),
     }
+    // An ABI of the user's names the calls inside a multicall too, not just
+    // the one at the top.
+    let name = |data: &[u8]| {
+        abi.function(data)
+            .map(str::to_owned)
+            .or_else(|| web3::known_function(data).map(str::to_owned))
+    };
     let arguments = signature
         .as_deref()
-        .and_then(|signature| web3::arguments(signature, &bytes));
+        .and_then(|signature| web3::arguments_named(signature, &bytes, &name));
     match arguments {
         Some(arguments) => {
             let more = arguments.len().saturating_sub(ARGUMENTS_SHOWN);
@@ -516,6 +523,9 @@ fn raw_transaction(raw: &str, abi: &Abi) -> Vec<Line> {
     let mut lines = vec![Line::said("type", kind_text(tx.kind))];
     lines.extend(tx.chain_id.map(|id| Line::said("chainId", chain_text(id))));
     lines.push(Line::said("nonce", tx.nonce.to_string()));
+    // Not in the transaction at all: worked out from the signature, and the
+    // first thing anyone looking at one wants to know.
+    lines.extend(tx.from.clone().map(|from| Line::code("from", from)));
     lines.push(match &tx.to {
         Some(to) => Line::code("to", to.clone()),
         None => Line::said("to", tr!("none: it makes a contract")),
@@ -1165,26 +1175,34 @@ mod tests {
         let asked = &shown.sections[0];
         assert_eq!(asked.title, "eth_sendRawTransaction");
         let lines = lines(asked);
-        assert_eq!(lines[0], ("type", "2 (EIP-1559)"));
-        assert_eq!(lines[1], ("chainId", "1 (Ethereum)"));
-        assert_eq!(lines[2], ("nonce", "204580"));
-        // The capitals are EIP-55's, which the store's own tests check
-        // against addresses anyone can look up.
-        assert_eq!(
-            lines[3],
-            ("to", "0x0000000aa232009084Bd71A5797d089AA4Edfad4")
-        );
-        assert_eq!(lines[4], ("value", "0 ETH"));
-        assert_eq!(lines[5], ("gas", "462389"));
-        assert_eq!(lines[6], ("maxFeePerGas", "0.346815537 gwei"));
-        assert_eq!(lines[7], ("maxPriorityFeePerGas", "0 gwei"));
-        // What it calls is nobody's standard function, so the four bytes
-        // stand for it until an ABI names them.
-        assert_eq!(lines[8], ("selector", "0x09c5eabe"));
+        // By label, not by place: a field added in the middle should not
+        // move what every other line of this says.
+        for said in [
+            ("type", "2 (EIP-1559)"),
+            ("chainId", "1 (Ethereum)"),
+            ("nonce", "204580"),
+            // Who signed it, which the transaction does not carry.
+            ("from", "0x5875Db54CD9AE2b2A875E09bB731772297aE9d92"),
+            // EIP-55's capitals, which the store's own tests check against
+            // addresses anyone can look up.
+            ("to", "0x0000000aa232009084Bd71A5797d089AA4Edfad4"),
+            ("value", "0 ETH"),
+            ("gas", "462389"),
+            ("maxFeePerGas", "0.346815537 gwei"),
+            ("maxPriorityFeePerGas", "0 gwei"),
+            // What it calls is nobody's standard function, so the four bytes
+            // stand for it until an ABI names them.
+            ("selector", "0x09c5eabe"),
+        ] {
+            assert!(lines.contains(&said), "{said:?} in {lines:?}");
+        }
+        // 772 bytes of calldata, four of them the selector.
         assert!(
-            lines[9].1.contains("does not say how to read"),
-            "{:?}",
-            lines[9]
+            lines.contains(&(
+                "arguments",
+                "768 bytes, which the signature does not say how to read"
+            )),
+            "{lines:?}"
         );
     }
 
