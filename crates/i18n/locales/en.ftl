@@ -369,6 +369,61 @@ tdca19bdc = The server sent no files for its services
 t345fdb40 = The server answered { $status }: it may not offer gRPC reflection
 tb629329e = The server answered { $code }: it may not offer gRPC reflection. { $message }
 t6bbb6207 = The server answered nothing: it may not offer gRPC reflection
+t2c29f04d = any
+t5579c3d4 = Failed
+ta74e5f73 = The server answered 200: a call that fails says so in the body.
+t534e422e =
+    { $n ->
+        [one] { $count } item
+       *[other] { $count } items
+    }
+t0039810a =
+    { $n ->
+        [one] { $count } field
+       *[other] { $count } fields
+    }
+tbdb1ff6a = and { $count } more
+t36ffce30 =
+    { $n ->
+        [one] { $count } byte, which the signature does not say how to read
+       *[other] { $count } bytes, which the signature does not say how to read
+    }
+ta7ee514c =
+    { $n ->
+        [one] { $count } byte that does not read as one
+       *[other] { $count } bytes that do not read as one
+    }
+t188b58f6 = none: it makes a contract
+t0965779e =
+    { $n ->
+        [one] { $count } place
+       *[other] { $count } places
+    }
+t95369f92 =
+    { $n ->
+        [one] { $count } blob
+       *[other] { $count } blobs
+    }
+tc2fde48e = 0, the kind from before EIP-2718
+teaf455ca = The bodies were not kept, so what the call sent cannot be shown.
+tf0ac7103 = and { $count } more calls
+t9ffc3c7c =
+    { $n ->
+        [one] { $count } function
+       *[other] { $count } functions
+    }
+t4dd03992 =
+    { $n ->
+        [one] { $count } event
+       *[other] { $count } events
+    }
+t4fba4c4e =
+    { $n ->
+        [one] { $count } error
+       *[other] { $count } errors
+    }
+t08fb00f2 = Contract ABIs
+tfadffbd2 = Folders or files of ABI JSON, as solc, Hardhat and Foundry write it, to name the functions, events and errors in a JSON-RPC call instead of showing four bytes. They are read again when they change. Nothing is sent anywhere: a signature is worked out from the ABI on this machine.
 tbd074002 = Block
 td8edab50 = Answer from a file
 te3cd85d7 = Send to another host

@@ -973,6 +973,117 @@ tb629329e = Сервер ответил { $code }: возможно, у него
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Сервер ничего не ответил: возможно, у него нет gRPC reflection
 
+# any
+t2c29f04d = любой
+
+# Failed
+t5579c3d4 = Не удалось
+
+# The server answered 200: a call that fails says so in the body.
+ta74e5f73 = Сервер ответил 200: неудавшийся вызов сообщает об этом в теле.
+
+# {count} item | {count} items
+t534e422e =
+    { $n ->
+        [one] { $count } элемент
+        [few] { $count } элемента
+        [many] { $count } элементов
+       *[other] { $count } элементов
+    }
+
+# {count} field | {count} fields
+t0039810a =
+    { $n ->
+        [one] { $count } поле
+        [few] { $count } поля
+        [many] { $count } полей
+       *[other] { $count } полей
+    }
+
+# and {count} more
+tbdb1ff6a = и ещё { $count }
+
+# {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
+t36ffce30 =
+    { $n ->
+        [one] { $count } байт, который подпись не объясняет, как читать
+        [few] { $count } байта, которые подпись не объясняет, как читать
+        [many] { $count } байт, которые подпись не объясняет, как читать
+       *[other] { $count } байт, которые подпись не объясняет, как читать
+    }
+
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c =
+    { $n ->
+        [one] { $count } байт, который не читается как транзакция
+        [few] { $count } байта, которые не читаются как транзакция
+        [many] { $count } байт, которые не читаются как транзакция
+       *[other] { $count } байт, которые не читаются как транзакция
+    }
+
+# none: it makes a contract
+t188b58f6 = нет: создаёт контракт
+
+# {count} place | {count} places
+t0965779e =
+    { $n ->
+        [one] { $count } место
+        [few] { $count } места
+        [many] { $count } мест
+       *[other] { $count } мест
+    }
+
+# {count} blob | {count} blobs
+t95369f92 =
+    { $n ->
+        [one] { $count } блоб
+        [few] { $count } блоба
+        [many] { $count } блобов
+       *[other] { $count } блобов
+    }
+
+# 0, the kind from before EIP-2718
+tc2fde48e = 0, вид до EIP-2718
+
+# The bodies were not kept, so what the call sent cannot be shown.
+teaf455ca = Тела не сохранены, поэтому нельзя показать, что отправил вызов.
+
+# and {count} more calls
+tf0ac7103 = и ещё { $count } вызовов
+
+# {count} function | {count} functions
+t9ffc3c7c =
+    { $n ->
+        [one] { $count } функция
+        [few] { $count } функции
+        [many] { $count } функций
+       *[other] { $count } функций
+    }
+
+# {count} event | {count} events
+t4dd03992 =
+    { $n ->
+        [one] { $count } событие
+        [few] { $count } события
+        [many] { $count } событий
+       *[other] { $count } событий
+    }
+
+# {count} error | {count} errors
+t4fba4c4e =
+    { $n ->
+        [one] { $count } ошибка
+        [few] { $count } ошибки
+        [many] { $count } ошибок
+       *[other] { $count } ошибок
+    }
+
+# Contract ABIs
+t08fb00f2 = ABI контрактов
+
+# Folders or files of ABI JSON, as solc, Hardhat and Foundry write it, to name the functions, events and errors in a JSON-RPC call instead of showing four bytes. They are read again when they change. Nothing is sent anywhere: a signature is worked out from the ABI on this machine.
+tfadffbd2 = Папки или файлы ABI JSON, как их пишут solc, Hardhat и Foundry, чтобы называть функции, события и ошибки в вызове JSON-RPC вместо четырёх байт. Они читаются заново, когда меняются. Никуда ничего не отправляется: подпись вычисляется из ABI на этой машине.
+
 # Block
 tbd074002 = Блокировать
 

@@ -941,6 +941,99 @@ tb629329e = Le serveur a répondu { $code } : il n’offre peut-être pas la ré
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Le serveur n’a rien répondu : il n’offre peut-être pas la réflexion gRPC
 
+# any
+t2c29f04d = indifférent
+
+# Failed
+t5579c3d4 = Échec
+
+# The server answered 200: a call that fails says so in the body.
+ta74e5f73 = Le serveur a répondu 200 : un appel qui échoue le dit dans le corps.
+
+# {count} item | {count} items
+t534e422e =
+    { $n ->
+        [one] { $count } élément
+       *[other] { $count } éléments
+    }
+
+# {count} field | {count} fields
+t0039810a =
+    { $n ->
+        [one] { $count } champ
+       *[other] { $count } champs
+    }
+
+# and {count} more
+tbdb1ff6a = et { $count } de plus
+
+# {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
+t36ffce30 =
+    { $n ->
+        [one] { $count } octet que la signature ne dit pas comment lire
+       *[other] { $count } octets que la signature ne dit pas comment lire
+    }
+
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c =
+    { $n ->
+        [one] { $count } octet qui ne se lit pas comme une transaction
+       *[other] { $count } octets qui ne se lisent pas comme une transaction
+    }
+
+# none: it makes a contract
+t188b58f6 = aucune : il crée un contrat
+
+# {count} place | {count} places
+t0965779e =
+    { $n ->
+        [one] { $count } emplacement
+       *[other] { $count } emplacements
+    }
+
+# {count} blob | {count} blobs
+t95369f92 =
+    { $n ->
+        [one] { $count } blob
+       *[other] { $count } blobs
+    }
+
+# 0, the kind from before EIP-2718
+tc2fde48e = 0, le type d'avant EIP-2718
+
+# The bodies were not kept, so what the call sent cannot be shown.
+teaf455ca = Les corps n'ont pas été conservés, donc ce que l'appel a envoyé ne peut pas être montré.
+
+# and {count} more calls
+tf0ac7103 = et { $count } appels de plus
+
+# {count} function | {count} functions
+t9ffc3c7c =
+    { $n ->
+        [one] { $count } fonction
+       *[other] { $count } fonctions
+    }
+
+# {count} event | {count} events
+t4dd03992 =
+    { $n ->
+        [one] { $count } événement
+       *[other] { $count } événements
+    }
+
+# {count} error | {count} errors
+t4fba4c4e =
+    { $n ->
+        [one] { $count } erreur
+       *[other] { $count } erreurs
+    }
+
+# Contract ABIs
+t08fb00f2 = ABI de contrats
+
+# Folders or files of ABI JSON, as solc, Hardhat and Foundry write it, to name the functions, events and errors in a JSON-RPC call instead of showing four bytes. They are read again when they change. Nothing is sent anywhere: a signature is worked out from the ABI on this machine.
+tfadffbd2 = Dossiers ou fichiers d'ABI JSON, tels que solc, Hardhat et Foundry les écrivent, pour nommer les fonctions, événements et erreurs d'un appel JSON-RPC au lieu d'afficher quatre octets. Ils sont relus quand ils changent. Rien n'est envoyé ailleurs : une signature est calculée depuis l'ABI sur cette machine.
+
 # Block
 tbd074002 = Bloquer
 

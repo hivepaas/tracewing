@@ -929,6 +929,63 @@ tb629329e = Sunucu { $code } yanıtını verdi: gRPC reflection sunmuyor olabili
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = Sunucu hiçbir şey göndermedi: gRPC reflection sunmuyor olabilir
 
+# any
+t2c29f04d = herhangi
+
+# Failed
+t5579c3d4 = Başarısız
+
+# The server answered 200: a call that fails says so in the body.
+ta74e5f73 = Sunucu 200 yanıtladı: başarısız bir çağrı bunu gövdede söyler.
+
+# {count} item | {count} items
+t534e422e = { $count } öğe
+
+# {count} field | {count} fields
+t0039810a = { $count } alan
+
+# and {count} more
+tbdb1ff6a = ve { $count } tane daha
+
+# {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
+t36ffce30 = { $count } bayt, imza bunların nasıl okunacağını söylemiyor
+
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } bayt, bir işlem olarak okunmuyor
+
+# none: it makes a contract
+t188b58f6 = yok: bir sözleşme oluşturur
+
+# {count} place | {count} places
+t0965779e = { $count } yer
+
+# {count} blob | {count} blobs
+t95369f92 = { $count } blob
+
+# 0, the kind from before EIP-2718
+tc2fde48e = 0, EIP-2718 öncesinin türü
+
+# The bodies were not kept, so what the call sent cannot be shown.
+teaf455ca = Gövdeler saklanmadı, bu yüzden çağrının ne gönderdiği gösterilemiyor.
+
+# and {count} more calls
+tf0ac7103 = ve { $count } çağrı daha
+
+# {count} function | {count} functions
+t9ffc3c7c = { $count } fonksiyon
+
+# {count} event | {count} events
+t4dd03992 = { $count } olay
+
+# {count} error | {count} errors
+t4fba4c4e = { $count } hata
+
+# Contract ABIs
+t08fb00f2 = Sözleşme ABI'leri
+
+# Folders or files of ABI JSON, as solc, Hardhat and Foundry write it, to name the functions, events and errors in a JSON-RPC call instead of showing four bytes. They are read again when they change. Nothing is sent anywhere: a signature is worked out from the ABI on this machine.
+tfadffbd2 = solc, Hardhat ve Foundry'nin yazdığı biçimde ABI JSON klasörleri veya dosyaları; bir JSON-RPC çağrısındaki fonksiyonları, olayları ve hataları dört bayt yerine adıyla göstermek için. Değiştiklerinde yeniden okunur. Hiçbir yere bir şey gönderilmez: imza bu makinede ABI'den hesaplanır.
+
 # Block
 tbd074002 = Engelle
 

@@ -871,6 +871,63 @@ tb629329e = サーバーの応答は { $code } でした: gRPC リフレクシ�
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = サーバーから何も返ってきませんでした: gRPC リフレクションがないのかもしれません
 
+# any
+t2c29f04d = 任意
+
+# Failed
+t5579c3d4 = 失敗
+
+# The server answered 200: a call that fails says so in the body.
+ta74e5f73 = サーバーは 200 を返します。失敗した呼び出しはボディでそれを伝えます。
+
+# {count} item | {count} items
+t534e422e = { $count } 項目
+
+# {count} field | {count} fields
+t0039810a = { $count } フィールド
+
+# and {count} more
+tbdb1ff6a = ほか { $count } 件
+
+# {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
+t36ffce30 = { $count } バイト、署名が読み方を示していません
+
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } バイトはトランザクションとして読めません
+
+# none: it makes a contract
+t188b58f6 = なし: コントラクトを作成します
+
+# {count} place | {count} places
+t0965779e = { $count } 箇所
+
+# {count} blob | {count} blobs
+t95369f92 = { $count } 個のブロブ
+
+# 0, the kind from before EIP-2718
+tc2fde48e = 0、EIP-2718 より前の種類
+
+# The bodies were not kept, so what the call sent cannot be shown.
+teaf455ca = ボディが保存されていないため、呼び出しが送った内容は表示できません。
+
+# and {count} more calls
+tf0ac7103 = ほか { $count } 件の呼び出し
+
+# {count} function | {count} functions
+t9ffc3c7c = { $count } 個の関数
+
+# {count} event | {count} events
+t4dd03992 = { $count } 個のイベント
+
+# {count} error | {count} errors
+t4fba4c4e = { $count } 個のエラー
+
+# Contract ABIs
+t08fb00f2 = コントラクト ABI
+
+# Folders or files of ABI JSON, as solc, Hardhat and Foundry write it, to name the functions, events and errors in a JSON-RPC call instead of showing four bytes. They are read again when they change. Nothing is sent anywhere: a signature is worked out from the ABI on this machine.
+tfadffbd2 = solc、Hardhat、Foundry が書き出す ABI JSON のフォルダーまたはファイル。JSON-RPC の呼び出しで 4 バイトの代わりに関数・イベント・エラーの名前を表示します。変更されると読み直します。どこにも送信しません。署名はこのマシン上で ABI から求めます。
+
 # Block
 tbd074002 = ブロック
 

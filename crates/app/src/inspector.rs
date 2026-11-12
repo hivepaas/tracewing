@@ -62,6 +62,8 @@ pub enum Part {
     Llm,
     /// What a GraphQL request asks for, laid out.
     GraphQl,
+    /// What the JSON-RPC calls of a request hold, with the hex read.
+    Rpc,
 }
 
 #[derive(Default)]
@@ -99,6 +101,8 @@ pub struct InspectorState {
     pub llm: Option<(crate::llm::Provider, crate::llm::Exchange)>,
     /// What the chosen flow's GraphQL request sends, once its body is read.
     pub graphql: Option<Vec<tracewing_store::graphql::Sent>>,
+    /// What the chosen flow's JSON-RPC calls hold, once its bodies are read.
+    pub rpc: Option<crate::rpc_view::Shown>,
     /// What is selected of the part shown, when it is not a body.
     pub select: Selection,
     /// How bodies are shown, kept from one flow to the next.
@@ -152,6 +156,7 @@ impl Traffic {
                     (false, Part::Messages | Part::Llm) => Part::Body,
                     (false, Part::Cookies) if no_cookies => Part::Body,
                     (false, Part::GraphQl) if detail.graphql.is_none() => Part::Body,
+                    (false, Part::Rpc) if detail.rpc.is_none() => Part::Body,
                     (false, Part::Query | Part::Form) if !has_part(&detail, part_now, side_now) => {
                         Part::Body
                     }
@@ -162,6 +167,7 @@ impl Traffic {
                 self.inspector.llm = None;
                 self.load_llm(cx);
                 self.load_graphql(cx);
+                self.load_rpc(cx);
                 self.show_device_name(cx);
                 self.take_new_messages();
                 self.load_body(cx);
@@ -773,6 +779,9 @@ impl Traffic {
         if detail.graphql.is_some() {
             parts.push(Part::GraphQl);
         }
+        if detail.rpc.is_some() {
+            parts.push(Part::Rpc);
+        }
         parts.extend([Part::Body, Part::Headers]);
         if sent + set > 0 {
             parts.push(Part::Cookies);
@@ -876,6 +885,9 @@ impl Traffic {
             }))
             .when(detail.graphql.is_some(), |d| {
                 d.child(tab("part-graphql", "GraphQL".to_owned(), Part::GraphQl))
+            })
+            .when(detail.rpc.is_some(), |d| {
+                d.child(tab("part-rpc", "RPC".to_owned(), Part::Rpc))
             })
             .child(tab("part-body", tr!("Body"), Part::Body))
             .child(tab(
@@ -1099,6 +1111,7 @@ impl Traffic {
             Part::GraphQl => self
                 .selectable(well, &sel, cx)
                 .child(self.render_graphql(&sel)),
+            Part::Rpc => self.selectable(well, &sel, cx).child(self.render_rpc(&sel)),
             Part::Headers => self.selectable(well, &sel, cx).child(render_headers(
                 detail.headers(self.inspector.side),
                 detail.trailers(self.inspector.side),
@@ -1399,7 +1412,8 @@ impl Traffic {
                 | Part::Connection
                 | Part::Query
                 | Part::Form
-                | Part::Llm,
+                | Part::Llm
+                | Part::Rpc,
                 _,
             ) => {
                 self.inspector.select.select_all();

@@ -292,6 +292,13 @@ pub struct Traffic {
     devices: Devices,
     /// The `.proto` files that name Protobuf's fields.
     pub(crate) protos: Arc<tracewing_store::schema::Library>,
+    /// The ABIs chosen, which name the contracts in a JSON-RPC call.
+    pub(crate) abis: Arc<tracewing_store::abi::Library>,
+    /// What was read from them, once Settings has asked.
+    pub abis_read: Option<Arc<tracewing_store::abi::Abi>>,
+    pub(crate) abis_busy: bool,
+    /// Why the list of ABIs was not saved, if it was not.
+    pub(crate) abis_problem: Option<String>,
     /// What was read from them, as Settings shows it, and whether they are
     /// being read now.
     pub protos_read: Option<Arc<tracewing_store::schema::Schema>>,
@@ -461,6 +468,10 @@ impl Traffic {
             device_counts: Vec::new(),
             devices: Devices::load(&data_dir.join("devices.toml")),
             protos: tracewing_store::schema::Library::open(data_dir),
+            abis: tracewing_store::abi::Library::open(data_dir),
+            abis_read: None,
+            abis_busy: false,
+            abis_problem: None,
             protos_read: None,
             protos_busy: false,
             protos_problem: None,

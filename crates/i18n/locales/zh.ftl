@@ -871,6 +871,63 @@ tb629329e = 服务器返回 { $code }：它可能不提供 gRPC 反射。{ $mess
 # The server answered nothing: it may not offer gRPC reflection
 t6bbb6207 = 服务器没有返回任何内容：它可能不提供 gRPC 反射
 
+# any
+t2c29f04d = 任意
+
+# Failed
+t5579c3d4 = 失败
+
+# The server answered 200: a call that fails says so in the body.
+ta74e5f73 = 服务器返回 200：失败的调用在正文中说明。
+
+# {count} item | {count} items
+t534e422e = { $count } 项
+
+# {count} field | {count} fields
+t0039810a = { $count } 个字段
+
+# and {count} more
+tbdb1ff6a = 还有 { $count } 个
+
+# {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
+t36ffce30 = { $count } 字节，签名未说明如何读取
+
+# {count} byte that does not read as one | {count} bytes that do not read as one
+ta7ee514c = { $count } 字节无法读作交易
+
+# none: it makes a contract
+t188b58f6 = 无：它创建合约
+
+# {count} place | {count} places
+t0965779e = { $count } 处
+
+# {count} blob | {count} blobs
+t95369f92 = { $count } 个 blob
+
+# 0, the kind from before EIP-2718
+tc2fde48e = 0，EIP-2718 之前的类型
+
+# The bodies were not kept, so what the call sent cannot be shown.
+teaf455ca = 正文未保留，因此无法显示该调用发送的内容。
+
+# and {count} more calls
+tf0ac7103 = 还有 { $count } 个调用
+
+# {count} function | {count} functions
+t9ffc3c7c = { $count } 个函数
+
+# {count} event | {count} events
+t4dd03992 = { $count } 个事件
+
+# {count} error | {count} errors
+t4fba4c4e = { $count } 个错误
+
+# Contract ABIs
+t08fb00f2 = 合约 ABI
+
+# Folders or files of ABI JSON, as solc, Hardhat and Foundry write it, to name the functions, events and errors in a JSON-RPC call instead of showing four bytes. They are read again when they change. Nothing is sent anywhere: a signature is worked out from the ABI on this machine.
+tfadffbd2 = ABI JSON 的文件夹或文件，即 solc、Hardhat 和 Foundry 生成的格式，用于在 JSON-RPC 调用中显示函数、事件和错误的名称，而不是四个字节。它们变化时会重新读取。不会向任何地方发送内容：签名在本机从 ABI 算出。
+
 # Block
 tbd074002 = 拦截
 
