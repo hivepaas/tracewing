@@ -8,7 +8,7 @@ use crate::select::{Act, Item};
 use chrono::Offset as _;
 use gpui::{App, ClipboardItem, Window};
 use std::rc::Rc;
-use tracewing_convert::{Input, Reading};
+use tracewing_convert::{Input, Reading, Shown};
 use tracewing_i18n::tr;
 
 /// How many readings a menu offers at once. Past a few it is a list to read,
@@ -76,6 +76,19 @@ pub fn copy_item(
     ))
 }
 
+/// A reading small enough to keep beside a field. What was unpacked is not
+/// kept: one line says what it holds until there is a pane to open it in, and
+/// a reader who picks six of them should not be holding six bodies in memory.
+pub fn small(reading: Reading) -> Reading {
+    match reading.shown {
+        Shown::Bytes { .. } => Reading {
+            shown: Shown::Line(reading.beside()),
+            ..reading
+        },
+        _ => reading,
+    }
+}
+
 /// What the menu says where a reading was asked for and none was found.
 pub fn nothing() -> Item {
     Item::new("no-reading", tr!("Nothing to read in this"), None)
@@ -113,6 +126,17 @@ mod tests {
             assert!(heading.act.is_none(), "a heading is not chosen");
             assert_eq!(items.len(), many.len().min(MOST + 1 + MOST_MORE) + 1);
         }
+    }
+
+    #[test]
+    fn what_was_unpacked_is_kept_as_the_line_that_says_so() {
+        let packed = of("eyJhIjoxfQ", None);
+        let json = packed.iter().find(|r| r.id == "base64").unwrap().clone();
+        assert!(matches!(json.shown, Shown::Bytes { .. }));
+        let kept = small(json.clone());
+        assert!(matches!(kept.shown, Shown::Line(_)));
+        assert_eq!(kept.beside(), json.beside());
+        assert_eq!(kept.id, "base64");
     }
 
     #[test]

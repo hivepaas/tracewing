@@ -15,6 +15,7 @@ use crate::{
     jwt::{self, Jwt},
     layout::Sides,
     messages::MessagesState,
+    reading,
     select::{self, Copied, Selection},
     snippets::{self, Language},
     traffic::Traffic,
@@ -26,9 +27,12 @@ use gpui::{
     px, relative, rgb,
 };
 use std::{
+    collections::HashMap,
+    rc::Rc,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
+use tracewing_convert::{Reading, Shown};
 use tracewing_i18n::{tr, tr_n};
 use tracewing_store::session::BodyReader;
 
@@ -112,9 +116,72 @@ pub struct InspectorState {
     /// The last call before the chosen flow to the same method, host and
     /// path, which it can be compared with in a click.
     pub previous_call: Option<i64>,
+    /// What the selection was read as, worked out when the menu opened: a
+    /// frame must not read the selection again on every draw.
+    pub readings: Vec<Reading>,
+    /// The field and the value those readings came from, which is where a
+    /// chosen one is drawn. None where the selection sits under no field.
+    read_from: Option<(SharedString, SharedString)>,
+    /// The readings chosen, by [`drawn_key`].
+    drawn: HashMap<String, Reading>,
+}
+
+/// What a drawn reading is kept under: the field and the value it was read
+/// from, rather than where they sat. Rows move as a flow is chosen or a side
+/// is switched, and the same header in the next flow says itself again.
+fn drawn_key(field: &str, value: &str) -> String {
+    format!("{field}\u{1}{value}")
 }
 
 impl InspectorState {
+    /// Reads what is selected, and keeps the field and value it was read
+    /// from. Called as the menu opens, not as it draws.
+    pub fn read_here(&mut self, sel: &Selection) {
+        self.readings = Vec::new();
+        self.read_from = None;
+        let Copied::Text(text) = sel.selected_text() else {
+            return;
+        };
+        if text.len() > tracewing_convert::MAX_INPUT {
+            return;
+        }
+        let Some((start, _)) = sel.bounds() else {
+            return;
+        };
+        let field = sel.field_of(start.piece);
+        self.readings = reading::of(&text, field.as_deref());
+        if let (Some(field), Some(value)) = (field, sel.text_of(start.piece)) {
+            self.read_from = Some((field, value));
+        }
+    }
+
+    /// Draws `reading` under the field the last read came from, which is
+    /// what choosing it from the menu does.
+    pub fn draw_reading(&mut self, reading: Reading) {
+        if let Some((field, value)) = self.read_from.clone() {
+            self.drawn
+                .insert(drawn_key(&field, &value), reading::small(reading));
+        }
+    }
+
+    /// How many readings are drawn under a field.
+    pub fn readings_drawn(&self) -> usize {
+        self.drawn.len()
+    }
+
+    /// Takes away everything drawn under a field.
+    pub fn clear_readings(&mut self) {
+        self.drawn.clear();
+    }
+
+    /// The reading drawn under `field`'s value, if one was chosen.
+    fn drawn_under(&self, field: &str, value: &str) -> Option<&Reading> {
+        if self.drawn.is_empty() {
+            return None;
+        }
+        self.drawn.get(&drawn_key(field, value))
+    }
+
     fn slot(&mut self, other: bool) -> &mut BodyState {
         if other {
             &mut self.other
@@ -1130,28 +1197,40 @@ impl Traffic {
                 .selectable(well, &sel, cx)
                 .child(self.render_graphql(&sel)),
             Part::Rpc => self.selectable(well, &sel, cx).child(self.render_rpc(&sel)),
-            Part::Headers => self.selectable(well, &sel, cx).child(render_headers(
-                detail.headers(self.inspector.side),
-                detail.trailers(self.inspector.side),
-                &sel,
-            )),
+            Part::Headers => {
+                let side = self.inspector.side;
+                self.selectable(well, &sel, cx).child(render_headers(
+                    detail.headers(side),
+                    detail.trailers(side),
+                    &sel,
+                    &self.inspector,
+                ))
+            }
             Part::Connection => {
                 let naming = (detail.app.is_none() && device_of(&detail.client).is_some())
                     .then(|| self.device_name_input().clone());
                 self.selectable(well, &sel, cx)
                     .child(render_connection(detail, naming, &sel))
             }
-            Part::Query => self
-                .selectable(well, &sel, cx)
-                .child(render_fields(fields::query(&detail.url), &sel)),
-            Part::Form => self
-                .selectable(well, &sel, cx)
-                .child(render_fields(detail.form.clone().unwrap_or_default(), &sel)),
-            Part::Cookies => self.selectable(well, &sel, cx).child(render_cookies(
-                detail.headers(self.inspector.side),
-                self.inspector.side,
+            Part::Query => self.selectable(well, &sel, cx).child(render_fields(
+                fields::query(&detail.url),
                 &sel,
+                &self.inspector,
             )),
+            Part::Form => self.selectable(well, &sel, cx).child(render_fields(
+                detail.form.clone().unwrap_or_default(),
+                &sel,
+                &self.inspector,
+            )),
+            Part::Cookies => {
+                let side = self.inspector.side;
+                self.selectable(well, &sel, cx).child(render_cookies(
+                    detail.headers(side),
+                    side,
+                    &sel,
+                    &self.inspector,
+                ))
+            }
             Part::Body => match self.render_read_as(cx) {
                 Some(picker) => well.child(picker),
                 None => body_well(well, &self.inspector.body),
@@ -1181,11 +1260,13 @@ impl Traffic {
                     detail.headers(side),
                     detail.trailers(side),
                     sel,
+                    &self.inspector,
                 )),
                 Part::Cookies => self.selectable(well, sel, cx).child(render_cookies(
                     detail.headers(side),
                     side,
                     sel,
+                    &self.inspector,
                 )),
                 _ => match self.render_read_as(cx).filter(|_| side == chosen) {
                     Some(picker) => well.child(picker),
@@ -1308,8 +1389,7 @@ impl Traffic {
         let menu = sel.menu().map(|at| {
             let (copy, all, close) = (sel.clone(), sel.clone(), sel.clone());
             let (r1, r2, r3) = (redraw.clone(), redraw.clone(), redraw.clone());
-            select::copy_menu(
-                at,
+            let mut items = select::copy_items(
                 !sel.is_empty(),
                 true,
                 move |_, cx| {
@@ -1322,11 +1402,47 @@ impl Traffic {
                     write_copied(all.all_text(), cx);
                     r2(cx);
                 },
-                move |_, cx| {
-                    close.set_menu(None);
-                    r3(cx);
+            );
+            // What the selection turned out to be. Choosing one draws it
+            // under the field it was read from, as a token's claims are.
+            let (picked, pick_me) = (sel.clone(), me.clone());
+            items.extend(reading::items(
+                &self.inspector.readings,
+                move |reading, _, cx| {
+                    let _ = pick_me.update(cx, |this, cx| {
+                        this.inspector.draw_reading(reading);
+                        this.inspector.readings = Vec::new();
+                        cx.notify();
+                    });
+                    picked.set_menu(None);
                 },
-            )
+            ));
+            let (copied_one, r4) = (sel.clone(), redraw.clone());
+            items.extend(reading::copy_item(
+                &self.inspector.readings,
+                move |_, cx| {
+                    copied_one.set_menu(None);
+                    r4(cx);
+                },
+            ));
+            if !self.inspector.drawn.is_empty() {
+                let (cleared, clear_me) = (sel.clone(), me.clone());
+                items.push(select::Item::new(
+                    "clear-readings",
+                    tr!("Clear what was read"),
+                    Some(Rc::new(move |_: &mut gpui::Window, cx: &mut gpui::App| {
+                        let _ = clear_me.update(cx, |this, cx| {
+                            this.inspector.clear_readings();
+                            cx.notify();
+                        });
+                        cleared.set_menu(None);
+                    }) as select::Act),
+                ));
+            }
+            select::render_menu(at, items, move |_, cx| {
+                close.set_menu(None);
+                r3(cx);
+            })
         });
         let (press, menu_at) = (sel.clone(), sel.clone());
         view.relative()
@@ -1344,6 +1460,7 @@ impl Traffic {
                 cx.listener(move |this, e: &MouseDownEvent, window, cx| {
                     window.focus(&this.focus, cx);
                     menu_at.set_menu(Some(e.position));
+                    this.inspector.read_here(&menu_at);
                     cx.notify();
                 }),
             )
@@ -1950,6 +2067,7 @@ fn render_headers(
     headers: Option<&[(String, String)]>,
     trailers: &[(String, String)],
     sel: &Selection,
+    read: &InspectorState,
 ) -> impl IntoElement {
     let c = colors();
     let Some(headers) = headers else {
@@ -1976,8 +2094,12 @@ fn render_headers(
                     .min_w_0()
                     .flex()
                     .flex_col()
-                    .child(sel.piece(value.clone(), ": ", Vec::new()))
-                    .children(Jwt::find(value).map(|jwt| render_jwt(jwt, sel))),
+                    .child(sel.piece_under(name.clone(), value.clone(), ": ", Vec::new()))
+                    .children(Jwt::find(value).map(|jwt| render_jwt(jwt, sel)))
+                    .children(
+                        read.drawn_under(name, value)
+                            .map(|reading| render_reading(reading, sel)),
+                    ),
             )
     };
     div()
@@ -2016,7 +2138,7 @@ fn has_part(detail: &Detail, part: Part, side: Side) -> bool {
     }
 }
 
-fn render_fields(found: Vec<Field>, sel: &Selection) -> impl IntoElement {
+fn render_fields(found: Vec<Field>, sel: &Selection, read: &InspectorState) -> impl IntoElement {
     let c = colors();
     div()
         .id("fields")
@@ -2030,9 +2152,16 @@ fn render_fields(found: Vec<Field>, sel: &Selection) -> impl IntoElement {
         .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(px(12.))
         .children(found.into_iter().map(|field| {
+            let field_name = field.name.clone();
             let name = sel.piece(field.name, "\n", Vec::new());
+            let drawn = match &field.value {
+                FieldValue::Text(text) => read.drawn_under(&field_name, text).cloned(),
+                FieldValue::File { .. } => None,
+            };
             let value = match field.value {
-                FieldValue::Text(text) => div().child(sel.piece(text, ": ", Vec::new())),
+                FieldValue::Text(text) => {
+                    div().child(sel.piece_under(field_name.clone(), text, ": ", Vec::new()))
+                }
                 FieldValue::File {
                     filename,
                     content_type,
@@ -2059,7 +2188,15 @@ fn render_fields(found: Vec<Field>, sel: &Selection) -> impl IntoElement {
                         .text_color(rgb(c.json_key))
                         .child(name),
                 )
-                .child(div().flex_1().min_w_0().child(value))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .flex()
+                        .flex_col()
+                        .child(value)
+                        .children(drawn.map(|reading| render_reading(&reading, sel))),
+                )
         }))
 }
 
@@ -2074,6 +2211,7 @@ fn render_cookies(
     headers: Option<&[(String, String)]>,
     side: Side,
     sel: &Selection,
+    read: &InspectorState,
 ) -> impl IntoElement {
     let c = colors();
     let Some(headers) = headers else {
@@ -2100,6 +2238,8 @@ fn render_cookies(
         .text_size(px(12.))
         .children(found.into_iter().map(|cookie| {
             let jwt = Jwt::find(&cookie.value);
+            let drawn = read.drawn_under(&cookie.name, &cookie.value).cloned();
+            let cookie_name = cookie.name.clone();
             div()
                 .flex()
                 .flex_row()
@@ -2118,7 +2258,7 @@ fn render_cookies(
                         .flex()
                         .flex_col()
                         .gap(px(2.))
-                        .child(sel.piece(cookie.value, ": ", Vec::new()))
+                        .child(sel.piece_under(cookie_name, cookie.value, ": ", Vec::new()))
                         .when(!cookie.attributes.is_empty(), |d| {
                             d.child(
                                 div().text_size(px(11.5)).text_color(rgb(c.muted)).child(
@@ -2126,13 +2266,67 @@ fn render_cookies(
                                 ),
                             )
                         })
-                        .children(jwt.map(|jwt| render_jwt(jwt, sel))),
+                        .children(jwt.map(|jwt| render_jwt(jwt, sel)))
+                        .children(drawn.map(|reading| render_reading(&reading, sel))),
                 )
         }))
         .into_any_element()
 }
 
 /// What a token claims, under the header or cookie that carries it.
+/// A reading under the field it was read from, as a token's claims are.
+fn render_reading(reading: &Reading, sel: &Selection) -> Div {
+    let c = colors();
+    let line = |text: String| div().child(sel.piece(text, "\n", Vec::new()));
+    let pair = |name: &str, value: &str| {
+        div()
+            .flex()
+            .flex_row()
+            .gap(px(8.))
+            .child(
+                div()
+                    .w(relative(0.3))
+                    .flex_shrink_0()
+                    .text_color(rgb(c.muted))
+                    .child(sel.piece(name.to_owned(), "\n", Vec::new())),
+            )
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .child(sel.piece(value.to_owned(), ": ", Vec::new())),
+            )
+    };
+    let said: Vec<Div> = match &reading.shown {
+        Shown::Line(text) => vec![line(text.clone())],
+        Shown::Fields(fields) => fields
+            .iter()
+            .map(|(name, value)| pair(name, value))
+            .collect(),
+        Shown::Table { head, rows } => std::iter::once(head.join(" · "))
+            .chain(rows.iter().map(|row| row.join(" · ")))
+            .map(line)
+            .collect(),
+        Shown::Bytes { .. } => vec![line(reading.beside())],
+    };
+    div()
+        .mt(px(6.))
+        .p(px(10.))
+        .rounded(px(10.))
+        .bg(rgb(c.surface))
+        .flex()
+        .flex_col()
+        .gap(px(2.))
+        .child(
+            div()
+                .font_family(crate::FONT)
+                .font_weight(FontWeight::BOLD)
+                .text_color(rgb(c.text))
+                .child(sel.piece(reading.label.clone(), "\n\n", Vec::new())),
+        )
+        .children(said)
+}
+
 fn render_jwt(jwt: Jwt, sel: &Selection) -> Div {
     let c = colors();
     let now = now_secs();

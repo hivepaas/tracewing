@@ -38,6 +38,10 @@ struct Inner {
     /// Each piece of a view drawn whole, in order: its text, and what goes
     /// before it when it is copied after the one before.
     pieces: Vec<(SharedString, &'static str)>,
+    /// The field each piece is the value of, where the view knows one: the
+    /// `Set-Cookie` of its value, the `page` of its query field. It turns a
+    /// guess about a value into a reading.
+    fields: Vec<Option<SharedString>>,
     /// Where pieces were drawn in the last frame.
     drawn: BTreeMap<u64, TextLayout>,
     /// The menu, open where it was asked for.
@@ -53,6 +57,7 @@ impl Selection {
     pub fn begin(&self) {
         let mut inner = self.0.borrow_mut();
         inner.pieces.clear();
+        inner.fields.clear();
         inner.drawn.clear();
     }
 
@@ -72,13 +77,46 @@ impl Selection {
         before: &'static str,
         highlights: Vec<(Range<usize>, HighlightStyle)>,
     ) -> SelectableText {
+        self.piece_of(None, text, before, highlights)
+    }
+
+    /// The same, for the value of a field the view can name.
+    pub fn piece_under(
+        &self,
+        field: impl Into<SharedString>,
+        text: impl Into<SharedString>,
+        before: &'static str,
+        highlights: Vec<(Range<usize>, HighlightStyle)>,
+    ) -> SelectableText {
+        self.piece_of(Some(field.into()), text, before, highlights)
+    }
+
+    fn piece_of(
+        &self,
+        field: Option<SharedString>,
+        text: impl Into<SharedString>,
+        before: &'static str,
+        highlights: Vec<(Range<usize>, HighlightStyle)>,
+    ) -> SelectableText {
         let text = text.into();
         let key = {
             let mut inner = self.0.borrow_mut();
             inner.pieces.push((text.clone(), before));
+            inner.fields.push(field);
             inner.pieces.len() as u64 - 1
         };
         self.piece_at(key, text, highlights)
+    }
+
+    /// The field the piece `key` is the value of, as the view said when it
+    /// drew it.
+    pub fn field_of(&self, key: u64) -> Option<SharedString> {
+        self.0.borrow().fields.get(key as usize)?.clone()
+    }
+
+    /// The whole of the piece `key`, however much of it is selected.
+    pub fn text_of(&self, key: u64) -> Option<SharedString> {
+        Some(self.0.borrow().pieces.get(key as usize)?.0.clone())
     }
 
     /// A piece of a view whose text is kept elsewhere, such as a body's line.

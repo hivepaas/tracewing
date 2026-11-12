@@ -14,7 +14,7 @@ use std::{
 use tracewing::{
     engine::{Engine, EngineOptions},
     input::TextInput,
-    inspector::BodyState,
+    inspector::{BodyState, Part},
     select::Spot,
     traffic::{Screen, Traffic},
 };
@@ -239,6 +239,121 @@ fn a_value_is_read_and_drawn_where_it_stands() {
             };
             body.read(cx).readings_drawn()
         })
+        .unwrap();
+    assert_eq!(drawn, 0);
+}
+
+/// A header's value read and drawn under it, where the field's own name is
+/// what the converters are told.
+#[test]
+fn a_header_is_read_under_its_own_name() {
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir =
+        std::env::temp_dir().join(format!("tracewing-reading-headers-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let listener = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let port = listener.local_addr().unwrap().port();
+    runtime.spawn(tracewing_dev::playground::serve(listener));
+    let engine = Engine::start(EngineOptions {
+        data_dir: dir.clone(),
+        settings: StorageSettings {
+            disk_reserve_mib: 1,
+            ..StorageSettings::default()
+        },
+        rules: Default::default(),
+        traffic_rules: Default::default(),
+        ports: 20_360..20_370,
+        extra_roots: Vec::new(),
+        key_store: Default::default(),
+        find_apps: false,
+    })
+    .unwrap();
+    while !dir.join("ca.pem").exists() {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+
+    let text = Arc::new(gpui_wgpu::CosmicTextSystem::new(tracewing::FONT));
+    let mut cx = HeadlessAppContext::with_platform(text, Arc::new(tracewing::Assets), || {
+        gpui_platform::current_headless_renderer()
+    });
+    cx.update(tracewing::load_fonts);
+    let data_dir = dir.clone();
+    let window: WindowHandle<Traffic> = cx
+        .open_window(size(px(1440.), px(900.)), move |window, cx| {
+            cx.new(|cx| Traffic::new(engine, &data_dir, window, cx))
+        })
+        .unwrap();
+
+    get(&mut cx, window, &format!("http://localhost:{port}/json"));
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Traffic, cx);
+            view.select_place(0, cx);
+            view.set_part(Part::Headers, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+
+    // The headers are drawn as a name and then its value, so the first value
+    // is the second piece. `date` carries an HTTP-date, which is certain.
+    let (piece, len, field) = window
+        .update(&mut cx, |view, _, _| {
+            let sel = &view.inspector.select;
+            (0..12u64).find_map(|piece| {
+                let field = sel.field_of(piece)?;
+                let text = sel.text_of(piece)?;
+                (field.eq_ignore_ascii_case("date")).then_some((piece, text.len(), field))
+            })
+        })
+        .unwrap()
+        .expect("the answer carries a Date header");
+    assert_eq!(field.to_lowercase(), "date");
+
+    let readings = window
+        .update(&mut cx, |view, _, cx| {
+            view.inspector
+                .select
+                .select(Spot { piece, at: 0 }, Spot { piece, at: len });
+            view.inspector.read_here(&view.inspector.select.clone());
+            let readings = view.inspector.readings.clone();
+            if let Some(best) = readings.first() {
+                view.inspector.draw_reading(best.clone());
+            }
+            cx.notify();
+            readings
+        })
+        .unwrap();
+
+    assert_eq!(
+        readings.first().map(|r| r.id),
+        Some("http-date"),
+        "a Date header reads as an HTTP-date: {:?}",
+        readings.iter().map(|r| r.id).collect::<Vec<_>>()
+    );
+    let drawn = window
+        .update(&mut cx, |view, _, _| view.inspector.readings_drawn())
+        .unwrap();
+    assert_eq!(drawn, 1);
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "84-reading-under-a-header");
+
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.inspector.clear_readings();
+            cx.notify();
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let drawn = window
+        .update(&mut cx, |view, _, _| view.inspector.readings_drawn())
         .unwrap();
     assert_eq!(drawn, 0);
 }
