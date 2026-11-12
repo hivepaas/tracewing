@@ -115,6 +115,42 @@ tdfe4e404 = 시간
 # Number
 t61e9eac0 = 번호
 
+# The request is in {path}. Give it to your IT team to sign as an intermediate CA, then take in what they send back.
+td2c32731 = 요청이 { $path }에 있습니다. IT 팀에 중간 CA로 서명해 달라고 전달한 뒤, 돌려받은 것을 가져오세요.
+
+# Take in
+t3118cd2d = 가져오기
+
+# Signed by {issuer}: restart tracewing to use it. Nothing needs installing on this company's machines.
+tb68eb888 = { $issuer }이(가) 서명함: 사용하려면 tracewing을 다시 시작하세요. 회사 컴퓨터에는 아무것도 설치할 필요가 없습니다.
+
+# It cannot be used: {why}
+tb4233c11 = 사용할 수 없음: { $why }
+
+# Back to tracewing's own certificate: restart tracewing to use it.
+t4a1a1e86 = tracewing 자체 인증서로 돌아감: 사용하려면 tracewing을 다시 시작하세요.
+
+# Now: signed by {issuer}, until {until}.
+tcb26a623 = 현재: { $issuer }이(가) 서명, { $until }까지.
+
+# Now: tracewing's own, which signs itself, until {until}.
+t900843cd = 현재: tracewing 자체 인증서(자체 서명), { $until }까지.
+
+# Certificate signed by your company
+t1df2d89b = 회사가 서명한 인증서
+
+# Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install.
+t0489607f = IT가 새 루트 인증서를 허용하지 않는 경우: tracewing이 CA 키에 대한 요청을 만들고, IT 팀이 회사 루트 아래 중간 CA로 서명하면, tracewing이 그것을 사용합니다. 회사 컴퓨터는 이미 신뢰하므로 설치할 것이 없습니다.
+
+# Make the request (CSR)…
+t61f8c4ae = 요청 만들기(CSR)…
+
+# Take in the signed certificate…
+t2f79e9d7 = 서명된 인증서 가져오기…
+
+# Back to tracewing's own
+t9c075d1b = tracewing 자체 인증서로 돌아가기
+
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = 본문이 보관되지 않아 둘을 비교할 수 없습니다.
 

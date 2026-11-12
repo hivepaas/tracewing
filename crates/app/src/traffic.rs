@@ -327,6 +327,8 @@ pub struct Traffic {
     pub protos_server: Option<Entity<TextInput>>,
     /// A client certificate being added in Settings.
     pub client_cert_form: Option<crate::client_certs_view::ClientCertForm>,
+    /// What the last step with the company's certificate did, and whether it failed.
+    pub company_ca_note: Option<(String, bool)>,
     pub protos_fetching: bool,
     /// What came of the last time a server was asked: what it has, or why
     /// not.
@@ -535,6 +537,7 @@ impl Traffic {
             relay_fields: None,
             protos_server: None,
             client_cert_form: None,
+            company_ca_note: None,
             protos_fetching: false,
             protos_fetched: None,
             device_name,

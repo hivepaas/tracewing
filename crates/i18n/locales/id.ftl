@@ -115,6 +115,42 @@ tdfe4e404 = Waktu
 # Number
 t61e9eac0 = Nomor
 
+# The request is in {path}. Give it to your IT team to sign as an intermediate CA, then take in what they send back.
+td2c32731 = Permintaan ada di { $path }. Berikan ke tim TI untuk ditandatangani sebagai CA perantara, lalu ambil yang mereka kirim balik.
+
+# Take in
+t3118cd2d = Ambil
+
+# Signed by {issuer}: restart tracewing to use it. Nothing needs installing on this company's machines.
+tb68eb888 = Ditandatangani oleh { $issuer }: mulai ulang tracewing untuk memakainya. Tidak ada yang perlu dipasang di komputer perusahaan.
+
+# It cannot be used: {why}
+tb4233c11 = Tidak bisa dipakai: { $why }
+
+# Back to tracewing's own certificate: restart tracewing to use it.
+t4a1a1e86 = Kembali ke sertifikat tracewing sendiri: mulai ulang tracewing untuk memakainya.
+
+# Now: signed by {issuer}, until {until}.
+tcb26a623 = Sekarang: ditandatangani oleh { $issuer }, sampai { $until }.
+
+# Now: tracewing's own, which signs itself, until {until}.
+t900843cd = Sekarang: milik tracewing sendiri, ditandatangani sendiri, sampai { $until }.
+
+# Certificate signed by your company
+t1df2d89b = Sertifikat yang ditandatangani perusahaan Anda
+
+# Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install.
+t0489607f = Jika TI tidak mengizinkan root baru: tracewing membuat permintaan untuk kunci CA-nya, tim TI menandatanganinya sebagai CA perantara di bawah root perusahaan, dan tracewing memakainya. Komputer perusahaan sudah memercayainya, tanpa perlu memasang apa pun.
+
+# Make the request (CSR)…
+t61f8c4ae = Buat permintaan (CSR)…
+
+# Take in the signed certificate…
+t2f79e9d7 = Ambil sertifikat yang ditandatangani…
+
+# Back to tracewing's own
+t9c075d1b = Kembali ke milik tracewing
+
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Sebuah body tidak disimpan, jadi keduanya tidak bisa dibandingkan.
 

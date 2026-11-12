@@ -115,6 +115,42 @@ tdfe4e404 = Thời gian
 # Number
 t61e9eac0 = Số thứ tự
 
+# The request is in {path}. Give it to your IT team to sign as an intermediate CA, then take in what they send back.
+td2c32731 = Yêu cầu đã lưu ở { $path }. Hãy đưa cho bộ phận IT để ký thành CA trung gian, rồi nhập lại thứ họ gửi về.
+
+# Take in
+t3118cd2d = Nhập
+
+# Signed by {issuer}: restart tracewing to use it. Nothing needs installing on this company's machines.
+tb68eb888 = Đã được { $issuer } ký: hãy khởi động lại tracewing để dùng. Không cần cài gì trên các máy của công ty.
+
+# It cannot be used: {why}
+tb4233c11 = Không dùng được: { $why }
+
+# Back to tracewing's own certificate: restart tracewing to use it.
+t4a1a1e86 = Đã quay về chứng chỉ của tracewing: hãy khởi động lại tracewing để dùng.
+
+# Now: signed by {issuer}, until {until}.
+tcb26a623 = Hiện tại: do { $issuer } ký, đến { $until }.
+
+# Now: tracewing's own, which signs itself, until {until}.
+t900843cd = Hiện tại: chứng chỉ riêng của tracewing, tự ký, đến { $until }.
+
+# Certificate signed by your company
+t1df2d89b = Chứng chỉ do công ty bạn ký
+
+# Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install.
+t0489607f = Khi IT không cho cài root mới: tracewing tạo yêu cầu cho khoá CA của nó, IT ký thành CA trung gian dưới root của công ty, và tracewing dùng chứng chỉ đó. Máy trong công ty vốn đã tin nó, không cần cài gì.
+
+# Make the request (CSR)…
+t61f8c4ae = Tạo yêu cầu (CSR)…
+
+# Take in the signed certificate…
+t2f79e9d7 = Nhập chứng chỉ đã ký…
+
+# Back to tracewing's own
+t9c075d1b = Quay về chứng chỉ của tracewing
+
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Một body không được giữ lại, nên không so sánh được.
 

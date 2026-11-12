@@ -126,6 +126,42 @@ tdfe4e404 = Temps
 # Number
 t61e9eac0 = Numéro
 
+# The request is in {path}. Give it to your IT team to sign as an intermediate CA, then take in what they send back.
+td2c32731 = La demande est dans { $path }. Donnez-la à votre équipe informatique pour qu'elle la signe comme CA intermédiaire, puis importez ce qu'elle renvoie.
+
+# Take in
+t3118cd2d = Importer
+
+# Signed by {issuer}: restart tracewing to use it. Nothing needs installing on this company's machines.
+tb68eb888 = Signé par { $issuer } : redémarrez tracewing pour l'utiliser. Rien à installer sur les machines de l'entreprise.
+
+# It cannot be used: {why}
+tb4233c11 = Inutilisable : { $why }
+
+# Back to tracewing's own certificate: restart tracewing to use it.
+t4a1a1e86 = Retour au certificat propre de tracewing : redémarrez tracewing pour l'utiliser.
+
+# Now: signed by {issuer}, until {until}.
+tcb26a623 = Actuellement : signé par { $issuer }, jusqu'au { $until }.
+
+# Now: tracewing's own, which signs itself, until {until}.
+t900843cd = Actuellement : celui de tracewing, auto-signé, jusqu'au { $until }.
+
+# Certificate signed by your company
+t1df2d89b = Certificat signé par votre entreprise
+
+# Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install.
+t0489607f = Là où l'informatique n'accepte aucune nouvelle racine : tracewing crée une demande pour la clé de sa CA, votre équipe informatique la signe comme CA intermédiaire sous la racine de l'entreprise, et tracewing l'utilise. Les machines de l'entreprise lui font déjà confiance, sans rien installer.
+
+# Make the request (CSR)…
+t61f8c4ae = Créer la demande (CSR)…
+
+# Take in the signed certificate…
+t2f79e9d7 = Importer le certificat signé…
+
+# Back to tracewing's own
+t9c075d1b = Revenir à celui de tracewing
+
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Un body n'a pas été conservé : les deux ne peuvent pas être comparés.
 

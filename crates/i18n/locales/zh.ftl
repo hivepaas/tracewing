@@ -115,6 +115,42 @@ tdfe4e404 = 时间
 # Number
 t61e9eac0 = 序号
 
+# The request is in {path}. Give it to your IT team to sign as an intermediate CA, then take in what they send back.
+td2c32731 = 请求已保存在 { $path }。请交给 IT 团队签署为中间 CA，然后导入他们返回的证书。
+
+# Take in
+t3118cd2d = 导入
+
+# Signed by {issuer}: restart tracewing to use it. Nothing needs installing on this company's machines.
+tb68eb888 = 已由 { $issuer } 签署：重新启动 tracewing 后生效。公司的电脑无需安装任何东西。
+
+# It cannot be used: {why}
+tb4233c11 = 无法使用：{ $why }
+
+# Back to tracewing's own certificate: restart tracewing to use it.
+t4a1a1e86 = 已改回 tracewing 自己的证书：重新启动 tracewing 后生效。
+
+# Now: signed by {issuer}, until {until}.
+tcb26a623 = 当前：由 { $issuer } 签署，有效期至 { $until }。
+
+# Now: tracewing's own, which signs itself, until {until}.
+t900843cd = 当前：tracewing 自己的自签名证书，有效期至 { $until }。
+
+# Certificate signed by your company
+t1df2d89b = 由公司签署的证书
+
+# Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install.
+t0489607f = 当 IT 不允许新增根证书时：tracewing 为其 CA 的密钥生成请求，IT 团队在公司根证书下将其签署为中间 CA，tracewing 改用该证书。公司的电脑已信任它，无需安装。
+
+# Make the request (CSR)…
+t61f8c4ae = 生成请求（CSR）…
+
+# Take in the signed certificate…
+t2f79e9d7 = 导入已签署的证书…
+
+# Back to tracewing's own
+t9c075d1b = 改回 tracewing 自己的
+
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = 有一个 body 未保存，因此无法比较两者。
 

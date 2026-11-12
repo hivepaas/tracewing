@@ -130,6 +130,42 @@ tdfe4e404 = Час
 # Number
 t61e9eac0 = Номер
 
+# The request is in {path}. Give it to your IT team to sign as an intermediate CA, then take in what they send back.
+td2c32731 = Запит збережено в { $path }. Передайте його ІТ-відділу на підпис як проміжного CA, потім прийміть те, що вони надішлють.
+
+# Take in
+t3118cd2d = Прийняти
+
+# Signed by {issuer}: restart tracewing to use it. Nothing needs installing on this company's machines.
+tb68eb888 = Підписано { $issuer }: перезапустіть tracewing, щоб використовувати. На комп'ютерах компанії нічого встановлювати не треба.
+
+# It cannot be used: {why}
+tb4233c11 = Не можна використати: { $why }
+
+# Back to tracewing's own certificate: restart tracewing to use it.
+t4a1a1e86 = Повернено власний сертифікат tracewing: перезапустіть tracewing, щоб використовувати.
+
+# Now: signed by {issuer}, until {until}.
+tcb26a623 = Зараз: підписано { $issuer }, до { $until }.
+
+# Now: tracewing's own, which signs itself, until {until}.
+t900843cd = Зараз: власний сертифікат tracewing, самопідписаний, до { $until }.
+
+# Certificate signed by your company
+t1df2d89b = Сертифікат, підписаний вашою компанією
+
+# Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install.
+t0489607f = Якщо ІТ не дозволяє нових кореневих сертифікатів: tracewing створює запит для ключа свого CA, ІТ-відділ підписує його як проміжний CA під коренем компанії, і tracewing використовує його. Комп'ютери компанії вже йому довіряють, нічого встановлювати не треба.
+
+# Make the request (CSR)…
+t61f8c4ae = Створити запит (CSR)…
+
+# Take in the signed certificate…
+t2f79e9d7 = Прийняти підписаний сертифікат…
+
+# Back to tracewing's own
+t9c075d1b = Повернутися до власного tracewing
+
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Одне з тіл не збережено, тож порівняти їх не можна.
 

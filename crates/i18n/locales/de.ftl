@@ -124,6 +124,42 @@ tdfe4e404 = Zeit
 # Number
 t61e9eac0 = Nummer
 
+# The request is in {path}. Give it to your IT team to sign as an intermediate CA, then take in what they send back.
+td2c32731 = Die Anfrage liegt in { $path }. Geben Sie sie Ihrer IT zum Signieren als Zwischen-CA und übernehmen Sie dann, was zurückkommt.
+
+# Take in
+t3118cd2d = Übernehmen
+
+# Signed by {issuer}: restart tracewing to use it. Nothing needs installing on this company's machines.
+tb68eb888 = Signiert von { $issuer }: Starten Sie tracewing neu, um es zu verwenden. Auf den Rechnern der Firma muss nichts installiert werden.
+
+# It cannot be used: {why}
+tb4233c11 = Nicht verwendbar: { $why }
+
+# Back to tracewing's own certificate: restart tracewing to use it.
+t4a1a1e86 = Zurück zum eigenen Zertifikat von tracewing: Starten Sie tracewing neu, um es zu verwenden.
+
+# Now: signed by {issuer}, until {until}.
+tcb26a623 = Jetzt: signiert von { $issuer }, bis { $until }.
+
+# Now: tracewing's own, which signs itself, until {until}.
+t900843cd = Jetzt: das eigene von tracewing, selbst signiert, bis { $until }.
+
+# Certificate signed by your company
+t1df2d89b = Von Ihrer Firma signiertes Zertifikat
+
+# Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install.
+t0489607f = Wo die IT kein neues Stammzertifikat zulässt: tracewing erstellt eine Anfrage für den Schlüssel seiner CA, Ihre IT signiert sie als Zwischen-CA unter der Stamm-CA der Firma, und tracewing verwendet diese. Die Rechner der Firma vertrauen ihr bereits, ohne Installation.
+
+# Make the request (CSR)…
+t61f8c4ae = Anfrage erstellen (CSR)…
+
+# Take in the signed certificate…
+t2f79e9d7 = Signiertes Zertifikat übernehmen…
+
+# Back to tracewing's own
+t9c075d1b = Zurück zum eigenen von tracewing
+
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Ein Body wurde nicht behalten, daher lassen sich die beiden nicht vergleichen.
 
