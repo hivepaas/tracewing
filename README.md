@@ -6,7 +6,8 @@
 
 <p align="center">
   <b>The HTTP(S) debugging proxy that keeps up with big sessions.</b><br>
-  See, pause and change every request your apps make: web, mobile, AI and web3. Native, for Windows, macOS and Linux.
+  For everything your browser's DevTools can't see: mobile apps, desktop apps, servers and AI agents.<br>
+  See, pause and change every request they make. Native, for Windows, macOS and Linux.
 </p>
 
 <p align="center">
