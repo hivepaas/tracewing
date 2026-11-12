@@ -1119,8 +1119,8 @@ tb945a053 = http://proxy.example.com:8080 oder socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Über einen anderen Proxy gehen
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
-t5c30a22f = Lässt das Firmennetz nur über den eigenen Proxy nach draußen, geht tracewing über diesen zu den Servern. Apps senden ihren Verkehr weiter an tracewing. Benutzername und Passwort stehen in der Adresse, etwa http://name:passwort@proxy:8080; das Passwort wird dann im Schlüsselbund des Systems gespeichert und nicht wieder angezeigt. Leer geht tracewing direkt zu den Servern.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers.
+tf46c980f = Lässt das Firmennetz nur über den eigenen Proxy nach draußen, geht tracewing über diesen zu den Servern. Apps senden ihren Verkehr weiter an tracewing. Benutzername und Passwort stehen in der Adresse, etwa http://name:passwort@proxy:8080, oder http://DOMAIN%5Cname:passwort@proxy:8080 für eine Windows-Domäne; das Passwort wird dann im Schlüsselbund des Systems gespeichert und nicht wieder angezeigt. Basic oder NTLM, wie der Proxy es verlangt. Leer geht tracewing direkt zu den Servern.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Direkt erreichte Hosts, wie NO_PROXY sie schreibt: example.com ist er selbst und alles darunter, * jeder Host.

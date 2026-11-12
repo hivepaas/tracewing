@@ -176,7 +176,7 @@ impl Traffic {
             .bg(rgb(c.surface))
             .child(eyebrow(tr!("Go through another proxy")).px(px(6.)))
             .child(note(tr!(
-                "Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers."
+                "Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers."
             )))
             .child(field(proxy))
             .child(note(tr!(

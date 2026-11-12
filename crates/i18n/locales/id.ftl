@@ -1060,8 +1060,8 @@ tb945a053 = http://proxy.example.com:8080 atau socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Lewat proxy lain
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
-t5c30a22f = Jika jaringan perusahaan hanya mengizinkan keluar lewat proxy-nya sendiri, tracewing meneruskan ke server lewat proxy itu. Aplikasi tetap mengirim traffic ke tracewing. Nama pengguna dan kata sandi ditulis di alamat, seperti http://nama:sandi@proxy:8080; kata sandi lalu disimpan di keychain sistem dan tidak ditampilkan lagi. Jika kosong, tracewing langsung ke server.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers.
+tf46c980f = Jika jaringan perusahaan hanya mengizinkan keluar lewat proxy-nya sendiri, tracewing meneruskan ke server lewat proxy itu. Aplikasi tetap mengirim traffic ke tracewing. Nama pengguna dan kata sandi ditulis di alamat, seperti http://nama:sandi@proxy:8080, atau http://DOMAIN%5Cnama:sandi@proxy:8080 untuk domain Windows; kata sandi lalu disimpan di keychain sistem dan tidak ditampilkan lagi. Basic atau NTLM, sesuai permintaan proxy. Jika kosong, tracewing langsung ke server.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Host yang dihubungi langsung, seperti aturan NO_PROXY: example.com berarti host itu dan semua di bawahnya, * berarti semua host.

@@ -1060,8 +1060,8 @@ tb945a053 = http://proxy.example.com:8080 或 socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = 經由另一個代理
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
-t5c30a22f = 當公司網路只允許透過其自身代理存取外部時，tracewing 會經由該代理連線伺服器。應用程式仍將流量傳送到 tracewing。使用者名稱與密碼寫在位址中，例如 http://名稱:密碼@proxy:8080；之後密碼儲存在系統鑰匙圈中，不再顯示。留空時 tracewing 直接連線伺服器。
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers.
+tf46c980f = 當公司網路只允許透過其自身代理存取外部時，tracewing 會經由該代理連線伺服器。應用程式仍將流量傳送到 tracewing。使用者名稱與密碼寫在位址中，例如 http://名稱:密碼@proxy:8080、或 http://DOMAIN%5C名稱:密碼@proxy:8080（Windows 網域）；之後密碼儲存在系統鑰匙圈中，不再顯示。依代理伺服器的要求使用 Basic 或 NTLM。留空時 tracewing 直接連線伺服器。
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = 直接連線的主機（同 NO_PROXY 寫法）：example.com 表示它及其下所有主機，* 表示所有主機。

@@ -1119,8 +1119,8 @@ tb945a053 = http://proxy.example.com:8080 veya socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Başka bir proxy üzerinden git
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
-t5c30a22f = Bir şirket ağı dışarıya yalnızca kendi proxy'si üzerinden çıkmaya izin veriyorsa, tracewing sunuculara o proxy üzerinden gider. Uygulamalar trafiklerini yine tracewing'e gönderir. Kullanıcı adı ve parola adrese yazılır, örneğin http://ad:parola@proxy:8080; parola sonra sistemin anahtar zincirinde saklanır ve yeniden gösterilmez. Boşsa tracewing sunuculara doğrudan gider.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers.
+tf46c980f = Bir şirket ağı dışarıya yalnızca kendi proxy'si üzerinden çıkmaya izin veriyorsa, tracewing sunuculara o proxy üzerinden gider. Uygulamalar trafiklerini yine tracewing'e gönderir. Kullanıcı adı ve parola adrese yazılır, örneğin http://ad:parola@proxy:8080, veya http://DOMAIN%5Cad:parola@proxy:8080 Windows etki alanı için; parola sonra sistemin anahtar zincirinde saklanır ve yeniden gösterilmez. Proxy ne isterse, Basic veya NTLM. Boşsa tracewing sunuculara doğrudan gider.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Doğrudan ulaşılacak sunucular, NO_PROXY'deki gibi: example.com kendisi ve altındaki her şey, * her sunucu.

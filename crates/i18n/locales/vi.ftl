@@ -1060,8 +1060,8 @@ tb945a053 = http://proxy.example.com:8080 hoặc socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = Đi qua một proxy khác
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
-t5c30a22f = Khi mạng công ty chỉ cho ra ngoài qua proxy của công ty, tracewing đi tiếp tới server qua proxy đó. Các app vẫn gửi traffic tới tracewing. Tên đăng nhập và mật khẩu ghi trong địa chỉ, như http://tên:mật-khẩu@proxy:8080; mật khẩu sau đó được giữ trong kho khoá của hệ thống và không hiện lại. Để trống thì tracewing đi thẳng tới server.
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers.
+tf46c980f = Khi mạng công ty chỉ cho ra ngoài qua proxy của công ty, tracewing đi tiếp tới server qua proxy đó. Các app vẫn gửi traffic tới tracewing. Tên đăng nhập và mật khẩu ghi trong địa chỉ, như http://tên:mật-khẩu@proxy:8080, hoặc http://DOMAIN%5Ctên:mật-khẩu@proxy:8080 cho domain Windows; mật khẩu sau đó được giữ trong kho khoá của hệ thống và không hiện lại. Basic hoặc NTLM, tuỳ proxy yêu cầu. Để trống thì tracewing đi thẳng tới server.
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = Các host đi thẳng, theo quy ước NO_PROXY: example.com là chính nó và mọi host bên dưới, * là mọi host.

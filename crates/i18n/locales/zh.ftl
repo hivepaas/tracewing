@@ -1060,8 +1060,8 @@ tb945a053 = http://proxy.example.com:8080 或 socks5://proxy.example.com:1080
 # Go through another proxy
 tc67dfdb1 = 经由另一个代理
 
-# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080; the password is then kept in the system's keychain, not shown again. Empty, tracewing goes straight to servers.
-t5c30a22f = 当公司网络只允许通过其自身代理访问外部时，tracewing 会经由该代理连接服务器。应用仍将流量发送到 tracewing。用户名和密码写在地址中，例如 http://名称:密码@proxy:8080；之后密码保存在系统钥匙串中，不再显示。留空时 tracewing 直接连接服务器。
+# Where a company's network lets nothing out but through its own proxy, tracewing goes on to servers through it. Apps still send their traffic to tracewing. A user name and password go in the address, as http://name:password@proxy:8080, or http://DOMAIN%5Cname:password@proxy:8080 for a Windows domain; the password is then kept in the system's keychain, not shown again. Basic or NTLM, as the proxy asks. Empty, tracewing goes straight to servers.
+tf46c980f = 当公司网络只允许通过其自身代理访问外部时，tracewing 会经由该代理连接服务器。应用仍将流量发送到 tracewing。用户名和密码写在地址中，例如 http://名称:密码@proxy:8080、或 http://DOMAIN%5C名称:密码@proxy:8080（Windows 域）；之后密码保存在系统钥匙串中，不再显示。按代理的要求使用 Basic 或 NTLM。留空时 tracewing 直接连接服务器。
 
 # Hosts to reach straight, as NO_PROXY has them: example.com is it and everything under it, * is every host.
 tcbc7d298 = 直接连接的主机（同 NO_PROXY 写法）：example.com 表示它及其下所有主机，* 表示所有主机。
