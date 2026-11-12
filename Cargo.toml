@@ -57,6 +57,7 @@ time = "0.3.55"
 tokio = { version = "1.54.1", features = ["full"] }
 tokio-rustls = "0.26"
 rquickjs = "0.14"
+x509-parser = "0.18"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 webpki-roots = "1.0.11"

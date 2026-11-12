@@ -51,7 +51,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | The server's real certificate chain and TLS details for every flow; a warning when it is invalid | Beta | Free |
 | Trust servers whose certificates come from an authority this computer trusts, such as a company's own, or from one put in the `trusted-servers` folder; Settings lists them, and those it left out | Beta | Free |
 | Client certificates for servers that ask for one (mTLS): a PEM certificate and key per host pattern, in Settings; a server that asks when none is given says so in its flow. The playground has an mTLS port (10444) and a client certificate to try it | Beta | Pro |
-| Use a CA signed by the company's own PKI (a CSR), for machines where IT forbids new roots | 1.x | Pro |
+| Use a CA signed by the company's own PKI, for machines where IT forbids new roots: Settings makes a request (CSR) for the CA's key, takes in what IT signs as an intermediate CA, and sends it with what leads to the company's root after each leaf; back to tracewing's own at any time | Beta | Pro |
 | Export TLS keys for Wireshark: switched on in Settings (off again at the next start), or where `SSLKEYLOGFILE` says; both connections of a flow, from the app and to the server | Beta | Pro |
 
 ## Protocols

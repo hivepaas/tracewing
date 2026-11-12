@@ -130,6 +130,42 @@ tdfe4e404 = Время
 # Number
 t61e9eac0 = Номер
 
+# The request is in {path}. Give it to your IT team to sign as an intermediate CA, then take in what they send back.
+td2c32731 = Запрос сохранён в { $path }. Передайте его ИТ-отделу на подпись как промежуточного CA, затем примите то, что они пришлют.
+
+# Take in
+t3118cd2d = Принять
+
+# Signed by {issuer}: restart tracewing to use it. Nothing needs installing on this company's machines.
+tb68eb888 = Подписан { $issuer }: перезапустите tracewing, чтобы использовать его. На компьютерах компании ничего устанавливать не нужно.
+
+# It cannot be used: {why}
+tb4233c11 = Нельзя использовать: { $why }
+
+# Back to tracewing's own certificate: restart tracewing to use it.
+t4a1a1e86 = Возврат к собственному сертификату tracewing: перезапустите tracewing, чтобы использовать его.
+
+# Now: signed by {issuer}, until {until}.
+tcb26a623 = Сейчас: подписан { $issuer }, до { $until }.
+
+# Now: tracewing's own, which signs itself, until {until}.
+t900843cd = Сейчас: собственный сертификат tracewing, самоподписанный, до { $until }.
+
+# Certificate signed by your company
+t1df2d89b = Сертификат, подписанный вашей компанией
+
+# Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install.
+t0489607f = Если ИТ не разрешает новые корневые сертификаты: tracewing создаёт запрос для ключа своего CA, ИТ-отдел подписывает его как промежуточный CA под корнем компании, и tracewing использует его. Компьютеры компании уже доверяют ему, ничего устанавливать не нужно.
+
+# Make the request (CSR)…
+t61f8c4ae = Создать запрос (CSR)…
+
+# Take in the signed certificate…
+t2f79e9d7 = Принять подписанный сертификат…
+
+# Back to tracewing's own
+t9c075d1b = Вернуться к собственному tracewing
+
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Одно из тел не сохранено, поэтому сравнить их нельзя.
 

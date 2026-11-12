@@ -170,7 +170,8 @@ pub fn verify_ca(ca: &LocalCa, provider: hudsucker::rustls::crypto::CryptoProvid
     verifier
         .verify_server_cert(
             &leaf,
-            &[],
+            // A CA a company signed: what leads to its root.
+            ca.chain(),
             &ServerName::try_from(PROBE_HOST)?,
             &[],
             UnixTime::now(),

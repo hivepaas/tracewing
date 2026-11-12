@@ -254,6 +254,71 @@ fn servers_of_a_trusted_authority_are_trusted() {
         })
         .unwrap();
 
+    // A request for the company to sign, and what it sends back taken in: the
+    // CA is the company's from the next start, and back to its own after.
+    let csr = dir.join("tracewing-ca.csr");
+    let signed = dir.join("signed.pem");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.save_company_request(&csr, cx);
+            assert!(!view.company_ca_note.as_ref().unwrap().1);
+        })
+        .unwrap();
+    {
+        use hudsucker::rcgen::{
+            BasicConstraints, CertificateParams, CertificateSigningRequestParams, DnType, IsCa,
+            Issuer, KeyPair, KeyUsagePurpose,
+        };
+        let key = KeyPair::generate().unwrap();
+        let mut root = CertificateParams::default();
+        root.distinguished_name
+            .push(DnType::CommonName, "Example Corp Root");
+        root.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+        root.key_usages = vec![KeyUsagePurpose::KeyCertSign];
+        let issuer = Issuer::new(root, key);
+        let asked =
+            CertificateSigningRequestParams::from_pem(&std::fs::read_to_string(&csr).unwrap())
+                .unwrap();
+        std::fs::write(&signed, asked.signed_by(&issuer).unwrap().pem()).unwrap();
+    }
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.take_company_cert(&signed, cx);
+            let (note, failed) = view.company_ca_note.clone().unwrap();
+            assert!(!failed, "{note}");
+            assert!(note.contains("Example Corp Root"), "{note}");
+            // What cannot be used is refused, and says why.
+            view.take_company_cert(&csr, cx);
+            assert!(view.company_ca_note.as_ref().unwrap().1);
+            view.take_company_cert(&signed, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    cx.update_window(window.into(), |_, window, cx| {
+        window.dispatch_event(
+            gpui::PlatformInput::ScrollWheel(gpui::ScrollWheelEvent {
+                position: gpui::point(px(900.), px(500.)),
+                delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(-150.))),
+                ..Default::default()
+            }),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "105-company-ca");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.back_to_own_ca(cx);
+            let (note, failed) = view.company_ca_note.clone().unwrap();
+            assert!(!failed, "{note}");
+        })
+        .unwrap();
+    assert!(
+        !tracewing_proxy::company_ca::info(&dir).unwrap().company,
+        "its own again"
+    );
+
     // TLS keys for Wireshark, switched on in Settings: the next request's
     // secrets are written to the data folder.
     let keys = dir.join(tracewing::settings_page::TLS_KEYS_FILE);

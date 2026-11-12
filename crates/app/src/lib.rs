@@ -9,6 +9,7 @@ pub mod cli;
 pub mod client_certs_view;
 pub mod colors;
 pub mod columns;
+pub mod company_ca_view;
 pub mod compare;
 pub mod compare_page;
 pub mod compose;

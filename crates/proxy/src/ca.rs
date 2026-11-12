@@ -45,8 +45,11 @@ use std::{
 use time::{Duration, OffsetDateTime};
 use tracing::{debug, warn};
 
-const CA_CERT_FILE: &str = "ca.pem";
-const CA_KEY_FILE: &str = "ca.key";
+pub(crate) const CA_CERT_FILE: &str = "ca.pem";
+pub(crate) const CA_KEY_FILE: &str = "ca.key";
+/// The certificates between a CA a company signed and the company's root,
+/// sent after it: see [`crate::company_ca`].
+pub(crate) const CA_CHAIN_FILE: &str = "ca-chain.pem";
 /// The path the proxy answers itself, for clients that ask it directly.
 pub const CRL_PATH: &str = "/tracewing.crl";
 
@@ -71,6 +74,9 @@ pub struct LocalCa {
     provider: Arc<CryptoProvider>,
     cache: Mutex<HashMap<String, (Instant, Arc<ServerConfig>)>>,
     key_place: KeyPlace,
+    /// Sent after each leaf, for a CA a company signed: itself, then those
+    /// that lead to the company's root. Empty for tracewing's own.
+    chain: Vec<CertificateDer<'static>>,
     /// Where the secrets of connections from apps are written, for Wireshark.
     key_log: Option<Arc<dyn hudsucker::rustls::KeyLog>>,
 }
@@ -118,6 +124,7 @@ impl LocalCa {
 
         let leaf_key = KeyPair::generate().context("generate leaf key")?;
         let leaf_key_der = PrivatePkcs8KeyDer::from(leaf_key.serialize_der()).into();
+        let chain = chain_of(dir, &cert_path)?;
 
         Ok(Self {
             issuer,
@@ -128,8 +135,14 @@ impl LocalCa {
             provider: Arc::new(provider),
             cache: Mutex::new(HashMap::new()),
             key_place,
+            chain,
             key_log: None,
         })
+    }
+
+    /// What each leaf is sent with: see `chain`.
+    pub fn chain(&self) -> &[CertificateDer<'static>] {
+        &self.chain
     }
 
     /// Where the CA's key is kept.
@@ -215,7 +228,12 @@ impl LocalCa {
         let mut config = ServerConfig::builder_with_provider(Arc::clone(&self.provider))
             .with_safe_default_protocol_versions()?
             .with_no_client_auth()
-            .with_single_cert(vec![leaf], self.leaf_key_der.clone_key())?;
+            .with_single_cert(
+                std::iter::once(leaf)
+                    .chain(self.chain.iter().cloned())
+                    .collect(),
+                self.leaf_key_der.clone_key(),
+            )?;
         config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
         if let Some(key_log) = &self.key_log {
             config.key_log = Arc::clone(key_log);
@@ -284,6 +302,28 @@ impl LocalCa {
     }
 }
 
+/// The chain a CA a company signed is sent with; none for one that signed
+/// itself.
+fn chain_of(dir: &Path, cert_path: &Path) -> Result<Vec<CertificateDer<'static>>> {
+    let pem =
+        fs::read_to_string(cert_path).with_context(|| format!("read {}", cert_path.display()))?;
+    let own = CertificateDer::from_pem_slice(pem.as_bytes())
+        .with_context(|| format!("parse {}", cert_path.display()))?;
+    if crate::company_ca::signed_itself(&own) {
+        return Ok(Vec::new());
+    }
+    let mut chain = vec![own];
+    let more = dir.join(CA_CHAIN_FILE);
+    if more.exists() {
+        for cert in CertificateDer::pem_file_iter(&more)
+            .with_context(|| format!("read {}", more.display()))?
+        {
+            chain.push(cert.with_context(|| format!("parse {}", more.display()))?);
+        }
+    }
+    Ok(chain)
+}
+
 fn create_root(
     cert_path: &Path,
     key_path: &Path,
@@ -320,7 +360,7 @@ fn create_root(
 /// Writes a file that is either not there or whole: written beside it,
 /// then moved in place. A browser or a test that sees the certificate as it is
 /// made would otherwise read it half written, or empty, and trust nothing.
-fn write_whole(path: &Path, contents: &[u8]) -> Result<()> {
+pub(crate) fn write_whole(path: &Path, contents: &[u8]) -> Result<()> {
     let mut part = path.as_os_str().to_owned();
     part.push(".part");
     let part = PathBuf::from(part);
@@ -342,7 +382,7 @@ fn next_serial() -> SerialNumber {
     SerialNumber::from_slice(&bytes)
 }
 
-fn hostname() -> String {
+pub(crate) fn hostname() -> String {
     fs::read_to_string("/etc/hostname")
         .ok()
         .map(|s| s.trim().to_owned())

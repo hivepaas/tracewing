@@ -6,6 +6,7 @@ pub mod ca;
 pub mod ca_key;
 pub mod capture;
 pub mod client_certs;
+pub mod company_ca;
 pub mod key_log;
 pub mod lan;
 pub mod pause;

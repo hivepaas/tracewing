@@ -126,6 +126,42 @@ tdfe4e404 = Tempo
 # Number
 t61e9eac0 = Número
 
+# The request is in {path}. Give it to your IT team to sign as an intermediate CA, then take in what they send back.
+td2c32731 = O pedido está em { $path }. Entregue-o à sua equipe de TI para assinar como CA intermediária e depois importe o que mandarem de volta.
+
+# Take in
+t3118cd2d = Importar
+
+# Signed by {issuer}: restart tracewing to use it. Nothing needs installing on this company's machines.
+tb68eb888 = Assinado por { $issuer }: reinicie o tracewing para usar. Nada precisa ser instalado nos computadores da empresa.
+
+# It cannot be used: {why}
+tb4233c11 = Não pode ser usado: { $why }
+
+# Back to tracewing's own certificate: restart tracewing to use it.
+t4a1a1e86 = De volta ao certificado do tracewing: reinicie o tracewing para usar.
+
+# Now: signed by {issuer}, until {until}.
+tcb26a623 = Agora: assinado por { $issuer }, até { $until }.
+
+# Now: tracewing's own, which signs itself, until {until}.
+t900843cd = Agora: o do tracewing, autoassinado, até { $until }.
+
+# Certificate signed by your company
+t1df2d89b = Certificado assinado pela sua empresa
+
+# Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install.
+t0489607f = Onde a TI não deixa entrar nenhuma raiz nova: o tracewing cria um pedido para a chave da sua CA, sua equipe de TI o assina como CA intermediária sob a raiz da empresa, e o tracewing passa a usá-lo. Os computadores da empresa já confiam nele, sem instalar nada.
+
+# Make the request (CSR)…
+t61f8c4ae = Criar o pedido (CSR)…
+
+# Take in the signed certificate…
+t2f79e9d7 = Importar o certificado assinado…
+
+# Back to tracewing's own
+t9c075d1b = Voltar ao do tracewing
+
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Um body não foi guardado, então os dois não podem ser comparados.
 

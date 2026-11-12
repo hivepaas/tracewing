@@ -124,6 +124,42 @@ tdfe4e404 = Süre
 # Number
 t61e9eac0 = Numara
 
+# The request is in {path}. Give it to your IT team to sign as an intermediate CA, then take in what they send back.
+td2c32731 = İstek { $path } konumunda. İmzalaması için BT ekibinize ara CA olarak verin, sonra geri gönderdiklerini içe alın.
+
+# Take in
+t3118cd2d = İçe al
+
+# Signed by {issuer}: restart tracewing to use it. Nothing needs installing on this company's machines.
+tb68eb888 = { $issuer } tarafından imzalandı: kullanmak için tracewing'i yeniden başlatın. Şirket bilgisayarlarına bir şey kurmak gerekmez.
+
+# It cannot be used: {why}
+tb4233c11 = Kullanılamıyor: { $why }
+
+# Back to tracewing's own certificate: restart tracewing to use it.
+t4a1a1e86 = tracewing'in kendi sertifikasına dönüldü: kullanmak için tracewing'i yeniden başlatın.
+
+# Now: signed by {issuer}, until {until}.
+tcb26a623 = Şu an: { $issuer } tarafından imzalı, { $until } tarihine kadar.
+
+# Now: tracewing's own, which signs itself, until {until}.
+t900843cd = Şu an: tracewing'in kendi sertifikası, kendinden imzalı, { $until } tarihine kadar.
+
+# Certificate signed by your company
+t1df2d89b = Şirketinizin imzaladığı sertifika
+
+# Where IT lets no new root certificate in: tracewing makes a request for its CA's key, your IT team signs it as an intermediate CA under the company's root, and tracewing uses that instead. The company's computers trust it already, with nothing to install.
+t0489607f = BT'nin yeni kök sertifikaya izin vermediği yerde: tracewing CA anahtarı için bir istek oluşturur, BT ekibiniz bunu şirketin kökü altında ara CA olarak imzalar ve tracewing onu kullanır. Şirket bilgisayarları ona zaten güvenir, kurulacak bir şey yoktur.
+
+# Make the request (CSR)…
+t61f8c4ae = İsteği oluştur (CSR)…
+
+# Take in the signed certificate…
+t2f79e9d7 = İmzalı sertifikayı içe al…
+
+# Back to tracewing's own
+t9c075d1b = tracewing'in kendisine dön
+
 # A body was not kept, so the two cannot be compared.
 t9d6abb2a = Bir gövde saklanmadığı için ikisi karşılaştırılamıyor.
 
