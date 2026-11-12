@@ -24,6 +24,7 @@ rmpv.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha3.workspace = true
 time = { workspace = true, features = ["formatting", "parsing"] }
 toml.workspace = true
 tracing.workspace = true
