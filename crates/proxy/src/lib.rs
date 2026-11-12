@@ -5,6 +5,7 @@ pub mod apps;
 pub mod ca;
 pub mod ca_key;
 pub mod capture;
+pub mod key_log;
 pub mod lan;
 pub mod pause;
 pub mod relay;
@@ -106,6 +107,8 @@ pub struct ProxyOptions {
     /// Another proxy that connections to servers go through, as a company's.
     /// Changes apply to the next connection.
     pub relay: Arc<relay::Relay>,
+    /// Where TLS secrets are written for Wireshark, while they are.
+    pub tls_keys: Arc<key_log::TlsKeys>,
 }
 
 #[derive(Debug)]
@@ -158,6 +161,7 @@ pub async fn run_proxy(
         listen_addr
     };
     ca.serve_crl_at(own_addr);
+    ca.log_keys_to(Arc::clone(&opts.tls_keys) as Arc<dyn hudsucker::rustls::KeyLog>);
     let _ = opts.leaf_spki.set(ca.leaf_spki_sha256());
     let crl = Crl {
         host: own_addr.to_string(),
@@ -190,7 +194,8 @@ pub async fn run_proxy(
     // Without TCP_NODELAY, small writes wait for delayed ACKs and the tail
     // latency jumps to ~40 ms. Linux copies the flag to accepted sockets.
     socket2::SockRef::from(&listener).set_tcp_nodelay(true)?;
-    let (upstream_tls, verifier) = upstream_tls(&opts.extra_roots, opts.settings.os_roots)?;
+    let (mut upstream_tls, verifier) = upstream_tls(&opts.extra_roots, opts.settings.os_roots)?;
+    upstream_tls.key_log = Arc::clone(&opts.tls_keys) as Arc<dyn hudsucker::rustls::KeyLog>;
     let connector = upstream::TimedConnector::new(upstream_tls, verifier, Arc::clone(&opts.relay));
 
     let handler = FlowHandler::new(

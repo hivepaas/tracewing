@@ -1390,6 +1390,18 @@ tc7d7e212 = Buka folder
 # Read it again
 td72efd5e = Baca lagi
 
+# TLS keys for Wireshark
+tcb4394af = Kunci TLS untuk Wireshark
+
+# Writes the secrets of each HTTPS connection, from apps to tracewing and from it to servers, to a file Wireshark reads: Preferences, Protocols, TLS, (Pre)-Master-Secret log filename. Anyone with the file can read the traffic it covers. Off again when tracewing starts, unless SSLKEYLOGFILE names a file.
+t2f92ac10 = Menulis rahasia setiap koneksi HTTPS, dari aplikasi ke tracewing dan dari tracewing ke server, ke file yang dibaca Wireshark: Preferences, Protocols, TLS, (Pre)-Master-Secret log filename. Siapa pun yang memiliki file ini dapat membaca lalu lintas yang dicakupnya. Mati lagi saat tracewing dimulai, kecuali SSLKEYLOGFILE menunjuk sebuah file.
+
+# Cannot write to it: {why}
+t956ecc4b = Tidak dapat menulis ke sana: { $why }
+
+# Copy the path
+t095d064e = Salin jalur
+
 # Language
 t9a73db9b = Bahasa
 

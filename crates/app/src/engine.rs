@@ -15,6 +15,7 @@ use tracewing_proxy::{
     ProxyOptions,
     ca_key::KeyStore,
     capture::Check,
+    key_log::TlsKeys,
     lan::OtherDevices,
     pause::Pauses,
     relay::{Relay, RelaySettings},
@@ -76,6 +77,9 @@ pub struct Engine {
     pub extra_roots: Vec<PathBuf>,
     /// Another proxy that connections to servers go through, as a company's.
     pub relay: Arc<Relay>,
+    /// Where TLS secrets are written for Wireshark: off at each start, unless
+    /// `SSLKEYLOGFILE` says where.
+    pub tls_keys: Arc<TlsKeys>,
     stop: Option<oneshot::Sender<()>>,
     thread: Option<JoinHandle<()>>,
 }
@@ -110,6 +114,7 @@ impl Engine {
             .unwrap_or_default(),
         );
         let network = Arc::new(Network::new(conditions));
+        let tls_keys = Arc::new(TlsKeys::from_env());
         let (stop, stopped) = oneshot::channel::<()>();
         let proxy = ProxyOptions {
             listener: None,
@@ -135,6 +140,7 @@ impl Engine {
             live: Arc::clone(&live),
             other_devices: Some(Arc::clone(&other_devices)),
             relay: Arc::clone(&relay),
+            tls_keys: Arc::clone(&tls_keys),
         };
         let thread = {
             let failure = Arc::clone(&failure);
@@ -174,6 +180,7 @@ impl Engine {
             live,
             extra_roots: opts.extra_roots,
             relay,
+            tls_keys,
             stop: Some(stop),
             thread: Some(thread),
         })

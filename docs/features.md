@@ -52,7 +52,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Trust servers whose certificates come from an authority this computer trusts, such as a company's own, or from one put in the `trusted-servers` folder; Settings lists them, and those it left out | Beta | Free |
 | Client certificates for servers that ask for one (mTLS) | 1.x | Pro |
 | Use a CA signed by the company's own PKI (a CSR), for machines where IT forbids new roots | 1.x | Pro |
-| Export TLS keys (`SSLKEYLOGFILE`) for Wireshark | 1.x | Pro |
+| Export TLS keys for Wireshark: switched on in Settings (off again at the next start), or where `SSLKEYLOGFILE` says; both connections of a flow, from the app and to the server | Beta | Pro |
 
 ## Protocols
 

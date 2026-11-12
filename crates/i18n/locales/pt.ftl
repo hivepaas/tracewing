@@ -1505,6 +1505,18 @@ tc7d7e212 = Abrir a pasta
 # Read it again
 td72efd5e = Ler de novo
 
+# TLS keys for Wireshark
+tcb4394af = Chaves TLS para o Wireshark
+
+# Writes the secrets of each HTTPS connection, from apps to tracewing and from it to servers, to a file Wireshark reads: Preferences, Protocols, TLS, (Pre)-Master-Secret log filename. Anyone with the file can read the traffic it covers. Off again when tracewing starts, unless SSLKEYLOGFILE names a file.
+t2f92ac10 = Grava os segredos de cada conexão HTTPS, dos apps para o tracewing e dele para os servidores, num arquivo que o Wireshark lê: Preferences, Protocols, TLS, (Pre)-Master-Secret log filename. Quem tiver o arquivo pode ler o tráfego que ele cobre. Desliga de novo quando o tracewing inicia, a menos que SSLKEYLOGFILE indique um arquivo.
+
+# Cannot write to it: {why}
+t956ecc4b = Não é possível gravar nele: { $why }
+
+# Copy the path
+t095d064e = Copiar o caminho
+
 # Language
 t9a73db9b = Idioma
 

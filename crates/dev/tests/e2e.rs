@@ -45,6 +45,7 @@ struct Harness {
     other_devices: Arc<OtherDevices>,
     live: Arc<Live>,
     relay: Arc<tracewing_proxy::relay::Relay>,
+    tls_keys: Arc<tracewing_proxy::key_log::TlsKeys>,
     dir: PathBuf,
     proxy_url: String,
     origin: String,
@@ -115,6 +116,7 @@ impl Harness {
         let other_devices = Arc::new(OtherDevices::new(false));
         let live = Arc::new(Live::default());
         let relay = Arc::new(tracewing_proxy::relay::Relay::default());
+        let tls_keys = Arc::new(tracewing_proxy::key_log::TlsKeys::default());
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -140,6 +142,7 @@ impl Harness {
                 live: Arc::clone(&live),
                 other_devices: Some(Arc::clone(&other_devices)),
                 relay: Arc::clone(&relay),
+                tls_keys: Arc::clone(&tls_keys),
             },
             async {
                 let _ = stopped.await;
@@ -165,6 +168,7 @@ impl Harness {
             proxy_url,
             origin: format!("https://localhost:{origin_port}"),
             relay,
+            tls_keys,
             stop,
             proxy,
         }
@@ -287,6 +291,64 @@ async fn intercepts_http1_and_http2() {
         assert!(body.starts_with(br#"{"data":"#));
         assert_eq!(*truncated, 0);
     }
+    clean_up(conn, dir);
+}
+
+/// The TLS secrets of both connections a request goes over, from the app and
+/// to the server, are written while it is switched on, and only then.
+#[tokio::test(flavor = "multi_thread")]
+async fn tls_keys_are_written_for_wireshark_while_on() {
+    let h = Harness::start("tls-keys").await;
+    let file = h.dir.join("keys/tls.log");
+    let get = |n: u32| {
+        let client = h.client(true);
+        let url = format!("{}/json?size={n}", h.origin);
+        async move {
+            let res = client.get(url).send().await.unwrap();
+            assert_eq!(res.status(), 200);
+            res.bytes().await.unwrap();
+        }
+    };
+
+    assert!(!file.exists(), "nothing while off");
+    // On before the first request: after it, the connection to the server
+    // is kept and used again, with no new secrets.
+    h.tls_keys.start(&file).unwrap();
+    get(20).await;
+    let text = std::fs::read_to_string(&file).unwrap();
+    // A line a secret: label, the client's random and the secret, in hex.
+    let mut randoms = std::collections::BTreeSet::new();
+    for line in text.lines() {
+        let parts: Vec<&str> = line.split(' ').collect();
+        assert_eq!(parts.len(), 3, "{line}");
+        assert!(
+            parts[1..]
+                .iter()
+                .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_hexdigit())),
+            "{line}"
+        );
+        assert_eq!(parts[1].len(), 64, "a client random is 32 bytes: {line}");
+        randoms.insert(parts[1].to_owned());
+    }
+    assert!(
+        text.contains("CLIENT_TRAFFIC_SECRET_0 ") && text.contains("SERVER_TRAFFIC_SECRET_0 "),
+        "{text}"
+    );
+    assert_eq!(
+        randoms.len(),
+        2,
+        "the app's connection and the server's: {text}"
+    );
+
+    h.tls_keys.stop();
+    get(30).await;
+    assert_eq!(
+        std::fs::read_to_string(&file).unwrap(),
+        text,
+        "nothing after"
+    );
+
+    let (_, conn, dir) = h.finish(2).await;
     clean_up(conn, dir);
 }
 

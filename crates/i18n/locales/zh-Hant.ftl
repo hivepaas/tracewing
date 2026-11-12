@@ -1390,6 +1390,18 @@ tc7d7e212 = 開啟資料夾
 # Read it again
 td72efd5e = 重新讀取
 
+# TLS keys for Wireshark
+tcb4394af = 用於 Wireshark 的 TLS 金鑰
+
+# Writes the secrets of each HTTPS connection, from apps to tracewing and from it to servers, to a file Wireshark reads: Preferences, Protocols, TLS, (Pre)-Master-Secret log filename. Anyone with the file can read the traffic it covers. Off again when tracewing starts, unless SSLKEYLOGFILE names a file.
+t2f92ac10 = 將每個 HTTPS 連線（從應用程式到 tracewing、從 tracewing 到伺服器）的金鑰寫入 Wireshark 可讀取的檔案：Preferences, Protocols, TLS, (Pre)-Master-Secret log filename。擁有此檔案的人可以讀取其涵蓋的流量。除非 SSLKEYLOGFILE 指定了檔案，否則 tracewing 下次啟動時會重新關閉。
+
+# Cannot write to it: {why}
+t956ecc4b = 無法寫入：{ $why }
+
+# Copy the path
+t095d064e = 複製路徑
+
 # Language
 t9a73db9b = 語言
 

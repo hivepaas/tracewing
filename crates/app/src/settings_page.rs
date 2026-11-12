@@ -17,6 +17,9 @@ use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::rules::HostRules;
 use tracewing_store::settings::StorageSettings;
 
+/// Where TLS secrets are written for Wireshark, in the data folder.
+pub const TLS_KEYS_FILE: &str = "tls-keys.log";
+
 /// One setting. `key` is its name in the file; a test sees that none is forgotten.
 struct Row {
     key: &'static str,
@@ -532,6 +535,7 @@ impl Traffic {
         let abis = self.render_abis(cx);
         let trusted = self.render_trusted(cx);
         let relay = self.render_relay(cx);
+        let tls_keys = self.render_tls_keys(cx);
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);
         // A problem shows under the setting being changed, or else at the top.
@@ -762,6 +766,7 @@ impl Traffic {
             )
             .child(relay)
             .child(trusted)
+            .child(tls_keys)
             .child(protos)
             .child(abis)
             .children(groups)
@@ -866,6 +871,118 @@ impl Traffic {
 }
 
 impl Traffic {
+    /// Writes TLS secrets to the file in the data folder, or stops.
+    pub fn switch_tls_keys(&mut self, cx: &mut Context<Self>) {
+        let keys = &self.engine.tls_keys;
+        if keys.path().is_some() {
+            keys.stop();
+        } else {
+            // What went wrong shows under it.
+            let _ = keys.start(&self.data_dir.join(TLS_KEYS_FILE));
+        }
+        cx.notify();
+    }
+
+    /// The TLS secrets written for Wireshark: switched on here, off at the next
+    /// start.
+    fn render_tls_keys(&mut self, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let keys = &self.engine.tls_keys;
+        let writing = keys.path();
+        let on = writing.is_some();
+        let path = writing.unwrap_or_else(|| self.data_dir.join(TLS_KEYS_FILE));
+        let shown = path.display().to_string();
+        let button = |id: &'static str, label: String| {
+            div()
+                .id(id)
+                .h(px(32.))
+                .px(px(14.))
+                .rounded(px(16.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .reachable()
+                .text_size(px(12.5))
+                .font_weight(FontWeight::BOLD)
+                .bg(rgb(c.chip))
+                .text_color(rgb(c.on_chip))
+                .child(label)
+        };
+        let switch = div()
+            .id("tls-keys")
+            .w(px(44.))
+            .h(px(24.))
+            .p(px(3.))
+            .flex_shrink_0()
+            .rounded(px(12.))
+            .flex()
+            .cursor_pointer()
+            .reachable()
+            .when(on, |d| d.bg(rgb(c.accent)).justify_end())
+            .when(!on, |d| d.bg(rgb(c.input)))
+            .child(div().size(px(18.)).rounded(px(9.)).bg(rgb(if on {
+                c.on_accent
+            } else {
+                c.muted
+            })))
+            .on_click(cx.listener(|this, _, _, cx| this.switch_tls_keys(cx)));
+        let folder = path.parent().map(|p| p.to_owned());
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(8.))
+            .p(px(14.))
+            .rounded(px(22.))
+            .bg(rgb(c.surface))
+            .child(eyebrow(tr!("TLS keys for Wireshark")).px(px(6.)))
+            .child(div().px(px(6.)).text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                "Writes the secrets of each HTTPS connection, from apps to tracewing and from it to servers, to a file Wireshark reads: Preferences, Protocols, TLS, (Pre)-Master-Secret log filename. Anyone with the file can read the traffic it covers. Off again when tracewing starts, unless SSLKEYLOGFILE names a file."
+            )))
+            .child(
+                div()
+                    .px(px(6.))
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap(px(10.))
+                    .child(switch)
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .font_family(crate::MONO_FONT)
+                            .text_size(px(12.))
+                            .text_color(rgb(if on { c.text } else { c.muted }))
+                            .child(shown.clone()),
+                    ),
+            )
+            .children(keys.problem().map(|why| {
+                div()
+                    .px(px(6.))
+                    .text_color(rgb(c.error))
+                    .child(tr!("Cannot write to it: {why}", why = why))
+            }))
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .gap(px(8.))
+                    .child(button("tls-keys-copy", tr!("Copy the path")).on_click(cx.listener(
+                        move |_, _, _, cx| {
+                            cx.write_to_clipboard(gpui::ClipboardItem::new_string(shown.clone()));
+                        },
+                    )))
+                    .children(folder.map(|folder| {
+                        button("tls-keys-open", tr!("Open the folder")).on_click(cx.listener(
+                            move |_, _, _, cx| {
+                                let _ = std::fs::create_dir_all(&folder);
+                                cx.open_with_system(&folder);
+                            },
+                        ))
+                    })),
+            )
+    }
+
     /// The language: the system's, or one of those there are, each named in
     /// itself so that it is found by someone who cannot read the others.
     fn render_language(&self, cx: &mut Context<Self>) -> gpui::Div {

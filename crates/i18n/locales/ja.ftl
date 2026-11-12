@@ -1390,6 +1390,18 @@ tc7d7e212 = フォルダーを開く
 # Read it again
 td72efd5e = 読み直す
 
+# TLS keys for Wireshark
+tcb4394af = Wireshark 用の TLS キー
+
+# Writes the secrets of each HTTPS connection, from apps to tracewing and from it to servers, to a file Wireshark reads: Preferences, Protocols, TLS, (Pre)-Master-Secret log filename. Anyone with the file can read the traffic it covers. Off again when tracewing starts, unless SSLKEYLOGFILE names a file.
+t2f92ac10 = 各 HTTPS 接続（アプリから tracewing、tracewing からサーバー）の秘密を、Wireshark が読めるファイルに書き出します：Preferences, Protocols, TLS, (Pre)-Master-Secret log filename。このファイルを持つ人は、対象の通信を読めます。SSLKEYLOGFILE でファイルが指定されていない限り、tracewing の次回起動時にオフに戻ります。
+
+# Cannot write to it: {why}
+t956ecc4b = 書き込めません：{ $why }
+
+# Copy the path
+t095d064e = パスをコピー
+
 # Language
 t9a73db9b = 言語
 
