@@ -28,6 +28,48 @@ t49fe2cb3 = { $size } · { $percent }% 읽는 중
 # Appearance: {now}. Click for {next}.
 t332cfa6d = 모양: { $now }. 클릭하면 { $next } 모드로 바뀝니다.
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com 또는 *.example.com
+
+# Choose
+t73c66160 = 선택
+
+# Choose the certificate's file.
+t6c7ace6e = 인증서 파일을 선택하세요.
+
+# Say which host it is for.
+taf39b2e1 = 어느 호스트용인지 입력하세요.
+
+# Not used: {why}
+t3a0298f3 = 사용 안 함: { $why }
+
+# Remove
+t21a5901d = 제거
+
+# Client certificates
+te3ce8812 = 클라이언트 인증서
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = 클라이언트에게 인증서를 요구하는 서버(상호 TLS)용: tracewing이 앱 대신 해당 호스트에 지정된 인증서를 제시합니다. 암호 없는 PEM 인증서와 키이며, 파일은 원래 위치에 그대로 있습니다. 각 인증서는 다음 연결부터 적용됩니다.
+
+# None yet.
+t786bc275 = 아직 없습니다.
+
+# Certificate…
+t164f4d6c = 인증서…
+
+# none chosen
+t23b63bc7 = 선택 안 됨
+
+# Key…
+t7aa250a8 = 키…
+
+# in the certificate's file
+t13bc7052 = 인증서 파일 안에 있음
+
+# Add
+t9dc3aa14 = 추가
+
 # Method
 t98a2c750 = 메서드
 
@@ -853,9 +895,6 @@ tfceba380 = 목록을 저장하지 못했습니다: { $e }
 # {count} service: {names} | {count} services: {names}
 tc1b8764c = 서비스 { $count }개: { $names }
 
-# Add
-t9dc3aa14 = 추가
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com 또는 http://localhost:50051
 
@@ -873,9 +912,6 @@ t51f71902 = 서비스 { $count }개
 
 # and {count} more problem | and {count} more problems
 t591ce5ea = 그 밖의 문제 { $count }개
-
-# Remove
-t21a5901d = 제거
 
 # Protobuf schemas
 ta4401d1a = Protobuf 스키마
@@ -1446,9 +1482,6 @@ t571051f9 = tracewing은 공용 인증 기관과 이 컴퓨터가 신뢰하는 �
 
 # Left out: {why}
 t4a567d82 = 제외됨: { $why }
-
-# None yet.
-t786bc275 = 아직 없습니다.
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = tracewing 시작 후 폴더가 바뀌었습니다. 지금 내용을 쓰려면 다시 시작하세요.

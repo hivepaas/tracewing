@@ -43,6 +43,48 @@ t49fe2cb3 = { $size } · читання { $percent }%
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Вигляд: { $now }. Натисніть, щоб змінити на: { $next }.
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com або *.example.com
+
+# Choose
+t73c66160 = Вибрати
+
+# Choose the certificate's file.
+t6c7ace6e = Виберіть файл сертифіката.
+
+# Say which host it is for.
+taf39b2e1 = Вкажіть, для якого хоста він.
+
+# Not used: {why}
+t3a0298f3 = Не використовується: { $why }
+
+# Remove
+t21a5901d = Видалити
+
+# Client certificates
+te3ce8812 = Клієнтські сертифікати
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = Для серверів, що вимагають сертифікат клієнта (взаємний TLS): tracewing пред'являє сертифікат, заданий для їхнього хоста, замість застосунку. Сертифікат PEM і його ключ без парольної фрази; файли лишаються на місці. Кожен діє з наступного з'єднання.
+
+# None yet.
+t786bc275 = Поки немає.
+
+# Certificate…
+t164f4d6c = Сертифікат…
+
+# none chosen
+t23b63bc7 = не вибрано
+
+# Key…
+t7aa250a8 = Ключ…
+
+# in the certificate's file
+t13bc7052 = у файлі сертифіката
+
+# Add
+t9dc3aa14 = Додати
+
 # Method
 t98a2c750 = Метод
 
@@ -928,9 +970,6 @@ tc1b8764c =
        *[other] { $count } сервісу: { $names }
     }
 
-# Add
-t9dc3aa14 = Додати
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com або http://localhost:50051
 
@@ -972,9 +1011,6 @@ t591ce5ea =
         [many] і ще { $count } проблем
        *[other] і ще { $count } проблеми
     }
-
-# Remove
-t21a5901d = Видалити
 
 # Protobuf schemas
 ta4401d1a = Схеми Protobuf
@@ -1623,9 +1659,6 @@ t571051f9 = tracewing довіряє серверам, за які ручают�
 
 # Left out: {why}
 t4a567d82 = Пропущено: { $why }
-
-# None yet.
-t786bc275 = Поки немає.
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = Папка змінилася після запуску tracewing: перезапустіть його, щоб використати її поточний вміст.

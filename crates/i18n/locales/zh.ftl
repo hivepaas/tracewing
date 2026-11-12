@@ -28,6 +28,48 @@ t49fe2cb3 = { $size } · 正在读取 { $percent }%
 # Appearance: {now}. Click for {next}.
 t332cfa6d = 外观：{ $now }。点击切换为 { $next }。
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com，或 *.example.com
+
+# Choose
+t73c66160 = 选择
+
+# Choose the certificate's file.
+t6c7ace6e = 请选择证书文件。
+
+# Say which host it is for.
+taf39b2e1 = 请填写它用于哪个主机。
+
+# Not used: {why}
+t3a0298f3 = 未使用：{ $why }
+
+# Remove
+t21a5901d = 移除
+
+# Client certificates
+te3ce8812 = 客户端证书
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = 用于要求客户端提供证书的服务器（双向 TLS）：tracewing 代替应用出示为其主机指定的证书。PEM 证书及其不带密码的密钥；文件保留在原处。每个证书从下一个连接起生效。
+
+# None yet.
+t786bc275 = 暂无。
+
+# Certificate…
+t164f4d6c = 证书…
+
+# none chosen
+t23b63bc7 = 未选择
+
+# Key…
+t7aa250a8 = 密钥…
+
+# in the certificate's file
+t13bc7052 = 在证书文件中
+
+# Add
+t9dc3aa14 = 添加
+
 # Method
 t98a2c750 = 方法
 
@@ -853,9 +895,6 @@ tfceba380 = 列表未保存：{ $e }
 # {count} service: {names} | {count} services: {names}
 tc1b8764c = { $count } 个服务：{ $names }
 
-# Add
-t9dc3aa14 = 添加
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com 或 http://localhost:50051
 
@@ -873,9 +912,6 @@ t51f71902 = { $count } 个服务
 
 # and {count} more problem | and {count} more problems
 t591ce5ea = 还有 { $count } 个问题
-
-# Remove
-t21a5901d = 移除
 
 # Protobuf schemas
 ta4401d1a = Protobuf 架构
@@ -1446,9 +1482,6 @@ t571051f9 = tracewing 信任公共证书颁发机构以及本机信任的颁发�
 
 # Left out: {why}
 t4a567d82 = 已略过：{ $why }
-
-# None yet.
-t786bc275 = 暂无。
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = 自 tracewing 启动后文件夹已更改：请重启以使用当前内容。

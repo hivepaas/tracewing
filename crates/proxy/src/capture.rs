@@ -2036,6 +2036,12 @@ pub fn error_chain(err: &dyn StdError) -> String {
         message.push_str(&cause.to_string());
         source = cause.source();
     }
+    // What to do about it, where TLS says only its name.
+    if message.contains("CertificateRequired") {
+        message.push_str(
+            ". The server asks for a client certificate: give one for this host in Settings",
+        );
+    }
     message
 }
 

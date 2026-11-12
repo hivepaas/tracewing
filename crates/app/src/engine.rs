@@ -15,6 +15,7 @@ use tracewing_proxy::{
     ProxyOptions,
     ca_key::KeyStore,
     capture::Check,
+    client_certs::{ClientCertSettings, ClientCerts},
     key_log::TlsKeys,
     lan::OtherDevices,
     pause::Pauses,
@@ -83,6 +84,8 @@ pub struct Engine {
     pub tls_keys: Arc<TlsKeys>,
     /// The WebSockets open now, to send messages into.
     pub sockets: Arc<Sockets>,
+    /// Certificates to show servers that ask the client for one.
+    pub client_certs: Arc<ClientCerts>,
     stop: Option<oneshot::Sender<()>>,
     thread: Option<JoinHandle<()>>,
 }
@@ -119,6 +122,10 @@ impl Engine {
         let network = Arc::new(Network::new(conditions));
         let tls_keys = Arc::new(TlsKeys::from_env());
         let sockets = Arc::new(Sockets::default());
+        // A file that cannot be read means none, and Settings says why.
+        let client_certs = Arc::new(ClientCerts::new(
+            &ClientCertSettings::load(&opts.data_dir).unwrap_or_default(),
+        ));
         let (stop, stopped) = oneshot::channel::<()>();
         let proxy = ProxyOptions {
             listener: None,
@@ -146,6 +153,7 @@ impl Engine {
             relay: Arc::clone(&relay),
             tls_keys: Arc::clone(&tls_keys),
             sockets: Arc::clone(&sockets),
+            client_certs: Arc::clone(&client_certs),
         };
         let thread = {
             let failure = Arc::clone(&failure);
@@ -187,6 +195,7 @@ impl Engine {
             relay,
             tls_keys,
             sockets,
+            client_certs,
             stop: Some(stop),
             thread: Some(thread),
         })

@@ -536,6 +536,7 @@ impl Traffic {
         let trusted = self.render_trusted(cx);
         let relay = self.render_relay(cx);
         let tls_keys = self.render_tls_keys(cx);
+        let client_certs = self.render_client_certs(cx);
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);
         // A problem shows under the setting being changed, or else at the top.
@@ -766,6 +767,7 @@ impl Traffic {
             )
             .child(relay)
             .child(trusted)
+            .child(client_certs)
             .child(tls_keys)
             .child(protos)
             .child(abis)

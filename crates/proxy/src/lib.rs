@@ -5,6 +5,7 @@ pub mod apps;
 pub mod ca;
 pub mod ca_key;
 pub mod capture;
+pub mod client_certs;
 pub mod key_log;
 pub mod lan;
 pub mod pause;
@@ -112,6 +113,8 @@ pub struct ProxyOptions {
     pub tls_keys: Arc<key_log::TlsKeys>,
     /// The WebSockets open now, for the window to send messages into.
     pub sockets: Arc<sockets::Sockets>,
+    /// Certificates to show servers that ask the client for one.
+    pub client_certs: Arc<client_certs::ClientCerts>,
 }
 
 #[derive(Debug)]
@@ -199,7 +202,12 @@ pub async fn run_proxy(
     socket2::SockRef::from(&listener).set_tcp_nodelay(true)?;
     let (mut upstream_tls, verifier) = upstream_tls(&opts.extra_roots, opts.settings.os_roots)?;
     upstream_tls.key_log = Arc::clone(&opts.tls_keys) as Arc<dyn hudsucker::rustls::KeyLog>;
-    let connector = upstream::TimedConnector::new(upstream_tls, verifier, Arc::clone(&opts.relay));
+    let connector = upstream::TimedConnector::new(
+        upstream_tls,
+        verifier,
+        Arc::clone(&opts.relay),
+        Arc::clone(&opts.client_certs),
+    );
 
     let handler = FlowHandler::new(
         recorder,

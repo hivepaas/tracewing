@@ -37,6 +37,48 @@ t49fe2cb3 = { $size } · wird gelesen: { $percent }%
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Darstellung: { $now }. Klicken für { $next }.
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com oder *.example.com
+
+# Choose
+t73c66160 = Wählen
+
+# Choose the certificate's file.
+t6c7ace6e = Wählen Sie die Datei des Zertifikats.
+
+# Say which host it is for.
+taf39b2e1 = Geben Sie an, für welchen Host es ist.
+
+# Not used: {why}
+t3a0298f3 = Nicht verwendet: { $why }
+
+# Remove
+t21a5901d = Entfernen
+
+# Client certificates
+te3ce8812 = Client-Zertifikate
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = Für Server, die vom Client ein Zertifikat verlangen (Mutual TLS): tracewing zeigt an Stelle der App das für ihren Host angegebene. Ein PEM-Zertifikat und sein Schlüssel ohne Passphrase; die Dateien bleiben, wo sie sind. Jedes gilt ab der nächsten Verbindung.
+
+# None yet.
+t786bc275 = Noch keine.
+
+# Certificate…
+t164f4d6c = Zertifikat…
+
+# none chosen
+t23b63bc7 = keines gewählt
+
+# Key…
+t7aa250a8 = Schlüssel…
+
+# in the certificate's file
+t13bc7052 = in der Zertifikatsdatei
+
+# Add
+t9dc3aa14 = Hinzufügen
+
 # Method
 t98a2c750 = Methode
 
@@ -892,9 +934,6 @@ tc1b8764c =
        *[other] { $count } Dienste: { $names }
     }
 
-# Add
-t9dc3aa14 = Hinzufügen
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com oder http://localhost:50051
 
@@ -928,9 +967,6 @@ t591ce5ea =
         [one] und { $count } weiteres Problem
        *[other] und { $count } weitere Probleme
     }
-
-# Remove
-t21a5901d = Entfernen
 
 # Protobuf schemas
 ta4401d1a = Protobuf-Schemas
@@ -1549,9 +1585,6 @@ t571051f9 = tracewing vertraut Servern, für die öffentliche Zertifizierungsste
 
 # Left out: {why}
 t4a567d82 = Ausgelassen: { $why }
-
-# None yet.
-t786bc275 = Noch keine.
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = Der Ordner hat sich seit dem Start von tracewing geändert: neu starten, um den jetzigen Inhalt zu nutzen.

@@ -37,6 +37,48 @@ t49fe2cb3 = { $size } · okunuyor %{ $percent }
 # Appearance: {now}. Click for {next}.
 t332cfa6d = Görünüm: { $now }. Değiştirmek için tıklayın: { $next }.
 
+# api.example.com, or *.example.com
+tdc6588ac = api.example.com veya *.example.com
+
+# Choose
+t73c66160 = Seç
+
+# Choose the certificate's file.
+t6c7ace6e = Sertifika dosyasını seçin.
+
+# Say which host it is for.
+taf39b2e1 = Hangi sunucu adı için olduğunu yazın.
+
+# Not used: {why}
+t3a0298f3 = Kullanılmıyor: { $why }
+
+# Remove
+t21a5901d = Kaldır
+
+# Client certificates
+te3ce8812 = İstemci sertifikaları
+
+# For servers that ask the client for a certificate (mutual TLS): tracewing shows the one given for their host, in the app's place. A PEM certificate and its key without a passphrase; the files stay where they are. Each applies to the next connection.
+tcd3f6864 = İstemciden sertifika isteyen sunucular için (karşılıklı TLS): tracewing, uygulamanın yerine o sunucu adı için verilen sertifikayı sunar. Parolasız bir PEM sertifikası ve anahtarı; dosyalar yerinde kalır. Her biri bir sonraki bağlantıdan itibaren geçerlidir.
+
+# None yet.
+t786bc275 = Henüz yok.
+
+# Certificate…
+t164f4d6c = Sertifika…
+
+# none chosen
+t23b63bc7 = seçilmedi
+
+# Key…
+t7aa250a8 = Anahtar…
+
+# in the certificate's file
+t13bc7052 = sertifika dosyasında
+
+# Add
+t9dc3aa14 = Ekle
+
 # Method
 t98a2c750 = Metot
 
@@ -892,9 +934,6 @@ tc1b8764c =
        *[other] { $count } servis: { $names }
     }
 
-# Add
-t9dc3aa14 = Ekle
-
 # https://api.example.com or http://localhost:50051
 t14f9744c = https://api.example.com ya da http://localhost:50051
 
@@ -928,9 +967,6 @@ t591ce5ea =
         [one] ve { $count } sorun daha
        *[other] ve { $count } sorun daha
     }
-
-# Remove
-t21a5901d = Kaldır
 
 # Protobuf schemas
 ta4401d1a = Protobuf şemaları
@@ -1513,9 +1549,6 @@ t571051f9 = tracewing, genel sertifika yetkililerinin ve bu bilgisayarın güven
 
 # Left out: {why}
 t4a567d82 = Atlandı: { $why }
-
-# None yet.
-t786bc275 = Henüz yok.
 
 # The folder has changed since tracewing started: restart it to use what it holds now.
 t65f2d800 = Klasör, tracewing başladığından beri değişti: şimdiki içeriği kullanmak için yeniden başlatın.
