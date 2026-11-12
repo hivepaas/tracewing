@@ -658,21 +658,6 @@ t114f9980 = 헤더
 # Payload
 ta0639745 = 페이로드
 
-# Expires
-tc7aa0523 = 만료
-
-# Issued
-tb1835ecc = 발급
-
-# Not before
-td10dacd9 = 유효 시작
-
-# in {amount}
-tfda57c3e = { $amount } 후
-
-# {amount} ago
-t5f968014 = { $amount } 전
-
 # Light
 t8ad2f8cf = 라이트
 
@@ -957,6 +942,9 @@ t134c9a06 = 자동 (gRPC 경로 또는 messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = { $count }개 더 있음: 입력해서 좁히기
+
+# Nothing to read in this
+t92a8694c = 여기서 읽을 것이 없습니다
 
 # Write the server's address first
 t4f68f91a = 먼저 서버 주소를 입력하세요
@@ -2073,3 +2061,246 @@ t4ab0ecb4 = 단축키 { $keys }
 
 # Columns
 tea156fdc = 열
+
+# base64url
+tadfc8ac3 = base64url
+
+# base64
+tf04e6eba = base64
+
+# Hex
+t613f34ea = 16진수
+
+# Percent-encoded
+t7c7bb5a9 = 퍼센트 인코딩
+
+# Escaped text
+t195b3db9 = 이스케이프된 텍스트
+
+# HTML entities
+t54958ecb = HTML 엔티티
+
+# Version
+t5dcdd537 = 버전
+
+# Variant
+t8433b026 = 변형
+
+# UUID
+t257b8832 = UUID
+
+# ULID
+tf19e9db9 = ULID
+
+# ObjectId
+t427abd77 = ObjectId
+
+# Counter
+tfc0f33c3 = 카운터
+
+# KSUID
+te30e0b47 = KSUID
+
+# Worker
+tde5c1a77 = 워커
+
+# Sequence
+t64cec188 = 시퀀스
+
+# Snowflake
+te00a2b87 = Snowflake
+
+# JSON, {n} fields
+tc6a0fbd2 = JSON, 필드 { $n }개
+
+# JSON, {n} items
+t06f5832d = JSON, 항목 { $n }개
+
+# JSON in a string
+tc69f7572 = 문자열 안의 JSON
+
+# Expires
+tc7aa0523 = 만료
+
+# Issued
+tb1835ecc = 발급
+
+# Not before
+td10dacd9 = 유효 시작
+
+# Algorithm
+t9945210a = 알고리즘
+
+# State
+t1deca496 = 상태
+
+# expired
+t338eb632 = 만료됨
+
+# JWT
+t6076261e = JWT
+
+# {n} row | {n} rows
+td8d653d6 =
+    { $n ->
+       *[other] { $n }행
+    }
+
+# In hex and binary
+tc31ef85f = 16진수와 2진수로
+
+# Bits set
+tb67e8e09 = 설정된 비트
+
+# As a size
+ta9175b27 = 크기로
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# in {amount}
+tfda57c3e = { $amount } 후
+
+# {amount} ago
+t5f968014 = { $amount } 전
+
+# Unix seconds
+t6edf5796 = Unix 초
+
+# Unix milliseconds
+t0d28f4b7 = Unix 밀리초
+
+# Unix microseconds
+tc705fe24 = Unix 마이크로초
+
+# Unix nanoseconds
+t235cb430 = Unix 나노초
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, 시간대 없음: UTC로 읽음
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Seconds
+t7e12f48a = 초
+
+# Trace context
+ta58c7c95 = 트레이스 컨텍스트
+
+# Trace
+t26f8e74e = 트레이스
+
+# Span
+taba837e1 = 스팬
+
+# Sampled
+t7e4a1d99 = 샘플링됨
+
+# yes
+t4e9f3590 = 예
+
+# no
+t62366ffa = 아니요
+
+# Parent span
+t3cf3f9c3 = 상위 스팬
+
+# B3 trace
+tb4f9b9bb = B3 트레이스
+
+# Began
+t3a1b8566 = 시작
+
+# Amazon trace
+t122e82a4 = Amazon 트레이스
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Took
+tcea1562e = 소요 시간
+
+# About
+t58e096de = 설명
+
+# Scheme
+t9c9083a2 = 스킴
+
+# Port
+te2c53cc6 = 포트
+
+# User
+te0a63e12 = 사용자
+
+# {n} fields
+t98976d50 = 필드 { $n }개
+
+# Fragment
+t7889e7fd = 프래그먼트
+
+# Query fields
+t2f58f1e0 = 쿼리 필드
+
+# Field
+t0fb83d07 = 필드
+
+# Value
+td147f96a = 값
+
+# Basic authentication
+te161b66b = Basic 인증
+
+# Password
+t2cc30838 = 비밀번호
+
+# never kept
+t83c57deb = 저장하지 않음
+
+# kept {span}
+t01f67b47 = { $span } 동안 저장
+
+# kept {span} by shared caches
+t5af054c4 = 공유 캐시에서 { $span } 동안 저장
+
+# by the browser only
+tfb7516b7 = 브라우저만
+
+# by anyone
+t86fe63fe = 누구나
+
+# checked every time
+t02076cba = 매번 확인
+
+# not used once stale
+t0f7f5bf9 = 오래되면 사용하지 않음
+
+# never checked again
+tc01144d0 = 다시 확인하지 않음
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = 상태 코드
+
+# Cookie
+tbdbabadf = 쿠키
+
+# data: URI, {media}
+t514d8ddb = data: URI, { $media }

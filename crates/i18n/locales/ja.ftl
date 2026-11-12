@@ -658,21 +658,6 @@ t114f9980 = ヘッダー
 # Payload
 ta0639745 = ペイロード
 
-# Expires
-tc7aa0523 = 有効期限
-
-# Issued
-tb1835ecc = 発行日時
-
-# Not before
-td10dacd9 = 有効開始
-
-# in {amount}
-tfda57c3e = { $amount }後
-
-# {amount} ago
-t5f968014 = { $amount }前
-
 # Light
 t8ad2f8cf = ライト
 
@@ -957,6 +942,9 @@ t134c9a06 = 自動（gRPC のパスまたは messageType）
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = ほかに { $count } 件: 入力して絞り込み
+
+# Nothing to read in this
+t92a8694c = ここに読めるものはありません
 
 # Write the server's address first
 t4f68f91a = 先にサーバーのアドレスを入力してください
@@ -2073,3 +2061,246 @@ t4ab0ecb4 = ショートカット { $keys }
 
 # Columns
 tea156fdc = 列
+
+# base64url
+tadfc8ac3 = base64url
+
+# base64
+tf04e6eba = base64
+
+# Hex
+t613f34ea = 16進数
+
+# Percent-encoded
+t7c7bb5a9 = パーセントエンコード
+
+# Escaped text
+t195b3db9 = エスケープされたテキスト
+
+# HTML entities
+t54958ecb = HTML実体参照
+
+# Version
+t5dcdd537 = バージョン
+
+# Variant
+t8433b026 = バリアント
+
+# UUID
+t257b8832 = UUID
+
+# ULID
+tf19e9db9 = ULID
+
+# ObjectId
+t427abd77 = ObjectId
+
+# Counter
+tfc0f33c3 = カウンター
+
+# KSUID
+te30e0b47 = KSUID
+
+# Worker
+tde5c1a77 = ワーカー
+
+# Sequence
+t64cec188 = シーケンス
+
+# Snowflake
+te00a2b87 = Snowflake
+
+# JSON, {n} fields
+tc6a0fbd2 = JSON、{ $n } 個のフィールド
+
+# JSON, {n} items
+t06f5832d = JSON、{ $n } 個の項目
+
+# JSON in a string
+tc69f7572 = 文字列の中のJSON
+
+# Expires
+tc7aa0523 = 有効期限
+
+# Issued
+tb1835ecc = 発行日時
+
+# Not before
+td10dacd9 = 有効開始
+
+# Algorithm
+t9945210a = アルゴリズム
+
+# State
+t1deca496 = 状態
+
+# expired
+t338eb632 = 期限切れ
+
+# JWT
+t6076261e = JWT
+
+# {n} row | {n} rows
+td8d653d6 =
+    { $n ->
+       *[other] { $n } 行
+    }
+
+# In hex and binary
+tc31ef85f = 16進数と2進数で
+
+# Bits set
+tb67e8e09 = 立っているビット
+
+# As a size
+ta9175b27 = サイズとして
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# in {amount}
+tfda57c3e = { $amount }後
+
+# {amount} ago
+t5f968014 = { $amount }前
+
+# Unix seconds
+t6edf5796 = Unix秒
+
+# Unix milliseconds
+t0d28f4b7 = Unixミリ秒
+
+# Unix microseconds
+tc705fe24 = Unixマイクロ秒
+
+# Unix nanoseconds
+t235cb430 = Unixナノ秒
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601、ゾーンなし: UTCとして読みました
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Seconds
+t7e12f48a = 秒
+
+# Trace context
+ta58c7c95 = トレースコンテキスト
+
+# Trace
+t26f8e74e = トレース
+
+# Span
+taba837e1 = スパン
+
+# Sampled
+t7e4a1d99 = サンプリング
+
+# yes
+t4e9f3590 = はい
+
+# no
+t62366ffa = いいえ
+
+# Parent span
+t3cf3f9c3 = 親スパン
+
+# B3 trace
+tb4f9b9bb = B3トレース
+
+# Began
+t3a1b8566 = 開始
+
+# Amazon trace
+t122e82a4 = Amazonトレース
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Took
+tcea1562e = 所要時間
+
+# About
+t58e096de = 説明
+
+# Scheme
+t9c9083a2 = スキーム
+
+# Port
+te2c53cc6 = ポート
+
+# User
+te0a63e12 = ユーザー
+
+# {n} fields
+t98976d50 = { $n } 個のフィールド
+
+# Fragment
+t7889e7fd = フラグメント
+
+# Query fields
+t2f58f1e0 = クエリのフィールド
+
+# Field
+t0fb83d07 = フィールド
+
+# Value
+td147f96a = 値
+
+# Basic authentication
+te161b66b = Basic認証
+
+# Password
+t2cc30838 = パスワード
+
+# never kept
+t83c57deb = 保存しない
+
+# kept {span}
+t01f67b47 = { $span } 保存
+
+# kept {span} by shared caches
+t5af054c4 = 共有キャッシュでは { $span } 保存
+
+# by the browser only
+tfb7516b7 = ブラウザーのみ
+
+# by anyone
+t86fe63fe = 誰でも
+
+# checked every time
+t02076cba = 毎回確認
+
+# not used once stale
+t0f7f5bf9 = 古くなったら使わない
+
+# never checked again
+tc01144d0 = 再確認しない
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = ステータスコード
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI, {media}
+t514d8ddb = data: URI、{ $media }

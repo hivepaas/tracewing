@@ -7,6 +7,7 @@ use crate::{
     body::{Body, Kind, Line, Token},
     colors::colors,
     flows::size_text,
+    reading,
     select::{self, COPY_MAX, Copied, Selection, Spot},
     syntax::Syntax,
     table::{self, Table},
@@ -25,6 +26,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use tracewing_convert::Reading;
 use tracewing_i18n::{tr, tr_n};
 
 pub const LINE_HEIGHT: f32 = 20.;
@@ -177,6 +179,9 @@ pub struct BodyView {
     select: Selection,
     /// The window's, which a press in the body takes so that its keys work.
     focus: FocusHandle,
+    /// What the selection was read as, worked out when the right-click menu
+    /// opened: a frame must not read the selection again on every draw.
+    readings: Vec<Reading>,
     /// CSV or TSV read as a table, which [`BodyMode::Table`] shows.
     table: Option<Arc<Table>>,
     table_scroll: UniformListScrollHandle,
@@ -208,6 +213,7 @@ impl BodyView {
             bounds: Rc::new(Cell::new(Bounds::default())),
             select: Selection::default(),
             focus,
+            readings: Vec::new(),
             table: None,
             table_scroll: UniformListScrollHandle::new(),
         }
@@ -250,6 +256,19 @@ impl BodyView {
             Some(text) => Copied::Text(text),
             None => Copied::TooLarge,
         }
+    }
+
+    /// The key the selection sits under, for the converters: the `created_at`
+    /// of `"created_at": 1763000000`. A body is indexed by line and carries no
+    /// path, so the name comes off the line itself.
+    fn selected_field(&self) -> Option<String> {
+        let (start, _) = self.select.bounds()?;
+        let (line, at) = self.line_spot(start);
+        let text = self.shown().read_whole(line..line + 1).pop()?;
+        let before = &text[..select::floor(&text, at.min(text.len()))];
+        let end = before.rfind("\":")?;
+        let open = before[..end].rfind('"')?;
+        Some(before[open + 1..end].to_owned())
     }
 
     /// The first and the last spot of the body.
@@ -404,8 +423,32 @@ impl BodyView {
         }
     }
 
-    fn copy_all(&mut self, cx: &mut Context<Self>) {
+    /// Shuts the right-click menu, and forgets the readings it offered.
+    fn close_menu(&mut self) {
         self.select.set_menu(None);
+        self.readings = Vec::new();
+    }
+
+    /// The selection read, as far as it is worth reading: past
+    /// [`tracewing_convert::MAX_INPUT`] a selection is something to copy, not
+    /// a value to make sense of.
+    fn read_selection(&self) -> Vec<Reading> {
+        let Some((start, end)) = self.select.bounds() else {
+            return Vec::new();
+        };
+        let Some(text) = self.shown().text_in(
+            self.line_spot(start),
+            self.line_spot(end),
+            tracewing_convert::MAX_INPUT,
+            self.hex(),
+        ) else {
+            return Vec::new();
+        };
+        reading::of(&text, self.selected_field().as_deref())
+    }
+
+    fn copy_all(&mut self, cx: &mut Context<Self>) {
+        self.close_menu();
         if let Some((start, end)) = self.ends()
             && let Copied::Text(text) = self.copy(start, end)
         {
@@ -415,7 +458,7 @@ impl BodyView {
     }
 
     fn copy_selected(&mut self, cx: &mut Context<Self>) {
-        self.select.set_menu(None);
+        self.close_menu();
         if let Copied::Text(text) = self.selected_text() {
             cx.write_to_clipboard(ClipboardItem::new_string(text));
         }
@@ -1043,13 +1086,23 @@ impl BodyView {
                     let _ = all.update(cx, |this, cx| this.copy_all(cx));
                 },
             );
+            // What the selection turned out to be: a time, a token, something
+            // packed. The reading itself is drawn where the value is; from
+            // here it can be copied.
+            let shut = me.clone();
+            items.extend(reading::items(&self.readings, move |_, cx| {
+                let _ = shut.update(cx, |this, cx| {
+                    this.close_menu();
+                    cx.notify();
+                });
+            }));
             if !self.folds.is_empty() {
                 items.push(select::Item::new(
                     "unfold-all",
                     tr!("Unfold all"),
                     Some(Rc::new(move |_: &mut Window, cx: &mut gpui::App| {
                         let _ = unfold.update(cx, |this, cx| {
-                            this.select.set_menu(None);
+                            this.close_menu();
                             this.unfold_all(cx);
                         });
                     }) as select::Act),
@@ -1057,7 +1110,7 @@ impl BodyView {
             }
             select::render_menu(at, items, move |_, cx| {
                 let _ = close.update(cx, |this, cx| {
-                    this.select.set_menu(None);
+                    this.close_menu();
                     cx.notify();
                 });
             })
@@ -1082,6 +1135,7 @@ impl BodyView {
                     window.focus(&this.focus, cx);
                     this.select
                         .press(e.position, e.click_count, e.modifiers.shift);
+                    this.readings = Vec::new();
                     cx.notify();
                 }),
             )
@@ -1090,6 +1144,7 @@ impl BodyView {
                 cx.listener(|this, e: &MouseDownEvent, window, cx| {
                     window.focus(&this.focus, cx);
                     this.select.set_menu(Some(e.position));
+                    this.readings = this.read_selection();
                     cx.notify();
                 }),
             )

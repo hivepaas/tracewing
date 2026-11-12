@@ -11,6 +11,7 @@ license = "GPL-3.0-or-later"
 publish = false
 
 [workspace.dependencies]
+tracewing-convert = { path = "crates/convert" }
 tracewing-store = { path = "crates/store" }
 tracewing-proxy = { path = "crates/proxy" }
 tracewing-system = { path = "crates/system" }

@@ -715,21 +715,6 @@ t114f9980 = Заголовок
 # Payload
 ta0639745 = Payload
 
-# Expires
-tc7aa0523 = Истекает
-
-# Issued
-tb1835ecc = Выдан
-
-# Not before
-td10dacd9 = Не ранее
-
-# in {amount}
-tfda57c3e = через { $amount }
-
-# {amount} ago
-t5f968014 = { $amount } назад
-
 # Light
 t8ad2f8cf = Светлое
 
@@ -1062,6 +1047,9 @@ t70ff68f9 =
         [many] и ещё { $count }: введите, чтобы сузить
        *[other] и ещё { $count }: введите, чтобы сузить
     }
+
+# Nothing to read in this
+t92a8694c = Здесь нечего прочесть
 
 # Write the server's address first
 t4f68f91a = Сначала введите адрес сервера
@@ -2274,3 +2262,249 @@ t4ab0ecb4 = Сочетания клавиш { $keys }
 
 # Columns
 tea156fdc = Столбцы
+
+# base64url
+tadfc8ac3 = base64url
+
+# base64
+tf04e6eba = base64
+
+# Hex
+t613f34ea = Hex
+
+# Percent-encoded
+t7c7bb5a9 = Процентное кодирование
+
+# Escaped text
+t195b3db9 = Текст с escape-последовательностями
+
+# HTML entities
+t54958ecb = HTML-сущности
+
+# Version
+t5dcdd537 = Версия
+
+# Variant
+t8433b026 = Вариант
+
+# UUID
+t257b8832 = UUID
+
+# ULID
+tf19e9db9 = ULID
+
+# ObjectId
+t427abd77 = ObjectId
+
+# Counter
+tfc0f33c3 = Счётчик
+
+# KSUID
+te30e0b47 = KSUID
+
+# Worker
+tde5c1a77 = Воркер
+
+# Sequence
+t64cec188 = Последовательность
+
+# Snowflake
+te00a2b87 = Snowflake
+
+# JSON, {n} fields
+tc6a0fbd2 = JSON, полей: { $n }
+
+# JSON, {n} items
+t06f5832d = JSON, элементов: { $n }
+
+# JSON in a string
+tc69f7572 = JSON внутри строки
+
+# Expires
+tc7aa0523 = Истекает
+
+# Issued
+tb1835ecc = Выдан
+
+# Not before
+td10dacd9 = Не ранее
+
+# Algorithm
+t9945210a = Алгоритм
+
+# State
+t1deca496 = Состояние
+
+# expired
+t338eb632 = истёк
+
+# JWT
+t6076261e = JWT
+
+# {n} row | {n} rows
+td8d653d6 =
+    { $n ->
+        [one] { $n } строка
+        [few] { $n } строки
+        [many] { $n } строк
+       *[other] { $n } строки
+    }
+
+# In hex and binary
+tc31ef85f = В hex и двоичном виде
+
+# Bits set
+tb67e8e09 = Установленные биты
+
+# As a size
+ta9175b27 = Как размер
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# in {amount}
+tfda57c3e = через { $amount }
+
+# {amount} ago
+t5f968014 = { $amount } назад
+
+# Unix seconds
+t6edf5796 = Unix-секунды
+
+# Unix milliseconds
+t0d28f4b7 = Unix-миллисекунды
+
+# Unix microseconds
+tc705fe24 = Unix-микросекунды
+
+# Unix nanoseconds
+t235cb430 = Unix-наносекунды
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, без зоны: прочитано как UTC
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Seconds
+t7e12f48a = Секунды
+
+# Trace context
+ta58c7c95 = Контекст трассировки
+
+# Trace
+t26f8e74e = Трассировка
+
+# Span
+taba837e1 = Спан
+
+# Sampled
+t7e4a1d99 = Собрана
+
+# yes
+t4e9f3590 = да
+
+# no
+t62366ffa = нет
+
+# Parent span
+t3cf3f9c3 = Родительский спан
+
+# B3 trace
+tb4f9b9bb = Трассировка B3
+
+# Began
+t3a1b8566 = Начало
+
+# Amazon trace
+t122e82a4 = Трассировка Amazon
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Took
+tcea1562e = Длительность
+
+# About
+t58e096de = Описание
+
+# Scheme
+t9c9083a2 = Схема
+
+# Port
+te2c53cc6 = Порт
+
+# User
+te0a63e12 = Пользователь
+
+# {n} fields
+t98976d50 = полей: { $n }
+
+# Fragment
+t7889e7fd = Фрагмент
+
+# Query fields
+t2f58f1e0 = Поля запроса
+
+# Field
+t0fb83d07 = Поле
+
+# Value
+td147f96a = Значение
+
+# Basic authentication
+te161b66b = Аутентификация Basic
+
+# Password
+t2cc30838 = Пароль
+
+# never kept
+t83c57deb = никогда не хранится
+
+# kept {span}
+t01f67b47 = хранится { $span }
+
+# kept {span} by shared caches
+t5af054c4 = в общих кэшах хранится { $span }
+
+# by the browser only
+tfb7516b7 = только браузером
+
+# by anyone
+t86fe63fe = кем угодно
+
+# checked every time
+t02076cba = проверяется каждый раз
+
+# not used once stale
+t0f7f5bf9 = не используется, когда устарел
+
+# never checked again
+tc01144d0 = больше не проверяется
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Код статуса
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI, {media}
+t514d8ddb = data:-URI, { $media }

@@ -695,21 +695,6 @@ t114f9980 = Encabezado
 # Payload
 ta0639745 = Payload
 
-# Expires
-tc7aa0523 = Caduca
-
-# Issued
-tb1835ecc = Emitido
-
-# Not before
-td10dacd9 = No antes de
-
-# in {amount}
-tfda57c3e = en { $amount }
-
-# {amount} ago
-t5f968014 = hace { $amount }
-
 # Light
 t8ad2f8cf = Claro
 
@@ -1028,6 +1013,9 @@ t70ff68f9 =
         [many] y { $count } más: escribe para filtrar
        *[other] y { $count } más: escribe para filtrar
     }
+
+# Nothing to read in this
+t92a8694c = No hay nada que interpretar aquí
 
 # Write the server's address first
 t4f68f91a = Escribe primero la dirección del servidor
@@ -2203,3 +2191,248 @@ t4ab0ecb4 = Atajos { $keys }
 
 # Columns
 tea156fdc = Columnas
+
+# base64url
+tadfc8ac3 = base64url
+
+# base64
+tf04e6eba = base64
+
+# Hex
+t613f34ea = Hex
+
+# Percent-encoded
+t7c7bb5a9 = Codificado en porcentaje
+
+# Escaped text
+t195b3db9 = Texto con escapes
+
+# HTML entities
+t54958ecb = Entidades HTML
+
+# Version
+t5dcdd537 = Versión
+
+# Variant
+t8433b026 = Variante
+
+# UUID
+t257b8832 = UUID
+
+# ULID
+tf19e9db9 = ULID
+
+# ObjectId
+t427abd77 = ObjectId
+
+# Counter
+tfc0f33c3 = Contador
+
+# KSUID
+te30e0b47 = KSUID
+
+# Worker
+tde5c1a77 = Worker
+
+# Sequence
+t64cec188 = Secuencia
+
+# Snowflake
+te00a2b87 = Snowflake
+
+# JSON, {n} fields
+tc6a0fbd2 = JSON, { $n } campos
+
+# JSON, {n} items
+t06f5832d = JSON, { $n } elementos
+
+# JSON in a string
+tc69f7572 = JSON dentro de una cadena
+
+# Expires
+tc7aa0523 = Caduca
+
+# Issued
+tb1835ecc = Emitido
+
+# Not before
+td10dacd9 = No antes de
+
+# Algorithm
+t9945210a = Algoritmo
+
+# State
+t1deca496 = Estado
+
+# expired
+t338eb632 = caducado
+
+# JWT
+t6076261e = JWT
+
+# {n} row | {n} rows
+td8d653d6 =
+    { $n ->
+        [one] { $n } fila
+        [many] { $n } filas
+       *[other] { $n } filas
+    }
+
+# In hex and binary
+tc31ef85f = En hex y binario
+
+# Bits set
+tb67e8e09 = Bits activos
+
+# As a size
+ta9175b27 = Como tamaño
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# in {amount}
+tfda57c3e = en { $amount }
+
+# {amount} ago
+t5f968014 = hace { $amount }
+
+# Unix seconds
+t6edf5796 = Segundos Unix
+
+# Unix milliseconds
+t0d28f4b7 = Milisegundos Unix
+
+# Unix microseconds
+tc705fe24 = Microsegundos Unix
+
+# Unix nanoseconds
+t235cb430 = Nanosegundos Unix
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, sin zona: leído como UTC
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Seconds
+t7e12f48a = Segundos
+
+# Trace context
+ta58c7c95 = Contexto de traza
+
+# Trace
+t26f8e74e = Traza
+
+# Span
+taba837e1 = Span
+
+# Sampled
+t7e4a1d99 = Muestreado
+
+# yes
+t4e9f3590 = sí
+
+# no
+t62366ffa = no
+
+# Parent span
+t3cf3f9c3 = Span padre
+
+# B3 trace
+tb4f9b9bb = Traza B3
+
+# Began
+t3a1b8566 = Comenzó
+
+# Amazon trace
+t122e82a4 = Traza de Amazon
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Took
+tcea1562e = Duración
+
+# About
+t58e096de = Descripción
+
+# Scheme
+t9c9083a2 = Esquema
+
+# Port
+te2c53cc6 = Puerto
+
+# User
+te0a63e12 = Usuario
+
+# {n} fields
+t98976d50 = { $n } campos
+
+# Fragment
+t7889e7fd = Fragmento
+
+# Query fields
+t2f58f1e0 = Campos de la consulta
+
+# Field
+t0fb83d07 = Campo
+
+# Value
+td147f96a = Valor
+
+# Basic authentication
+te161b66b = Autenticación Basic
+
+# Password
+t2cc30838 = Contraseña
+
+# never kept
+t83c57deb = nunca se guarda
+
+# kept {span}
+t01f67b47 = se guarda { $span }
+
+# kept {span} by shared caches
+t5af054c4 = se guarda { $span } en cachés compartidas
+
+# by the browser only
+tfb7516b7 = solo por el navegador
+
+# by anyone
+t86fe63fe = por cualquiera
+
+# checked every time
+t02076cba = se comprueba cada vez
+
+# not used once stale
+t0f7f5bf9 = no se usa si está obsoleto
+
+# never checked again
+tc01144d0 = nunca se vuelve a comprobar
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Código de estado
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI, {media}
+t514d8ddb = URI data:, { $media }

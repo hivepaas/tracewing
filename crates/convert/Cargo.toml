@@ -1,0 +1,19 @@
+[package]
+name = "tracewing-convert"
+description = "Reads the values in a flow: times, tokens, encodings and the rest"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tracewing-i18n.workspace = true
+base64.workspace = true
+brotli.workspace = true
+# No clock: the time to read against comes from `Input`.
+chrono = { version = "0.4", default-features = false, features = ["std", "alloc"] }
+flate2.workspace = true
+http.workspace = true
+serde_json.workspace = true
+zstd.workspace = true

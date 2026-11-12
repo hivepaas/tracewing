@@ -658,21 +658,6 @@ t114f9980 = Header
 # Payload
 ta0639745 = Payload
 
-# Expires
-tc7aa0523 = Hết hạn
-
-# Issued
-tb1835ecc = Cấp lúc
-
-# Not before
-td10dacd9 = Không trước
-
-# in {amount}
-tfda57c3e = sau { $amount }
-
-# {amount} ago
-t5f968014 = { $amount } trước
-
 # Light
 t8ad2f8cf = Sáng
 
@@ -957,6 +942,9 @@ t134c9a06 = Tự động (path gRPC hoặc messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = và { $count } message khác: gõ để thu hẹp
+
+# Nothing to read in this
+t92a8694c = Không đọc được gì ở đây
 
 # Write the server's address first
 t4f68f91a = Hãy nhập địa chỉ server trước
@@ -2073,3 +2061,246 @@ t4ab0ecb4 = Phím tắt { $keys }
 
 # Columns
 tea156fdc = Cột
+
+# base64url
+tadfc8ac3 = base64url
+
+# base64
+tf04e6eba = base64
+
+# Hex
+t613f34ea = Hex
+
+# Percent-encoded
+t7c7bb5a9 = Mã hóa percent
+
+# Escaped text
+t195b3db9 = Văn bản có escape
+
+# HTML entities
+t54958ecb = Thực thể HTML
+
+# Version
+t5dcdd537 = Phiên bản
+
+# Variant
+t8433b026 = Biến thể
+
+# UUID
+t257b8832 = UUID
+
+# ULID
+tf19e9db9 = ULID
+
+# ObjectId
+t427abd77 = ObjectId
+
+# Counter
+tfc0f33c3 = Bộ đếm
+
+# KSUID
+te30e0b47 = KSUID
+
+# Worker
+tde5c1a77 = Worker
+
+# Sequence
+t64cec188 = Thứ tự
+
+# Snowflake
+te00a2b87 = Snowflake
+
+# JSON, {n} fields
+tc6a0fbd2 = JSON, { $n } trường
+
+# JSON, {n} items
+t06f5832d = JSON, { $n } phần tử
+
+# JSON in a string
+tc69f7572 = JSON trong một string
+
+# Expires
+tc7aa0523 = Hết hạn
+
+# Issued
+tb1835ecc = Cấp lúc
+
+# Not before
+td10dacd9 = Không trước
+
+# Algorithm
+t9945210a = Thuật toán
+
+# State
+t1deca496 = Trạng thái
+
+# expired
+t338eb632 = đã hết hạn
+
+# JWT
+t6076261e = JWT
+
+# {n} row | {n} rows
+td8d653d6 =
+    { $n ->
+       *[other] { $n } dòng
+    }
+
+# In hex and binary
+tc31ef85f = Dạng hex và binary
+
+# Bits set
+tb67e8e09 = Các bit được set
+
+# As a size
+ta9175b27 = Dạng kích thước
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# in {amount}
+tfda57c3e = sau { $amount }
+
+# {amount} ago
+t5f968014 = { $amount } trước
+
+# Unix seconds
+t6edf5796 = Unix giây
+
+# Unix milliseconds
+t0d28f4b7 = Unix milligiây
+
+# Unix microseconds
+tc705fe24 = Unix microgiây
+
+# Unix nanoseconds
+t235cb430 = Unix nanogiây
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, không có zone: đọc như UTC
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Seconds
+t7e12f48a = Giây
+
+# Trace context
+ta58c7c95 = Trace context
+
+# Trace
+t26f8e74e = Trace
+
+# Span
+taba837e1 = Span
+
+# Sampled
+t7e4a1d99 = Được sample
+
+# yes
+t4e9f3590 = có
+
+# no
+t62366ffa = không
+
+# Parent span
+t3cf3f9c3 = Span cha
+
+# B3 trace
+tb4f9b9bb = Trace B3
+
+# Began
+t3a1b8566 = Bắt đầu
+
+# Amazon trace
+t122e82a4 = Trace Amazon
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Took
+tcea1562e = Mất
+
+# About
+t58e096de = Mô tả
+
+# Scheme
+t9c9083a2 = Scheme
+
+# Port
+te2c53cc6 = Port
+
+# User
+te0a63e12 = Người dùng
+
+# {n} fields
+t98976d50 = { $n } trường
+
+# Fragment
+t7889e7fd = Fragment
+
+# Query fields
+t2f58f1e0 = Các trường query
+
+# Field
+t0fb83d07 = Trường
+
+# Value
+td147f96a = Giá trị
+
+# Basic authentication
+te161b66b = Xác thực Basic
+
+# Password
+t2cc30838 = Mật khẩu
+
+# never kept
+t83c57deb = không bao giờ lưu
+
+# kept {span}
+t01f67b47 = lưu { $span }
+
+# kept {span} by shared caches
+t5af054c4 = cache dùng chung lưu { $span }
+
+# by the browser only
+tfb7516b7 = chỉ bởi browser
+
+# by anyone
+t86fe63fe = bởi bất kỳ ai
+
+# checked every time
+t02076cba = kiểm tra mỗi lần
+
+# not used once stale
+t0f7f5bf9 = hết hạn là không dùng nữa
+
+# never checked again
+tc01144d0 = không kiểm tra lại
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Mã trạng thái
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI, {media}
+t514d8ddb = data: URI, { $media }

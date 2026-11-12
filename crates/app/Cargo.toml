@@ -16,6 +16,7 @@ x11 = ["gpui_platform/x11"]
 headless = ["gpui_platform/test-support", "dep:gpui_wgpu", "dep:image"]
 
 [dependencies]
+tracewing-convert.workspace = true
 tracewing-proxy.workspace = true
 tracewing-store.workspace = true
 tracewing-system.workspace = true
