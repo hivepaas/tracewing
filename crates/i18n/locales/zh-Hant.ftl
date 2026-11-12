@@ -913,14 +913,20 @@ t0039810a = { $count } 個欄位
 # and {count} more
 tbdb1ff6a = 還有 { $count } 個
 
+# succeeded
+t6b166ff2 = 成功
+
+# failed: it was mined, and what it asked for did not happen
+t46ea918c = 失敗：已被打包進區塊，但它要求的事情沒有發生
+
+# none: it makes a contract
+t188b58f6 = 無：它建立合約
+
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } 位元組，簽章未說明如何讀取
 
 # {count} byte that does not read as one | {count} bytes that do not read as one
 ta7ee514c = { $count } 位元組無法讀作交易
-
-# none: it makes a contract
-t188b58f6 = 無：它建立合約
 
 # {count} place | {count} places
 t0965779e = { $count } 處

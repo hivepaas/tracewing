@@ -913,14 +913,20 @@ t0039810a = { $count } trường
 # and {count} more
 tbdb1ff6a = và { $count } nữa
 
+# succeeded
+t6b166ff2 = thành công
+
+# failed: it was mined, and what it asked for did not happen
+t46ea918c = thất bại: đã vào block, nhưng việc nó yêu cầu đã không xảy ra
+
+# none: it makes a contract
+t188b58f6 = không có: nó tạo contract
+
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } byte mà chữ ký không cho biết cách đọc
 
 # {count} byte that does not read as one | {count} bytes that do not read as one
 ta7ee514c = { $count } byte không đọc được thành một transaction
-
-# none: it makes a contract
-t188b58f6 = không có: nó tạo contract
 
 # {count} place | {count} places
 t0965779e = { $count } vị trí

@@ -913,14 +913,20 @@ t0039810a = { $count } フィールド
 # and {count} more
 tbdb1ff6a = ほか { $count } 件
 
+# succeeded
+t6b166ff2 = 成功
+
+# failed: it was mined, and what it asked for did not happen
+t46ea918c = 失敗: ブロックには入りましたが、求めたことは起きませんでした
+
+# none: it makes a contract
+t188b58f6 = なし: コントラクトを作成します
+
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } バイト、署名が読み方を示していません
 
 # {count} byte that does not read as one | {count} bytes that do not read as one
 ta7ee514c = { $count } バイトはトランザクションとして読めません
-
-# none: it makes a contract
-t188b58f6 = なし: コントラクトを作成します
 
 # {count} place | {count} places
 t0965779e = { $count } 箇所

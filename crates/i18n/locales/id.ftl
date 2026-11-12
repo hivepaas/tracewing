@@ -913,14 +913,20 @@ t0039810a = { $count } bidang
 # and {count} more
 tbdb1ff6a = dan { $count } lagi
 
+# succeeded
+t6b166ff2 = berhasil
+
+# failed: it was mined, and what it asked for did not happen
+t46ea918c = gagal: sudah masuk blok, dan yang dimintanya tidak terjadi
+
+# none: it makes a contract
+t188b58f6 = tidak ada: ini membuat kontrak
+
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } byte yang tidak dijelaskan cara membacanya oleh signature
 
 # {count} byte that does not read as one | {count} bytes that do not read as one
 ta7ee514c = { $count } byte yang tidak terbaca sebagai transaksi
-
-# none: it makes a contract
-t188b58f6 = tidak ada: ini membuat kontrak
 
 # {count} place | {count} places
 t0965779e = { $count } tempat

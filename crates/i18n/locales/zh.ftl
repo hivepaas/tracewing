@@ -913,14 +913,20 @@ t0039810a = { $count } 个字段
 # and {count} more
 tbdb1ff6a = 还有 { $count } 个
 
+# succeeded
+t6b166ff2 = 成功
+
+# failed: it was mined, and what it asked for did not happen
+t46ea918c = 失败：已被打包进区块，但它要求的事情没有发生
+
+# none: it makes a contract
+t188b58f6 = 无：它创建合约
+
 # {count} byte, which the signature does not say how to read | {count} bytes, which the signature does not say how to read
 t36ffce30 = { $count } 字节，签名未说明如何读取
 
 # {count} byte that does not read as one | {count} bytes that do not read as one
 ta7ee514c = { $count } 字节无法读作交易
-
-# none: it makes a contract
-t188b58f6 = 无：它创建合约
 
 # {count} place | {count} places
 t0965779e = { $count } 处

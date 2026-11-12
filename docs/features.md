@@ -107,6 +107,7 @@ keyboard.
 | JSON-RPC calls read: the function a `data` field names and its arguments, a signed transaction out of its RLP, with who signed it worked out from the signature (amounts in ether, fees in gwei, addresses with their EIP-55 capitals), the reason a call reverted, and each call of a batch with its own reply; over a WebSocket too, where a subscription and what it sends back are read from the messages | Beta | Free |
 | Arguments of any shape read, down to the calls inside a multicall | Beta | Free |
 | What a call answered read by the types it answers with, and a reply's logs said as the events they are, out of their topics and their data | Beta | Free |
+| A receipt, a transaction or a block a node answered with laid out field by field, with a transaction that was mined and did not go through saying so | Beta | Free |
 | Contracts named by ABI JSON chosen in Settings, as solc, Hardhat and Foundry write it; read again when it changes, and never fetched from anywhere | Beta | Free |
 | Bodies of 50 MB and more open without freezing the window | Beta | Free |
 | Copy as cURL; save a body to a file | Beta | Free |
