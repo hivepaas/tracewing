@@ -265,6 +265,15 @@ fn graphql_cookies_and_tokens_are_read() {
         .unwrap();
     cx.run_until_parked();
     shot(&mut cx, window.into(), "91-graphql-query");
+
+    // Ctrl+A takes the whole query, as it does in every other part that is
+    // not a body.
+    key(&mut cx, window, "ctrl-a");
+    key(&mut cx, window, "ctrl-c");
+    let all = clipboard(&mut cx);
+    for said in ["query GetUser($id: ID!)", "user(id: $id)", "\"id\": \"42\""] {
+        assert!(all.contains(said), "{said} in {all}");
+    }
     window
         .update(&mut cx, |view, _, cx| view.set_part(Part::Headers, cx))
         .unwrap();

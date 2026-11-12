@@ -1413,7 +1413,8 @@ impl Traffic {
                 | Part::Query
                 | Part::Form
                 | Part::Llm
-                | Part::Rpc,
+                | Part::Rpc
+                | Part::GraphQl,
                 _,
             ) => {
                 self.inspector.select.select_all();
