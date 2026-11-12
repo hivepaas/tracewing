@@ -166,11 +166,17 @@ t3220a10a = 正文不是 { $message }：{ $e }
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }，以 JSON 编写：发送时为 Protobuf。
 
+# Stopped: no answer was read. What reached the server shows in Traffic.
+t5a78825c = 已停止：未读取任何响应。已到达服务器的部分会显示在 Traffic 中。
+
 # Sending…
 te946e7bf = 正在发送…
 
 # Send
 tf28e14cf = 发送
+
+# Stop
+t4b7f7705 = 停止
 
 # New
 t8b242db1 = 新建

@@ -226,5 +226,50 @@ fn requests_composed_in_the_window_go_through() {
         .unwrap();
     wait_for(&mut cx, window, "both flows", |view| view.count() == 2);
 
+    // A send can be stopped, and then nothing of it reaches the page. The
+    // test executor runs background work on this thread, so the stop has to
+    // be asked for before the executor gets its turn; that a stop lands part
+    // way through a real send is `compose::tests::a_send_stops_where_it_stands`.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Compose, cx);
+            let page = view.compose_page.as_ref().unwrap();
+            let (method, url_field, body) =
+                (page.method.clone(), page.url.clone(), page.body.clone());
+            type_in(&method, "GET", cx);
+            // Twenty seconds of answer, a little at a time.
+            type_in(
+                &url_field,
+                &format!("https://localhost:{origin_port}/stream?events=40&gap_ms=500"),
+                cx,
+            );
+            type_in(&body, "", cx);
+            view.send_composed(cx);
+            assert!(view.compose_page.as_ref().unwrap().sending);
+
+            view.stop_composed(cx);
+            let page = view.compose_page.as_ref().unwrap();
+            assert!(!page.sending, "the page is free at once");
+            assert!(page.stopped, "and says the send was stopped");
+            assert!(page.answer.is_none());
+        })
+        .unwrap();
+    // The send that was let go of brings nothing back, however long it is given.
+    let after = Instant::now();
+    while after.elapsed() < Duration::from_secs(2) {
+        cx.run_until_parked();
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    window
+        .update(&mut cx, |view, _, _| {
+            let page = view.compose_page.as_ref().unwrap();
+            assert_eq!(answer(view), None, "no late answer");
+            assert_eq!(page.problem, None, "and it is not an error");
+            assert!(page.stopped);
+            assert!(!page.sending);
+        })
+        .unwrap();
+    shot(&mut cx, window.into(), "36-compose-stopped");
+
     std::fs::remove_dir_all(&dir).ok();
 }

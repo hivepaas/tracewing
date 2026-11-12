@@ -205,11 +205,17 @@ t3220a10a = Тело не является { $message }: { $e }
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, записанный как JSON: отправляется как Protobuf.
 
+# Stopped: no answer was read. What reached the server shows in Traffic.
+t5a78825c = Остановлено: ответ не прочитан. То, что дошло до сервера, видно в Traffic.
+
 # Sending…
 te946e7bf = Отправка…
 
 # Send
 tf28e14cf = Отправить
+
+# Stop
+t4b7f7705 = Остановить
 
 # New
 t8b242db1 = Новый

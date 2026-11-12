@@ -166,11 +166,17 @@ t3220a10a = Body không phải một { $message }: { $e }
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, viết dưới dạng JSON: khi gửi sẽ là Protobuf.
 
+# Stopped: no answer was read. What reached the server shows in Traffic.
+t5a78825c = Đã dừng: chưa đọc phản hồi nào. Phần đã tới server hiện trong Traffic.
+
 # Sending…
 te946e7bf = Đang gửi…
 
 # Send
 tf28e14cf = Gửi
+
+# Stop
+t4b7f7705 = Dừng
 
 # New
 t8b242db1 = Mới

@@ -166,11 +166,17 @@ t3220a10a = 本文が { $message } ではありません: { $e }
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message } を JSON で書きます。送信時は Protobuf になります。
 
+# Stopped: no answer was read. What reached the server shows in Traffic.
+t5a78825c = 停止しました: 応答は読み取っていません。サーバーに届いた分は Traffic に表示されます。
+
 # Sending…
 te946e7bf = 送信中…
 
 # Send
 tf28e14cf = 送信
+
+# Stop
+t4b7f7705 = 停止
 
 # New
 t8b242db1 = 新規

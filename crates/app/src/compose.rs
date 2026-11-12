@@ -37,10 +37,30 @@ pub struct Answer {
     pub took: Duration,
 }
 
+/// Asked to stop a send that is on its way. Dropping it, or sending on it,
+/// stops the one `send` it was made for.
+pub type Stop = tokio::sync::oneshot::Sender<()>;
+
+/// The other end, which `send` waits on.
+pub type Stopped = tokio::sync::oneshot::Receiver<()>;
+
+/// A pair of them, for a send about to start.
+pub fn stopper() -> (Stop, Stopped) {
+    tokio::sync::oneshot::channel()
+}
+
 /// Sends `message` through the proxy at `proxy`, trusting its CA as well as
 /// the system's roots (hosts tracewing does not decrypt show their own).
 /// Redirects are not followed: each step is worth seeing.
-pub fn send(proxy: SocketAddr, ca_pem: &Path, message: &Message) -> Result<Answer> {
+///
+/// `None` when `stop` asked it to stop first: the request is dropped where it
+/// stands, which closes the connection, rather than held to `WAIT_MAX`.
+pub fn send(
+    proxy: SocketAddr,
+    ca_pem: &Path,
+    message: &Message,
+    stop: Stopped,
+) -> Result<Option<Answer>> {
     let ca = std::fs::read(ca_pem).with_context(|| format!("read {}", ca_pem.display()))?;
     let client = reqwest::Client::builder()
         .proxy(reqwest::Proxy::all(format!("http://{proxy}"))?)
@@ -68,44 +88,55 @@ pub fn send(proxy: SocketAddr, ca_pem: &Path, message: &Message) -> Result<Answe
         .enable_all()
         .build()?;
     runtime.block_on(async move {
-        let started = Instant::now();
-        let mut response = request.send().await?;
-        let status = response.status().as_u16();
-        let version = format!("{:?}", response.version());
-        let headers: Vec<(String, String)> = response
-            .headers()
-            .iter()
-            .map(|(name, value)| {
-                (
-                    name.as_str().to_owned(),
-                    String::from_utf8_lossy(value.as_bytes()).into_owned(),
-                )
-            })
-            .collect();
-        let mut raw = Vec::new();
-        let mut bytes = 0u64;
-        while let Some(chunk) = response.chunk().await? {
-            bytes += chunk.len() as u64;
-            let room = HOLD_MAX.saturating_sub(raw.len());
-            raw.extend_from_slice(&chunk[..chunk.len().min(room)]);
+        // Waiting on `stop` alongside the request: when it wins, the request
+        // future is dropped here and its connection goes with it.
+        tokio::select! {
+            biased;
+            _ = stop => Ok(None),
+            answer = asked(request) => answer.map(Some),
         }
-        let took = started.elapsed();
-        let encoding = headers
-            .iter()
-            .find(|(name, _)| name.eq_ignore_ascii_case("content-encoding"))
-            .map(|(_, value)| value.as_str());
-        let body = match Encoding::from_header(encoding) {
-            Encoding::Identity | Encoding::Unknown => raw,
-            packed => decode::unpack(&raw, packed, HOLD_MAX).unwrap_or(raw),
-        };
-        Ok(Answer {
-            status,
-            version,
-            headers,
-            body,
-            bytes,
-            took,
+    })
+}
+
+/// The request itself, from sending it to the whole answer in hand.
+async fn asked(request: reqwest::RequestBuilder) -> Result<Answer> {
+    let started = Instant::now();
+    let mut response = request.send().await?;
+    let status = response.status().as_u16();
+    let version = format!("{:?}", response.version());
+    let headers: Vec<(String, String)> = response
+        .headers()
+        .iter()
+        .map(|(name, value)| {
+            (
+                name.as_str().to_owned(),
+                String::from_utf8_lossy(value.as_bytes()).into_owned(),
+            )
         })
+        .collect();
+    let mut raw = Vec::new();
+    let mut bytes = 0u64;
+    while let Some(chunk) = response.chunk().await? {
+        bytes += chunk.len() as u64;
+        let room = HOLD_MAX.saturating_sub(raw.len());
+        raw.extend_from_slice(&chunk[..chunk.len().min(room)]);
+    }
+    let took = started.elapsed();
+    let encoding = headers
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case("content-encoding"))
+        .map(|(_, value)| value.as_str());
+    let body = match Encoding::from_header(encoding) {
+        Encoding::Identity | Encoding::Unknown => raw,
+        packed => decode::unpack(&raw, packed, HOLD_MAX).unwrap_or(raw),
+    };
+    Ok(Answer {
+        status,
+        version,
+        headers,
+        body,
+        bytes,
+        took,
     })
 }
 
@@ -180,6 +211,50 @@ mod tests {
                 .to_string()
                 .contains("not kept whole")
         );
+    }
+
+    /// A proxy that accepts and then says nothing: without a stop, the send
+    /// would sit there until `WAIT_MAX`, ten minutes away.
+    #[test]
+    fn a_send_stops_where_it_stands() {
+        use std::net::TcpListener;
+
+        let dir = std::env::temp_dir().join(format!("tracewing-compose-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        tracewing_proxy::ca::LocalCa::load_or_create(
+            &dir,
+            tracewing_proxy::crypto_provider(),
+            Default::default(),
+        )
+        .unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let proxy = listener.local_addr().unwrap();
+        let held = std::thread::spawn(move || {
+            let accepted = listener.accept();
+            std::thread::sleep(Duration::from_secs(2));
+            drop(accepted);
+        });
+        let message = Message {
+            method: "GET".to_owned(),
+            url: "http://held.test/wait".to_owned(),
+            status: 0,
+            headers: Vec::new(),
+            body: Vec::new(),
+        };
+
+        let (stop, stopped) = stopper();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(200));
+            drop(stop);
+        });
+        let started = Instant::now();
+        let answer = send(proxy, &dir.join("ca.pem"), &message, stopped).unwrap();
+        let took = started.elapsed();
+
+        assert!(answer.is_none(), "a stopped send has no answer");
+        assert!(took < Duration::from_secs(5), "it waited {took:?}");
+        let _ = held.join();
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -166,11 +166,17 @@ t3220a10a = 본문이 { $message }이(가) 아닙니다: { $e }
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }을(를) JSON으로 씁니다. 보낼 때는 Protobuf로 갑니다.
 
+# Stopped: no answer was read. What reached the server shows in Traffic.
+t5a78825c = 중지됨: 응답을 읽지 않았습니다. 서버에 도달한 내용은 Traffic에 표시됩니다.
+
 # Sending…
 te946e7bf = 보내는 중…
 
 # Send
 tf28e14cf = 보내기
+
+# Stop
+t4b7f7705 = 중지
 
 # New
 t8b242db1 = 새로 만들기

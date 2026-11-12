@@ -191,11 +191,17 @@ t3220a10a = Gövde bir { $message } değil: { $e }
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, JSON olarak yazılır: Protobuf olarak gönderilir.
 
+# Stopped: no answer was read. What reached the server shows in Traffic.
+t5a78825c = Durduruldu: yanıt okunmadı. Sunucuya ulaşan kısım Traffic'te görünür.
+
 # Sending…
 te946e7bf = Gönderiliyor…
 
 # Send
 tf28e14cf = Gönder
+
+# Stop
+t4b7f7705 = Durdur
 
 # New
 t8b242db1 = Yeni

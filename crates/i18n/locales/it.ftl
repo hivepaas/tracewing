@@ -197,11 +197,17 @@ t3220a10a = Il corpo non è un { $message }: { $e }
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, scritto come JSON: viene inviato come Protobuf.
 
+# Stopped: no answer was read. What reached the server shows in Traffic.
+t5a78825c = Fermato: nessuna risposta è stata letta. Ciò che è arrivato al server compare in Traffic.
+
 # Sending…
 te946e7bf = Invio…
 
 # Send
 tf28e14cf = Invia
+
+# Stop
+t4b7f7705 = Ferma
 
 # New
 t8b242db1 = Nuova
