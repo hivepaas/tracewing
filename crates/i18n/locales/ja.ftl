@@ -1915,6 +1915,15 @@ t31eaddb7 = キーボードショートカット
 # Close
 tcd86acc3 = 閉じる
 
+# The signature in this body now works out to {now}, not {was}: it is no longer the transaction that was signed. tracewing holds no keys, so it cannot sign the new one.
+td0d9c66b = この本文の署名は今 { $was } ではなく { $now } になります: 署名されたトランザクションではなくなりました。tracewing は鍵を持たないので、新しいものに署名できません。
+
+# What this body carries no longer reads as a signed transaction. tracewing holds no keys, so it cannot sign it again.
+td97ae94b = この本文の中身は、もう署名済みトランザクションとして読めません。tracewing は鍵を持たないので、署名し直せません。
+
+# This body carries a signed transaction and its bytes have changed. The signatures are over the bytes as they were, and tracewing can neither check them nor make new ones.
+ta6e69f9a = この本文は署名済みトランザクションを運んでおり、そのバイトが変わりました。署名は元のバイトに対するもので、tracewing はそれを検証することも作り直すこともできません。
+
 # The certificate: {e}
 t0235648c = 証明書: { $e }
 

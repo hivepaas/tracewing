@@ -33,6 +33,19 @@ fn answer_json(protos: &Library, url: &str, answer: &Answer) -> Option<(String, 
     Some((message.full_name().to_owned(), json))
 }
 
+/// What to say about a body whose signed transaction an edit has left
+/// behind, if anything. Worked out as the body is drawn, so it is there
+/// before the send rather than after it.
+pub fn signature_trouble(page: &ComposePage, cx: &gpui::App) -> Option<String> {
+    let (shown, bytes) = page.loaded.as_ref()?;
+    let was = crate::signed::signed_in(bytes)?;
+    let text = page.body.read(cx).text().to_owned();
+    if &text == shown {
+        return None;
+    }
+    crate::signed::trouble(&was, crate::signed::signed_in(text.as_bytes()).as_ref())
+}
+
 /// The most of an answer's body drawn as text.
 const SHOWN_MAX: usize = 64 * 1024;
 
@@ -445,6 +458,11 @@ impl Traffic {
                 page.problem
                     .clone()
                     .map(|problem| div().text_color(rgb(c.error)).child(problem)),
+            )
+            .children(
+                signature_trouble(page, cx).map(|why| {
+                    div().text_size(px(12.)).text_color(rgb(c.warn)).child(why)
+                }),
             )
             .children((!page.calls.is_empty()).then(|| {
                 div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(

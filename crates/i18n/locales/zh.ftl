@@ -1915,6 +1915,15 @@ t31eaddb7 = 键盘快捷键
 # Close
 tcd86acc3 = 关闭
 
+# The signature in this body now works out to {now}, not {was}: it is no longer the transaction that was signed. tracewing holds no keys, so it cannot sign the new one.
+td0d9c66b = 这个正文里的签名现在算出来是 { $now }，不是 { $was }：它已经不是当初被签的那笔交易。tracewing 不持有私钥，无法为新的签名。
+
+# What this body carries no longer reads as a signed transaction. tracewing holds no keys, so it cannot sign it again.
+td97ae94b = 这个正文携带的内容已经读不出一笔已签名的交易。tracewing 不持有私钥，无法重新签名。
+
+# This body carries a signed transaction and its bytes have changed. The signatures are over the bytes as they were, and tracewing can neither check them nor make new ones.
+ta6e69f9a = 这个正文携带一笔已签名的交易，而它的字节已经变了。签名是针对原来的字节的，tracewing 既无法验证也无法重新生成。
+
 # The certificate: {e}
 t0235648c = 证书：{ $e }
 

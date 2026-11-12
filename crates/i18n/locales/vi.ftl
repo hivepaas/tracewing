@@ -1915,6 +1915,15 @@ t31eaddb7 = Phím tắt
 # Close
 tcd86acc3 = Đóng
 
+# The signature in this body now works out to {now}, not {was}: it is no longer the transaction that was signed. tracewing holds no keys, so it cannot sign the new one.
+td0d9c66b = Chữ ký trong body này giờ tính ra { $now }, không phải { $was }: đây không còn là transaction đã được ký. tracewing không giữ khoá nên không ký lại được.
+
+# What this body carries no longer reads as a signed transaction. tracewing holds no keys, so it cannot sign it again.
+td97ae94b = Thứ body này mang không còn đọc được như một transaction đã ký. tracewing không giữ khoá nên không ký lại được.
+
+# This body carries a signed transaction and its bytes have changed. The signatures are over the bytes as they were, and tracewing can neither check them nor make new ones.
+ta6e69f9a = Body này mang một transaction đã ký và các byte của nó đã thay đổi. Chữ ký là cho các byte như lúc trước, và tracewing không kiểm được cũng không tạo mới được.
+
 # The certificate: {e}
 t0235648c = Chứng chỉ: { $e }
 

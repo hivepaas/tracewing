@@ -1915,6 +1915,15 @@ t31eaddb7 = 키보드 단축키
 # Close
 tcd86acc3 = 닫기
 
+# The signature in this body now works out to {now}, not {was}: it is no longer the transaction that was signed. tracewing holds no keys, so it cannot sign the new one.
+td0d9c66b = 이 본문의 서명은 이제 { $was }이 아니라 { $now }으로 계산됩니다: 서명된 그 트랜잭션이 아닙니다. tracewing은 키를 갖지 않으므로 새로 서명할 수 없습니다.
+
+# What this body carries no longer reads as a signed transaction. tracewing holds no keys, so it cannot sign it again.
+td97ae94b = 이 본문의 내용은 더 이상 서명된 트랜잭션으로 읽히지 않습니다. tracewing은 키를 갖지 않으므로 다시 서명할 수 없습니다.
+
+# This body carries a signed transaction and its bytes have changed. The signatures are over the bytes as they were, and tracewing can neither check them nor make new ones.
+ta6e69f9a = 이 본문은 서명된 트랜잭션을 담고 있고, 그 바이트가 바뀌었습니다. 서명은 바뀌기 전 바이트에 대한 것이며, tracewing은 그것을 검증할 수도 새로 만들 수도 없습니다.
+
 # The certificate: {e}
 t0235648c = 인증서: { $e }
 

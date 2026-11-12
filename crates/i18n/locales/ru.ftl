@@ -2104,6 +2104,15 @@ t31eaddb7 = Сочетания клавиш
 # Close
 tcd86acc3 = Закрыть
 
+# The signature in this body now works out to {now}, not {was}: it is no longer the transaction that was signed. tracewing holds no keys, so it cannot sign the new one.
+td0d9c66b = Подпись в этом теле теперь даёт { $now }, а не { $was }: это уже не та транзакция, которую подписали. У tracewing нет ключей, поэтому новую он подписать не может.
+
+# What this body carries no longer reads as a signed transaction. tracewing holds no keys, so it cannot sign it again.
+td97ae94b = То, что несёт это тело, больше не читается как подписанная транзакция. У tracewing нет ключей, поэтому подписать её заново он не может.
+
+# This body carries a signed transaction and its bytes have changed. The signatures are over the bytes as they were, and tracewing can neither check them nor make new ones.
+ta6e69f9a = Это тело несёт подписанную транзакцию, и его байты изменились. Подписи стоят под байтами, какими они были, и tracewing не может ни проверить их, ни создать новые.
+
 # The certificate: {e}
 t0235648c = Сертификат: { $e }
 

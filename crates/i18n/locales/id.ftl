@@ -1915,6 +1915,15 @@ t31eaddb7 = Pintasan keyboard
 # Close
 tcd86acc3 = Tutup
 
+# The signature in this body now works out to {now}, not {was}: it is no longer the transaction that was signed. tracewing holds no keys, so it cannot sign the new one.
+td0d9c66b = Tanda tangan di body ini sekarang menghasilkan { $now }, bukan { $was }: ini bukan lagi transaksi yang ditandatangani. tracewing tidak menyimpan kunci, jadi tidak bisa menandatangani yang baru.
+
+# What this body carries no longer reads as a signed transaction. tracewing holds no keys, so it cannot sign it again.
+td97ae94b = Isi body ini tidak lagi terbaca sebagai transaksi yang ditandatangani. tracewing tidak menyimpan kunci, jadi tidak bisa menandatanganinya lagi.
+
+# This body carries a signed transaction and its bytes have changed. The signatures are over the bytes as they were, and tracewing can neither check them nor make new ones.
+ta6e69f9a = Body ini berisi transaksi yang ditandatangani dan byte-nya sudah berubah. Tanda tangannya atas byte yang lama, dan tracewing tidak bisa memeriksanya maupun membuat yang baru.
+
 # The certificate: {e}
 t0235648c = Sertifikat: { $e }
 

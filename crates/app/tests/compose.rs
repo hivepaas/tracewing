@@ -15,13 +15,14 @@ use std::{
     time::{Duration, Instant},
 };
 use tracewing::{
+    compose_page::signature_trouble,
     engine::{Engine, EngineOptions},
     input::TextInput,
     rpc_view::Shown,
     traffic::{Screen, Traffic},
 };
 use tracewing_dev::benchkit;
-use tracewing_store::settings::StorageSettings;
+use tracewing_store::{settings::StorageSettings, web3};
 
 fn wait_for(
     cx: &mut HeadlessAppContext,
@@ -58,6 +59,10 @@ fn shot(cx: &mut HeadlessAppContext, window: gpui::AnyWindowHandle, name: &str) 
 fn type_in(input: &Entity<TextInput>, text: &str, cx: &mut gpui::Context<Traffic>) {
     input.update(cx, |input, cx| input.set_text(text, 0..0, cx));
 }
+
+/// The same sample the store's tests read: a real transaction, captured from
+/// Ethereum mainnet. See `crates/store/testdata/jsonrpc/README.md`.
+const SEND_RAW: &str = include_str!("../../store/testdata/jsonrpc/send_raw.req.json");
 
 /// The lines of the inspector's JSON-RPC part, as label and value.
 fn lines(shown: &Shown) -> Vec<(&str, &str)> {
@@ -310,6 +315,74 @@ fn requests_composed_in_the_window_go_through() {
             );
         })
         .unwrap();
+
+    // Editing a body that carries a signed transaction says so, before the
+    // send rather than after it: the signature is over bytes that are gone.
+    let raw = serde_json::from_str::<serde_json::Value>(SEND_RAW).unwrap()["params"][0]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let signed_body = format!(
+        r#"{{"jsonrpc":"2.0","id":4,"method":"eth_sendRawTransaction","params":["{raw}"]}}"#
+    );
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Compose, cx);
+            let page = view.compose_page.as_ref().unwrap();
+            let (url_field, body) = (page.url.clone(), page.body.clone());
+            type_in(&url_field, &rpc, cx);
+            type_in(&body, &signed_body, cx);
+            view.send_composed(cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the transaction's answer", |view| {
+        answer(view).is_some()
+    });
+    // Sent again from Traffic, so the page knows the body it came with.
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the transaction's flow", |view| {
+        view.count() == 4
+    });
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(3, cx);
+            view.edit_flow(cx);
+            let page = view.compose_page.as_ref().unwrap();
+            assert_eq!(
+                signature_trouble(page, cx),
+                None,
+                "as it came, nothing is the matter"
+            );
+        })
+        .unwrap();
+
+    // A byte of the transaction changed: the signature now works out to
+    // someone else, which is how it is caught.
+    let mut bytes = web3::bytes_of(&raw).unwrap();
+    let at = bytes.len() - 40;
+    bytes[at] ^= 0x01;
+    let edited = signed_body.replace(&raw, &web3::hex_text(&bytes));
+    let whom = web3::Transaction::decode(&bytes).and_then(|tx| tx.from);
+    window
+        .update(&mut cx, |view, _, cx| {
+            let body = view.compose_page.as_ref().unwrap().body.clone();
+            type_in(&body, &edited, cx);
+            let page = view.compose_page.as_ref().unwrap();
+            let said = signature_trouble(page, cx).expect("it says so");
+            match &whom {
+                Some(whom) => assert!(said.contains(whom.as_str()), "{said}"),
+                None => assert!(said.contains("no longer reads"), "{said}"),
+            }
+
+            // Put back as it was: nothing is the matter again.
+            type_in(&body, &signed_body, cx);
+            let page = view.compose_page.as_ref().unwrap();
+            assert_eq!(signature_trouble(page, cx), None);
+        })
+        .unwrap();
+    shot(&mut cx, window.into(), "37-compose-signature");
 
     // A send can be stopped, and then nothing of it reaches the page. The
     // test executor runs background work on this thread, so the stop has to
