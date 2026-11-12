@@ -2254,6 +2254,36 @@ t4ab0ecb4 = 단축키 { $keys }
 # Columns
 tea156fdc = 열
 
+# Field {number}, {wire}
+ta367cc19 = 필드 { $number }, { $wire }
+
+# gRPC, with no .proto to name its fields
+t212b75bf = gRPC, 필드 이름을 알려줄 .proto 없음
+
+# Protobuf, with no .proto to name its fields
+t7f1e0096 = Protobuf, 필드 이름을 알려줄 .proto 없음
+
+# a number
+tb42f6255 = 숫자
+
+# eight bytes
+t0487503b = 8바이트
+
+# bytes
+t65b1d004 = 바이트
+
+# four bytes
+tabee15aa = 4바이트
+
+# unknown
+t9b759fb9 = 알 수 없음
+
+# a message of {n} field | a message of {n} fields
+t88e6aa3c =
+    { $n ->
+       *[other] 필드 { $n }개짜리 메시지
+    }
+
 # base64url
 tadfc8ac3 = base64url
 
@@ -2463,6 +2493,114 @@ tc7a82a5d = 1904년부터의 초 (HFS+)
 
 # Days since 1899 (spreadsheet)
 td7bc06f2 = 1899년부터의 일수 (스프레드시트)
+
+# Key wrapped with
+ted680adb = 키 래핑 방식
+
+# Encrypted with
+t7e4ecbbd = 암호화 방식
+
+# Key named
+t79491281 = 키 이름
+
+# The rest
+tbfad8752 = 나머지
+
+# encrypted: it needs the key, which tracewing does not have
+tacb4301a = 암호화됨: 키가 필요하지만 tracewing에는 없습니다
+
+# JWE, an encrypted token
+t6da81e5b = JWE, 암호화된 토큰
+
+# What it is for
+t7f5984ef = 용도
+
+# shared key, encrypted
+t63aa35b5 = 공유 키, 암호화
+
+# public key, signed
+tf7f41fd7 = 공개 키, 서명됨
+
+# The claims
+t5918e3d1 = 클레임
+
+# PASETO
+t309420ff = PASETO
+
+# MD5, or MD4, or NTLM
+t562aaed5 = MD5, MD4 또는 NTLM
+
+# SHA-1, or RIPEMD-160
+tf202ac9d = SHA-1 또는 RIPEMD-160
+
+# SHA-224
+tc24ef188 = SHA-224
+
+# SHA-256, or SHA3-256, or BLAKE2s
+ta2e8a8a4 = SHA-256, SHA3-256 또는 BLAKE2s
+
+# SHA-384
+ta4d7ea95 = SHA-384
+
+# SHA-512, or SHA3-512, or BLAKE2b
+t275da5bd = SHA-512, SHA3-512 또는 BLAKE2b
+
+# A hash, by its size
+te82b53c8 = 크기로 본 해시
+
+# Made by
+te8ff7e65 = 생성 방식
+
+# bcrypt
+tef91acbf = bcrypt
+
+# Rounds
+tfdc8b178 = 라운드
+
+# 2 to the {cost}
+t25e03044 = 2의 { $cost }제곱
+
+# Memory
+t58f879ce = 메모리
+
+# Passes
+t364b5a7c = 반복 횟수
+
+# In parallel
+t81449775 = 병렬 수
+
+# SHA-256 crypt
+tefb8e7ad = SHA-256 crypt
+
+# SHA-512 crypt
+t9dcf716c = SHA-512 crypt
+
+# A hashed password
+t0157a1e6 = 해시된 비밀번호
+
+# PEM
+tf70119c9 = PEM
+
+# What it holds
+tff372c62 = 내용
+
+# How much
+td909a26a = 얼마나
+
+# {size} of DER
+tbfdcf758 = DER { $size }
+
+# Which message
+t867ac265 = 어떤 메시지
+
+# Made
+t3890a578 = 생성
+
+# Named
+t6055a346 = 이름
+
+# SAML
+t015e7110 = SAML
 
 # Trace context
 ta58c7c95 = 트레이스 컨텍스트

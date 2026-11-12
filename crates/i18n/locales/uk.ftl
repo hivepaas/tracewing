@@ -2467,6 +2467,39 @@ t4ab0ecb4 = Комбінації клавіш { $keys }
 # Columns
 tea156fdc = Стовпці
 
+# Field {number}, {wire}
+ta367cc19 = Поле { $number }, { $wire }
+
+# gRPC, with no .proto to name its fields
+t212b75bf = gRPC, без .proto для назв полів
+
+# Protobuf, with no .proto to name its fields
+t7f1e0096 = Protobuf, без .proto для назв полів
+
+# a number
+tb42f6255 = число
+
+# eight bytes
+t0487503b = вісім байтів
+
+# bytes
+t65b1d004 = байти
+
+# four bytes
+tabee15aa = чотири байти
+
+# unknown
+t9b759fb9 = невідомо
+
+# a message of {n} field | a message of {n} fields
+t88e6aa3c =
+    { $n ->
+        [one] повідомлення з { $n } поля
+        [few] повідомлення з { $n } полів
+        [many] повідомлення з { $n } полів
+       *[other] повідомлення з { $n } полів
+    }
+
 # base64url
 tadfc8ac3 = base64url
 
@@ -2679,6 +2712,114 @@ tc7a82a5d = Секунди з 1904 (HFS+)
 
 # Days since 1899 (spreadsheet)
 td7bc06f2 = Дні з 1899 (таблиця)
+
+# Key wrapped with
+ted680adb = Ключ запаковано через
+
+# Encrypted with
+t7e4ecbbd = Зашифровано через
+
+# Key named
+t79491281 = Ім'я ключа
+
+# The rest
+tbfad8752 = Решта
+
+# encrypted: it needs the key, which tracewing does not have
+tacb4301a = зашифровано: потрібен ключ, якого tracewing не має
+
+# JWE, an encrypted token
+t6da81e5b = JWE, зашифрований токен
+
+# What it is for
+t7f5984ef = Для чого
+
+# shared key, encrypted
+t63aa35b5 = спільний ключ, зашифровано
+
+# public key, signed
+tf7f41fd7 = відкритий ключ, підписано
+
+# The claims
+t5918e3d1 = Твердження
+
+# PASETO
+t309420ff = PASETO
+
+# MD5, or MD4, or NTLM
+t562aaed5 = MD5, MD4 або NTLM
+
+# SHA-1, or RIPEMD-160
+tf202ac9d = SHA-1 або RIPEMD-160
+
+# SHA-224
+tc24ef188 = SHA-224
+
+# SHA-256, or SHA3-256, or BLAKE2s
+ta2e8a8a4 = SHA-256, SHA3-256 або BLAKE2s
+
+# SHA-384
+ta4d7ea95 = SHA-384
+
+# SHA-512, or SHA3-512, or BLAKE2b
+t275da5bd = SHA-512, SHA3-512 або BLAKE2b
+
+# A hash, by its size
+te82b53c8 = Хеш, судячи з розміру
+
+# Made by
+te8ff7e65 = Зроблено через
+
+# bcrypt
+tef91acbf = bcrypt
+
+# Rounds
+tfdc8b178 = Раунди
+
+# 2 to the {cost}
+t25e03044 = 2 у степені { $cost }
+
+# Memory
+t58f879ce = Пам'ять
+
+# Passes
+t364b5a7c = Проходи
+
+# In parallel
+t81449775 = Паралельно
+
+# SHA-256 crypt
+tefb8e7ad = SHA-256 crypt
+
+# SHA-512 crypt
+t9dcf716c = SHA-512 crypt
+
+# A hashed password
+t0157a1e6 = Хешований пароль
+
+# PEM
+tf70119c9 = PEM
+
+# What it holds
+tff372c62 = Що всередині
+
+# How much
+td909a26a = Скільки
+
+# {size} of DER
+tbfdcf758 = { $size } DER
+
+# Which message
+t867ac265 = Яке повідомлення
+
+# Made
+t3890a578 = Створено
+
+# Named
+t6055a346 = Ім'я
+
+# SAML
+t015e7110 = SAML
 
 # Trace context
 ta58c7c95 = Контекст трасування

@@ -2254,6 +2254,36 @@ t4ab0ecb4 = Pintasan { $keys }
 # Columns
 tea156fdc = Kolom
 
+# Field {number}, {wire}
+ta367cc19 = Bidang { $number }, { $wire }
+
+# gRPC, with no .proto to name its fields
+t212b75bf = gRPC, tanpa .proto untuk menamai bidangnya
+
+# Protobuf, with no .proto to name its fields
+t7f1e0096 = Protobuf, tanpa .proto untuk menamai bidangnya
+
+# a number
+tb42f6255 = sebuah angka
+
+# eight bytes
+t0487503b = delapan byte
+
+# bytes
+t65b1d004 = byte
+
+# four bytes
+tabee15aa = empat byte
+
+# unknown
+t9b759fb9 = tidak dikenal
+
+# a message of {n} field | a message of {n} fields
+t88e6aa3c =
+    { $n ->
+       *[other] pesan dengan { $n } bidang
+    }
+
 # base64url
 tadfc8ac3 = base64url
 
@@ -2463,6 +2493,114 @@ tc7a82a5d = Detik sejak 1904 (HFS+)
 
 # Days since 1899 (spreadsheet)
 td7bc06f2 = Hari sejak 1899 (lembar sebar)
+
+# Key wrapped with
+ted680adb = Kunci dibungkus dengan
+
+# Encrypted with
+t7e4ecbbd = Dienkripsi dengan
+
+# Key named
+t79491281 = Kunci bernama
+
+# The rest
+tbfad8752 = Sisanya
+
+# encrypted: it needs the key, which tracewing does not have
+tacb4301a = terenkripsi: perlu kuncinya, yang tidak dimiliki tracewing
+
+# JWE, an encrypted token
+t6da81e5b = JWE, token terenkripsi
+
+# What it is for
+t7f5984ef = Untuk apa
+
+# shared key, encrypted
+t63aa35b5 = kunci bersama, terenkripsi
+
+# public key, signed
+tf7f41fd7 = kunci publik, ditandatangani
+
+# The claims
+t5918e3d1 = Klaimnya
+
+# PASETO
+t309420ff = PASETO
+
+# MD5, or MD4, or NTLM
+t562aaed5 = MD5, MD4, atau NTLM
+
+# SHA-1, or RIPEMD-160
+tf202ac9d = SHA-1 atau RIPEMD-160
+
+# SHA-224
+tc24ef188 = SHA-224
+
+# SHA-256, or SHA3-256, or BLAKE2s
+ta2e8a8a4 = SHA-256, SHA3-256, atau BLAKE2s
+
+# SHA-384
+ta4d7ea95 = SHA-384
+
+# SHA-512, or SHA3-512, or BLAKE2b
+t275da5bd = SHA-512, SHA3-512, atau BLAKE2b
+
+# A hash, by its size
+te82b53c8 = Sebuah hash, dari ukurannya
+
+# Made by
+te8ff7e65 = Dibuat oleh
+
+# bcrypt
+tef91acbf = bcrypt
+
+# Rounds
+tfdc8b178 = Putaran
+
+# 2 to the {cost}
+t25e03044 = 2 pangkat { $cost }
+
+# Memory
+t58f879ce = Memori
+
+# Passes
+t364b5a7c = Lintasan
+
+# In parallel
+t81449775 = Paralel
+
+# SHA-256 crypt
+tefb8e7ad = SHA-256 crypt
+
+# SHA-512 crypt
+t9dcf716c = SHA-512 crypt
+
+# A hashed password
+t0157a1e6 = Kata sandi yang di-hash
+
+# PEM
+tf70119c9 = PEM
+
+# What it holds
+tff372c62 = Apa isinya
+
+# How much
+td909a26a = Berapa banyak
+
+# {size} of DER
+tbfdcf758 = { $size } DER
+
+# Which message
+t867ac265 = Pesan yang mana
+
+# Made
+t3890a578 = Dibuat
+
+# Named
+t6055a346 = Nama
+
+# SAML
+t015e7110 = SAML
 
 # Trace context
 ta58c7c95 = Konteks trace

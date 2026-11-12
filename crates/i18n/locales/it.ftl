@@ -2394,6 +2394,38 @@ t4ab0ecb4 = Scorciatoie { $keys }
 # Columns
 tea156fdc = Colonne
 
+# Field {number}, {wire}
+ta367cc19 = Campo { $number }, { $wire }
+
+# gRPC, with no .proto to name its fields
+t212b75bf = gRPC, senza .proto che ne nomini i campi
+
+# Protobuf, with no .proto to name its fields
+t7f1e0096 = Protobuf, senza .proto che ne nomini i campi
+
+# a number
+tb42f6255 = un numero
+
+# eight bytes
+t0487503b = otto byte
+
+# bytes
+t65b1d004 = byte
+
+# four bytes
+tabee15aa = quattro byte
+
+# unknown
+t9b759fb9 = sconosciuto
+
+# a message of {n} field | a message of {n} fields
+t88e6aa3c =
+    { $n ->
+        [one] un messaggio di { $n } campo
+        [many] un messaggio di { $n } campi
+       *[other] un messaggio di { $n } campi
+    }
+
 # base64url
 tadfc8ac3 = base64url
 
@@ -2605,6 +2637,114 @@ tc7a82a5d = Secondi dal 1904 (HFS+)
 
 # Days since 1899 (spreadsheet)
 td7bc06f2 = Giorni dal 1899 (foglio di calcolo)
+
+# Key wrapped with
+ted680adb = Chiave avvolta con
+
+# Encrypted with
+t7e4ecbbd = Cifrato con
+
+# Key named
+t79491281 = Chiave chiamata
+
+# The rest
+tbfad8752 = Il resto
+
+# encrypted: it needs the key, which tracewing does not have
+tacb4301a = cifrato: serve la chiave, che tracewing non ha
+
+# JWE, an encrypted token
+t6da81e5b = JWE, un token cifrato
+
+# What it is for
+t7f5984ef = A che serve
+
+# shared key, encrypted
+t63aa35b5 = chiave condivisa, cifrato
+
+# public key, signed
+tf7f41fd7 = chiave pubblica, firmato
+
+# The claims
+t5918e3d1 = Le dichiarazioni
+
+# PASETO
+t309420ff = PASETO
+
+# MD5, or MD4, or NTLM
+t562aaed5 = MD5, MD4 o NTLM
+
+# SHA-1, or RIPEMD-160
+tf202ac9d = SHA-1 o RIPEMD-160
+
+# SHA-224
+tc24ef188 = SHA-224
+
+# SHA-256, or SHA3-256, or BLAKE2s
+ta2e8a8a4 = SHA-256, SHA3-256 o BLAKE2s
+
+# SHA-384
+ta4d7ea95 = SHA-384
+
+# SHA-512, or SHA3-512, or BLAKE2b
+t275da5bd = SHA-512, SHA3-512 o BLAKE2b
+
+# A hash, by its size
+te82b53c8 = Un hash, dalla sua dimensione
+
+# Made by
+te8ff7e65 = Fatto da
+
+# bcrypt
+tef91acbf = bcrypt
+
+# Rounds
+tfdc8b178 = Round
+
+# 2 to the {cost}
+t25e03044 = 2 alla { $cost }
+
+# Memory
+t58f879ce = Memoria
+
+# Passes
+t364b5a7c = Passaggi
+
+# In parallel
+t81449775 = In parallelo
+
+# SHA-256 crypt
+tefb8e7ad = SHA-256 crypt
+
+# SHA-512 crypt
+t9dcf716c = SHA-512 crypt
+
+# A hashed password
+t0157a1e6 = Una password con hash
+
+# PEM
+tf70119c9 = PEM
+
+# What it holds
+tff372c62 = Che cosa contiene
+
+# How much
+td909a26a = Quanto
+
+# {size} of DER
+tbfdcf758 = { $size } di DER
+
+# Which message
+t867ac265 = Quale messaggio
+
+# Made
+t3890a578 = Creato
+
+# Named
+t6055a346 = Nome
+
+# SAML
+t015e7110 = SAML
 
 # Trace context
 ta58c7c95 = Contesto di trace

@@ -2341,6 +2341,37 @@ t4ab0ecb4 = Kısayollar { $keys }
 # Columns
 tea156fdc = Sütunlar
 
+# Field {number}, {wire}
+ta367cc19 = Alan { $number }, { $wire }
+
+# gRPC, with no .proto to name its fields
+t212b75bf = gRPC, alanlarını adlandıracak .proto yok
+
+# Protobuf, with no .proto to name its fields
+t7f1e0096 = Protobuf, alanlarını adlandıracak .proto yok
+
+# a number
+tb42f6255 = bir sayı
+
+# eight bytes
+t0487503b = sekiz bayt
+
+# bytes
+t65b1d004 = baytlar
+
+# four bytes
+tabee15aa = dört bayt
+
+# unknown
+t9b759fb9 = bilinmiyor
+
+# a message of {n} field | a message of {n} fields
+t88e6aa3c =
+    { $n ->
+        [one] { $n } alanlı bir mesaj
+       *[other] { $n } alanlı bir mesaj
+    }
+
 # base64url
 tadfc8ac3 = base64url
 
@@ -2551,6 +2582,114 @@ tc7a82a5d = 1904'ten beri saniye (HFS+)
 
 # Days since 1899 (spreadsheet)
 td7bc06f2 = 1899'dan beri gün (hesap tablosu)
+
+# Key wrapped with
+ted680adb = Anahtarı saran
+
+# Encrypted with
+t7e4ecbbd = Şifreleyen
+
+# Key named
+t79491281 = Anahtar adı
+
+# The rest
+tbfad8752 = Geri kalanı
+
+# encrypted: it needs the key, which tracewing does not have
+tacb4301a = şifreli: anahtar gerekir, tracewing'de yok
+
+# JWE, an encrypted token
+t6da81e5b = JWE, şifreli bir token
+
+# What it is for
+t7f5984ef = Ne için
+
+# shared key, encrypted
+t63aa35b5 = paylaşılan anahtar, şifreli
+
+# public key, signed
+tf7f41fd7 = açık anahtar, imzalı
+
+# The claims
+t5918e3d1 = İddialar
+
+# PASETO
+t309420ff = PASETO
+
+# MD5, or MD4, or NTLM
+t562aaed5 = MD5, MD4 ya da NTLM
+
+# SHA-1, or RIPEMD-160
+tf202ac9d = SHA-1 ya da RIPEMD-160
+
+# SHA-224
+tc24ef188 = SHA-224
+
+# SHA-256, or SHA3-256, or BLAKE2s
+ta2e8a8a4 = SHA-256, SHA3-256 ya da BLAKE2s
+
+# SHA-384
+ta4d7ea95 = SHA-384
+
+# SHA-512, or SHA3-512, or BLAKE2b
+t275da5bd = SHA-512, SHA3-512 ya da BLAKE2b
+
+# A hash, by its size
+te82b53c8 = Boyutuna göre bir özet
+
+# Made by
+te8ff7e65 = Yapan
+
+# bcrypt
+tef91acbf = bcrypt
+
+# Rounds
+tfdc8b178 = Tur
+
+# 2 to the {cost}
+t25e03044 = 2 üzeri { $cost }
+
+# Memory
+t58f879ce = Bellek
+
+# Passes
+t364b5a7c = Geçiş
+
+# In parallel
+t81449775 = Paralel
+
+# SHA-256 crypt
+tefb8e7ad = SHA-256 crypt
+
+# SHA-512 crypt
+t9dcf716c = SHA-512 crypt
+
+# A hashed password
+t0157a1e6 = Özetlenmiş bir parola
+
+# PEM
+tf70119c9 = PEM
+
+# What it holds
+tff372c62 = İçinde ne var
+
+# How much
+td909a26a = Ne kadar
+
+# {size} of DER
+tbfdcf758 = { $size } DER
+
+# Which message
+t867ac265 = Hangi mesaj
+
+# Made
+t3890a578 = Oluşturuldu
+
+# Named
+t6055a346 = Adı
+
+# SAML
+t015e7110 = SAML
 
 # Trace context
 ta58c7c95 = İzleme bağlamı
