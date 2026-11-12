@@ -42,15 +42,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Ubuntu's mirrors once held this step for 15 minutes, a package at a time:
+      # each download gives up sooner, the whole is tried again, and then fails.
       - name: "Linux packages (GPUI: Wayland, X11, Vulkan, fonts)"
         if: runner.os == 'Linux'
+        timeout-minutes: 10
+        env:
+          APT: -o Acquire::Retries=3 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential pkg-config libfontconfig-dev libfreetype-dev \
-            libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev \
-            libx11-xcb-dev libxcb1-dev libxcb-xkb-dev libxcb-shape0-dev libxcb-xfixes0-dev \
-            libvulkan-dev libdbus-1-dev libzstd-dev
+          for try in 1 2 3; do
+            sudo apt-get $APT update && sudo apt-get $APT install -y --no-install-recommends \
+              build-essential pkg-config libfontconfig-dev libfreetype-dev \
+              libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev \
+              libx11-xcb-dev libxcb1-dev libxcb-xkb-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+              libvulkan-dev libdbus-1-dev libzstd-dev && exit 0
+            echo "apt failed ($try of 3)"
+            sleep 10
+          done
+          exit 1
 
       # The version and its components: rust-toolchain.toml.
       - name: Rust
