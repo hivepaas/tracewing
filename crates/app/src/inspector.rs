@@ -1514,6 +1514,19 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
                 c.on_tonal,
             )
         }))
+        .children(
+            detail
+                .rpc
+                .clone()
+                .map(|method| chip(tr!("RPC: {method}", method = method), c.tonal, c.on_tonal)),
+        )
+        .children(detail.rpc_error.map(|code| {
+            // A failed call answered 200, so the status chip says nothing is
+            // wrong: this is what says it. The message is in the body.
+            let (ground, ink) = status_colors(Some(500));
+            let text = format!("RPC {}", tracewing_store::jsonrpc::code_text(code));
+            chip(text, ground, ink).max_w_full().rounded(px(12.))
+        }))
         .child(plain(detail.protocols()))
         .children(if detail.open {
             Some(chip(tr!("Open"), c.ok_ground, c.ok))

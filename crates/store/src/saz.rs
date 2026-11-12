@@ -12,6 +12,7 @@ use crate::{
         self, Connections, Imported, address, encoding_kept, header_lines, host_of, unix_micros,
         version_of,
     },
+    jsonrpc,
     settings::StorageSettings,
     store::FlowRecord,
 };
@@ -472,6 +473,22 @@ impl Session {
             ),
             None => (None, None, String::new(), Vec::new(), None),
         };
+        let rpc = match req_encoding {
+            None => jsonrpc::method(
+                &self.method,
+                req_content_type.as_deref(),
+                &self.request.body,
+            ),
+            Some(_) => None,
+        };
+        // Only a reply to a call that was JSON-RPC is looked at, so that no
+        // other JSON is parsed a second time.
+        let rpc_error = match (rpc.is_some(), &resp_encoding) {
+            (true, None) => jsonrpc::faults(content_type.as_deref(), &resp_body)
+                .first()
+                .map(|fault| fault.code),
+            _ => None,
+        };
         FlowRecord {
             started_us: started,
             client,
@@ -490,6 +507,8 @@ impl Session {
             req_headers: self.request.lines(),
             resp_headers,
             graphql,
+            rpc,
+            rpc_error,
             conn_id: conn.map(|(id, _)| id),
             blocked_us: made.then_some(0),
             dns_us: made.then(|| meta.ms("DNSTime")).flatten(),

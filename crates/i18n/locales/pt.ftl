@@ -470,6 +470,9 @@ tce693254 = Túnel, não descriptografado
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
+# RPC: {method}
+tf8162891 = RPC: { $method }
+
 # Over connection {id}, made before: no time went on connecting.
 t84144a81 = Pela conexão { $id }, feita antes: nenhum tempo foi gasto conectando.
 

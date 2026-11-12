@@ -436,6 +436,9 @@ tce693254 = トンネル、未復号
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
+# RPC: {method}
+tf8162891 = RPC: { $method }
+
 # Over connection {id}, made before: no time went on connecting.
 t84144a81 = 以前に確立された接続 { $id } を使用: 接続に時間はかかっていません。
 

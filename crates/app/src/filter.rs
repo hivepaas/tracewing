@@ -1,6 +1,6 @@
 //! What the filter box means, and finding the flows that fit.
 //!
-//! `host:myapp method:post status:4xx type:json graphql:GetUser app:curl
+//! `host:myapp method:post status:4xx type:json graphql:GetUser rpc:eth_call app:curl
 //! device:iphone grpc:error` narrow by column;
 //! anything else
 //! is text to find in URLs and in bodies. The chips and the host chosen in
@@ -23,16 +23,18 @@ pub enum Kind {
     All,
     Json,
     GraphQl,
+    Rpc,
     Errors,
     WebSocket,
     Media,
 }
 
 impl Kind {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::All,
         Self::Json,
         Self::GraphQl,
+        Self::Rpc,
         Self::Errors,
         Self::WebSocket,
         Self::Media,
@@ -43,6 +45,7 @@ impl Kind {
             Self::All => tr!("All"),
             Self::Json => "JSON".to_owned(),
             Self::GraphQl => "GraphQL".to_owned(),
+            Self::Rpc => "JSON-RPC".to_owned(),
             Self::Errors => tr!("Errors"),
             Self::WebSocket => "WebSocket".to_owned(),
             Self::Media => tr!("Media"),
@@ -54,7 +57,11 @@ impl Kind {
             Self::All => None,
             Self::Json => Some("content_type LIKE '%json%'"),
             Self::GraphQl => Some("graphql IS NOT NULL"),
-            Self::Errors => Some("(status >= 400 OR status IS NULL OR grpc_status > 0)"),
+            Self::Rpc => Some("rpc IS NOT NULL"),
+            // A JSON-RPC call that failed answered 200, as a gRPC one does.
+            Self::Errors => Some(
+                "(status >= 400 OR status IS NULL OR grpc_status > 0 OR rpc_error IS NOT NULL)",
+            ),
             Self::WebSocket => Some("kind = 'websocket'"),
             Self::Media => Some(
                 "(content_type LIKE 'image/%' OR content_type LIKE 'video/%' \
@@ -80,6 +87,8 @@ pub struct Filter {
     pub content_type: Option<String>,
     /// A part of the GraphQL operation, as `GetUser` or `mutation`.
     pub graphql: Option<String>,
+    /// A part of the JSON-RPC method called, from the box.
+    pub rpc: Option<String>,
     /// A part of the program's name, from the box.
     pub app: Option<String>,
     /// The whole name, from the sidebar.
@@ -116,6 +125,9 @@ impl Filter {
                 }
                 Some(("graphql" | "gql", value)) if !value.is_empty() => {
                     filter.graphql = Some(value.to_owned());
+                }
+                Some(("rpc", value)) if !value.is_empty() => {
+                    filter.rpc = Some(value.to_owned());
                 }
                 Some(("app", value)) if !value.is_empty() => {
                     filter.app = Some(value.to_owned());
@@ -249,6 +261,10 @@ impl Filter {
         if let Some(graphql) = &self.graphql {
             clauses.push("graphql LIKE ? ESCAPE '\\'".to_owned());
             values.push(Box::new(format!("%{}%", escape_like(graphql))));
+        }
+        if let Some(rpc) = &self.rpc {
+            clauses.push("rpc LIKE ? ESCAPE '\\'".to_owned());
+            values.push(Box::new(format!("%{}%", escape_like(rpc))));
         }
         if let Some(app) = &self.app {
             clauses.push("app LIKE ? ESCAPE '\\'".to_owned());
@@ -417,6 +433,68 @@ mod tests {
         assert_eq!(status_range("5xx"), Some((500, 600)));
         assert_eq!(status_range("9xx"), None);
         assert_eq!(status_range("abc"), None);
+    }
+
+    #[test]
+    fn json_rpc_calls_are_found_by_method_and_by_failing() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE flows (id INTEGER PRIMARY KEY, host TEXT, status INTEGER,
+                                 grpc_status INTEGER, graphql TEXT, rpc TEXT, rpc_error INTEGER);
+             INSERT INTO flows (id, status, graphql, rpc, rpc_error) VALUES
+               (1, 200, NULL, 'eth_call', NULL),
+               (2, 200, NULL, 'eth_sendRawTransaction', -32000),
+               (3, 200, NULL, 'eth_call', 3),
+               (4, 404, NULL, NULL, NULL),
+               (5, 200, 'query Me', NULL, NULL);",
+        )
+        .unwrap();
+        let ids = |text: &str| Filter::parse(text).by_columns(&conn, 1).unwrap().unwrap();
+        assert_eq!(ids("rpc:eth_call"), [1, 3]);
+        assert_eq!(ids("rpc:eth_"), [1, 2, 3]);
+        let kind = |kind| {
+            Filter {
+                kind,
+                ..Filter::default()
+            }
+            .by_columns(&conn, 1)
+            .unwrap()
+            .unwrap()
+        };
+        assert_eq!(kind(Kind::Rpc), [1, 2, 3]);
+        assert_eq!(
+            kind(Kind::Errors),
+            [2, 3, 4],
+            "the two calls that answered 200 with a failure count as errors"
+        );
+        assert_eq!(kind(Kind::GraphQl), [5]);
+    }
+
+    #[test]
+    fn the_operation_column_sorts_graphql_and_json_rpc_together() {
+        use crate::columns::{Column, Sort};
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE flows (id INTEGER PRIMARY KEY, host TEXT, graphql TEXT, rpc TEXT);
+             INSERT INTO flows (id, graphql, rpc) VALUES
+               (1, NULL, 'eth_call'), (2, 'query Me', NULL), (3, NULL, NULL),
+               (4, NULL, 'admin_peers');",
+        )
+        .unwrap();
+        let sorted = |descending| {
+            Filter {
+                sort: Some(Sort {
+                    column: Column::Operation,
+                    descending,
+                }),
+                ..Filter::default()
+            }
+            .find(&conn, Path::new("/no/session"))
+            .unwrap()
+        };
+        // One column, both lenses: a flow with neither comes first going up.
+        assert_eq!(sorted(false), [3, 4, 1, 2]);
+        assert_eq!(sorted(true), [2, 1, 4, 3]);
     }
 
     #[test]

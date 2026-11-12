@@ -42,7 +42,7 @@ use tracewing_store::decode::{Encoding, Unpacker};
 use tracewing_store::settings::Live;
 use tracewing_store::spool::{Spool, SpoolFile};
 use tracewing_store::store::{BodyRecord, FlowRecord, Recorder, StreamHandle};
-use tracewing_store::{binjson, graphql, protobuf};
+use tracewing_store::{binjson, graphql, jsonrpc, protobuf};
 
 /// The CRL the proxy answers for itself, and the address it answers on.
 #[derive(Clone)]
@@ -1464,11 +1464,31 @@ impl TapBody {
                         &body.captured,
                     );
                 }
+                if plain && !body.truncated {
+                    record.rpc = jsonrpc::method(
+                        &record.method,
+                        record.req_content_type.as_deref(),
+                        &body.captured,
+                    );
+                }
                 record.request = body;
             }
             Side::Response => {
                 record.resp_trailers = std::mem::take(&mut self.trailers);
                 record.grpc_status = grpc_status(&record, &body);
+                // JSON-RPC answers 200 and puts a failure in the body. Only
+                // the reply to a call the request named is looked at, so that
+                // other JSON is not parsed a second time.
+                let plain = record
+                    .resp_encoding
+                    .as_deref()
+                    .is_none_or(|e| e.eq_ignore_ascii_case("identity"));
+                if record.rpc.is_some() && plain && !body.truncated {
+                    record.rpc_error =
+                        jsonrpc::faults(record.content_type.as_deref(), &body.captured)
+                            .first()
+                            .map(|fault| fault.code);
+                }
                 record.response = body;
                 record.duration_us = Some(elapsed);
                 self.flow.ended.store(true, Ordering::Relaxed);

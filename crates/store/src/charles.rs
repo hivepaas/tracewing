@@ -9,6 +9,7 @@ use crate::{
         self, Connections, Imported, address, encoding_kept, header_lines, host_of, unix_micros,
         version_of,
     },
+    jsonrpc,
     settings::StorageSettings,
     store::FlowRecord,
 };
@@ -357,9 +358,22 @@ impl Entry {
         let (req_body, req_encoding) = request.map(Side::body).unwrap_or_default();
         let (resp_body, resp_encoding) = response.map(Side::body).unwrap_or_default();
         let req_content_type = request.and_then(Side::content_type);
+        let resp_content_type = response.and_then(Side::content_type);
         let graphql = match req_encoding {
             None => graphql::operation(&method, &path, req_content_type.as_deref(), &req_body),
             Some(_) => None,
+        };
+        let rpc = match req_encoding {
+            None => jsonrpc::method(&method, req_content_type.as_deref(), &req_body),
+            Some(_) => None,
+        };
+        // Only a reply to a call that was JSON-RPC is looked at, so that no
+        // other JSON is parsed a second time.
+        let rpc_error = match (rpc.is_some(), &resp_encoding) {
+            (true, None) => jsonrpc::faults(resp_content_type.as_deref(), &resp_body)
+                .first()
+                .map(|fault| fault.code),
+            _ => None,
         };
         let failed = self
             .status
@@ -389,13 +403,15 @@ impl Entry {
             client_version,
             server_version,
             status: status.or(tunnel.then_some(200)),
-            content_type: response.and_then(Side::content_type),
+            content_type: resp_content_type,
             req_content_type,
             req_encoding,
             resp_encoding,
             req_headers: request.map(Side::lines).unwrap_or_default(),
             resp_headers: response.map(Side::lines).unwrap_or_default(),
             graphql,
+            rpc,
+            rpc_error,
             conn_id: conn.map(|(id, _)| id),
             blocked_us: made.then_some(0),
             dns_us: made.then(|| us(durations.dns)).flatten(),

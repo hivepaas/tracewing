@@ -26,8 +26,11 @@ pub struct Row {
     pub app: Option<SharedString>,
     /// Else the address of the other device it came from.
     pub device: Option<SharedString>,
-    /// The GraphQL operation, as `query GetUser`.
-    pub graphql: Option<SharedString>,
+    /// What the Operation column shows: the GraphQL operation, as
+    /// `query GetUser`, or the JSON-RPC method, as `eth_call`.
+    pub operation: Option<SharedString>,
+    /// The code a failed JSON-RPC call answered with, which it answers 200.
+    pub rpc_failed: Option<i64>,
     /// What went wrong, or that it is a WebSocket.
     pub note: Option<SharedString>,
     pub size: SharedString,
@@ -120,8 +123,8 @@ impl Flows {
                 end += 1;
             }
             let mut stmt = self.conn.prepare_cached(
-                "SELECT id, method, status, host, path, resp_bytes, duration_us, error, kind, open, rule, graphql, app, client,
-                        grpc_status
+                "SELECT id, method, status, host, path, resp_bytes, duration_us, error, kind, open, rule,
+                        COALESCE(graphql, rpc), app, client, grpc_status, rpc_error
                  FROM flows WHERE id >= ?1 AND id <= ?2",
             )?;
             let rows = stmt.query_map(params![ids[at], ids[end - 1]], |r| {
@@ -133,6 +136,7 @@ impl Flows {
                 let going = open && live;
                 let rule: Option<String> = r.get(10)?;
                 let grpc_failed = r.get::<_, Option<u16>>(14)?.filter(|code| *code != 0);
+                let rpc_failed = r.get::<_, Option<i64>>(15)?;
                 Ok(Row {
                     id,
                     number: group_digits(id as u64).into(),
@@ -143,15 +147,24 @@ impl Flows {
                     path: r.get::<_, String>(4)?.into(),
                     app: r.get::<_, Option<String>>(12)?.map(SharedString::from),
                     device: device_of(&r.get::<_, String>(13)?).map(SharedString::from),
-                    graphql: r
+                    operation: r
                         .get::<_, Option<String>>(11)?
                         .map(|operation| short_operation(&operation).into()),
+                    rpc_failed,
                     note: error
                         .map(SharedString::from)
                         .or_else(|| {
                             grpc_failed.map(|code| {
                                 format!("gRPC {}", crate::grpc::code_name(code).unwrap_or("error"))
                                     .into()
+                            })
+                        })
+                        .or_else(|| {
+                            // A failed JSON-RPC call answered 200, so without
+                            // this the row looks like one that went through.
+                            rpc_failed.map(|code| {
+                                let name = tracewing_store::jsonrpc::code_name(code);
+                                format!("RPC {}", name.unwrap_or("error")).into()
                             })
                         })
                         .or_else(|| rule.map(|rule| tr!("Rule: {rule}", rule = rule).into()))

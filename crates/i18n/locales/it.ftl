@@ -470,6 +470,9 @@ tce693254 = Tunnel, non decifrato
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
+# RPC: {method}
+tf8162891 = RPC: { $method }
+
 # Over connection {id}, made before: no time went on connecting.
 t84144a81 = Sulla connessione { $id }, aperta prima: nessun tempo speso per connettersi.
 

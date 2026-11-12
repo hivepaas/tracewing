@@ -9,6 +9,7 @@
 use crate::{
     decode, graphql,
     import::{self, Connections, host_of, unix_micros, version_of},
+    jsonrpc,
     session::{self, BodyReader, Headers, LogPlace, StoredBody},
     settings::StorageSettings,
     store::FlowRecord,
@@ -740,6 +741,22 @@ fn record_of(entry: Entry, connections: &mut Connections) -> Option<FlowRecord> 
         req_content_type.as_deref(),
         request_body.as_deref().unwrap_or_default(),
     );
+    let rpc = jsonrpc::method(
+        &method,
+        req_content_type.as_deref(),
+        request_body.as_deref().unwrap_or_default(),
+    );
+    let rpc_error = rpc
+        .is_some()
+        .then(|| {
+            jsonrpc::faults(
+                resp_content_type.as_deref(),
+                response_body.as_deref().unwrap_or_default(),
+            )
+            .first()
+            .map(|fault| fault.code)
+        })
+        .flatten();
     Some(FlowRecord {
         started_us: unix_micros(&entry.started_date_time)?,
         client: "HAR".to_owned(),
@@ -759,6 +776,8 @@ fn record_of(entry: Entry, connections: &mut Connections) -> Option<FlowRecord> 
         req_headers: lines(&entry.request.headers),
         resp_headers: lines(&entry.response.headers),
         graphql,
+        rpc,
+        rpc_error,
         conn_id: conn.map(|(id, _)| id),
         blocked_us: made.then(|| present(timings.blocked).unwrap_or(0)),
         dns_us: made.then(|| present(timings.dns)).flatten(),
@@ -872,6 +891,45 @@ mod tests {
             .query_row("SELECT graphql FROM flows WHERE id = 2", [], |r| r.get(0))
             .unwrap();
         assert_eq!(operation.as_deref(), Some("query Me"));
+        // Windows will not delete a database that is still open.
+        drop(flows);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// The samples are real: see `testdata/jsonrpc/README.md`.
+    #[test]
+    fn a_json_rpc_call_and_its_failure_are_read_on_the_way_in() {
+        let dir = temp("jsonrpc");
+        let session = dir.join("imported");
+        let call = include_str!("../testdata/jsonrpc/revert.req.json").trim();
+        let reply = include_str!("../testdata/jsonrpc/revert.res.json").trim();
+        let har = json!({"log": {"version": "1.2", "creator": {"name": "x", "version": "1"},
+          "entries": [{"startedDateTime": "2026-11-12T01:00:00Z", "time": 40,
+            "request": {"method": "POST", "url": "https://eth.test/", "httpVersion": "h2",
+              "headers": [{"name": "content-type", "value": "application/json"}],
+              "postData": {"mimeType": "application/json", "text": call}},
+            "response": {"status": 200, "httpVersion": "h2",
+              "headers": [{"name": "content-type", "value": "application/json"}],
+              "content": {"size": reply.len(), "mimeType": "application/json", "text": reply}},
+            "timings": {"send": 0, "wait": 30, "receive": 10}}]}});
+        import(
+            har.to_string().as_bytes(),
+            &session,
+            "x",
+            &StorageSettings::default(),
+        )
+        .unwrap();
+        let flows = Connection::open(session::flows_db(&session)).unwrap();
+        let (method, code, status): (Option<String>, Option<i64>, Option<u16>) = flows
+            .query_row(
+                "SELECT rpc, rpc_error, status FROM flows WHERE id = 1",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(method.as_deref(), Some("eth_call"));
+        assert_eq!(status, Some(200), "a reverted call answers 200");
+        assert_eq!(code, Some(3), "and says it reverted in the body");
         // Windows will not delete a database that is still open.
         drop(flows);
         std::fs::remove_dir_all(&dir).unwrap();

@@ -105,18 +105,29 @@ pub struct SessionInfo {
 }
 
 /// Rows of the format this version writes.
-pub const VERSION: i64 = 7;
+pub const VERSION: i64 = 8;
 
-/// Brings rows an earlier version wrote up to this one, where that is only
-/// a column more. Anything older stays as it is, and is not read.
+/// Brings rows an earlier version wrote up to this one, a step at a time,
+/// where each step is only a column more. Anything older than the first step
+/// stays as it is, and is not read.
 pub fn upgrade(flows: &Connection) -> rusqlite::Result<()> {
-    let version: i64 = flows.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+    let mut version: i64 = flows.query_row("PRAGMA user_version", [], |r| r.get(0))?;
     if version == 6 {
         // Adding a column rewrites nothing: rows without it read as NULL.
         flows.execute_batch(
             "BEGIN IMMEDIATE;
              ALTER TABLE flows ADD COLUMN grpc_status INTEGER;
              PRAGMA user_version = 7;
+             COMMIT;",
+        )?;
+        version = 7;
+    }
+    if version == 7 {
+        flows.execute_batch(
+            "BEGIN IMMEDIATE;
+             ALTER TABLE flows ADD COLUMN rpc TEXT;
+             ALTER TABLE flows ADD COLUMN rpc_error INTEGER;
+             PRAGMA user_version = 8;
              COMMIT;",
         )?;
     }
@@ -681,9 +692,10 @@ mod tests {
         let dir = sessions.join(name);
         create(&dir).unwrap();
         let db = Connection::open(flows_db(&dir)).unwrap();
-        db.execute_batch(
-            "PRAGMA user_version = 7; CREATE TABLE flows (id INTEGER PRIMARY KEY, started_us INTEGER);",
-        )
+        db.execute_batch(&format!(
+            "PRAGMA user_version = {VERSION}; \
+                 CREATE TABLE flows (id INTEGER PRIMARY KEY, started_us INTEGER);"
+        ))
         .unwrap();
         for id in 1..=flows {
             db.execute("INSERT INTO flows VALUES (?1, ?2)", params![id, id * 10])
@@ -724,7 +736,7 @@ mod tests {
     }
 
     #[test]
-    fn the_last_format_is_brought_up_to_this_one() {
+    fn every_earlier_format_is_brought_up_to_this_one() {
         let sessions = temp("upgrade");
         let dir = make(&sessions, "100", 3);
         Connection::open(flows_db(&dir))
@@ -741,6 +753,15 @@ mod tests {
             })
             .unwrap();
         assert_eq!(status, None);
+        // Two steps up: the columns of both arrived.
+        let rpc: Option<String> = flows
+            .query_row("SELECT rpc FROM flows WHERE id = 1", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rpc, None);
+        let rpc_error: Option<i64> = flows
+            .query_row("SELECT rpc_error FROM flows WHERE id = 1", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rpc_error, None);
         let version: i64 = flows
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();

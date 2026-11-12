@@ -127,7 +127,9 @@ impl Column {
             Self::App => "app",
             Self::Host => "host",
             Self::Path => "path",
-            Self::Operation => "graphql",
+            // The one column both lenses write to: a request is a GraphQL
+            // operation or a JSON-RPC call, never both.
+            Self::Operation => "COALESCE(graphql, rpc)",
             Self::Size => "resp_bytes",
             Self::Time => "duration_us",
         }

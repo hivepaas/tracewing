@@ -864,6 +864,64 @@ async fn grpc_trailers_and_status_are_kept() {
     clean_up(conn, dir);
 }
 
+/// A JSON-RPC call through the proxy: the method named in the row, the other
+/// calls of a batch counted, and a reverted call marked although it answered
+/// 200. The bodies are real traffic: see `crates/store/testdata/jsonrpc`.
+#[tokio::test(flavor = "multi_thread")]
+async fn json_rpc_calls_are_named_and_their_failures_marked() {
+    let h = Harness::start("jsonrpc").await;
+    let call = concat!(
+        r#"{"jsonrpc":"2.0","id":5,"method":"eth_call","params":"#,
+        r#"[{"to":"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48","#,
+        r#""data":"0x70a08231000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045"},"#,
+        r#""latest"]}"#
+    );
+    let batch = concat!(
+        r#"[{"jsonrpc":"2.0","id":1,"method":"eth_chainId"},"#,
+        r#"{"jsonrpc":"2.0","id":2,"method":"eth_blockNumber"},"#,
+        r#"{"jsonrpc":"2.0","id":3,"method":"net_version"}]"#
+    );
+    for (path, body) in [("/rpc", call), ("/rpc?fail=1", call), ("/rpc", batch)] {
+        h.client(false)
+            .post(format!("{}{path}", h.origin))
+            .header("content-type", "application/json")
+            .body(body)
+            .send()
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap();
+    }
+    let (_, conn, dir) = h.finish(3).await;
+    let about = |id: i64| -> (Option<String>, Option<i64>, Option<u16>) {
+        conn.query_row(
+            "SELECT rpc, rpc_error, status FROM flows WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap()
+    };
+    let plain = about(id_of(&conn, "rpc = 'eth_call' AND rpc_error IS NULL"));
+    assert_eq!(plain.0.as_deref(), Some("eth_call"));
+    assert_eq!(plain.2, Some(200));
+    let reverted = about(id_of(&conn, "rpc_error IS NOT NULL"));
+    assert_eq!(reverted.0.as_deref(), Some("eth_call"));
+    assert_eq!(
+        (reverted.1, reverted.2),
+        (Some(3), Some(200)),
+        "a reverted call answers 200 and says so in the body"
+    );
+    let batched = about(id_of(&conn, "rpc LIKE '%+%'"));
+    assert_eq!(
+        batched.0.as_deref(),
+        Some("eth_chainId +2"),
+        "the first call, and how many followed it"
+    );
+    assert_eq!(batched.1, None, "every call of it went through");
+    clean_up(conn, dir);
+}
+
 /// Headers come back in the inspector, from the log rather than the row.
 #[tokio::test(flavor = "multi_thread")]
 async fn headers_are_kept() {
