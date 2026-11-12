@@ -95,7 +95,7 @@ keyboard.
 | Resize panels by dragging the dividers; hide the sidebar or the inspector | Beta | Free |
 | Request and response as tabs, side by side, or one above the other | Beta | Free |
 | The layout is kept and restored at the next start | Beta | Free |
-| The inspector in a window of its own, for a second display | 1.x | Free |
+| The inspector in a window of its own, for a second display: the toolbar's window button; closing that window puts it back | Beta | Free |
 | Named layouts to switch between (for example "Phone" and "API") | 1.x | Free |
 
 ## The inspector

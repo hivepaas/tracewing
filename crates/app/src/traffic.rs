@@ -257,6 +257,12 @@ pub struct Traffic {
     pub compare_page: Option<ComparePage>,
     /// A flow chosen to be compared, waiting for the other to be clicked.
     pub compare_pick: Option<i64>,
+    /// The inspector's own window, when it is in one.
+    pub(crate) inspector_window: Option<gpui::AnyWindowHandle>,
+    pub(crate) inspector_closed_watch: Option<gpui::Subscription>,
+    /// This window's, to tell the app quitting from the inspector's window
+    /// being closed alone.
+    pub(crate) main_window: Option<gpui::WindowId>,
     /// The system's own appearance is dark.
     system_dark: bool,
     pub(crate) data_dir: PathBuf,
@@ -443,6 +449,9 @@ impl Traffic {
             compose_page: None,
             compare_page: None,
             compare_pick: None,
+            inspector_window: None,
+            inspector_closed_watch: None,
+            main_window: Some(window.window_handle().window_id()),
             system_dark,
             data_dir: data_dir.to_owned(),
             screen: Screen::Traffic,
@@ -1202,6 +1211,9 @@ impl Traffic {
     }
 
     pub fn set_place(&mut self, place: Place, cx: &mut Context<Self>) {
+        if self.inspector_detached() {
+            self.dock_inspector(cx);
+        }
         self.layout.place = place;
         self.layout.inspector_shown = true;
         self.save_layout();
@@ -1391,7 +1403,12 @@ impl Traffic {
         cx.notify();
     }
 
-    fn on_key(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn on_key(
+        &mut self,
+        event: &KeyDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let keys = &event.keystroke;
         // A text field has the keyboard when the window itself does not.
         let typing = !self.focus.is_focused(window);
@@ -1677,7 +1694,8 @@ impl Traffic {
 
     fn render_layout_buttons(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
-        let shown = self.layout.inspector_shown;
+        // Beside or below: in the main window.
+        let shown = self.layout.inspector_shown && !self.inspector_detached();
         let button = |id: &'static str, name: &'static str, on: bool| {
             div()
                 .id(id)
@@ -1712,6 +1730,17 @@ impl Traffic {
             .child(
                 button("below", "below", shown && self.layout.place == Place::Below)
                     .on_click(cx.listener(|this, _, _, cx| this.set_place(Place::Below, cx))),
+            )
+            .child(
+                button("window", "window", self.inspector_detached()).on_click(cx.listener(
+                    |this, _, _, cx| {
+                        if this.inspector_detached() {
+                            this.dock_inspector(cx)
+                        } else {
+                            this.detach_inspector(cx)
+                        }
+                    },
+                )),
             )
     }
 
@@ -2512,7 +2541,8 @@ impl Render for Traffic {
             _ => None,
         };
         let list = self.render_list(cx).into_any_element();
-        let center = if shown {
+        // In its own window, the inspector leaves the list all the room.
+        let center = if shown && !self.inspector_detached() {
             let inspector = self.render_inspector(cx).into_any_element();
             match place {
                 Place::Beside => div()

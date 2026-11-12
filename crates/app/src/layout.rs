@@ -103,6 +103,10 @@ pub struct Layout {
     /// The language chosen, as a tag; `None` for the system's.
     pub language: Option<String>,
     pub sides: Sides,
+    /// The inspector in a window of its own, for a second display.
+    pub detached: bool,
+    /// Where that window was when last seen.
+    pub inspector_window: Option<WindowState>,
 }
 
 impl Default for Layout {
@@ -121,6 +125,8 @@ impl Default for Layout {
             hosts: HostMarks::default(),
             language: None,
             sides: Sides::default(),
+            detached: false,
+            inspector_window: None,
         }
     }
 }
