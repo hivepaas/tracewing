@@ -455,29 +455,33 @@ impl Traffic {
 
     pub(crate) fn render_inspector(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
+        // Dragged to the side of or below the list; not from a window of its own.
+        let detached = self.inspector_detached();
         let handle = div()
             .flex()
             .flex_row()
             .items_center()
             .gap(px(6.))
-            .child(
-                div()
-                    .id("inspector-handle")
-                    .size(px(28.))
-                    .rounded(px(10.))
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .cursor_grab()
-                    .bg(rgb(c.input))
-                    .child(icon("grip", 14., c.muted))
-                    .on_mouse_down(
-                        MouseButton::Left,
-                        cx.listener(|this, _: &MouseDownEvent, _, cx| {
-                            this.begin_inspector_drag(cx)
-                        }),
-                    ),
-            )
+            .when(!detached, |row| {
+                row.child(
+                    div()
+                        .id("inspector-handle")
+                        .size(px(28.))
+                        .rounded(px(10.))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .cursor_grab()
+                        .bg(rgb(c.input))
+                        .child(icon("grip", 14., c.muted))
+                        .on_mouse_down(
+                            MouseButton::Left,
+                            cx.listener(|this, _: &MouseDownEvent, _, cx| {
+                                this.begin_inspector_drag(cx)
+                            }),
+                        ),
+                )
+            })
             .child(eyebrow(tr!("Inspector")));
         let panel = div()
             .size_full()

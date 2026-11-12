@@ -24,6 +24,7 @@ pub mod grpc;
 pub mod hosts;
 pub mod input;
 pub mod inspector;
+pub mod inspector_window;
 pub mod jwt;
 pub mod layout;
 pub mod llm;
@@ -91,6 +92,7 @@ const ICONS: &[(&str, &[u8])] = icons![
     "search",
     "beside",
     "below",
+    "window",
     "tabs",
     "sidebar",
     "down",

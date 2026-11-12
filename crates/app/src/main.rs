@@ -128,12 +128,24 @@ fn main() -> Result<()> {
                     })
                 },
             );
-            if let Err(e) = opened {
-                eprintln!("tracewing: cannot open a window: {e:#}");
-                cx.quit();
-                return;
-            }
-            cx.on_window_closed(|cx, _| cx.quit()).detach();
+            let main = match opened {
+                Ok(main) => main,
+                Err(e) => {
+                    eprintln!("tracewing: cannot open a window: {e:#}");
+                    cx.quit();
+                    return;
+                }
+            };
+            // The inspector's window, if it was left open, comes back too.
+            let _ = main.update(cx, |view, _, cx| view.reopen_inspector_window(cx));
+            // Only the main window's closing ends the app.
+            let main_id = main.window_id();
+            cx.on_window_closed(move |cx, closed| {
+                if closed == main_id {
+                    cx.quit();
+                }
+            })
+            .detach();
             cx.activate(true);
         });
     Ok(())
