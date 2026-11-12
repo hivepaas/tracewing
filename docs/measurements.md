@@ -443,6 +443,10 @@ than the two builds differ: the spread is what this machine can tell apart, and 
 cost of the looking is under it. A run taken while the machine was busy building fell
 to 42,700, which says the same thing about the spread.
 
+Taken again on 2026-11-12, on main after the WebSocket path was rewritten: recording
+off 49,007–50,833, recording on 45,102–47,817 round trips/s. The range above still
+holds, so the table stands as it is.
+
 ## The program behind a quick request (`crates/proxy/src/capture.rs`, 2026-11-12)
 
 curl asks once and is gone as soon as it is answered. Finding the program behind a

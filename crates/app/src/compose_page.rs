@@ -42,6 +42,13 @@ pub struct ComposePage {
     pub headers: Entity<TextInput>,
     pub body: Entity<TextInput>,
     pub sending: bool,
+    /// Asks the send on its way to stop. Held while one is.
+    pub stop: Option<compose::Stop>,
+    /// Which send the page is showing: a send that finishes after it was
+    /// stopped, or after another started, leaves the page alone.
+    pub sent: u64,
+    /// The last send was stopped part way, so there is no answer to show.
+    pub stopped: bool,
     pub answer: Option<Answer>,
     /// The answer's Protobuf as JSON, and the message it is.
     pub answer_json: Option<(String, String)>,
@@ -69,6 +76,9 @@ impl ComposePage {
                 .new(|cx| TextInput::said(|| tr!("name: value, one a line"), cx).multiline(3, 14)),
             body: cx.new(|cx| TextInput::said(|| tr!("No body"), cx).multiline(5, 24)),
             sending: false,
+            stop: None,
+            sent: 0,
+            stopped: false,
             answer: None,
             answer_json: None,
             problem: None,
@@ -115,6 +125,11 @@ impl Traffic {
                     Some((text, schema.full_name().to_owned()))
                 });
         let page = self.compose_page(cx);
+        // A send still on its way was for the request being replaced here.
+        page.stop = None;
+        page.sending = false;
+        page.sent += 1;
+        page.stopped = false;
         page.answer = None;
         page.answer_json = None;
         page.problem = None;
@@ -228,8 +243,13 @@ impl Traffic {
                 return;
             }
         };
+        let (stop, stopped) = compose::stopper();
         let page = self.compose_page(cx);
         page.sending = true;
+        page.stop = Some(stop);
+        page.sent += 1;
+        let mine = page.sent;
+        page.stopped = false;
         page.problem = None;
         page.answer = None;
         page.answer_json = None;
@@ -238,19 +258,27 @@ impl Traffic {
         cx.spawn(async move |this, cx| {
             let (result, json) = cx
                 .background_spawn(async move {
-                    let result = compose::send(proxy, &ca, &message);
+                    let result = compose::send(proxy, &ca, &message, stopped);
                     let json = result
                         .as_ref()
                         .ok()
+                        .and_then(|answer| answer.as_ref())
                         .and_then(|answer| answer_json(&protos, &message.url, answer));
                     (result, json)
                 })
                 .await;
             let _ = this.update(cx, |this, cx| {
                 let page = this.compose_page(cx);
+                if page.sent != mine {
+                    return;
+                }
                 page.sending = false;
+                page.stop = None;
                 match result {
-                    Ok(answer) => {
+                    // Stopped: the page says so already, and half an answer
+                    // is worse than none.
+                    Ok(None) => {}
+                    Ok(Some(answer)) => {
                         page.answer = Some(answer);
                         page.answer_json = json;
                         page.select.clear();
@@ -261,6 +289,22 @@ impl Traffic {
             });
         })
         .detach();
+        cx.notify();
+    }
+
+    /// Stops the send on its way, which closes its connection rather than
+    /// leave it waiting out `WAIT_MAX`. The page is free at once.
+    pub fn stop_composed(&mut self, cx: &mut Context<Self>) {
+        let page = self.compose_page(cx);
+        if !page.sending {
+            return;
+        }
+        // Dropping the other end is what the send waits on.
+        page.stop = None;
+        page.sending = false;
+        // Whatever it comes back with is no longer this page's answer.
+        page.sent += 1;
+        page.stopped = true;
         cx.notify();
     }
 
@@ -379,6 +423,11 @@ impl Traffic {
                     .clone()
                     .map(|problem| div().text_color(rgb(c.error)).child(problem)),
             )
+            .children(page.stopped.then(|| {
+                div().text_size(px(12.)).text_color(rgb(c.muted)).child(tr!(
+                    "Stopped: no answer was read. What reached the server shows in Traffic."
+                ))
+            }))
             .child(
                 div()
                     .flex()
@@ -390,6 +439,10 @@ impl Traffic {
                         chip("compose-send", tr!("Send"), true)
                             .on_click(cx.listener(|this, _, _, cx| this.send_composed(cx)))
                     })
+                    .children(page.sending.then(|| {
+                        chip("compose-stop", tr!("Stop"), true)
+                            .on_click(cx.listener(|this, _, _, cx| this.stop_composed(cx)))
+                    }))
                     .child(
                         chip("compose-new", tr!("New"), false)
                             .on_click(cx.listener(|this, _, _, cx| this.new_compose(cx))),

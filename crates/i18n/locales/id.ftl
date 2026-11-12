@@ -166,11 +166,17 @@ t3220a10a = Body bukan { $message }: { $e }
 # Protobuf {message}, written as JSON: it is sent as Protobuf.
 t83b6cd6e = Protobuf { $message }, ditulis sebagai JSON: dikirim sebagai Protobuf.
 
+# Stopped: no answer was read. What reached the server shows in Traffic.
+t5a78825c = Dihentikan: tidak ada jawaban yang dibaca. Apa yang sampai ke server tampil di Traffic.
+
 # Sending…
 te946e7bf = Mengirim…
 
 # Send
 tf28e14cf = Kirim
+
+# Stop
+t4b7f7705 = Hentikan
 
 # New
 t8b242db1 = Baru
