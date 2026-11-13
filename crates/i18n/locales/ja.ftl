@@ -2404,6 +2404,9 @@ t29e7dcd0 = システムプロキシ…
 # System proxy on · {addr}
 t319ad6b9 = システムプロキシ オン · { $addr }
 
+# This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
+tb0605c20 = このコンピューターの通信はここに来ます。これを入れたまま tracewing を強制終了すると設定が残り、ネットワークが止まります: `tracewing recover` で元に戻せます。
+
 # Apps
 t53d91aad = アプリ
 

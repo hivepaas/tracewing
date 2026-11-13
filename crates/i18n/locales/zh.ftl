@@ -2404,6 +2404,9 @@ t29e7dcd0 = 系统代理…
 # System proxy on · {addr}
 t319ad6b9 = 系统代理已开启 · { $addr }
 
+# This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
+tb0605c20 = 这台电脑的流量会来到这里。在开启状态下 tracewing 被强制结束，设置会留下来，网络随之中断：用 `tracewing recover` 恢复。
+
 # Apps
 t53d91aad = 应用
 

@@ -1,5 +1,5 @@
-//! `tracewing capture`, `export` and `sessions`, as a terminal runs them: the
-//! program itself, recording with no window, then its HAR.
+//! `tracewing capture`, `export`, `sessions` and `recover`, as a terminal runs
+//! them: the program itself, recording with no window, then its HAR.
 //!
 //! `cargo test --release -p tracewing --test cli`
 
@@ -140,6 +140,54 @@ fn it_records_with_no_window_and_writes_a_har() {
         .unwrap();
     assert!(!missing.status.success());
     assert!(String::from_utf8_lossy(&missing.stderr).contains("no session nope"));
+
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// The command somebody runs when the network has gone: it has to work with
+/// no window, no proxy running, and nothing of ours left behind.
+#[test]
+fn recover_says_what_it_did_and_leaves_a_stranger_alone() {
+    let dir = std::env::temp_dir().join(format!("tracewing-recover-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    // Nothing of tracewing's is on the machine: it says so and does nothing.
+    let out = tracewing()
+        .args(["recover", "--data-dir"])
+        .arg(&dir)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    assert!(
+        String::from_utf8_lossy(&out.stdout).contains("nothing to put back"),
+        "{out:?}"
+    );
+
+    // A journal from a run that was killed, naming settings that are not on
+    // this machine now: it must not put somebody else's settings back.
+    // The keys are the journal's own: `addr`, and `saved.` for each setting
+    // as it was before tracewing touched it.
+    std::fs::write(
+        dir.join("sysproxy.journal"),
+        "addr=127.0.0.1:9090\nsaved.mode='none'\n",
+    )
+    .unwrap();
+    let out = tracewing()
+        .args(["recover", "--data-dir"])
+        .arg(&dir)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let said = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        said.contains("left alone") || said.contains("back as it was"),
+        "it says which of the two happened: {said}"
+    );
+    assert!(
+        !dir.join("sysproxy.journal").exists(),
+        "and the journal goes either way, so it cannot be used twice"
+    );
 
     std::fs::remove_dir_all(&dir).ok();
 }
