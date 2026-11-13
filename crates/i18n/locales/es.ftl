@@ -2184,6 +2184,12 @@ t99f8c07e = Abrió la página de prueba a través de tracewing, por HTTPS.
 # Opened the test page through tracewing, but without HTTPS.
 t7d4b60bb = Abrió la página de prueba a través de tracewing, pero sin HTTPS.
 
+# Sends localhost and 127.0.0.1 straight to the server, as all of macOS's own networking does: a name under .localhost, such as playground.localhost, comes through tracewing.
+t36665e5c = Envía localhost y 127.0.0.1 directamente al servidor, como hace toda la red propia de macOS: un nombre bajo .localhost, como playground.localhost, pasa por tracewing.
+
+# Goes only where the system proxy sends it: nothing of it comes through tracewing until step 2 is on.
+t67bac94a = Solo va adonde lo envía el proxy del sistema: nada de él pasa por tracewing hasta que el paso 2 esté activado.
+
 # Browsers
 td580efd4 = Navegadores
 

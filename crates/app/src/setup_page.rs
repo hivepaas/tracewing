@@ -535,6 +535,32 @@ pub fn seen_text(name: &str, visits: &[CheckVisit]) -> (String, Mark) {
     }
 }
 
+/// What Safari needs that the other browsers do not. It has no profile of
+/// its own to open, so it comes through tracewing only by the system proxy;
+/// and it never sends a server on this computer through any proxy, by its
+/// name `localhost` or its address — macOS's networking leaves them out
+/// whatever the settings say. A name under `.localhost` comes through.
+pub fn safari_text(proxy_on: bool) -> (String, Mark) {
+    if proxy_on {
+        (
+            tr!(
+                "Sends localhost and 127.0.0.1 straight to the server, as all of macOS's own \
+                 networking does: a name under .localhost, such as playground.localhost, \
+                 comes through tracewing."
+            ),
+            Mark::Unknown,
+        )
+    } else {
+        (
+            tr!(
+                "Goes only where the system proxy sends it: nothing of it comes through \
+                 tracewing until step 2 is on."
+            ),
+            Mark::Missing,
+        )
+    }
+}
+
 /// A line of the Browsers card, after a dot that says how it stands.
 fn marked(text: String, mark: Mark) -> Div {
     let c = colors();
@@ -567,6 +593,7 @@ impl Traffic {
             self.system.ca,
             CaState::Checking | CaState::Installing | CaState::Removing
         );
+        let proxy_on = matches!(self.system.proxy, ProxySwitch::On(_));
         let mut card = aside(
             tr!("Browsers"),
             tr!(
@@ -591,6 +618,7 @@ impl Traffic {
             let name = browser.name;
             let (trust_line, trust_mark) = trust_text(*trust, &self.system.ca);
             let (seen_line, seen_mark) = seen_text(name, &self.check_visits);
+            let safari = (browser.engine == Engine::Safari).then(|| safari_text(proxy_on));
             // Its own stores can take the certificate now; the system's is step 1.
             // Without certutil it would fail: step 1 says how to get it.
             let can_install = !busy
@@ -623,7 +651,8 @@ impl Traffic {
                             .flex_col()
                             .gap(ui(2.))
                             .child(marked(trust_line, trust_mark))
-                            .child(marked(seen_line, seen_mark)),
+                            .child(marked(seen_line, seen_mark))
+                            .when_some(safari, |d, (line, mark)| d.child(marked(line, mark))),
                     )
                     .when(can_install, |d| {
                         d.child(
@@ -1536,6 +1565,18 @@ mod tests {
         );
         assert_eq!(seen_text("Firefox", &visits[..2]).1, Mark::Missing);
         assert_eq!(seen_text("Edge", &visits).1, Mark::Unknown);
+    }
+
+    /// Safari has no profile of its own, so the system proxy is the whole of
+    /// how it comes through; with it on, what is left to say is localhost.
+    #[test]
+    fn safari_says_what_it_needs() {
+        let (text, mark) = safari_text(false);
+        assert_eq!(mark, Mark::Missing);
+        assert!(text.contains("step 2"), "{text}");
+        let (text, mark) = safari_text(true);
+        assert_eq!(mark, Mark::Unknown);
+        assert!(text.contains(".localhost"), "{text}");
     }
 
     #[test]

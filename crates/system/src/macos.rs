@@ -23,7 +23,13 @@ const WAITER_PLIST: &str = "sysproxy.waiter.plist";
 const WAITER_LOG: &str = "recovery.log";
 const SYSTEM_KEYCHAIN: &str = "/Library/Keychains/System.keychain";
 const CA_NAME: &str = "tracewing CA";
-const BYPASS: &[&str] = &["localhost", "127.0.0.1", "::1", "*.local"];
+/// What the system proxy leaves alone. Not `localhost`: macOS's own
+/// networking — Safari, and every app that uses it — never sends `localhost`
+/// or `127.0.0.1` through a proxy whatever the list says, and it reads an
+/// entry of `localhost` as every name that ends in it. A name under
+/// `.localhost`, such as `playground.localhost`, is the way to watch a server
+/// on this computer from Safari, and that entry would send it straight past.
+const BYPASS: &[&str] = &["127.0.0.1", "::1", "*.local"];
 
 fn run(program: &str, args: &[&str]) -> Result<String> {
     let out = Command::new(program)

@@ -513,6 +513,12 @@ async fn main() -> Result<()> {
             let tls_base = format!("https://localhost:{}", tls.local_addr()?.port());
             println!("playground on {base} and {tls_base}");
             println!(
+                "from Safari, which never sends localhost through a proxy: http://{host}:{} and https://{host}:{}",
+                listener.local_addr()?.port(),
+                tls.local_addr()?.port(),
+                host = playground::SAFARI_HOST,
+            );
+            println!(
                 "its authority: {} (--trust puts it where tracewing looks)",
                 ca.display()
             );

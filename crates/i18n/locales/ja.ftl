@@ -2050,6 +2050,12 @@ t99f8c07e = tracewing 経由で、HTTPS でテストページを開きました�
 # Opened the test page through tracewing, but without HTTPS.
 t7d4b60bb = tracewing 経由でテストページを開きましたが、HTTPS ではありません。
 
+# Sends localhost and 127.0.0.1 straight to the server, as all of macOS's own networking does: a name under .localhost, such as playground.localhost, comes through tracewing.
+t36665e5c = macOS 自身のネットワークを使うものはすべて、localhost と 127.0.0.1 をサーバーへ直接送ります。playground.localhost のような .localhost 配下の名前なら tracewing を通ります。
+
+# Goes only where the system proxy sends it: nothing of it comes through tracewing until step 2 is on.
+t67bac94a = システムプロキシが送る先にしか行きません。手順 2 をオンにするまで、tracewing を通るものはありません。
+
 # Browsers
 td580efd4 = ブラウザー
 

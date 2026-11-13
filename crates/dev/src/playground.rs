@@ -208,11 +208,18 @@ pub async fn serve(listener: TcpListener) -> Result<()> {
     }
 }
 
+/// The playground's name for Safari. Safari, and every app on macOS's own
+/// networking, sends `localhost` and `127.0.0.1` straight to the server
+/// whatever the proxy settings say; a name under `.localhost` goes through
+/// the system proxy, and still comes back to this computer.
+pub const SAFARI_HOST: &str = "playground.localhost";
+
 /// Where it listens with TLS unless told otherwise.
 pub const TLS_PORT: u16 = 10443;
 
 /// The same paths over TLS, HTTP/2 to a client that offers it, with a
-/// certificate for `localhost` and `127.0.0.1` from the authority in `dir`.
+/// certificate for `localhost`, [`SAFARI_HOST`] and `127.0.0.1` from the
+/// authority in `dir`.
 pub async fn serve_tls(listener: TcpListener, dir: &Path) -> Result<()> {
     let acceptor = tokio_rustls::TlsAcceptor::from(Arc::new(tls_config(dir)?));
     loop {
@@ -336,8 +343,8 @@ fn tls_config_asking(
     let ca_key = KeyPair::from_pem(&std::fs::read_to_string(dir.join("ca-key.pem"))?)?;
     let issuer = Issuer::from_ca_cert_pem(&std::fs::read_to_string(&cert)?, ca_key)?;
     let leaf_key = KeyPair::generate()?;
-    let leaf = CertificateParams::new(vec!["localhost".to_owned(), "127.0.0.1".to_owned()])?
-        .signed_by(&leaf_key, &issuer)?;
+    let names = ["localhost", SAFARI_HOST, "127.0.0.1"].map(str::to_owned);
+    let leaf = CertificateParams::new(names.to_vec())?.signed_by(&leaf_key, &issuer)?;
     let chain = vec![CertificateDer::from(leaf.der().to_vec())];
     let key = PrivateKeyDer::from(PrivatePkcs8KeyDer::from(leaf_key.serialize_der()));
     let builder = ServerConfig::builder_with_provider(Arc::new(tracewing_proxy::crypto_provider()))

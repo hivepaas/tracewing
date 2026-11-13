@@ -2050,6 +2050,12 @@ t99f8c07e = 已通过 tracewing 以 HTTPS 打开测试页。
 # Opened the test page through tracewing, but without HTTPS.
 t7d4b60bb = 已通过 tracewing 打开测试页，但未使用 HTTPS。
 
+# Sends localhost and 127.0.0.1 straight to the server, as all of macOS's own networking does: a name under .localhost, such as playground.localhost, comes through tracewing.
+t36665e5c = 与所有使用 macOS 自身网络的程序一样，localhost 和 127.0.0.1 会直接发往服务器：改用 .localhost 之下的名称，例如 playground.localhost，就会经过 tracewing。
+
+# Goes only where the system proxy sends it: nothing of it comes through tracewing until step 2 is on.
+t67bac94a = 只走系统代理指定的路：在第 2 步开启之前，不会有任何流量经过 tracewing。
+
 # Browsers
 td580efd4 = 浏览器
 
