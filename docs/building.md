@@ -28,6 +28,18 @@ make playground          # a server: http://localhost:10000 lists its paths, and
 make playground-trust    # the same, its authority trusted by tracewing first (restart tracewing)
 ```
 
+## Packages
+
+A build of your own is a binary; a release is a package. On Linux, with
+`cargo-about` and `dpkg-dev rpm cpio desktop-file-utils` installed:
+
+```sh
+make package                                        # dist/: a .deb and an .rpm
+scripts/check_linux_package.sh dist/tracewing_*.deb # what it holds, and that it runs
+```
+
+How a release is made and what it ships: [releasing.md](releasing.md).
+
 ## More
 
 ```sh

@@ -16,7 +16,7 @@ FEATURES ?=
 APP := -p tracewing $(if $(FEATURES),--features $(FEATURES))
 
 .DEFAULT_GOAL := help
-.PHONY: help debug release build build-debug test test-window lint fmt playground playground-trust clean
+.PHONY: help debug release build build-debug package test test-window lint fmt playground playground-trust clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-18s %s\n", $$1, $$2}'
@@ -32,6 +32,9 @@ build-debug: ## Build the debug version: target/debug/tracewing
 
 build: ## Build the release version: target/release/tracewing
 	$(CARGO) build --release $(APP)
+
+package: build ## Package the release build for this system: dist/ (Linux; needs cargo-about)
+	scripts/package_linux.sh
 
 test: ## Run every test, without the ones that draw the window
 	$(CARGO) test --workspace --release

@@ -1,0 +1,26 @@
+Third-party licenses in tracewing
+================================
+
+tracewing is free software under the GNU General Public License, version 3
+or later. It is built with the Rust crates below, each under its own
+license; each license's text follows, with the crates under it and where
+their source is.
+
+Licenses, by how many crates use them:
+{{#each overview}}
+{{#unless (eq id "GPL-3.0-or-later")}}
+  {{count}}  {{{name}}} ({{id}})
+{{/unless}}
+{{/each}}
+{{#each licenses}}
+{{#unless (eq id "GPL-3.0-or-later")}}
+
+--------------------------------------------------------------------------------
+{{{name}}} ({{id}}), used by:
+{{#each used_by}}
+  {{crate.name}} {{crate.version}}{{#if crate.repository}}  {{{crate.repository}}}{{/if}}
+{{/each}}
+
+{{{text}}}
+{{/unless}}
+{{/each}}
