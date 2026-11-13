@@ -2560,6 +2560,48 @@ t88e6aa3c =
        *[other] 필드 { $n }개짜리 메시지
     }
 
+# As EIP-55 writes it
+t23cd498d = EIP-55 표기
+
+# Checksum
+t59e723b2 = 체크섬
+
+# none in it, so nothing to check
+te7ec8c71 = 들어 있지 않아 확인할 것이 없음
+
+# holds
+t5a262a91 = 맞음
+
+# does not hold: a digit is wrong
+tbc8974e3 = 맞지 않음: 한 자리가 틀림
+
+# Known as
+t2d1b5c44 = 알려진 이름
+
+# nobody: minted from, or burned to
+t5fe6920b = 아무도 아님: 여기서 발행하고 여기로 소각
+
+# the chain's own coin, not a token
+t2bb477cf = 체인 자체의 코인, 토큰이 아님
+
+# An address
+t2372877a = 주소
+
+# An event's topic
+td0126fb7 = 이벤트의 토픽
+
+# Event
+td02b533f = 이벤트
+
+# Calls
+tc4ef94ce = 호출
+
+# Answers with
+t5bdbbcc4 = 반환
+
+# A call, by its four bytes
+t21c2b1a6 = 호출, 앞 4바이트로
+
 # base64url
 tadfc8ac3 = base64url
 

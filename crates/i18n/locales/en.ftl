@@ -1030,6 +1030,20 @@ t88e6aa3c =
         [one] a message of { $n } field
        *[other] a message of { $n } fields
     }
+t23cd498d = As EIP-55 writes it
+t59e723b2 = Checksum
+te7ec8c71 = none in it, so nothing to check
+t5a262a91 = holds
+tbc8974e3 = does not hold: a digit is wrong
+t2d1b5c44 = Known as
+t5fe6920b = nobody: minted from, or burned to
+t2bb477cf = the chain's own coin, not a token
+t2372877a = An address
+td0126fb7 = An event's topic
+td02b533f = Event
+tc4ef94ce = Calls
+t5bdbbcc4 = Answers with
+t21c2b1a6 = A call, by its four bytes
 tadfc8ac3 = base64url
 tf04e6eba = base64
 t613f34ea = Hex

@@ -2560,6 +2560,48 @@ t88e6aa3c =
        *[other] 一条有 { $n } 个字段的消息
     }
 
+# As EIP-55 writes it
+t23cd498d = EIP-55 的写法
+
+# Checksum
+t59e723b2 = 校验和
+
+# none in it, so nothing to check
+te7ec8c71 = 没有校验和，无从核对
+
+# holds
+t5a262a91 = 吻合
+
+# does not hold: a digit is wrong
+tbc8974e3 = 不吻合：有一位写错了
+
+# Known as
+t2d1b5c44 = 常被称作
+
+# nobody: minted from, or burned to
+t5fe6920b = 无人：从这里铸造，烧到这里
+
+# the chain's own coin, not a token
+t2bb477cf = 链自己的币，不是代币
+
+# An address
+t2372877a = 一个地址
+
+# An event's topic
+td0126fb7 = 事件的主题
+
+# Event
+td02b533f = 事件
+
+# Calls
+tc4ef94ce = 调用
+
+# Answers with
+t5bdbbcc4 = 返回
+
+# A call, by its four bytes
+t21c2b1a6 = 一次调用，由开头四字节认出
+
 # base64url
 tadfc8ac3 = base64url
 

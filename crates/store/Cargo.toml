@@ -31,6 +31,7 @@ alloy-json-abi.workspace = true
 k256.workspace = true
 time = { workspace = true, features = ["formatting", "parsing"] }
 toml.workspace = true
+tracewing-convert.workspace = true
 tracing.workspace = true
 zip.workspace = true
 zstd.workspace = true

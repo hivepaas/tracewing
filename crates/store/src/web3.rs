@@ -13,7 +13,6 @@
 
 use alloy_dyn_abi::{DynSolType, DynSolValue};
 use sha3::{Digest, Keccak256};
-use std::{collections::HashMap, sync::OnceLock};
 
 /// The bytes a `DATA` field holds: `0x`, then two hex digits a byte.
 pub fn bytes_of(hex: &str) -> Option<Vec<u8>> {
@@ -99,141 +98,14 @@ pub fn gwei(wei: u128) -> String {
     format!("{} gwei", scaled(&wei.to_string(), 9))
 }
 
-/// An address as EIP-55 writes it: the hex, with the capitals that check it.
-/// One digit wrong and the capitals no longer fit, which is what they are for.
-pub fn address_text(bytes: &[u8]) -> String {
-    let lower = hex_text(bytes)[2..].to_owned();
-    let hash = Keccak256::digest(lower.as_bytes());
-    let mut out = String::with_capacity(2 + lower.len());
-    out.push_str("0x");
-    for (i, digit) in lower.chars().enumerate() {
-        // The nibble of the hash that stands for this digit.
-        let nibble = match i % 2 {
-            0 => hash[i / 2] >> 4,
-            _ => hash[i / 2] & 0xf,
-        };
-        match nibble >= 8 {
-            true => out.extend(digit.to_uppercase()),
-            false => out.push(digit),
-        }
-    }
-    out
-}
-
-/// `0x70a08231`, as a `data` field starts.
-pub fn hex_text(bytes: &[u8]) -> String {
-    use std::fmt::Write as _;
-    let mut out = String::with_capacity(2 + bytes.len() * 2);
-    out.push_str("0x");
-    for byte in bytes {
-        // Written straight in: calldata runs to hundreds of bytes, and can
-        // run to hundreds of thousands.
-        let _ = write!(out, "{byte:02x}");
-    }
-    out
-}
-
-/// The four bytes a `data` field starts with: the first four of the
-/// keccak-256 of the signature.
-pub fn selector_of(signature: &str) -> [u8; 4] {
-    let hash = Keccak256::digest(signature.as_bytes());
-    [hash[0], hash[1], hash[2], hash[3]]
-}
-
-/// An event's first topic: the whole keccak-256 of its signature.
-pub fn topic_of(signature: &str) -> [u8; 32] {
-    Keccak256::digest(signature.as_bytes()).into()
-}
-
-/// The calls that nearly every chain has, as their text. The four bytes are
-/// worked out from it, so what is written here can be read and checked; four
-/// bytes written by hand could be wrong and nobody would see it.
-pub const FUNCTIONS: &[(&str, &str)] = &[
-    // ERC-20, with what each answers: without that, a number a call came
-    // back with is only a word of hex.
-    ("transfer(address,uint256)", "(bool)"),
-    ("transferFrom(address,address,uint256)", "(bool)"),
-    ("approve(address,uint256)", "(bool)"),
-    ("balanceOf(address)", "(uint256)"),
-    ("allowance(address,address)", "(uint256)"),
-    ("totalSupply()", "(uint256)"),
-    ("decimals()", "(uint8)"),
-    ("symbol()", "(string)"),
-    ("name()", "(string)"),
-    (
-        "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-        "()",
-    ),
-    // ERC-721 and ERC-1155.
-    ("ownerOf(uint256)", "(address)"),
-    ("safeTransferFrom(address,address,uint256)", "()"),
-    ("safeTransferFrom(address,address,uint256,bytes)", "()"),
-    ("setApprovalForAll(address,bool)", "()"),
-    ("isApprovedForAll(address,address)", "(bool)"),
-    ("tokenURI(uint256)", "(string)"),
-    ("uri(uint256)", "(string)"),
-    ("balanceOfBatch(address[],uint256[])", "(uint256[])"),
-    // Wrapped ether.
-    ("deposit()", "()"),
-    ("withdraw(uint256)", "()"),
-    // What a wallet asks a node for, through a contract.
-    ("multicall(bytes[])", "(bytes[])"),
-    ("aggregate3((address,bool,bytes)[])", "((bool,bytes)[])"),
-];
-
-/// The events that nearly every chain has, as their text.
-pub const EVENTS: &[&str] = &[
-    "Transfer(address,address,uint256)",
-    "Approval(address,address,uint256)",
-    "ApprovalForAll(address,address,bool)",
-    "TransferSingle(address,address,address,uint256,uint256)",
-    "TransferBatch(address,address,address,uint256[],uint256[])",
-    "Deposit(address,uint256)",
-    "Withdrawal(address,uint256)",
-    "OwnershipTransferred(address,address)",
-];
-
-/// The function those four bytes name, if it is one of [`FUNCTIONS`]. The
-/// `data` of a call may be passed whole: only its first four bytes are read.
-pub fn known_function(data: &[u8]) -> Option<&'static str> {
-    Some(known(data)?.0)
-}
-
-/// The types that call answers with, as `(uint256)`, for reading what came
-/// back. `()` for one that answers with nothing.
-pub fn known_returns(data: &[u8]) -> Option<&'static str> {
-    Some(known(data)?.1)
-}
-
-fn known(data: &[u8]) -> Option<(&'static str, &'static str)> {
-    static TABLE: OnceLock<HashMap<[u8; 4], (&'static str, &'static str)>> = OnceLock::new();
-    let table = TABLE.get_or_init(|| {
-        FUNCTIONS
-            .iter()
-            .map(|(signature, returns)| (selector_of(signature), (*signature, *returns)))
-            .collect()
-    });
-    let four: [u8; 4] = data.get(..4)?.try_into().ok()?;
-    table.get(&four).copied()
-}
-
-/// The event that first topic names, if it is one of [`EVENTS`].
-pub fn known_event(topic: &[u8]) -> Option<&'static str> {
-    static TABLE: OnceLock<HashMap<[u8; 32], &'static str>> = OnceLock::new();
-    let table = TABLE.get_or_init(|| {
-        EVENTS
-            .iter()
-            .map(|signature| (topic_of(signature), *signature))
-            .collect()
-    });
-    let whole: [u8; 32] = topic.get(..32)?.try_into().ok()?;
-    table.get(&whole).copied()
-}
-
-/// The name a signature gives, without its types: `transfer`.
-pub fn name_of(signature: &str) -> &str {
-    signature.split('(').next().unwrap_or(signature)
-}
+// An address as EIP-55 writes it, the four bytes of a call, an event's
+// topic, and the tables that name them: they live in `tracewing_convert`, so
+// that a value can be read with no database behind it, and are taken from
+// here by everything that always took them from here.
+pub use tracewing_convert::chain::{
+    EVENTS, FUNCTIONS, address_text, hex_text, known_event, known_function, known_returns, name_of,
+    selector_of, topic_of,
+};
 
 /// Why a call did not go through, from the `data` a node sends with the error.
 #[derive(Clone, Debug, PartialEq, Eq)]

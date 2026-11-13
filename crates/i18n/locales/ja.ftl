@@ -2560,6 +2560,48 @@ t88e6aa3c =
        *[other] { $n } 個のフィールドを持つメッセージ
     }
 
+# As EIP-55 writes it
+t23cd498d = EIP-55 での書き方
+
+# Checksum
+t59e723b2 = チェックサム
+
+# none in it, so nothing to check
+te7ec8c71 = 入っていないので確かめようがない
+
+# holds
+t5a262a91 = 合っている
+
+# does not hold: a digit is wrong
+tbc8974e3 = 合わない: どこかの桁が違う
+
+# Known as
+t2d1b5c44 = よく知られた
+
+# nobody: minted from, or burned to
+t5fe6920b = 誰でもない: ここから発行し、ここへ焼却する
+
+# the chain's own coin, not a token
+t2bb477cf = チェーン自身のコイン、トークンではない
+
+# An address
+t2372877a = アドレス
+
+# An event's topic
+td0126fb7 = イベントのトピック
+
+# Event
+td02b533f = イベント
+
+# Calls
+tc4ef94ce = 呼ぶのは
+
+# Answers with
+t5bdbbcc4 = 返すのは
+
+# A call, by its four bytes
+t21c2b1a6 = 呼び出し、先頭 4 バイトから
+
 # base64url
 tadfc8ac3 = base64url
 
