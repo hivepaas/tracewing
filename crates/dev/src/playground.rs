@@ -1013,7 +1013,10 @@ const WS_PAGE: &str = r#"<!doctype html>
 let ws;
 const log = (line) => { document.getElementById("log").textContent += line + "\n"; };
 document.getElementById("open").onclick = () => {
-  ws = new WebSocket(`ws://${location.host}/ws?ticks=5`);
+  // Over TLS the socket must be `wss`, or it meets the TLS port speaking
+  // plain HTTP and the handshake fails with "invalid HTTP version".
+  const scheme = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${scheme}://${location.host}/ws?ticks=5`);
   ws.onopen = () => log("open");
   ws.onmessage = (e) => log("< " + e.data);
   ws.onclose = () => log("closed");
