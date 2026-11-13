@@ -2790,6 +2790,42 @@ t195b3db9 = Texto con escapes
 # HTML entities
 t54958ecb = Entidades HTML
 
+# Ascii85
+td69511f7 = Ascii85
+
+# z85
+t6c0d8dce = z85
+
+# a Bitcoin address
+t7b0efb3e = una dirección de Bitcoin
+
+# a Bitcoin script address
+te6f3988d = una dirección de script de Bitcoin
+
+# a Bitcoin private key
+td594ad36 = una clave privada de Bitcoin
+
+# version {version}
+tbb1843f1 = versión { $version }
+
+# base58check
+t8f5cfb6f = base58check
+
+# What it is
+t065b8fa0 = Qué es
+
+# How much
+td909a26a = Cuánto
+
+# base58
+tee4c2cfd = base58
+
+# base32
+t5c46c9f9 = base32
+
+# Quoted-printable
+t1f2024f7 = Quoted-printable
+
 # Version
 t5dcdd537 = Versión
 
@@ -3047,9 +3083,6 @@ t8d20daf3 = Completa
 # The IPv4 in it
 tc1fb8957 = La IPv4 que contiene
 
-# What it is
-t065b8fa0 = Qué es
-
 # From
 t18743595 = Desde
 
@@ -3145,9 +3178,6 @@ t9dcf716c = SHA-512 crypt
 
 # What it holds
 tff372c62 = Qué contiene
-
-# How much
-td909a26a = Cuánto
 
 # {size} of DER
 tbfdcf758 = { $size } de DER

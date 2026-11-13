@@ -2644,6 +2644,42 @@ t195b3db9 = 이스케이프된 텍스트
 # HTML entities
 t54958ecb = HTML 엔티티
 
+# Ascii85
+td69511f7 = Ascii85
+
+# z85
+t6c0d8dce = z85
+
+# a Bitcoin address
+t7b0efb3e = 비트코인 주소
+
+# a Bitcoin script address
+te6f3988d = 비트코인 스크립트 주소
+
+# a Bitcoin private key
+td594ad36 = 비트코인 개인 키
+
+# version {version}
+tbb1843f1 = 버전 { $version }
+
+# base58check
+t8f5cfb6f = base58check
+
+# What it is
+t065b8fa0 = 무엇인지
+
+# How much
+td909a26a = 얼마나
+
+# base58
+tee4c2cfd = base58
+
+# base32
+t5c46c9f9 = base32
+
+# Quoted-printable
+t1f2024f7 = Quoted-printable
+
 # Version
 t5dcdd537 = 버전
 
@@ -2899,9 +2935,6 @@ t8d20daf3 = 전체
 # The IPv4 in it
 tc1fb8957 = 안에 있는 IPv4
 
-# What it is
-t065b8fa0 = 무엇인지
-
 # From
 t18743595 = 시작
 
@@ -2997,9 +3030,6 @@ t9dcf716c = SHA-512 crypt
 
 # What it holds
 tff372c62 = 내용
-
-# How much
-td909a26a = 얼마나
 
 # {size} of DER
 tbfdcf758 = DER { $size }

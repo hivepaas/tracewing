@@ -2736,6 +2736,42 @@ t195b3db9 = Kaçışlı metin
 # HTML entities
 t54958ecb = HTML varlıkları
 
+# Ascii85
+td69511f7 = Ascii85
+
+# z85
+t6c0d8dce = z85
+
+# a Bitcoin address
+t7b0efb3e = bir Bitcoin adresi
+
+# a Bitcoin script address
+te6f3988d = bir Bitcoin betik adresi
+
+# a Bitcoin private key
+td594ad36 = bir Bitcoin özel anahtarı
+
+# version {version}
+tbb1843f1 = sürüm { $version }
+
+# base58check
+t8f5cfb6f = base58check
+
+# What it is
+t065b8fa0 = Bu nedir
+
+# How much
+td909a26a = Ne kadar
+
+# base58
+tee4c2cfd = base58
+
+# base32
+t5c46c9f9 = base32
+
+# Quoted-printable
+t1f2024f7 = Quoted-printable
+
 # Version
 t5dcdd537 = Sürüm
 
@@ -2992,9 +3028,6 @@ t8d20daf3 = Tam hâli
 # The IPv4 in it
 tc1fb8957 = İçindeki IPv4
 
-# What it is
-t065b8fa0 = Bu nedir
-
 # From
 t18743595 = Başlangıç
 
@@ -3090,9 +3123,6 @@ t9dcf716c = SHA-512 crypt
 
 # What it holds
 tff372c62 = İçinde ne var
-
-# How much
-td909a26a = Ne kadar
 
 # {size} of DER
 tbfdcf758 = { $size } DER
