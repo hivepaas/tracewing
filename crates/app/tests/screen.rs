@@ -350,6 +350,53 @@ fn the_window_shows_real_traffic() {
         })
         .unwrap();
     save(&mut cx, window.into(), "92-body-hex");
+
+    // Hex says each byte twice. Choosing digits marks the characters they
+    // stand for, and choosing characters marks their digits -- but what is
+    // copied is only what was chosen.
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                panic!()
+            };
+            let body = body.read(cx);
+            let spot = |at| tracewing::select::Spot {
+                piece: tracewing::wrap::key(0, 0),
+                at,
+            };
+            let line = body.body().read_in(0..1, true)[0].text.clone();
+            // The first three bytes, spaces between them and all.
+            body.selection().select(spot(0), spot(8));
+            let twin = tracewing::body::hex_twin(&(0..8), &line).expect("the characters");
+            assert_eq!(twin.len(), 3, "three bytes, three characters");
+            match body.selected_text() {
+                tracewing::select::Copied::Text(text) => {
+                    assert_eq!(text, line[0..8], "only the digits are copied");
+                    assert!(!text.contains(&line[twin.clone()]), "{text:?}");
+                }
+                _ => panic!("copied"),
+            }
+        })
+        .unwrap();
+    // Wide enough that both sides of a hex line are in view: the characters
+    // sit past sixteen bytes of digits, and hex does not wrap.
+    window
+        .update(&mut cx, |view, window, cx| {
+            for _ in 0..3 {
+                view.resize_inspector(true, window, cx);
+            }
+        })
+        .unwrap();
+    cx.run_until_parked();
+    save(&mut cx, window.into(), "121-hex-chosen-on-both-sides");
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                panic!()
+            };
+            body.read(cx).selection().clear();
+        })
+        .unwrap();
     window
         .update(&mut cx, |view, _, cx| {
             view.set_body_mode(BodyMode::Pretty, cx)

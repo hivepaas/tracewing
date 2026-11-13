@@ -828,6 +828,57 @@ impl Body {
     }
 }
 
+/// Where the characters of a hex line begin: sixteen bytes of `xx ` and the
+/// space that sets the text apart.
+const HEX_TEXT_AT: usize = HEX_LINE * 3 + 1;
+
+/// The same bytes on the other side of a hex line. A hex line says each byte
+/// twice -- two digits, then the character it stands for -- so a choice on
+/// one side is worth marking on the other, which is how a reader sees that
+/// `6e` is the `n` of a name.
+///
+/// `chosen` is what was chosen of the line's `text`, in characters. `None`
+/// when there is nothing to mark on the other side: a choice that holds only
+/// the space between the sides, or one that holds both sides already.
+pub fn hex_twin(chosen: &Range<usize>, text: &str) -> Option<Range<usize>> {
+    let digits = HEX_LINE * 3;
+    // How many characters the text side has: the last line is short.
+    let characters = text.len().saturating_sub(HEX_TEXT_AT);
+    if chosen.is_empty() || characters == 0 {
+        return None;
+    }
+    if chosen.start < digits && chosen.end > HEX_TEXT_AT {
+        // Both sides are in it already.
+        return None;
+    }
+    if chosen.start < digits {
+        // Digits chosen: the bytes whose digits it touches, and nothing for a
+        // choice of the space between two of them.
+        let end = chosen.end.min(digits);
+        let first = if chosen.start % 3 == 2 {
+            chosen.start / 3 + 1
+        } else {
+            chosen.start / 3
+        };
+        let last = (end - 1) / 3;
+        if first > last || first >= characters {
+            return None;
+        }
+        return Some(HEX_TEXT_AT + first..HEX_TEXT_AT + (last + 1).min(characters));
+    }
+    if chosen.start >= HEX_TEXT_AT {
+        // Characters chosen: the digits of those bytes, without the space
+        // after the last of them.
+        let first = chosen.start - HEX_TEXT_AT;
+        let last = (chosen.end - HEX_TEXT_AT - 1).min(characters - 1);
+        if first > last {
+            return None;
+        }
+        return Some(first * 3..last * 3 + 2);
+    }
+    None
+}
+
 /// How much of a line is its text: JSON without the whitespace before the
 /// next token, other text without its line break.
 fn content_len(line: &[u8], kind: Kind) -> usize {
@@ -958,6 +1009,73 @@ pub fn tokens(text: &str) -> Vec<(std::ops::Range<usize>, Token)> {
 mod tests {
     use super::*;
     use std::io::Write;
+
+    /// A hex line of `bytes`, as the view draws it.
+    fn hex_text(bytes: &[u8]) -> String {
+        let path = std::env::temp_dir().join(format!(
+            "hex-{}-{:x}",
+            std::process::id(),
+            bytes.as_ptr() as usize
+        ));
+        File::create(&path).unwrap().write_all(bytes).unwrap();
+        let body = Body::open(&path).unwrap();
+        let text = body.read_in(0..1, true)[0].text.clone();
+        std::fs::remove_file(&path).unwrap();
+        text
+    }
+
+    /// What is chosen on one side of a hex line is marked on the other.
+    #[test]
+    fn the_same_bytes_are_found_on_the_other_side() {
+        let bytes: Vec<u8> = (0..16u8).map(|n| b'a' + n).collect();
+        let text = hex_text(&bytes);
+        // The digits of the first byte: the first character.
+        assert_eq!(hex_twin(&(0..2), &text), Some(HEX_TEXT_AT..HEX_TEXT_AT + 1));
+        // Three bytes, the spaces between them included.
+        assert_eq!(hex_twin(&(0..8), &text), Some(HEX_TEXT_AT..HEX_TEXT_AT + 3));
+        // The last byte of the line.
+        assert_eq!(
+            hex_twin(&(45..47), &text),
+            Some(HEX_TEXT_AT + 15..HEX_TEXT_AT + 16)
+        );
+        // And the other way: a character gives back the two digits of it,
+        // without the space that follows them.
+        assert_eq!(hex_twin(&(HEX_TEXT_AT..HEX_TEXT_AT + 1), &text), Some(0..2));
+        assert_eq!(
+            hex_twin(&(HEX_TEXT_AT + 2..HEX_TEXT_AT + 4), &text),
+            Some(6..11)
+        );
+    }
+
+    /// The choices there is nothing to mark for.
+    #[test]
+    fn a_choice_of_neither_side_marks_nothing() {
+        let text = hex_text(b"hello");
+        // Only the space between two bytes.
+        assert_eq!(hex_twin(&(2..3), &text), None);
+        // Only the gap between the sides.
+        assert_eq!(hex_twin(&(HEX_LINE * 3..HEX_TEXT_AT), &text), None);
+        // Both sides already.
+        assert_eq!(hex_twin(&(0..text.len()), &text), None);
+        // Nothing at all.
+        assert_eq!(hex_twin(&(4..4), &text), None);
+    }
+
+    /// The last line is short: a choice of the digits that have no bytes
+    /// behind them marks nothing, and one that runs past them stops.
+    #[test]
+    fn a_short_line_has_fewer_characters_to_mark() {
+        let text = hex_text(b"hi");
+        assert_eq!(text.len(), HEX_TEXT_AT + 2, "{text:?}");
+        assert_eq!(hex_twin(&(0..2), &text), Some(HEX_TEXT_AT..HEX_TEXT_AT + 1));
+        // Over the two bytes and into the padding.
+        assert_eq!(
+            hex_twin(&(0..20), &text),
+            Some(HEX_TEXT_AT..HEX_TEXT_AT + 2)
+        );
+        // Padding alone.
+        assert_eq!(hex_twin(&(9..20), &text), None);
+    }
 
     fn lines_of(contents: &[u8]) -> Vec<(u32, String)> {
         let path = std::env::temp_dir().join(format!(

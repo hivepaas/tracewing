@@ -1061,6 +1061,20 @@ impl BodyView {
         for (range, now) in self.found_in(line, from, &shown.text) {
             highlights = combine_highlights(highlights, [(range, found_style(now))]).collect();
         }
+        // Hex says each byte twice, as two digits and as the character it
+        // stands for. What is chosen on one side is marked on the other, so
+        // that a byte and its character are read together.
+        if self.hex()
+            && from == 0
+            && let Some(chosen) = self.select.range_in(key, shown.text.len())
+            && let Some(twin) = crate::body::hex_twin(&chosen, &shown.text)
+        {
+            let echoed = HighlightStyle {
+                background_color: Some(rgb(colors().echoed).into()),
+                ..Default::default()
+            };
+            highlights = combine_highlights(highlights, [(twin, echoed)]).collect();
+        }
         let text: SharedString = shown.text.into();
         let folded = matches!(mark, FoldMark::Folded(..));
         let mut row = div()
