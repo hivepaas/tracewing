@@ -863,9 +863,7 @@ impl Traffic {
         // and Find counts in them.
         let parts = self.render_parts(&detail, cx).into_any_element();
         let shown = self.render_part(&detail, cx);
-        let find = self
-            .render_find_bar(cx)
-            .filter(|_| self.inspector.part != Part::Messages);
+        let find = self.render_find_bar(cx);
         panel
             .child(render_title(&detail))
             .child(self.render_decrypt_choice(&detail, cx))
@@ -1354,8 +1352,7 @@ impl Traffic {
             .children(self.render_hex_switch(part, cx))
             .children(self.render_read_as_button(cx))
             .when(
-                part != Part::Messages
-                    && (part != Part::Body || matches!(self.inspector.body, BodyState::Shown(_))),
+                part != Part::Body || matches!(self.inspector.body, BodyState::Shown(_)),
                 |d| {
                     d.child(
                         div()

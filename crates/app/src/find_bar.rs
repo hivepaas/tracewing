@@ -61,6 +61,7 @@ impl Traffic {
             view.update(cx, |view, cx| view.set_find(None, cx));
         }
         self.inspector.select.set_find(None);
+        self.find_in_messages(None, cx);
         window.focus(&self.focus, cx);
         cx.notify();
     }
@@ -86,8 +87,10 @@ impl Traffic {
         self.inspector.select.set_find(re.clone());
         if let BodyState::Shown(view) = &self.inspector.body {
             bar.mark_applied(view.entity_id());
+            let re = re.clone();
             view.update(cx, |view, cx| view.set_find(re, cx));
         }
+        self.find_in_messages(re, cx);
         cx.notify();
     }
 
@@ -98,7 +101,18 @@ impl Traffic {
             (Some(bar), BodyState::Shown(view)) => !bar.applied(view.entity_id()),
             _ => false,
         };
-        if stale {
+        // Another flow's messages, not yet searched.
+        let messages_stale = self
+            .inspector
+            .find
+            .as_ref()
+            .is_some_and(|bar| bar.problem.is_none() && !bar.input.read(cx).text().is_empty())
+            && self
+                .inspector
+                .messages
+                .as_ref()
+                .is_some_and(|m| m.find.is_none());
+        if stale || messages_stale {
             self.apply_find(cx);
         }
         // In a part drawn whole, the one Find is at, once it has moved.
@@ -140,7 +154,9 @@ impl Traffic {
 
     /// The next found, or the one before.
     pub fn find_step(&mut self, forward: bool, cx: &mut Context<Self>) {
-        if self.inspector.part != Part::Body {
+        if self.inspector.part == Part::Messages {
+            self.messages_find_step(forward, cx);
+        } else if self.inspector.part != Part::Body {
             self.inspector.select.find_step(forward);
             cx.notify();
         } else if let BodyState::Shown(view) = &self.inspector.body {
@@ -170,7 +186,19 @@ impl Traffic {
         if bar.input.read(cx).text().is_empty() {
             return (String::new(), false);
         }
-        let count = if self.inspector.part != Part::Body {
+        let count = if self.inspector.part == Part::Messages {
+            // The messages that hold it.
+            self.inspector
+                .messages
+                .as_ref()
+                .and_then(|m| m.find.as_ref())
+                .map(|find| crate::bodyview::FindCount {
+                    now: find.now,
+                    found: find.places.len(),
+                    done: find.done,
+                    capped: false,
+                })
+        } else if self.inspector.part != Part::Body {
             // A part drawn whole: all of it is searched as it is drawn.
             self.inspector
                 .select
