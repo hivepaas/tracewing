@@ -2543,6 +2543,9 @@ t29e7dcd0 = Proxy di sistema…
 # System proxy on · {addr}
 t319ad6b9 = Proxy di sistema attivo · { $addr }
 
+# This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
+tb0605c20 = Il traffico di questo computer arriva qui. Se tracewing viene ucciso con questo attivo, l'impostazione resta e la rete si ferma: `tracewing recover` la rimette a posto.
+
 # Apps
 t53d91aad = App
 

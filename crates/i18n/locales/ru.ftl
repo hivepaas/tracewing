@@ -2614,6 +2614,9 @@ t29e7dcd0 = Системный прокси…
 # System proxy on · {addr}
 t319ad6b9 = Системный прокси включён · { $addr }
 
+# This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
+tb0605c20 = Трафик этого компьютера идёт сюда. Если tracewing убить, пока это включено, настройка останется и сеть пропадёт: `tracewing recover` вернёт её.
+
 # Apps
 t53d91aad = Приложения
 

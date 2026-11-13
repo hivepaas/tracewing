@@ -2490,6 +2490,9 @@ t29e7dcd0 = Sistem proxy'si…
 # System proxy on · {addr}
 t319ad6b9 = Sistem proxy'si açık · { $addr }
 
+# This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
+tb0605c20 = Bu bilgisayarın trafiği buraya gelir. Bu açıkken tracewing öldürülürse ayar geride kalır ve ağ durur: `tracewing recover` onu geri alır.
+
 # Apps
 t53d91aad = Uygulamalar
 

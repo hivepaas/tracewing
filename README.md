@@ -64,9 +64,29 @@ tracewing's first release, 0.1, is on its way: it will be at **[tracewing.app](h
 tracewing capture --seconds 60 --har api.har
 tracewing sessions
 tracewing export --har today.har --filter "host:api.example.com"
+tracewing recover                 # no network after tracewing was killed? this
 ```
 
 `tracewing help` lists the rest.
+
+### No network after tracewing was killed
+
+While the system proxy is on, this computer sends its traffic to tracewing. If
+tracewing is killed, the setting stays behind and points at a port nothing
+listens on, so **every program on the machine loses the network** — browsers
+first, and nothing says why.
+
+tracewing puts the setting back when it is closed, when it next starts, and from
+a watchdog process the moment it dies. When all three are missed — a kill that
+takes the watchdog with it, for instance — one command undoes it:
+
+```sh
+tracewing recover
+```
+
+It restores the settings tracewing wrote down before it changed them, and leaves
+them alone if they are no longer tracewing's. Starting tracewing again does the
+same.
 
 ## Build from source
 

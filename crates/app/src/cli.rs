@@ -20,6 +20,7 @@ use tracewing_store::{
     har::{self, ExportOptions},
     session,
 };
+use tracewing_system::Recovered;
 
 #[derive(Parser)]
 #[command(
@@ -80,6 +81,17 @@ enum Command {
         #[arg(long)]
         data_dir: Option<PathBuf>,
     },
+    /// Put the system proxy back, after tracewing was killed and left it
+    /// pointing at a port nothing listens on — which takes the network away
+    /// from everything on this computer.
+    ///
+    /// It restores the settings tracewing wrote down before it changed them,
+    /// and does nothing if they are not tracewing's any more.
+    Recover {
+        /// The data folder [default: the window's].
+        #[arg(long)]
+        data_dir: Option<PathBuf>,
+    },
     /// List the sessions recorded, the newest first.
     Sessions {
         /// The data folder [default: the window's].
@@ -92,7 +104,15 @@ enum Command {
 pub fn is_command(arg: &str) -> bool {
     matches!(
         arg,
-        "capture" | "export" | "sessions" | "help" | "--help" | "-h" | "--version" | "-V"
+        "capture"
+            | "export"
+            | "recover"
+            | "sessions"
+            | "help"
+            | "--help"
+            | "-h"
+            | "--version"
+            | "-V"
     )
 }
 
@@ -145,6 +165,19 @@ pub fn run(args: &[String]) -> Result<()> {
             };
             let n = out.write(&data_dir, &dir)?;
             println!("{} written to {}", flows(n), out.path.display());
+            Ok(())
+        }
+        Command::Recover { data_dir } => {
+            let dir = data_dir.unwrap_or_else(default_data_dir);
+            match tracewing_system::recover(&dir)? {
+                Recovered::PutBack => println!("the system proxy is back as it was"),
+                Recovered::LeftAlone => {
+                    println!("the system proxy is not tracewing's, so it was left alone")
+                }
+                Recovered::Nothing => {
+                    println!("tracewing has not changed the system proxy: nothing to put back")
+                }
+            }
             Ok(())
         }
         Command::Sessions { data_dir } => {

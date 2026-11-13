@@ -1977,6 +1977,14 @@ impl Traffic {
             .px(ui(14.))
             .gap(ui(8.))
             .font_weight(FontWeight::BOLD)
+            // Said while it is on, because the time to learn it is before
+            // the network goes: if tracewing is killed with this on, every
+            // program on the machine loses the network and nothing says why.
+            .when(on, |d| {
+                d.tooltip(tip(tr!(
+                    "This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back."
+                )))
+            })
             .when(on, |d| {
                 d.bg(rgb(c.tonal))
                     .text_color(rgb(c.on_tonal))

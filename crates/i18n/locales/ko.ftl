@@ -2404,6 +2404,9 @@ t29e7dcd0 = 시스템 프록시…
 # System proxy on · {addr}
 t319ad6b9 = 시스템 프록시 켜짐 · { $addr }
 
+# This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
+tb0605c20 = 이 컴퓨터의 트래픽이 여기로 옵니다. 이 상태에서 tracewing이 강제 종료되면 설정이 남아 네트워크가 끊깁니다: `tracewing recover`로 되돌립니다.
+
 # Apps
 t53d91aad = 앱
 

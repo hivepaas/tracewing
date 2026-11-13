@@ -960,6 +960,7 @@ tc9390ffa = Hide what came before. Nothing is deleted: the session keeps it, and
 t7e813d25 = System proxy off · { $addr }
 t29e7dcd0 = System proxy…
 t319ad6b9 = System proxy on · { $addr }
+tb0605c20 = This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
 t53d91aad = Apps
 t27acf320 = Devices
 tfc7bfe37 = All hosts
