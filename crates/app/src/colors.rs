@@ -34,8 +34,9 @@ pub struct Palette {
     pub faint: u32,
     /// The selection behind text in a field.
     pub soft: u32,
-    /// Behind the same bytes on the other side of a hex line: weaker than
-    /// the selection itself, so that which side was chosen is still plain.
+    /// Behind the same bytes on the other side of a hex line. A tone of its
+    /// own rather than a weaker selection: weaker only, it sank into the
+    /// page, and in the dark it could hardly be seen at all.
     pub echoed: u32,
     /// Behind text Find found, and behind the one it is at.
     pub found: u32,
@@ -93,7 +94,7 @@ const LIGHT: Palette = Palette {
     muted: 0x4a5263,
     faint: 0x8a93a6,
     soft: 0xc9d2e6,
-    echoed: 0xdfe6f5,
+    echoed: 0xbfd6fb,
     found: 0xfff0b3,
     found_now: 0xffc95c,
     splitter: 0xc9d2e6,
@@ -146,7 +147,7 @@ const GRAPHITE: Palette = Palette {
     muted: 0xa2a5ad,
     faint: 0x7d818b,
     soft: 0x3b3e45,
-    echoed: 0x2b2e35,
+    echoed: 0x31486e,
     found: 0x4d4220,
     found_now: 0x8a6b1c,
     splitter: 0x3b3e45,
