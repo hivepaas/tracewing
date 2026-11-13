@@ -270,6 +270,18 @@ fn build() -> Vec<Sample> {
             format!("Basic {}", b64(b"ana:open sesame")),
             "The name and the password behind Basic",
         ),
+        // Not under `authorization`, which already carries the JWT above: a
+        // header holds one value, and both of these are worth having. The
+        // reading goes by the value, so it reads here all the same.
+        header(
+            "aws-sigv4",
+            "x-amz-authorization",
+            "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20261112/ap-southeast-1/s3/aws4_request, \
+             SignedHeaders=host;x-amz-content-sha256;x-amz-date, \
+             Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"
+                .to_owned(),
+            "What an Amazon signature says: the key, the day, the region, the service",
+        ),
         header(
             "traceparent",
             "traceparent",
@@ -333,6 +345,12 @@ fn build() -> Vec<Sample> {
             "Seconds, said as a span",
         ),
         // Times, in a body, each kind in the field a real one would be in.
+        field(
+            "aws-sigv4",
+            "x_amz_credential",
+            "AKIDEXAMPLE/20261112/ap-southeast-1/s3/aws4_request".to_owned(),
+            "The same credential as a presigned URL carries it, with no algorithm in front",
+        ),
         field(
             "unix-ms",
             "created_at_ms",
@@ -717,6 +735,7 @@ mod tests {
         const KNOWN: &[&str] = &[
             "address",
             "amazon-trace",
+            "aws-sigv4",
             "b3",
             "base32",
             "base58",
@@ -806,6 +825,7 @@ mod tests {
         assert_eq!(
             quiet,
             [
+                "aws-sigv4",
                 "basic-auth",
                 "cache-control",
                 "cookie",

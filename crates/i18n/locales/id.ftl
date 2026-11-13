@@ -2833,6 +2833,9 @@ tb79773df = Server-Timing
 # Query fields
 t2f58f1e0 = Bidang query
 
+# An Amazon signature
+t001aa07c = Tanda tangan Amazon
+
 # Basic authentication
 te161b66b = Autentikasi Basic
 
@@ -3117,3 +3120,21 @@ tc01144d0 = tidak diperiksa lagi
 
 # data: URI, {media}
 t514d8ddb = URI data:, { $media }
+
+# Key
+tcd1ac90c = Kunci
+
+# Day
+t4954229d = Hari
+
+# Region
+t492e789d = Region
+
+# Service
+tb643c704 = Layanan
+
+# Headers signed
+t62bd9377 = Header yang ditandatangani
+
+# Signature
+tc049050d = Tanda tangan

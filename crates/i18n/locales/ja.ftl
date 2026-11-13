@@ -2833,6 +2833,9 @@ tb79773df = Server-Timing
 # Query fields
 t2f58f1e0 = クエリのフィールド
 
+# An Amazon signature
+t001aa07c = Amazon の署名
+
 # Basic authentication
 te161b66b = Basic認証
 
@@ -3117,3 +3120,21 @@ tc01144d0 = 再確認しない
 
 # data: URI, {media}
 t514d8ddb = data: URI、{ $media }
+
+# Key
+tcd1ac90c = キー
+
+# Day
+t4954229d = 日付
+
+# Region
+t492e789d = リージョン
+
+# Service
+tb643c704 = サービス
+
+# Headers signed
+t62bd9377 = 署名対象ヘッダー
+
+# Signature
+tc049050d = 署名

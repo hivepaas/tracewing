@@ -2833,6 +2833,9 @@ tb79773df = Server-Timing
 # Query fields
 t2f58f1e0 = 쿼리 필드
 
+# An Amazon signature
+t001aa07c = Amazon 서명
+
 # Basic authentication
 te161b66b = Basic 인증
 
@@ -3117,3 +3120,21 @@ tc01144d0 = 다시 확인하지 않음
 
 # data: URI, {media}
 t514d8ddb = data: URI, { $media }
+
+# Key
+tcd1ac90c = 키
+
+# Day
+t4954229d = 날짜
+
+# Region
+t492e789d = 리전
+
+# Service
+tb643c704 = 서비스
+
+# Headers signed
+t62bd9377 = 서명된 헤더
+
+# Signature
+tc049050d = 서명

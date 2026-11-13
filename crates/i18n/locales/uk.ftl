@@ -3064,6 +3064,9 @@ tb79773df = Server-Timing
 # Query fields
 t2f58f1e0 = Поля запиту
 
+# An Amazon signature
+t001aa07c = Підпис Amazon
+
 # Basic authentication
 te161b66b = Аутентифікація Basic
 
@@ -3348,3 +3351,21 @@ tc01144d0 = більше не перевіряється
 
 # data: URI, {media}
 t514d8ddb = data:-URI, { $media }
+
+# Key
+tcd1ac90c = Ключ
+
+# Day
+t4954229d = День
+
+# Region
+t492e789d = Регіон
+
+# Service
+tb643c704 = Сервіс
+
+# Headers signed
+t62bd9377 = Підписані заголовки
+
+# Signature
+tc049050d = Підпис

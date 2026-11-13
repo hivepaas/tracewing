@@ -2926,6 +2926,9 @@ tb79773df = Server-Timing
 # Query fields
 t2f58f1e0 = Sorgu alanları
 
+# An Amazon signature
+t001aa07c = Amazon imzası
+
 # Basic authentication
 te161b66b = Basic kimlik doğrulama
 
@@ -3210,3 +3213,21 @@ tc01144d0 = bir daha doğrulanmaz
 
 # data: URI, {media}
 t514d8ddb = data: URI, { $media }
+
+# Key
+tcd1ac90c = Anahtar
+
+# Day
+t4954229d = Gün
+
+# Region
+t492e789d = Bölge
+
+# Service
+tb643c704 = Hizmet
+
+# Headers signed
+t62bd9377 = İmzalanan başlıklar
+
+# Signature
+tc049050d = İmza

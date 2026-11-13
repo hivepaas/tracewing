@@ -298,6 +298,66 @@ pub fn data_uri(input: &Input) -> Option<Reading> {
     ))
 }
 
+/// What an `Authorization` of Amazon's says, which is a great deal: the key
+/// it was signed with, the day, the region, the service, and which headers
+/// were part of the signature.
+///
+/// Nothing else in a request to a cloud is so long and so unreadable, and a
+/// request refused for the wrong region or a stale day is a morning gone.
+pub fn aws_sigv4(input: &Input) -> Option<Reading> {
+    let text = input.text.trim().trim_matches('"');
+    let rest = text
+        .strip_prefix("AWS4-HMAC-SHA256")
+        .map(str::trim_start)
+        .filter(|rest| rest.starts_with("Credential="));
+    // A presigned URL carries the same thing in a query field, with no
+    // algorithm in front of it.
+    let credential = match rest {
+        Some(rest) => rest
+            .split(',')
+            .find_map(|part| part.trim().strip_prefix("Credential="))?,
+        None if text.ends_with("/aws4_request") => text,
+        None => return None,
+    };
+    let parts: Vec<&str> = credential.split('/').collect();
+    let [key, day, region, service, scope] = parts.as_slice() else {
+        return None;
+    };
+    if *scope != "aws4_request" || day.len() != 8 || !day.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let mut fields = vec![
+        (tr!("Key"), (*key).to_owned()),
+        (
+            tr!("Day"),
+            format!("{}-{}-{}", &day[..4], &day[4..6], &day[6..]),
+        ),
+        (tr!("Region"), (*region).to_owned()),
+        (tr!("Service"), (*service).to_owned()),
+    ];
+    if let Some(rest) = rest {
+        if let Some(headers) = rest
+            .split(',')
+            .find_map(|part| part.trim().strip_prefix("SignedHeaders="))
+        {
+            let named: Vec<&str> = headers.split(';').filter(|h| !h.is_empty()).collect();
+            fields.push((tr!("Headers signed"), named.join(", ")));
+        }
+        if let Some(signature) = rest
+            .split(',')
+            .find_map(|part| part.trim().strip_prefix("Signature="))
+        {
+            fields.push((tr!("Signature"), signature.trim().to_owned()));
+        }
+    }
+    Some(Reading::new(
+        "aws-sigv4",
+        tr!("An Amazon signature"),
+        Confidence::Certain,
+        Shown::Fields(fields),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -348,6 +408,58 @@ mod tests {
         }
         // One pair alone is a value with an equals sign in it.
         assert!(by_id(&read("a=1"), "query").is_none());
+    }
+
+    #[test]
+    fn an_amazon_signature_comes_apart() {
+        let found = fields(
+            "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, \
+             SignedHeaders=content-type;host;x-amz-date, \
+             Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7",
+            "aws-sigv4",
+        );
+        let said: Vec<(&str, &str)> = found
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect();
+        assert!(said.contains(&("Key", "AKIDEXAMPLE")));
+        assert!(said.contains(&("Day", "2015-08-30")));
+        assert!(said.contains(&("Region", "us-east-1")));
+        assert!(said.contains(&("Service", "iam")));
+        assert!(said.contains(&("Headers signed", "content-type, host, x-amz-date")));
+        assert!(said.contains(&(
+            "Signature",
+            "5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"
+        )));
+    }
+
+    #[test]
+    fn a_presigned_credential_is_enough() {
+        let found = fields(
+            "AKIDEXAMPLE/20150830/eu-west-1/s3/aws4_request",
+            "aws-sigv4",
+        );
+        let said: Vec<&str> = found.iter().map(|(name, _)| name.as_str()).collect();
+        assert_eq!(said, vec!["Key", "Day", "Region", "Service"]);
+        assert_eq!(found[1].1, "2015-08-30");
+    }
+
+    #[test]
+    fn what_is_not_an_amazon_signature_is_not_one() {
+        // The algorithm alone, with nothing signed.
+        assert!(by_id(&read("AWS4-HMAC-SHA256"), "aws-sigv4").is_none());
+        // A path that happens to end the same way.
+        assert!(by_id(&read("/one/two/three/four/aws4_request"), "aws-sigv4").is_none());
+        // A day that is not a day.
+        assert!(
+            by_id(
+                &read("AKIDEXAMPLE/last-week/us-east-1/iam/aws4_request"),
+                "aws-sigv4"
+            )
+            .is_none()
+        );
+        // The older scheme, which says nothing of regions or services.
+        assert!(by_id(&read("AWS4-HMAC-SHA256 Signature=abc"), "aws-sigv4").is_none());
     }
 
     #[test]

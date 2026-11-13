@@ -2981,6 +2981,9 @@ tb79773df = Server-Timing
 # Query fields
 t2f58f1e0 = Campos da query
 
+# An Amazon signature
+t001aa07c = Uma assinatura da Amazon
+
 # Basic authentication
 te161b66b = Autenticação Basic
 
@@ -3265,3 +3268,21 @@ tc01144d0 = nunca mais verificado
 
 # data: URI, {media}
 t514d8ddb = URI data:, { $media }
+
+# Key
+tcd1ac90c = Chave
+
+# Day
+t4954229d = Dia
+
+# Region
+t492e789d = Região
+
+# Service
+tb643c704 = Serviço
+
+# Headers signed
+t62bd9377 = Cabeçalhos assinados
+
+# Signature
+tc049050d = Assinatura
