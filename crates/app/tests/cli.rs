@@ -12,6 +12,31 @@ fn tracewing() -> Command {
     Command::new(env!("CARGO_BIN_EXE_tracewing"))
 }
 
+/// `tracewing recover`, with the XDG folders pointed inside `dir`. Putting the
+/// settings back takes the login recovery away with them, and on a machine
+/// somebody works on that entry belongs to whatever tracewing they have
+/// running, not to a test.
+fn recover(dir: &std::path::Path) -> Command {
+    let mut command = tracewing();
+    command
+        .args(["recover", "--data-dir"])
+        .arg(dir)
+        .env("HOME", dir)
+        .env("XDG_CONFIG_HOME", dir.join("config"));
+    command
+}
+
+/// A journal as a killed run leaves one: the address it pointed the system
+/// proxy at, and each setting as it was before. The keys are the journal's
+/// own, `addr` and `saved.<name>`.
+fn journal_of_a_killed_run(dir: &std::path::Path) {
+    std::fs::write(
+        dir.join("sysproxy.journal"),
+        "addr=127.0.0.1:9090\nsaved.mode='none'\n",
+    )
+    .unwrap();
+}
+
 #[test]
 fn it_records_with_no_window_and_writes_a_har() {
     let _ = tracewing_proxy::crypto_provider().install_default();
@@ -153,11 +178,7 @@ fn recover_says_what_it_did_and_leaves_a_stranger_alone() {
     std::fs::create_dir_all(&dir).unwrap();
 
     // Nothing of tracewing's is on the machine: it says so and does nothing.
-    let out = tracewing()
-        .args(["recover", "--data-dir"])
-        .arg(&dir)
-        .output()
-        .unwrap();
+    let out = recover(&dir).output().unwrap();
     assert!(out.status.success(), "{out:?}");
     assert!(
         String::from_utf8_lossy(&out.stdout).contains("nothing to put back"),
@@ -166,28 +187,34 @@ fn recover_says_what_it_did_and_leaves_a_stranger_alone() {
 
     // A journal from a run that was killed, naming settings that are not on
     // this machine now: it must not put somebody else's settings back.
-    // The keys are the journal's own: `addr`, and `saved.` for each setting
-    // as it was before tracewing touched it.
-    std::fs::write(
-        dir.join("sysproxy.journal"),
-        "addr=127.0.0.1:9090\nsaved.mode='none'\n",
-    )
-    .unwrap();
-    let out = tracewing()
-        .args(["recover", "--data-dir"])
-        .arg(&dir)
-        .output()
-        .unwrap();
-    assert!(out.status.success(), "{out:?}");
+    journal_of_a_killed_run(&dir);
+    let out = recover(&dir).output().unwrap();
     let said = String::from_utf8_lossy(&out.stdout);
-    assert!(
-        said.contains("left alone") || said.contains("back as it was"),
-        "it says which of the two happened: {said}"
-    );
-    assert!(
-        !dir.join("sysproxy.journal").exists(),
-        "and the journal goes either way, so it cannot be used twice"
-    );
+    if out.status.success() {
+        assert!(
+            said.contains("left alone") || said.contains("back as it was"),
+            "it says which of the two happened: {said}"
+        );
+        assert!(
+            !dir.join("sysproxy.journal").exists(),
+            "and the journal goes either way, so it cannot be used twice"
+        );
+    } else {
+        // A machine with no desktop, a build runner among them, has no system
+        // proxy setting that could have been changed. It says which half it
+        // could not do, and it keeps the journal: that is the only record of
+        // what the settings were, and throwing it away on a machine that
+        // cannot read them would lose them for the machine that can.
+        let complaint = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            complaint.contains("read this computer's proxy setting"),
+            "{complaint}"
+        );
+        assert!(
+            dir.join("sysproxy.journal").exists(),
+            "and the journal stays, being all that is left of the settings"
+        );
+    }
 
     std::fs::remove_dir_all(&dir).ok();
 }
