@@ -45,7 +45,13 @@ pub enum ToOpen {
     WholeLine { line: u64, text: String },
     /// A value a reader pressed, to be read in a pane of its own: the value
     /// as it stands, and the field it sat under.
-    Value { text: String, field: Option<String> },
+    Value {
+        text: String,
+        field: Option<String>,
+        /// Whether the reader asked outright -- a double press, or the menu
+        /// -- which is answered even where the value reads as nothing.
+        asked: bool,
+    },
 }
 
 /// What opens one: a body view has no pane of its own, so it asks the window.
@@ -374,16 +380,27 @@ impl BodyView {
     /// path, so the name comes off the line itself.
     /// Takes the whole value under `point` and asks the window to read it
     /// beside the body. Nothing happens where the press was not in a value.
-    fn read_value_at(&mut self, point: gpui::Point<gpui::Pixels>, cx: &mut Context<Self>) {
+    fn read_value_at(
+        &mut self,
+        point: gpui::Point<gpui::Pixels>,
+        asked: bool,
+        cx: &mut Context<Self>,
+    ) {
         if let Some(spot) = self.select.spot_at(point) {
-            self.read_value_at_spot(spot, cx);
+            self.read_value_at_spot(spot, asked, cx);
         }
     }
 
     /// The same from a spot rather than a point, which is what a press
     /// becomes and what a test can hand over.
-    pub fn read_value_at_spot(&mut self, spot: Spot, cx: &mut Context<Self>) -> bool {
-        let Some((range, value, field)) = self.value_at(spot) else {
+    pub fn read_value_at_spot(&mut self, spot: Spot, asked: bool, cx: &mut Context<Self>) -> bool {
+        // Asked for outright, the word under the press will do where it is
+        // not in a value of its own: somebody pressing twice on a line of
+        // plain text means that word.
+        let found = self
+            .value_at(spot)
+            .or_else(|| asked.then(|| self.word_at(spot)).flatten());
+        let Some((range, value, field)) = found else {
             return false;
         };
         self.select.select(
@@ -398,11 +415,25 @@ impl BodyView {
         );
         if let Some(opens) = &self.opens {
             let opens = opens.clone();
-            let what = ToOpen::Value { text: value, field };
+            let what = ToOpen::Value {
+                text: value,
+                field,
+                asked,
+            };
             cx.defer(move |cx| opens(what, cx));
         }
         cx.notify();
         true
+    }
+
+    /// The word under a spot, where it is not in a value of its own: what a
+    /// reader who pressed twice on a line of plain text means.
+    fn word_at(&self, spot: Spot) -> Option<(std::ops::Range<usize>, String, Option<String>)> {
+        let (line, at) = self.line_spot(spot);
+        let text = self.shown().read_whole(line..line + 1).pop()?;
+        let range = crate::input::word_around(&text, at.min(text.len()));
+        let word = text.get(range.clone())?.trim_matches('"').to_owned();
+        (!word.trim().is_empty()).then_some((range, word, None))
     }
 
     /// The whole value the press landed in, and the field it sits under:
@@ -1810,6 +1841,28 @@ impl BodyView {
                     let _ = all.update(cx, |this, cx| this.copy_all(cx));
                 },
             );
+            // Read what was dragged across, whatever it turns out to be:
+            // the way to read a part of a line, or a value the view does
+            // not see as one.
+            if let Some(opens) = self.opens.clone()
+                && let Copied::Text(chosen) = self.select.selected_text()
+            {
+                let field = self.selected_field();
+                items.push(select::Item::new(
+                    "read-this",
+                    tr!("Read this"),
+                    Some(Rc::new(move |_: &mut Window, cx: &mut gpui::App| {
+                        opens(
+                            ToOpen::Value {
+                                text: chosen.clone(),
+                                field: field.clone(),
+                                asked: true,
+                            },
+                            cx,
+                        );
+                    }) as select::Act),
+                ));
+            }
             // What the selection turned out to be: a time, a token, something
             // packed. Choosing one draws it after the value it was read from;
             // `Copy reading` takes the whole of it instead.
@@ -1994,8 +2047,13 @@ impl BodyView {
                     // value is taken and read, so that nobody has to drag
                     // across a JWT exactly to have it read. A drag is left
                     // alone -- what was dragged is what was meant.
-                    if e.click_count == 1 && this.select.is_empty() {
-                        this.read_value_at(e.position, cx);
+                    // Pressed twice, the reader is asking rather than
+                    // passing through, and the answer comes whatever the
+                    // value turns out to be.
+                    match e.click_count {
+                        1 if this.select.is_empty() => this.read_value_at(e.position, false, cx),
+                        2 => this.read_value_at(e.position, true, cx),
+                        _ => {}
                     }
                 }),
             )

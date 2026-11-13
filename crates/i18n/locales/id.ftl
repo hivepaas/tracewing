@@ -136,6 +136,9 @@ tbdecf3c8 = Salin baris
 # Copy column
 te26431fe = Salin kolom
 
+# Read this
+tf389da1f = Baca ini
+
 # Open this line
 t9bc3ec63 = Buka baris ini
 

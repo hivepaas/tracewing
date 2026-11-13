@@ -276,7 +276,7 @@ fn streams_show_as_they_come() {
                 .unwrap();
             body.update(cx, |body, cx| {
                 assert!(
-                    body.read_value_at_spot(spot, cx),
+                    body.read_value_at_spot(spot, false, cx),
                     "the press is inside the value"
                 );
             });

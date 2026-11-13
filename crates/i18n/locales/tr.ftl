@@ -144,6 +144,9 @@ tbdecf3c8 = Satırı kopyala
 # Copy column
 te26431fe = Sütunu kopyala
 
+# Read this
+tf389da1f = Bunu oku
+
 # Open this line
 t9bc3ec63 = Bu satırı aç
 
