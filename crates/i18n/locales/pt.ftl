@@ -1673,6 +1673,20 @@ tf756539b =
        *[other] O SQLite encontrou { $count } problemas, o primeiro: { $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+        [one] { $count } fluxo resgatado para uma nova sessão. O fim da danificada não se conseguiu ler, por isso pode haver mais.
+       *[other] { $count } fluxos resgatados para uma nova sessão. O fim da danificada não se conseguiu ler, por isso pode haver mais.
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+        [one] { $count } fluxo resgatado para uma nova sessão; { $lost } não se conseguiu ler.
+       *[other] { $count } fluxos resgatados para uma nova sessão; { $lost } não se conseguiram ler.
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · gravada por outra versão, então não pode ser aberta
 
@@ -1694,6 +1708,12 @@ t3cb3e6fc = Gravando agora
 
 # Export HAR
 t4d6458cc = Exportar HAR
+
+# Rescuing…
+t1eea47d9 = A resgatar…
+
+# Rescue what reads
+te43c8d2b = Resgatar o que se lê
 
 # Checking…
 t87f62cb7 = A verificar…
@@ -2451,6 +2471,9 @@ tf2cc0563 = { $shown } de { $total }
 # Recording
 te75cf20c = Gravando
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = Esconde o que veio antes. Nada é apagado: a sessão guarda-o, e é em Sessões que desaparece de vez.
+
 # System proxy off · {addr}
 t7e813d25 = Proxy do sistema desativado · { $addr }
 
@@ -2555,6 +2578,13 @@ t57bf5200 =
     { $n ->
         [one] { $count } fluxo
        *[other] { $count } fluxos
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+        [one] { $count } escondido, continua gravado · mostrar
+       *[other] { $count } escondidos, continuam gravados · mostrar
     }
 
 # Export as HAR

@@ -1552,6 +1552,18 @@ tf756539b =
        *[other] SQLite 发现 { $count } 个问题，第一个：{ $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+       *[other] 已把 { $count } 条流救到新会话。损坏会话的末尾读不出来，可能还有更多。
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+       *[other] 已把 { $count } 条流救到新会话；{ $lost } 条读不出来。
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · 由其他版本写入，无法打开
 
@@ -1572,6 +1584,12 @@ t3cb3e6fc = 正在录制
 
 # Export HAR
 t4d6458cc = 导出 HAR
+
+# Rescuing…
+t1eea47d9 = 正在抢救…
+
+# Rescue what reads
+te43c8d2b = 抢救可读的部分
 
 # Checking…
 t87f62cb7 = 正在检查…
@@ -2314,6 +2332,9 @@ tf2cc0563 = { $shown } / { $total }
 # Recording
 te75cf20c = 录制
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = 隐藏此前的记录。不会删除任何内容：会话仍然保留，要彻底删除请到“会话”页。
+
 # System proxy off · {addr}
 t7e813d25 = 系统代理已关闭 · { $addr }
 
@@ -2414,6 +2435,12 @@ te30201f0 =
 t57bf5200 =
     { $n ->
        *[other] { $count } 条流量记录
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+       *[other] 已隐藏 { $count } 条，记录仍在 · 重新显示
     }
 
 # Export as HAR

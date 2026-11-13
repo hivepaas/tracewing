@@ -1552,6 +1552,18 @@ tf756539b =
        *[other] SQLite가 문제 { $count }개를 찾았습니다. 첫 번째: { $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+       *[other] 플로우 { $count }개를 새 세션으로 구해 냈습니다. 손상된 쪽의 끝을 읽지 못했으니 더 있을 수 있습니다.
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+       *[other] 플로우 { $count }개를 새 세션으로 구해 냈습니다. { $lost }개는 읽지 못했습니다.
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · 다른 버전에서 작성되어 열 수 없음
 
@@ -1572,6 +1584,12 @@ t3cb3e6fc = 지금 기록 중
 
 # Export HAR
 t4d6458cc = HAR 내보내기
+
+# Rescuing…
+t1eea47d9 = 구하는 중…
+
+# Rescue what reads
+te43c8d2b = 읽히는 것만 구하기
 
 # Checking…
 t87f62cb7 = 확인 중…
@@ -2314,6 +2332,9 @@ tf2cc0563 = { $shown } / { $total }
 # Recording
 te75cf20c = 기록 중
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = 그 앞의 것을 숨깁니다. 지워지지는 않습니다: 세션에 그대로 남아 있고, 완전히 지우는 곳은 세션 화면입니다.
+
 # System proxy off · {addr}
 t7e813d25 = 시스템 프록시 꺼짐 · { $addr }
 
@@ -2414,6 +2435,12 @@ te30201f0 =
 t57bf5200 =
     { $n ->
        *[other] 플로우 { $count }개
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+       *[other] { $count }개 숨김, 기록은 남아 있음 · 보이기
     }
 
 # Export as HAR

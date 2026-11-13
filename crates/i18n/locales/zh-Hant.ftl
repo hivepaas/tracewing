@@ -1552,6 +1552,18 @@ tf756539b =
        *[other] SQLite 發現 { $count } 個問題，第一個：{ $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+       *[other] 已把 { $count } 條流救到新的工作階段。損壞那個的結尾讀不出來，可能還有更多。
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+       *[other] 已把 { $count } 條流救到新的工作階段；{ $lost } 條讀不出來。
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · 由其他版本寫入，無法開啟
 
@@ -1572,6 +1584,12 @@ t3cb3e6fc = 正在錄製
 
 # Export HAR
 t4d6458cc = 匯出 HAR
+
+# Rescuing…
+t1eea47d9 = 正在搶救…
+
+# Rescue what reads
+te43c8d2b = 搶救可讀的部分
 
 # Checking…
 t87f62cb7 = 正在檢查…
@@ -2314,6 +2332,9 @@ tf2cc0563 = { $shown } / { $total }
 # Recording
 te75cf20c = 錄製
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = 隱藏此前的紀錄。不會刪除任何內容：工作階段仍然保留，要徹底刪除請到「工作階段」頁。
+
 # System proxy off · {addr}
 t7e813d25 = 系統代理伺服器已關閉 · { $addr }
 
@@ -2414,6 +2435,12 @@ te30201f0 =
 t57bf5200 =
     { $n ->
        *[other] { $count } 筆流量紀錄
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+       *[other] 已隱藏 { $count } 筆，紀錄仍在 · 重新顯示
     }
 
 # Export as HAR

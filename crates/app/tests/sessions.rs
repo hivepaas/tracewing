@@ -12,6 +12,7 @@ use std::{
 };
 use tracewing::{
     engine::{Engine, EngineOptions},
+    flows::group_digits,
     inspector::BodyState,
     traffic::{Screen, Traffic},
 };
@@ -252,6 +253,45 @@ fn an_earlier_session_opens_again() {
         .unwrap();
     cx.run_until_parked();
     shot(&mut cx, window.into(), "19-session-damaged");
+
+    // What it still holds is worth more than the file: rescued into a new
+    // session, which reads like any other, while the damaged one stays
+    // where it is for anyone who wants another go at it.
+    window
+        .update(&mut cx, |view, _, cx| view.rescue_session(&broken, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the rescue", |view| {
+        view.sessions_page.checked.contains_key(&broken)
+    });
+    wait_for(&mut cx, window, "the new session listed", |view| {
+        view.sessions_page.sessions.len() == 3
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let said = view.sessions_page.checked[&broken].to_string();
+            assert!(said.contains("rescued"), "it says what came out: {said}");
+            let rescued = view
+                .sessions_page
+                .sessions
+                .iter()
+                .find(|about| about.name.as_deref() == Some("rescued from 1000000001"))
+                .expect("the rescued session is listed");
+            assert!(rescued.readable, "{:?}", rescued.trouble);
+            assert!(rescued.flows > 0, "with flows in it");
+            // The number on the row is the number that was rescued. The
+            // screen counts a session's flows by the span of its ids, so
+            // the rescued rows are numbered again; before that, a rescue of
+            // 1,448 was listed as 1,460.
+            assert!(
+                said.contains(&group_digits(rescued.flows)),
+                "{said} against {} on the row",
+                rescued.flows
+            );
+            assert!(broken.exists(), "and the damaged one is still there");
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "20-session-rescued");
 
     drop(cx);
     std::fs::remove_dir_all(&dir).unwrap();

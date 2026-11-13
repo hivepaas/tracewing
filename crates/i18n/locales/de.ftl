@@ -1659,6 +1659,20 @@ tf756539b =
        *[other] SQLite hat { $count } Probleme gefunden, das erste: { $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+        [one] { $count } Flow in eine neue Sitzung gerettet. Das Ende der beschädigten war nicht lesbar, es kann also mehr geben.
+       *[other] { $count } Flows in eine neue Sitzung gerettet. Das Ende der beschädigten war nicht lesbar, es kann also mehr geben.
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+        [one] { $count } Flow in eine neue Sitzung gerettet; { $lost } war nicht lesbar.
+       *[other] { $count } Flows in eine neue Sitzung gerettet; { $lost } waren nicht lesbar.
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · von einer anderen Version geschrieben, kann daher nicht geöffnet werden
 
@@ -1680,6 +1694,12 @@ t3cb3e6fc = Wird gerade aufgezeichnet
 
 # Export HAR
 t4d6458cc = HAR exportieren
+
+# Rescuing…
+t1eea47d9 = Wird gerettet …
+
+# Rescue what reads
+te43c8d2b = Retten, was lesbar ist
 
 # Checking…
 t87f62cb7 = Wird geprüft …
@@ -2434,6 +2454,9 @@ tf2cc0563 = { $shown } von { $total }
 # Recording
 te75cf20c = Aufzeichnung
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = Blendet aus, was davor kam. Nichts wird gelöscht: die Sitzung behält es, und unter Sitzungen geht es endgültig.
+
 # System proxy off · {addr}
 t7e813d25 = System-Proxy aus · { $addr }
 
@@ -2538,6 +2561,13 @@ t57bf5200 =
     { $n ->
         [one] { $count } Flow
        *[other] { $count } Flows
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+        [one] { $count } ausgeblendet, weiter aufgezeichnet · anzeigen
+       *[other] { $count } ausgeblendet, weiter aufgezeichnet · anzeigen
     }
 
 # Export as HAR

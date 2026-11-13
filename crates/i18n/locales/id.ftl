@@ -1552,6 +1552,18 @@ tf756539b =
        *[other] SQLite menemukan { $count } masalah, yang pertama: { $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+       *[other] { $count } flow diselamatkan ke sesi baru. Ujung sesi yang rusak tidak terbaca, jadi mungkin masih ada lagi.
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+       *[other] { $count } flow diselamatkan ke sesi baru; { $lost } tidak terbaca.
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · ditulis oleh versi lain, jadi tidak bisa dibuka
 
@@ -1572,6 +1584,12 @@ t3cb3e6fc = Sedang merekam
 
 # Export HAR
 t4d6458cc = Ekspor HAR
+
+# Rescuing…
+t1eea47d9 = Menyelamatkan…
+
+# Rescue what reads
+te43c8d2b = Selamatkan yang terbaca
 
 # Checking…
 t87f62cb7 = Memeriksa…
@@ -2314,6 +2332,9 @@ tf2cc0563 = { $shown } dari { $total }
 # Recording
 te75cf20c = Merekam
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = Menyembunyikan yang sebelumnya. Tidak ada yang dihapus: sesi tetap menyimpannya, dan di Sesi-lah ia hilang untuk selamanya.
+
 # System proxy off · {addr}
 t7e813d25 = Proxy sistem mati · { $addr }
 
@@ -2414,6 +2435,12 @@ te30201f0 =
 t57bf5200 =
     { $n ->
        *[other] { $count } flow
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+       *[other] { $count } disembunyikan, tetap terekam · tampilkan
     }
 
 # Export as HAR

@@ -655,6 +655,16 @@ tf756539b =
         [one] SQLite found { $count } problem: { $first }
        *[other] SQLite found { $count } problems, the first: { $first }
     }
+t40214658 =
+    { $n ->
+        [one] { $count } flow rescued into a new session. The end of the damaged one could not be read, so there may be more.
+       *[other] { $count } flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+    }
+t26f5c0cc =
+    { $n ->
+        [one] { $count } flow rescued into a new session; { $lost } could not be read.
+       *[other] { $count } flows rescued into a new session; { $lost } could not be read.
+    }
 t878e5c80 = { $size } · written by another version, so it cannot be opened
 tf94fb7c2 = { $size } · damaged, so it cannot be opened
 t7dfb1f1b = { $size } · cannot be read: { $why }
@@ -665,6 +675,8 @@ t3f3c0eb4 =
     }
 t3cb3e6fc = Recording now
 t4d6458cc = Export HAR
+t1eea47d9 = Rescuing…
+te43c8d2b = Rescue what reads
 t87f62cb7 = Checking…
 t592c8de7 = Check
 ta7737f13 = Delete for good?
@@ -924,6 +936,7 @@ te2f35d9e = Read-only. Recording goes on.
 t317c0453 = Back to live
 tf2cc0563 = { $shown } of { $total }
 te75cf20c = Recording
+tc9390ffa = Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
 t7e813d25 = System proxy off · { $addr }
 t29e7dcd0 = System proxy…
 t319ad6b9 = System proxy on · { $addr }
@@ -969,6 +982,11 @@ t57bf5200 =
     { $n ->
         [one] { $count } flow
        *[other] { $count } flows
+    }
+t8c2c795e =
+    { $n ->
+        [one] { $count } hidden, still recorded · show it
+       *[other] { $count } hidden, still recorded · show them
     }
 t95b6b766 = Export as HAR
 t4ab0ecb4 = Shortcuts { $keys }
