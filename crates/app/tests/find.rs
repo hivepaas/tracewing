@@ -263,6 +263,19 @@ fn find_in_the_body_and_in_a_table() {
         .update(&mut cx, |view, _, _| view.inspector.find.is_some())
         .unwrap();
     assert!(open, "Ctrl+F after a press in the inspector opens Find");
+    // Again: it closes, as a press on the magnifier does.
+    common::key(&mut cx, window, "ctrl-f");
+    let open = window
+        .update(&mut cx, |view, _, _| view.inspector.find.is_some())
+        .unwrap();
+    assert!(!open, "Ctrl+F again closes Find");
+    window
+        .update(&mut cx, |view, window, cx| view.toggle_find(window, cx))
+        .unwrap();
+    let open = window
+        .update(&mut cx, |view, _, _| view.inspector.find.is_some())
+        .unwrap();
+    assert!(open, "the magnifier opens it again");
 
     // In a CSV table, its cells.
     window

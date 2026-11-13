@@ -41,6 +41,16 @@ impl Traffic {
         self.apply_find(cx);
     }
 
+    /// Opens Find, or closes it if it is open: what the magnifier and Ctrl+F
+    /// do.
+    pub fn toggle_find(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.inspector.find.is_some() {
+            self.close_find(window, cx);
+        } else {
+            self.open_find(window, cx);
+        }
+    }
+
     /// Closes Find: what it found is no longer marked.
     pub fn close_find(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.inspector.find.take().is_none() {

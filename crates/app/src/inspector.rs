@@ -1229,6 +1229,7 @@ impl Traffic {
 
     fn render_parts(&self, detail: &Detail, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
+        let finding = self.inspector.find.is_some();
         let part = self.inspector.part;
         let side = self.inspector.side;
         let both = self.layout.sides != Sides::Tabs;
@@ -1361,11 +1362,16 @@ impl Traffic {
                             .justify_center()
                             .cursor_pointer()
                             .reachable()
-                            .bg(rgb(c.chip))
+                            // On while Find is open; a press closes it again.
+                            .bg(rgb(if finding { c.accent } else { c.chip }))
                             .tooltip(tip(tr!("Find in the body (Ctrl+F)")))
-                            .child(icon("search", 14., c.on_chip))
+                            .child(icon(
+                                "search",
+                                14.,
+                                if finding { c.on_accent } else { c.on_chip },
+                            ))
                             .on_click(
-                                cx.listener(|view, _, window, cx| view.open_find(window, cx)),
+                                cx.listener(|view, _, window, cx| view.toggle_find(window, cx)),
                             ),
                     )
                 },

@@ -1743,14 +1743,15 @@ impl Traffic {
             Action::Close if self.close_message(cx) => {}
             Action::Close => return false,
             Action::Shortcuts => self.set_shortcuts(!self.shortcuts_open, cx),
-            // Pressed in the inspector last: Find in its body, not the list's filter.
+            // Pressed in the inspector last: Find in its body, opened or closed,
+            // not the list's filter.
             Action::Filter
                 if self.inspector_active
                     && self.screen == Screen::Traffic
                     && self.inspector.part == crate::inspector::Part::Body
                     && matches!(self.inspector.body, crate::inspector::BodyState::Shown(_)) =>
             {
-                self.open_find(window, cx)
+                self.toggle_find(window, cx)
             }
             Action::Filter => {
                 self.set_screen(Screen::Traffic, cx);
