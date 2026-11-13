@@ -161,14 +161,32 @@ fn each_flow_says_which_program_sent_it() {
     let me = std::env::current_exe().unwrap();
     let me = me.file_stem().unwrap().to_str().unwrap().to_owned();
     let expected = me.clone();
-    wait_for(&mut cx, window, "both programs counted", move |view| {
-        let counts: Vec<(String, u64)> = view
-            .app_counts()
-            .iter()
-            .map(|(app, n)| (app.to_string(), *n))
-            .collect();
-        counts == [("curl".to_owned(), 2), (expected.clone(), 1)]
-    });
+    // Said with what was actually counted: on a machine where a socket's
+    // owner cannot be looked up, "waiting for both programs counted" alone
+    // says nothing about why.
+    let counts_now = |cx: &mut HeadlessAppContext| -> Vec<(String, u64)> {
+        window
+            .update(cx, |view, _, cx| {
+                view.look(cx);
+                view.app_counts()
+                    .iter()
+                    .map(|(app, n)| (app.to_string(), *n))
+                    .collect()
+            })
+            .unwrap()
+    };
+    let want = vec![("curl".to_owned(), 2), (expected.clone(), 1)];
+    let deadline = Instant::now() + Duration::from_secs(20);
+    let mut counts = counts_now(&mut cx);
+    while counts != want {
+        cx.run_until_parked();
+        assert!(
+            Instant::now() < deadline,
+            "waiting for both programs counted: wanted {want:?}, and the list says {counts:?}"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+        counts = counts_now(&mut cx);
+    }
     shot(&mut cx, window.into(), "54-apps");
 
     // Chosen in the sidebar, then typed in the box.

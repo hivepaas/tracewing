@@ -81,10 +81,65 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets --release -- -D warnings
 
-      # The UI tests need a GPU to run, but they should always build.
-      - name: Clippy (UI tests)
+      # They run in the window job below, on Linux; everywhere else they
+      # should at least build.
+      - name: Clippy (window tests)
         if: runner.os == 'Linux'
         run: cargo clippy -p tracewing --all-targets --release --features headless -- -D warnings
 
       - name: Test
         run: cargo test --workspace --release
+
+  # The tests that draw the window. They were left out of CI for wanting a
+  # GPU; Mesa's software Vulkan gives them one, so a change that moves what a
+  # window test asserts is caught here rather than on someone's machine.
+  window:
+    name: linux-window-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Linux packages (GPUI, and Vulkan with no GPU)"
+        timeout-minutes: 10
+        env:
+          APT: -o Acquire::Retries=3 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
+        run: |
+          for try in 1 2 3; do
+            sudo apt-get $APT update && sudo apt-get $APT install -y --no-install-recommends \
+              build-essential pkg-config libfontconfig-dev libfreetype-dev \
+              libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev \
+              libx11-xcb-dev libxcb1-dev libxcb-xkb-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+              libvulkan-dev libdbus-1-dev libzstd-dev mesa-vulkan-drivers && exit 0
+            echo "apt failed ($try of 3)"
+            sleep 10
+          done
+          exit 1
+
+      - name: Rust
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: linux-window
+
+      # A runner has no GPU, so Mesa's lavapipe draws instead. Its file is
+      # named differently from one Mesa build to the next, so it is looked up
+      # rather than guessed, and saying which driver outright beats taking
+      # whichever the loader happens to find.
+      - name: Window tests
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          icd=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+          echo "drawing with $icd"
+          VK_ICD_FILENAMES=$icd cargo test -p tracewing --release --features headless
+
+      # What the tests drew, to look at when one of them fails.
+      - name: The pictures they drew
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: window-test-shots
+          path: target/shots/
+          if-no-files-found: ignore
+          retention-days: 7
