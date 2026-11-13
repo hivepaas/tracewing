@@ -342,6 +342,75 @@ fn find_in_the_body_and_in_a_table() {
         "the connection says its HTTP"
     );
 
+    // A stream's messages: those that hold it, opened one by one.
+    get(&mut cx, window, &format!("{base}/sse?n=20&ms=5"));
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Traffic, cx);
+            view.select_place(2, cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the twenty events", |view, _| {
+        view.inspector
+            .messages
+            .as_ref()
+            .is_some_and(|m| m.list.len() == 20)
+    });
+    window
+        .update(&mut cx, |view, _, cx| view.set_part(Part::Messages, cx))
+        .unwrap();
+    // n:1 and n:10 to n:19.
+    let text = r#""n":1"#;
+    window
+        .update(&mut cx, |view, _, cx| {
+            let input = view.inspector.find.as_ref().unwrap().input.clone();
+            input.update(cx, |input, cx| {
+                input.set_text(text, text.len()..text.len(), cx)
+            });
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the messages searched", |view, _| {
+        view.inspector
+            .messages
+            .as_ref()
+            .and_then(|m| m.find.as_ref())
+            .is_some_and(|f| f.done)
+    });
+    let places = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector
+                .messages
+                .as_ref()
+                .unwrap()
+                .find
+                .as_ref()
+                .unwrap()
+                .places
+                .clone()
+        })
+        .unwrap();
+    assert_eq!(places.len(), 11, "{places:?}");
+    common::key(&mut cx, window, "enter");
+    common::key(&mut cx, window, "enter");
+    let chosen = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector.messages.as_ref().unwrap().chosen
+        })
+        .unwrap();
+    assert_eq!(
+        chosen,
+        Some(places[1]),
+        "Enter opens the next that holds it"
+    );
+    wait_for(&mut cx, window, "the message open", |view, _| {
+        view.inspector
+            .messages
+            .as_ref()
+            .is_some_and(|m| m.view.is_some())
+    });
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "124-find-messages");
+
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -1743,12 +1743,11 @@ impl Traffic {
             Action::Close if self.close_message(cx) => {}
             Action::Close => return false,
             Action::Shortcuts => self.set_shortcuts(!self.shortcuts_open, cx),
-            // Pressed in the inspector last: Find in its body, opened or closed,
-            // not the list's filter.
+            // Pressed in the inspector last: Find in the part shown, opened or
+            // closed, not the list's filter.
             Action::Filter
                 if self.inspector_active
                     && self.screen == Screen::Traffic
-                    && self.inspector.part != crate::inspector::Part::Messages
                     && (self.inspector.part != crate::inspector::Part::Body
                         || matches!(
                             self.inspector.body,

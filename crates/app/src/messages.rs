@@ -53,7 +53,23 @@ pub struct MessagesState {
     /// The calls the last message sent had written out in it, by the
     /// signatures they were taken to mean.
     pub send_calls: Vec<String>,
+    /// What Find looks for in the messages, and those it found.
+    pub find: Option<MessagesFound>,
+    /// Which search is the latest: an older one still running stops.
+    find_gen: u64,
 }
+
+/// The messages Find found, by their place in the list, and the one it is at.
+pub struct MessagesFound {
+    pub re: regex::Regex,
+    pub places: Vec<usize>,
+    /// Every message there was has been searched.
+    pub done: bool,
+    pub now: Option<usize>,
+}
+
+/// Messages searched between two looks at the window.
+const FIND_CHUNK: usize = 500;
 
 impl MessagesState {
     pub fn new(flow_id: i64) -> Self {
@@ -68,6 +84,8 @@ impl MessagesState {
             view_h: None,
             send_problem: None,
             send_calls: Vec::new(),
+            find: None,
+            find_gen: 0,
         }
     }
 }
@@ -108,6 +126,126 @@ impl Traffic {
                 .scroll_to_item(state.list.len() - 1, ScrollStrategy::Nearest);
         }
         true
+    }
+
+    /// Looks for `re` in the messages, from the first, in the background a
+    /// chunk at a time; `None` stops looking.
+    pub fn find_in_messages(&mut self, re: Option<regex::Regex>, cx: &mut Context<Self>) {
+        let session_dir = self.session_dir().to_owned();
+        let Some(state) = self.inspector.messages.as_mut() else {
+            return;
+        };
+        state.find_gen += 1;
+        let generation = state.find_gen;
+        // The message open marks what it holds of it too.
+        if let Some(view) = &state.view {
+            let re = re.clone();
+            view.update(cx, |view, cx| view.set_find(re, cx));
+        }
+        let Some(re) = re else {
+            state.find = None;
+            cx.notify();
+            return;
+        };
+        state.find = Some(MessagesFound {
+            re: re.clone(),
+            places: Vec::new(),
+            done: false,
+            now: None,
+        });
+        cx.spawn(async move |this, cx| {
+            let mut from = 0;
+            loop {
+                // The messages there are now: more may have come.
+                let Ok(Some(chunk)) = this.update(cx, |this, _| {
+                    let state = this.inspector.messages.as_ref()?;
+                    (state.find_gen == generation).then(|| {
+                        state
+                            .list
+                            .iter()
+                            .enumerate()
+                            .skip(from)
+                            .take(FIND_CHUNK)
+                            .map(|(place, m)| (place, m.place))
+                            .collect::<Vec<_>>()
+                    })
+                }) else {
+                    break;
+                };
+                let end = chunk.len() < FIND_CHUNK;
+                let next = chunk.last().map_or(from, |(place, _)| place + 1);
+                let (dir, re) = (session_dir.clone(), re.clone());
+                let found = cx
+                    .background_spawn(async move {
+                        let mut reader = BodyReader::new(&dir);
+                        chunk
+                            .into_iter()
+                            .filter(|(_, at)| {
+                                at.and_then(|at| reader.read_place(at).ok())
+                                    .is_some_and(|data| {
+                                        crate::find::found(&re, &String::from_utf8_lossy(&data))
+                                            .next()
+                                            .is_some()
+                                    })
+                            })
+                            .map(|(place, _)| place)
+                            .collect::<Vec<_>>()
+                    })
+                    .await;
+                let go_on = this
+                    .update(cx, |this, cx| {
+                        let Some(state) = this.inspector.messages.as_mut() else {
+                            return false;
+                        };
+                        if state.find_gen != generation {
+                            return false;
+                        }
+                        let Some(find) = state.find.as_mut() else {
+                            return false;
+                        };
+                        find.places.extend(found);
+                        find.done = end;
+                        cx.notify();
+                        !end
+                    })
+                    .unwrap_or(false);
+                if !go_on {
+                    break;
+                }
+                from = next;
+            }
+        })
+        .detach();
+        cx.notify();
+    }
+
+    /// Opens the next message Find found, or the one before, round again at
+    /// either end, with the list scrolled to it.
+    pub fn messages_find_step(&mut self, forward: bool, cx: &mut Context<Self>) {
+        let Some(find) = self
+            .inspector
+            .messages
+            .as_mut()
+            .and_then(|s| s.find.as_mut())
+        else {
+            return;
+        };
+        let count = find.places.len();
+        if count == 0 {
+            return;
+        }
+        let now = match (find.now, forward) {
+            (None, true) => 0,
+            (None, false) => count - 1,
+            (Some(i), true) => (i + 1) % count,
+            (Some(i), false) => (i + count - 1) % count,
+        };
+        find.now = Some(now);
+        let place = find.places[now];
+        self.choose_message(place, cx);
+        if let Some(state) = &self.inspector.messages {
+            state.scroll.scroll_to_item(place, ScrollStrategy::Center);
+        }
     }
 
     /// Puts the chosen message away and gives the list its room back.
@@ -169,7 +307,17 @@ impl Traffic {
                     let Some(state) = this.inspector.messages.as_mut() else {
                         return;
                     };
-                    state.view = Some(cx.new(|cx| BodyView::new(body, None, focus, cx)));
+                    let re = state.find.as_ref().map(|find| find.re.clone());
+                    let view = cx.new(|cx| BodyView::new(body, None, focus, cx));
+                    if re.is_some() {
+                        view.update(cx, |view, cx| view.set_find(re, cx));
+                    }
+                    state.view = Some(view);
+                    // The viewer takes room from the list: the chosen row stays
+                    // in what is left of it.
+                    if let Some(place) = state.chosen {
+                        state.scroll.scroll_to_item(place, ScrollStrategy::Nearest);
+                    }
                 }
                 cx.notify();
             });
@@ -261,7 +409,19 @@ impl Traffic {
                     .children(
                         kind.map(|kind| div().flex_shrink_0().text_color(rgb(c.muted)).child(kind)),
                     )
-                    .child(div().flex_1().min_w_0().truncate().child(preview))
+                    .child(div().flex_1().min_w_0().truncate().child({
+                        let marks: Vec<_> = state
+                            .find
+                            .as_ref()
+                            .map(|find| {
+                                let now = find.now.map(|i| find.places[i]) == Some(place);
+                                crate::find::found(&find.re, &preview)
+                                    .map(|r| (r, crate::find::found_style(now)))
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        gpui::StyledText::new(preview).with_highlights(marks)
+                    }))
                     .on_click(cx.listener(move |this, _, _, cx| this.choose_message(place, cx)))
             })
             .collect()
