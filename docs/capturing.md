@@ -23,7 +23,7 @@ it:
 | | What tracewing sets | What follows it |
 |---|---|---|
 | **macOS** | SystemConfiguration, per network service | CFNetwork and URLSession, so Safari and Mac apps. `localhost` and `127.0.0.1` go straight out whatever it says |
-| **Windows** | WinInet, **per user** | WinInet and WinHTTP as they come, Chromium, .NET, Office. A service running as SYSTEM has its own setting (`netsh winhttp set proxy`), and local addresses are left out by default |
+| **Windows** | WinInet, **per user** | WinInet as it comes: Chromium, Office, and .NET's `HttpClient` where it reads that configuration. **WinHTTP does not follow it** — it has a setting of its own (`netsh winhttp set proxy`) unless the program asks for the user's, which is also why a service running as SYSTEM comes through nothing. Local addresses are left out by default |
 | **Linux** | GSettings for GNOME, the config file for KDE | only what reads them: Chromium, Electron, GNOME's own apps. **Linux has no proxy setting at the level of the system**, and a terminal knows nothing of this one |
 
 So on Linux the system proxy reaches the least, and a terminal or a browser on
@@ -84,13 +84,19 @@ What does not come through, although started in such a terminal:
 - **Java**, which reads neither: start it with
   `-Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9090`, and add tracewing's
   `ca.pem` to the keystore it uses.
-- **The Docker daemon**, which does not inherit the terminal's environment: it
-  takes a systemd drop-in of its own, and a container needs `--network host`
-  and tracewing's authority inside the image.
+- **Docker**, where the daemon and a container are two different problems.
+  The daemon's own traffic — pulling an image — does not inherit the
+  terminal's environment: on Linux it takes a systemd drop-in, and on Docker
+  Desktop its own proxy settings. A container's traffic takes the variables
+  set inside the container, tracewing's authority in the image, and a route to
+  this machine: `--network host` on Linux, `host.docker.internal` on Docker
+  Desktop, which has no host networking of that kind.
 - **A Windows service running as SYSTEM**, which reads neither this terminal
   nor the user's own proxy setting: `netsh winhttp set proxy`.
 - **WSL**, which has a network stack of its own: set the variables in the WSL
-  shell, pointed at the Windows host's address rather than `127.0.0.1`.
+  shell, pointed at the Windows host's address rather than `127.0.0.1` —
+  unless it runs with `networkingMode=mirrored` (Windows 11 22H2 and after),
+  where `127.0.0.1` does reach the host.
 
 ## Where a program looks for authorities
 
@@ -103,7 +109,7 @@ computer.
 | | Where it looks | What makes it work |
 |---|---|---|
 | Safari, Mac and Windows apps, Chrome and Edge, Go on macOS and Windows | the system's store | Set up, step 1. `SSL_CERT_FILE` is not read there, so Go on those two needs the authority installed |
-| **Firefox**, every profile its own | NSS, one store per profile | Set up installs it into each profile it finds, the one **Open on its own** makes included |
+| **Firefox**, every profile its own | NSS, one store per profile | Set up installs it into each profile it finds, the one **Open on its own** makes included. On Linux that needs `certutil`, and step 1 says how to install it when it is missing |
 | **Python** `requests`, `httpx`, `pip` | `certifi` | `REQUESTS_CA_BUNDLE` or `SSL_CERT_FILE`, both of which a terminal sets |
 | **Node.js**, Deno, Bun | roots built into the binary | `NODE_EXTRA_CA_CERTS`, `DENO_CERT`, which a terminal sets; `--use-system-ca` on a new enough Node |
 | **Java** | its own `cacerts` | `keytool -importcert`, or `-Djavax.net.ssl.trustStore` |
