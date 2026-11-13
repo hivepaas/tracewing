@@ -146,6 +146,9 @@ tbdecf3c8 = Copia riga
 # Copy column
 te26431fe = Copia colonna
 
+# Open this line
+t9bc3ec63 = Apri questa riga
+
 # Forget how {field} is read
 tdb2d6aa8 = Dimentica come leggere { $field }
 

@@ -144,6 +144,9 @@ tbdecf3c8 = Satırı kopyala
 # Copy column
 te26431fe = Sütunu kopyala
 
+# Open this line
+t9bc3ec63 = Bu satırı aç
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } nasıl okunduğunu unut
 

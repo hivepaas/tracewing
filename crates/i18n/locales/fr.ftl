@@ -146,6 +146,9 @@ tbdecf3c8 = Copier la ligne
 # Copy column
 te26431fe = Copier la colonne
 
+# Open this line
+t9bc3ec63 = Ouvrir cette ligne
+
 # Forget how {field} is read
 tdb2d6aa8 = Oublier comment { $field } est lu
 

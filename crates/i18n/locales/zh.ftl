@@ -136,6 +136,9 @@ tbdecf3c8 = 复制行
 # Copy column
 te26431fe = 复制列
 
+# Open this line
+t9bc3ec63 = 打开这一行
+
 # Forget how {field} is read
 tdb2d6aa8 = 忘记 { $field } 的解读方式
 

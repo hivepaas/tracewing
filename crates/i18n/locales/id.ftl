@@ -136,6 +136,9 @@ tbdecf3c8 = Salin baris
 # Copy column
 te26431fe = Salin kolom
 
+# Open this line
+t9bc3ec63 = Buka baris ini
+
 # Forget how {field} is read
 tdb2d6aa8 = Lupakan cara { $field } dibaca
 

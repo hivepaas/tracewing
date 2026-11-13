@@ -54,6 +54,7 @@ t0a4220dc =
 t16aa1c6d = The first { $count } rows are shown.
 tbdecf3c8 = Copy row
 te26431fe = Copy column
+t9bc3ec63 = Open this line
 tdb2d6aa8 = Forget how { $field } is read
 tc75725b1 = Always read { $field } this way
 tdd38ff77 = Clear what was read

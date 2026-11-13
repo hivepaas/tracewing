@@ -136,6 +136,9 @@ tbdecf3c8 = Sao chép hàng
 # Copy column
 te26431fe = Sao chép cột
 
+# Open this line
+t9bc3ec63 = Mở dòng này
+
 # Forget how {field} is read
 tdb2d6aa8 = Quên cách đọc { $field }
 

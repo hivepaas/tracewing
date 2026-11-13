@@ -144,6 +144,9 @@ tbdecf3c8 = Zeile kopieren
 # Copy column
 te26431fe = Spalte kopieren
 
+# Open this line
+t9bc3ec63 = Diese Zeile öffnen
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } nicht mehr so lesen
 

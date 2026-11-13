@@ -148,6 +148,9 @@ tbdecf3c8 = Копіювати рядок
 # Copy column
 te26431fe = Копіювати стовпець
 
+# Open this line
+t9bc3ec63 = Відкрити цей рядок
+
 # Forget how {field} is read
 tdb2d6aa8 = Забути, як читається { $field }
 

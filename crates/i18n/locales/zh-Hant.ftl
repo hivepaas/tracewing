@@ -136,6 +136,9 @@ tbdecf3c8 = 複製列
 # Copy column
 te26431fe = 複製欄
 
+# Open this line
+t9bc3ec63 = 開啟這一行
+
 # Forget how {field} is read
 tdb2d6aa8 = 忘記 { $field } 的解讀方式
 
