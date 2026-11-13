@@ -5,4 +5,5 @@ pub mod benchkit;
 pub mod chain;
 pub mod fake_relay;
 pub mod playground;
+pub mod readings;
 pub mod seed;

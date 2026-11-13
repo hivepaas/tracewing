@@ -7,7 +7,7 @@
 
 use crate::{
     benchkit::{self, OriginBody},
-    chain,
+    chain, readings,
     seed::Rng,
 };
 use anyhow::Context as _;
@@ -158,6 +158,11 @@ pub const ROUTES: &[(&str, &str, &[&str])] = &[
     (
         "/web3-ws",
         "JSON-RPC over a WebSocket, as a node that is subscribed to: /web3 opens one",
+        &[],
+    ),
+    (
+        "/readings",
+        "One value of every kind the window can read, in headers and in the body: times, tokens, ids, encodings, packed bodies",
         &[],
     ),
 ];
@@ -483,6 +488,28 @@ async fn route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallibl
         }
         "/web3" => body("text/html; charset=utf-8", web3_page()),
         "/web3-ws" => web3_socket(req),
+        "/readings" => {
+            let mut response = body("application/json; charset=utf-8", readings::body());
+            for (name, value) in readings::headers() {
+                if let (Ok(name), Ok(value)) = (
+                    http::HeaderName::from_bytes(name.as_bytes()),
+                    HeaderValue::from_str(&value),
+                ) {
+                    response.headers_mut().append(name, value);
+                }
+            }
+            response
+        }
+        // A value a JSON string cannot carry, served on its own.
+        other if other.starts_with("/readings/") => {
+            match readings::alone(other.trim_start_matches("/readings/")) {
+                Some(sample) => body("text/plain; charset=utf-8", sample.value.clone()),
+                None => with_status(
+                    StatusCode::NOT_FOUND,
+                    body("text/plain; charset=utf-8", "No such value here.\n"),
+                ),
+            }
+        }
         "/ws.html" => body("text/html; charset=utf-8", WS_PAGE),
         "/ws" => websocket(
             req,
@@ -1759,6 +1786,51 @@ mod tests {
                 assert!(!said.contains("-32600"), "{}: {said}", case.id);
             }
         }
+    }
+
+    /// Everything the readings route carries has to arrive: the headers as
+    /// headers, the body as JSON, and what a JSON string cannot hold on its
+    /// own path.
+    #[tokio::test]
+    async fn the_readings_route_carries_every_kind() {
+        let base = start().await;
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let answer = client.get(format!("{base}/readings")).send().await.unwrap();
+        assert_eq!(answer.status(), 200);
+        let headers = answer.headers().clone();
+        let said = answer.text().await.unwrap();
+        let body: serde_json::Value = serde_json::from_str(&said).unwrap();
+        for sample in readings::samples() {
+            match sample.at {
+                readings::At::Header => assert_eq!(
+                    headers.get(sample.name).map(|v| v.to_str().unwrap()),
+                    Some(sample.value.as_str()),
+                    "{}",
+                    sample.name
+                ),
+                readings::At::Body => assert_eq!(
+                    body.get(sample.name).and_then(|v| v.as_str()),
+                    Some(sample.value.as_str()),
+                    "{}",
+                    sample.name
+                ),
+                readings::At::Alone => {
+                    let alone = client
+                        .get(format!("{base}/readings/{}", sample.name))
+                        .send()
+                        .await
+                        .unwrap();
+                    assert_eq!(alone.status(), 200, "{}", sample.name);
+                    assert_eq!(alone.text().await.unwrap(), sample.value, "{}", sample.name);
+                }
+            }
+        }
+        let missing = client
+            .get(format!("{base}/readings/nothing.pem"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(missing.status(), 404);
     }
 
     /// The slow case waits before it answers, which is the point of it.
