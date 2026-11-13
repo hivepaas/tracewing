@@ -14,7 +14,7 @@ use tracewing_store::{
     session::{self, BodyReader, Headers, LogPlace, StoredBody},
 };
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Side {
     Request,
     #[default]

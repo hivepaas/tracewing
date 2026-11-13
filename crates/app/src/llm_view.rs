@@ -115,7 +115,11 @@ impl Traffic {
     }
 
     /// The call, its text selectable with `sel`.
-    pub(crate) fn render_llm(&self, sel: &Selection) -> impl IntoElement {
+    pub(crate) fn render_llm(
+        &self,
+        sel: &Selection,
+        scroll: &gpui::ScrollHandle,
+    ) -> impl IntoElement {
         let c = colors();
         let Some((provider, call)) = &self.inspector.llm else {
             return div()
@@ -232,7 +236,9 @@ impl Traffic {
             .id("llm")
             .size_full()
             .overflow_y_scroll()
+            .track_scroll(scroll)
             .p(ui(14.))
+            .pr(gpui::px(crate::scrollbar::BAR_W + 4.))
             .flex()
             .flex_col()
             .gap(ui(10.))

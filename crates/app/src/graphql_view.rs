@@ -57,13 +57,19 @@ impl Traffic {
     }
 
     /// Each operation the request sends, its text selectable with `sel`.
-    pub(crate) fn render_graphql(&self, sel: &Selection) -> impl IntoElement {
+    pub(crate) fn render_graphql(
+        &self,
+        sel: &Selection,
+        scroll: &gpui::ScrollHandle,
+    ) -> impl IntoElement {
         let c = colors();
         let mut view = div()
             .id("graphql")
             .size_full()
             .overflow_y_scroll()
+            .track_scroll(scroll)
             .p(ui(14.))
+            .pr(gpui::px(crate::scrollbar::BAR_W + 4.))
             .flex()
             .flex_col()
             .gap(ui(8.));

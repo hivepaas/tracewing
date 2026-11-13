@@ -51,6 +51,7 @@ pub mod relay_view;
 pub mod remembered;
 pub mod rpc_view;
 pub mod rules_page;
+pub mod scrollbar;
 pub mod select;
 pub mod sessions_page;
 pub mod settings_page;
