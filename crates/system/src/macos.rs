@@ -237,6 +237,18 @@ pub fn disarm_recovery() -> Result<()> {
     }
 }
 
+/// No timer here yet, and no pretence of one: a launchd agent with
+/// `StartInterval` would do what the systemd user timer does on Linux. Until
+/// there is one, a kill that takes the watchdog with it waits for the next
+/// login.
+pub fn arm_timer(_command: &[String], _journal: &Path) -> Result<()> {
+    Ok(())
+}
+
+pub fn disarm_timer() -> Result<()> {
+    Ok(())
+}
+
 fn login_keychain() -> Result<String> {
     Ok(home()?
         .join("Library/Keychains/login.keychain-db")

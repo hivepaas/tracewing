@@ -77,8 +77,15 @@ listens on, so **every program on the machine loses the network** — browsers
 first, and nothing says why.
 
 tracewing puts the setting back when it is closed, when it next starts, and from
-a watchdog process the moment it dies. When all three are missed — a kill that
-takes the watchdog with it, for instance — one command undoes it:
+a watchdog process the moment it dies. On Linux a systemd user timer stands
+behind those: once a minute it looks for a journal left by a tracewing that is
+gone, which is the case the watchdog cannot cover because `pkill tracewing`
+takes the watchdog with the app. **The network comes back by itself within a
+minute**, and the timer is armed and disarmed with the setting, so nothing of it
+is left when the setting is off. macOS and Windows have no such timer yet: there
+the next login is what puts it back.
+
+To have it back now, or on an OS with no timer, one command undoes it:
 
 ```sh
 tracewing recover
@@ -86,7 +93,9 @@ tracewing recover
 
 It restores the settings tracewing wrote down before it changed them, and leaves
 them alone if they are no longer tracewing's. Starting tracewing again does the
-same.
+same. `tracewing recover --only-if-gone` is the same thing with a running
+tracewing left alone, which is what the timer runs and what a script of your own
+should run.
 
 ## Build from source
 

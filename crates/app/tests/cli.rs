@@ -12,6 +12,31 @@ fn tracewing() -> Command {
     Command::new(env!("CARGO_BIN_EXE_tracewing"))
 }
 
+/// `tracewing recover`, with the XDG folders pointed inside `dir`. Putting the
+/// settings back takes the login recovery and the minute timer away with
+/// them, and on the machine this is built on those belong to whatever
+/// tracewing the person has running, not to a test.
+fn recover(dir: &std::path::Path) -> Command {
+    let mut command = tracewing();
+    command
+        .args(["recover", "--data-dir"])
+        .arg(dir)
+        .env("HOME", dir)
+        .env("XDG_CONFIG_HOME", dir.join("config"));
+    command
+}
+
+/// A journal as a killed run leaves one: the address it pointed the system
+/// proxy at, and each setting as it was before. The keys are the journal's
+/// own, `addr` and `saved.<name>`.
+fn journal_of_a_killed_run(dir: &std::path::Path) {
+    std::fs::write(
+        dir.join("sysproxy.journal"),
+        "addr=127.0.0.1:9090\nsaved.mode='none'\n",
+    )
+    .unwrap();
+}
+
 #[test]
 fn it_records_with_no_window_and_writes_a_har() {
     let _ = tracewing_proxy::crypto_provider().install_default();
@@ -153,11 +178,7 @@ fn recover_says_what_it_did_and_leaves_a_stranger_alone() {
     std::fs::create_dir_all(&dir).unwrap();
 
     // Nothing of tracewing's is on the machine: it says so and does nothing.
-    let out = tracewing()
-        .args(["recover", "--data-dir"])
-        .arg(&dir)
-        .output()
-        .unwrap();
+    let out = recover(&dir).output().unwrap();
     assert!(out.status.success(), "{out:?}");
     assert!(
         String::from_utf8_lossy(&out.stdout).contains("nothing to put back"),
@@ -166,18 +187,8 @@ fn recover_says_what_it_did_and_leaves_a_stranger_alone() {
 
     // A journal from a run that was killed, naming settings that are not on
     // this machine now: it must not put somebody else's settings back.
-    // The keys are the journal's own: `addr`, and `saved.` for each setting
-    // as it was before tracewing touched it.
-    std::fs::write(
-        dir.join("sysproxy.journal"),
-        "addr=127.0.0.1:9090\nsaved.mode='none'\n",
-    )
-    .unwrap();
-    let out = tracewing()
-        .args(["recover", "--data-dir"])
-        .arg(&dir)
-        .output()
-        .unwrap();
+    journal_of_a_killed_run(&dir);
+    let out = recover(&dir).output().unwrap();
     assert!(out.status.success(), "{out:?}");
     let said = String::from_utf8_lossy(&out.stdout);
     assert!(
@@ -188,6 +199,52 @@ fn recover_says_what_it_did_and_leaves_a_stranger_alone() {
         !dir.join("sysproxy.journal").exists(),
         "and the journal goes either way, so it cannot be used twice"
     );
+
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// What the minute timer runs, once a minute, for the whole of an ordinary
+/// session. A run of it against a healthy app has to come to nothing, or
+/// turning the system proxy on would take the network away a minute later.
+#[test]
+fn recover_only_if_gone_leaves_a_running_app_alone() {
+    let dir = std::env::temp_dir().join(format!("tracewing-if-gone-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let journal = dir.join("sysproxy.journal");
+    journal_of_a_killed_run(&dir);
+
+    // The lock an app holds for as long as the system proxy is its own, held
+    // here by the test: another process entirely, which is what the timer is.
+    let held = tracewing_system::hold_alive(&dir).unwrap();
+    let out = recover(&dir).arg("--only-if-gone").output().unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let said = String::from_utf8_lossy(&out.stdout);
+    assert!(said.contains("still running"), "{said}");
+    assert!(journal.exists(), "and the journal is left for the real end");
+
+    // The lock goes however the app ends. Now there is work to do — once no
+    // other test in this program is in the moment between starting a process
+    // and that process taking over, when the half-made process holds a copy
+    // of everything its parent had open, this lock among it.
+    drop(held);
+    let said = (0..50)
+        .find_map(|_| {
+            let out = recover(&dir).arg("--only-if-gone").output().unwrap();
+            assert!(out.status.success(), "{out:?}");
+            let said = String::from_utf8_lossy(&out.stdout).into_owned();
+            if said.contains("still running") {
+                std::thread::sleep(Duration::from_millis(20));
+                return None;
+            }
+            Some(said)
+        })
+        .expect("it went on saying tracewing was running");
+    assert!(
+        said.contains("left alone") || said.contains("back as it was"),
+        "it says which of the two happened: {said}"
+    );
+    assert!(!journal.exists());
 
     std::fs::remove_dir_all(&dir).ok();
 }
