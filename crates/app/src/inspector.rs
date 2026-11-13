@@ -2406,17 +2406,17 @@ impl Traffic {
                     ),
             )
             .child({
+                // What the pane says: the field, the value, the ways it
+                // can be read, the chain a reader asked for. The ground and
+                // the corners belong to the column that holds this and the
+                // body under it.
                 let inside = div()
-                    .flex_1()
-                    .min_w_0()
                     .flex()
                     .flex_col()
-                    .rounded(ui(16.))
-                    .overflow_hidden()
-                    // The ground a body is read on, so the pane and the body
-                    // beside it are one surface with a gap between them
-                    // rather than two kinds of panel.
-                    .bg(rgb(c.code))
+                    // With no body under it, what the pane says takes the
+                    // room and scrolls in it; with one, it is as tall as
+                    // what it says and the body has the rest.
+                    .when(body.is_none(), |d| d.flex_1().min_h_0())
                     .child(
                         div()
                             .flex()
@@ -2523,27 +2523,11 @@ impl Traffic {
                     .child(self.render_asked(cx))
                     // What the chosen one says: a body of its own where it
                     // holds bytes, and the reading itself where it does not.
-                    .child(match body {
-                        Some((label, shown)) => div()
-                            .flex_1()
-                            .min_h_0()
-                            .flex()
-                            .flex_col()
-                            .border_t_1()
-                            .border_color(rgb(c.line))
-                            .child(
-                                div()
-                                    .px(ui(10.))
-                                    .py(ui(4.))
-                                    .text_size(ui(11.))
-                                    .text_color(rgb(c.muted))
-                                    .child(label),
-                            )
-                            .child(div().flex_1().min_h_0().child(shown)),
+                    .children(body.is_none().then(|| {
                         // Scrolled by itself: a JWT's claims or a query's
                         // fields run past the pane's height, and the rest of
                         // them has to be reachable.
-                        None => div().flex_1().min_h_0().relative().child(
+                        div().flex_1().min_h_0().relative().child(
                             scrolled.around(
                                 div()
                                     .id("reads-said")
@@ -2571,12 +2555,40 @@ impl Traffic {
                                     })
                                     .children(chosen.map(|reading| render_reading(&reading, &sel))),
                             ),
-                        ),
-                    });
-                // What is in the pane is text to choose from and copy,
-                // like the views beside it: the presses go to the same
-                // selection, so a copy takes what was chosen here.
-                self.selectable(inside, &sel, cx)
+                        )
+                    }));
+                // What the pane says is text to choose from and copy, like
+                // the views beside it. The body a reading opened is left
+                // out of this: it is a body view, with a selection and a
+                // menu of its own, and wrapping it gave a press in it two
+                // menus, one over the other.
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .flex()
+                    .flex_col()
+                    .rounded(ui(16.))
+                    .overflow_hidden()
+                    .bg(rgb(c.code))
+                    .child(self.selectable(inside, &sel, cx))
+                    .children(body.map(|(label, shown)| {
+                        div()
+                            .flex_1()
+                            .min_h_0()
+                            .flex()
+                            .flex_col()
+                            .border_t_1()
+                            .border_color(rgb(c.line))
+                            .child(
+                                div()
+                                    .px(ui(10.))
+                                    .py(ui(4.))
+                                    .text_size(ui(11.))
+                                    .text_color(rgb(c.muted))
+                                    .child(label),
+                            )
+                            .child(div().flex_1().min_h_0().child(shown))
+                    }))
             })
     }
 

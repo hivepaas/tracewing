@@ -1482,6 +1482,47 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
         "a press on no text leaves the reading that was chosen"
     );
 
+    // The body a reading opens keeps its presses to itself: it has a
+    // selection and a menu of its own, so a right-click in it must not also
+    // open the pane's -- two menus, one over the other.
+    let menus = window
+        .update(&mut cx, |view, _, cx| {
+            let reads = view.inspector.reads.as_ref()?;
+            let opened = reads.opened.as_ref()?;
+            let OpenedAs::Body(body) = &opened.shown else {
+                return None;
+            };
+            let in_body = body.read(cx).selection().clone();
+            let at = gpui::point(gpui::px(40.), gpui::px(40.));
+            // What a right-click in the opened body does.
+            in_body.set_menu(Some(at));
+            Some((
+                in_body.menu().is_some(),
+                view.inspector.reads_select.menu().is_some(),
+            ))
+        })
+        .unwrap()
+        .expect("the payload opens a body in the pane");
+    assert_eq!(
+        menus,
+        (true, false),
+        "the body's menu is up and the pane's is not"
+    );
+    window
+        .update(&mut cx, |view, _, cx| {
+            if let Some(opened) = view
+                .inspector
+                .reads
+                .as_ref()
+                .and_then(|r| r.opened.as_ref())
+                && let OpenedAs::Body(body) = &opened.shown
+            {
+                body.read(cx).selection().set_menu(None);
+            }
+        })
+        .unwrap();
+    cx.run_until_parked();
+
     // A chain that reads as nothing says so. An empty pane reads as one
     // that has not caught up, not as an answer -- and the words for it were
     // written and never reached the screen.
