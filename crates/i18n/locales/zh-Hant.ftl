@@ -1615,6 +1615,9 @@ tae8622fc = 開啟工作階段檔案
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR、Fiddler .saz 或 Charles .chlsj
 
+# Start a new session
+t17bccaf2 = 開始新的工作階段
+
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = 匯出的 HAR 檔案會去掉標頭、URL 和本文中的 Cookie、權杖、金鑰和密碼
 
@@ -2310,6 +2313,12 @@ tf9d9c09b = 要傳送的訊息；按 { $keys } 傳送
 
 # The search index: {e}
 te3c971c9 = 搜尋索引：{ $e }
+
+# Recording again on {now}. This computer is still sending its traffic to {was}: turn the system proxy off and on again.
+te295872f = 已在 { $now } 重新記錄。這台電腦仍把流量送往 { $was }：請把系統 Proxy 關掉再打開。
+
+# Recording did not start again: {problem}
+teb8c8bbd = 沒有重新開始記錄：{ $problem }
 
 # Click the flow to compare #{id} with.
 tac1ec1d2 = 點擊要與 #{ $id } 比較的流。

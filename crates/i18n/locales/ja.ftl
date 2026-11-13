@@ -1615,6 +1615,9 @@ tae8622fc = セッションファイルを開く
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR、Fiddler .saz、または Charles .chlsj
 
+# Start a new session
+t17bccaf2 = 新しいセッションを始める
+
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = エクスポートした HAR ファイルでは、ヘッダー・URL・ボディ内の Cookie、トークン、キー、パスワードを省きます
 
@@ -2310,6 +2313,12 @@ tf9d9c09b = 送信するメッセージ（{ $keys } で送信）
 
 # The search index: {e}
 te3c971c9 = 検索インデックス: { $e }
+
+# Recording again on {now}. This computer is still sending its traffic to {was}: turn the system proxy off and on again.
+te295872f = { $now } で記録を再開しました。このコンピューターはまだ { $was } に通信を送っています: システムプロキシをいったん切って入れ直してください。
+
+# Recording did not start again: {problem}
+teb8c8bbd = 記録を再開できませんでした: { $problem }
 
 # Click the flow to compare #{id} with.
 tac1ec1d2 = #{ $id } と比較するフローをクリックしてください。

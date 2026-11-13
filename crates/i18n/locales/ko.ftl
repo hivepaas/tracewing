@@ -1615,6 +1615,9 @@ tae8622fc = 세션 파일 열기
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, Fiddler .saz 또는 Charles .chlsj
 
+# Start a new session
+t17bccaf2 = 새 세션 시작
+
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = 내보낸 HAR 파일은 헤더, URL, 본문에서 쿠키, 토큰, 키, 비밀번호를 뺍니다
 
@@ -2310,6 +2313,12 @@ tf9d9c09b = 보낼 메시지 ({ $keys }로 전송)
 
 # The search index: {e}
 te3c971c9 = 검색 색인: { $e }
+
+# Recording again on {now}. This computer is still sending its traffic to {was}: turn the system proxy off and on again.
+te295872f = { $now }에서 다시 기록합니다. 이 컴퓨터는 아직 { $was }로 트래픽을 보냅니다: 시스템 프록시를 껐다 켜세요.
+
+# Recording did not start again: {problem}
+teb8c8bbd = 기록을 다시 시작하지 못했습니다: { $problem }
 
 # Click the flow to compare #{id} with.
 tac1ec1d2 = #{ $id }와 비교할 플로를 클릭하세요.

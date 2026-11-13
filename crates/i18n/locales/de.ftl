@@ -1725,6 +1725,9 @@ tae8622fc = Sitzungsdatei öffnen
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, Fiddler .saz oder Charles .chlsj
 
+# Start a new session
+t17bccaf2 = Neue Sitzung beginnen
+
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = Exportierte HAR-Dateien lassen Cookies, Tokens, Schlüssel und Passwörter weg, in Headern, URLs und Bodys
 
@@ -2432,6 +2435,12 @@ tf9d9c09b = Eine Nachricht; { $keys } sendet sie
 
 # The search index: {e}
 te3c971c9 = Der Suchindex: { $e }
+
+# Recording again on {now}. This computer is still sending its traffic to {was}: turn the system proxy off and on again.
+te295872f = Zeichnet wieder auf, auf { $now }. Dieser Computer schickt seinen Verkehr weiterhin an { $was }: Systemproxy aus- und wieder einschalten.
+
+# Recording did not start again: {problem}
+teb8c8bbd = Die Aufzeichnung begann nicht erneut: { $problem }
 
 # Click the flow to compare #{id} with.
 tac1ec1d2 = Klicke auf den Flow, mit dem #{ $id } verglichen werden soll.

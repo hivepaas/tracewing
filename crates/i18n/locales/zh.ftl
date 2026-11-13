@@ -1615,6 +1615,9 @@ tae8622fc = 打开会话文件
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR、Fiddler .saz 或 Charles .chlsj
 
+# Start a new session
+t17bccaf2 = 开始新会话
+
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = 导出的 HAR 文件会去掉标头、URL 和正文中的 Cookie、令牌、密钥和密码
 
@@ -2310,6 +2313,12 @@ tf9d9c09b = 要发送的消息；按 { $keys } 发送
 
 # The search index: {e}
 te3c971c9 = 搜索索引：{ $e }
+
+# Recording again on {now}. This computer is still sending its traffic to {was}: turn the system proxy off and on again.
+te295872f = 已在 { $now } 重新记录。这台电脑仍把流量发往 { $was }：请把系统代理关掉再打开。
+
+# Recording did not start again: {problem}
+teb8c8bbd = 没有重新开始记录：{ $problem }
 
 # Click the flow to compare #{id} with.
 tac1ec1d2 = 点击要与 #{ $id } 比较的流。

@@ -1615,6 +1615,9 @@ tae8622fc = Mở file phiên
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, .saz của Fiddler, hoặc .chlsj của Charles
 
+# Start a new session
+t17bccaf2 = Bắt đầu phiên mới
+
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = File HAR export ra bỏ đi cookie, token, key và mật khẩu, trong header, URL và body
 
@@ -2310,6 +2313,12 @@ tf9d9c09b = Message cần gửi; { $keys } để gửi
 
 # The search index: {e}
 te3c971c9 = Chỉ mục tìm kiếm: { $e }
+
+# Recording again on {now}. This computer is still sending its traffic to {was}: turn the system proxy off and on again.
+te295872f = Đang ghi lại ở { $now }. Máy này vẫn gửi traffic tới { $was }: hãy tắt rồi bật lại system proxy.
+
+# Recording did not start again: {problem}
+teb8c8bbd = Không bắt đầu ghi lại được: { $problem }
 
 # Click the flow to compare #{id} with.
 tac1ec1d2 = Bấm vào flow để so sánh với #{ $id }.

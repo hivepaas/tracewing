@@ -483,6 +483,27 @@ impl Traffic {
             )
             .child(
                 div()
+                    .id("session-new")
+                    .flex_shrink_0()
+                    .h(ui(32.))
+                    .px(ui(14.))
+                    .rounded(ui(16.))
+                    .flex()
+                    .items_center()
+                    .cursor_pointer()
+                    .reachable()
+                    .font_weight(FontWeight::BOLD)
+                    .text_size(ui(12.5))
+                    .bg(rgb(c.chip))
+                    .text_color(rgb(c.on_chip))
+                    .child(tr!("Start a new session"))
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.start_new_session(cx);
+                        this.refresh_sessions(cx);
+                    })),
+            )
+            .child(
+                div()
                     .id("har-secrets")
                     .flex()
                     .flex_row()
