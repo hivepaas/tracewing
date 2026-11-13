@@ -45,7 +45,7 @@ work the source is:
 | Hands over | **flows** | packets | packets |
 | Needs our own TCP stack | no | **yes** | **yes** |
 | Privilege | the user approves a system extension | Administrator | root, for `bpf()` |
-| Shipping | Developer ID, notarized, **and an entitlement Apple grants by review** | a signed `.sys` driver alongside the app | kernel 6.8 or newer |
+| Shipping | Developer ID, notarized, packaged as a system extension | a signed `.sys` driver alongside the app | kernel 6.8 or newer |
 | Knows the app by | audit token, so bundle id | PID | name, first 16 characters only (`task->comm`) |
 
 mitmproxy has all three and is worth reading before starting any of them; the
@@ -188,15 +188,46 @@ is the next piece of work for a source that deals in packets.
 A `NETransparentProxyProvider` in a system extension. `handleNewFlow` gives an
 `NEAppProxyTCPFlow` — a byte stream with the originating app's audit token —
 and the extension passes it to tracewing over a unix socket. Flow-level, so no
-TCP stack needed; this is the cheapest of the three in code and the most
-expensive in paperwork.
+TCP stack needed, which makes it the cheapest of the three in code.
 
-Open questions, in the order they will bite:
+**There is nothing to ask Apple for.** Since November 2016 the Network
+Extension provider capability — packet tunnel, app proxy, content filter — is
+self-serve: tick it in Xcode's Signing & Capabilities, or on the developer
+website, and the profile comes back with the entitlement in it. What still
+needs Apple to authorise a managed capability is the app push provider (Local
+Push Connectivity) and `NEHotspotHelper`, neither of which this needs.
+An earlier draft of this page said the opposite, from reports of long waits
+that were about those managed ones.
 
-- the entitlement, `com.apple.developer.networking.networkextension` with the
-  system-extension variant. Apple reviews these; developers report weeks, and
-  refusals. **Nothing else here can start until this is answered, so ask
-  first** — it costs no code.
+What it does take, as a Developer ID app rather than an App Store one:
+
+- macOS 10.15 or later, and the provider packaged as a **system extension**,
+  not an app extension;
+- the `-systemextension` value of the entitlement in **both** the app and the
+  extension — `app-proxy-provider-systemextension`, which is the one a
+  transparent proxy uses, since `NETransparentProxyProvider` is an app proxy
+  as far as the entitlement is concerned;
+- `com.apple.developer.system-extension.install` on the app, so it may install
+  the extension;
+- in the extension's `Info.plist`, `NEProviderClasses` mapping
+  `com.apple.networkextension.app-proxy` to the provider class, and an
+  `NSSystemExtensionUsageDescription` for the prompt the user sees.
+
+mitmproxy's redirector ships exactly that pair of entitlement files, and is
+worth reading rather than guessing at.
+
+**The step that will eat a day** is the export. Xcode's own Direct
+Distribution could not produce a Developer ID system extension correctly until
+very recently, so the archive has to be re-signed by hand: dump both
+entitlement sets out of the archive with `codesign -d --entitlements`, add the
+`-systemextension` suffix, swap in the Developer ID provisioning profiles for
+the app and for the extension, then re-sign from the inside out — extension
+first, app last, `--timestamp -o runtime` on each — and notarise and staple it
+yourself. Keep the plain values in the Xcode project: development builds want
+those, and only the Developer ID build wants the suffixed ones.
+
+The rest, in the order it will bite:
+
 - the extension's own traffic must be excluded or it will capture itself;
 - the extension runs under a tight memory budget, so bytes must leave it
   immediately rather than be buffered;
