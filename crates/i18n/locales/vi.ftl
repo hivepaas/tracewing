@@ -130,6 +130,12 @@ t0a4220dc = { $size } { $format } · { $count } dòng JSON
 # The first {count} rows are shown.
 t16aa1c6d = Chỉ hiện { $count } dòng đầu tiên.
 
+# Copy row
+tbdecf3c8 = Sao chép hàng
+
+# Copy column
+te26431fe = Sao chép cột
+
 # Forget how {field} is read
 tdb2d6aa8 = Quên cách đọc { $field }
 

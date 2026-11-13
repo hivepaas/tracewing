@@ -142,6 +142,12 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Показаны только первые { $count } строк.
 
+# Copy row
+tbdecf3c8 = Копировать строку
+
+# Copy column
+te26431fe = Копировать столбец
+
 # Forget how {field} is read
 tdb2d6aa8 = Забыть, как читается { $field }
 

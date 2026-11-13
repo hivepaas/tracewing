@@ -3,6 +3,7 @@
 //! pixel offset in an `f32` can tell apart: `uniform_list`'s step grows to 8 px at
 //! 6 million lines of 20 px.
 
+use crate::scrollbar::Scrolled;
 use crate::text_size::ui;
 use crate::{
     body::{Body, Kind, Line, Token},
@@ -219,6 +220,11 @@ pub struct BodyView {
     /// CSV or TSV read as a table, which [`BodyMode::Table`] shows.
     table: Option<Arc<Table>>,
     table_scroll: UniformListScrollHandle,
+    /// The table's scroll bar, on the list's own handle.
+    table_bar: Scrolled,
+    /// The cell a right click was on, as row and column: what Copy row and
+    /// Copy column take.
+    table_menu_cell: Option<(usize, usize)>,
 }
 
 impl BodyView {
@@ -230,6 +236,8 @@ impl BodyView {
         cx: &mut Context<Self>,
     ) -> Self {
         let syntax = Syntax::of(body.kind(), content_type, body.head());
+        let table_scroll = UniformListScrollHandle::new();
+        let table_bar = Scrolled::of(table_scroll.0.borrow().base_handle.clone());
         watch_scan(Arc::clone(&body), cx);
         Self {
             body,
@@ -257,7 +265,9 @@ impl BodyView {
             marks: RefCell::new(HashMap::new()),
             opens: None,
             table: None,
-            table_scroll: UniformListScrollHandle::new(),
+            table_scroll,
+            table_bar,
+            table_menu_cell: None,
         }
     }
 
@@ -282,6 +292,7 @@ impl BodyView {
     /// The selected text, as [`Body::text`] gives it.
     pub fn selected_text(&self) -> Copied {
         match self.select.bounds() {
+            Some((start, end)) if self.is_table() => self.table_text(start, end),
             Some((start, end)) => self.copy(start, end),
             None => Copied::Nothing,
         }
@@ -313,8 +324,18 @@ impl BodyView {
         Some(before[open + 1..end].to_owned())
     }
 
-    /// The first and the last spot of the body.
+    /// The first and the last spot of what is shown: the body's text, or its
+    /// table.
     fn ends(&self) -> Option<(Spot, Spot)> {
+        if self.is_table() {
+            self.table_ends()
+        } else {
+            self.text_ends()
+        }
+    }
+
+    /// The first and the last spot of the body's text.
+    fn text_ends(&self) -> Option<(Spot, Spot)> {
         let last = self.lines().checked_sub(1)?;
         let piece = if self.wrapping() {
             wrap::key(last, wrap::LAST_ROW)
@@ -627,7 +648,8 @@ impl BodyView {
 
     fn copy_all(&mut self, cx: &mut Context<Self>) {
         self.close_menu();
-        if let Some((start, end)) = self.ends()
+        // The body as it came, a table's too.
+        if let Some((start, end)) = self.text_ends()
             && let Copied::Text(text) = self.copy(start, end)
         {
             cx.write_to_clipboard(ClipboardItem::new_string(text));
@@ -1175,6 +1197,19 @@ impl BodyView {
         let c = colors();
         let rows = table.rows();
         let scroll = self.table_scroll.clone();
+        let me = cx.entity().downgrade();
+        let follow = select::follow_drag(&self.select, {
+            let me = me.clone();
+            move |at, _, cx| {
+                let _ = me.update(cx, |this, cx| {
+                    if this.select.drag_to(at) {
+                        cx.notify();
+                    }
+                });
+            }
+        });
+        let menu = self.select.menu().map(|at| self.render_table_menu(at, cx));
+        self.select.begin();
         div()
             .size_full()
             .flex()
@@ -1196,17 +1231,93 @@ impl BodyView {
                 )
             })
             .child(
-                uniform_list(
-                    "table-rows",
-                    rows,
-                    cx.processor(|this, range: std::ops::Range<usize>, _, _| {
-                        this.render_table_rows(range)
-                    }),
-                )
-                .flex_1()
-                .with_horizontal_sizing_behavior(ListHorizontalSizingBehavior::Unconstrained)
-                .track_scroll(&scroll),
+                div()
+                    .id("table")
+                    .flex_1()
+                    .min_h_0()
+                    .relative()
+                    .cursor(gpui::CursorStyle::IBeam)
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(|this, e: &MouseDownEvent, window, cx| {
+                            window.focus(&this.focus, cx);
+                            this.select
+                                .press(e.position, e.click_count, e.modifiers.shift);
+                            cx.notify();
+                        }),
+                    )
+                    .on_mouse_down(
+                        MouseButton::Right,
+                        cx.listener(|this, e: &MouseDownEvent, window, cx| {
+                            window.focus(&this.focus, cx);
+                            this.table_menu_cell = this
+                                .select
+                                .spot_at(e.position)
+                                .map(|spot| this.cell_of(spot.piece));
+                            this.select.set_menu(Some(e.position));
+                            cx.notify();
+                        }),
+                    )
+                    .child(
+                        self.table_bar.around(
+                            uniform_list(
+                                "table-rows",
+                                rows,
+                                cx.processor(|this, range: std::ops::Range<usize>, _, _| {
+                                    this.render_table_rows(range)
+                                }),
+                            )
+                            .size_full()
+                            .with_horizontal_sizing_behavior(
+                                ListHorizontalSizingBehavior::Unconstrained,
+                            )
+                            .track_scroll(&scroll),
+                        ),
+                    )
+                    .children(follow)
+                    .children(menu),
             )
+    }
+
+    /// What a right click on the table offers.
+    fn render_table_menu(&self, at: Point<Pixels>, cx: &mut Context<Self>) -> AnyElement {
+        let me = cx.entity().downgrade();
+        let (copy, all, row, column, close) = (me.clone(), me.clone(), me.clone(), me.clone(), me);
+        let mut items = select::copy_items(
+            !self.select.is_empty(),
+            self.body.size() <= COPY_MAX as u64,
+            move |_, cx| {
+                let _ = copy.update(cx, |this, cx| this.copy_selected(cx));
+            },
+            move |_, cx| {
+                let _ = all.update(cx, |this, cx| this.copy_all(cx));
+            },
+        );
+        let on = self.table_menu_cell.is_some();
+        items.push(select::Item::new(
+            "copy-row",
+            tr!("Copy row"),
+            on.then(|| {
+                Rc::new(move |_: &mut Window, cx: &mut gpui::App| {
+                    let _ = row.update(cx, |this, cx| this.copy_table_row(cx));
+                }) as select::Act
+            }),
+        ));
+        items.push(select::Item::new(
+            "copy-column",
+            tr!("Copy column"),
+            on.then(|| {
+                Rc::new(move |_: &mut Window, cx: &mut gpui::App| {
+                    let _ = column.update(cx, |this, cx| this.copy_table_column(cx));
+                }) as select::Act
+            }),
+        ));
+        select::render_menu(at, items, move |_, cx| {
+            let _ = close.update(cx, |this, cx| {
+                this.close_menu();
+                cx.notify();
+            });
+        })
     }
 
     fn render_table_rows(&self, range: std::ops::Range<usize>) -> Vec<AnyElement> {
@@ -1239,6 +1350,10 @@ impl BodyView {
                             .when(!head, |d| d.child(row.to_string())),
                     )
                     .children(table.widths.iter().enumerate().map(|(i, width)| {
+                        let shown = cells
+                            .get(i)
+                            .map(|cell| table::shown(cell))
+                            .unwrap_or_default();
                         div()
                             .w(ui(*width as f32 * TABLE_CHAR_W + 14.))
                             .h_full()
@@ -1250,16 +1365,132 @@ impl BodyView {
                             .whitespace_nowrap()
                             .border_l_1()
                             .border_color(rgb(c.line))
-                            .child(
-                                cells
-                                    .get(i)
-                                    .map(|cell| table::shown(cell))
-                                    .unwrap_or_default(),
-                            )
+                            .child(self.select.piece_at(
+                                self.cell_key(row, i),
+                                shown.into(),
+                                Vec::new(),
+                            ))
                     }))
                     .into_any_element()
             })
             .collect()
+    }
+
+    /// The table's scroll bar, and where the table is scrolled to.
+    pub fn table_bar(&self) -> &Scrolled {
+        &self.table_bar
+    }
+
+    /// Whether the body is shown as its table.
+    fn is_table(&self) -> bool {
+        self.table.is_some() && self.mode() == BodyMode::Table
+    }
+
+    /// How many columns the table has, at least one.
+    fn table_cols(&self) -> usize {
+        self.table.as_ref().map_or(1, |t| t.widths.len().max(1))
+    }
+
+    /// A cell's piece of the selection: row by row, a column at a time, so a
+    /// selection runs through the cells as it does through text.
+    fn cell_key(&self, row: usize, col: usize) -> u64 {
+        (row * self.table_cols() + col) as u64
+    }
+
+    /// The row and the column of the cell a piece is.
+    fn cell_of(&self, key: u64) -> (usize, usize) {
+        let cols = self.table_cols();
+        (key as usize / cols, key as usize % cols)
+    }
+
+    fn table_ends(&self) -> Option<(Spot, Spot)> {
+        let last = self.table.as_ref()?.rows().checked_sub(1)?;
+        Some((
+            Spot::default(),
+            Spot {
+                piece: self.cell_key(last, self.table_cols() - 1),
+                at: usize::MAX,
+            },
+        ))
+    }
+
+    /// The cells from `start` to `end`, as TSV: a tab between cells, a line
+    /// between rows. A cell selected whole is copied whole, as it came; one
+    /// selected in part, as much of it as was shown and selected.
+    fn table_text(&self, start: Spot, end: Spot) -> Copied {
+        let Some(table) = &self.table else {
+            return Copied::Nothing;
+        };
+        let cols = self.table_cols();
+        let (first, last) = (self.cell_of(start.piece), self.cell_of(end.piece));
+        let last_row = last.0.min(table.rows().saturating_sub(1));
+        let mut text = String::new();
+        for row in first.0..=last_row {
+            let cells = table.cells(row);
+            let from_col = if row == first.0 { first.1 } else { 0 };
+            let to_col = if row == last.0 { last.1 } else { cols - 1 };
+            if row > first.0 {
+                text.push('\n');
+            }
+            for col in from_col..=to_col {
+                if col > from_col {
+                    text.push('\t');
+                }
+                let cell = cells.get(col).map(String::as_str).unwrap_or("");
+                let shown = table::shown(cell);
+                let from = if (row, col) == first { start.at } else { 0 };
+                let to = if (row, col) == last {
+                    end.at
+                } else {
+                    usize::MAX
+                };
+                if from == 0 && to >= shown.len() {
+                    text.push_str(cell);
+                } else {
+                    let to = select::floor(&shown, to.min(shown.len()));
+                    let from = select::floor(&shown, from.min(to));
+                    text.push_str(&shown[from..to]);
+                }
+            }
+            if text.len() > COPY_MAX {
+                return Copied::TooLarge;
+            }
+        }
+        if text.is_empty() {
+            Copied::Nothing
+        } else {
+            Copied::Text(text)
+        }
+    }
+
+    /// The row a right click was on, as TSV.
+    fn copy_table_row(&mut self, cx: &mut Context<Self>) {
+        self.close_menu();
+        if let (Some(table), Some((row, _))) = (&self.table, self.table_menu_cell) {
+            cx.write_to_clipboard(ClipboardItem::new_string(table.cells(row).join("\t")));
+        }
+        cx.notify();
+    }
+
+    /// The column a right click was on, its name first, a line a row.
+    fn copy_table_column(&mut self, cx: &mut Context<Self>) {
+        self.close_menu();
+        if let (Some(table), Some((_, col))) = (&self.table, self.table_menu_cell) {
+            let mut text = String::new();
+            for row in 0..table.rows() {
+                if row > 0 {
+                    text.push('\n');
+                }
+                text.push_str(table.cells(row).get(col).map_or("", String::as_str));
+                if text.len() > COPY_MAX {
+                    break;
+                }
+            }
+            if text.len() <= COPY_MAX {
+                cx.write_to_clipboard(ClipboardItem::new_string(text));
+            }
+        }
+        cx.notify();
     }
 
     fn render_text(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {

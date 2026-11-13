@@ -140,6 +140,12 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Solo se muestran las primeras { $count } filas.
 
+# Copy row
+tbdecf3c8 = Copiar fila
+
+# Copy column
+te26431fe = Copiar columna
+
 # Forget how {field} is read
 tdb2d6aa8 = Olvidar cómo se lee { $field }
 
