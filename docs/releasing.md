@@ -8,7 +8,7 @@ until the draft the tag makes is published by hand.
 | Platform | Files | Made by |
 | --- | --- | --- |
 | Linux x86_64, aarch64 | `tracewing_<v>_<amd64\|arm64>.deb`, `tracewing_<v>_<x86_64\|aarch64>.rpm` | `scripts/package_linux.sh` |
-| macOS aarch64, x86_64 | not yet: `tracewing_<v>_macos_<arch>.dmg` | — |
+| macOS aarch64, x86_64 | `tracewing_<v>_macos_<aarch64\|x86_64>.dmg` | `scripts/package_macos.sh` |
 | Windows x86_64 | `tracewing_<v>_windows_x86_64-setup.exe`, `tracewing_<v>_windows_x86_64.zip` | `scripts/package_windows.sh` |
 
 and `SHA256SUMS`.
@@ -36,10 +36,33 @@ licenses of what it is built with.
   proxy back. It is not signed: SmartScreen asks the first time (More info ›
   Run anyway). The `.zip` is the same program to run from a folder, with no
   installer.
-- **macOS** is a row in the matrix of
-  [release.yml](../.github/workflows/release.yml) and a packaging script. The
-  download page names its files already, so a release before it exists must
-  say so there (`landing/src/data/downloads.ts` has `comingSoon` for it).
+- **macOS**: `tracewing.app` in a disk image, with a link to `/Applications`
+  beside it. It runs on macOS 13 Ventura and newer, as
+  `packaging/macos/Info.plist` says and the build is told. Signed with the
+  Developer ID and notarized when the repository holds one ([Signing for
+  macOS](#signing-for-macos)); without one it is signed ad hoc and Gatekeeper
+  asks the first time it opens (Control-click › Open).
+
+## Signing for macOS
+
+The repository's secrets, as packwing's and shellwing's have them:
+`MACOS_CERTIFICATE` (the Developer ID Application `.p12`, base64),
+`MACOS_CERTIFICATE_PASSWORD`, `APPLE_API_KEY` (an App Store Connect API key's
+`.p8` text), `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`.
+
+The workflow uses them only if `MACOS_CERTIFICATE` is set, in a keychain of
+that run's own which it deletes afterwards. With the certificate and no API
+key the app is signed but not notarized, and Gatekeeper then refuses it
+downloaded; with neither, it is signed ad hoc. tracewing claims no entitlement
+a provisioning profile must allow, so there is none to embed.
+
+**On a Mac**, with the certificate in the login keychain:
+
+```sh
+cargo build --release --locked -p tracewing
+MACOS_SIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
+  scripts/package_macos.sh
+```
 
 ## Cutting one
 
@@ -83,6 +106,14 @@ scripts/check_linux_package.sh dist/tracewing_*.rpm
 
 It needs `cargo-about` (`cargo install cargo-about --locked --features cli`)
 and, on Debian or Ubuntu, `dpkg-dev rpm cpio desktop-file-utils`.
+
+On a Mac:
+
+```sh
+cargo build --release --locked -p tracewing
+scripts/package_macos.sh                            # dist/..._macos_<arch>.dmg
+scripts/check_macos_app.sh dist/tracewing_*.dmg     # opened, read and run
+```
 
 On Windows, from Git Bash or MSYS2 with NSIS 3 installed
 (`choco install nsis`):
