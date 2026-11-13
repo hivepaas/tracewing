@@ -754,6 +754,9 @@ t60beaefd = 關閉解讀
 # a guess
 t6af47169 = 推測
 
+# Nothing to read in this
+t92a8694c = 這裡沒有可解讀的內容
+
 # Read as
 t8c0f1d8b = 按其他方式解讀
 
@@ -1236,9 +1239,6 @@ t70ff68f9 = 還有 { $count } 個：輸入以縮小範圍
 
 # Copy reading
 td38c5cc8 = 複製解讀結果
-
-# Nothing to read in this
-t92a8694c = 這裡沒有可解讀的內容
 
 # Write the server's address first
 t4f68f91a = 請先填寫伺服器位址
