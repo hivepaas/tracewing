@@ -50,68 +50,104 @@ const BIG_MB: usize = 10;
 const BIG_MB_MAX: usize = 500;
 
 /// Every path, and what it answers with: the list `/` shows.
-pub const ROUTES: &[(&str, &str)] = &[
-    ("/json", "JSON: a few orders"),
-    ("/json_big", "JSON of 10 MB (?mb=N for another size)"),
+/// Each path the playground answers, what it sends, and the parameters worth
+/// trying with it: one worded exactly as it goes on the end of the path
+/// (`?mb=1`), or written whole where it is not a query (`/status/201`). The
+/// listing offers them as links, since a parameter nobody can click is a
+/// parameter everybody retypes.
+pub const ROUTES: &[(&str, &str, &[&str])] = &[
+    ("/json", "JSON: a few orders", &[]),
+    (
+        "/json_big",
+        "JSON of 10 MB (?mb=N for another size)",
+        &["?mb=1", "?mb=100"],
+    ),
     (
         "/json_long",
         "JSON whose one value is too long for a line: base64 of more JSON",
+        &[],
     ),
-    ("/xml", "XML: the same orders"),
-    ("/xml_big", "XML of 10 MB (?mb=N)"),
-    ("/soap", "A SOAP answer, all on one line"),
+    ("/xml", "XML: the same orders", &[]),
+    ("/xml_big", "XML of 10 MB (?mb=N)", &["?mb=1"]),
+    ("/soap", "A SOAP answer, all on one line", &[]),
     (
         "/html",
         "An HTML page with a table, its CSS, JS and picture",
+        &[],
     ),
-    ("/html_big", "HTML of 10 MB (?mb=N)"),
-    ("/csv", "CSV, with quotes and commas inside cells"),
-    ("/csv_big", "CSV of 10 MB (?mb=N)"),
-    ("/tsv", "TSV"),
-    ("/tsv_big", "TSV of 10 MB (?mb=N)"),
-    ("/text", "Plain text: log lines"),
-    ("/text_big", "Plain text of 10 MB (?mb=N)"),
-    ("/js", "JavaScript"),
-    ("/css", "CSS"),
-    ("/svg", "An SVG picture"),
-    ("/png", "A PNG picture"),
-    ("/binary", "64 KB of bytes that are no format"),
-    ("/msgpack", "MessagePack"),
-    ("/cbor", "CBOR"),
-    ("/protobuf", "Protobuf, with no .proto"),
-    ("/grpc-web", "gRPC-Web: a message, then trailers"),
+    ("/html_big", "HTML of 10 MB (?mb=N)", &["?mb=1"]),
+    ("/csv", "CSV, with quotes and commas inside cells", &[]),
+    ("/csv_big", "CSV of 10 MB (?mb=N)", &["?mb=1"]),
+    ("/tsv", "TSV", &[]),
+    ("/tsv_big", "TSV of 10 MB (?mb=N)", &["?mb=1"]),
+    ("/text", "Plain text: log lines", &[]),
+    ("/text_big", "Plain text of 10 MB (?mb=N)", &["?mb=1"]),
+    ("/js", "JavaScript", &[]),
+    ("/css", "CSS", &[]),
+    ("/svg", "An SVG picture", &[]),
+    ("/png", "A PNG picture", &[]),
+    ("/binary", "64 KB of bytes that are no format", &[]),
+    ("/msgpack", "MessagePack", &[]),
+    ("/cbor", "CBOR", &[]),
+    ("/protobuf", "Protobuf, with no .proto", &[]),
+    ("/grpc-web", "gRPC-Web: a message, then trailers", &[]),
     (
         "/shop.proto",
         "The .proto the Protobuf and gRPC answers are made by",
+        &[],
     ),
-    ("/gzip", "JSON packed with gzip"),
-    ("/br", "JSON packed with Brotli"),
-    ("/zstd", "JSON packed with zstd"),
-    ("/sse", "Server-sent events, one each 500 ms (?n=10&ms=500)"),
-    ("/ndjson", "A JSON line each 500 ms (?n=10&ms=500)"),
-    ("/slow", "JSON after 3 s (?ms=N)"),
-    ("/status/404", "Any status: /status/201, /status/500…"),
-    ("/redirect", "Redirects 3 times, then JSON (?n=N)"),
-    ("/cookies", "Sets cookies, and says which came"),
-    ("/auth", "401 unless a header Authorization: Bearer … comes"),
+    ("/gzip", "JSON packed with gzip", &[]),
+    ("/br", "JSON packed with Brotli", &[]),
+    ("/zstd", "JSON packed with zstd", &[]),
+    (
+        "/sse",
+        "Server-sent events, one each 500 ms (?n=10&ms=500)",
+        &["?n=3&ms=200", "?n=100&ms=20"],
+    ),
+    (
+        "/ndjson",
+        "A JSON line each 500 ms (?n=10&ms=500)",
+        &["?n=3&ms=200", "?n=100&ms=20"],
+    ),
+    ("/slow", "JSON after 3 s (?ms=N)", &["?ms=500", "?ms=10000"]),
+    (
+        "/status/404",
+        "Any status at all",
+        &["/status/201", "/status/304", "/status/418", "/status/500"],
+    ),
+    (
+        "/redirect",
+        "Redirects 3 times, then JSON (?n=N)",
+        &["?n=1", "?n=10"],
+    ),
+    ("/cookies", "Sets cookies, and says which came", &[]),
+    (
+        "/auth",
+        "401 unless a header Authorization: Bearer … comes",
+        &[],
+    ),
     (
         "/hop",
         "Headers for the next hop alone, which a proxy must not pass on",
+        &[],
     ),
-    ("/echo", "Any method: says what came, body and all"),
-    ("/ws.html", "A page to talk to /ws"),
+    ("/echo", "Any method: says what came, body and all", &[]),
+    ("/ws.html", "A page to talk to /ws", &[]),
     (
         "/ws",
         "WebSocket: says what came, echoes, ticks each second (?ticks=N), \
          sends N bytes (?big=N), closes with a code (?close=4000), refuses (?refuse=403)",
+        &["?ticks=1", "?big=65536", "?close=4000", "?refuse=403"],
     ),
     (
         "/shop.Orders/Get",
         "gRPC (HTTP/2, POST): the order asked for; 42 is not found",
+        &[],
     ),
     (
         "/rpc",
         "JSON-RPC (POST), as an Ethereum node answers; ?fail=1 reverts, in a 200",
+        &["?fail=1"],
     ),
 ];
 
@@ -449,19 +485,38 @@ async fn read_body(req: Request<Incoming>) -> Bytes {
         .unwrap_or_default()
 }
 
+/// Where one of a route's listed parameters leads: `?mb=1` goes on the end of
+/// its path, `/status/201` is a path of its own.
+pub fn variant_url(path: &str, variant: &str) -> String {
+    if variant.starts_with('/') {
+        variant.to_owned()
+    } else {
+        format!("{path}{variant}")
+    }
+}
+
 fn index() -> String {
     let mut rows = String::new();
-    for (path, what) in ROUTES {
+    for (path, what, variants) in ROUTES {
+        let mut links = String::new();
+        for variant in *variants {
+            let _ = write!(
+                links,
+                r#" <a class="p" href="{}"><code>{}</code></a>"#,
+                escape_xml(&variant_url(path, variant)),
+                escape_xml(variant)
+            );
+        }
         let _ = writeln!(
             rows,
-            r#"<tr><td><a href="{path}"><code>{path}</code></a></td><td>{}</td></tr>"#,
+            r#"<tr><td><a href="{path}"><code>{path}</code></a>{links}</td><td>{}</td></tr>"#,
             escape_xml(what)
         );
     }
     format!(
         r#"<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>tracewing playground</title>
-<style>body{{font:15px system-ui,sans-serif;margin:2rem;max-width:60rem}}td{{padding:.25rem .75rem}}code{{font-size:14px}}</style>
+<style>body{{font:15px system-ui,sans-serif;margin:2rem;max-width:60rem}}td{{padding:.25rem .75rem}}code{{font-size:14px}}a.p{{margin-left:.5rem;color:#666}}a.p code{{font-size:13px}}</style>
 </head><body>
 <h1>tracewing playground</h1>
 <p>A server to try tracewing on. Each path answers with one kind of body.</p>
@@ -1049,7 +1104,7 @@ mod tests {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap();
-        for (path, _) in ROUTES {
+        for (path, _, variants) in ROUTES {
             let response = client
                 .get(format!("{base}{path}?mb=1&n=2&ms=1"))
                 .send()
@@ -1070,9 +1125,37 @@ mod tests {
             } else if *path != "/redirect" {
                 assert!(size > 0, "{path}");
             }
+            // What the listing offers as a link had better answer. The large
+            // and slow ones are left out: being large and slow is what those
+            // links are for, and the suite should not wait for them.
+            for variant in *variants {
+                if is_slow(variant) {
+                    continue;
+                }
+                let url = format!("{base}{}", variant_url(path, variant));
+                let status = client.get(&url).send().await.unwrap().status().as_u16();
+                let wanted = variant
+                    .strip_prefix("/status/")
+                    .and_then(|code| code.parse().ok())
+                    .unwrap_or(expected);
+                assert_eq!(status, wanted, "{url}");
+            }
         }
         let missing = client.get(format!("{base}/nope")).send().await.unwrap();
         assert_eq!(missing.status(), 404);
+    }
+
+    /// Whether a listed parameter asks for something big or slow on purpose.
+    fn is_slow(variant: &str) -> bool {
+        benchkit::parse_query(variant.trim_start_matches('?'))
+            .into_iter()
+            .any(|(key, value)| {
+                let n: u64 = value.parse().unwrap_or(0);
+                matches!(key, "mb" if n > 10)
+                    || matches!(key, "ms" if n > 1000)
+                    || matches!(key, "n" if n > 10)
+                    || matches!(key, "big" if n > 1024)
+            })
     }
 
     #[test]

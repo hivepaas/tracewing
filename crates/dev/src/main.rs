@@ -522,8 +522,12 @@ async fn main() -> Result<()> {
                 client_cert.display(),
                 client_key.display()
             );
-            for (path, what) in playground::ROUTES {
+            for (path, what, variants) in playground::ROUTES {
+                let also = variants.join("  ");
                 println!("  {base}{path:<20} {what}");
+                if !also.is_empty() {
+                    println!("  {:<20}   {also}", "", also = also);
+                }
             }
             let mtls_state = state.clone();
             tokio::spawn(async move {
