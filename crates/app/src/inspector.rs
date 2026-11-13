@@ -147,6 +147,9 @@ pub struct InspectorState {
     /// A reading being looked at as a body of its own, which the body pane
     /// shows until it is closed.
     pub opened: Option<Opened>,
+    /// Whether the phases of the time are folded away. Worded as the negative
+    /// so that `Default` gives what the window has always done: show them.
+    pub timing_hidden: bool,
     /// How many have been opened, so that each gets a file of its own.
     opened_count: u64,
 }
@@ -813,8 +816,13 @@ impl Traffic {
         panel
             .child(render_title(&detail))
             .child(self.render_decrypt_choice(&detail, cx))
-            .child(render_chips(&detail))
-            .children(render_timing(&detail))
+            .child(render_chips(&detail, self.inspector.timing_hidden, {
+                let me = cx.entity().downgrade();
+                move |_: &mut gpui::Window, cx: &mut gpui::App| {
+                    let _ = me.update(cx, |this: &mut Traffic, cx| this.toggle_timing(cx));
+                }
+            }))
+            .children(render_timing(&detail).filter(|_| !self.inspector.timing_hidden))
             .child(self.render_sides(cx))
             .child(self.render_parts(&detail, cx))
             .child(self.render_part(&detail, cx))
@@ -1863,6 +1871,14 @@ impl Traffic {
         done
     }
 
+    /// Folds the phases of the time away, or brings them back. They are the
+    /// detail behind the chip that says how long it took, so that chip is
+    /// what folds them.
+    pub fn toggle_timing(&mut self, cx: &mut Context<Self>) {
+        self.inspector.timing_hidden = !self.inspector.timing_hidden;
+        cx.notify();
+    }
+
     /// Closes what was opened, and shows the body itself again.
     pub fn close_opened(&mut self, cx: &mut Context<Self>) -> bool {
         let was = self.inspector.opened.take().is_some();
@@ -2198,7 +2214,14 @@ fn status_text(status: Option<u16>) -> String {
     }
 }
 
-fn render_chips(detail: &Detail) -> impl IntoElement {
+/// The facts about a flow, side by side. The one that says how long it took
+/// is also the way to the phases below it: it is their total, so folding them
+/// away belongs on it rather than on a switch of its own.
+fn render_chips(
+    detail: &Detail,
+    timing_hidden: bool,
+    toggle_timing: impl Fn(&mut gpui::Window, &mut gpui::App) + 'static,
+) -> impl IntoElement {
     let c = colors();
     let (ground, ink) = status_colors(detail.status);
     let plain = |text: String| chip(text, c.chip, c.on_chip);
@@ -2257,9 +2280,19 @@ fn render_chips(detail: &Detail) -> impl IntoElement {
         }))
         .child(plain(detail.protocols()))
         .children(if detail.open {
-            Some(chip(tr!("Open"), c.ok_ground, c.ok))
+            Some(chip(tr!("Open"), c.ok_ground, c.ok).into_any_element())
         } else {
-            detail.duration_us.map(|d| plain(time_text(d)))
+            detail.duration_us.map(|took| {
+                let mark = if timing_hidden { "▸" } else { "▾" };
+                chip(format!("{mark} {}", time_text(took)), c.chip, c.on_chip)
+                    .id("timing")
+                    .cursor_pointer()
+                    .reachable()
+                    .hover(|s| s.bg(rgb(c.soft)))
+                    .tooltip(tip(tr!("Where the time went")))
+                    .on_click(move |_, window, cx| toggle_timing(window, cx))
+                    .into_any_element()
+            })
         })
         .when(detail.kind != "websocket", |d| d.child(plain(size)))
         .children(

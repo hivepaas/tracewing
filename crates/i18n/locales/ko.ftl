@@ -724,6 +724,9 @@ t2d65757d = GraphQL: { $operation }
 # RPC: {method}
 tf8162891 = RPC: { $method }
 
+# Where the time went
+tb12d299a = 시간이 어디에 쓰였는지
+
 # Over connection {id}, made before: no time went on connecting.
 t84144a81 = 이전에 만들어진 연결 { $id } 사용: 연결에 걸린 시간이 없습니다.
 

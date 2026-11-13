@@ -724,6 +724,9 @@ t2d65757d = GraphQL：{ $operation }
 # RPC: {method}
 tf8162891 = RPC：{ $method }
 
+# Where the time went
+tb12d299a = 时间花在哪里
+
 # Over connection {id}, made before: no time went on connecting.
 t84144a81 = 复用之前建立的连接 { $id }：没有花费连接时间。
 

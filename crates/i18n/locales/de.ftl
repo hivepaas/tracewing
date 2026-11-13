@@ -753,6 +753,9 @@ t2d65757d = GraphQL: { $operation }
 # RPC: {method}
 tf8162891 = RPC: { $method }
 
+# Where the time went
+tb12d299a = Wohin die Zeit ging
+
 # Over connection {id}, made before: no time went on connecting.
 t84144a81 = Über Verbindung { $id }, zuvor aufgebaut: Für den Verbindungsaufbau wurde keine Zeit benötigt.
 
