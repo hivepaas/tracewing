@@ -1413,6 +1413,49 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
     assert!(back.1, "and what it said with it");
     assert!(back.2 > 0, "the readings it found are still there");
 
+    // What is in the pane is text: it can be chosen and copied, which is
+    // the whole use of having the value and what it means side by side.
+    let copied = window
+        .update(&mut cx, |view, _, cx| {
+            let sel = view.inspector.reads_select.clone();
+            // The pane's own pieces: the value it is reading, and the lines
+            // of what it was read as.
+            // Whatever the pane is reading now, as the pane shows it.
+            let value = view.inspector.reads.as_ref()?.value.clone();
+            let want: String = value.chars().take(16).collect();
+            let piece = (0..80u64).find(|piece| {
+                sel.text_of(*piece)
+                    .is_some_and(|text| text.contains(want.as_str()))
+            })?;
+            let len = sel.text_of(piece).map_or(0, |text| text.len());
+            sel.select(
+                tracewing::select::Spot { piece, at: 0 },
+                tracewing::select::Spot { piece, at: len },
+            );
+            match view.copy_selection(cx) {
+                true => Some(sel.selected_text()),
+                false => None,
+            }
+        })
+        .unwrap()
+        .expect("the pane's value is a piece that can be chosen");
+    let value = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector
+                .reads
+                .as_ref()
+                .map(|reads| reads.value.clone())
+        })
+        .unwrap()
+        .expect("the pane is open");
+    match copied {
+        tracewing::select::Copied::Text(text) => {
+            let want: String = value.chars().take(16).collect();
+            assert!(text.contains(&want), "what a copy takes: {text}");
+        }
+        other => panic!("{other:?}"),
+    }
+
     // Escape puts the pane away and gives the body its width back.
     let closed = window
         .update(&mut cx, |view, _, cx| {
