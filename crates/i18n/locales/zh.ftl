@@ -754,6 +754,9 @@ t60beaefd = 关闭解读
 # a guess
 t6af47169 = 推测
 
+# Nothing to read in this
+t92a8694c = 这里没有可解读的内容
+
 # Read as
 t8c0f1d8b = 按其他方式解读
 
@@ -1236,9 +1239,6 @@ t70ff68f9 = 还有 { $count } 个：输入以缩小范围
 
 # Copy reading
 td38c5cc8 = 复制解读结果
-
-# Nothing to read in this
-t92a8694c = 这里没有可解读的内容
 
 # Write the server's address first
 t4f68f91a = 请先填写服务器地址

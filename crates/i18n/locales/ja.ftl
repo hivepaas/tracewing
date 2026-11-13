@@ -754,6 +754,9 @@ t60beaefd = 読み取りを閉じる
 # a guess
 t6af47169 = 推測
 
+# Nothing to read in this
+t92a8694c = ここに読めるものはありません
+
 # Read as
 t8c0f1d8b = 別の読み方
 
@@ -1236,9 +1239,6 @@ t70ff68f9 = ほかに { $count } 件: 入力して絞り込み
 
 # Copy reading
 td38c5cc8 = 読んだ内容をコピー
-
-# Nothing to read in this
-t92a8694c = ここに読めるものはありません
 
 # Write the server's address first
 t4f68f91a = 先にサーバーのアドレスを入力してください

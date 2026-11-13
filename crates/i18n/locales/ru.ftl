@@ -805,6 +805,9 @@ t60beaefd = Закрыть прочтения
 # a guess
 t6af47169 = догадка
 
+# Nothing to read in this
+t92a8694c = Здесь нечего прочесть
+
 # Read as
 t8c0f1d8b = Прочитать как
 
@@ -1341,9 +1344,6 @@ t70ff68f9 =
 
 # Copy reading
 td38c5cc8 = Копировать прочитанное
-
-# Nothing to read in this
-t92a8694c = Здесь нечего прочесть
 
 # Write the server's address first
 t4f68f91a = Сначала введите адрес сервера

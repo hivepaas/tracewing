@@ -783,6 +783,9 @@ t60beaefd = Okumaları kapat
 # a guess
 t6af47169 = tahmin
 
+# Nothing to read in this
+t92a8694c = Burada okunacak bir şey yok
+
 # Read as
 t8c0f1d8b = Şu olarak oku
 
@@ -1295,9 +1298,6 @@ t70ff68f9 =
 
 # Copy reading
 td38c5cc8 = Okunanı kopyala
-
-# Nothing to read in this
-t92a8694c = Burada okunacak bir şey yok
 
 # Write the server's address first
 t4f68f91a = Önce sunucunun adresini yazın

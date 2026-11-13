@@ -789,6 +789,9 @@ t60beaefd = Chiudi le letture
 # a guess
 t6af47169 = un'ipotesi
 
+# Nothing to read in this
+t92a8694c = Niente da leggere qui
+
 # Read as
 t8c0f1d8b = Leggi come
 
@@ -1307,9 +1310,6 @@ t70ff68f9 =
 
 # Copy reading
 td38c5cc8 = Copia la lettura
-
-# Nothing to read in this
-t92a8694c = Niente da leggere qui
 
 # Write the server's address first
 t4f68f91a = Scrivi prima l’indirizzo del server

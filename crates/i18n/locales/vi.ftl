@@ -754,6 +754,9 @@ t60beaefd = Đóng phần đọc
 # a guess
 t6af47169 = phỏng đoán
 
+# Nothing to read in this
+t92a8694c = Không đọc được gì ở đây
+
 # Read as
 t8c0f1d8b = Đọc như
 
@@ -1236,9 +1239,6 @@ t70ff68f9 = và { $count } message khác: gõ để thu hẹp
 
 # Copy reading
 td38c5cc8 = Copy phần đã đọc
-
-# Nothing to read in this
-t92a8694c = Không đọc được gì ở đây
 
 # Write the server's address first
 t4f68f91a = Hãy nhập địa chỉ server trước

@@ -754,6 +754,9 @@ t60beaefd = Tutup pembacaan
 # a guess
 t6af47169 = tebakan
 
+# Nothing to read in this
+t92a8694c = Tidak ada yang bisa dibaca di sini
+
 # Read as
 t8c0f1d8b = Baca sebagai
 
@@ -1236,9 +1239,6 @@ t70ff68f9 = dan { $count } lagi: ketik untuk mempersempit
 
 # Copy reading
 td38c5cc8 = Salin hasil baca
-
-# Nothing to read in this
-t92a8694c = Tidak ada yang bisa dibaca di sini
 
 # Write the server's address first
 t4f68f91a = Tulis alamat server dulu

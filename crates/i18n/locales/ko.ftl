@@ -754,6 +754,9 @@ t60beaefd = 해석 닫기
 # a guess
 t6af47169 = 추측
 
+# Nothing to read in this
+t92a8694c = 여기서 읽을 것이 없습니다
+
 # Read as
 t8c0f1d8b = 다른 해석
 
@@ -1236,9 +1239,6 @@ t70ff68f9 = { $count }개 더 있음: 입력해서 좁히기
 
 # Copy reading
 td38c5cc8 = 읽은 내용 복사
-
-# Nothing to read in this
-t92a8694c = 여기서 읽을 것이 없습니다
 
 # Write the server's address first
 t4f68f91a = 먼저 서버 주소를 입력하세요

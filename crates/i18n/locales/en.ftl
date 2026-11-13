@@ -291,6 +291,7 @@ t1942c7ae = line { $number }
 t4df6b638 = Readings
 t60beaefd = Close the readings
 t6af47169 = a guess
+t92a8694c = Nothing to read in this
 t8c0f1d8b = Read as
 te030653c = choose…
 t6d510d3d = Read from { $from }
@@ -494,7 +495,6 @@ t70ff68f9 =
        *[other] and { $count } more: type to narrow them
     }
 td38c5cc8 = Copy reading
-t92a8694c = Nothing to read in this
 t4f68f91a = Write the server's address first
 t8c4d03a6 = "{ $address }" is not a server's address
 tfa5b7ad8 = The server has no services to describe
