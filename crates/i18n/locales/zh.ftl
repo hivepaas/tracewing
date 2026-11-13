@@ -700,8 +700,8 @@ tfa6e7203 = 表单 { $form }
 # Connection
 t09ea4ff9 = 连接
 
-# Find in the body (Ctrl+F)
-tb52d85cd = 在正文中查找 (Ctrl+F)
+# Find (Ctrl+F)
+t1a435961 = 查找 (Ctrl+F)
 
 # Save body
 te2c44424 = 保存正文

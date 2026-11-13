@@ -3,16 +3,17 @@
 //! next, Shift+Enter for the one before, Esc to close.
 
 use gpui::{
-    AppContext as _, Context, Div, Focusable, FontWeight, KeyDownEvent, Window, div, prelude::*,
-    rgb,
+    AppContext as _, Context, Div, Focusable, FontWeight, KeyDownEvent, Window, div, point,
+    prelude::*, px, rgb,
 };
 use tracewing_i18n::tr;
 
 use crate::{
     colors::colors,
+    detail::Side,
     find::{self, FindOptions},
     input::{Changed, TextInput},
-    inspector::{BodyState, FindBar, FindSwitch},
+    inspector::{BodyState, FindBar, FindSwitch, Part},
     text_size::ui,
     traffic::Traffic,
     widgets::{Reachable, icon, tip},
@@ -59,11 +60,13 @@ impl Traffic {
         if let BodyState::Shown(view) = &self.inspector.body {
             view.update(cx, |view, cx| view.set_find(None, cx));
         }
+        self.inspector.select.set_find(None);
         window.focus(&self.focus, cx);
         cx.notify();
     }
 
-    /// Searches the body shown for what is typed, as the switches say.
+    /// Searches what is shown for what is typed, as the switches say: the
+    /// body, and the parts drawn whole (headers, query, cookies…).
     pub fn apply_find(&mut self, cx: &mut Context<Self>) {
         let options = self.inspector.find_options;
         let Some(bar) = &mut self.inspector.find else {
@@ -80,6 +83,7 @@ impl Traffic {
                 None
             }
         };
+        self.inspector.select.set_find(re.clone());
         if let BodyState::Shown(view) = &self.inspector.body {
             bar.mark_applied(view.entity_id());
             view.update(cx, |view, cx| view.set_find(re, cx));
@@ -97,11 +101,49 @@ impl Traffic {
         if stale {
             self.apply_find(cx);
         }
+        // In a part drawn whole, the one Find is at, once it has moved.
+        if self.inspector.find.is_some()
+            && self.inspector.part != Part::Body
+            && let Some(key) = self.inspector.select.take_find_scroll()
+        {
+            self.scroll_to_piece(key);
+        }
+    }
+
+    /// Scrolls the part shown so that piece `key` is in view: in the pane it
+    /// was drawn in, a third of the way down.
+    fn scroll_to_piece(&mut self, key: u64) {
+        let Some(piece) = self.inspector.select.drawn_at(key) else {
+            return;
+        };
+        let part = self.inspector.part;
+        let center = piece.center();
+        let pane = [Side::Request, Side::Response]
+            .into_iter()
+            .map(|side| self.inspector.scrolled(part, side).handle)
+            .find(|handle| {
+                let view = handle.bounds();
+                view.size.width > px(0.) && view.left() <= center.x && center.x <= view.right()
+            });
+        let Some(handle) = pane else {
+            return;
+        };
+        let view = handle.bounds();
+        if piece.top() >= view.top() && piece.bottom() <= view.bottom() {
+            return;
+        }
+        let now = handle.offset();
+        let max = handle.max_offset().y.max(px(0.));
+        let y = now.y - (piece.top() - (view.top() + view.size.height / 3.));
+        handle.set_offset(point(now.x, y.clamp(-max, px(0.))));
     }
 
     /// The next found, or the one before.
     pub fn find_step(&mut self, forward: bool, cx: &mut Context<Self>) {
-        if let BodyState::Shown(view) = &self.inspector.body {
+        if self.inspector.part != Part::Body {
+            self.inspector.select.find_step(forward);
+            cx.notify();
+        } else if let BodyState::Shown(view) = &self.inspector.body {
             view.update(cx, |view, cx| view.find_step(forward, cx));
         }
     }
@@ -128,9 +170,22 @@ impl Traffic {
         if bar.input.read(cx).text().is_empty() {
             return (String::new(), false);
         }
-        let count = match &self.inspector.body {
-            BodyState::Shown(view) => view.read(cx).find_count(),
-            _ => None,
+        let count = if self.inspector.part != Part::Body {
+            // A part drawn whole: all of it is searched as it is drawn.
+            self.inspector
+                .select
+                .find_count()
+                .map(|(now, found)| crate::bodyview::FindCount {
+                    now,
+                    found,
+                    done: true,
+                    capped: false,
+                })
+        } else {
+            match &self.inspector.body {
+                BodyState::Shown(view) => view.read(cx).find_count(),
+                _ => None,
+            }
         };
         let Some(count) = count else {
             return (String::new(), false);
@@ -155,7 +210,7 @@ impl Traffic {
         )
     }
 
-    /// The bar, over the body.
+    /// The bar, over the part shown.
     pub(crate) fn render_find_bar(&self, cx: &mut Context<Self>) -> Option<gpui::Stateful<Div>> {
         let bar = self.inspector.find.as_ref()?;
         let c = colors();

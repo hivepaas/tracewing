@@ -700,8 +700,8 @@ tfa6e7203 = フォーム { $form }
 # Connection
 t09ea4ff9 = 接続
 
-# Find in the body (Ctrl+F)
-tb52d85cd = 本文を検索 (Ctrl+F)
+# Find (Ctrl+F)
+t1a435961 = 検索 (Ctrl+F)
 
 # Save body
 te2c44424 = ボディを保存

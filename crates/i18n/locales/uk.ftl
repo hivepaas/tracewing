@@ -751,8 +751,8 @@ tfa6e7203 = Форма { $form }
 # Connection
 t09ea4ff9 = З’єднання
 
-# Find in the body (Ctrl+F)
-tb52d85cd = Знайти в тілі (Ctrl+F)
+# Find (Ctrl+F)
+t1a435961 = Знайти (Ctrl+F)
 
 # Save body
 te2c44424 = Зберегти тіло

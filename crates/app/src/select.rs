@@ -47,6 +47,12 @@ struct Inner {
     drawn: BTreeMap<u64, TextLayout>,
     /// The menu, open where it was asked for.
     menu: Option<Point<Pixels>>,
+    /// What Find looks for in the pieces, and the one it is at: its piece
+    /// and where in it.
+    find: Option<regex::Regex>,
+    find_at: Option<(u64, usize)>,
+    /// The one Find is at moved, and wants to be scrolled to.
+    find_scroll: bool,
 }
 
 /// One view's selection. Clones share it.
@@ -127,6 +133,24 @@ impl Selection {
         text: SharedString,
         highlights: Vec<(Range<usize>, HighlightStyle)>,
     ) -> SelectableText {
+        // What Find found in it, the one it is at brighter.
+        let found: Vec<(Range<usize>, HighlightStyle)> = {
+            let inner = self.0.borrow();
+            match &inner.find {
+                Some(re) => crate::find::found(re, &text)
+                    .map(|range| {
+                        let now = inner.find_at == Some((key, range.start));
+                        (range, crate::find::found_style(now))
+                    })
+                    .collect(),
+                None => Vec::new(),
+            }
+        };
+        let highlights: Vec<_> = if found.is_empty() {
+            highlights
+        } else {
+            combine_highlights(highlights, found).collect()
+        };
         let selected = self.range_in(key, text.len()).filter(|r| !r.is_empty());
         let highlights: Vec<_> = match selected {
             Some(range) => {
@@ -144,6 +168,84 @@ impl Selection {
             text: StyledText::new(text).with_highlights(highlights),
             selection: self.clone(),
         }
+    }
+
+    /// Looks for `re` in the pieces of the view, from the first; `None` stops.
+    pub fn set_find(&self, re: Option<regex::Regex>) {
+        let mut inner = self.0.borrow_mut();
+        inner.find = re;
+        inner.find_at = None;
+        inner.find_scroll = true;
+    }
+
+    /// What Find found in the pieces as the view said them, in order: each
+    /// piece, and where in it.
+    fn found(&self) -> Vec<(u64, Range<usize>)> {
+        let inner = self.0.borrow();
+        let Some(re) = &inner.find else {
+            return Vec::new();
+        };
+        inner
+            .pieces
+            .iter()
+            .enumerate()
+            .flat_map(|(key, (text, _))| {
+                crate::find::found(re, text)
+                    .map(|range| (key as u64, range))
+                    .collect::<Vec<_>>()
+            })
+            .collect()
+    }
+
+    /// Which found Find is at, of how many: the first, when it was at none or
+    /// at one no longer there. `None` when Find is not looking.
+    pub fn find_count(&self) -> Option<(Option<usize>, usize)> {
+        self.0.borrow().find.as_ref()?;
+        let hits = self.found();
+        let mut inner = self.0.borrow_mut();
+        let Some((key, start)) = hits.first().map(|(key, range)| (*key, range.start)) else {
+            inner.find_at = None;
+            return Some((None, 0));
+        };
+        let now = inner
+            .find_at
+            .and_then(|(k, s)| hits.iter().position(|(hk, r)| *hk == k && r.start == s));
+        let now = now.unwrap_or_else(|| {
+            inner.find_at = Some((key, start));
+            inner.find_scroll = true;
+            0
+        });
+        Some((Some(now), hits.len()))
+    }
+
+    /// The next found, or the one before, round again at either end.
+    pub fn find_step(&self, forward: bool) {
+        let hits = self.found();
+        if hits.is_empty() {
+            return;
+        }
+        let mut inner = self.0.borrow_mut();
+        let now = inner
+            .find_at
+            .and_then(|(k, s)| hits.iter().position(|(hk, r)| *hk == k && r.start == s));
+        let count = hits.len();
+        let next = match (now, forward) {
+            (None, true) => 0,
+            (None, false) => count - 1,
+            (Some(i), true) => (i + 1) % count,
+            (Some(i), false) => (i + count - 1) % count,
+        };
+        inner.find_at = Some((hits[next].0, hits[next].1.start));
+        inner.find_scroll = true;
+    }
+
+    /// The piece Find is at, once, when it has moved and should be scrolled to.
+    pub fn take_find_scroll(&self) -> Option<u64> {
+        let mut inner = self.0.borrow_mut();
+        if !std::mem::take(&mut inner.find_scroll) {
+            return None;
+        }
+        inner.find_at.map(|(key, _)| key)
     }
 
     /// The selection, start first, if there is one.

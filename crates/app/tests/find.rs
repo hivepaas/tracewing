@@ -19,7 +19,7 @@ use tracewing::{
     bodyview::{BodyMode, BodyView},
     engine::{Engine, EngineOptions},
     input::TextInput,
-    inspector::{BodyState, FindSwitch},
+    inspector::{BodyState, FindSwitch, Part},
     traffic::{Screen, Traffic},
 };
 use tracewing_store::settings::StorageSettings;
@@ -287,6 +287,60 @@ fn find_in_the_body_and_in_a_table() {
     let cells = find(&mut cx, window, "Lyon");
     assert!(cells > 0, "Lyon is in the table's cells");
     shot(&mut cx, window.into(), "122-find-table");
+
+    // The parts drawn whole: the response's headers, then its connection.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(0, cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the JSON again", |view, cx| {
+        matches!(shown(view, cx), Some((BodyMode::Pretty, None)))
+    });
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_side(tracewing::detail::Side::Response, cx);
+            view.set_part(Part::Headers, cx);
+        })
+        .unwrap();
+    let in_part = |cx: &mut HeadlessAppContext, text: &str| -> (Option<usize>, usize) {
+        window
+            .update(cx, |view, _, cx| {
+                let input = view.inspector.find.as_ref().unwrap().input.clone();
+                input.update(cx, |input, cx| {
+                    input.set_text(text, text.len()..text.len(), cx)
+                });
+            })
+            .unwrap();
+        // Drawn twice: the pieces are said as the part is drawn.
+        for _ in 0..2 {
+            window.update(cx, |_, window, _| window.refresh()).unwrap();
+            cx.run_until_parked();
+        }
+        window
+            .update(cx, |view, _, _| view.inspector.select.find_count())
+            .unwrap()
+            .expect("Find looks in the part")
+    };
+    let (now, found) = in_part(&mut cx, "content");
+    assert!(found >= 2, "content-type and content-length: {found}");
+    assert_eq!(now, Some(0), "the first is the one Find is at");
+    common::key(&mut cx, window, "enter");
+    let now = window
+        .update(&mut cx, |view, _, _| view.inspector.select.find_count())
+        .unwrap()
+        .and_then(|(now, _)| now);
+    assert_eq!(now, Some(1), "Enter steps in a part too");
+    shot(&mut cx, window.into(), "123-find-headers");
+    assert_eq!(in_part(&mut cx, "no such header").1, 0);
+
+    window
+        .update(&mut cx, |view, _, cx| view.set_part(Part::Connection, cx))
+        .unwrap();
+    assert!(
+        in_part(&mut cx, "HTTP").1 >= 1,
+        "the connection says its HTTP"
+    );
 
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);

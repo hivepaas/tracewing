@@ -1748,8 +1748,12 @@ impl Traffic {
             Action::Filter
                 if self.inspector_active
                     && self.screen == Screen::Traffic
-                    && self.inspector.part == crate::inspector::Part::Body
-                    && matches!(self.inspector.body, crate::inspector::BodyState::Shown(_)) =>
+                    && self.inspector.part != crate::inspector::Part::Messages
+                    && (self.inspector.part != crate::inspector::Part::Body
+                        || matches!(
+                            self.inspector.body,
+                            crate::inspector::BodyState::Shown(_)
+                        )) =>
             {
                 self.toggle_find(window, cx)
             }
