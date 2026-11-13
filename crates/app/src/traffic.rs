@@ -5,6 +5,9 @@
 //! never holds up a frame.
 
 use crate::text_size::ui;
+// The list's scroll bar is the body's, so that two bars on one screen are
+// not two thicknesses: 6 px of thumb beside the body's 9 px was the difference.
+use crate::scrollbar::{BAR_W, THUMB_W};
 use crate::{
     chrome,
     colors::{self, colors, with_alpha},
@@ -61,7 +64,6 @@ const LOOK_EVERY: Duration = Duration::from_millis(100);
 const WORK_SHARE: u32 = 10;
 const WORK_EVERY: Duration = Duration::from_secs(1);
 const HOSTS_SHOWN: i64 = 500;
-const BAR_W: f32 = 10.;
 /// How long after the last change of the window's size to write it down: a drag
 /// changes it many times a second.
 const SAVE_BOUNDS: Duration = Duration::from_millis(400);
@@ -2419,9 +2421,9 @@ impl Traffic {
                                         .absolute()
                                         .top(px((offset / max).clamp(0., 1.) * track))
                                         .h(px(thumb))
-                                        .left(ui(2.))
-                                        .right(ui(2.))
-                                        .rounded_sm()
+                                        .left(px((BAR_W - THUMB_W) / 2.))
+                                        .w(px(THUMB_W))
+                                        .rounded(px(THUMB_W / 2.))
                                         .bg(rgb(c.splitter)),
                                 ),
                         )
