@@ -1623,6 +1623,20 @@ tf756539b =
        *[other] SQLite { $count } sorun buldu, ilki: { $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+        [one] { $count } akış yeni bir oturuma kurtarıldı. Bozuk olanın sonu okunamadı, dolayısıyla dahası olabilir.
+       *[other] { $count } akış yeni bir oturuma kurtarıldı. Bozuk olanın sonu okunamadı, dolayısıyla dahası olabilir.
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+        [one] { $count } akış yeni bir oturuma kurtarıldı; { $lost } okunamadı.
+       *[other] { $count } akış yeni bir oturuma kurtarıldı; { $lost } okunamadı.
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · başka bir sürüm tarafından yazılmış, bu yüzden açılamıyor
 
@@ -1644,6 +1658,12 @@ t3cb3e6fc = Şu anda kaydediliyor
 
 # Export HAR
 t4d6458cc = HAR dışa aktar
+
+# Rescuing…
+t1eea47d9 = Kurtarılıyor…
+
+# Rescue what reads
+te43c8d2b = Okunanı kurtar
 
 # Checking…
 t87f62cb7 = Kontrol ediliyor…
@@ -2398,6 +2418,9 @@ tf2cc0563 = { $shown } / { $total }
 # Recording
 te75cf20c = Kaydediliyor
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = Öncekileri gizler. Hiçbir şey silinmez: oturum onları saklar, kalıcı silme Oturumlar ekranındadır.
+
 # System proxy off · {addr}
 t7e813d25 = Sistem proxy'si kapalı · { $addr }
 
@@ -2502,6 +2525,13 @@ t57bf5200 =
     { $n ->
         [one] { $count } akış
        *[other] { $count } akış
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+        [one] { $count } gizlendi, kaydı duruyor · göster
+       *[other] { $count } gizlendi, kayıtları duruyor · göster
     }
 
 # Export as HAR

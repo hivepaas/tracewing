@@ -1673,6 +1673,20 @@ tf756539b =
        *[other] SQLite a trouvé { $count } problèmes, le premier : { $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+        [one] { $count } flux récupéré dans une nouvelle session. La fin de la session endommagée était illisible, il peut donc y en avoir d'autres.
+       *[other] { $count } flux récupérés dans une nouvelle session. La fin de la session endommagée était illisible, il peut donc y en avoir d'autres.
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+        [one] { $count } flux récupéré dans une nouvelle session ; { $lost } illisible.
+       *[other] { $count } flux récupérés dans une nouvelle session ; { $lost } illisibles.
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · écrite par une autre version, impossible de l'ouvrir
 
@@ -1694,6 +1708,12 @@ t3cb3e6fc = Capture en cours
 
 # Export HAR
 t4d6458cc = Exporter en HAR
+
+# Rescuing…
+t1eea47d9 = Récupération…
+
+# Rescue what reads
+te43c8d2b = Récupérer ce qui se lit
 
 # Checking…
 t87f62cb7 = Vérification…
@@ -2451,6 +2471,9 @@ tf2cc0563 = { $shown } sur { $total }
 # Recording
 te75cf20c = Capture
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = Masque ce qui précède. Rien n'est supprimé : la session le garde, et c'est dans Sessions que cela disparaît pour de bon.
+
 # System proxy off · {addr}
 t7e813d25 = Proxy système désactivé · { $addr }
 
@@ -2555,6 +2578,13 @@ t57bf5200 =
     { $n ->
         [one] { $count } flow
        *[other] { $count } flows
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+        [one] { $count } masqué, toujours enregistré · l'afficher
+       *[other] { $count } masqués, toujours enregistrés · les afficher
     }
 
 # Export as HAR

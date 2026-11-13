@@ -246,6 +246,227 @@ pub fn info(session: &Path) -> SessionInfo {
     }
 }
 
+/// What came out of a damaged session.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Rescued {
+    /// Flows that still read, and are in the new session.
+    pub flows: u64,
+    /// Flows the damage took from inside what was rescued: ids that failed
+    /// to read, counted only below the last row that came out, where their
+    /// being there is certain.
+    pub lost: u64,
+    /// The table's last id could not be read, so how far it went is not
+    /// known and there may be more past what came out. Said rather than
+    /// guessed at: a count of what cannot be reached is a made-up number.
+    pub end_unknown: bool,
+    /// Messages of those flows, for the sockets among them.
+    pub messages: u64,
+}
+
+/// How many ids are read at a time. A damaged range is read again one id at
+/// a time, so this is also how much work damage costs.
+const AT_A_TIME: i64 = 256;
+
+/// How many ranges in a row may give nothing before the walk stops. The last
+/// id of a damaged table cannot always be asked for, and without an end the
+/// walk has none.
+const BARREN_MAX: i64 = 256;
+
+/// Copies what still reads out of `from` into a new session at `into`.
+///
+/// Rows are read in ranges, and a range that fails is read again id by id,
+/// so damage costs the rows it touches and not the rest. The bodies are not
+/// copied: they are linked where the file system allows it, which is why
+/// this is quick on a session of many gigabytes, and why deleting one of the
+/// two sessions afterwards leaves the other whole.
+///
+/// It does not touch `from`. Repairing a database is another tool's job
+/// (`sqlite3 .recover`), and rewriting what somebody recorded, in place,
+/// is not something to do on their behalf.
+pub fn rescue(from: &Path, into: &Path) -> Result<Rescued> {
+    create(into)?;
+    for dir in [bodies_dir(from), files_dir(from)] {
+        let Ok(entries) = fs::read_dir(&dir) else {
+            continue;
+        };
+        let to = into.join(dir.file_name().unwrap_or_default());
+        for entry in entries.flatten() {
+            let there = to.join(entry.file_name());
+            // A link costs nothing and shares no fate: removing either
+            // session leaves the other's bodies where they are.
+            if fs::hard_link(entry.path(), &there).is_err() {
+                let _ = fs::copy(entry.path(), &there);
+            }
+        }
+    }
+
+    let damaged = Connection::open_with_flags(flows_db(from), OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .with_context(|| format!("open {}", flows_db(from).display()))?;
+    let fresh = crate::store::open(&flows_db(into))?;
+    let mut out = Rescued::default();
+
+    // The last id, where it can be had. Where it cannot, the ids are walked
+    // until a long run of them holds nothing: a damaged table has no count
+    // to ask for.
+    let end = damaged
+        .query_row("SELECT max(id) FROM flows", [], |r| {
+            r.get::<_, Option<i64>>(0)
+        })
+        .ok()
+        .flatten();
+    out.end_unknown = end.is_none();
+    let last = end.unwrap_or(i64::MAX);
+
+    // A range that gives nothing counts towards the end of the walk, whether
+    // it is empty or damaged. Without that, a database whose ranges all fail
+    // and whose last id cannot be asked for walks to i64::MAX: the first
+    // write of this hung a test for ten minutes.
+    // Rescued rows are numbered again from one. A session's ids are taken to
+    // have no gaps — that is how its flows are counted without reading every
+    // row — and what damage leaves behind is full of them. The old id is
+    // kept only to find that flow's messages.
+    let mut numbers: Vec<(i64, i64)> = Vec::new();
+    let mut barren = 0;
+    // What has been counted lost since the last row that was kept. The walk ends on a
+    // run of ranges that gave nothing, and those ids are almost certainly
+    // ids that never existed rather than rows the damage took, so the tail
+    // is taken back off at the end.
+    let mut tail_lost = 0;
+    let mut at = 1i64;
+    while at <= last && barren < BARREN_MAX {
+        let to = at.saturating_add(AT_A_TIME - 1).min(last);
+        let kept = match read_range(&damaged, at, to) {
+            Ok(rows) => write_rows(&fresh, "flows", &renumber(rows, &mut numbers))?,
+            // The range holds damage. Each id on its own: the ones that
+            // read are kept, and the rest are counted as lost.
+            Err(_) => {
+                let mut kept = 0;
+                for id in at..=to {
+                    match read_range(&damaged, id, id) {
+                        Ok(rows) => {
+                            kept += write_rows(&fresh, "flows", &renumber(rows, &mut numbers))?
+                        }
+                        Err(_) => {
+                            out.lost += 1;
+                            tail_lost += 1;
+                        }
+                    }
+                }
+                kept
+            }
+        };
+        out.flows += kept;
+        (barren, tail_lost) = match kept {
+            0 => (barren + 1, tail_lost),
+            _ => (0, 0),
+        };
+        at = to.saturating_add(1);
+    }
+    // Past the last row that came out, the ids are the walk's own guesswork.
+    out.lost -= tail_lost;
+    out.messages = copy_messages(&damaged, &fresh, &numbers)?;
+    let name = from
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    // Named, so the clean-up does not take what was just rescued.
+    let _ = set_name(into, &format!("rescued from {name}"));
+    Ok(out)
+}
+
+/// Gives each row the next id of the new session, and remembers which old
+/// id it had, for its messages to be found by.
+fn renumber(
+    mut rows: Vec<Vec<rusqlite::types::Value>>,
+    numbers: &mut Vec<(i64, i64)>,
+) -> Vec<Vec<rusqlite::types::Value>> {
+    for row in &mut rows {
+        let Some(&rusqlite::types::Value::Integer(old)) = row.first() else {
+            continue;
+        };
+        let new = numbers.len() as i64 + 1;
+        numbers.push((old, new));
+        row[0] = rusqlite::types::Value::Integer(new);
+    }
+    rows
+}
+
+/// The flows whose ids are in the range, as rows of values.
+///
+/// Reading is what damage stops, so a failure here is the session's. Writing
+/// them is this code's own doing, and those failures are kept apart (see
+/// [`write_rows`]) so that a bug here is never counted as a row the disk ate.
+fn read_range(
+    from: &Connection,
+    first: i64,
+    last: i64,
+) -> rusqlite::Result<Vec<Vec<rusqlite::types::Value>>> {
+    let mut read = from.prepare("SELECT * FROM flows WHERE id BETWEEN ?1 AND ?2")?;
+    let columns = read.column_count();
+    read.query_map(params![first, last], |row| {
+        (0..columns)
+            .map(|at| row.get::<_, rusqlite::types::Value>(at))
+            .collect::<rusqlite::Result<Vec<_>>>()
+    })?
+    .collect()
+}
+
+/// Puts rows in the new session. An error here is not a row lost: it is this
+/// not working, so it stops the rescue instead of being counted as damage.
+fn write_rows(into: &Connection, table: &str, rows: &[Vec<rusqlite::types::Value>]) -> Result<u64> {
+    let Some(columns) = rows.first().map(Vec::len) else {
+        return Ok(0);
+    };
+    let places = (1..=columns)
+        .map(|at| format!("?{at}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let mut write = into
+        .prepare(&format!("INSERT OR REPLACE INTO {table} VALUES ({places})"))
+        .with_context(|| format!("write {table} into the rescued session"))?;
+    for row in rows {
+        write
+            .execute(rusqlite::params_from_iter(row.iter()))
+            .with_context(|| format!("write a row of {table} into the rescued session"))?;
+    }
+    Ok(rows.len() as u64)
+}
+
+/// The messages of the flows that were kept. A socket whose row is gone has
+/// nothing to hang its messages on, so they go with it.
+fn copy_messages(from: &Connection, into: &Connection, numbers: &[(i64, i64)]) -> Result<u64> {
+    /// Where `flow_id` is in the `messages` table, as the schema writes it:
+    /// `id, flow_id, …`.
+    const FLOW_ID: usize = 1;
+    let mut kept = 0;
+    for &(id, new_id) in numbers {
+        let Ok(mut read) = from.prepare("SELECT * FROM messages WHERE flow_id = ?1") else {
+            return Ok(kept);
+        };
+        let columns = read.column_count();
+        let rows = read.query_map(params![id], |row| {
+            (0..columns)
+                .map(|at| row.get::<_, rusqlite::types::Value>(at))
+                .collect::<rusqlite::Result<Vec<_>>>()
+        });
+        // Messages the damage took go the way their flow's row would have.
+        let Ok(rows) = rows else {
+            continue;
+        };
+        let rows: Vec<_> = rows
+            .flatten()
+            .map(|mut row| {
+                if row.len() > FLOW_ID {
+                    row[FLOW_ID] = rusqlite::types::Value::Integer(new_id);
+                }
+                row
+            })
+            .collect();
+        kept += write_rows(into, "messages", &rows)?;
+    }
+    Ok(kept)
+}
+
 /// What `PRAGMA quick_check` says about a session, a line a complaint, empty
 /// when it has none.
 ///
@@ -867,6 +1088,99 @@ mod tests {
         assert_eq!(check(&good).unwrap(), Vec::<String>::new(), "nothing wrong");
         assert_eq!(info(&good).trouble, None);
 
+        fs::remove_dir_all(&sessions).unwrap();
+    }
+
+    /// A session written the way the proxy writes one, so that what is
+    /// rescued out of it is read back by the same code that reads any other.
+    fn real_session(dir: &Path, flows: u64) {
+        use super::Shared;
+        use crate::store::{FlowRecord, Recorder};
+        let settings = crate::settings::StorageSettings {
+            session_max_mib: u64::MAX / (1 << 20),
+            ..Default::default()
+        };
+        create(dir).unwrap();
+        let (recorder, writer) =
+            Recorder::spawn(dir, &settings, Arc::new(Shared::default()), None, 10_000).unwrap();
+        for i in 0..flows {
+            recorder.submit(FlowRecord {
+                started_us: 1_793_000_000_000_000 + i as i64,
+                client: "127.0.0.1".to_owned(),
+                kind: "http",
+                method: "GET".to_owned(),
+                scheme: "https".to_owned(),
+                host: format!("host{}.test", i % 7),
+                path: format!("/v1/things/{i}"),
+                client_version: "HTTP/2.0".to_owned(),
+                status: Some(200),
+                ..Default::default()
+            });
+        }
+        drop(recorder);
+        writer.close().unwrap();
+    }
+
+    /// What a damaged session still holds is worth more than the file: it
+    /// cannot be recorded again.
+    #[test]
+    fn what_still_reads_is_rescued_from_a_damaged_session() {
+        let sessions = temp("rescue");
+        let dir = sessions.join("100");
+        real_session(&dir, 600);
+        // A body beside the rows, to be linked rather than copied.
+        fs::write(files_dir(&dir).join("1.body"), b"a body of its own").unwrap();
+        let whole = info(&dir);
+        assert!(whole.readable, "{:?}", whole.trouble);
+        assert_eq!(whole.flows, 600);
+
+        // Damage from the middle on, as a disk does.
+        let path = flows_db(&dir);
+        let mut bytes = fs::read(&path).unwrap();
+        let from = bytes.len() / 2;
+        for byte in &mut bytes[from..] {
+            *byte = 0x5a;
+        }
+        fs::write(&path, &bytes).unwrap();
+        assert!(!info(&dir).readable, "it is damaged to begin with");
+
+        let into = sessions.join("101");
+        let out = rescue(&dir, &into).unwrap();
+        assert!(out.flows > 0, "something came out: {out:?}");
+        assert!(out.flows < 600, "and not all of it: {out:?}");
+        // Nothing can be lost that was never there: the walk's own tail,
+        // past the last row it found, is not loss. It read 65,541 ids that
+        // way before this was taken off.
+        assert!(
+            out.flows + out.lost <= 600,
+            "more accounted for than were ever written: {out:?}"
+        );
+        // And the damage took the end of the table with it, so how far it
+        // went is not known. Saying "5 lost" as if that were the whole of
+        // it would be a worse answer than saying this.
+        assert!(out.end_unknown, "the last id could not be read: {out:?}");
+
+        // The new one is a session like any other: it reads, it holds what
+        // was rescued, and the clean-up will not take it.
+        let about = info(&into);
+        assert!(about.readable, "{:?}", about.trouble);
+        // The count the screen shows has to be the count that was rescued:
+        // a session's ids are taken to have no gaps, so they are given new
+        // ones here. Before that, a rescue of 1,448 was listed as 1,460.
+        assert_eq!(about.flows, out.flows);
+        assert_eq!(
+            about.first_us.is_some(),
+            out.flows > 0,
+            "its first flow has a time: {about:?}"
+        );
+        assert_eq!(about.name.as_deref(), Some("rescued from 100"));
+
+        // The bodies came across without being copied twice over.
+        let body = files_dir(&into).join("1.body");
+        assert_eq!(fs::read(&body).unwrap(), b"a body of its own");
+
+        // And the damaged one is left exactly as it was.
+        assert_eq!(fs::read(&path).unwrap(), bytes, "nothing written to it");
         fs::remove_dir_all(&sessions).unwrap();
     }
 

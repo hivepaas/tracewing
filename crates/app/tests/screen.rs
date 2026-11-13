@@ -21,7 +21,7 @@ use tracewing::{
     traffic::Traffic,
 };
 use tracewing_dev::benchkit;
-use tracewing_store::settings::StorageSettings;
+use tracewing_store::{session, settings::StorageSettings};
 
 fn shots() -> PathBuf {
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/shots");
@@ -436,6 +436,28 @@ fn the_window_shows_real_traffic() {
         .update(&mut cx, |view, _, cx| view.set_filter_text("", cx))
         .unwrap();
     wait_for(&mut cx, window, "no filter", |view, _| view.count() == 303);
+
+    // The bin hides; it does not delete. What it hid comes back, because it
+    // was never gone: the session still holds every row and every body.
+    window
+        .update(&mut cx, |view, _, cx| view.clear(cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the list hidden", |view, _| {
+        view.count() == 0
+    });
+    save(&mut cx, window.into(), "6b-hidden");
+    window
+        .update(&mut cx, |view, _, cx| view.show_hidden(cx))
+        .unwrap();
+    wait_for(&mut cx, window, "them back", |view, _| view.count() == 303);
+    window
+        .update(&mut cx, |view, _, _| {
+            assert!(
+                session::flows_db(&view.engine.session).exists(),
+                "and the session is where it always was"
+            );
+        })
+        .unwrap();
 
     // Rows that cannot be read must not make the list ask for all of them: that
     // once took 51 GB, at a million rows.

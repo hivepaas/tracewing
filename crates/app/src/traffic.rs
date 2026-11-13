@@ -1260,7 +1260,21 @@ impl Traffic {
         }
     }
 
-    fn clear(&mut self, cx: &mut Context<Self>) {
+    /// Brings back what [`Self::clear`] hid. Nothing was deleted, so this
+    /// is only the mark moving back to the start.
+    pub fn show_hidden(&mut self, cx: &mut Context<Self>) {
+        if self.cleared_to == 0 {
+            return;
+        }
+        self.cleared_to = 0;
+        self.hosts.clear();
+        self.apps.clear();
+        self.device_counts.clear();
+        self.hosts_seen = 0;
+        self.refilter(cx);
+    }
+
+    pub fn clear(&mut self, cx: &mut Context<Self>) {
         self.cleared_to = self.bounds.map_or(0, |(_, last)| last + 1);
         self.hosts.clear();
         self.apps.clear();
@@ -1791,6 +1805,11 @@ impl Traffic {
                     .justify_center()
                     .bg(rgb(c.surface))
                     .child(icon("trash", 18., c.muted))
+                    // It hides; it does not delete. The icon says otherwise,
+                    // so the words have to say it plainly.
+                    .tooltip(tip(tr!(
+                        "Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good."
+                    )))
                     .on_click(cx.listener(|this, _, _, cx| this.clear(cx))),
             )
             .child(self.render_proxy_switch(cx))
@@ -2688,6 +2707,23 @@ impl Traffic {
                 "{count} flows",
                 count = group_digits(self.total() as u64)
             ))
+            .when(self.cleared_to > 0, |d| {
+                let hidden = self.cleared_to as u64;
+                d.child(
+                    div()
+                        .id("show-hidden")
+                        .cursor_pointer()
+                        .reachable()
+                        .text_color(rgb(c.link))
+                        .child(tr_n!(
+                            hidden,
+                            "{count} hidden, still recorded · show it",
+                            "{count} hidden, still recorded · show them",
+                            count = group_digits(hidden)
+                        ))
+                        .on_click(cx.listener(|this, _, _, cx| this.show_hidden(cx))),
+                )
+            })
             .when(self.total() > 0, |d| {
                 d.child(
                     div()

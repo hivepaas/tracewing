@@ -1552,6 +1552,18 @@ tf756539b =
        *[other] SQLite が問題を { $count } 件見つけました。最初の 1 件: { $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+       *[other] { $count } 件のフローを新しいセッションに救い出しました。壊れたほうの終わりは読めなかったので、まだあるかもしれません。
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+       *[other] { $count } 件のフローを新しいセッションに救い出しました。{ $lost } 件は読めませんでした。
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · 別のバージョンで書き込まれたため開けません
 
@@ -1572,6 +1584,12 @@ t3cb3e6fc = 記録中
 
 # Export HAR
 t4d6458cc = HAR をエクスポート
+
+# Rescuing…
+t1eea47d9 = 救出中…
+
+# Rescue what reads
+te43c8d2b = 読めるぶんを救い出す
 
 # Checking…
 t87f62cb7 = 確認中…
@@ -2314,6 +2332,9 @@ tf2cc0563 = { $shown } / { $total }
 # Recording
 te75cf20c = 記録中
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = それより前を隠します。削除はされません: セッションには残っており、完全に消すのはセッション画面です。
+
 # System proxy off · {addr}
 t7e813d25 = システムプロキシ オフ · { $addr }
 
@@ -2414,6 +2435,12 @@ te30201f0 =
 t57bf5200 =
     { $n ->
        *[other] { $count } 件のフロー
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+       *[other] { $count } 件を非表示、記録は残っています · 表示する
     }
 
 # Export as HAR

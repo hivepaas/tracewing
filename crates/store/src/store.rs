@@ -441,7 +441,7 @@ impl WriterThread {
     }
 }
 
-fn open(path: &Path) -> Result<Connection> {
+pub(crate) fn open(path: &Path) -> Result<Connection> {
     let conn = Connection::open(path).with_context(|| format!("open {}", path.display()))?;
     session::upgrade(&conn)?;
     // Without a limit the WAL stays the largest it has ever been.

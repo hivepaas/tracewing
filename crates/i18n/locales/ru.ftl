@@ -1735,6 +1735,24 @@ tf756539b =
        *[other] SQLite нашёл { $count } проблемы, первая: { $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+        [one] { $count } поток спасён в новую сессию. Конец повреждённой прочитать не удалось, так что там может быть больше.
+        [few] { $count } потока спасены в новую сессию. Конец повреждённой прочитать не удалось, так что там может быть больше.
+        [many] { $count } потоков спасено в новую сессию. Конец повреждённой прочитать не удалось, так что там может быть больше.
+       *[other] { $count } потока спасено в новую сессию. Конец повреждённой прочитать не удалось, так что там может быть больше.
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+        [one] { $count } поток спасён в новую сессию; { $lost } прочитать не удалось.
+        [few] { $count } потока спасены в новую сессию; { $lost } прочитать не удалось.
+        [many] { $count } потоков спасено в новую сессию; { $lost } прочитать не удалось.
+       *[other] { $count } потока спасено в новую сессию; { $lost } прочитать не удалось.
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · записано другой версией, поэтому не открывается
 
@@ -1758,6 +1776,12 @@ t3cb3e6fc = Идёт запись
 
 # Export HAR
 t4d6458cc = Экспорт HAR
+
+# Rescuing…
+t1eea47d9 = Спасаются…
+
+# Rescue what reads
+te43c8d2b = Спасти то, что читается
 
 # Checking…
 t87f62cb7 = Проверяется…
@@ -2518,6 +2542,9 @@ tf2cc0563 = { $shown } из { $total }
 # Recording
 te75cf20c = Запись
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = Скрывает всё, что было раньше. Ничего не удаляется: сессия это хранит, а насовсем удаляют в «Сессиях».
+
 # System proxy off · {addr}
 t7e813d25 = Системный прокси выключен · { $addr }
 
@@ -2630,6 +2657,15 @@ t57bf5200 =
         [few] { $count } потока
         [many] { $count } потоков
        *[other] { $count } потока
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+        [one] { $count } скрыт, запись сохранена · показать
+        [few] { $count } скрыты, записи сохранены · показать
+        [many] { $count } скрыто, записи сохранены · показать
+       *[other] { $count } скрыто, записи сохранены · показать
     }
 
 # Export as HAR

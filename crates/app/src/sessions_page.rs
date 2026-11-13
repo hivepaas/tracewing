@@ -40,6 +40,8 @@ pub struct SessionsPage {
     pub checking: Option<PathBuf>,
     /// What the last check said, by the session it was asked about.
     pub checked: HashMap<PathBuf, SharedString>,
+    /// The session being rescued, while it is.
+    pub rescuing: Option<PathBuf>,
     pub problem: Option<String>,
     loading: bool,
     pub files: FileState,
@@ -138,6 +140,54 @@ impl Traffic {
         cx.notify();
     }
 
+    /// Copies what still reads out of a damaged session into a new one. The
+    /// damaged session is left as it is: whoever rescued it may want to try
+    /// again with another tool.
+    pub fn rescue_session(&mut self, dir: &Path, cx: &mut Context<Self>) {
+        if self.sessions_page.rescuing.is_some() {
+            return;
+        }
+        self.sessions_page.rescuing = Some(dir.to_owned());
+        self.sessions_page.checked.remove(dir);
+        let from = dir.to_owned();
+        let into = self
+            .sessions_dir()
+            .join(crate::engine::next_session_name(&self.sessions_dir()));
+        cx.spawn(async move |this, cx| {
+            let said = cx
+                .background_spawn({
+                    let from = from.clone();
+                    async move { session::rescue(&from, &into) }
+                })
+                .await;
+            let text: SharedString = match said {
+                Ok(out) if out.end_unknown => tr_n!(
+                    out.flows,
+                    "{count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more.",
+                    "{count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.",
+                    count = group_digits(out.flows)
+                )
+                .into(),
+                Ok(out) => tr_n!(
+                    out.flows,
+                    "{count} flow rescued into a new session; {lost} could not be read.",
+                    "{count} flows rescued into a new session; {lost} could not be read.",
+                    count = group_digits(out.flows),
+                    lost = group_digits(out.lost)
+                )
+                .into(),
+                Err(e) => format!("{e:#}").into(),
+            };
+            let _ = this.update(cx, |this, cx| {
+                this.sessions_page.rescuing = None;
+                this.sessions_page.checked.insert(from, text);
+                this.refresh_sessions(cx);
+            });
+        })
+        .detach();
+        cx.notify();
+    }
+
     pub fn delete_session(&mut self, dir: &Path, cx: &mut Context<Self>) {
         if self.is_in_use(dir) {
             return;
@@ -213,6 +263,8 @@ impl Traffic {
                 let (open_dir, delete_dir, export_dir) = (dir.clone(), dir.clone(), dir.clone());
                 let check_dir = dir.clone();
                 let busy = page.checking.as_deref() == Some(dir.as_path());
+                let rescuing = page.rescuing.as_deref() == Some(dir.as_path());
+                let rescue_dir = dir.clone();
                 let said = page.checked.get(&dir).cloned();
                 let button = |id: (&'static str, u64), label: String, loud: bool| {
                     div()
@@ -300,6 +352,24 @@ impl Traffic {
                                     this.ask_export_session(export_dir.clone(), cx);
                                 }),
                             ),
+                        )
+                    })
+                    .when(matches!(about.trouble, Some(Trouble::Damaged(_))), |d| {
+                        d.child(
+                            button(
+                                ("session-rescue", key),
+                                if rescuing {
+                                    tr!("Rescuing…")
+                                } else {
+                                    tr!("Rescue what reads")
+                                },
+                                false,
+                            )
+                            .on_click(cx.listener(
+                                move |this, _, _, cx| {
+                                    this.rescue_session(&rescue_dir, cx);
+                                },
+                            )),
                         )
                     })
                     .child(

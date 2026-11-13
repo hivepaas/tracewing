@@ -1552,6 +1552,18 @@ tf756539b =
        *[other] SQLite tìm thấy { $count } vấn đề, cái đầu tiên: { $first }
     }
 
+# {count} flow rescued into a new session. The end of the damaged one could not be read, so there may be more. | {count} flows rescued into a new session. The end of the damaged one could not be read, so there may be more.
+t40214658 =
+    { $n ->
+       *[other] Đã cứu { $count } flow sang phiên mới. Không đọc được phần cuối của phiên hỏng nên có thể còn nữa.
+    }
+
+# {count} flow rescued into a new session; {lost} could not be read. | {count} flows rescued into a new session; {lost} could not be read.
+t26f5c0cc =
+    { $n ->
+       *[other] Đã cứu { $count } flow sang phiên mới; { $lost } không đọc được.
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · do phiên bản khác ghi, nên không mở được
 
@@ -1572,6 +1584,12 @@ t3cb3e6fc = Đang ghi
 
 # Export HAR
 t4d6458cc = Xuất HAR
+
+# Rescuing…
+t1eea47d9 = Đang cứu…
+
+# Rescue what reads
+te43c8d2b = Cứu phần đọc được
 
 # Checking…
 t87f62cb7 = Đang kiểm tra…
@@ -2314,6 +2332,9 @@ tf2cc0563 = { $shown } trên { $total }
 # Recording
 te75cf20c = Đang ghi
 
+# Hide what came before. Nothing is deleted: the session keeps it, and Sessions is where it goes for good.
+tc9390ffa = Ẩn những gì có trước đó. Không xoá gì cả: phiên vẫn giữ, muốn xoá hẳn thì vào màn Sessions.
+
 # System proxy off · {addr}
 t7e813d25 = System proxy tắt · { $addr }
 
@@ -2414,6 +2435,12 @@ te30201f0 =
 t57bf5200 =
     { $n ->
        *[other] { $count } flow
+    }
+
+# {count} hidden, still recorded · show it | {count} hidden, still recorded · show them
+t8c2c795e =
+    { $n ->
+       *[other] Đang ẩn { $count } mục, vẫn được ghi · hiện lại
     }
 
 # Export as HAR
