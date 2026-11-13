@@ -2570,6 +2570,12 @@ t319ad6b9 = Proxy do sistema ativado · { $addr }
 # This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
 tb0605c20 = O tráfego deste computador vem para aqui. Se o tracewing for morto com isto ligado, a definição fica e a rede pára: `tracewing recover` repõe-na.
 
+# No host has this in its name
+t838c1d44 = Nenhum host tem isto no nome
+
+# Hidden
+t3c2dfe59 = Ocultos
+
 # Apps
 t53d91aad = Apps
 
@@ -2578,12 +2584,6 @@ t27acf320 = Dispositivos
 
 # All hosts
 tfc7bfe37 = Todos os hosts
-
-# No host has this in its name
-t838c1d44 = Nenhum host tem isto no nome
-
-# Hidden
-t3c2dfe59 = Ocultos
 
 # Hosts
 tcf9aefb4 = Hosts

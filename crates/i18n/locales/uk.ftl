@@ -2641,6 +2641,12 @@ t319ad6b9 = Системний проксі ввімкнено · { $addr }
 # This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
 tb0605c20 = Трафік цього комп'ютера йде сюди. Якщо вбити tracewing, поки це ввімкнено, налаштування залишиться і мережа зникне: `tracewing recover` поверне його.
 
+# No host has this in its name
+t838c1d44 = Немає хостів із цим в імені
+
+# Hidden
+t3c2dfe59 = Приховані
+
 # Apps
 t53d91aad = Застосунки
 
@@ -2649,12 +2655,6 @@ t27acf320 = Пристрої
 
 # All hosts
 tfc7bfe37 = Усі хости
-
-# No host has this in its name
-t838c1d44 = Немає хостів із цим в імені
-
-# Hidden
-t3c2dfe59 = Приховані
 
 # Hosts
 tcf9aefb4 = Хости

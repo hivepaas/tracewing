@@ -2517,6 +2517,12 @@ t319ad6b9 = Sistem proxy'si açık · { $addr }
 # This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
 tb0605c20 = Bu bilgisayarın trafiği buraya gelir. Bu açıkken tracewing öldürülürse ayar geride kalır ve ağ durur: `tracewing recover` onu geri alır.
 
+# No host has this in its name
+t838c1d44 = Adında bu geçen bir host yok
+
+# Hidden
+t3c2dfe59 = Gizli
+
 # Apps
 t53d91aad = Uygulamalar
 
@@ -2525,12 +2531,6 @@ t27acf320 = Cihazlar
 
 # All hosts
 tfc7bfe37 = Tüm host'lar
-
-# No host has this in its name
-t838c1d44 = Adında bu geçen bir host yok
-
-# Hidden
-t3c2dfe59 = Gizli
 
 # Hosts
 tcf9aefb4 = Host'lar

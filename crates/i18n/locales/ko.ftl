@@ -2431,6 +2431,12 @@ t319ad6b9 = 시스템 프록시 켜짐 · { $addr }
 # This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
 tb0605c20 = 이 컴퓨터의 트래픽이 여기로 옵니다. 이 상태에서 tracewing이 강제 종료되면 설정이 남아 네트워크가 끊깁니다: `tracewing recover`로 되돌립니다.
 
+# No host has this in its name
+t838c1d44 = 이름에 이것이 들어간 호스트가 없습니다
+
+# Hidden
+t3c2dfe59 = 숨김
+
 # Apps
 t53d91aad = 앱
 
@@ -2439,12 +2445,6 @@ t27acf320 = 기기
 
 # All hosts
 tfc7bfe37 = 모든 호스트
-
-# No host has this in its name
-t838c1d44 = 이름에 이것이 들어간 호스트가 없습니다
-
-# Hidden
-t3c2dfe59 = 숨김
 
 # Hosts
 tcf9aefb4 = 호스트

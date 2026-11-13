@@ -2431,6 +2431,12 @@ t319ad6b9 = 系統代理伺服器已開啟 · { $addr }
 # This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
 tb0605c20 = 這台電腦的流量會來到這裡。在開啟狀態下 tracewing 被強制結束，設定會留下來，網路隨之中斷：用 `tracewing recover` 復原。
 
+# No host has this in its name
+t838c1d44 = 沒有名稱包含此內容的主機
+
+# Hidden
+t3c2dfe59 = 已隱藏
+
 # Apps
 t53d91aad = App
 
@@ -2439,12 +2445,6 @@ t27acf320 = 裝置
 
 # All hosts
 tfc7bfe37 = 所有主機
-
-# No host has this in its name
-t838c1d44 = 沒有名稱包含此內容的主機
-
-# Hidden
-t3c2dfe59 = 已隱藏
 
 # Hosts
 tcf9aefb4 = 主機

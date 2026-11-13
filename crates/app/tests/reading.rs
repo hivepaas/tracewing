@@ -1456,6 +1456,32 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
         other => panic!("{other:?}"),
     }
 
+    // A press that lands on no text reads nothing. Choosing a way, pressing
+    // the pane's own buttons, pressing the space around them: none of those
+    // is a press on a value, and taking them as one threw the reader back
+    // to the value at the top of the pane.
+    window
+        .update(&mut cx, |view, _, cx| view.choose_reading(1, cx))
+        .unwrap();
+    cx.run_until_parked();
+    let held = window
+        .update(&mut cx, |view, _, cx| {
+            let sel = view.inspector.reads_select.clone();
+            let piece = (0..80u64).find(|piece| sel.drawn_at(*piece).is_some())?;
+            let bounds = sel.drawn_at(piece)?;
+            // Above the first piece there is nothing but the pane's own
+            // heading, which is where a press used to be read as the value.
+            let above = gpui::point(bounds.left() + gpui::px(2.), bounds.top() - gpui::px(12.));
+            view.read_piece_at(&sel, above, cx);
+            view.inspector.reads.as_ref().map(|reads| reads.at)
+        })
+        .unwrap();
+    assert_eq!(
+        held,
+        Some(1),
+        "a press on no text leaves the reading that was chosen"
+    );
+
     // A menu opened in the pane stays open: the press that opened it must
     // not be taken as a press on the value under it, which would build the
     // pane again and take the menu with it.

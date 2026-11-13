@@ -2431,6 +2431,12 @@ t319ad6b9 = 系统代理已开启 · { $addr }
 # This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
 tb0605c20 = 这台电脑的流量会来到这里。在开启状态下 tracewing 被强制结束，设置会留下来，网络随之中断：用 `tracewing recover` 恢复。
 
+# No host has this in its name
+t838c1d44 = 没有名称包含此内容的主机
+
+# Hidden
+t3c2dfe59 = 已隐藏
+
 # Apps
 t53d91aad = 应用
 
@@ -2439,12 +2445,6 @@ t27acf320 = 设备
 
 # All hosts
 tfc7bfe37 = 所有主机
-
-# No host has this in its name
-t838c1d44 = 没有名称包含此内容的主机
-
-# Hidden
-t3c2dfe59 = 已隐藏
 
 # Hosts
 tcf9aefb4 = 主机

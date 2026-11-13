@@ -2431,6 +2431,12 @@ t319ad6b9 = システムプロキシ オン · { $addr }
 # This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
 tb0605c20 = このコンピューターの通信はここに来ます。これを入れたまま tracewing を強制終了すると設定が残り、ネットワークが止まります: `tracewing recover` で元に戻せます。
 
+# No host has this in its name
+t838c1d44 = 名前にこれを含むホストはありません
+
+# Hidden
+t3c2dfe59 = 非表示
+
 # Apps
 t53d91aad = アプリ
 
@@ -2439,12 +2445,6 @@ t27acf320 = デバイス
 
 # All hosts
 tfc7bfe37 = すべてのホスト
-
-# No host has this in its name
-t838c1d44 = 名前にこれを含むホストはありません
-
-# Hidden
-t3c2dfe59 = 非表示
 
 # Hosts
 tcf9aefb4 = ホスト
