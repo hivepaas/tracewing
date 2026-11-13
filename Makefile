@@ -42,8 +42,13 @@ test: ## Run every test, without the ones that draw the window
 test-window: ## Run every test, with the window drawn with no display (Linux)
 	$(CARGO) test --workspace --release --features tracewing/headless
 
-lint: ## Check the format and run clippy, as CI does
+lint: ## Check the format, the translations and clippy, as CI does
 	$(CARGO) fmt --all -- --check
+	# The messages follow the code, in what they say and in what order they
+	# are said: moving a `tr!` is enough to put the files out of step, and
+	# adding one that already exists elsewhere is too. CI checks this, and
+	# twice in one afternoon it was CI that found it -- once on main.
+	python3 scripts/i18n.py check
 	$(CARGO) clippy --workspace --all-targets --release -- -D warnings
 	# The window tests are behind `headless`, so without it they compile to
 	# nothing and clippy never sees them. CI runs this; so must `make lint`,
