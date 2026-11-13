@@ -706,6 +706,9 @@ t1a435961 = 検索 (Ctrl+F)
 # Save body
 te2c44424 = ボディを保存
 
+# More
+t4f34d900 = その他
+
 # Send again
 tf5910557 = 再送信
 

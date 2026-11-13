@@ -706,6 +706,9 @@ t1a435961 = Cari (Ctrl+F)
 # Save body
 te2c44424 = Simpan body
 
+# More
+t4f34d900 = Lainnya
+
 # Send again
 tf5910557 = Kirim ulang
 

@@ -1615,6 +1615,11 @@ impl Traffic {
     }
 
     /// The body text size chosen, in px: the design's unless Settings say.
+    /// How much larger than the design the window draws, as last drawn.
+    pub(crate) fn ui_scale(&self) -> f32 {
+        self.ui_scale
+    }
+
     /// What the list is filtered by, as typed.
     pub(crate) fn filter_text(&self, cx: &gpui::App) -> String {
         self.filter_input.read(cx).text().to_owned()

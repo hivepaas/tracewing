@@ -706,6 +706,9 @@ t1a435961 = 찾기 (Ctrl+F)
 # Save body
 te2c44424 = 본문 저장
 
+# More
+t4f34d900 = 더 보기
+
 # Send again
 tf5910557 = 다시 보내기
 

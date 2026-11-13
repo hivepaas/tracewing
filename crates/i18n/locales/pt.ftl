@@ -741,6 +741,9 @@ t1a435961 = Localizar (Ctrl+F)
 # Save body
 te2c44424 = Salvar corpo
 
+# More
+t4f34d900 = Mais
+
 # Send again
 tf5910557 = Reenviar
 
