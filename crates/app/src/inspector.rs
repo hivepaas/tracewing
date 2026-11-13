@@ -85,9 +85,51 @@ pub enum BodyState {
     Note(SharedString),
 }
 
+/// Find, over the part shown: what is typed, and why it does not work if it
+/// does not.
+pub struct FindBar {
+    pub input: Entity<TextInput>,
+    pub problem: Option<String>,
+    /// The body the search was last given to: another, after a flow or a side
+    /// is chosen, is given it again.
+    applied_to: Option<gpui::EntityId>,
+    _changed: gpui::Subscription,
+}
+
+impl FindBar {
+    pub(crate) fn new(input: Entity<TextInput>, changed: gpui::Subscription) -> Self {
+        FindBar {
+            input,
+            problem: None,
+            applied_to: None,
+            _changed: changed,
+        }
+    }
+
+    pub(crate) fn mark_applied(&mut self, body: gpui::EntityId) {
+        self.applied_to = Some(body);
+    }
+
+    pub(crate) fn applied(&self, body: gpui::EntityId) -> bool {
+        self.applied_to == Some(body)
+    }
+}
+
+/// One of Find's switches.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FindSwitch {
+    Case,
+    Word,
+    Regex,
+}
+
 #[derive(Default)]
 pub struct InspectorState {
     pub detail: Option<Detail>,
+    /// Find, while it is open.
+    pub find: Option<FindBar>,
+    /// How Find matches, kept while it is closed.
+    pub find_options: crate::find::FindOptions,
     /// Where each part that scrolls by itself is scrolled to, a side at a time,
     /// with its scroll bar's drag.
     scrolls: RefCell<HashMap<(Part, Side), Scrolled>>,
@@ -792,6 +834,8 @@ impl Traffic {
                         })),
                     )
             });
+        // Find goes with the body shown, as a flow or a side is chosen.
+        self.find_follows(cx);
         let panel = div()
             .size_full()
             .p(ui(14.))
@@ -801,6 +845,8 @@ impl Traffic {
             .gap(ui(12.))
             .overflow_hidden()
             .bg(rgb(c.surface))
+            // A press here makes Ctrl+F find in the inspector, not filter the list.
+            .capture_any_mouse_down(cx.listener(|this, _, _, _| this.inspector_active = true))
             .child(handle);
         let Some(detail) = self.inspector.detail.clone() else {
             return panel.child(
@@ -825,6 +871,10 @@ impl Traffic {
             .children(render_timing(&detail).filter(|_| !self.inspector.timing_hidden))
             .child(self.render_sides(cx))
             .child(self.render_parts(&detail, cx))
+            .children(
+                self.render_find_bar(cx)
+                    .filter(|_| self.inspector.part == Part::Body),
+            )
             .child(self.render_part(&detail, cx))
     }
 
@@ -1298,6 +1348,28 @@ impl Traffic {
             }))
             .children(self.render_hex_switch(part, cx))
             .children(self.render_read_as_button(cx))
+            .when(
+                part == Part::Body && matches!(self.inspector.body, BodyState::Shown(_)),
+                |d| {
+                    d.child(
+                        div()
+                            .id("find-open")
+                            .size(ui(28.))
+                            .rounded(ui(14.))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .cursor_pointer()
+                            .reachable()
+                            .bg(rgb(c.chip))
+                            .tooltip(tip(tr!("Find in the body (Ctrl+F)")))
+                            .child(icon("search", 14., c.on_chip))
+                            .on_click(
+                                cx.listener(|view, _, window, cx| view.open_find(window, cx)),
+                            ),
+                    )
+                },
+            )
             .when(
                 part == Part::Body && detail.body(side).stored.exists(),
                 |d| {

@@ -526,6 +526,36 @@ te9ed60a6 = Error
 # Media
 td10fcaa3 = Media
 
+# Find
+t3e1cd17a = Cari
+
+# Not found
+t66d1107a = Tidak ditemukan
+
+# Looking…
+t284579ba = Mencari…
+
+# {now} of {count}
+tb689f139 = { $now } dari { $count }
+
+# Match case
+t2034fd8e = Cocokkan huruf besar/kecil
+
+# Whole word
+t1d601c34 = Seluruh kata
+
+# Regular expression
+t3f9a29fb = Ekspresi reguler
+
+# The one before (Shift+Enter)
+t956e28b3 = Sebelumnya (Shift+Enter)
+
+# The next (Enter)
+t0c8af534 = Berikutnya (Enter)
+
+# Close (Esc)
+t653214db = Tutup (Esc)
+
 # Rule: {rule}
 teca2074f = Aturan: { $rule }
 
@@ -669,6 +699,9 @@ tfa6e7203 = Form { $form }
 
 # Connection
 t09ea4ff9 = Koneksi
+
+# Find in the body (Ctrl+F)
+tb52d85cd = Cari di isi (Ctrl+F)
 
 # Save body
 te2c44424 = Simpan body
@@ -1987,9 +2020,6 @@ tc5bba858 = Memercayai sertifikat.
 # Does not trust the certificate yet.
 tf2a0b8c5 = Belum memercayai sertifikat.
 
-# Looking…
-t284579ba = Mencari…
-
 # Has no profile yet. Open it once, then look again.
 t00e4c88d = Belum punya profil. Buka sekali, lalu cari lagi.
 
@@ -2209,8 +2239,8 @@ t7e278a00 = Flow pertama atau terakhir
 # A page up or down
 t23b1814b = Satu halaman ke atas atau ke bawah
 
-# Filter
-tf4a9c097 = Filter
+# Filter the list; after a press in the inspector, find in it
+t05e6ebf7 = Saring daftar; setelah klik di inspektor, cari di sana
 
 # Pause or resume recording
 t6e21519a = Jeda atau lanjutkan perekaman
@@ -2322,6 +2352,9 @@ t00d0cf30 = host:, status:4xx, atau teks di body
 
 # A name, as iPhone test
 t19f89214 = Nama, misalnya Tes iPhone
+
+# Filter
+tf4a9c097 = Filter
 
 # A name, as Phone
 tfce439bf = Nama, misalnya Phone

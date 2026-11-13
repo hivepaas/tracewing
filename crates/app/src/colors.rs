@@ -34,6 +34,9 @@ pub struct Palette {
     pub faint: u32,
     /// The selection behind text in a field.
     pub soft: u32,
+    /// Behind text Find found, and behind the one it is at.
+    pub found: u32,
+    pub found_now: u32,
     pub splitter: u32,
     pub chip: u32,
     pub on_chip: u32,
@@ -87,6 +90,8 @@ const LIGHT: Palette = Palette {
     muted: 0x4a5263,
     faint: 0x8a93a6,
     soft: 0xc9d2e6,
+    found: 0xfff0b3,
+    found_now: 0xffc95c,
     splitter: 0xc9d2e6,
     chip: 0xeef1f7,
     on_chip: 0x2e3545,
@@ -137,6 +142,8 @@ const GRAPHITE: Palette = Palette {
     muted: 0xa2a5ad,
     faint: 0x7d818b,
     soft: 0x3b3e45,
+    found: 0x4d4220,
+    found_now: 0x8a6b1c,
     splitter: 0x3b3e45,
     chip: 0x26282d,
     on_chip: 0xcfd1d6,

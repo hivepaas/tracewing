@@ -526,6 +526,36 @@ te9ed60a6 = エラー
 # Media
 td10fcaa3 = メディア
 
+# Find
+t3e1cd17a = 検索
+
+# Not found
+t66d1107a = 見つかりません
+
+# Looking…
+t284579ba = 探しています…
+
+# {now} of {count}
+tb689f139 = { $now } / { $count }
+
+# Match case
+t2034fd8e = 大文字と小文字を区別
+
+# Whole word
+t1d601c34 = 単語単位
+
+# Regular expression
+t3f9a29fb = 正規表現
+
+# The one before (Shift+Enter)
+t956e28b3 = 前へ (Shift+Enter)
+
+# The next (Enter)
+t0c8af534 = 次へ (Enter)
+
+# Close (Esc)
+t653214db = 閉じる (Esc)
+
 # Rule: {rule}
 teca2074f = ルール: { $rule }
 
@@ -669,6 +699,9 @@ tfa6e7203 = フォーム { $form }
 
 # Connection
 t09ea4ff9 = 接続
+
+# Find in the body (Ctrl+F)
+tb52d85cd = 本文を検索 (Ctrl+F)
 
 # Save body
 te2c44424 = ボディを保存
@@ -1987,9 +2020,6 @@ tc5bba858 = 証明書を信頼しています。
 # Does not trust the certificate yet.
 tf2a0b8c5 = まだ証明書を信頼していません。
 
-# Looking…
-t284579ba = 探しています…
-
 # Has no profile yet. Open it once, then look again.
 t00e4c88d = まだプロファイルがありません。一度開いてから、もう一度探してください。
 
@@ -2209,8 +2239,8 @@ t7e278a00 = 最初または最後のフロー
 # A page up or down
 t23b1814b = 1 ページ上または下へ
 
-# Filter
-tf4a9c097 = フィルタ
+# Filter the list; after a press in the inspector, find in it
+t05e6ebf7 = リストを絞り込み、インスペクターをクリックした後はその中を検索
 
 # Pause or resume recording
 t6e21519a = 記録を一時停止または再開
@@ -2322,6 +2352,9 @@ t00d0cf30 = host:、status:4xx、またはボディ内のテキスト
 
 # A name, as iPhone test
 t19f89214 = 名前（例: iPhone テスト）
+
+# Filter
+tf4a9c097 = フィルタ
 
 # A name, as Phone
 tfce439bf = 名前（例：Phone）

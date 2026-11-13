@@ -561,6 +561,36 @@ te9ed60a6 = Erros
 # Media
 td10fcaa3 = Mídia
 
+# Find
+t3e1cd17a = Localizar
+
+# Not found
+t66d1107a = Não encontrado
+
+# Looking…
+t284579ba = Procurando…
+
+# {now} of {count}
+tb689f139 = { $now } de { $count }
+
+# Match case
+t2034fd8e = Diferenciar maiúsculas
+
+# Whole word
+t1d601c34 = Palavra inteira
+
+# Regular expression
+t3f9a29fb = Expressão regular
+
+# The one before (Shift+Enter)
+t956e28b3 = Anterior (Shift+Enter)
+
+# The next (Enter)
+t0c8af534 = Próximo (Enter)
+
+# Close (Esc)
+t653214db = Fechar (Esc)
+
 # Rule: {rule}
 teca2074f = Regra: { $rule }
 
@@ -704,6 +734,9 @@ tfa6e7203 = Formulário { $form }
 
 # Connection
 t09ea4ff9 = Conexão
+
+# Find in the body (Ctrl+F)
+tb52d85cd = Localizar no corpo (Ctrl+F)
 
 # Save body
 te2c44424 = Salvar corpo
@@ -2116,9 +2149,6 @@ tc5bba858 = Confia no certificado.
 # Does not trust the certificate yet.
 tf2a0b8c5 = Ainda não confia no certificado.
 
-# Looking…
-t284579ba = Procurando…
-
 # Has no profile yet. Open it once, then look again.
 t00e4c88d = Ainda não tem perfil. Abra-o uma vez e procure de novo.
 
@@ -2348,8 +2378,8 @@ t7e278a00 = O primeiro ou o último fluxo
 # A page up or down
 t23b1814b = Uma página acima ou abaixo
 
-# Filter
-tf4a9c097 = Filtrar
+# Filter the list; after a press in the inspector, find in it
+t05e6ebf7 = Filtrar a lista; depois de clicar no inspetor, localizar nele
 
 # Pause or resume recording
 t6e21519a = Pausar ou retomar a gravação
@@ -2461,6 +2491,9 @@ t00d0cf30 = host:, status:4xx, ou texto nos corpos
 
 # A name, as iPhone test
 t19f89214 = Um nome, como Teste iPhone
+
+# Filter
+tf4a9c097 = Filtrar
 
 # A name, as Phone
 tfce439bf = Um nome, por ex. Phone

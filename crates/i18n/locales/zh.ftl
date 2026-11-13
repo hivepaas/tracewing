@@ -526,6 +526,36 @@ te9ed60a6 = 错误
 # Media
 td10fcaa3 = 媒体
 
+# Find
+t3e1cd17a = 查找
+
+# Not found
+t66d1107a = 未找到
+
+# Looking…
+t284579ba = 正在查找…
+
+# {now} of {count}
+tb689f139 = { $now } / { $count }
+
+# Match case
+t2034fd8e = 区分大小写
+
+# Whole word
+t1d601c34 = 全字匹配
+
+# Regular expression
+t3f9a29fb = 正则表达式
+
+# The one before (Shift+Enter)
+t956e28b3 = 上一个 (Shift+Enter)
+
+# The next (Enter)
+t0c8af534 = 下一个 (Enter)
+
+# Close (Esc)
+t653214db = 关闭 (Esc)
+
 # Rule: {rule}
 teca2074f = 规则：{ $rule }
 
@@ -669,6 +699,9 @@ tfa6e7203 = 表单 { $form }
 
 # Connection
 t09ea4ff9 = 连接
+
+# Find in the body (Ctrl+F)
+tb52d85cd = 在正文中查找 (Ctrl+F)
 
 # Save body
 te2c44424 = 保存正文
@@ -1987,9 +2020,6 @@ tc5bba858 = 信任该证书。
 # Does not trust the certificate yet.
 tf2a0b8c5 = 尚未信任该证书。
 
-# Looking…
-t284579ba = 正在查找…
-
 # Has no profile yet. Open it once, then look again.
 t00e4c88d = 还没有配置文件。先打开一次，再重新查找。
 
@@ -2209,8 +2239,8 @@ t7e278a00 = 第一条或最后一条流量记录
 # A page up or down
 t23b1814b = 向上或向下翻页
 
-# Filter
-tf4a9c097 = 过滤
+# Filter the list; after a press in the inspector, find in it
+t05e6ebf7 = 筛选列表；在检查器中点击后，则在其中查找
 
 # Pause or resume recording
 t6e21519a = 暂停或继续录制
@@ -2322,6 +2352,9 @@ t00d0cf30 = host:、status:4xx 或正文中的文字
 
 # A name, as iPhone test
 t19f89214 = 名称，如：测试用 iPhone
+
+# Filter
+tf4a9c097 = 过滤
 
 # A name, as Phone
 tfce439bf = 名称，如：Phone

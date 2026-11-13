@@ -526,6 +526,36 @@ te9ed60a6 = 오류
 # Media
 td10fcaa3 = 미디어
 
+# Find
+t3e1cd17a = 찾기
+
+# Not found
+t66d1107a = 찾을 수 없음
+
+# Looking…
+t284579ba = 찾는 중…
+
+# {now} of {count}
+tb689f139 = { $now } / { $count }
+
+# Match case
+t2034fd8e = 대소문자 구분
+
+# Whole word
+t1d601c34 = 단어 단위
+
+# Regular expression
+t3f9a29fb = 정규식
+
+# The one before (Shift+Enter)
+t956e28b3 = 이전 (Shift+Enter)
+
+# The next (Enter)
+t0c8af534 = 다음 (Enter)
+
+# Close (Esc)
+t653214db = 닫기 (Esc)
+
 # Rule: {rule}
 teca2074f = 규칙: { $rule }
 
@@ -669,6 +699,9 @@ tfa6e7203 = 폼 { $form }
 
 # Connection
 t09ea4ff9 = 연결
+
+# Find in the body (Ctrl+F)
+tb52d85cd = 본문에서 찾기 (Ctrl+F)
 
 # Save body
 te2c44424 = 본문 저장
@@ -1987,9 +2020,6 @@ tc5bba858 = 인증서를 신뢰합니다.
 # Does not trust the certificate yet.
 tf2a0b8c5 = 아직 인증서를 신뢰하지 않습니다.
 
-# Looking…
-t284579ba = 찾는 중…
-
 # Has no profile yet. Open it once, then look again.
 t00e4c88d = 아직 프로필이 없습니다. 한 번 연 다음 다시 찾으세요.
 
@@ -2209,8 +2239,8 @@ t7e278a00 = 첫 번째 또는 마지막 플로우
 # A page up or down
 t23b1814b = 한 페이지 위 또는 아래로
 
-# Filter
-tf4a9c097 = 필터
+# Filter the list; after a press in the inspector, find in it
+t05e6ebf7 = 목록 필터링, 인스펙터를 누른 뒤에는 그 안에서 찾기
 
 # Pause or resume recording
 t6e21519a = 기록 일시 정지 또는 재개
@@ -2322,6 +2352,9 @@ t00d0cf30 = host:, status:4xx 또는 본문 텍스트
 
 # A name, as iPhone test
 t19f89214 = 이름(예: iPhone 테스트)
+
+# Filter
+tf4a9c097 = 필터
 
 # A name, as Phone
 tfce439bf = 이름 (예: Phone)

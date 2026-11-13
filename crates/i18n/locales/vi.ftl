@@ -526,6 +526,36 @@ te9ed60a6 = Lỗi
 # Media
 td10fcaa3 = Đa phương tiện
 
+# Find
+t3e1cd17a = Tìm
+
+# Not found
+t66d1107a = Không thấy
+
+# Looking…
+t284579ba = Đang tìm…
+
+# {now} of {count}
+tb689f139 = { $now } / { $count }
+
+# Match case
+t2034fd8e = Phân biệt hoa thường
+
+# Whole word
+t1d601c34 = Nguyên từ
+
+# Regular expression
+t3f9a29fb = Biểu thức chính quy
+
+# The one before (Shift+Enter)
+t956e28b3 = Kết quả trước (Shift+Enter)
+
+# The next (Enter)
+t0c8af534 = Kết quả sau (Enter)
+
+# Close (Esc)
+t653214db = Đóng (Esc)
+
 # Rule: {rule}
 teca2074f = Quy tắc: { $rule }
 
@@ -669,6 +699,9 @@ tfa6e7203 = Form { $form }
 
 # Connection
 t09ea4ff9 = Kết nối
+
+# Find in the body (Ctrl+F)
+tb52d85cd = Tìm trong body (Ctrl+F)
 
 # Save body
 te2c44424 = Lưu body
@@ -1987,9 +2020,6 @@ tc5bba858 = Tin chứng chỉ.
 # Does not trust the certificate yet.
 tf2a0b8c5 = Chưa tin chứng chỉ.
 
-# Looking…
-t284579ba = Đang tìm…
-
 # Has no profile yet. Open it once, then look again.
 t00e4c88d = Chưa có profile. Hãy mở nó một lần, rồi tìm lại.
 
@@ -2209,8 +2239,8 @@ t7e278a00 = Flow đầu tiên hoặc cuối cùng
 # A page up or down
 t23b1814b = Lên hoặc xuống một trang
 
-# Filter
-tf4a9c097 = Lọc
+# Filter the list; after a press in the inspector, find in it
+t05e6ebf7 = Lọc danh sách; sau khi bấm vào inspector thì tìm trong đó
 
 # Pause or resume recording
 t6e21519a = Tạm dừng hoặc tiếp tục ghi
@@ -2322,6 +2352,9 @@ t00d0cf30 = host:, status:4xx, hoặc chữ trong body
 
 # A name, as iPhone test
 t19f89214 = Một cái tên, như iPhone test
+
+# Filter
+tf4a9c097 = Lọc
 
 # A name, as Phone
 tfce439bf = Tên, ví dụ Phone

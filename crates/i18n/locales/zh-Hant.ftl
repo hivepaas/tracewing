@@ -526,6 +526,36 @@ te9ed60a6 = 錯誤
 # Media
 td10fcaa3 = 媒體
 
+# Find
+t3e1cd17a = 尋找
+
+# Not found
+t66d1107a = 找不到
+
+# Looking…
+t284579ba = 正在尋找…
+
+# {now} of {count}
+tb689f139 = { $now } / { $count }
+
+# Match case
+t2034fd8e = 大小寫須相符
+
+# Whole word
+t1d601c34 = 全字拼寫須相符
+
+# Regular expression
+t3f9a29fb = 規則運算式
+
+# The one before (Shift+Enter)
+t956e28b3 = 上一個 (Shift+Enter)
+
+# The next (Enter)
+t0c8af534 = 下一個 (Enter)
+
+# Close (Esc)
+t653214db = 關閉 (Esc)
+
 # Rule: {rule}
 teca2074f = 規則：{ $rule }
 
@@ -669,6 +699,9 @@ tfa6e7203 = 表單 { $form }
 
 # Connection
 t09ea4ff9 = 連線
+
+# Find in the body (Ctrl+F)
+tb52d85cd = 在內文中尋找 (Ctrl+F)
 
 # Save body
 te2c44424 = 儲存本文
@@ -1987,9 +2020,6 @@ tc5bba858 = 信任此憑證。
 # Does not trust the certificate yet.
 tf2a0b8c5 = 尚未信任此憑證。
 
-# Looking…
-t284579ba = 正在尋找…
-
 # Has no profile yet. Open it once, then look again.
 t00e4c88d = 還沒有設定檔。先開啟一次，再重新尋找。
 
@@ -2209,8 +2239,8 @@ t7e278a00 = 第一筆或最後一筆流量紀錄
 # A page up or down
 t23b1814b = 向上或向下翻頁
 
-# Filter
-tf4a9c097 = 篩選
+# Filter the list; after a press in the inspector, find in it
+t05e6ebf7 = 篩選清單；在檢查器中點按後，則在其中尋找
 
 # Pause or resume recording
 t6e21519a = 暫停或繼續錄製
@@ -2322,6 +2352,9 @@ t00d0cf30 = host:、status:4xx 或本文中的文字
 
 # A name, as iPhone test
 t19f89214 = 名稱，例如：測試用 iPhone
+
+# Filter
+tf4a9c097 = 篩選
 
 # A name, as Phone
 tfce439bf = 名稱，如：Phone

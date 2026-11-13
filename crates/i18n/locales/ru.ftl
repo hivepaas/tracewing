@@ -577,6 +577,36 @@ te9ed60a6 = Ошибки
 # Media
 td10fcaa3 = Медиа
 
+# Find
+t3e1cd17a = Найти
+
+# Not found
+t66d1107a = Не найдено
+
+# Looking…
+t284579ba = Поиск…
+
+# {now} of {count}
+tb689f139 = { $now } из { $count }
+
+# Match case
+t2034fd8e = Учитывать регистр
+
+# Whole word
+t1d601c34 = Слово целиком
+
+# Regular expression
+t3f9a29fb = Регулярное выражение
+
+# The one before (Shift+Enter)
+t956e28b3 = Предыдущее (Shift+Enter)
+
+# The next (Enter)
+t0c8af534 = Следующее (Enter)
+
+# Close (Esc)
+t653214db = Закрыть (Esc)
+
 # Rule: {rule}
 teca2074f = Правило: { $rule }
 
@@ -720,6 +750,9 @@ tfa6e7203 = Форма { $form }
 
 # Connection
 t09ea4ff9 = Подключение
+
+# Find in the body (Ctrl+F)
+tb52d85cd = Найти в теле (Ctrl+F)
 
 # Save body
 te2c44424 = Сохранить тело
@@ -2185,9 +2218,6 @@ tc5bba858 = Доверяет сертификату.
 # Does not trust the certificate yet.
 tf2a0b8c5 = Пока не доверяет сертификату.
 
-# Looking…
-t284579ba = Поиск…
-
 # Has no profile yet. Open it once, then look again.
 t00e4c88d = Профиля пока нет. Откройте браузер один раз, затем поищите снова.
 
@@ -2419,8 +2449,8 @@ t7e278a00 = Первый или последний поток
 # A page up or down
 t23b1814b = На страницу вверх или вниз
 
-# Filter
-tf4a9c097 = Фильтр
+# Filter the list; after a press in the inspector, find in it
+t05e6ebf7 = Фильтр списка; после щелчка в инспекторе — поиск в нём
 
 # Pause or resume recording
 t6e21519a = Приостановить или продолжить запись
@@ -2532,6 +2562,9 @@ t00d0cf30 = host:, status:4xx или текст в телах
 
 # A name, as iPhone test
 t19f89214 = Имя, например iPhone тест
+
+# Filter
+tf4a9c097 = Фильтр
 
 # A name, as Phone
 tfce439bf = Имя, например Phone
