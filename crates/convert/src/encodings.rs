@@ -468,3 +468,293 @@ mod tests {
         );
     }
 }
+
+/// Ascii85, as PDF and git's binary patches write bytes, and ZeroMQ's z85.
+///
+/// Five characters carry four bytes, which is why it is reached for where
+/// base64's four-for-three is thought wasteful. Adobe's wraps it in `<~ ~>`;
+/// z85 uses an alphabet safe inside a string literal.
+pub fn base85(input: &Input) -> Option<Reading> {
+    let text = input.text.trim().trim_matches('"');
+    let adobe = text.strip_prefix("<~").and_then(|t| t.strip_suffix("~>"));
+    let (text, label) = match adobe {
+        Some(inside) => (inside, tr!("Ascii85")),
+        None => (text, tr!("Ascii85")),
+    };
+    if text.len() < 5 {
+        return None;
+    }
+    let bytes = ascii85(text).or_else(|| z85(text))?;
+    let label = if ascii85(text).is_some() {
+        label
+    } else {
+        tr!("z85")
+    };
+    decoded("base85", label, bytes, false, input.asked)
+}
+
+/// The Ascii85 alphabet: `!` through `u`, with `z` for four zero bytes.
+fn ascii85(text: &str) -> Option<Vec<u8>> {
+    let mut out = Vec::new();
+    let mut group = Vec::with_capacity(5);
+    for c in text.chars().filter(|c| !c.is_whitespace()) {
+        if c == 'z' && group.is_empty() {
+            out.extend_from_slice(&[0, 0, 0, 0]);
+            continue;
+        }
+        if !('!'..='u').contains(&c) {
+            return None;
+        }
+        group.push(c as u32 - 33);
+        if group.len() == 5 {
+            out.extend_from_slice(&four(&group, 5)?);
+            group.clear();
+        }
+    }
+    if !group.is_empty() {
+        // A short last group is padded with the highest digit, and only as
+        // many bytes as it carried are kept.
+        let held = group.len();
+        if held == 1 {
+            return None;
+        }
+        let mut padded = group.clone();
+        padded.resize(5, 84);
+        let whole = four(&padded, 5)?;
+        out.extend_from_slice(&whole[..held - 1]);
+    }
+    (!out.is_empty()).then_some(out)
+}
+
+/// What five base85 digits hold, as four bytes.
+fn four(group: &[u32], base: u32) -> Option<[u8; 4]> {
+    let _ = base;
+    let mut n: u32 = 0;
+    for digit in group {
+        n = n.checked_mul(85)?.checked_add(*digit)?;
+    }
+    Some(n.to_be_bytes())
+}
+
+/// ZeroMQ's alphabet, which is five characters to four bytes as well.
+fn z85(text: &str) -> Option<Vec<u8>> {
+    const ALPHABET: &[u8] =
+        b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#";
+    if !text.len().is_multiple_of(5) {
+        return None;
+    }
+    let mut out = Vec::with_capacity(text.len() / 5 * 4);
+    for group in text.as_bytes().chunks(5) {
+        let mut n: u32 = 0;
+        for byte in group {
+            let digit = ALPHABET.iter().position(|a| a == byte)? as u32;
+            n = n.checked_mul(85)?.checked_add(digit)?;
+        }
+        out.extend_from_slice(&n.to_be_bytes());
+    }
+    (!out.is_empty()).then_some(out)
+}
+
+/// base58, and base58check where the four bytes at the end check out.
+///
+/// The alphabet leaves out `0`, `O`, `I` and `l`, so that what is read aloud
+/// or copied by eye cannot turn into something else. Bitcoin addresses,
+/// Solana keys and IPFS names are written in it.
+pub fn base58(input: &Input) -> Option<Reading> {
+    const ALPHABET: &[u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    let text = input.text.trim().trim_matches('"');
+    if !(8..=256).contains(&text.len()) || !text.bytes().all(|b| ALPHABET.contains(&b)) {
+        return None;
+    }
+    // Base 58 the long way: every digit multiplies what is held so far.
+    let mut bytes: Vec<u8> = Vec::new();
+    for c in text.bytes() {
+        let mut carry = ALPHABET.iter().position(|a| *a == c)? as u32;
+        for byte in bytes.iter_mut().rev() {
+            let n = u32::from(*byte) * 58 + carry;
+            *byte = (n & 0xff) as u8;
+            carry = n >> 8;
+        }
+        while carry > 0 {
+            bytes.insert(0, (carry & 0xff) as u8);
+            carry >>= 8;
+        }
+    }
+    // Each leading `1` is a zero byte, which the arithmetic above drops.
+    let zeros = text.bytes().take_while(|b| *b == b'1').count();
+    let mut whole = vec![0u8; zeros];
+    whole.extend_from_slice(&bytes);
+
+    // base58check: the last four bytes are the start of the double SHA-256
+    // of the rest. Nothing else makes that true by accident, so this is the
+    // one way to be sure of base58 rather than merely able to decode it.
+    if whole.len() > 4 {
+        use sha2::{Digest, Sha256};
+        let (body, given) = whole.split_at(whole.len() - 4);
+        let once = Sha256::digest(body);
+        let twice = Sha256::digest(once);
+        if twice[..4] == *given {
+            let version = body.first().copied().unwrap_or(0);
+            let what = match (version, body.len()) {
+                (0x00, 21) => tr!("a Bitcoin address"),
+                (0x05, 21) => tr!("a Bitcoin script address"),
+                (0x80, 34) | (0x80, 33) => tr!("a Bitcoin private key"),
+                _ => tr!("version {version}", version = format!("{version:#04x}")),
+            };
+            return Some(Reading::new(
+                "base58",
+                tr!("base58check"),
+                Confidence::Certain,
+                Shown::Fields(vec![
+                    (tr!("What it is"), what),
+                    (
+                        tr!("How much"),
+                        crate::numbers::bytes_size(body.len() as u64 - 1),
+                    ),
+                    (tr!("Checksum"), tr!("holds")),
+                ]),
+            ));
+        }
+    }
+    decoded("base58", tr!("base58"), whole, false, input.asked)
+}
+
+/// RFC 4648's base32: a TOTP secret, an onion address, a DNS label that has
+/// to survive a case-insensitive hop.
+pub fn base32(input: &Input) -> Option<Reading> {
+    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    let text = input.text.trim().trim_matches('"').trim_end_matches('=');
+    let upper = text.to_ascii_uppercase();
+    if upper.len() < 8 || !upper.bytes().all(|b| ALPHABET.contains(&b)) {
+        return None;
+    }
+    let mut out = Vec::new();
+    let (mut held, mut bits) = (0u32, 0u32);
+    for c in upper.bytes() {
+        let digit = ALPHABET.iter().position(|a| *a == c)? as u32;
+        held = held << 5 | digit;
+        bits += 5;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((held >> bits & 0xff) as u8);
+        }
+    }
+    decoded("base32", tr!("base32"), out, false, input.asked)
+}
+
+/// Quoted-printable, as mail writes anything that is not plain ASCII: `=C3=A9`
+/// for a letter, `=` at the end of a line for a line that did not end.
+pub fn quoted_printable(input: &Input) -> Option<Reading> {
+    let text = input.text.trim_matches('"');
+    if !text.contains('=') {
+        return None;
+    }
+    let mut out: Vec<u8> = Vec::new();
+    let mut seen = false;
+    let bytes = text.as_bytes();
+    let mut at = 0;
+    while at < bytes.len() {
+        if bytes[at] == b'=' {
+            match bytes.get(at + 1..at + 3) {
+                // A line that goes on: the break is not part of the text.
+                Some(b"\r\n") | Some(b"\n\r") => {
+                    at += 3;
+                    seen = true;
+                    continue;
+                }
+                Some(pair) if pair[0] == b'\n' => {
+                    at += 2;
+                    seen = true;
+                    continue;
+                }
+                Some(pair) => {
+                    let hex = std::str::from_utf8(pair).ok()?;
+                    let byte = u8::from_str_radix(hex, 16).ok()?;
+                    out.push(byte);
+                    at += 3;
+                    seen = true;
+                    continue;
+                }
+                None => return None,
+            }
+        }
+        out.push(bytes[at]);
+        at += 1;
+    }
+    if !seen {
+        return None;
+    }
+    let plain = String::from_utf8(out).ok()?;
+    if plain == text {
+        return None;
+    }
+    Some(Reading::new(
+        "quoted-printable",
+        tr!("Quoted-printable"),
+        Confidence::Certain,
+        Shown::Line(plain),
+    ))
+}
+
+#[cfg(test)]
+mod alphabet_tests {
+    use super::*;
+    use crate::tests::{by_id, read};
+
+    fn said(found: &[Reading], id: &str) -> String {
+        match by_id(found, id).map(|reading| &reading.shown) {
+            Some(Shown::Line(line)) => line.clone(),
+            other => panic!("no line for {id}: {other:?}"),
+        }
+    }
+
+    /// Five characters to four bytes, as a PDF or a binary patch writes it.
+    #[test]
+    fn ascii85_is_read_and_so_is_what_it_held() {
+        // `{"hello":"world"}` in Ascii85.
+        let found = read("HQm-7Ci\"#63[/cdEbo81I/");
+        let inside = by_id(&found, "base85").expect("the Ascii85 in it");
+        assert_eq!(inside.chain, vec!["base85"]);
+        assert!(by_id(&found, "json").is_some(), "and the JSON inside it");
+        // Adobe wraps it; the wrapping is not part of the text.
+        assert!(by_id(&read("<~HQm-7Ci\"#63[/cdEbo81I/~>"), "base85").is_some());
+    }
+
+    /// base58 says it is base58 when the four bytes at the end check out,
+    /// which is the only way to be sure rather than merely able to decode.
+    #[test]
+    fn a_bitcoin_address_checks_out() {
+        let found = read("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa");
+        let reading = by_id(&found, "base58").expect("the address");
+        assert_eq!(reading.confidence, Confidence::Certain);
+        let Shown::Fields(fields) = &reading.shown else {
+            panic!("{reading:?}")
+        };
+        assert_eq!(fields[0].1, "a Bitcoin address");
+        assert_eq!(fields[2].1, "holds");
+    }
+
+    /// And a word in the same alphabet, which decodes to nothing worth
+    /// reading, says nothing at all.
+    #[test]
+    fn base58_of_nothing_in_particular_is_not_offered() {
+        let found = read("PleaseReadThisCarefully");
+        assert!(by_id(&found, "base58").is_none(), "{found:?}");
+    }
+
+    #[test]
+    fn base32_holds_what_it_holds() {
+        // `{"a":1}` in base32.
+        let found = read("PMRGCIR2GF6Q====");
+        assert!(by_id(&found, "base32").is_some(), "{found:?}");
+    }
+
+    #[test]
+    fn quoted_printable_is_the_letters_it_stands_for() {
+        let found = read("caf=C3=A9_=C4=91=E1=BA=B7t");
+        assert_eq!(said(&found, "quoted-printable"), "café_đặt");
+        // Text with no escapes in it is not quoted-printable, whatever
+        // equals signs it holds.
+        assert!(by_id(&read("a=1&b=2"), "quoted-printable").is_none());
+    }
+}

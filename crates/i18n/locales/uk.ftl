@@ -2872,6 +2872,42 @@ t195b3db9 = Текст з escape-послідовностями
 # HTML entities
 t54958ecb = HTML-сутності
 
+# Ascii85
+td69511f7 = Ascii85
+
+# z85
+t6c0d8dce = z85
+
+# a Bitcoin address
+t7b0efb3e = адреса Bitcoin
+
+# a Bitcoin script address
+te6f3988d = адреса скрипту Bitcoin
+
+# a Bitcoin private key
+td594ad36 = приватний ключ Bitcoin
+
+# version {version}
+tbb1843f1 = версія { $version }
+
+# base58check
+t8f5cfb6f = base58check
+
+# What it is
+t065b8fa0 = Що це
+
+# How much
+td909a26a = Скільки
+
+# base58
+tee4c2cfd = base58
+
+# base32
+t5c46c9f9 = base32
+
+# Quoted-printable
+t1f2024f7 = Quoted-printable
+
 # Version
 t5dcdd537 = Версія
 
@@ -3130,9 +3166,6 @@ t8d20daf3 = Повністю
 # The IPv4 in it
 tc1fb8957 = IPv4 всередині
 
-# What it is
-t065b8fa0 = Що це
-
 # From
 t18743595 = Від
 
@@ -3228,9 +3261,6 @@ t9dcf716c = SHA-512 crypt
 
 # What it holds
 tff372c62 = Що всередині
-
-# How much
-td909a26a = Скільки
 
 # {size} of DER
 tbfdcf758 = { $size } DER

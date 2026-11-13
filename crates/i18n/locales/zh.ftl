@@ -2644,6 +2644,42 @@ t195b3db9 = 转义文本
 # HTML entities
 t54958ecb = HTML 实体
 
+# Ascii85
+td69511f7 = Ascii85
+
+# z85
+t6c0d8dce = z85
+
+# a Bitcoin address
+t7b0efb3e = 一个比特币地址
+
+# a Bitcoin script address
+te6f3988d = 一个比特币脚本地址
+
+# a Bitcoin private key
+td594ad36 = 一个比特币私钥
+
+# version {version}
+tbb1843f1 = 版本 { $version }
+
+# base58check
+t8f5cfb6f = base58check
+
+# What it is
+t065b8fa0 = 是什么
+
+# How much
+td909a26a = 多少
+
+# base58
+tee4c2cfd = base58
+
+# base32
+t5c46c9f9 = base32
+
+# Quoted-printable
+t1f2024f7 = Quoted-printable
+
 # Version
 t5dcdd537 = 版本
 
@@ -2899,9 +2935,6 @@ t8d20daf3 = 完整
 # The IPv4 in it
 tc1fb8957 = 其中的 IPv4
 
-# What it is
-t065b8fa0 = 是什么
-
 # From
 t18743595 = 从
 
@@ -2997,9 +3030,6 @@ t9dcf716c = SHA-512 crypt
 
 # What it holds
 tff372c62 = 里面是什么
-
-# How much
-td909a26a = 多少
 
 # {size} of DER
 tbfdcf758 = { $size } 的 DER

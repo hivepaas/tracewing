@@ -2644,6 +2644,42 @@ t195b3db9 = Văn bản có escape
 # HTML entities
 t54958ecb = Thực thể HTML
 
+# Ascii85
+td69511f7 = Ascii85
+
+# z85
+t6c0d8dce = z85
+
+# a Bitcoin address
+t7b0efb3e = một địa chỉ Bitcoin
+
+# a Bitcoin script address
+te6f3988d = một địa chỉ script Bitcoin
+
+# a Bitcoin private key
+td594ad36 = một khoá riêng Bitcoin
+
+# version {version}
+tbb1843f1 = phiên bản { $version }
+
+# base58check
+t8f5cfb6f = base58check
+
+# What it is
+t065b8fa0 = Nó là gì
+
+# How much
+td909a26a = Bao nhiêu
+
+# base58
+tee4c2cfd = base58
+
+# base32
+t5c46c9f9 = base32
+
+# Quoted-printable
+t1f2024f7 = Quoted-printable
+
 # Version
 t5dcdd537 = Phiên bản
 
@@ -2899,9 +2935,6 @@ t8d20daf3 = Đầy đủ
 # The IPv4 in it
 tc1fb8957 = IPv4 bên trong
 
-# What it is
-t065b8fa0 = Nó là gì
-
 # From
 t18743595 = Từ
 
@@ -2997,9 +3030,6 @@ t9dcf716c = SHA-512 crypt
 
 # What it holds
 tff372c62 = Chứa gì
-
-# How much
-td909a26a = Bao nhiêu
 
 # {size} of DER
 tbfdcf758 = { $size } DER

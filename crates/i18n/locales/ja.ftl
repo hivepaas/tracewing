@@ -2644,6 +2644,42 @@ t195b3db9 = エスケープされたテキスト
 # HTML entities
 t54958ecb = HTML実体参照
 
+# Ascii85
+td69511f7 = Ascii85
+
+# z85
+t6c0d8dce = z85
+
+# a Bitcoin address
+t7b0efb3e = ビットコインのアドレス
+
+# a Bitcoin script address
+te6f3988d = ビットコインのスクリプトアドレス
+
+# a Bitcoin private key
+td594ad36 = ビットコインの秘密鍵
+
+# version {version}
+tbb1843f1 = バージョン { $version }
+
+# base58check
+t8f5cfb6f = base58check
+
+# What it is
+t065b8fa0 = これは何か
+
+# How much
+td909a26a = どれだけ
+
+# base58
+tee4c2cfd = base58
+
+# base32
+t5c46c9f9 = base32
+
+# Quoted-printable
+t1f2024f7 = Quoted-printable
+
 # Version
 t5dcdd537 = バージョン
 
@@ -2899,9 +2935,6 @@ t8d20daf3 = 完全形
 # The IPv4 in it
 tc1fb8957 = 中のIPv4
 
-# What it is
-t065b8fa0 = これは何か
-
 # From
 t18743595 = 開始
 
@@ -2997,9 +3030,6 @@ t9dcf716c = SHA-512 crypt
 
 # What it holds
 tff372c62 = 中身
-
-# How much
-td909a26a = どれだけ
 
 # {size} of DER
 tbfdcf758 = { $size } の DER

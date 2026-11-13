@@ -2644,6 +2644,42 @@ t195b3db9 = Teks ter-escape
 # HTML entities
 t54958ecb = Entitas HTML
 
+# Ascii85
+td69511f7 = Ascii85
+
+# z85
+t6c0d8dce = z85
+
+# a Bitcoin address
+t7b0efb3e = alamat Bitcoin
+
+# a Bitcoin script address
+te6f3988d = alamat skrip Bitcoin
+
+# a Bitcoin private key
+td594ad36 = kunci privat Bitcoin
+
+# version {version}
+tbb1843f1 = versi { $version }
+
+# base58check
+t8f5cfb6f = base58check
+
+# What it is
+t065b8fa0 = Apa ini
+
+# How much
+td909a26a = Berapa banyak
+
+# base58
+tee4c2cfd = base58
+
+# base32
+t5c46c9f9 = base32
+
+# Quoted-printable
+t1f2024f7 = Quoted-printable
+
 # Version
 t5dcdd537 = Versi
 
@@ -2899,9 +2935,6 @@ t8d20daf3 = Lengkap
 # The IPv4 in it
 tc1fb8957 = IPv4 di dalamnya
 
-# What it is
-t065b8fa0 = Apa ini
-
 # From
 t18743595 = Dari
 
@@ -2997,9 +3030,6 @@ t9dcf716c = SHA-512 crypt
 
 # What it holds
 tff372c62 = Apa isinya
-
-# How much
-td909a26a = Berapa banyak
 
 # {size} of DER
 tbfdcf758 = { $size } DER

@@ -2872,6 +2872,42 @@ t195b3db9 = Текст с escape-последовательностями
 # HTML entities
 t54958ecb = HTML-сущности
 
+# Ascii85
+td69511f7 = Ascii85
+
+# z85
+t6c0d8dce = z85
+
+# a Bitcoin address
+t7b0efb3e = адрес Bitcoin
+
+# a Bitcoin script address
+te6f3988d = адрес скрипта Bitcoin
+
+# a Bitcoin private key
+td594ad36 = приватный ключ Bitcoin
+
+# version {version}
+tbb1843f1 = версия { $version }
+
+# base58check
+t8f5cfb6f = base58check
+
+# What it is
+t065b8fa0 = Что это
+
+# How much
+td909a26a = Сколько
+
+# base58
+tee4c2cfd = base58
+
+# base32
+t5c46c9f9 = base32
+
+# Quoted-printable
+t1f2024f7 = Quoted-printable
+
 # Version
 t5dcdd537 = Версия
 
@@ -3130,9 +3166,6 @@ t8d20daf3 = Полностью
 # The IPv4 in it
 tc1fb8957 = IPv4 внутри
 
-# What it is
-t065b8fa0 = Что это
-
 # From
 t18743595 = От
 
@@ -3228,9 +3261,6 @@ t9dcf716c = SHA-512 crypt
 
 # What it holds
 tff372c62 = Что внутри
-
-# How much
-td909a26a = Сколько
 
 # {size} of DER
 tbfdcf758 = { $size } DER
