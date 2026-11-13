@@ -2380,6 +2380,9 @@ t2af18488 = Окно
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Настройка, Трафик, Правила, На паузе, Конструктор, Сессии, Настройки
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = Назад или вперёд, как боковые кнопки мыши
+
 # Show or hide the sidebar
 t67adca04 = Показать или скрыть боковую панель
 

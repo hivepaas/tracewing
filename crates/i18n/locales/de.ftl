@@ -2298,6 +2298,9 @@ t2af18488 = Das Fenster
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Einrichten, Traffic, Regeln, Angehalten, Erstellen, Sitzungen, Einstellungen
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = Zurück oder vor, wie die Maustasten dafür
+
 # Show or hide the sidebar
 t67adca04 = Seitenleiste ein- oder ausblenden
 

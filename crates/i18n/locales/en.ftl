@@ -876,6 +876,7 @@ t16f7abb5 = Send it on as it was
 t4e7f48b9 = Drop it
 t2af18488 = The window
 t9df89562 = Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
+tad71f882 = Back or forward, as the mouse's own buttons do
 t67adca04 = Show or hide the sidebar
 ta5a7b9e9 = Show or hide the inspector
 t51e214f7 = The inspector beside the list or below it
