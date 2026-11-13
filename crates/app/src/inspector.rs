@@ -2016,6 +2016,17 @@ impl Traffic {
     /// The same by the piece rather than by where it was pressed, which is
     /// what a press becomes and what a test can hand over.
     pub fn read_piece(&mut self, sel: &Selection, piece: u64, cx: &mut Context<Self>) {
+        // A press that opened a menu is not a press on a value. Reading one
+        // builds the pane again, and the menu would go with it -- which is
+        // the menu opening and shutting in the same click.
+        if self
+            .inspector
+            .reads
+            .as_ref()
+            .is_some_and(|reads| reads.menu.is_some())
+        {
+            return;
+        }
         let Some(text) = sel.text_of(piece) else {
             return;
         };
@@ -2570,6 +2581,9 @@ impl Traffic {
                 .on_mouse_down(
                     MouseButton::Left,
                     cx.listener(move |this, e: &MouseDownEvent, _, cx| {
+                        // The press belongs to the menu, not to the text
+                        // under it: it does not start a selection.
+                        cx.stop_propagation();
                         this.ask_menu(Some((at, None, e.position)), cx);
                     }),
                 )
