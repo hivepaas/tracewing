@@ -304,11 +304,41 @@ impl Traffic {
                 }
                 if let Some(body) = file.and_then(|path| Body::open(&path).ok()) {
                     let focus = this.focus.clone();
+                    // Taken before the messages are borrowed, since both are
+                    // the inspector's.
+                    let rules = this.inspector.remembered.clone();
+                    let host = this.inspector.host();
+                    let marks_on = this.inspector.marks_on.clone();
                     let Some(state) = this.inspector.messages.as_mut() else {
                         return;
                     };
                     let re = state.find.as_ref().map(|find| find.re.clone());
+                    // What a message holds is read as any other body is: the
+                    // rules of this host, the underline Settings asks for,
+                    // and a way to ask the window for the readings pane.
+                    let opens = {
+                        let me = cx.entity().downgrade();
+                        std::rc::Rc::new(
+                            move |what: crate::bodyview::ToOpen, cx: &mut gpui::App| {
+                                let _ = me.update(cx, |this: &mut Traffic, cx| match what {
+                                    crate::bodyview::ToOpen::Reading(reading, from) => {
+                                        this.open_reading(&reading, &from, cx);
+                                    }
+                                    crate::bodyview::ToOpen::WholeLine { line, text } => {
+                                        this.open_line(line, &text, cx);
+                                    }
+                                    crate::bodyview::ToOpen::Value { text, field } => {
+                                        this.read_value(text, field, cx);
+                                    }
+                                });
+                            },
+                        ) as crate::bodyview::Opens
+                    };
                     let view = cx.new(|cx| BodyView::new(body, None, focus, cx));
+                    view.update(cx, |view, _| {
+                        view.set_rules(rules, host, marks_on);
+                        view.on_open_reading(opens);
+                    });
                     if re.is_some() {
                         view.update(cx, |view, cx| view.set_find(re, cx));
                     }

@@ -780,6 +780,9 @@ t4df6b638 = Okumalar
 # Close the readings
 t60beaefd = Okumaları kapat
 
+# a guess
+t6af47169 = tahmin
+
 # Read from {from}
 t6d510d3d = { $from } içinden okundu
 

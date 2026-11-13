@@ -1701,7 +1701,7 @@ impl Traffic {
     /// so that the value and what it was read as are in view together.
     fn render_part(&mut self, detail: &Detail, cx: &mut Context<Self>) -> Div {
         let shown = self.render_part_alone(detail, cx);
-        if self.inspector.reads.is_none() || self.inspector.part != Part::Body {
+        if self.inspector.reads.is_none() {
             return shown;
         }
         div()
@@ -1979,6 +1979,38 @@ fn body_well(well: Div, state: &BodyState) -> Div {
 }
 
 impl Traffic {
+    /// Reads the piece under `point` in the pane: a header's value, a field
+    /// of a call, a part of a message. The piece is the value in these
+    /// views, so there is nothing to work out about where it begins.
+    pub fn read_piece_at(
+        &mut self,
+        sel: &Selection,
+        point: gpui::Point<gpui::Pixels>,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(spot) = sel.spot_at(point) {
+            self.read_piece(sel, spot.piece, cx);
+        }
+    }
+
+    /// The same by the piece rather than by where it was pressed, which is
+    /// what a press becomes and what a test can hand over.
+    pub fn read_piece(&mut self, sel: &Selection, piece: u64, cx: &mut Context<Self>) {
+        let Some(text) = sel.text_of(piece) else {
+            return;
+        };
+        let field = sel.field_of(piece).map(|field| field.to_string());
+        let text = text.to_string();
+        sel.select(
+            select::Spot { piece, at: 0 },
+            select::Spot {
+                piece,
+                at: text.len(),
+            },
+        );
+        self.read_value(text, field, cx);
+    }
+
     /// Reads a value beside the body: every way it can be read, the first of
     /// them shown. Pressing another value moves the pane to it.
     ///
@@ -2007,7 +2039,6 @@ impl Traffic {
             at: 0,
             opened,
         });
-        self.inspector.part = Part::Body;
         cx.notify();
     }
 
@@ -2189,7 +2220,7 @@ impl Traffic {
         let value = cut_to(&reads.value, 300);
         let field = reads.field.clone();
         let at = reads.at;
-        let ways: Vec<(usize, String, String, bool)> = reads
+        let ways: Vec<(usize, String, String, bool, bool)> = reads
             .found
             .iter()
             .enumerate()
@@ -2199,7 +2230,11 @@ impl Traffic {
                 } else {
                     String::new()
                 };
-                (n, reading.label.clone(), chain, n == at)
+                // A guess is said to be one: twenty bytes of hex are a hash
+                // by their size and an address by where they are, and a
+                // reader has to be able to tell which they are being shown.
+                let guess = reading.confidence == tracewing_convert::Confidence::Possible;
+                (n, reading.label.clone(), chain, n == at, guess)
             })
             .collect();
         let chosen = reads.found.get(at).cloned();
@@ -2309,7 +2344,7 @@ impl Traffic {
                             .px(ui(6.))
                             .pb(ui(6.))
                             .gap(ui(2.))
-                            .children(ways.into_iter().map(|(n, label, chain, now)| {
+                            .children(ways.into_iter().map(|(n, label, chain, now, guess)| {
                                 div()
                                     .id(("way", n))
                                     .px(ui(6.))
@@ -2322,7 +2357,17 @@ impl Traffic {
                                     .when(!now, |d| {
                                         d.text_color(rgb(c.text)).hover(|s| s.bg(rgb(c.chip)))
                                     })
-                                    .child(label)
+                                    .child(div().flex().flex_row().gap(ui(6.)).child(label).when(
+                                        guess,
+                                        |d| {
+                                            d.child(
+                                                div()
+                                                    .text_size(ui(10.5))
+                                                    .text_color(rgb(c.muted))
+                                                    .child(tr!("a guess")),
+                                            )
+                                        },
+                                    ))
                                     .when(!chain.is_empty(), |d| {
                                         d.child(
                                             div()
@@ -2610,9 +2655,20 @@ impl Traffic {
                 r3(cx);
             })
         });
-        let (press, menu_at) = (sel.clone(), sel.clone());
+        let (press, menu_at, pressed) = (sel.clone(), sel.clone(), sel.clone());
         view.relative()
             .cursor(gpui::CursorStyle::IBeam)
+            .on_mouse_up(
+                MouseButton::Left,
+                cx.listener(move |this, e: &gpui::MouseUpEvent, _, cx| {
+                    // A press that went nowhere: the piece under it is the
+                    // value, so it is taken whole and read. A drag is left
+                    // alone -- what was dragged is what was meant.
+                    if e.click_count == 1 && pressed.is_empty() {
+                        this.read_piece_at(&pressed, e.position, cx);
+                    }
+                }),
+            )
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, e: &MouseDownEvent, window, cx| {

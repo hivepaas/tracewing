@@ -751,6 +751,9 @@ t4df6b638 = 解读
 # Close the readings
 t60beaefd = 关闭解读
 
+# a guess
+t6af47169 = 推测
+
 # Read from {from}
 t6d510d3d = 读自 { $from }
 

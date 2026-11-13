@@ -751,6 +751,9 @@ t4df6b638 = Cách đọc
 # Close the readings
 t60beaefd = Đóng phần đọc
 
+# a guess
+t6af47169 = phỏng đoán
+
 # Read from {from}
 t6d510d3d = Đọc từ { $from }
 

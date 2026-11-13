@@ -290,6 +290,7 @@ t17d1ec47 = The whole line
 t1942c7ae = line { $number }
 t4df6b638 = Readings
 t60beaefd = Close the readings
+t6af47169 = a guess
 t6d510d3d = Read from { $from }
 t3506a32c = Back to the body
 t8c2c37b1 = No response

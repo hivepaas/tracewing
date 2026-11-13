@@ -802,6 +802,9 @@ t4df6b638 = Прочитання
 # Close the readings
 t60beaefd = Закрити прочитання
 
+# a guess
+t6af47169 = здогад
+
 # Read from {from}
 t6d510d3d = Прочитано з { $from }
 

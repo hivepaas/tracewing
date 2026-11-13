@@ -786,6 +786,9 @@ t4df6b638 = Letture
 # Close the readings
 t60beaefd = Chiudi le letture
 
+# a guess
+t6af47169 = un'ipotesi
+
 # Read from {from}
 t6d510d3d = Letto da { $from }
 
