@@ -577,6 +577,36 @@ te9ed60a6 = Помилки
 # Media
 td10fcaa3 = Медіа
 
+# Find
+t3e1cd17a = Знайти
+
+# Not found
+t66d1107a = Не знайдено
+
+# Looking…
+t284579ba = Пошук…
+
+# {now} of {count}
+tb689f139 = { $now } з { $count }
+
+# Match case
+t2034fd8e = Враховувати регістр
+
+# Whole word
+t1d601c34 = Слово цілком
+
+# Regular expression
+t3f9a29fb = Регулярний вираз
+
+# The one before (Shift+Enter)
+t956e28b3 = Попереднє (Shift+Enter)
+
+# The next (Enter)
+t0c8af534 = Наступне (Enter)
+
+# Close (Esc)
+t653214db = Закрити (Esc)
+
 # Rule: {rule}
 teca2074f = Правило: { $rule }
 
@@ -720,6 +750,9 @@ tfa6e7203 = Форма { $form }
 
 # Connection
 t09ea4ff9 = З’єднання
+
+# Find in the body (Ctrl+F)
+tb52d85cd = Знайти в тілі (Ctrl+F)
 
 # Save body
 te2c44424 = Зберегти тіло
@@ -2185,9 +2218,6 @@ tc5bba858 = Довіряє сертифікату.
 # Does not trust the certificate yet.
 tf2a0b8c5 = Поки не довіряє сертифікату.
 
-# Looking…
-t284579ba = Пошук…
-
 # Has no profile yet. Open it once, then look again.
 t00e4c88d = Профілю ще немає. Відкрийте браузер один раз, потім пошукайте знову.
 
@@ -2419,8 +2449,8 @@ t7e278a00 = Перший або останній потік
 # A page up or down
 t23b1814b = На сторінку вгору або вниз
 
-# Filter
-tf4a9c097 = Фільтр
+# Filter the list; after a press in the inspector, find in it
+t05e6ebf7 = Фільтр списку; після клацання в інспекторі — пошук у ньому
 
 # Pause or resume recording
 t6e21519a = Призупинити або відновити запис
@@ -2532,6 +2562,9 @@ t00d0cf30 = host:, status:4xx або текст у тілах
 
 # A name, as iPhone test
 t19f89214 = Назва, наприклад Тестовий iPhone
+
+# Filter
+tf4a9c097 = Фільтр
 
 # A name, as Phone
 tfce439bf = Назва, наприклад Phone

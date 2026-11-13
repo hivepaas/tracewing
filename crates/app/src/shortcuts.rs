@@ -187,7 +187,10 @@ pub fn list() -> Vec<Group> {
                 ("up / down", tr!("Choose the flow above or below")),
                 ("home / end", tr!("The first or the last flow")),
                 ("pageup / pagedown", tr!("A page up or down")),
-                ("mod+f", tr!("Filter")),
+                (
+                    "mod+f",
+                    tr!("Filter the list; after a press in the inspector, find in it"),
+                ),
                 ("mod+r", tr!("Pause or resume recording")),
                 ("mod+k", tr!("Clear the list")),
                 (

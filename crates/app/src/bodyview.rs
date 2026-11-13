@@ -3,6 +3,11 @@
 //! pixel offset in an `f32` can tell apart: `uniform_list`'s step grows to 8 px at
 //! 6 million lines of 20 px.
 
+mod find;
+
+use find::found_style;
+pub use find::{FOUND_MAX, FindCount};
+
 use crate::scrollbar::Scrolled;
 use crate::text_size::ui;
 use crate::{
@@ -253,6 +258,10 @@ pub struct BodyView {
     /// A character's width in the table, at the design's size: measured in
     /// the code font as it draws.
     table_char_w: f32,
+    /// What Find looks for here and has found, if it is open.
+    find: Option<find::Found>,
+    /// Which search is the latest: an older one still running stops.
+    find_gen: u64,
 }
 
 impl BodyView {
@@ -302,6 +311,8 @@ impl BodyView {
             table_bar,
             table_menu_cell: None,
             table_char_w: 7.4,
+            find: None,
+            find_gen: 0,
         }
     }
 
@@ -883,6 +894,8 @@ impl BodyView {
         self.select.clear();
         self.top = 0;
         self.sub = 0.;
+        // What Find found was in the other mode's text.
+        self.find_again(cx);
         cx.notify();
     }
 
@@ -1006,12 +1019,15 @@ impl BodyView {
 
     /// A line, or with text wrapped one row of it: `key` tells it from the
     /// rest for selecting, and only a line's first row has its number.
+    /// `from` is where `shown` starts in its line: past 0 for a wrapped row.
+    #[allow(clippy::too_many_arguments)]
     fn render_line(
         &self,
         line: u64,
         key: u64,
         number: Option<u64>,
         shown: Line,
+        from: usize,
         mark: FoldMark,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
@@ -1040,6 +1056,10 @@ impl BodyView {
             && let Some(at) = self.marked(key, &shown.text)
         {
             highlights = combine_highlights(highlights, [(at, reading::underlined())]).collect();
+        }
+        // What Find found here, the one it is at brighter.
+        for (range, now) in self.found_in(line, from, &shown.text) {
+            highlights = combine_highlights(highlights, [(range, found_style(now))]).collect();
         }
         let text: SharedString = shown.text.into();
         let folded = matches!(mark, FoldMark::Folded(..));
@@ -1247,6 +1267,7 @@ impl BodyView {
                             wrap::key(line, row),
                             number.filter(|_| row == 0),
                             part,
+                            from,
                             FoldMark::None,
                             cx,
                         )
@@ -1305,7 +1326,7 @@ impl BodyView {
                     None => FoldMark::None,
                 };
                 shown.push(
-                    self.render_line(at, at, Some(at + 1), text, mark, cx)
+                    self.render_line(at, at, Some(at + 1), text, 0, mark, cx)
                         .into_any_element(),
                 );
             }
@@ -1321,6 +1342,7 @@ impl Render for BodyView {
             Some(table) if self.mode() == BodyMode::Table => {
                 // As wide as the code font's letters, whichever it is.
                 let scale = crate::text_size::scale(window);
+                self.scale = scale;
                 self.table_char_w = mono_char_w(window, 12. * scale) / scale;
                 self.render_table(table, cx).into_any_element()
             }
@@ -1525,11 +1547,15 @@ impl BodyView {
                             .whitespace_nowrap()
                             .border_l_1()
                             .border_color(rgb(c.line))
-                            .child(self.select.piece_at(
-                                self.cell_key(row, i),
-                                shown.into(),
-                                Vec::new(),
-                            ))
+                            .child({
+                                let key = self.cell_key(row, i);
+                                let found = self
+                                    .found_in_cell(key, &shown)
+                                    .into_iter()
+                                    .map(|(range, now)| (range, found_style(now)))
+                                    .collect();
+                                self.select.piece_at(key, shown.into(), found)
+                            })
                     }))
                     .into_any_element()
             })

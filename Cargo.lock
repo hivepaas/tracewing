@@ -8334,6 +8334,7 @@ dependencies = [
  "prost",
  "prost-types",
  "qrcode",
+ "regex",
  "reqwest",
  "rmpv",
  "rusqlite",

@@ -23,6 +23,8 @@ pub mod engine;
 pub mod fields;
 pub mod files;
 pub mod filter;
+pub mod find;
+pub mod find_bar;
 pub mod flows;
 pub mod graphql_view;
 pub mod grpc;

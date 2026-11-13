@@ -555,6 +555,36 @@ te9ed60a6 = Hatalar
 # Media
 td10fcaa3 = Medya
 
+# Find
+t3e1cd17a = Bul
+
+# Not found
+t66d1107a = Bulunamadı
+
+# Looking…
+t284579ba = Aranıyor…
+
+# {now} of {count}
+tb689f139 = { $now } / { $count }
+
+# Match case
+t2034fd8e = Büyük/küçük harf duyarlı
+
+# Whole word
+t1d601c34 = Tam sözcük
+
+# Regular expression
+t3f9a29fb = Düzenli ifade
+
+# The one before (Shift+Enter)
+t956e28b3 = Önceki (Shift+Enter)
+
+# The next (Enter)
+t0c8af534 = Sonraki (Enter)
+
+# Close (Esc)
+t653214db = Kapat (Esc)
+
 # Rule: {rule}
 teca2074f = Kural: { $rule }
 
@@ -698,6 +728,9 @@ tfa6e7203 = Form { $form }
 
 # Connection
 t09ea4ff9 = Bağlantı
+
+# Find in the body (Ctrl+F)
+tb52d85cd = Gövdede bul (Ctrl+F)
 
 # Save body
 te2c44424 = Gövdeyi kaydet
@@ -2065,9 +2098,6 @@ tc5bba858 = Sertifikaya güveniyor.
 # Does not trust the certificate yet.
 tf2a0b8c5 = Sertifikaya henüz güvenmiyor.
 
-# Looking…
-t284579ba = Aranıyor…
-
 # Has no profile yet. Open it once, then look again.
 t00e4c88d = Henüz profili yok. Bir kez açın, sonra yeniden arayın.
 
@@ -2295,8 +2325,8 @@ t7e278a00 = İlk ya da son akış
 # A page up or down
 t23b1814b = Bir sayfa yukarı ya da aşağı
 
-# Filter
-tf4a9c097 = Filtrele
+# Filter the list; after a press in the inspector, find in it
+t05e6ebf7 = Listeyi süz; denetçiye tıkladıktan sonra onun içinde bul
 
 # Pause or resume recording
 t6e21519a = Kaydı duraklat ya da sürdür
@@ -2408,6 +2438,9 @@ t00d0cf30 = host:, status:4xx, ya da gövdelerde metin
 
 # A name, as iPhone test
 t19f89214 = Bir ad, örneğin iPhone test
+
+# Filter
+tf4a9c097 = Filtrele
 
 # A name, as Phone
 tfce439bf = Bir ad, örneğin Phone

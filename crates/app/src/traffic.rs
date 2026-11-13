@@ -390,6 +390,9 @@ pub struct Traffic {
     /// The font families on this computer, read once when a font chosen in
     /// Settings needs them.
     pub(crate) installed_fonts: Option<Vec<String>>,
+    /// The inspector was pressed in last, rather than the list: Ctrl+F then
+    /// finds in it.
+    pub(crate) inspector_active: bool,
     /// Those of them whose letters are all as wide: what Settings offers for
     /// code.
     pub(crate) mono_fonts: Option<Vec<String>>,
@@ -550,6 +553,7 @@ impl Traffic {
             }),
             going: false,
             installed_fonts: None,
+            inspector_active: false,
             mono_fonts: None,
             network_form: None,
             ids: None,
@@ -1588,6 +1592,11 @@ impl Traffic {
     }
 
     /// The body text size chosen, in px: the design's unless Settings say.
+    /// What the list is filtered by, as typed.
+    pub(crate) fn filter_text(&self, cx: &gpui::App) -> String {
+        self.filter_input.read(cx).text().to_owned()
+    }
+
     /// The font families on this computer, read once.
     pub(crate) fn installed_fonts(&mut self, window: &Window) -> &[String] {
         self.installed_fonts
@@ -1725,11 +1734,25 @@ impl Traffic {
             Action::Close if self.shortcuts_open => self.set_shortcuts(false, cx),
             Action::Close if self.layouts_menu => self.set_layouts_menu(false, cx),
             Action::Close if self.close_copy_menu(cx) => {}
+            // The bar opened last is what Esc means, before the rest.
+            Action::Close if self.inspector.find.is_some() && self.screen == Screen::Traffic => {
+                self.close_find(window, cx)
+            }
             Action::Close if self.compare_pick.is_some() => self.cancel_compare(cx),
             Action::Close if self.screen == Screen::Compare => self.set_screen(Screen::Traffic, cx),
             Action::Close if self.close_message(cx) => {}
             Action::Close => return false,
             Action::Shortcuts => self.set_shortcuts(!self.shortcuts_open, cx),
+            // Pressed in the inspector last: Find in its body, opened or closed,
+            // not the list's filter.
+            Action::Filter
+                if self.inspector_active
+                    && self.screen == Screen::Traffic
+                    && self.inspector.part == crate::inspector::Part::Body
+                    && matches!(self.inspector.body, crate::inspector::BodyState::Shown(_)) =>
+            {
+                self.toggle_find(window, cx)
+            }
             Action::Filter => {
                 self.set_screen(Screen::Traffic, cx);
                 let handle = self.filter_input.read(cx).focus_handle(cx);
@@ -2923,6 +2946,9 @@ impl Render for Traffic {
             .track_focus(&self.focus)
             .key_context("Traffic")
             .on_key_down(cx.listener(Self::on_key))
+            // A press anywhere but the inspector makes Ctrl+F the list's again;
+            // the inspector says otherwise for itself, after this.
+            .capture_any_mouse_down(cx.listener(|this, _, _, _| this.inspector_active = false))
             .on_mouse_move(cx.listener(Self::on_mouse_move))
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
             // The mouse's own back and forward buttons, as in a browser.
