@@ -136,6 +136,9 @@ tbdecf3c8 = 행 복사
 # Copy column
 te26431fe = 열 복사
 
+# Open this line
+t9bc3ec63 = 이 줄 열기
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } 읽는 방식 잊기
 
@@ -684,6 +687,12 @@ t1e92fb27 = 이 이미지를 표시할 수 없습니다. 본문을 저장해서 
 
 # Opening…
 tc40f2321 = 여는 중…
+
+# The whole line
+t17d1ec47 = 줄 전체
+
+# line {number}
+t1942c7ae = { $number }번째 줄
 
 # Read from {from}
 t6d510d3d = { $from }에서 읽음

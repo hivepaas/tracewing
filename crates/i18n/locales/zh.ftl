@@ -136,6 +136,9 @@ tbdecf3c8 = 复制行
 # Copy column
 te26431fe = 复制列
 
+# Open this line
+t9bc3ec63 = 打开这一行
+
 # Forget how {field} is read
 tdb2d6aa8 = 忘记 { $field } 的解读方式
 
@@ -684,6 +687,12 @@ t1e92fb27 = 无法显示此图片。请保存正文后查看。
 
 # Opening…
 tc40f2321 = 正在打开…
+
+# The whole line
+t17d1ec47 = 整行
+
+# line {number}
+t1942c7ae = 第 { $number } 行
 
 # Read from {from}
 t6d510d3d = 读自 { $from }

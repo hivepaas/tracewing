@@ -32,9 +32,16 @@ use std::{
 use tracewing_convert::Reading;
 use tracewing_i18n::{tr, tr_n};
 
-/// What opens a reading that holds a body of its own: the reading, the field
-/// or line it was read from, and the window to open it in.
-pub type OpensReading = Rc<dyn Fn(Reading, String, &mut gpui::App)>;
+/// What a body view asks the window to open in a pane of its own.
+pub enum ToOpen {
+    /// A reading that holds a body, and the field or line it was read from.
+    Reading(Reading, String),
+    /// A line too long to be shown whole, by its number and its whole text.
+    WholeLine { line: u64, text: String },
+}
+
+/// What opens one: a body view has no pane of its own, so it asks the window.
+pub type Opens = Rc<dyn Fn(ToOpen, &mut gpui::App)>;
 
 pub const LINE_HEIGHT: f32 = 20.;
 /// How many lines' worth of "is this worth reading" to keep. A reader who has
@@ -214,9 +221,13 @@ pub struct BodyView {
     /// Which pieces hold a value worth saying something about, by piece. The
     /// same reason, and the same answer kept.
     marks: RefCell<HashMap<u64, bool>>,
+    /// The line the right-click menu was opened over, which `Open this line`
+    /// opens. A line wider than the panel is cut by the panel, not by the
+    /// reading, so it carries no note saying there is more.
+    menu_line: Option<u64>,
     /// What to call to open a reading that holds a body of its own. A body
     /// view has no pane to put one in; the window does.
-    opens: Option<OpensReading>,
+    opens: Option<Opens>,
     /// CSV or TSV read as a table, which [`BodyMode::Table`] shows.
     table: Option<Arc<Table>>,
     table_scroll: UniformListScrollHandle,
@@ -263,6 +274,7 @@ impl BodyView {
             marks_on: reading::MarksOn::default(),
             by_rule: RefCell::new((0, HashMap::new())),
             marks: RefCell::new(HashMap::new()),
+            menu_line: None,
             opens: None,
             table: None,
             table_scroll,
@@ -490,6 +502,7 @@ impl BodyView {
     fn close_menu(&mut self) {
         self.select.set_menu(None);
         self.readings = Vec::new();
+        self.menu_line = None;
     }
 
     /// The selection read, as far as it is worth reading: past
@@ -534,7 +547,7 @@ impl BodyView {
     }
 
     /// What to call when a reading holds a body of its own.
-    pub fn on_open_reading(&mut self, opens: OpensReading) {
+    pub fn on_open_reading(&mut self, opens: Opens) {
         self.opens = Some(opens);
     }
 
@@ -632,6 +645,19 @@ impl BodyView {
                 cx.notify();
             }
         }
+        true
+    }
+
+    /// Opens the whole of a line the view had to cut, in a pane of its own.
+    /// False where there is nowhere to open it or nothing to open.
+    pub fn open_whole_line(&mut self, line: u64, cx: &mut gpui::App) -> bool {
+        let Some(opens) = self.opens.clone() else {
+            return false;
+        };
+        let Some(text) = self.shown().read_whole(line..line + 1).pop() else {
+            return false;
+        };
+        opens(ToOpen::WholeLine { line, text }, cx);
         true
     }
 
@@ -950,12 +976,21 @@ impl BodyView {
             .overflow_hidden()
             .child(
                 div()
+                    .id(("number", key))
                     .w(ui(GUTTER_W))
                     .flex_shrink_0()
                     .pr_1()
                     .flex()
                     .justify_end()
                     .text_color(rgb(colors().faint))
+                    .when(self.opens.is_some() && !number.is_empty(), |d| {
+                        d.cursor_pointer()
+                            .hover(|s| s.text_color(rgb(colors().link)))
+                            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                this.open_whole_line(line, cx);
+                            }))
+                    })
                     .child(number),
             )
             .child({
@@ -1018,12 +1053,24 @@ impl BodyView {
             );
         }
         if shown.cut > 0 {
+            // The rest of the line is not lost, only not drawn: a click opens
+            // the whole of it in a pane, where text wraps.
+            let opens = self.opens.clone();
             row = row.child(
                 div()
+                    .id(("cut", key))
                     .flex_shrink_0()
                     .pl_2()
                     .text_color(rgb(colors().faint))
-                    .child(tr!("… {size} more", size = size_text(shown.cut))),
+                    .when(opens.is_some(), |d| {
+                        d.cursor_pointer()
+                            .hover(|s| s.text_color(rgb(colors().link)))
+                    })
+                    .child(tr!("… {size} more", size = size_text(shown.cut)))
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.open_whole_line(line, cx);
+                    })),
             );
         }
         // What the reader asked to see of this piece: the time a number is,
@@ -1567,7 +1614,7 @@ impl BodyView {
                     this.close_menu();
                 });
                 if let Some((opens, reading, from)) = opened {
-                    opens(reading, from, cx);
+                    opens(ToOpen::Reading(reading, from), cx);
                 }
             }));
             let copied = me.clone();
@@ -1577,6 +1624,22 @@ impl BodyView {
                     cx.notify();
                 });
             }));
+            // Any line at all can be opened whole, not only one the reading
+            // had to cut: a line wider than the panel is cut by the panel,
+            // and says nothing about it.
+            if let Some(line) = self.menu_line.filter(|_| self.opens.is_some()) {
+                let open = me.clone();
+                items.push(select::Item::new(
+                    "open-line",
+                    tr!("Open this line"),
+                    Some(Rc::new(move |_: &mut Window, cx: &mut gpui::App| {
+                        let _ = open.update(cx, |this, cx| {
+                            this.close_menu();
+                            this.open_whole_line(line, cx);
+                        });
+                    }) as select::Act),
+                ));
+            }
             // Always, and never again: a rule for the field this value sits
             // under, on the host this body came from.
             if let Some(field) = self.selected_field() {
@@ -1686,6 +1749,10 @@ impl BodyView {
                     window.focus(&this.focus, cx);
                     this.select.set_menu(Some(e.position));
                     this.readings = this.read_selection();
+                    this.menu_line = this
+                        .select
+                        .spot_at(e.position)
+                        .map(|spot| this.line_spot(spot).0);
                     cx.notify();
                 }),
             )

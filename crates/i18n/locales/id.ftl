@@ -136,6 +136,9 @@ tbdecf3c8 = Salin baris
 # Copy column
 te26431fe = Salin kolom
 
+# Open this line
+t9bc3ec63 = Buka baris ini
+
 # Forget how {field} is read
 tdb2d6aa8 = Lupakan cara { $field } dibaca
 
@@ -684,6 +687,12 @@ t1e92fb27 = Gambar ini tidak bisa ditampilkan. Simpan body-nya untuk melihatnya.
 
 # Opening…
 tc40f2321 = Membuka…
+
+# The whole line
+t17d1ec47 = Seluruh baris
+
+# line {number}
+t1942c7ae = baris { $number }
 
 # Read from {from}
 t6d510d3d = Dibaca dari { $from }

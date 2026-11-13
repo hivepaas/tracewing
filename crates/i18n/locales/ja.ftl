@@ -136,6 +136,9 @@ tbdecf3c8 = 行をコピー
 # Copy column
 te26431fe = 列をコピー
 
+# Open this line
+t9bc3ec63 = この行を開く
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } の読み方を忘れる
 
@@ -684,6 +687,12 @@ t1e92fb27 = この画像は表示できません。ボディを保存して確�
 
 # Opening…
 tc40f2321 = 開いています…
+
+# The whole line
+t17d1ec47 = 行全体
+
+# line {number}
+t1942c7ae = { $number } 行目
 
 # Read from {from}
 t6d510d3d = { $from } から読み取り

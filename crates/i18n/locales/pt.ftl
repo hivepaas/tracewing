@@ -146,6 +146,9 @@ tbdecf3c8 = Copiar linha
 # Copy column
 te26431fe = Copiar coluna
 
+# Open this line
+t9bc3ec63 = Abrir esta linha
+
 # Forget how {field} is read
 tdb2d6aa8 = Esquecer como { $field } é lido
 
@@ -719,6 +722,12 @@ t1e92fb27 = Esta imagem não pode ser exibida. Salve o corpo para vê-la.
 
 # Opening…
 tc40f2321 = Abrindo…
+
+# The whole line
+t17d1ec47 = A linha inteira
+
+# line {number}
+t1942c7ae = linha { $number }
 
 # Read from {from}
 t6d510d3d = Lido de { $from }

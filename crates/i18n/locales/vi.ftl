@@ -136,6 +136,9 @@ tbdecf3c8 = Sao chép hàng
 # Copy column
 te26431fe = Sao chép cột
 
+# Open this line
+t9bc3ec63 = Mở dòng này
+
 # Forget how {field} is read
 tdb2d6aa8 = Quên cách đọc { $field }
 
@@ -684,6 +687,12 @@ t1e92fb27 = Không vẽ được hình này. Hãy lưu body để xem.
 
 # Opening…
 tc40f2321 = Đang mở…
+
+# The whole line
+t17d1ec47 = Nguyên dòng
+
+# line {number}
+t1942c7ae = dòng { $number }
 
 # Read from {from}
 t6d510d3d = Đọc từ { $from }

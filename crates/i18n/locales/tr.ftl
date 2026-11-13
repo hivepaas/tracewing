@@ -144,6 +144,9 @@ tbdecf3c8 = Satırı kopyala
 # Copy column
 te26431fe = Sütunu kopyala
 
+# Open this line
+t9bc3ec63 = Bu satırı aç
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } nasıl okunduğunu unut
 
@@ -713,6 +716,12 @@ t1e92fb27 = Bu resim çizilemiyor. Görmek için gövdeyi kaydedin.
 
 # Opening…
 tc40f2321 = Açılıyor…
+
+# The whole line
+t17d1ec47 = Satırın tamamı
+
+# line {number}
+t1942c7ae = satır { $number }
 
 # Read from {from}
 t6d510d3d = { $from } içinden okundu

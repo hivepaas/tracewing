@@ -144,6 +144,9 @@ tbdecf3c8 = Zeile kopieren
 # Copy column
 te26431fe = Spalte kopieren
 
+# Open this line
+t9bc3ec63 = Diese Zeile öffnen
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } nicht mehr so lesen
 
@@ -713,6 +716,12 @@ t1e92fb27 = Dieses Bild kann nicht dargestellt werden. Speichern Sie den Body, u
 
 # Opening…
 tc40f2321 = Wird geöffnet…
+
+# The whole line
+t17d1ec47 = Die ganze Zeile
+
+# line {number}
+t1942c7ae = Zeile { $number }
 
 # Read from {from}
 t6d510d3d = Gelesen aus { $from }
