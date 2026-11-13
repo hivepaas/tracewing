@@ -1265,6 +1265,21 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
         .unwrap();
     assert_eq!(selected.trim_matches('"'), value, "what a copy would take");
     shot(&mut cx, window.into(), "123-readings-pane");
+    // And in the dark, where a pane that is a different ground from the
+    // body beside it shows up as two kinds of panel rather than one.
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.set_appearance(tracewing::layout::Appearance::Dark, window, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "127-readings-pane-in-the-dark");
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.set_appearance(tracewing::layout::Appearance::Light, window, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
 
     // Another way of reading the same value, chosen in the pane.
     window

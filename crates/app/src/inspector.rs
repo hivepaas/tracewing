@@ -2286,7 +2286,10 @@ impl Traffic {
                     .flex_col()
                     .rounded(ui(16.))
                     .overflow_hidden()
-                    .bg(rgb(c.surface))
+                    // The ground a body is read on, so the pane and the body
+                    // beside it are one surface with a gap between them
+                    // rather than two kinds of panel.
+                    .bg(rgb(c.code))
                     .child(
                         div()
                             .flex()
