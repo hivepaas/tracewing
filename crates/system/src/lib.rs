@@ -61,6 +61,10 @@ use std::{
 use tracewing_proxy::ca::LocalCa;
 
 const JOURNAL_FILE: &str = "sysproxy.journal";
+/// The second name the watchdog is started under on Windows, beside the
+/// journal: see [`watchdog_program`].
+#[cfg(windows)]
+const WATCHDOG_EXE: &str = "trw-watchdog.exe";
 const WATCHDOG_LOG: &str = "watchdog.log";
 /// The name issued in `verify_ca`; nothing ever connects to it.
 const PROBE_HOST: &str = "probe.invalid";
@@ -370,6 +374,8 @@ pub fn watchdog(data_dir: &Path) -> Result<()> {
 /// same command line as before, `pkill -f tracewing` still finds it, and it
 /// ends of its own accord a second after the app does. What it no longer does
 /// is die in the same breath as the app it is there to clean up after.
+///
+/// Windows comes by the same name another way, in [`watchdog_program`].
 #[cfg(target_os = "linux")]
 fn name_itself() {
     // SAFETY: prctl takes a name of at most 16 bytes, ending in a zero, and
@@ -381,8 +387,54 @@ fn name_itself() {
 #[cfg(not(target_os = "linux"))]
 fn name_itself() {}
 
+/// What to start the watchdog as.
+///
+/// On Linux it renames itself once it is running ([`name_itself`]). Windows
+/// has no such call: a process answers to the name of the file it was started
+/// from, so `taskkill /IM tracewing.exe` would take the watchdog with the app
+/// it is there to clean up after. It is started from a second name for the
+/// same file instead — a hard link where the volume allows one, a copy where
+/// it does not — kept beside the journal and made again whenever the program
+/// it names has changed.
+///
+/// Where none of that can be done, the program's own name: a watchdog that
+/// answers to `tracewing` is still a watchdog, and the timer stands behind it.
+#[cfg(windows)]
+fn watchdog_program(data_dir: &Path) -> Result<PathBuf> {
+    let exe = std::env::current_exe()?;
+    let named = data_dir.join(WATCHDOG_EXE);
+    let same = |a: &fs::Metadata, b: &fs::Metadata| {
+        a.len() == b.len() && a.modified().ok() == b.modified().ok()
+    };
+    match (fs::metadata(&named), fs::metadata(&exe)) {
+        (Ok(there), Ok(now)) if same(&there, &now) => return Ok(named),
+        // There, but of another version: a watchdog that is still running
+        // from it holds the file, and then it is left as it is — old code
+        // doing the one thing it has always done.
+        (Ok(_), _) if fs::remove_file(&named).is_err() => return Ok(named),
+        _ => {}
+    }
+    if fs::hard_link(&exe, &named).is_ok() {
+        return Ok(named);
+    }
+    // Another volume, or a filesystem that keeps no links: the program's size
+    // once, which is the price of a name of its own.
+    match fs::copy(&exe, &named) {
+        Ok(_) => Ok(named),
+        Err(e) => {
+            tracing::warn!("the watchdog goes by tracewing's own name: {e}");
+            Ok(exe)
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn watchdog_program(_data_dir: &Path) -> Result<PathBuf> {
+    Ok(std::env::current_exe()?)
+}
+
 fn spawn_watchdog(data_dir: &Path) -> Result<(Child, ChildStdin)> {
-    let mut command = Command::new(std::env::current_exe()?);
+    let mut command = Command::new(watchdog_program(data_dir)?);
     command
         .arg("watchdog")
         .arg("--data-dir")

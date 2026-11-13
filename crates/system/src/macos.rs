@@ -237,10 +237,27 @@ pub fn disarm_recovery() -> Result<()> {
     }
 }
 
-/// No timer here yet, and no pretence of one: a launchd agent with
-/// `StartInterval` would do what the systemd user timer does on Linux. Until
-/// there is one, a kill that takes the watchdog with it waits for the next
-/// login.
+/// No timer here yet, and no pretence of one. Until there is one, a kill that
+/// takes the watchdog with it waits for the next login.
+///
+/// What it would be, for whoever writes it on a Mac — none of this should be
+/// written blind, which is why it is not written here:
+///
+/// - A second launchd agent beside [`arm_recovery`]'s, with `StartInterval`
+///   60 rather than `RunAtLoad`, running `tracewing recover --only-if-gone`,
+///   written and removed with the setting as the Linux timer is. `launchctl
+///   bootstrap gui/$UID` loads it; `bootout` takes it away.
+/// - The lock it judges by already works here: [`crate::app_is_gone`] is
+///   `flock`, the same as on Linux.
+/// - The watchdog needs a name of its own too, or `pkill tracewing` takes it
+///   with the app. macOS has no `prctl`, so it is Windows' way:
+///   `watchdog_program` in this crate's root, started from a hard link called
+///   `trw-watchdog` beside the journal.
+/// - Two things Linux needed that macOS may not: the timer's own environment
+///   (systemd's user manager is not told what the session knows, and the
+///   command could not find the proxy setting without it), and keeping the
+///   log quiet (a line a minute, for the whole of a session, is noise).
+///   Whatever the Mac turns out to need, say so where it is found.
 pub fn arm_timer(_command: &[String], _journal: &Path) -> Result<()> {
     Ok(())
 }
