@@ -8350,6 +8350,7 @@ dependencies = [
  "tracewing-store",
  "tracewing-system",
  "unicode-segmentation",
+ "unicode-width 0.2.3",
  "x509-parser",
 ]
 
