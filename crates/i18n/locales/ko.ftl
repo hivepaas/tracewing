@@ -2053,6 +2053,12 @@ t99f8c07e = tracewing을 거쳐 HTTPS로 테스트 페이지를 열었습니다.
 # Opened the test page through tracewing, but without HTTPS.
 t7d4b60bb = tracewing을 거쳐 테스트 페이지를 열었지만 HTTPS가 아닙니다.
 
+# Sends localhost and 127.0.0.1 straight to the server, as all of macOS's own networking does: a name under .localhost, such as playground.localhost, comes through tracewing.
+t36665e5c = macOS 자체 네트워크를 쓰는 모든 것처럼 localhost와 127.0.0.1은 서버로 바로 보냅니다. playground.localhost 같은 .localhost 아래 이름은 tracewing을 거칩니다.
+
+# Goes only where the system proxy sends it: nothing of it comes through tracewing until step 2 is on.
+t67bac94a = 시스템 프록시가 보내는 곳으로만 갑니다. 2단계를 켜기 전에는 아무것도 tracewing을 거치지 않습니다.
+
 # Browsers
 td580efd4 = 브라우저
 

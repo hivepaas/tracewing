@@ -28,6 +28,12 @@ make playground          # a server: http://localhost:10000 lists its paths, and
 make playground-trust    # the same, its authority trusted by tracewing first (restart tracewing)
 ```
 
+Safari, and every app on macOS's own networking, sends `localhost` and
+`127.0.0.1` straight to the server whatever the proxy settings say. From Safari,
+with the system proxy on, open `http://playground.localhost:10000` or
+`https://playground.localhost:10443`: a name under `.localhost` goes through the
+proxy and still comes back to this computer.
+
 ## Packages
 
 A build of your own is a binary; a release is a package. On Linux, with

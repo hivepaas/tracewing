@@ -2257,6 +2257,12 @@ t99f8c07e = Открыл тестовую страницу через tracewing,
 # Opened the test page through tracewing, but without HTTPS.
 t7d4b60bb = Открыл тестовую страницу через tracewing, но без HTTPS.
 
+# Sends localhost and 127.0.0.1 straight to the server, as all of macOS's own networking does: a name under .localhost, such as playground.localhost, comes through tracewing.
+t36665e5c = Отправляет localhost и 127.0.0.1 прямо на сервер, как и вся собственная сеть macOS: имя внутри .localhost, например playground.localhost, идёт через tracewing.
+
+# Goes only where the system proxy sends it: nothing of it comes through tracewing until step 2 is on.
+t67bac94a = Идёт только туда, куда направляет системный прокси: ничего не проходит через tracewing, пока не включён шаг 2.
+
 # Browsers
 td580efd4 = Браузеры
 

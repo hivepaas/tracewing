@@ -2053,6 +2053,12 @@ t99f8c07e = Đã mở trang kiểm tra qua tracewing, bằng HTTPS.
 # Opened the test page through tracewing, but without HTTPS.
 t7d4b60bb = Đã mở trang kiểm tra qua tracewing, nhưng không bằng HTTPS.
 
+# Sends localhost and 127.0.0.1 straight to the server, as all of macOS's own networking does: a name under .localhost, such as playground.localhost, comes through tracewing.
+t36665e5c = Gửi localhost và 127.0.0.1 thẳng tới server, như mọi thứ dùng mạng của chính macOS: một tên dưới .localhost, như playground.localhost, sẽ đi qua tracewing.
+
+# Goes only where the system proxy sends it: nothing of it comes through tracewing until step 2 is on.
+t67bac94a = Chỉ đi theo system proxy: không gì của nó đi qua tracewing cho tới khi bước 2 được bật.
+
 # Browsers
 td580efd4 = Trình duyệt
 

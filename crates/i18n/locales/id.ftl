@@ -2053,6 +2053,12 @@ t99f8c07e = Membuka halaman uji melalui tracewing, lewat HTTPS.
 # Opened the test page through tracewing, but without HTTPS.
 t7d4b60bb = Membuka halaman uji melalui tracewing, tetapi tanpa HTTPS.
 
+# Sends localhost and 127.0.0.1 straight to the server, as all of macOS's own networking does: a name under .localhost, such as playground.localhost, comes through tracewing.
+t36665e5c = Mengirim localhost dan 127.0.0.1 langsung ke server, seperti semua jaringan bawaan macOS: nama di bawah .localhost, misalnya playground.localhost, lewat tracewing.
+
+# Goes only where the system proxy sends it: nothing of it comes through tracewing until step 2 is on.
+t67bac94a = Hanya pergi ke tempat yang ditunjuk proxy sistem: tidak ada yang lewat tracewing sampai langkah 2 aktif.
+
 # Browsers
 td580efd4 = Browser
 
