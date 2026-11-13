@@ -9,8 +9,8 @@ name: Release
 # Release > Run workflow), builds and packages the branch the same way and
 # keeps the files as the run's artifacts: a rehearsal, with no release.
 #
-# macOS is still to come: a row for this matrix and a packaging script, and
-# the download page has its names already.
+# Every platform the download page names is here. What a release ships, and
+# how one is cut: docs/releasing.md.
 
 on:
   push:
@@ -24,6 +24,7 @@ on:
       - scripts/package_*.sh
       - scripts/check_linux_package.sh
       - scripts/check_windows_installer.ps1
+      - scripts/check_macos_app.sh
   workflow_dispatch:
 
 concurrency:
@@ -68,8 +69,15 @@ jobs:
           # packages run on (2.35: Ubuntu 22.04, Debian 12).
           - { name: linux-x86_64, runner: ubuntu-22.04 }
           - { name: linux-aarch64, runner: ubuntu-22.04-arm }
+          - { name: macos-aarch64, runner: macos-15 }
+          - { name: macos-x86_64, runner: macos-15-intel }
           - { name: windows-x86_64, runner: windows-latest }
     runs-on: ${{ matrix.runner }}
+    env:
+      # The oldest macOS tracewing runs on, as packaging/macos/Info.plist says.
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      # Whether the repository holds a Developer ID (not the secret itself).
+      MACOS_SIGNING: ${{ secrets.MACOS_CERTIFICATE != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -103,6 +111,13 @@ jobs:
         with:
           tool: cargo-about@0.9.3
 
+      # Where install-action has no build of it — Intel Macs — its fallback
+      # builds it from source without the `cli` feature, which is the program
+      # itself: what it leaves behind cannot be run.
+      - name: cargo-about, from source where it has no build
+        shell: bash
+        run: cargo about --version 2>/dev/null || cargo install cargo-about@0.9.3 --locked --features cli
+
       - name: NSIS
         if: runner.os == 'Windows'
         shell: pwsh
@@ -112,9 +127,52 @@ jobs:
       - name: Build
         run: cargo build --release --locked -p tracewing
 
+      # A Developer ID for macOS, when the repository has one
+      # (docs/releasing.md): a keychain of this run's own, and the notary's key
+      # in a file the packaging script is told of. Without it, signed ad hoc.
+      - name: Signing keys (macOS)
+        if: runner.os == 'macOS' && env.MACOS_SIGNING == 'true'
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password="$(openssl rand -hex 24)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          # Apple's intermediate, should the runner lack it: the chain must build.
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$keychain" || true
+          printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          security import "$RUNNER_TEMP/developer-id.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/developer-id.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          identity="$(security find-identity -v -p codesigning "$keychain" | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -n 1)"
+          if [ -z "$identity" ]; then
+            echo "::error::MACOS_CERTIFICATE holds no valid Developer ID Application identity"
+            exit 1
+          fi
+          echo "MACOS_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+          if [ -n "$APPLE_API_KEY" ]; then
+            printf '%s' "$APPLE_API_KEY" > "$RUNNER_TEMP/notary.p8"
+            echo "APPLE_API_KEY_PATH=$RUNNER_TEMP/notary.p8" >> "$GITHUB_ENV"
+          fi
+
       - name: Package
         shell: bash
-        run: scripts/package_${{ runner.os == 'Windows' && 'windows' || 'linux' }}.sh
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: scripts/package_${{ runner.os == 'macOS' && 'macos' || runner.os == 'Windows' && 'windows' || 'linux' }}.sh
+
+      - name: Forget the signing keys (macOS)
+        if: always() && runner.os == 'macOS' && env.MACOS_SIGNING == 'true'
+        run: |
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
+          rm -f "$RUNNER_TEMP/notary.p8"
 
       # What each holds, then the .deb installed here and the program run from
       # it, and the .rpm in a Fedora container.
@@ -123,6 +181,11 @@ jobs:
         run: |
           scripts/check_linux_package.sh --install dist/tracewing_*.deb
           scripts/check_linux_package.sh --install dist/tracewing_*.rpm
+
+      # The image opened as a person opens it, and the app inside it run.
+      - name: Open and run (macOS)
+        if: runner.os == 'macOS'
+        run: scripts/check_macos_app.sh dist/tracewing_*.dmg
 
       # The installer, quiet: for the user and for everyone, again over itself,
       # and uninstalled.
