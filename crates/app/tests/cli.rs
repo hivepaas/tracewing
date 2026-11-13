@@ -248,3 +248,53 @@ fn recover_only_if_gone_leaves_a_running_app_alone() {
 
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// `pkill tracewing` matches every process whose name has tracewing in it, so
+/// before the watchdog took a name of its own, the one process whose job was
+/// to survive the app died with it — and the machine kept the proxy setting
+/// and lost the network.
+#[cfg(target_os = "linux")]
+#[test]
+fn the_watchdog_is_not_caught_by_a_kill_of_the_app() {
+    let dir = std::env::temp_dir().join(format!("tracewing-watchdog-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let mut watchdog = tracewing()
+        .args(["watchdog", "--data-dir"])
+        .arg(&dir)
+        .env("HOME", &dir)
+        .env("XDG_CONFIG_HOME", dir.join("config"))
+        .stdin(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let comm = format!("/proc/{}/comm", watchdog.id());
+    // It is the program's own name until the watchdog has renamed itself,
+    // which is the first thing it does once it is running at all.
+    let name = (0..200)
+        .find_map(|_| {
+            let name = std::fs::read_to_string(&comm).unwrap_or_default();
+            if name.trim().is_empty() || name.trim() == "tracewing" {
+                std::thread::sleep(Duration::from_millis(10));
+                return None;
+            }
+            Some(name)
+        })
+        .unwrap_or_else(|| std::fs::read_to_string(&comm).unwrap_or_default());
+    assert!(
+        !name.contains("tracewing"),
+        "a name `pkill tracewing` would catch: {name}"
+    );
+
+    // And it hides from nobody: the command line is the one it was started
+    // with, which `pkill -f tracewing` reads.
+    let args = std::fs::read_to_string(format!("/proc/{}/cmdline", watchdog.id())).unwrap();
+    assert!(args.contains("tracewing"), "{args:?}");
+
+    // The app going is what it waits for, and then it has nothing to do: no
+    // journal, nothing to put back.
+    drop(watchdog.stdin.take());
+    assert!(watchdog.wait().unwrap().success());
+
+    std::fs::remove_dir_all(&dir).ok();
+}

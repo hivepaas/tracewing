@@ -5,7 +5,9 @@
 //! setting still on, every program on the machine loses the network, and
 //! nothing tells the user why. So three things stand behind it:
 //! - a journal of the previous settings, written before anything changes;
-//! - a watchdog process, which puts them back the moment the app dies;
+//! - a watchdog process, which puts them back the moment the app dies, under
+//!   a name of its own so that a blanket kill of the app does not take the
+//!   safety net with it;
 //! - a timer, on the systems that have one, which looks once a minute for an
 //!   app that is gone and settings that are still its own — for when the
 //!   watchdog was killed along with the app, as `pkill tracewing` does;
@@ -345,6 +347,7 @@ pub fn recover_if_gone(data_dir: &Path) -> Result<Recovered> {
 
 /// The watchdog's body: wait for the app to go away, then clean up after it.
 pub fn watchdog(data_dir: &Path) -> Result<()> {
+    name_itself();
     let mut sink = [0u8; 64];
     let mut stdin = std::io::stdin();
     while stdin.read(&mut sink).is_ok_and(|n| n > 0) {}
@@ -357,6 +360,23 @@ pub fn watchdog(data_dir: &Path) -> Result<()> {
     writeln!(log, "app gone: {outcome:?}")?;
     outcome.map(|_| ())
 }
+
+/// The watchdog takes a name of its own, because the whole of its job is to
+/// outlive the app and `pkill tracewing` matches every name with tracewing in
+/// it — the app's safety net included. It hides from nothing: `ps` shows the
+/// same command line as before, `pkill -f tracewing` still finds it, and it
+/// ends of its own accord a second after the app does. What it no longer does
+/// is die in the same breath as the app it is there to clean up after.
+#[cfg(target_os = "linux")]
+fn name_itself() {
+    // SAFETY: prctl takes a name of at most 16 bytes, ending in a zero, and
+    // this one is written as such.
+    unsafe { libc::prctl(libc::PR_SET_NAME, c"tw-watchdog".as_ptr()) };
+}
+
+/// Only Linux has a name apart from the program's.
+#[cfg(not(target_os = "linux"))]
+fn name_itself() {}
 
 fn spawn_watchdog(data_dir: &Path) -> Result<(Child, ChildStdin)> {
     let mut command = Command::new(std::env::current_exe()?);
