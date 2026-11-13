@@ -8395,6 +8395,7 @@ dependencies = [
  "time",
  "tokio",
  "tokio-rustls",
+ "tracewing-convert",
  "tracewing-proxy",
  "tracewing-store",
  "tracewing-system",
