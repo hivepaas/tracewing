@@ -2008,9 +2008,21 @@ impl Traffic {
         point: gpui::Point<gpui::Pixels>,
         cx: &mut Context<Self>,
     ) {
-        if let Some(spot) = sel.spot_at(point) {
-            self.read_piece(sel, spot.piece, cx);
+        let Some(spot) = sel.spot_at(point) else {
+            return;
+        };
+        // `spot_at` always answers: a drag has to land somewhere, so a point
+        // on no piece at all is given the nearest one above it, or the first
+        // of them. A press to read is not a drag -- pressing a button, a
+        // heading or the space around them must read nothing, or every press
+        // in the pane jumps the reader back to the value at its top.
+        if !sel
+            .drawn_at(spot.piece)
+            .is_some_and(|bounds| bounds.contains(&point))
+        {
+            return;
         }
+        self.read_piece(sel, spot.piece, cx);
     }
 
     /// The same by the piece rather than by where it was pressed, which is
