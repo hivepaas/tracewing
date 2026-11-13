@@ -1409,8 +1409,8 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
             )
         })
         .unwrap();
-    assert_eq!(back.0, true);
-    assert_eq!(back.1, true);
+    assert!(back.0, "the chain is gone");
+    assert!(back.1, "and what it said with it");
     assert!(back.2 > 0, "the readings it found are still there");
 
     // Escape puts the pane away and gives the body its width back.

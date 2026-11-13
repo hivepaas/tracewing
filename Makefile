@@ -45,6 +45,10 @@ test-window: ## Run every test, with the window drawn with no display (Linux)
 lint: ## Check the format and run clippy, as CI does
 	$(CARGO) fmt --all -- --check
 	$(CARGO) clippy --workspace --all-targets --release -- -D warnings
+	# The window tests are behind `headless`, so without it they compile to
+	# nothing and clippy never sees them. CI runs this; so must `make lint`,
+	# or a lint error in a window test is found at the pull request.
+	$(CARGO) clippy --workspace --all-targets --release --features tracewing/headless -- -D warnings
 
 fmt: ## Format the code
 	$(CARGO) fmt --all
