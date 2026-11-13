@@ -371,6 +371,7 @@ tb888a3c3 = This message was not kept: too much was waiting, or the disk was nea
 tdb0ec01f = This message is empty.
 t51e7624c = No messages yet
 t3558745a = { $said } kept, of { $size }
+t351a1976 = Close this message
 t8d883a0f = The socket has closed.
 tbea55dfd = Too many are still waiting to go. Try again.
 te1ef193a = To the server

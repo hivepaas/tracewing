@@ -1021,6 +1021,9 @@ t51e7624c = Сообщений пока нет
 # {said} kept, of {size}
 t3558745a = Сохранено { $said } из { $size }
 
+# Close this message
+t351a1976 = Закрыть это сообщение
+
 # The socket has closed.
 t8d883a0f = Сокет закрыт.
 

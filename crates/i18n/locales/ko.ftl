@@ -958,6 +958,9 @@ t51e7624c = 아직 메시지가 없습니다
 # {said} kept, of {size}
 t3558745a = { $size } 중 { $said } 보관됨
 
+# Close this message
+t351a1976 = 이 메시지 닫기
+
 # The socket has closed.
 t8d883a0f = 소켓이 닫혔습니다.
 

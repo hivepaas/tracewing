@@ -1021,6 +1021,9 @@ t51e7624c = Поки немає повідомлень
 # {said} kept, of {size}
 t3558745a = Збережено { $said } з { $size }
 
+# Close this message
+t351a1976 = Закрити це повідомлення
+
 # The socket has closed.
 t8d883a0f = Сокет закрито.
 

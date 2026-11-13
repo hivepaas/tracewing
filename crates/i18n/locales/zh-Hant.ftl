@@ -958,6 +958,9 @@ t51e7624c = 尚無訊息
 # {said} kept, of {size}
 t3558745a = 已保留 { $said }，共 { $size }
 
+# Close this message
+t351a1976 = 關閉這則訊息
+
 # The socket has closed.
 t8d883a0f = 通訊端已關閉。
 

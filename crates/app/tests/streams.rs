@@ -183,6 +183,42 @@ fn streams_show_as_they_come() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "20-websocket-message");
 
+    // The message can be put away again, by the × on it or by Escape, and
+    // the list is not taken away while it is open.
+    window
+        .update(&mut cx, |view, _, cx| {
+            let state = view.inspector.messages.as_ref().unwrap();
+            assert!(state.view_h.is_none(), "it starts at the usual height");
+            // Taller, as a drag on its edge makes it.
+            view.begin_message_view_drag(gpui::px(400.), cx);
+            view.look(cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    window
+        .update(&mut cx, |view, _, cx| {
+            assert!(view.close_message(cx), "the × puts it away");
+            let state = view.inspector.messages.as_ref().unwrap();
+            assert!(state.chosen.is_none() && state.view.is_none());
+            assert!(
+                state.view_h.is_none(),
+                "and the next message starts at the usual height"
+            );
+            assert!(!view.close_message(cx), "nothing left to close");
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "102-message-closed");
+    window
+        .update(&mut cx, |view, _, cx| view.choose_message(0, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the message again", |view| {
+        view.inspector
+            .messages
+            .as_ref()
+            .is_some_and(|m| m.view.is_some())
+    });
+
     // A message of the window's own: to the app, then to the server, which
     // echoes it. Each joins the list.
     let before = window

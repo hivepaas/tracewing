@@ -9,7 +9,7 @@ use crate::{
     colors::colors,
     flows::{size_text, time_text},
     traffic::Traffic,
-    widgets::Reachable,
+    widgets::{Reachable, tip},
 };
 use gpui::{
     Context, Div, Entity, FontWeight, ScrollStrategy, SharedString, Stateful,
@@ -21,6 +21,14 @@ use tracewing_proxy::sockets::{NotSent, Said, Toward};
 use tracewing_store::session::{self, BodyReader, StoredMessage};
 
 const ROW_HEIGHT: f32 = 26.;
+/// How tall the chosen message is shown, before anyone drags it.
+pub const VIEW_H: f32 = 240.;
+/// How short it may be dragged, and how little of the list it may leave: a
+/// message must never take the list away, however short the panel is.
+pub const VIEW_MIN: f32 = 64.;
+pub const LIST_MIN: f32 = 72.;
+/// The strip to drag it by, with its mark in the middle.
+const GRIP_H: f32 = 10.;
 /// How much of each message a row shows.
 const PREVIEW_BYTES: usize = 240;
 /// More previews than this and the cache starts again. A screen is a few dozen.
@@ -37,6 +45,9 @@ pub struct MessagesState {
     scroll: UniformListScrollHandle,
     /// Where a message the window sends goes.
     pub toward: Toward,
+    /// How tall the chosen message is shown. Dragged while it is open, and
+    /// gone with it: the next message starts at the usual height.
+    pub view_h: Option<f32>,
     /// Why the last one could not be sent.
     pub send_problem: Option<String>,
     /// The calls the last message sent had written out in it, by the
@@ -54,6 +65,7 @@ impl MessagesState {
             previews: HashMap::new(),
             scroll: UniformListScrollHandle::new(),
             toward: Toward::Server,
+            view_h: None,
             send_problem: None,
             send_calls: Vec::new(),
         }
@@ -95,6 +107,21 @@ impl Traffic {
                 .scroll
                 .scroll_to_item(state.list.len() - 1, ScrollStrategy::Nearest);
         }
+        true
+    }
+
+    /// Puts the chosen message away and gives the list its room back.
+    pub fn close_message(&mut self, cx: &mut Context<Self>) -> bool {
+        let Some(state) = self.inspector.messages.as_mut() else {
+            return false;
+        };
+        if state.chosen.is_none() && state.view.is_none() {
+            return false;
+        }
+        state.chosen = None;
+        state.view = None;
+        state.view_h = None;
+        cx.notify();
         true
     }
 
@@ -282,6 +309,7 @@ impl Traffic {
                 }),
             )
             .flex_1()
+            .min_h(ui(LIST_MIN))
             .track_scroll(&scroll)
             .into_any_element()
         };
@@ -298,20 +326,65 @@ impl Traffic {
                     None => said,
                 }
             });
+            let tall = state.view_h.unwrap_or(VIEW_H).max(VIEW_MIN);
             div()
-                .h(ui(240.))
-                .flex_shrink_0()
+                .h(ui(tall))
+                .min_h(ui(VIEW_MIN))
                 .flex()
                 .flex_col()
                 .border_t_1()
                 .border_color(rgb(c.line))
+                // The edge is a hair thick to aim at, so the strip is what
+                // takes the drag and a mark in the middle says so.
+                .child(
+                    div()
+                        .id("message-view-grip")
+                        .h(ui(GRIP_H))
+                        .flex_shrink_0()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .cursor(gpui::CursorStyle::ResizeUpDown)
+                        .child(
+                            div()
+                                .w(ui(28.))
+                                .h(ui(3.))
+                                .rounded_full()
+                                .bg(rgb(c.splitter)),
+                        )
+                        .on_mouse_down(
+                            gpui::MouseButton::Left,
+                            cx.listener(|this, e: &gpui::MouseDownEvent, _, cx| {
+                                this.begin_message_view_drag(e.position.y, cx);
+                            }),
+                        ),
+                )
                 .children(status.map(|status| {
                     div()
+                        .flex_shrink_0()
                         .px(ui(10.))
-                        .py(ui(4.))
+                        .pb(ui(4.))
+                        .flex()
+                        .flex_row()
+                        .items_center()
+                        .gap(ui(8.))
                         .text_size(ui(12.))
                         .text_color(rgb(c.muted))
-                        .child(status)
+                        .child(div().flex_1().min_w_0().child(status))
+                        .child(
+                            div()
+                                .id("close-message")
+                                .px(ui(6.))
+                                .rounded(ui(8.))
+                                .cursor_pointer()
+                                .reachable()
+                                .hover(|s| s.bg(rgb(c.chip)).text_color(rgb(c.text)))
+                                .tooltip(tip(tr!("Close this message")))
+                                .child("✕")
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.close_message(cx);
+                                })),
+                        )
                 }))
                 .child(
                     div()

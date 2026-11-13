@@ -958,6 +958,9 @@ t51e7624c = まだメッセージはありません
 # {said} kept, of {size}
 t3558745a = { $size } 中 { $said } を保持
 
+# Close this message
+t351a1976 = このメッセージを閉じる
+
 # The socket has closed.
 t8d883a0f = ソケットは閉じられました。
 
