@@ -130,6 +130,12 @@ t0a4220dc = { $size } { $format } · { $count } 行 JSON
 # The first {count} rows are shown.
 t16aa1c6d = 只顯示前 { $count } 列。
 
+# Copy row
+tbdecf3c8 = 複製列
+
+# Copy column
+te26431fe = 複製欄
+
 # Forget how {field} is read
 tdb2d6aa8 = 忘記 { $field } 的解讀方式
 

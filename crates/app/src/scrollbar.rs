@@ -30,6 +30,14 @@ pub struct Scrolled {
 }
 
 impl Scrolled {
+    /// The bar for an area that already has a handle, such as a list's.
+    pub fn of(handle: ScrollHandle) -> Self {
+        Scrolled {
+            handle,
+            drag: Rc::default(),
+        }
+    }
+
     /// `area`, which scrolls with [`Scrolled::handle`], with the bar over it.
     pub fn around(&self, area: impl IntoElement) -> AnyElement {
         let me = self.clone();

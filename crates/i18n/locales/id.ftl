@@ -130,6 +130,12 @@ t0a4220dc = { $size } { $format } · { $count } baris JSON
 # The first {count} rows are shown.
 t16aa1c6d = Hanya { $count } baris pertama yang ditampilkan.
 
+# Copy row
+tbdecf3c8 = Salin baris
+
+# Copy column
+te26431fe = Salin kolom
+
 # Forget how {field} is read
 tdb2d6aa8 = Lupakan cara { $field } dibaca
 
