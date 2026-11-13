@@ -188,6 +188,17 @@ chain it took:
 Each step is a menu of its own, so a wrong middle step can be changed without
 starting over.
 
+A step is only taken where the bytes before it read as something, and three
+formats say nothing about themselves at the front: raw deflate, Brotli and
+protobuf have no bytes at the start that name them. For those the only way to
+know is to unpack or parse and see whether what comes out is worth reading,
+which is what `encodings::interesting` does once the simpler tests have said
+nothing. It matters for more than neatness: a SAML response is always base64
+of deflate, so without it that converter could not be reached by a real value
+at all. What is not packed still has to fail — a key or a hash must not read
+as deflate — so what comes out is measured against what bytes say for
+themselves, never against another round of unpacking.
+
 ## What gets converted
 
 ### Phase one — built

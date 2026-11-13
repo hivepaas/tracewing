@@ -34,6 +34,16 @@ fn varint(bytes: &[u8], at: usize) -> Option<(u64, usize)> {
 /// Protobuf's own wire format, as far as it can be read with no `.proto`:
 /// which field numbers are there, how each was written, and what it holds.
 /// gRPC's five-byte frame is taken off first, where there is one.
+/// Whether these bytes read as a protobuf message, every byte of them. For
+/// telling that a value holds one where nothing at the front says so: a
+/// message has no magic number, so the only test is whether it parses.
+pub(crate) fn reads_as_protobuf(bytes: &[u8]) -> bool {
+    if !(2..=MAX_INPUT).contains(&bytes.len()) || std::str::from_utf8(bytes).is_ok() {
+        return false;
+    }
+    read_fields(bytes).is_some_and(|fields| !fields.is_empty() && fields.len() <= 256)
+}
+
 pub fn protobuf(input: &Input) -> Option<Reading> {
     let mut raw = input.raw();
     if !(2..=MAX_INPUT).contains(&raw.len()) {
@@ -178,6 +188,20 @@ mod tests {
     /// A message: field 1 the number 150, field 2 the text "hi".
     fn message() -> Vec<u8> {
         vec![0x08, 0x96, 0x01, 0x12, 0x02, b'h', b'i']
+    }
+
+    /// A message has no magic number, so base64 of one used to read as
+    /// nothing: the step that would have parsed it was never reached.
+    #[test]
+    fn protobuf_inside_base64_is_reached() {
+        use base64::Engine as _;
+        let mut bytes = message();
+        // Long enough that base64 of it is worth looking at at all.
+        bytes.extend_from_slice(&[0x1a, 0x06, b'A', b'-', b'4', b'4', b'7', b'1']);
+        let travelling = base64::engine::general_purpose::STANDARD.encode(&bytes);
+        let found = read(&travelling);
+        let reading = by_id(&found, "protobuf").expect("the message in it");
+        assert_eq!(reading.chain, vec!["base64", "protobuf"]);
     }
 
     fn fields_of(bytes: &[u8]) -> Vec<(String, String)> {
