@@ -125,6 +125,9 @@ pub struct Engine {
     pub other_devices: Arc<OtherDevices>,
     /// The other settings that apply as they change.
     pub live: Arc<Live>,
+    /// The ports it was given to listen on, kept so that starting again
+    /// stays on the same range rather than falling back to the default.
+    pub ports: std::ops::Range<u16>,
     /// The authorities trusted for servers besides the public and the
     /// system's, as the proxy was started with them.
     pub extra_roots: Vec<PathBuf>,
@@ -148,6 +151,7 @@ impl Engine {
         let sessions = opts.data_dir.join("sessions");
         session::forget_old(&sessions, opts.settings.sessions_kept);
         let session = sessions.join(next_session_name(&sessions));
+        let ports = opts.ports.clone();
         let (listener, addr) = bind(opts.ports)?;
         let other_devices = Arc::new(OtherDevices::new(opts.settings.other_devices));
         let live = Arc::new(Live::new(&opts.settings));
@@ -237,6 +241,7 @@ impl Engine {
             addr,
             address_file,
             key_store: opts.key_store,
+            ports,
             session,
             settings: opts.settings,
             shared,

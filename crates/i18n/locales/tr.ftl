@@ -1689,6 +1689,9 @@ tae8622fc = Oturum dosyası aç
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, Fiddler .saz ya da Charles .chlsj
 
+# Start a new session
+t17bccaf2 = Yeni bir oturum başlat
+
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = Dışa aktarılan HAR dosyaları başlıklarda, URL'lerde ve gövdelerde çerezleri, token'ları, anahtarları ve parolaları dışarıda bırakır
 
@@ -2414,6 +2417,12 @@ tf9d9c09b = Gönderilecek ileti; { $keys } gönderir
 
 # The search index: {e}
 te3c971c9 = Arama dizini: { $e }
+
+# Recording again on {now}. This computer is still sending its traffic to {was}: turn the system proxy off and on again.
+te295872f = { $now } üzerinde yeniden kaydediliyor. Bu bilgisayar trafiğini hâlâ { $was } adresine gönderiyor: sistem vekilini kapatıp açın.
+
+# Recording did not start again: {problem}
+teb8c8bbd = Kayıt yeniden başlamadı: { $problem }
 
 # Click the flow to compare #{id} with.
 tac1ec1d2 = #{ $id } ile karşılaştırılacak akışa tıklayın.

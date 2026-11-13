@@ -11,7 +11,7 @@ use crate::{
     columns::{Column, Columns, Sort},
     detail::Side,
     devices::{CLIENT_IP, Devices, NOT_LOOPBACK, device_of},
-    engine::Engine,
+    engine::{Engine, EngineOptions},
     filter::{Filter, Kind},
     flows::{Flows, Row, group_digits},
     hosts::{HostLine, HostMarks},
@@ -751,6 +751,58 @@ impl Traffic {
             }
         }
         self.went();
+    }
+
+    /// Stops recording into this session and starts a new one, without the
+    /// app being restarted.
+    ///
+    /// It is two things at once: the way to stop recording into a session
+    /// you would rather delete — the live one cannot be deleted — and the
+    /// way back from a proxy that has stopped, since what stopped it leaves
+    /// the window with nothing listening.
+    ///
+    /// The old session stays on disk, where Sessions can open or delete it —
+    /// unless it has no flows and no name, which the clean-up at every start
+    /// takes away, as it always has.
+    pub fn start_new_session(&mut self, cx: &mut Context<Self>) {
+        let was = self.engine.addr;
+        // The port goes with it, so the new one can have it back.
+        self.engine.stop();
+        // Settings, rules and trusted authorities are read again, so a
+        // change made since the start takes effect. How the app itself was
+        // started is kept: the ports it was given, and where its key is.
+        // Taking the defaults instead moved the proxy to another port and
+        // sent it looking in the system keychain, where it hung.
+        let (mut options, problem) =
+            EngineOptions::from_data_dir(&self.data_dir, self.engine.ports.clone());
+        options.key_store = self.engine.key_store;
+        match Engine::start(options) {
+            Ok(engine) => {
+                self.engine = engine;
+                self.settings_problem = problem;
+                self.viewing = None;
+                self.show_session(cx);
+                // The system sends its traffic to an address, and this one
+                // may not be the address it was told. Said, not silently
+                // put right: telling the system again asks for a password.
+                if self.engine.addr != was && matches!(self.system.proxy, ProxySwitch::On(_)) {
+                    self.system.problem = Some(tr!(
+                        "Recording again on {now}. This computer is still sending its traffic to {was}: turn the system proxy off and on again.",
+                        now = self.engine.addr.to_string(),
+                        was = was.to_string()
+                    ));
+                }
+            }
+            // Nothing is listening now. What was recorded is on disk either
+            // way, and the words say which of the two happened.
+            Err(e) => {
+                self.system.problem = Some(tr!(
+                    "Recording did not start again: {problem}",
+                    problem = format!("{e:#}")
+                ));
+            }
+        }
+        cx.notify();
     }
 
     pub fn back_to_live(&mut self, cx: &mut Context<Self>) {

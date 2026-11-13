@@ -293,6 +293,60 @@ fn an_earlier_session_opens_again() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "20-session-rescued");
 
+    // Recording moves to a new session without the app being restarted.
+    // This is also the way back from a proxy that has stopped, and the only
+    // way to stop recording into a session you would rather delete: the
+    // live one cannot be deleted.
+    let live = window
+        .update(&mut cx, |view, _, _| view.engine.session.clone())
+        .unwrap();
+    window
+        .update(&mut cx, |view, _, cx| view.start_new_session(cx))
+        .unwrap();
+    let (now, listening) = window
+        .update(&mut cx, |view, _, _| {
+            (view.engine.session.clone(), view.engine.addr)
+        })
+        .unwrap();
+    assert_ne!(now, live, "a session of its own");
+    // The one before it had nothing in it, and a start takes unnamed
+    // sessions with no flows away: that rule is older than this button. One
+    // with flows in it stays, which is the whole point of the button.
+    assert!(!live.exists(), "an empty session is not kept");
+    // It is listening again, and on a port a client can reach.
+    assert!(
+        listening.port() >= 19_490 && listening.port() < 19_500,
+        "{listening}"
+    );
+    wait_for(&mut cx, window, "an empty list", |view| {
+        !view.is_viewing() && view.count() == 0
+    });
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Sessions, cx);
+            view.refresh_sessions(cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the new one listed", |view| {
+        view.sessions_page
+            .sessions
+            .iter()
+            .any(|about| about.dir == now)
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            // The rescued one is still there: it has flows and a name, so
+            // neither the clean-up nor the new session touches it.
+            assert!(
+                view.sessions_page
+                    .sessions
+                    .iter()
+                    .any(|about| about.name.as_deref() == Some("rescued from 1000000001")),
+                "what was rescued outlives the session that was recording"
+            );
+        })
+        .unwrap();
+
     drop(cx);
     std::fs::remove_dir_all(&dir).unwrap();
 }

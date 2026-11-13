@@ -1807,6 +1807,9 @@ tae8622fc = Відкрити файл сеансу
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, Fiddler .saz або Charles .chlsj
 
+# Start a new session
+t17bccaf2 = Почати нову сесію
+
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = В експортованих HAR немає cookie, токенів, ключів і паролів — ні в заголовках, ні в URL, ні в тілах
 
@@ -2538,6 +2541,12 @@ tf9d9c09b = Повідомлення для надсилання; { $keys } — 
 
 # The search index: {e}
 te3c971c9 = Пошуковий індекс: { $e }
+
+# Recording again on {now}. This computer is still sending its traffic to {was}: turn the system proxy off and on again.
+te295872f = Запис знову йде на { $now }. Цей комп'ютер досі надсилає трафік на { $was }: вимкніть і ввімкніть системний проксі.
+
+# Recording did not start again: {problem}
+teb8c8bbd = Запис не почався знову: { $problem }
 
 # Click the flow to compare #{id} with.
 tac1ec1d2 = Натисніть на потік, щоб порівняти його з #{ $id }.

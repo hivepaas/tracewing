@@ -1615,6 +1615,9 @@ tae8622fc = Buka file sesi
 # HAR, Fiddler .saz, or Charles .chlsj
 td8955e6d = HAR, .saz Fiddler, atau .chlsj Charles
 
+# Start a new session
+t17bccaf2 = Mulai sesi baru
+
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = File HAR yang diekspor tidak menyertakan cookie, token, kunci, dan kata sandi, di header, URL, dan body
 
@@ -2328,6 +2331,12 @@ tf9d9c09b = Pesan untuk dikirim; { $keys } mengirimnya
 
 # The search index: {e}
 te3c971c9 = Indeks pencarian: { $e }
+
+# Recording again on {now}. This computer is still sending its traffic to {was}: turn the system proxy off and on again.
+te295872f = Merekam lagi di { $now }. Komputer ini masih mengirim lalu lintasnya ke { $was }: matikan lalu nyalakan proxy sistem.
+
+# Recording did not start again: {problem}
+teb8c8bbd = Perekaman tidak dimulai lagi: { $problem }
 
 # Click the flow to compare #{id} with.
 tac1ec1d2 = Klik flow untuk dibandingkan dengan #{ $id }.
