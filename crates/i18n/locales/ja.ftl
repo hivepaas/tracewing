@@ -2185,6 +2185,9 @@ t2af18488 = ウィンドウ
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = セットアップ、トラフィック、ルール、一時停止中、作成、セッション、設定
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = 戻る・進む(マウスの戻る/進むボタンと同じ)
+
 # Show or hide the sidebar
 t67adca04 = サイドバーの表示/非表示
 

@@ -2185,6 +2185,9 @@ t2af18488 = 窗口
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = 配置、流量、规则、已暂停、编写、会话、设置
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = 后退或前进，与鼠标的侧键相同
+
 # Show or hide the sidebar
 t67adca04 = 显示或隐藏侧边栏
 

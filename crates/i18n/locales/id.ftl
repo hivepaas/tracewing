@@ -2185,6 +2185,9 @@ t2af18488 = Jendela
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Siapkan, Lalu Lintas, Aturan, Dijeda, Susun, Sesi, Setelan
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = Mundur atau maju, seperti tombol mouse
+
 # Show or hide the sidebar
 t67adca04 = Tampilkan atau sembunyikan sidebar
 

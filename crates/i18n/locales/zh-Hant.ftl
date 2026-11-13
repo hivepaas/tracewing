@@ -2185,6 +2185,9 @@ t2af18488 = 視窗
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = 初始設定、流量、規則、已暫停、撰寫、工作階段、設定
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = 上一頁或下一頁，與滑鼠的側鍵相同
+
 # Show or hide the sidebar
 t67adca04 = 顯示或隱藏側邊欄
 
