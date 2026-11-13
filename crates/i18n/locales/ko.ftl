@@ -739,6 +739,9 @@ tc40f2321 = 여는 중…
 # this value
 t8a86fa50 = 이 값
 
+# Find a reading
+t3e5b868d = 해석 찾기
+
 # The whole line
 t17d1ec47 = 줄 전체
 
@@ -762,6 +765,9 @@ t8c0f1d8b = 다른 해석
 
 # choose…
 te030653c = 선택…
+
+# Nothing by that name
+t9e47dd8f = 그런 이름은 없습니다
 
 # Read from {from}
 t6d510d3d = { $from }에서 읽음

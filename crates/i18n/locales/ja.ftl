@@ -739,6 +739,9 @@ tc40f2321 = 開いています…
 # this value
 t8a86fa50 = この値
 
+# Find a reading
+t3e5b868d = 読み取りを探す
+
 # The whole line
 t17d1ec47 = 行全体
 
@@ -762,6 +765,9 @@ t8c0f1d8b = 別の読み方
 
 # choose…
 te030653c = 選ぶ…
+
+# Nothing by that name
+t9e47dd8f = その名前のものはありません
 
 # Read from {from}
 t6d510d3d = { $from } から読み取り

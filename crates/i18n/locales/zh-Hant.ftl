@@ -739,6 +739,9 @@ tc40f2321 = 正在開啟…
 # this value
 t8a86fa50 = 此值
 
+# Find a reading
+t3e5b868d = 尋找解讀
+
 # The whole line
 t17d1ec47 = 整行
 
@@ -762,6 +765,9 @@ t8c0f1d8b = 按其他方式解讀
 
 # choose…
 te030653c = 選擇…
+
+# Nothing by that name
+t9e47dd8f = 沒有這個名字的
 
 # Read from {from}
 t6d510d3d = 讀自 { $from }

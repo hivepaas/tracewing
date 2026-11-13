@@ -579,6 +579,17 @@ pub fn render_menu(
     items: Vec<Item>,
     on_close: impl Fn(&mut Window, &mut App) + 'static,
 ) -> AnyElement {
+    render_menu_headed(at, None, items, on_close)
+}
+
+/// The same, with something of the caller's above the items: a box to
+/// narrow a long menu down with.
+pub fn render_menu_headed(
+    at: Point<Pixels>,
+    head: Option<AnyElement>,
+    items: Vec<Item>,
+    on_close: impl Fn(&mut Window, &mut App) + 'static,
+) -> AnyElement {
     let c = colors();
     deferred(
         anchored().position(at).child(
@@ -596,6 +607,7 @@ pub fn render_menu(
                 .font_family(crate::ui_font())
                 .text_size(ui(13.))
                 .on_mouse_down_out(move |_, window, cx| on_close(window, cx))
+                .children(head)
                 .children(items.into_iter().enumerate().map(|(nth, item)| {
                     let enabled = item.act.is_some();
                     div()

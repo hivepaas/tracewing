@@ -739,6 +739,9 @@ tc40f2321 = Membuka…
 # this value
 t8a86fa50 = nilai ini
 
+# Find a reading
+t3e5b868d = Cari pembacaan
+
 # The whole line
 t17d1ec47 = Seluruh baris
 
@@ -762,6 +765,9 @@ t8c0f1d8b = Baca sebagai
 
 # choose…
 te030653c = pilih…
+
+# Nothing by that name
+t9e47dd8f = Tidak ada yang bernama itu
 
 # Read from {from}
 t6d510d3d = Dibaca dari { $from }

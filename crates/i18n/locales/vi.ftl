@@ -739,6 +739,9 @@ tc40f2321 = Đang mở…
 # this value
 t8a86fa50 = giá trị này
 
+# Find a reading
+t3e5b868d = Tìm cách đọc
+
 # The whole line
 t17d1ec47 = Nguyên dòng
 
@@ -762,6 +765,9 @@ t8c0f1d8b = Đọc như
 
 # choose…
 te030653c = chọn…
+
+# Nothing by that name
+t9e47dd8f = Không có tên nào như vậy
 
 # Read from {from}
 t6d510d3d = Đọc từ { $from }

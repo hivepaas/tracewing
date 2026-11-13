@@ -1804,6 +1804,7 @@ impl Traffic {
             }
             Action::Close if self.compare_pick.is_some() => self.cancel_compare(cx),
             Action::Close if self.screen == Screen::Compare => self.set_screen(Screen::Traffic, cx),
+            Action::Close if self.close_ask_menu(cx) => {}
             Action::Close if self.close_reads(cx) => {}
             Action::Close if self.close_message(cx) => {}
             Action::Close => return false,

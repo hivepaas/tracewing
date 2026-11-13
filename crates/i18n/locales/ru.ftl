@@ -790,6 +790,9 @@ tc40f2321 = Открытие…
 # this value
 t8a86fa50 = это значение
 
+# Find a reading
+t3e5b868d = Найти прочтение
+
 # The whole line
 t17d1ec47 = Вся строка
 
@@ -813,6 +816,9 @@ t8c0f1d8b = Прочитать как
 
 # choose…
 te030653c = выбрать…
+
+# Nothing by that name
+t9e47dd8f = Ничего с таким именем
 
 # Read from {from}
 t6d510d3d = Прочитано из { $from }
