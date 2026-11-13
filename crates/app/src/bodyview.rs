@@ -49,7 +49,7 @@ const INDENT_W: f32 = 14.;
 /// Past this the indent says what it is instead of pushing the text away.
 const INDENT_MAX: u32 = 40;
 const THUMB_MIN: f32 = 28.;
-const BAR_W: f32 = 10.;
+const BAR_W: f32 = crate::scrollbar::BAR_W;
 /// How often a window with a scan running looks at its progress.
 const SCAN_POLL: Duration = Duration::from_millis(50);
 /// Lines counted on either side of one whose rows are asked for.
@@ -1513,9 +1513,9 @@ impl BodyView {
                             .absolute()
                             .top(px(thumb_top))
                             .h(px(thumb))
-                            .left(ui(2.))
-                            .right(ui(2.))
-                            .rounded_sm()
+                            .left(px((BAR_W - crate::scrollbar::THUMB_W) / 2.))
+                            .w(px(crate::scrollbar::THUMB_W))
+                            .rounded(px(crate::scrollbar::THUMB_W / 2.))
                             .bg(rgb(c.splitter)),
                     ),
             )

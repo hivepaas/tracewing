@@ -95,6 +95,7 @@ keyboard.
 |---|---|---|
 | The inspector beside the list or below it: drag it by its handle, use the toolbar's layout buttons, or a shortcut | Beta | Free |
 | Resize panels by dragging the dividers; hide the sidebar or the inspector | Beta | Free |
+| Scroll bars on every part of the inspector that is longer than its pane (headers, connection, query, form, cookies, LLM, GraphQL, JSON-RPC, body): dragged, or pressed above or below the thumb to jump there | Beta | Free |
 | Request and response as tabs, side by side, or one above the other | Beta | Free |
 | The layout is kept and restored at the next start | Beta | Free |
 | Settings in parts, a menu beside the one open: General (language, look), Network, Certificates, Decoding, Storage, AI tools, About; Back to defaults for the part open; the part last open is kept | Beta | Free |

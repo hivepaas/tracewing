@@ -18,6 +18,7 @@ use crate::{
     messages::MessagesState,
     reading,
     remembered::Remembered,
+    scrollbar::{self, Scrolled},
     select::{self, Copied, Selection},
     snippets::{self, Language},
     traffic::Traffic,
@@ -25,8 +26,8 @@ use crate::{
 };
 use gpui::{
     Anchor, AnyElement, ClipboardItem, Context, Div, ElementId, Entity, FontWeight, MouseButton,
-    MouseDownEvent, ObjectFit, SharedString, StyledImage, anchored, deferred, div, img, prelude::*,
-    px, relative, rgb,
+    MouseDownEvent, ObjectFit, ScrollHandle, SharedString, StyledImage, anchored, deferred, div,
+    img, prelude::*, px, relative, rgb,
 };
 use std::{
     cell::RefCell,
@@ -51,7 +52,7 @@ fn is_picture(content_type: Option<&str>) -> bool {
     content_type.is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("image/"))
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Part {
     #[default]
     Body,
@@ -87,6 +88,9 @@ pub enum BodyState {
 #[derive(Default)]
 pub struct InspectorState {
     pub detail: Option<Detail>,
+    /// Where each part that scrolls by itself is scrolled to, a side at a time,
+    /// with its scroll bar's drag.
+    scrolls: RefCell<HashMap<(Part, Side), Scrolled>>,
     pub side: Side,
     pub part: Part,
     pub body: BodyState,
@@ -184,6 +188,15 @@ fn drawn_key(field: &str, value: &str) -> String {
 }
 
 impl InspectorState {
+    /// Where `part` on `side` is scrolled to, kept from frame to frame.
+    pub fn scrolled(&self, part: Part, side: Side) -> Scrolled {
+        self.scrolls
+            .borrow_mut()
+            .entry((part, side))
+            .or_default()
+            .clone()
+    }
+
     /// Reads what is selected, and keeps the field and value it was read
     /// from. Called as the menu opens, not as it draws.
     pub fn read_here(&mut self, sel: &Selection) {
@@ -1406,44 +1419,71 @@ impl Traffic {
         }
         match part {
             Part::Messages => well.child(self.render_messages(cx)),
-            Part::Llm => self.selectable(well, &sel, cx).child(self.render_llm(&sel)),
-            Part::GraphQl => self
-                .selectable(well, &sel, cx)
-                .child(self.render_graphql(&sel)),
-            Part::Rpc => self.selectable(well, &sel, cx).child(self.render_rpc(&sel)),
+            Part::Llm => {
+                let s = self.inspector.scrolled(part, Side::Request);
+                self.selectable(well, &sel, cx)
+                    .child(s.around(self.render_llm(&sel, &s.handle)))
+            }
+            Part::GraphQl => {
+                let s = self.inspector.scrolled(part, Side::Request);
+                self.selectable(well, &sel, cx)
+                    .child(s.around(self.render_graphql(&sel, &s.handle)))
+            }
+            Part::Rpc => {
+                let s = self.inspector.scrolled(part, Side::Request);
+                self.selectable(well, &sel, cx)
+                    .child(s.around(self.render_rpc(&sel, &s.handle)))
+            }
             Part::Headers => {
                 let side = self.inspector.side;
-                self.selectable(well, &sel, cx).child(render_headers(
-                    detail.headers(side),
-                    detail.trailers(side),
-                    &sel,
-                    &self.inspector,
-                ))
+                let s = self.inspector.scrolled(part, side);
+                self.selectable(well, &sel, cx)
+                    .child(s.around(render_headers(
+                        detail.headers(side),
+                        detail.trailers(side),
+                        &sel,
+                        &self.inspector,
+                        &s.handle,
+                    )))
             }
             Part::Connection => {
                 let naming = (detail.app.is_none() && device_of(&detail.client).is_some())
                     .then(|| self.device_name_input().clone());
+                let s = self.inspector.scrolled(part, Side::Request);
                 self.selectable(well, &sel, cx)
-                    .child(render_connection(detail, naming, &sel))
+                    .child(s.around(render_connection(detail, naming, &sel, &s.handle)))
             }
-            Part::Query => self.selectable(well, &sel, cx).child(render_fields(
-                fields::query(&detail.url),
-                &sel,
-                &self.inspector,
-            )),
-            Part::Form => self.selectable(well, &sel, cx).child(render_fields(
-                detail.form.clone().unwrap_or_default(),
-                &sel,
-                &self.inspector,
-            )),
+            Part::Query => {
+                let s = self.inspector.scrolled(part, Side::Request);
+                self.selectable(well, &sel, cx)
+                    .child(s.around(render_fields(
+                        fields::query(&detail.url),
+                        &sel,
+                        &self.inspector,
+                        &s.handle,
+                    )))
+            }
+            Part::Form => {
+                let s = self.inspector.scrolled(part, Side::Request);
+                self.selectable(well, &sel, cx)
+                    .child(s.around(render_fields(
+                        detail.form.clone().unwrap_or_default(),
+                        &sel,
+                        &self.inspector,
+                        &s.handle,
+                    )))
+            }
             Part::Cookies => {
                 let side = self.inspector.side;
-                self.selectable(well, &sel, cx).child(render_cookies(
-                    detail.headers(side),
-                    side,
-                    &sel,
-                    &self.inspector,
-                ))
+                let s = self.inspector.scrolled(part, side);
+                self.selectable(well, &sel, cx)
+                    .child(s.around(render_cookies(
+                        detail.headers(side),
+                        side,
+                        &sel,
+                        &self.inspector,
+                        &s.handle,
+                    )))
             }
             Part::Body => match (self.render_read_as(cx), &self.inspector.opened) {
                 (Some(picker), _) => well.child(picker),
@@ -1478,19 +1518,26 @@ impl Traffic {
                 .bg(rgb(c.code))
                 .border_1()
                 .border_color(rgb(if side == chosen { c.link } else { c.code }));
+            let s = self.inspector.scrolled(part, side);
             let content = match part {
-                Part::Headers => self.selectable(well, sel, cx).child(render_headers(
-                    detail.headers(side),
-                    detail.trailers(side),
-                    sel,
-                    &self.inspector,
-                )),
-                Part::Cookies => self.selectable(well, sel, cx).child(render_cookies(
-                    detail.headers(side),
-                    side,
-                    sel,
-                    &self.inspector,
-                )),
+                Part::Headers => self
+                    .selectable(well, sel, cx)
+                    .child(s.around(render_headers(
+                        detail.headers(side),
+                        detail.trailers(side),
+                        sel,
+                        &self.inspector,
+                        &s.handle,
+                    ))),
+                Part::Cookies => self
+                    .selectable(well, sel, cx)
+                    .child(s.around(render_cookies(
+                        detail.headers(side),
+                        side,
+                        sel,
+                        &self.inspector,
+                        &s.handle,
+                    ))),
                 _ => match self.render_read_as(cx).filter(|_| side == chosen) {
                     Some(picker) => well.child(picker),
                     None => body_well(well, self.inspector.body_of(side)),
@@ -2249,6 +2296,7 @@ fn render_connection(
     detail: &Detail,
     naming: Option<Entity<TextInput>>,
     sel: &Selection,
+    scroll: &ScrollHandle,
 ) -> AnyElement {
     let c = colors();
     let row = |label: String, value: String| {
@@ -2291,7 +2339,9 @@ fn render_connection(
         .id("connection")
         .size_full()
         .overflow_y_scroll()
+        .track_scroll(scroll)
         .p(ui(12.))
+        .pr(px(scrollbar::BAR_W + 4.))
         .flex()
         .flex_col()
         .gap(ui(6.))
@@ -2496,6 +2546,7 @@ fn render_headers(
     trailers: &[(String, String)],
     sel: &Selection,
     read: &InspectorState,
+    scroll: &ScrollHandle,
 ) -> impl IntoElement {
     let c = colors();
     let Some(headers) = headers else {
@@ -2538,7 +2589,9 @@ fn render_headers(
         .id("headers")
         .size_full()
         .overflow_y_scroll()
+        .track_scroll(scroll)
         .p(ui(12.))
+        .pr(px(scrollbar::BAR_W + 4.))
         .flex()
         .flex_col()
         .gap(ui(4.))
@@ -2570,13 +2623,20 @@ fn has_part(detail: &Detail, part: Part, side: Side) -> bool {
     }
 }
 
-fn render_fields(found: Vec<Field>, sel: &Selection, read: &InspectorState) -> impl IntoElement {
+fn render_fields(
+    found: Vec<Field>,
+    sel: &Selection,
+    read: &InspectorState,
+    scroll: &ScrollHandle,
+) -> impl IntoElement {
     let c = colors();
     div()
         .id("fields")
         .size_full()
         .overflow_y_scroll()
+        .track_scroll(scroll)
         .p(ui(12.))
+        .pr(px(scrollbar::BAR_W + 4.))
         .flex()
         .flex_col()
         .gap(ui(4.))
@@ -2644,6 +2704,7 @@ fn render_cookies(
     side: Side,
     sel: &Selection,
     read: &InspectorState,
+    scroll: &ScrollHandle,
 ) -> impl IntoElement {
     let c = colors();
     let Some(headers) = headers else {
@@ -2661,7 +2722,9 @@ fn render_cookies(
         .id("cookies")
         .size_full()
         .overflow_y_scroll()
+        .track_scroll(scroll)
         .p(ui(12.))
+        .pr(px(scrollbar::BAR_W + 4.))
         .flex()
         .flex_col()
         .gap(ui(8.))
