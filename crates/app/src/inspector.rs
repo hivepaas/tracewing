@@ -216,6 +216,10 @@ pub struct InspectorState {
     /// The head over the part (title, chips, timing, tabs…), scrolled by
     /// itself when it would leave the part too little room.
     pub head: Scrolled,
+    /// What the readings pane says, scrolled by itself: a JWT's claims or a
+    /// query's fields run past the pane's height, and there has to be a way
+    /// down to the rest of them.
+    pub reads_scroll: Scrolled,
     /// The size the inspector was last drawn at, in pixels: how much of its
     /// head it shows depends on it.
     pub panel: std::rc::Rc<std::cell::Cell<gpui::Size<gpui::Pixels>>>,
@@ -2337,6 +2341,7 @@ impl Traffic {
         let field = reads.field.clone();
         let at = reads.at;
         let asking = !reads.asked.is_empty();
+        let scrolled = self.inspector.reads_scroll.clone();
         let ways: Vec<(usize, String, String, bool, bool)> = reads
             .found
             .iter()
@@ -2535,13 +2540,38 @@ impl Traffic {
                                     .child(label),
                             )
                             .child(div().flex_1().min_h_0().child(shown)),
-                        None => div()
-                            .flex_1()
-                            .min_h_0()
-                            .overflow_hidden()
-                            .px(ui(6.))
-                            .text_size(ui(12.))
-                            .children(chosen.map(|reading| render_reading(&reading, &sel))),
+                        // Scrolled by itself: a JWT's claims or a query's
+                        // fields run past the pane's height, and the rest of
+                        // them has to be reachable.
+                        None => div().flex_1().min_h_0().relative().child(
+                            scrolled.around(
+                                div()
+                                    .id("reads-said")
+                                    .size_full()
+                                    .overflow_y_scroll()
+                                    .track_scroll(&scrolled.handle)
+                                    .px(ui(6.))
+                                    .pr(px(scrollbar::BAR_W + 4.))
+                                    .text_size(ui(12.))
+                                    // A chain a reader asked for that reads
+                                    // as nothing says so. An empty pane
+                                    // looks like a pane that has not caught
+                                    // up rather than an answer.
+                                    .when(asking && chosen.is_none(), |d| {
+                                        d.child(div().p(ui(10.)).text_color(rgb(c.muted)).child(
+                                            // A piece like the rest of
+                                            // the pane: everything it
+                                            // says can be chosen.
+                                            sel.piece(
+                                                tr!("Nothing to read in this"),
+                                                "\n",
+                                                Vec::new(),
+                                            ),
+                                        ))
+                                    })
+                                    .children(chosen.map(|reading| render_reading(&reading, &sel))),
+                            ),
+                        ),
                     });
                 // What is in the pane is text to choose from and copy,
                 // like the views beside it: the presses go to the same

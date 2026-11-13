@@ -1482,6 +1482,36 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
         "a press on no text leaves the reading that was chosen"
     );
 
+    // A chain that reads as nothing says so. An empty pane reads as one
+    // that has not caught up, not as an answer -- and the words for it were
+    // written and never reached the screen.
+    window
+        .update(&mut cx, |view, _, cx| view.ask_for(0, "unix-ms", cx))
+        .unwrap();
+    cx.run_until_parked();
+    let said_nothing = window
+        .update(&mut cx, |view, _, _| {
+            let sel = view.inspector.reads_select.clone();
+            let reads = view.inspector.reads.as_ref().expect("the pane is open");
+            let nothing = reads.said.is_none();
+            // The pane says it in words, not by going blank.
+            let words = (0..80u64).any(|piece| {
+                sel.text_of(piece)
+                    .is_some_and(|text| text.contains("Nothing to read"))
+            });
+            (nothing, words)
+        })
+        .unwrap();
+    assert_eq!(
+        said_nothing,
+        (true, true),
+        "it reads as nothing, and the pane says so"
+    );
+    window
+        .update(&mut cx, |view, _, cx| view.ask_nothing(cx))
+        .unwrap();
+    cx.run_until_parked();
+
     // A menu opened in the pane stays open: the press that opened it must
     // not be taken as a press on the value under it, which would build the
     // pane again and take the menu with it.
