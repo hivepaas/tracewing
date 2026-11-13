@@ -151,6 +151,34 @@ pub const ROUTES: &[(&str, &str, &[&str])] = &[
     ),
 ];
 
+/// Paths that want a body, and a body to send them. A link cannot ask for
+/// these: a browser follows one with a GET and no body, which is how
+/// `/rpc` came to answer "invalid request" to a click. The listing offers a
+/// button instead, and sends this.
+pub const POSTS: &[(&str, &str, &str)] = &[
+    (
+        "/rpc",
+        "application/json",
+        concat!(
+            r#"{"jsonrpc":"2.0","id":1,"method":"eth_getBalance","#,
+            r#""params":["0x5b24a0f0cbab79d9e7cf05a5cf5c28af0dc20ccc","latest"]}"#
+        ),
+    ),
+    (
+        "/echo",
+        "text/plain; charset=utf-8",
+        "Sent by the playground",
+    ),
+];
+
+/// What the listing sends to `path`, if a link will not do.
+pub fn post_body(path: &str) -> Option<(&'static str, &'static str)> {
+    POSTS
+        .iter()
+        .find(|(at, _, _)| *at == path)
+        .map(|(_, kind, body)| (*kind, *body))
+}
+
 /// Serves until the task is dropped.
 pub async fn serve(listener: TcpListener) -> Result<()> {
     loop {
@@ -498,30 +526,93 @@ pub fn variant_url(path: &str, variant: &str) -> String {
 fn index() -> String {
     let mut rows = String::new();
     for (path, what, variants) in ROUTES {
+        // A path that wants a body is sent, not followed: a link would GET it
+        // with nothing in it, which is not what the path is there to show.
+        let sends = post_body(path).is_some();
+        let one = |url: &str, text: &str| {
+            if sends {
+                format!(
+                    r#" <button class="p" data-path="{}" data-url="{}"><code>{}</code></button>"#,
+                    escape_xml(path),
+                    escape_xml(url),
+                    escape_xml(text)
+                )
+            } else {
+                format!(
+                    r#" <a class="p" href="{}"><code>{}</code></a>"#,
+                    escape_xml(url),
+                    escape_xml(text)
+                )
+            }
+        };
         let mut links = String::new();
         for variant in *variants {
-            let _ = write!(
-                links,
-                r#" <a class="p" href="{}"><code>{}</code></a>"#,
-                escape_xml(&variant_url(path, variant)),
-                escape_xml(variant)
-            );
+            links.push_str(&one(&variant_url(path, variant), variant));
         }
+        let head = if sends {
+            format!(
+                r#"<code>{}</code>{}"#,
+                escape_xml(path),
+                one(path, "POST").trim_start()
+            )
+        } else {
+            format!(r#"<a href="{path}"><code>{path}</code></a>"#)
+        };
         let _ = writeln!(
             rows,
-            r#"<tr><td><a href="{path}"><code>{path}</code></a>{links}</td><td>{}</td></tr>"#,
+            r#"<tr><td>{head}{links}</td><td>{} <span class="said"></span></td></tr>"#,
             escape_xml(what)
         );
     }
+    // What each button sends, by path.
+    let mut sends = String::from("{");
+    for (at, (path, kind, body)) in POSTS.iter().enumerate() {
+        if at > 0 {
+            sends.push(',');
+        }
+        let _ = write!(
+            sends,
+            r#""{}":["{}","{}"]"#,
+            js_text(path),
+            js_text(kind),
+            js_text(body)
+        );
+    }
+    sends.push('}');
     format!(
         r#"<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>tracewing playground</title>
-<style>body{{font:15px system-ui,sans-serif;margin:2rem;max-width:60rem}}td{{padding:.25rem .75rem}}code{{font-size:14px}}a.p{{margin-left:.5rem;color:#666}}a.p code{{font-size:13px}}</style>
+<style>body{{font:15px system-ui,sans-serif;margin:2rem;max-width:60rem}}td{{padding:.25rem .75rem}}code{{font-size:14px}}a.p{{margin-left:.5rem;color:#666}}a.p code{{font-size:13px}}
+button.p{{margin-left:.5rem;color:#666;background:#f2f2f2;border:1px solid #ddd;border-radius:.4rem;padding:.1rem .4rem;cursor:pointer}}
+button.p:hover{{background:#e8e8e8}}.said{{margin-left:.5rem;color:#888;font:13px ui-monospace,monospace}}</style>
 </head><body>
 <h1>tracewing playground</h1>
-<p>A server to try tracewing on. Each path answers with one kind of body.</p>
+<p>A server to try tracewing on. Each path answers with one kind of body.
+A path that wants a body has a button instead of a link: a link would GET it
+with nothing in it.</p>
 <table>
 {rows}</table>
+<script>
+const sends = {sends};
+for (const button of document.querySelectorAll("button[data-url]")) {{
+  button.addEventListener("click", async () => {{
+    const [kind, body] = sends[button.dataset.path];
+    const said = button.closest("tr").querySelector(".said");
+    said.textContent = "sending…";
+    try {{
+      const answer = await fetch(button.dataset.url, {{
+        method: "POST",
+        headers: {{ "content-type": kind }},
+        body,
+      }});
+      const text = await answer.text();
+      said.textContent = answer.status + " " + text.slice(0, 120);
+    }} catch (trouble) {{
+      said.textContent = String(trouble);
+    }}
+  }});
+}}
+</script>
 </body></html>
 "#
     )
@@ -579,6 +670,15 @@ fn fill(target: usize, out: &mut String, mut write: impl FnMut(&mut String, &Ord
 
 fn escape_json(text: &str) -> String {
     text.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+/// Text to go inside a JavaScript string: its quotes and backslashes kept,
+/// and no `</` to end the script before its time.
+fn js_text(text: &str) -> String {
+    text.replace('\\', r"\\")
+        .replace('"', "\\\"")
+        .replace('\n', r"\n")
+        .replace("</", r"<\/")
 }
 
 fn escape_xml(text: &str) -> String {
@@ -1105,11 +1205,17 @@ mod tests {
             .build()
             .unwrap();
         for (path, _, variants) in ROUTES {
-            let response = client
-                .get(format!("{base}{path}?mb=1&n=2&ms=1"))
-                .send()
-                .await
-                .unwrap();
+            let url = format!("{base}{path}?mb=1&n=2&ms=1");
+            let response = match post_body(path) {
+                Some((kind, body)) => client
+                    .post(&url)
+                    .header("content-type", kind)
+                    .body(body)
+                    .send()
+                    .await
+                    .unwrap(),
+                None => client.get(&url).send().await.unwrap(),
+            };
             let status = response.status().as_u16();
             let expected = match *path {
                 "/status/404" => 404,
@@ -1133,7 +1239,17 @@ mod tests {
                     continue;
                 }
                 let url = format!("{base}{}", variant_url(path, variant));
-                let status = client.get(&url).send().await.unwrap().status().as_u16();
+                let answer = match post_body(path) {
+                    Some((kind, body)) => client
+                        .post(&url)
+                        .header("content-type", kind)
+                        .body(body)
+                        .send()
+                        .await
+                        .unwrap(),
+                    None => client.get(&url).send().await.unwrap(),
+                };
+                let status = answer.status().as_u16();
                 let wanted = variant
                     .strip_prefix("/status/")
                     .and_then(|code| code.parse().ok())
@@ -1143,6 +1259,56 @@ mod tests {
         }
         let missing = client.get(format!("{base}/nope")).send().await.unwrap();
         assert_eq!(missing.status(), 404);
+    }
+
+    /// What the listing's buttons send has to be answered for real. A link
+    /// would GET `/rpc` with no body, which it answers "invalid request" --
+    /// a 200 that reads as the path being broken.
+    #[tokio::test]
+    async fn what_the_listing_sends_is_answered() {
+        let base = start().await;
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let said = |url: String, kind: &'static str, body: &'static str| {
+            let client = client.clone();
+            async move {
+                client
+                    .post(url)
+                    .header("content-type", kind)
+                    .body(body)
+                    .send()
+                    .await
+                    .unwrap()
+                    .text()
+                    .await
+                    .unwrap()
+            }
+        };
+        let (kind, body) = post_body("/rpc").unwrap();
+        let answered = said(format!("{base}/rpc"), kind, body).await;
+        assert!(
+            answered.contains(r#""result""#) && !answered.contains("invalid request"),
+            "{answered}"
+        );
+        let reverted = said(format!("{base}/rpc?fail=1"), kind, body).await;
+        assert!(reverted.contains("execution reverted"), "{reverted}");
+        let (kind, body) = post_body("/echo").unwrap();
+        let echoed = said(format!("{base}/echo"), kind, body).await;
+        assert!(echoed.contains(body), "{echoed}");
+
+        // And the page offers them that way: a button, not a link.
+        let page = client
+            .get(base.clone())
+            .send()
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+        assert!(
+            page.contains(r#"<button class="p" data-path="/rpc""#),
+            "{page}"
+        );
+        assert!(!page.contains(r#"<a href="/rpc">"#), "{page}");
     }
 
     /// Whether a listed parameter asks for something big or slow on purpose.
