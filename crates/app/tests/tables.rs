@@ -5,17 +5,20 @@
 
 #![cfg(all(feature = "headless", target_os = "linux"))]
 
-use gpui::{AppContext as _, Entity, HeadlessAppContext, WindowHandle, px, size};
+mod common;
+
+use gpui::{AppContext as _, Entity, HeadlessAppContext, WindowHandle, point, px, size};
 use std::{
     path::PathBuf,
     sync::Arc,
     time::{Duration, Instant},
 };
 use tracewing::{
-    bodyview::BodyMode,
+    bodyview::{BodyMode, BodyView},
     engine::{Engine, EngineOptions},
     input::TextInput,
     inspector::BodyState,
+    select::Copied,
     traffic::{Screen, Traffic},
 };
 use tracewing_store::settings::StorageSettings;
@@ -70,6 +73,16 @@ fn get(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>, url: &str) {
             .as_ref()
             .is_some_and(|page| page.answer.is_some() || page.problem.is_some())
     });
+}
+
+/// The body shown.
+fn body(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>) -> Entity<BodyView> {
+    window
+        .update(cx, |view, _, _| match &view.inspector.body {
+            BodyState::Shown(body) => body.clone(),
+            _ => panic!("a body is shown"),
+        })
+        .unwrap()
 }
 
 /// The body shown's mode, and its table's rows if it has one.
@@ -172,6 +185,86 @@ fn csv_and_tsv_are_tables() {
     wait_for(&mut cx, window, "the CSV as a table again", |view, cx| {
         shown(view, cx) == Some((BodyMode::Table, Some(6)))
     });
+
+    // Cells are selected as text is, a drag from one to another, and copy
+    // as TSV: a tab between cells, a line between rows.
+    let table = body(&mut cx, window);
+    let (from, to, first, second) = window
+        .update(&mut cx, |_, _, cx| {
+            let body = table.read(cx);
+            let t = body.table().unwrap();
+            let cols = t.widths.len() as u64;
+            let at = |key: u64| body.selection().drawn_at(key).expect("the cell is drawn");
+            let (a, b) = (at(cols), at(2 * cols + 1));
+            (
+                point(a.left() + px(1.), a.center().y),
+                point(b.right(), b.center().y),
+                t.cells(1),
+                t.cells(2),
+            )
+        })
+        .unwrap();
+    common::drag(&mut cx, window, from, to);
+    let copied = window
+        .update(&mut cx, |_, _, cx| table.read(cx).selected_text())
+        .unwrap();
+    let Copied::Text(copied) = copied else {
+        panic!("cells are selected: {copied:?}");
+    };
+    let lines: Vec<&str> = copied.lines().collect();
+    assert_eq!(lines.len(), 2, "two rows: {copied:?}");
+    assert!(
+        lines[0].starts_with(&format!("{}\t", first[0])),
+        "{copied:?}"
+    );
+    assert!(
+        lines[1].starts_with(&format!("{}\t", second[0])),
+        "{copied:?}"
+    );
+    shot(&mut cx, window.into(), "113-table-selected");
+
+    // A right click opens the menu: Copy, Copy all, Copy row, Copy column.
+    common::right_click(&mut cx, window, from);
+    let open = window
+        .update(&mut cx, |_, _, cx| {
+            table.read(cx).selection().menu().is_some()
+        })
+        .unwrap();
+    assert!(open, "the table's menu opens");
+    shot(&mut cx, window.into(), "114-table-menu");
+
+    // A table longer than its pane has a bar, and its thumb scrolls it.
+    window
+        .update(&mut cx, |view, _, cx| view.select_place(1, cx))
+        .unwrap();
+    wait_for(
+        &mut cx,
+        window,
+        "the TSV as a table again",
+        |view, cx| matches!(shown(view, cx), Some((BodyMode::Table, Some(rows))) if rows > 5_000),
+    );
+    window
+        .update(&mut cx, |_, window, _| window.refresh())
+        .unwrap();
+    cx.run_until_parked();
+    let bar = body(&mut cx, window).read_with(&cx, |b, _| b.table_bar().clone());
+    assert!(
+        bar.handle.max_offset().y > px(0.),
+        "the table is longer than its pane"
+    );
+    let pane = bar.handle.bounds();
+    let x = pane.right() - px(tracewing::scrollbar::BAR_W / 2.);
+    common::drag(
+        &mut cx,
+        window,
+        point(x, pane.top() + px(10.)),
+        point(x, pane.top() + pane.size.height / 2.),
+    );
+    assert!(
+        bar.handle.offset().y < px(0.),
+        "the thumb scrolled the table"
+    );
+    shot(&mut cx, window.into(), "115-table-scrolled");
 
     // JSON has no table, and Table chosen does not change it.
     window

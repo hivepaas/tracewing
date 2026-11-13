@@ -138,6 +138,12 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Yalnızca ilk { $count } satır gösteriliyor.
 
+# Copy row
+tbdecf3c8 = Satırı kopyala
+
+# Copy column
+te26431fe = Sütunu kopyala
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } nasıl okunduğunu unut
 

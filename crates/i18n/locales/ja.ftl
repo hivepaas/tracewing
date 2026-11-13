@@ -130,6 +130,12 @@ t0a4220dc = { $size } { $format } · JSON { $count } 行
 # The first {count} rows are shown.
 t16aa1c6d = 最初の { $count } 行のみ表示しています。
 
+# Copy row
+tbdecf3c8 = 行をコピー
+
+# Copy column
+te26431fe = 列をコピー
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } の読み方を忘れる
 

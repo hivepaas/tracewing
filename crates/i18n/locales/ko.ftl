@@ -130,6 +130,12 @@ t0a4220dc = { $size } { $format } · JSON { $count }줄
 # The first {count} rows are shown.
 t16aa1c6d = 처음 { $count }행만 표시합니다.
 
+# Copy row
+tbdecf3c8 = 행 복사
+
+# Copy column
+te26431fe = 열 복사
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } 읽는 방식 잊기
 
