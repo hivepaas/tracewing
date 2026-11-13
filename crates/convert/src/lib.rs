@@ -13,6 +13,7 @@
 //! See `docs/converting-values.md`.
 
 use std::time::{Duration, Instant};
+use tracewing_i18n::tr;
 
 mod binary;
 pub mod chain;
@@ -184,6 +185,11 @@ pub struct Input<'a> {
     pub now: i64,
     /// The reader's offset from UTC, in seconds east of it.
     pub offset: i32,
+    /// Whether a reader named this converter rather than the search finding
+    /// it. What a converter would not offer by itself it still has to do
+    /// when it is asked for: base64 of bytes nobody recognises is exactly
+    /// what somebody reaches for "read as" to see.
+    pub asked: bool,
 }
 
 impl<'a> Input<'a> {
@@ -194,6 +200,7 @@ impl<'a> Input<'a> {
             field: None,
             now,
             offset,
+            asked: false,
         }
     }
 
@@ -305,6 +312,493 @@ const CONVERTERS: &[Converter] = &[
     times::excel_date,
 ];
 
+/// What a converter is about, for a reader looking down a menu of them.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Group {
+    Times,
+    Names,
+    Tracing,
+    Web,
+    Network,
+    Data,
+    Encodings,
+    Packed,
+    Tokens,
+    Numbers,
+    Chain,
+}
+
+impl Group {
+    /// The heading it goes under.
+    pub fn name(self) -> String {
+        match self {
+            Self::Times => tr!("Times"),
+            Self::Names => tr!("Names and ids"),
+            Self::Tracing => tr!("Tracing"),
+            Self::Web => tr!("The web's own"),
+            Self::Network => tr!("Networks"),
+            Self::Data => tr!("Data"),
+            Self::Encodings => tr!("Encodings"),
+            Self::Packed => tr!("Packed"),
+            Self::Tokens => tr!("Tokens and keys"),
+            Self::Numbers => tr!("Numbers"),
+            Self::Chain => tr!("Chains"),
+        }
+    }
+}
+
+/// One reading a reader can ask for by name: what it is called, where it
+/// belongs in the menu, and what does it.
+///
+/// A converter may give more than one reading -- a number is seconds or
+/// milliseconds by how large it is -- so there is a row here for each
+/// reading rather than for each converter, and asking for one that the value
+/// is not gives nothing rather than the other.
+struct Known {
+    id: &'static str,
+    group: Group,
+    run: Converter,
+    name: fn() -> String,
+}
+
+/// What a reader may ask for by name, in the order a menu shows them.
+const KNOWN: &[Known] = &[
+    Known {
+        id: "unix-s",
+        group: Group::Times,
+        run: times::unix,
+        name: || tr!("Unix seconds"),
+    },
+    Known {
+        id: "unix-ms",
+        group: Group::Times,
+        run: times::unix,
+        name: || tr!("Unix milliseconds"),
+    },
+    Known {
+        id: "unix-us",
+        group: Group::Times,
+        run: times::unix,
+        name: || tr!("Unix microseconds"),
+    },
+    Known {
+        id: "unix-ns",
+        group: Group::Times,
+        run: times::unix,
+        name: || tr!("Unix nanoseconds"),
+    },
+    Known {
+        id: "iso-8601",
+        group: Group::Times,
+        run: times::iso,
+        name: || tr!("ISO 8601"),
+    },
+    Known {
+        id: "iso-8601-naive",
+        group: Group::Times,
+        run: times::iso,
+        name: || tr!("ISO 8601, no zone: read as UTC"),
+    },
+    Known {
+        id: "http-date",
+        group: Group::Times,
+        run: times::http_date,
+        name: || tr!("HTTP-date"),
+    },
+    Known {
+        id: "filetime",
+        group: Group::Times,
+        run: times::filetime,
+        name: || tr!("Windows FILETIME"),
+    },
+    Known {
+        id: "dotnet-ticks",
+        group: Group::Times,
+        run: times::dotnet_ticks,
+        name: || tr!(".NET ticks"),
+    },
+    Known {
+        id: "cocoa",
+        group: Group::Times,
+        run: times::cocoa,
+        name: || tr!("Seconds since 2001 (Apple)"),
+    },
+    Known {
+        id: "hfs",
+        group: Group::Times,
+        run: times::hfs,
+        name: || tr!("Seconds since 1904 (HFS+)"),
+    },
+    Known {
+        id: "excel-date",
+        group: Group::Times,
+        run: times::excel_date,
+        name: || tr!("Days since 1899 (spreadsheet)"),
+    },
+    Known {
+        id: "duration",
+        group: Group::Times,
+        run: times::duration,
+        name: || tr!("Seconds"),
+    },
+    Known {
+        id: "uuid",
+        group: Group::Names,
+        run: ids::uuid,
+        name: || tr!("UUID"),
+    },
+    Known {
+        id: "ulid",
+        group: Group::Names,
+        run: ids::ulid,
+        name: || tr!("ULID"),
+    },
+    Known {
+        id: "object-id",
+        group: Group::Names,
+        run: ids::object_id,
+        name: || tr!("ObjectId"),
+    },
+    Known {
+        id: "ksuid",
+        group: Group::Names,
+        run: ids::ksuid,
+        name: || tr!("KSUID"),
+    },
+    Known {
+        id: "snowflake",
+        group: Group::Names,
+        run: ids::snowflake,
+        name: || tr!("Snowflake"),
+    },
+    Known {
+        id: "traceparent",
+        group: Group::Tracing,
+        run: tracing::traceparent,
+        name: || tr!("Trace context"),
+    },
+    Known {
+        id: "b3",
+        group: Group::Tracing,
+        run: tracing::b3,
+        name: || tr!("B3 trace"),
+    },
+    Known {
+        id: "amazon-trace",
+        group: Group::Tracing,
+        run: tracing::amazon,
+        name: || tr!("Amazon trace"),
+    },
+    Known {
+        id: "server-timing",
+        group: Group::Tracing,
+        run: tracing::server_timing,
+        name: || tr!("Server-Timing"),
+    },
+    Known {
+        id: "url",
+        group: Group::Web,
+        run: web::url,
+        name: || tr!("URL"),
+    },
+    Known {
+        id: "query",
+        group: Group::Web,
+        run: web::query,
+        name: || tr!("Query fields"),
+    },
+    Known {
+        id: "basic-auth",
+        group: Group::Web,
+        run: web::basic,
+        name: || tr!("Basic authentication"),
+    },
+    Known {
+        id: "cache-control",
+        group: Group::Web,
+        run: web::cache_control,
+        name: || tr!("Cache-Control"),
+    },
+    Known {
+        id: "status",
+        group: Group::Web,
+        run: web::status,
+        name: || tr!("Status code"),
+    },
+    Known {
+        id: "cookie",
+        group: Group::Web,
+        run: web::cookie,
+        name: || tr!("Cookie"),
+    },
+    Known {
+        id: "data-uri",
+        group: Group::Web,
+        run: web::data_uri,
+        name: || tr!("data: URI"),
+    },
+    Known {
+        id: "ipv6",
+        group: Group::Network,
+        run: net::ipv6,
+        name: || tr!("IPv6"),
+    },
+    Known {
+        id: "cidr",
+        group: Group::Network,
+        run: net::cidr,
+        name: || tr!("A range of addresses"),
+    },
+    Known {
+        id: "mac",
+        group: Group::Network,
+        run: net::mac,
+        name: || tr!("A MAC address"),
+    },
+    Known {
+        id: "ip-number",
+        group: Group::Network,
+        run: net::ip_number,
+        name: || tr!("As an address"),
+    },
+    Known {
+        id: "port",
+        group: Group::Network,
+        run: net::port,
+        name: || tr!("As a port"),
+    },
+    Known {
+        id: "json",
+        group: Group::Data,
+        run: json::whole,
+        name: || tr!("JSON"),
+    },
+    Known {
+        id: "json-in-string",
+        group: Group::Data,
+        run: json::in_string,
+        name: || tr!("JSON in a string"),
+    },
+    Known {
+        id: "protobuf",
+        group: Group::Data,
+        run: binary::protobuf,
+        name: || tr!("Protobuf"),
+    },
+    Known {
+        id: "base64",
+        group: Group::Encodings,
+        run: encodings::base64,
+        name: || tr!("base64"),
+    },
+    Known {
+        id: "hex",
+        group: Group::Encodings,
+        run: encodings::hex,
+        name: || tr!("Hex"),
+    },
+    Known {
+        id: "percent",
+        group: Group::Encodings,
+        run: encodings::percent,
+        name: || tr!("Percent-encoded"),
+    },
+    Known {
+        id: "escapes",
+        group: Group::Encodings,
+        run: encodings::unicode_escapes,
+        name: || tr!("Escaped text"),
+    },
+    Known {
+        id: "entities",
+        group: Group::Encodings,
+        run: encodings::entities,
+        name: || tr!("HTML entities"),
+    },
+    Known {
+        id: "gzip",
+        group: Group::Packed,
+        run: packed::gzip,
+        name: || tr!("gzip"),
+    },
+    Known {
+        id: "zlib",
+        group: Group::Packed,
+        run: packed::zlib,
+        name: || tr!("zlib"),
+    },
+    Known {
+        id: "deflate",
+        group: Group::Packed,
+        run: packed::deflate,
+        name: || tr!("deflate"),
+    },
+    Known {
+        id: "zstd",
+        group: Group::Packed,
+        run: packed::zstd,
+        name: || tr!("zstd"),
+    },
+    Known {
+        id: "brotli",
+        group: Group::Packed,
+        run: packed::brotli,
+        name: || tr!("Brotli"),
+    },
+    Known {
+        id: "jwt",
+        group: Group::Tokens,
+        run: jwt::read,
+        name: || tr!("JWT"),
+    },
+    Known {
+        id: "jwe",
+        group: Group::Tokens,
+        run: tokens::jwe,
+        name: || tr!("JWE, an encrypted token"),
+    },
+    Known {
+        id: "paseto",
+        group: Group::Tokens,
+        run: tokens::paseto,
+        name: || tr!("PASETO"),
+    },
+    Known {
+        id: "saml",
+        group: Group::Tokens,
+        run: tokens::saml,
+        name: || tr!("SAML"),
+    },
+    Known {
+        id: "pem",
+        group: Group::Tokens,
+        run: tokens::pem,
+        name: || tr!("PEM"),
+    },
+    Known {
+        id: "crypt",
+        group: Group::Tokens,
+        run: tokens::crypt,
+        name: || tr!("A hashed password"),
+    },
+    Known {
+        id: "hash",
+        group: Group::Tokens,
+        run: tokens::hash,
+        name: || tr!("A hash, by its size"),
+    },
+    Known {
+        id: "size",
+        group: Group::Numbers,
+        run: numbers::size,
+        name: || tr!("As a size"),
+    },
+    Known {
+        id: "radix",
+        group: Group::Numbers,
+        run: numbers::radix,
+        name: || tr!("In hex and binary"),
+    },
+    Known {
+        id: "flags",
+        group: Group::Numbers,
+        run: numbers::flags,
+        name: || tr!("Bits set"),
+    },
+    Known {
+        id: "address",
+        group: Group::Chain,
+        run: chain::address,
+        name: || tr!("An address"),
+    },
+    Known {
+        id: "topic",
+        group: Group::Chain,
+        run: chain::topic,
+        name: || tr!("An event's topic"),
+    },
+    Known {
+        id: "selector",
+        group: Group::Chain,
+        run: chain::selector,
+        name: || tr!("A call, by its four bytes"),
+    },
+];
+
+/// One reading a reader can ask for, as a menu shows it.
+pub struct Named {
+    pub id: &'static str,
+    pub group: Group,
+    pub name: String,
+}
+
+/// Everything a reader may ask for by name, in menu order.
+pub fn named() -> Vec<Named> {
+    KNOWN
+        .iter()
+        .map(|known| Named {
+            id: known.id,
+            group: known.group,
+            name: (known.name)(),
+        })
+        .collect()
+}
+
+/// Whether what `id` reads can be read again: only bytes can be handed on
+/// to another converter, so only those can have a step after them.
+pub fn goes_on(reading: &Reading) -> bool {
+    matches!(reading.shown, Shown::Bytes { .. })
+}
+
+/// What `input` reads as, through the converters named, in that order.
+///
+/// This is what a reader asks for by hand, and it is not the search: each
+/// converter is run whether or not it would have offered itself, and each
+/// step after the first reads the bytes of the one before. `None` where a
+/// step reads as nothing, or where what a step gave cannot be read on.
+pub fn read_with(ids: &[&'static str], input: &Input) -> Option<Reading> {
+    if ids.is_empty() || ids.len() > MAX_DEPTH {
+        return None;
+    }
+    let mut held: Option<Vec<u8>> = None;
+    let mut last: Option<Reading> = None;
+    for (at, id) in ids.iter().enumerate() {
+        let known = KNOWN.iter().find(|known| known.id == *id)?;
+        let mut reading = match &held {
+            None => {
+                let mut asked = *input;
+                asked.asked = true;
+                (known.run)(&asked)?
+            }
+            Some(bytes) => {
+                let text = std::str::from_utf8(bytes).unwrap_or("").trim();
+                let inside = Input {
+                    text,
+                    bytes: Some(bytes),
+                    field: input.field,
+                    now: input.now,
+                    offset: input.offset,
+                    asked: true,
+                };
+                (known.run)(&inside)?
+            }
+        };
+        // A converter that gives more than one reading may give another of
+        // them: seconds where milliseconds were asked for. That is a no.
+        if reading.id != *id {
+            return None;
+        }
+        reading.chain = ids[..=at].to_vec();
+        held = match &reading.shown {
+            Shown::Bytes { bytes, .. } => Some(bytes.clone()),
+            _ if at + 1 < ids.len() => return None,
+            _ => None,
+        };
+        last = Some(reading);
+    }
+    last
+}
+
 /// Every reading of `input`, best first, within [`BUDGET`].
 pub fn readings(input: &Input) -> Vec<Reading> {
     readings_within(input, BUDGET)
@@ -385,6 +879,7 @@ fn collect(
                 field: input.field,
                 now: input.now,
                 offset: input.offset,
+                asked: input.asked,
             };
             chain.push(reading.id);
             collect(&inside, chain, found, deadline);
@@ -572,5 +1067,94 @@ mod tests {
         let reading = by_id(&found, "unix-s").unwrap();
         assert_eq!(reading.text(), "2026-11-12 21:13:20 (+07:00), in 0 s");
         assert!(reading.summary().ends_with("(Unix seconds)"));
+    }
+}
+
+#[cfg(test)]
+mod asked_tests {
+    use super::*;
+    use crate::tests::{NOW, TZ};
+    use base64::Engine as _;
+
+    fn b64(bytes: &[u8]) -> String {
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    }
+
+    fn deflated(data: &[u8]) -> Vec<u8> {
+        use std::io::Write as _;
+        let mut out = flate2::write::DeflateEncoder::new(Vec::new(), flate2::Compression::fast());
+        out.write_all(data).unwrap();
+        out.finish().unwrap()
+    }
+
+    fn asked(ids: &[&'static str], text: &str) -> Option<Reading> {
+        read_with(ids, &Input::new(text, NOW, TZ))
+    }
+
+    /// The chain a reader builds by hand is run step by step, each reading
+    /// the bytes of the one before.
+    #[test]
+    fn a_chain_asked_for_is_run_in_order() {
+        let packed = b64(&deflated(br#"{"hello":"world"}"#));
+        let reading = asked(&["base64", "deflate", "json"], &packed).expect("all three");
+        assert_eq!(reading.id, "json");
+        assert_eq!(reading.chain, vec!["base64", "deflate", "json"]);
+        // And one step at a time says what that step gave.
+        let first = asked(&["base64"], &packed).expect("base64 alone");
+        assert!(matches!(first.shown, Shown::Bytes { .. }));
+        assert!(goes_on(&first), "bytes can be read on");
+    }
+
+    /// What the search would not offer is still done when it is asked for:
+    /// base64 of bytes nobody recognises is the case somebody reaches for
+    /// "read as" to see at all.
+    #[test]
+    fn what_the_search_turns_away_is_done_when_asked() {
+        let key: Vec<u8> = (0..32u8)
+            .map(|n| n.wrapping_mul(37).wrapping_add(11))
+            .collect();
+        let text = b64(&key);
+        assert!(
+            readings(&Input::new(&text, NOW, TZ))
+                .iter()
+                .all(|reading| reading.id != "base64"),
+            "the search says nothing of it"
+        );
+        let reading = asked(&["base64"], &text).expect("asked for, it is done");
+        match reading.shown {
+            Shown::Bytes { ref bytes, .. } => assert_eq!(bytes, &key),
+            ref other => panic!("{other:?}"),
+        }
+    }
+
+    /// Asking for what the value is not gives nothing, rather than the
+    /// reading next door.
+    #[test]
+    fn asking_for_the_wrong_one_gives_nothing() {
+        // 1794492800 is seconds; asked for as milliseconds it is not that.
+        assert!(asked(&["unix-ms"], "1794492800").is_none());
+        assert_eq!(asked(&["unix-s"], "1794492800").unwrap().id, "unix-s");
+        // A step that gives no bytes cannot have one after it.
+        assert!(asked(&["unix-s", "json"], "1794492800").is_none());
+        // A name nobody has.
+        assert!(asked(&["not-a-reading"], "1794492800").is_none());
+        // Deeper than a chain goes.
+        assert!(asked(&["base64", "base64", "base64", "base64"], "aGVsbG8=").is_none());
+    }
+
+    /// Every reading a value of the samples has is one a reader can ask for
+    /// by name: the menu and the search say the same words.
+    #[test]
+    fn the_menu_names_what_the_search_finds() {
+        let named = named();
+        assert!(named.len() >= 57, "{}", named.len());
+        for one in &named {
+            assert!(!one.name.is_empty(), "{} has no name", one.id);
+        }
+        let mut ids: Vec<&str> = named.iter().map(|one| one.id).collect();
+        ids.sort_unstable();
+        let had = ids.len();
+        ids.dedup();
+        assert_eq!(had, ids.len(), "a name is in the menu twice");
     }
 }

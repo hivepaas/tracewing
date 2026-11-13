@@ -783,6 +783,12 @@ t60beaefd = Deutungen schließen
 # a guess
 t6af47169 = eine Vermutung
 
+# Read as
+t8c0f1d8b = Lesen als
+
+# choose…
+te030653c = wählen…
+
 # Read from {from}
 t6d510d3d = Gelesen aus { $from }
 
@@ -1286,9 +1292,6 @@ t70ff68f9 =
         [one] und { $count } weitere: tippen, um einzugrenzen
        *[other] und { $count } weitere: tippen, um einzugrenzen
     }
-
-# Read as
-t8c0f1d8b = Lesen als
 
 # Copy reading
 td38c5cc8 = Gelesenes kopieren
@@ -2815,8 +2818,170 @@ td8d653d6 =
        *[other] { $n } Zeilen
     }
 
+# Times
+tec53a755 = Zeiten
+
+# Names and ids
+t74dee54c = Namen und Ids
+
+# Tracing
+t1d5a82d9 = Tracing
+
+# The web's own
+t500d90ac = Das Eigene des Webs
+
+# Networks
+t18ac79a2 = Netze
+
+# Data
+t3f5279c5 = Daten
+
+# Encodings
+taf58dad9 = Kodierungen
+
+# Packed
+t6d550b01 = Gepackt
+
+# Tokens and keys
+t50973c5a = Token und Schlüssel
+
+# Numbers
+td63c77c9 = Zahlen
+
+# Chains
+t109ecadf = Ketten
+
+# Unix seconds
+t6edf5796 = Unix-Sekunden
+
+# Unix milliseconds
+t0d28f4b7 = Unix-Millisekunden
+
+# Unix microseconds
+tc705fe24 = Unix-Mikrosekunden
+
+# Unix nanoseconds
+t235cb430 = Unix-Nanosekunden
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, ohne Zone: als UTC gelesen
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET ticks
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = Sekunden seit 2001 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = Sekunden seit 1904 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = Tage seit 1899 (Tabelle)
+
+# Seconds
+t7e12f48a = Sekunden
+
+# Trace context
+ta58c7c95 = Trace-Kontext
+
+# B3 trace
+tb4f9b9bb = B3-Trace
+
+# Amazon trace
+t122e82a4 = Amazon-Trace
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Query fields
+t2f58f1e0 = Query-Felder
+
+# Basic authentication
+te161b66b = Basic-Authentifizierung
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Statuscode
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI
+teee15f8f = data: URI
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Ein Adressbereich
+
+# A MAC address
+t6d968a53 = Eine MAC-Adresse
+
 # As an address
 t9c53ba7c = Als Adresse
+
+# As a port
+t9fea9931 = Als Port
+
+# JSON
+tdfbd7fc3 = JSON
+
+# Protobuf
+taac68056 = Protobuf
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# JWE, an encrypted token
+t6da81e5b = JWE, ein verschlüsseltes Token
+
+# PASETO
+t309420ff = PASETO
+
+# SAML
+t015e7110 = SAML
+
+# PEM
+tf70119c9 = PEM
+
+# A hashed password
+t0157a1e6 = Ein gehashtes Passwort
+
+# A hash, by its size
+te82b53c8 = Ein Hash, an seiner Größe erkannt
+
+# As a size
+ta9175b27 = Als Größe
+
+# In hex and binary
+tc31ef85f = In Hex und Binär
+
+# Bits set
+tb67e8e09 = Gesetzte Bits
 
 # this machine
 t8bdabc70 = dieser Rechner
@@ -2845,12 +3010,6 @@ tc1fb8957 = Die IPv4 darin
 # What it is
 t065b8fa0 = Was es ist
 
-# IPv6
-t43fe7378 = IPv6
-
-# A range of addresses
-t889c22f2 = Ein Adressbereich
-
 # From
 t18743595 = Von
 
@@ -2860,86 +3019,17 @@ t41f59644 = Bis
 # How many
 tc31ec050 = Wie viele
 
-# As a port
-t9fea9931 = Als Port
-
 # to many, not to one
 t660024a1 = an viele, nicht an einen
 
 # given by hand, not by the maker
 tc16b0e31 = von Hand vergeben, nicht vom Hersteller
 
-# A MAC address
-t6d968a53 = Eine MAC-Adresse
-
-# In hex and binary
-tc31ef85f = In Hex und Binär
-
-# Bits set
-tb67e8e09 = Gesetzte Bits
-
-# As a size
-ta9175b27 = Als Größe
-
-# gzip
-t1a451735 = gzip
-
-# zlib
-t7c5452c4 = zlib
-
-# deflate
-t1dfa0080 = deflate
-
-# zstd
-tcfa9c52a = zstd
-
-# Brotli
-t5b0660bd = Brotli
-
 # in {amount}
 tfda57c3e = in { $amount }
 
 # {amount} ago
 t5f968014 = vor { $amount }
-
-# Unix seconds
-t6edf5796 = Unix-Sekunden
-
-# Unix milliseconds
-t0d28f4b7 = Unix-Millisekunden
-
-# Unix microseconds
-tc705fe24 = Unix-Mikrosekunden
-
-# Unix nanoseconds
-t235cb430 = Unix-Nanosekunden
-
-# ISO 8601
-t402bdff3 = ISO 8601
-
-# ISO 8601, no zone: read as UTC
-t3bb6c7ca = ISO 8601, ohne Zone: als UTC gelesen
-
-# HTTP-date
-te55df34c = HTTP-date
-
-# Seconds
-t7e12f48a = Sekunden
-
-# Windows FILETIME
-t8582ebf1 = Windows FILETIME
-
-# .NET ticks
-t8c35aaf6 = .NET ticks
-
-# Seconds since 2001 (Apple)
-t4bd1d35a = Sekunden seit 2001 (Apple)
-
-# Seconds since 1904 (HFS+)
-tc7a82a5d = Sekunden seit 1904 (HFS+)
-
-# Days since 1899 (spreadsheet)
-td7bc06f2 = Tage seit 1899 (Tabelle)
 
 # Key wrapped with
 ted680adb = Schlüssel verpackt mit
@@ -2956,9 +3046,6 @@ tbfad8752 = Der Rest
 # encrypted: it needs the key, which tracewing does not have
 tacb4301a = verschlüsselt: dafür braucht es den Schlüssel, den tracewing nicht hat
 
-# JWE, an encrypted token
-t6da81e5b = JWE, ein verschlüsseltes Token
-
 # What it is for
 t7f5984ef = Wofür es ist
 
@@ -2970,9 +3057,6 @@ tf7f41fd7 = öffentlicher Schlüssel, signiert
 
 # The claims
 t5918e3d1 = Die Angaben
-
-# PASETO
-t309420ff = PASETO
 
 # MD5, or MD4, or NTLM
 t562aaed5 = MD5, MD4 oder NTLM
@@ -2991,9 +3075,6 @@ ta4d7ea95 = SHA-384
 
 # SHA-512, or SHA3-512, or BLAKE2b
 t275da5bd = SHA-512, SHA3-512 oder BLAKE2b
-
-# A hash, by its size
-te82b53c8 = Ein Hash, an seiner Größe erkannt
 
 # Made by
 te8ff7e65 = Erzeugt von
@@ -3022,12 +3103,6 @@ tefb8e7ad = SHA-256 crypt
 # SHA-512 crypt
 t9dcf716c = SHA-512 crypt
 
-# A hashed password
-t0157a1e6 = Ein gehashtes Passwort
-
-# PEM
-tf70119c9 = PEM
-
 # What it holds
 tff372c62 = Was es enthält
 
@@ -3045,12 +3120,6 @@ t3890a578 = Erstellt
 
 # Named
 t6055a346 = Name
-
-# SAML
-t015e7110 = SAML
-
-# Trace context
-ta58c7c95 = Trace-Kontext
 
 # Trace
 t26f8e74e = Trace
@@ -3070,17 +3139,8 @@ t62366ffa = nein
 # Parent span
 t3cf3f9c3 = Eltern-Span
 
-# B3 trace
-tb4f9b9bb = B3-Trace
-
 # Began
 t3a1b8566 = Begann
-
-# Amazon trace
-t122e82a4 = Amazon-Trace
-
-# Server-Timing
-tb79773df = Server-Timing
 
 # Took
 tcea1562e = Dauer
@@ -3100,17 +3160,11 @@ t98976d50 = { $n } Felder
 # Fragment
 t7889e7fd = Fragment
 
-# Query fields
-t2f58f1e0 = Query-Felder
-
 # Field
 t0fb83d07 = Feld
 
 # Value
 td147f96a = Wert
-
-# Basic authentication
-te161b66b = Basic-Authentifizierung
 
 # Password
 t2cc30838 = Passwort
@@ -3138,15 +3192,6 @@ t0f7f5bf9 = nicht mehr genutzt, wenn veraltet
 
 # never checked again
 tc01144d0 = nie wieder geprüft
-
-# Cache-Control
-t3868d34d = Cache-Control
-
-# Status code
-t20b704bc = Statuscode
-
-# Cookie
-tbdbabadf = Cookie
 
 # data: URI, {media}
 t514d8ddb = data:-URI, { $media }

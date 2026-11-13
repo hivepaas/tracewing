@@ -31,6 +31,16 @@ pub fn of(text: &str, field: Option<&str>) -> Vec<Reading> {
     tracewing_convert::readings(&Input::new(text, now, offset).under(field))
 }
 
+/// What a value reads as through the converters a reader named, in order.
+/// Not the search: each one is run whether or not it would offer itself.
+pub fn read_with(ids: &[&'static str], text: &str, field: Option<&str>) -> Option<Reading> {
+    if text.len() > tracewing_convert::MAX_INPUT {
+        return None;
+    }
+    let (now, offset) = here();
+    tracewing_convert::read_with(ids, &Input::new(text, now, offset).under(field))
+}
+
 /// The one reading a remembered rule asks for, if the value still reads that
 /// way.
 pub fn read_as(id: &str, text: &str, field: Option<&str>) -> Option<Reading> {

@@ -754,6 +754,12 @@ t60beaefd = 해석 닫기
 # a guess
 t6af47169 = 추측
 
+# Read as
+t8c0f1d8b = 다른 해석
+
+# choose…
+te030653c = 선택…
+
 # Read from {from}
 t6d510d3d = { $from }에서 읽음
 
@@ -1227,9 +1233,6 @@ t134c9a06 = 자동 (gRPC 경로 또는 messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = { $count }개 더 있음: 입력해서 좁히기
-
-# Read as
-t8c0f1d8b = 다른 해석
 
 # Copy reading
 td38c5cc8 = 읽은 내용 복사
@@ -2686,8 +2689,170 @@ td8d653d6 =
        *[other] { $n }행
     }
 
+# Times
+tec53a755 = 시간
+
+# Names and ids
+t74dee54c = 이름과 ID
+
+# Tracing
+t1d5a82d9 = 추적
+
+# The web's own
+t500d90ac = 웹 고유의 것
+
+# Networks
+t18ac79a2 = 네트워크
+
+# Data
+t3f5279c5 = 데이터
+
+# Encodings
+taf58dad9 = 인코딩
+
+# Packed
+t6d550b01 = 압축
+
+# Tokens and keys
+t50973c5a = 토큰과 키
+
+# Numbers
+td63c77c9 = 숫자
+
+# Chains
+t109ecadf = 체인
+
+# Unix seconds
+t6edf5796 = Unix 초
+
+# Unix milliseconds
+t0d28f4b7 = Unix 밀리초
+
+# Unix microseconds
+tc705fe24 = Unix 마이크로초
+
+# Unix nanoseconds
+t235cb430 = Unix 나노초
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, 시간대 없음: UTC로 읽음
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET 틱
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = 2001년부터의 초 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = 1904년부터의 초 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = 1899년부터의 일수 (스프레드시트)
+
+# Seconds
+t7e12f48a = 초
+
+# Trace context
+ta58c7c95 = 트레이스 컨텍스트
+
+# B3 trace
+tb4f9b9bb = B3 트레이스
+
+# Amazon trace
+t122e82a4 = Amazon 트레이스
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Query fields
+t2f58f1e0 = 쿼리 필드
+
+# Basic authentication
+te161b66b = Basic 인증
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = 상태 코드
+
+# Cookie
+tbdbabadf = 쿠키
+
+# data: URI
+teee15f8f = data: URI
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = 주소 범위
+
+# A MAC address
+t6d968a53 = MAC 주소
+
 # As an address
 t9c53ba7c = 주소로
+
+# As a port
+t9fea9931 = 포트로
+
+# JSON
+tdfbd7fc3 = JSON
+
+# Protobuf
+taac68056 = Protobuf
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# JWE, an encrypted token
+t6da81e5b = JWE, 암호화된 토큰
+
+# PASETO
+t309420ff = PASETO
+
+# SAML
+t015e7110 = SAML
+
+# PEM
+tf70119c9 = PEM
+
+# A hashed password
+t0157a1e6 = 해시된 비밀번호
+
+# A hash, by its size
+te82b53c8 = 크기로 본 해시
+
+# As a size
+ta9175b27 = 크기로
+
+# In hex and binary
+tc31ef85f = 16진수와 2진수로
+
+# Bits set
+tb67e8e09 = 설정된 비트
 
 # this machine
 t8bdabc70 = 이 컴퓨터
@@ -2716,12 +2881,6 @@ tc1fb8957 = 안에 있는 IPv4
 # What it is
 t065b8fa0 = 무엇인지
 
-# IPv6
-t43fe7378 = IPv6
-
-# A range of addresses
-t889c22f2 = 주소 범위
-
 # From
 t18743595 = 시작
 
@@ -2731,86 +2890,17 @@ t41f59644 = 끝
 # How many
 tc31ec050 = 개수
 
-# As a port
-t9fea9931 = 포트로
-
 # to many, not to one
 t660024a1 = 하나가 아니라 여럿에게
 
 # given by hand, not by the maker
 tc16b0e31 = 제조사가 아니라 직접 지정
 
-# A MAC address
-t6d968a53 = MAC 주소
-
-# In hex and binary
-tc31ef85f = 16진수와 2진수로
-
-# Bits set
-tb67e8e09 = 설정된 비트
-
-# As a size
-ta9175b27 = 크기로
-
-# gzip
-t1a451735 = gzip
-
-# zlib
-t7c5452c4 = zlib
-
-# deflate
-t1dfa0080 = deflate
-
-# zstd
-tcfa9c52a = zstd
-
-# Brotli
-t5b0660bd = Brotli
-
 # in {amount}
 tfda57c3e = { $amount } 후
 
 # {amount} ago
 t5f968014 = { $amount } 전
-
-# Unix seconds
-t6edf5796 = Unix 초
-
-# Unix milliseconds
-t0d28f4b7 = Unix 밀리초
-
-# Unix microseconds
-tc705fe24 = Unix 마이크로초
-
-# Unix nanoseconds
-t235cb430 = Unix 나노초
-
-# ISO 8601
-t402bdff3 = ISO 8601
-
-# ISO 8601, no zone: read as UTC
-t3bb6c7ca = ISO 8601, 시간대 없음: UTC로 읽음
-
-# HTTP-date
-te55df34c = HTTP-date
-
-# Seconds
-t7e12f48a = 초
-
-# Windows FILETIME
-t8582ebf1 = Windows FILETIME
-
-# .NET ticks
-t8c35aaf6 = .NET 틱
-
-# Seconds since 2001 (Apple)
-t4bd1d35a = 2001년부터의 초 (Apple)
-
-# Seconds since 1904 (HFS+)
-tc7a82a5d = 1904년부터의 초 (HFS+)
-
-# Days since 1899 (spreadsheet)
-td7bc06f2 = 1899년부터의 일수 (스프레드시트)
 
 # Key wrapped with
 ted680adb = 키 래핑 방식
@@ -2827,9 +2917,6 @@ tbfad8752 = 나머지
 # encrypted: it needs the key, which tracewing does not have
 tacb4301a = 암호화됨: 키가 필요하지만 tracewing에는 없습니다
 
-# JWE, an encrypted token
-t6da81e5b = JWE, 암호화된 토큰
-
 # What it is for
 t7f5984ef = 용도
 
@@ -2841,9 +2928,6 @@ tf7f41fd7 = 공개 키, 서명됨
 
 # The claims
 t5918e3d1 = 클레임
-
-# PASETO
-t309420ff = PASETO
 
 # MD5, or MD4, or NTLM
 t562aaed5 = MD5, MD4 또는 NTLM
@@ -2862,9 +2946,6 @@ ta4d7ea95 = SHA-384
 
 # SHA-512, or SHA3-512, or BLAKE2b
 t275da5bd = SHA-512, SHA3-512 또는 BLAKE2b
-
-# A hash, by its size
-te82b53c8 = 크기로 본 해시
 
 # Made by
 te8ff7e65 = 생성 방식
@@ -2893,12 +2974,6 @@ tefb8e7ad = SHA-256 crypt
 # SHA-512 crypt
 t9dcf716c = SHA-512 crypt
 
-# A hashed password
-t0157a1e6 = 해시된 비밀번호
-
-# PEM
-tf70119c9 = PEM
-
 # What it holds
 tff372c62 = 내용
 
@@ -2916,12 +2991,6 @@ t3890a578 = 생성
 
 # Named
 t6055a346 = 이름
-
-# SAML
-t015e7110 = SAML
-
-# Trace context
-ta58c7c95 = 트레이스 컨텍스트
 
 # Trace
 t26f8e74e = 트레이스
@@ -2941,17 +3010,8 @@ t62366ffa = 아니요
 # Parent span
 t3cf3f9c3 = 상위 스팬
 
-# B3 trace
-tb4f9b9bb = B3 트레이스
-
 # Began
 t3a1b8566 = 시작
-
-# Amazon trace
-t122e82a4 = Amazon 트레이스
-
-# Server-Timing
-tb79773df = Server-Timing
 
 # Took
 tcea1562e = 소요 시간
@@ -2971,17 +3031,11 @@ t98976d50 = 필드 { $n }개
 # Fragment
 t7889e7fd = 프래그먼트
 
-# Query fields
-t2f58f1e0 = 쿼리 필드
-
 # Field
 t0fb83d07 = 필드
 
 # Value
 td147f96a = 값
-
-# Basic authentication
-te161b66b = Basic 인증
 
 # Password
 t2cc30838 = 비밀번호
@@ -3009,15 +3063,6 @@ t0f7f5bf9 = 오래되면 사용하지 않음
 
 # never checked again
 tc01144d0 = 다시 확인하지 않음
-
-# Cache-Control
-t3868d34d = Cache-Control
-
-# Status code
-t20b704bc = 상태 코드
-
-# Cookie
-tbdbabadf = 쿠키
 
 # data: URI, {media}
 t514d8ddb = data: URI, { $media }

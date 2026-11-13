@@ -1351,6 +1351,68 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
         .unwrap();
     assert_eq!(further.as_deref(), Some("base64 → json"));
 
+    // A chain of the reader's own, built a step at a time. The first step
+    // stands on its own: base64, whose bytes can be read on.
+    let (chain, goes_on) = window
+        .update(&mut cx, |view, _, cx| {
+            view.ask_for(0, "base64", cx);
+            let reads = view.inspector.reads.as_ref().expect("the pane is open");
+            let said = reads.said.as_ref().expect("base64 alone reads");
+            (said.chain.clone(), tracewing_convert::goes_on(said))
+        })
+        .unwrap();
+    assert_eq!(chain, vec!["base64"]);
+    assert!(goes_on, "bytes, so a step may follow");
+    cx.run_until_parked();
+
+    // And a second step reads what the first gave.
+    let (chain, id) = window
+        .update(&mut cx, |view, _, cx| {
+            view.ask_for(1, "json", cx);
+            let reads = view.inspector.reads.as_ref().unwrap();
+            let said = reads.said.as_ref().expect("the JSON inside it");
+            (said.chain.clone(), said.id)
+        })
+        .unwrap();
+    assert_eq!(chain, vec!["base64", "json"], "both steps, in order");
+    assert_eq!(id, "json");
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "128-readings-pane-asked-for");
+
+    // A step the value is not reads as nothing, and says so rather than
+    // falling back to what the search found.
+    window
+        .update(&mut cx, |view, _, cx| view.ask_for(0, "unix-ms", cx))
+        .unwrap();
+    cx.run_until_parked();
+    let (asked, said) = window
+        .update(&mut cx, |view, _, _| {
+            let reads = view.inspector.reads.as_ref().unwrap();
+            (reads.asked.clone(), reads.said.is_some())
+        })
+        .unwrap();
+    assert_eq!(asked, vec!["unix-ms"], "the step a reader asked for stands");
+    assert!(!said, "and it reads as nothing");
+
+    // Dropping the chain goes back to what the search found.
+    window
+        .update(&mut cx, |view, _, cx| view.ask_nothing(cx))
+        .unwrap();
+    cx.run_until_parked();
+    let back = window
+        .update(&mut cx, |view, _, _| {
+            let reads = view.inspector.reads.as_ref().unwrap();
+            (
+                reads.asked.is_empty(),
+                reads.said.is_none(),
+                reads.found.len(),
+            )
+        })
+        .unwrap();
+    assert!(back.0, "the chain is gone");
+    assert!(back.1, "and what it said with it");
+    assert!(back.2 > 0, "the readings it found are still there");
+
     // Escape puts the pane away and gives the body its width back.
     let closed = window
         .update(&mut cx, |view, _, cx| {

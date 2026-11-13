@@ -148,8 +148,20 @@ pub fn hex_dump(bytes: &[u8]) -> String {
 }
 
 /// Bytes as a reading, named by what they turned out to hold.
-fn decoded(id: &'static str, label: String, bytes: Vec<u8>, sure: bool) -> Option<Reading> {
-    let kind = interesting(&bytes)?;
+fn decoded(
+    id: &'static str,
+    label: String,
+    bytes: Vec<u8>,
+    sure: bool,
+    asked: bool,
+) -> Option<Reading> {
+    // Asked for by name, it is done whatever comes out: a reader reaching
+    // for "read as base64" wants the bytes, recognisable or not.
+    let kind = match interesting(&bytes) {
+        Some(kind) => kind,
+        None if asked => Kind::Binary,
+        None => return None,
+    };
     let said = match (&kind, named_format(&bytes)) {
         (_, Some(name)) => match picture_size(&bytes) {
             Some((wide, high)) => format!("{label}: {name} {wide}×{high}"),
@@ -200,7 +212,7 @@ pub fn base64(input: &Input) -> Option<Reading> {
     } else {
         tr!("base64")
     };
-    decoded("base64", label, bytes, false)
+    decoded("base64", label, bytes, false, input.asked)
 }
 
 /// Hex, as a hash, a key or a dumped body is written.
@@ -218,7 +230,7 @@ pub fn hex(input: &Input) -> Option<Reading> {
         .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap_or("zz"), 16))
         .collect::<Result<_, _>>()
         .ok()?;
-    decoded("hex", tr!("Hex"), bytes, false)
+    decoded("hex", tr!("Hex"), bytes, false, input.asked)
 }
 
 /// `%E2%9C%93`, as a URL and a form carry what is not plain.

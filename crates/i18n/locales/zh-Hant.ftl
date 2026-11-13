@@ -754,6 +754,12 @@ t60beaefd = 關閉解讀
 # a guess
 t6af47169 = 推測
 
+# Read as
+t8c0f1d8b = 按其他方式解讀
+
+# choose…
+te030653c = 選擇…
+
 # Read from {from}
 t6d510d3d = 讀自 { $from }
 
@@ -1227,9 +1233,6 @@ t134c9a06 = 自動（gRPC 路徑或 messageType）
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = 還有 { $count } 個：輸入以縮小範圍
-
-# Read as
-t8c0f1d8b = 按其他方式解讀
 
 # Copy reading
 td38c5cc8 = 複製解讀結果
@@ -2686,8 +2689,170 @@ td8d653d6 =
        *[other] { $n } 行
     }
 
+# Times
+tec53a755 = 時間
+
+# Names and ids
+t74dee54c = 名稱與 ID
+
+# Tracing
+t1d5a82d9 = 追蹤
+
+# The web's own
+t500d90ac = Web 自己的
+
+# Networks
+t18ac79a2 = 網路
+
+# Data
+t3f5279c5 = 資料
+
+# Encodings
+taf58dad9 = 編碼
+
+# Packed
+t6d550b01 = 壓縮
+
+# Tokens and keys
+t50973c5a = 權杖與金鑰
+
+# Numbers
+td63c77c9 = 數字
+
+# Chains
+t109ecadf = 鏈
+
+# Unix seconds
+t6edf5796 = Unix 秒
+
+# Unix milliseconds
+t0d28f4b7 = Unix 毫秒
+
+# Unix microseconds
+tc705fe24 = Unix 微秒
+
+# Unix nanoseconds
+t235cb430 = Unix 奈秒
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601，無時區：按 UTC 解讀
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET 計時單位
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = 自 2001 年起的秒數 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = 自 1904 年起的秒數 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = 自 1899 年起的天數（試算表）
+
+# Seconds
+t7e12f48a = 秒
+
+# Trace context
+ta58c7c95 = 追蹤內容
+
+# B3 trace
+tb4f9b9bb = B3 追蹤
+
+# Amazon trace
+t122e82a4 = Amazon 追蹤
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Query fields
+t2f58f1e0 = 查詢欄位
+
+# Basic authentication
+te161b66b = Basic 驗證
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = 狀態碼
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI
+teee15f8f = data: URI
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = 一段位址範圍
+
+# A MAC address
+t6d968a53 = 一個 MAC 位址
+
 # As an address
 t9c53ba7c = 作為位址
+
+# As a port
+t9fea9931 = 作為通訊埠
+
+# JSON
+tdfbd7fc3 = JSON
+
+# Protobuf
+taac68056 = Protobuf
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# JWE, an encrypted token
+t6da81e5b = JWE，加密的權杖
+
+# PASETO
+t309420ff = PASETO
+
+# SAML
+t015e7110 = SAML
+
+# PEM
+tf70119c9 = PEM
+
+# A hashed password
+t0157a1e6 = 經過雜湊的密碼
+
+# A hash, by its size
+te82b53c8 = 依長度判斷的雜湊
+
+# As a size
+ta9175b27 = 作為大小
+
+# In hex and binary
+tc31ef85f = 十六進位與二進位
+
+# Bits set
+tb67e8e09 = 已設定的位元
 
 # this machine
 t8bdabc70 = 本機
@@ -2716,12 +2881,6 @@ tc1fb8957 = 其中的 IPv4
 # What it is
 t065b8fa0 = 是什麼
 
-# IPv6
-t43fe7378 = IPv6
-
-# A range of addresses
-t889c22f2 = 一段位址範圍
-
 # From
 t18743595 = 從
 
@@ -2731,86 +2890,17 @@ t41f59644 = 到
 # How many
 tc31ec050 = 數量
 
-# As a port
-t9fea9931 = 作為通訊埠
-
 # to many, not to one
 t660024a1 = 送給多方，而非一方
 
 # given by hand, not by the maker
 tc16b0e31 = 手動指定，而非廠商分配
 
-# A MAC address
-t6d968a53 = 一個 MAC 位址
-
-# In hex and binary
-tc31ef85f = 十六進位與二進位
-
-# Bits set
-tb67e8e09 = 已設定的位元
-
-# As a size
-ta9175b27 = 作為大小
-
-# gzip
-t1a451735 = gzip
-
-# zlib
-t7c5452c4 = zlib
-
-# deflate
-t1dfa0080 = deflate
-
-# zstd
-tcfa9c52a = zstd
-
-# Brotli
-t5b0660bd = Brotli
-
 # in {amount}
 tfda57c3e = { $amount }後
 
 # {amount} ago
 t5f968014 = { $amount }前
-
-# Unix seconds
-t6edf5796 = Unix 秒
-
-# Unix milliseconds
-t0d28f4b7 = Unix 毫秒
-
-# Unix microseconds
-tc705fe24 = Unix 微秒
-
-# Unix nanoseconds
-t235cb430 = Unix 奈秒
-
-# ISO 8601
-t402bdff3 = ISO 8601
-
-# ISO 8601, no zone: read as UTC
-t3bb6c7ca = ISO 8601，無時區：按 UTC 解讀
-
-# HTTP-date
-te55df34c = HTTP-date
-
-# Seconds
-t7e12f48a = 秒
-
-# Windows FILETIME
-t8582ebf1 = Windows FILETIME
-
-# .NET ticks
-t8c35aaf6 = .NET 計時單位
-
-# Seconds since 2001 (Apple)
-t4bd1d35a = 自 2001 年起的秒數 (Apple)
-
-# Seconds since 1904 (HFS+)
-tc7a82a5d = 自 1904 年起的秒數 (HFS+)
-
-# Days since 1899 (spreadsheet)
-td7bc06f2 = 自 1899 年起的天數（試算表）
 
 # Key wrapped with
 ted680adb = 金鑰封裝方式
@@ -2827,9 +2917,6 @@ tbfad8752 = 其餘部分
 # encrypted: it needs the key, which tracewing does not have
 tacb4301a = 已加密：需要金鑰，而 tracewing 沒有
 
-# JWE, an encrypted token
-t6da81e5b = JWE，加密的權杖
-
 # What it is for
 t7f5984ef = 用途
 
@@ -2841,9 +2928,6 @@ tf7f41fd7 = 公鑰，已簽名
 
 # The claims
 t5918e3d1 = 宣告內容
-
-# PASETO
-t309420ff = PASETO
 
 # MD5, or MD4, or NTLM
 t562aaed5 = MD5、MD4 或 NTLM
@@ -2862,9 +2946,6 @@ ta4d7ea95 = SHA-384
 
 # SHA-512, or SHA3-512, or BLAKE2b
 t275da5bd = SHA-512、SHA3-512 或 BLAKE2b
-
-# A hash, by its size
-te82b53c8 = 依長度判斷的雜湊
 
 # Made by
 te8ff7e65 = 由什麼產生
@@ -2893,12 +2974,6 @@ tefb8e7ad = SHA-256 crypt
 # SHA-512 crypt
 t9dcf716c = SHA-512 crypt
 
-# A hashed password
-t0157a1e6 = 經過雜湊的密碼
-
-# PEM
-tf70119c9 = PEM
-
 # What it holds
 tff372c62 = 裡面是什麼
 
@@ -2916,12 +2991,6 @@ t3890a578 = 建立於
 
 # Named
 t6055a346 = 名稱
-
-# SAML
-t015e7110 = SAML
-
-# Trace context
-ta58c7c95 = 追蹤內容
 
 # Trace
 t26f8e74e = 追蹤
@@ -2941,17 +3010,8 @@ t62366ffa = 否
 # Parent span
 t3cf3f9c3 = 父跨度
 
-# B3 trace
-tb4f9b9bb = B3 追蹤
-
 # Began
 t3a1b8566 = 開始於
-
-# Amazon trace
-t122e82a4 = Amazon 追蹤
-
-# Server-Timing
-tb79773df = Server-Timing
 
 # Took
 tcea1562e = 耗時
@@ -2971,17 +3031,11 @@ t98976d50 = { $n } 個欄位
 # Fragment
 t7889e7fd = 片段
 
-# Query fields
-t2f58f1e0 = 查詢欄位
-
 # Field
 t0fb83d07 = 欄位
 
 # Value
 td147f96a = 值
-
-# Basic authentication
-te161b66b = Basic 驗證
 
 # Password
 t2cc30838 = 密碼
@@ -3009,15 +3063,6 @@ t0f7f5bf9 = 過期後不再使用
 
 # never checked again
 tc01144d0 = 不再驗證
-
-# Cache-Control
-t3868d34d = Cache-Control
-
-# Status code
-t20b704bc = 狀態碼
-
-# Cookie
-tbdbabadf = Cookie
 
 # data: URI, {media}
 t514d8ddb = data: URI，{ $media }

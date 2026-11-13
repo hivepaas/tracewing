@@ -805,6 +805,12 @@ t60beaefd = Закрыть прочтения
 # a guess
 t6af47169 = догадка
 
+# Read as
+t8c0f1d8b = Прочитать как
+
+# choose…
+te030653c = выбрать…
+
 # Read from {from}
 t6d510d3d = Прочитано из { $from }
 
@@ -1332,9 +1338,6 @@ t70ff68f9 =
         [many] и ещё { $count }: введите, чтобы сузить
        *[other] и ещё { $count }: введите, чтобы сузить
     }
-
-# Read as
-t8c0f1d8b = Прочитать как
 
 # Copy reading
 td38c5cc8 = Копировать прочитанное
@@ -2917,8 +2920,170 @@ td8d653d6 =
        *[other] { $n } строки
     }
 
+# Times
+tec53a755 = Время
+
+# Names and ids
+t74dee54c = Имена и идентификаторы
+
+# Tracing
+t1d5a82d9 = Трассировка
+
+# The web's own
+t500d90ac = Своё у веба
+
+# Networks
+t18ac79a2 = Сети
+
+# Data
+t3f5279c5 = Данные
+
+# Encodings
+taf58dad9 = Кодировки
+
+# Packed
+t6d550b01 = Упакованное
+
+# Tokens and keys
+t50973c5a = Токены и ключи
+
+# Numbers
+td63c77c9 = Числа
+
+# Chains
+t109ecadf = Цепочки
+
+# Unix seconds
+t6edf5796 = Unix-секунды
+
+# Unix milliseconds
+t0d28f4b7 = Unix-миллисекунды
+
+# Unix microseconds
+tc705fe24 = Unix-микросекунды
+
+# Unix nanoseconds
+t235cb430 = Unix-наносекунды
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, без зоны: прочитано как UTC
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET-тики
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = Секунды с 2001 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = Секунды с 1904 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = Дни с 1899 (таблица)
+
+# Seconds
+t7e12f48a = Секунды
+
+# Trace context
+ta58c7c95 = Контекст трассировки
+
+# B3 trace
+tb4f9b9bb = Трассировка B3
+
+# Amazon trace
+t122e82a4 = Трассировка Amazon
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Query fields
+t2f58f1e0 = Поля запроса
+
+# Basic authentication
+te161b66b = Аутентификация Basic
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Код статуса
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI
+teee15f8f = data: URI
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Диапазон адресов
+
+# A MAC address
+t6d968a53 = MAC-адрес
+
 # As an address
 t9c53ba7c = Как адрес
+
+# As a port
+t9fea9931 = Как порт
+
+# JSON
+tdfbd7fc3 = JSON
+
+# Protobuf
+taac68056 = Protobuf
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# JWE, an encrypted token
+t6da81e5b = JWE, зашифрованный токен
+
+# PASETO
+t309420ff = PASETO
+
+# SAML
+t015e7110 = SAML
+
+# PEM
+tf70119c9 = PEM
+
+# A hashed password
+t0157a1e6 = Хешированный пароль
+
+# A hash, by its size
+te82b53c8 = Хеш, судя по размеру
+
+# As a size
+ta9175b27 = Как размер
+
+# In hex and binary
+tc31ef85f = В hex и двоичном виде
+
+# Bits set
+tb67e8e09 = Установленные биты
 
 # this machine
 t8bdabc70 = эта машина
@@ -2947,12 +3112,6 @@ tc1fb8957 = IPv4 внутри
 # What it is
 t065b8fa0 = Что это
 
-# IPv6
-t43fe7378 = IPv6
-
-# A range of addresses
-t889c22f2 = Диапазон адресов
-
 # From
 t18743595 = От
 
@@ -2962,86 +3121,17 @@ t41f59644 = До
 # How many
 tc31ec050 = Сколько
 
-# As a port
-t9fea9931 = Как порт
-
 # to many, not to one
 t660024a1 = многим, а не одному
 
 # given by hand, not by the maker
 tc16b0e31 = задан вручную, не изготовителем
 
-# A MAC address
-t6d968a53 = MAC-адрес
-
-# In hex and binary
-tc31ef85f = В hex и двоичном виде
-
-# Bits set
-tb67e8e09 = Установленные биты
-
-# As a size
-ta9175b27 = Как размер
-
-# gzip
-t1a451735 = gzip
-
-# zlib
-t7c5452c4 = zlib
-
-# deflate
-t1dfa0080 = deflate
-
-# zstd
-tcfa9c52a = zstd
-
-# Brotli
-t5b0660bd = Brotli
-
 # in {amount}
 tfda57c3e = через { $amount }
 
 # {amount} ago
 t5f968014 = { $amount } назад
-
-# Unix seconds
-t6edf5796 = Unix-секунды
-
-# Unix milliseconds
-t0d28f4b7 = Unix-миллисекунды
-
-# Unix microseconds
-tc705fe24 = Unix-микросекунды
-
-# Unix nanoseconds
-t235cb430 = Unix-наносекунды
-
-# ISO 8601
-t402bdff3 = ISO 8601
-
-# ISO 8601, no zone: read as UTC
-t3bb6c7ca = ISO 8601, без зоны: прочитано как UTC
-
-# HTTP-date
-te55df34c = HTTP-date
-
-# Seconds
-t7e12f48a = Секунды
-
-# Windows FILETIME
-t8582ebf1 = Windows FILETIME
-
-# .NET ticks
-t8c35aaf6 = .NET-тики
-
-# Seconds since 2001 (Apple)
-t4bd1d35a = Секунды с 2001 (Apple)
-
-# Seconds since 1904 (HFS+)
-tc7a82a5d = Секунды с 1904 (HFS+)
-
-# Days since 1899 (spreadsheet)
-td7bc06f2 = Дни с 1899 (таблица)
 
 # Key wrapped with
 ted680adb = Ключ упакован через
@@ -3058,9 +3148,6 @@ tbfad8752 = Остальное
 # encrypted: it needs the key, which tracewing does not have
 tacb4301a = зашифровано: нужен ключ, которого у tracewing нет
 
-# JWE, an encrypted token
-t6da81e5b = JWE, зашифрованный токен
-
 # What it is for
 t7f5984ef = Для чего
 
@@ -3072,9 +3159,6 @@ tf7f41fd7 = открытый ключ, подписано
 
 # The claims
 t5918e3d1 = Утверждения
-
-# PASETO
-t309420ff = PASETO
 
 # MD5, or MD4, or NTLM
 t562aaed5 = MD5, MD4 или NTLM
@@ -3093,9 +3177,6 @@ ta4d7ea95 = SHA-384
 
 # SHA-512, or SHA3-512, or BLAKE2b
 t275da5bd = SHA-512, SHA3-512 или BLAKE2b
-
-# A hash, by its size
-te82b53c8 = Хеш, судя по размеру
 
 # Made by
 te8ff7e65 = Сделано через
@@ -3124,12 +3205,6 @@ tefb8e7ad = SHA-256 crypt
 # SHA-512 crypt
 t9dcf716c = SHA-512 crypt
 
-# A hashed password
-t0157a1e6 = Хешированный пароль
-
-# PEM
-tf70119c9 = PEM
-
 # What it holds
 tff372c62 = Что внутри
 
@@ -3147,12 +3222,6 @@ t3890a578 = Создано
 
 # Named
 t6055a346 = Имя
-
-# SAML
-t015e7110 = SAML
-
-# Trace context
-ta58c7c95 = Контекст трассировки
 
 # Trace
 t26f8e74e = Трассировка
@@ -3172,17 +3241,8 @@ t62366ffa = нет
 # Parent span
 t3cf3f9c3 = Родительский спан
 
-# B3 trace
-tb4f9b9bb = Трассировка B3
-
 # Began
 t3a1b8566 = Начало
-
-# Amazon trace
-t122e82a4 = Трассировка Amazon
-
-# Server-Timing
-tb79773df = Server-Timing
 
 # Took
 tcea1562e = Длительность
@@ -3202,17 +3262,11 @@ t98976d50 = полей: { $n }
 # Fragment
 t7889e7fd = Фрагмент
 
-# Query fields
-t2f58f1e0 = Поля запроса
-
 # Field
 t0fb83d07 = Поле
 
 # Value
 td147f96a = Значение
-
-# Basic authentication
-te161b66b = Аутентификация Basic
 
 # Password
 t2cc30838 = Пароль
@@ -3240,15 +3294,6 @@ t0f7f5bf9 = не используется, когда устарел
 
 # never checked again
 tc01144d0 = больше не проверяется
-
-# Cache-Control
-t3868d34d = Cache-Control
-
-# Status code
-t20b704bc = Код статуса
-
-# Cookie
-tbdbabadf = Cookie
 
 # data: URI, {media}
 t514d8ddb = data:-URI, { $media }

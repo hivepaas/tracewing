@@ -783,6 +783,12 @@ t60beaefd = Okumaları kapat
 # a guess
 t6af47169 = tahmin
 
+# Read as
+t8c0f1d8b = Şu olarak oku
+
+# choose…
+te030653c = seç…
+
 # Read from {from}
 t6d510d3d = { $from } içinden okundu
 
@@ -1286,9 +1292,6 @@ t70ff68f9 =
         [one] ve { $count } tane daha: daraltmak için yazın
        *[other] ve { $count } tane daha: daraltmak için yazın
     }
-
-# Read as
-t8c0f1d8b = Şu olarak oku
 
 # Copy reading
 td38c5cc8 = Okunanı kopyala
@@ -2779,8 +2782,170 @@ td8d653d6 =
        *[other] { $n } satır
     }
 
+# Times
+tec53a755 = Zamanlar
+
+# Names and ids
+t74dee54c = Adlar ve kimlikler
+
+# Tracing
+t1d5a82d9 = İzleme
+
+# The web's own
+t500d90ac = Webin kendine ait olanı
+
+# Networks
+t18ac79a2 = Ağlar
+
+# Data
+t3f5279c5 = Veri
+
+# Encodings
+taf58dad9 = Kodlamalar
+
+# Packed
+t6d550b01 = Paketli
+
+# Tokens and keys
+t50973c5a = Belirteçler ve anahtarlar
+
+# Numbers
+td63c77c9 = Sayılar
+
+# Chains
+t109ecadf = Zincirler
+
+# Unix seconds
+t6edf5796 = Unix saniye
+
+# Unix milliseconds
+t0d28f4b7 = Unix milisaniye
+
+# Unix microseconds
+tc705fe24 = Unix mikrosaniye
+
+# Unix nanoseconds
+t235cb430 = Unix nanosaniye
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, saat dilimi yok: UTC olarak okundu
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET ticks
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = 2001'den beri saniye (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = 1904'ten beri saniye (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = 1899'dan beri gün (hesap tablosu)
+
+# Seconds
+t7e12f48a = Saniye
+
+# Trace context
+ta58c7c95 = İzleme bağlamı
+
+# B3 trace
+tb4f9b9bb = B3 izlemesi
+
+# Amazon trace
+t122e82a4 = Amazon izlemesi
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Query fields
+t2f58f1e0 = Sorgu alanları
+
+# Basic authentication
+te161b66b = Basic kimlik doğrulama
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Durum kodu
+
+# Cookie
+tbdbabadf = Çerez
+
+# data: URI
+teee15f8f = data: URI
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Bir adres aralığı
+
+# A MAC address
+t6d968a53 = Bir MAC adresi
+
 # As an address
 t9c53ba7c = Adres olarak
+
+# As a port
+t9fea9931 = Port olarak
+
+# JSON
+tdfbd7fc3 = JSON
+
+# Protobuf
+taac68056 = Protobuf
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# JWE, an encrypted token
+t6da81e5b = JWE, şifreli bir token
+
+# PASETO
+t309420ff = PASETO
+
+# SAML
+t015e7110 = SAML
+
+# PEM
+tf70119c9 = PEM
+
+# A hashed password
+t0157a1e6 = Özetlenmiş bir parola
+
+# A hash, by its size
+te82b53c8 = Boyutuna göre bir özet
+
+# As a size
+ta9175b27 = Boyut olarak
+
+# In hex and binary
+tc31ef85f = Hex ve ikilik olarak
+
+# Bits set
+tb67e8e09 = Ayarlı bitler
 
 # this machine
 t8bdabc70 = bu makine
@@ -2809,12 +2974,6 @@ tc1fb8957 = İçindeki IPv4
 # What it is
 t065b8fa0 = Bu nedir
 
-# IPv6
-t43fe7378 = IPv6
-
-# A range of addresses
-t889c22f2 = Bir adres aralığı
-
 # From
 t18743595 = Başlangıç
 
@@ -2824,86 +2983,17 @@ t41f59644 = Bitiş
 # How many
 tc31ec050 = Kaç tane
 
-# As a port
-t9fea9931 = Port olarak
-
 # to many, not to one
 t660024a1 = bire değil, çoğa
 
 # given by hand, not by the maker
 tc16b0e31 = üretici değil, elle verilmiş
 
-# A MAC address
-t6d968a53 = Bir MAC adresi
-
-# In hex and binary
-tc31ef85f = Hex ve ikilik olarak
-
-# Bits set
-tb67e8e09 = Ayarlı bitler
-
-# As a size
-ta9175b27 = Boyut olarak
-
-# gzip
-t1a451735 = gzip
-
-# zlib
-t7c5452c4 = zlib
-
-# deflate
-t1dfa0080 = deflate
-
-# zstd
-tcfa9c52a = zstd
-
-# Brotli
-t5b0660bd = Brotli
-
 # in {amount}
 tfda57c3e = { $amount } sonra
 
 # {amount} ago
 t5f968014 = { $amount } önce
-
-# Unix seconds
-t6edf5796 = Unix saniye
-
-# Unix milliseconds
-t0d28f4b7 = Unix milisaniye
-
-# Unix microseconds
-tc705fe24 = Unix mikrosaniye
-
-# Unix nanoseconds
-t235cb430 = Unix nanosaniye
-
-# ISO 8601
-t402bdff3 = ISO 8601
-
-# ISO 8601, no zone: read as UTC
-t3bb6c7ca = ISO 8601, saat dilimi yok: UTC olarak okundu
-
-# HTTP-date
-te55df34c = HTTP-date
-
-# Seconds
-t7e12f48a = Saniye
-
-# Windows FILETIME
-t8582ebf1 = Windows FILETIME
-
-# .NET ticks
-t8c35aaf6 = .NET ticks
-
-# Seconds since 2001 (Apple)
-t4bd1d35a = 2001'den beri saniye (Apple)
-
-# Seconds since 1904 (HFS+)
-tc7a82a5d = 1904'ten beri saniye (HFS+)
-
-# Days since 1899 (spreadsheet)
-td7bc06f2 = 1899'dan beri gün (hesap tablosu)
 
 # Key wrapped with
 ted680adb = Anahtarı saran
@@ -2920,9 +3010,6 @@ tbfad8752 = Geri kalanı
 # encrypted: it needs the key, which tracewing does not have
 tacb4301a = şifreli: anahtar gerekir, tracewing'de yok
 
-# JWE, an encrypted token
-t6da81e5b = JWE, şifreli bir token
-
 # What it is for
 t7f5984ef = Ne için
 
@@ -2934,9 +3021,6 @@ tf7f41fd7 = açık anahtar, imzalı
 
 # The claims
 t5918e3d1 = İddialar
-
-# PASETO
-t309420ff = PASETO
 
 # MD5, or MD4, or NTLM
 t562aaed5 = MD5, MD4 ya da NTLM
@@ -2955,9 +3039,6 @@ ta4d7ea95 = SHA-384
 
 # SHA-512, or SHA3-512, or BLAKE2b
 t275da5bd = SHA-512, SHA3-512 ya da BLAKE2b
-
-# A hash, by its size
-te82b53c8 = Boyutuna göre bir özet
 
 # Made by
 te8ff7e65 = Yapan
@@ -2986,12 +3067,6 @@ tefb8e7ad = SHA-256 crypt
 # SHA-512 crypt
 t9dcf716c = SHA-512 crypt
 
-# A hashed password
-t0157a1e6 = Özetlenmiş bir parola
-
-# PEM
-tf70119c9 = PEM
-
 # What it holds
 tff372c62 = İçinde ne var
 
@@ -3009,12 +3084,6 @@ t3890a578 = Oluşturuldu
 
 # Named
 t6055a346 = Adı
-
-# SAML
-t015e7110 = SAML
-
-# Trace context
-ta58c7c95 = İzleme bağlamı
 
 # Trace
 t26f8e74e = İzleme
@@ -3034,17 +3103,8 @@ t62366ffa = hayır
 # Parent span
 t3cf3f9c3 = Üst span
 
-# B3 trace
-tb4f9b9bb = B3 izlemesi
-
 # Began
 t3a1b8566 = Başladı
-
-# Amazon trace
-t122e82a4 = Amazon izlemesi
-
-# Server-Timing
-tb79773df = Server-Timing
 
 # Took
 tcea1562e = Süre
@@ -3064,17 +3124,11 @@ t98976d50 = { $n } alan
 # Fragment
 t7889e7fd = Parça
 
-# Query fields
-t2f58f1e0 = Sorgu alanları
-
 # Field
 t0fb83d07 = Alan
 
 # Value
 td147f96a = Değer
-
-# Basic authentication
-te161b66b = Basic kimlik doğrulama
 
 # Password
 t2cc30838 = Şifre
@@ -3102,15 +3156,6 @@ t0f7f5bf9 = eskiyince kullanılmaz
 
 # never checked again
 tc01144d0 = bir daha doğrulanmaz
-
-# Cache-Control
-t3868d34d = Cache-Control
-
-# Status code
-t20b704bc = Durum kodu
-
-# Cookie
-tbdbabadf = Çerez
 
 # data: URI, {media}
 t514d8ddb = data: URI, { $media }

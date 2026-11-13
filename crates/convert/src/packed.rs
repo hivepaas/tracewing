@@ -17,8 +17,13 @@ fn unpack(reader: impl Read) -> Option<Vec<u8>> {
 }
 
 /// The reading an unpacked value makes, if it holds anything worth showing.
-fn unpacked(id: &'static str, label: String, bytes: Vec<u8>) -> Option<Reading> {
-    let kind = encodings::interesting(&bytes)?;
+fn unpacked(id: &'static str, label: String, bytes: Vec<u8>, asked: bool) -> Option<Reading> {
+    // Asked for by name, it is done whatever comes out.
+    let kind = match encodings::interesting(&bytes) {
+        Some(kind) => kind,
+        None if asked => crate::Kind::Binary,
+        None => return None,
+    };
     let said = format!(
         "{label}, {}",
         crate::numbers::bytes_size(bytes.len() as u64)
@@ -51,7 +56,7 @@ pub fn gzip(input: &Input) -> Option<Reading> {
         return None;
     }
     let bytes = unpack(flate2::read::GzDecoder::new(raw))?;
-    unpacked("gzip", tr!("gzip"), bytes)
+    unpacked("gzip", tr!("gzip"), bytes, input.asked)
 }
 
 pub fn zlib(input: &Input) -> Option<Reading> {
@@ -60,7 +65,7 @@ pub fn zlib(input: &Input) -> Option<Reading> {
         return None;
     }
     let bytes = unpack(flate2::read::ZlibDecoder::new(raw))?;
-    unpacked("zlib", tr!("zlib"), bytes)
+    unpacked("zlib", tr!("zlib"), bytes, input.asked)
 }
 
 /// Deflate with nothing around it, as a WebSocket and a SAML request send it.
@@ -71,7 +76,7 @@ pub fn deflate(input: &Input) -> Option<Reading> {
         return None;
     }
     let bytes = unpack(flate2::read::DeflateDecoder::new(raw))?;
-    unpacked("deflate", tr!("deflate"), bytes)
+    unpacked("deflate", tr!("deflate"), bytes, input.asked)
 }
 
 pub fn zstd(input: &Input) -> Option<Reading> {
@@ -80,7 +85,7 @@ pub fn zstd(input: &Input) -> Option<Reading> {
         return None;
     }
     let bytes = unpack(zstd::stream::read::Decoder::new(raw).ok()?)?;
-    unpacked("zstd", tr!("zstd"), bytes)
+    unpacked("zstd", tr!("zstd"), bytes, input.asked)
 }
 
 /// Brotli has no magic either: the same rule as deflate.
@@ -90,7 +95,7 @@ pub fn brotli(input: &Input) -> Option<Reading> {
         return None;
     }
     let bytes = unpack(brotli::Decompressor::new(raw, 4096))?;
-    unpacked("brotli", tr!("Brotli"), bytes)
+    unpacked("brotli", tr!("Brotli"), bytes, input.asked)
 }
 
 #[cfg(test)]
