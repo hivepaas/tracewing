@@ -222,6 +222,12 @@ pub enum Drag {
     InspectorSize,
     /// The inspector itself, by its handle, and where it would go now.
     Inspector(Place),
+    /// The top edge of the chosen message, by where the mouse went down and
+    /// how tall it was then.
+    MessageView {
+        from_y: f32,
+        from_h: f32,
+    },
     /// The list's scroll bar.
     ListBar,
 }
@@ -1405,6 +1411,22 @@ impl Traffic {
         cx.notify();
     }
 
+    /// Takes hold of the edge above the chosen message, to give it more of
+    /// the panel or less.
+    pub fn begin_message_view_drag(&mut self, y: gpui::Pixels, cx: &mut Context<Self>) {
+        let from_h = self
+            .inspector
+            .messages
+            .as_ref()
+            .and_then(|state| state.view_h)
+            .unwrap_or(crate::messages::VIEW_H);
+        self.drag = Some(Drag::MessageView {
+            from_y: f32::from(y),
+            from_h,
+        });
+        cx.notify();
+    }
+
     pub fn begin_inspector_drag(&mut self, cx: &mut Context<Self>) {
         self.drag = Some(Drag::Inspector(self.layout.place));
         cx.notify();
@@ -1446,6 +1468,19 @@ impl Traffic {
             },
             Drag::Inspector(_) => {
                 self.drag = Some(Drag::Inspector(self.place_under(event.position)));
+            }
+            Drag::MessageView { from_y, from_h } => {
+                // Up is taller, and the list keeps a floor of its own.
+                let moved = (from_y - f32::from(event.position.y)) / scale;
+                // A loose ceiling: the list's own floor is what really stops
+                // it, since the panel lays them out together.
+                let room = f32::from(content.size.height) / scale - crate::messages::LIST_MIN;
+                if let Some(state) = self.inspector.messages.as_mut() {
+                    state.view_h = Some((from_h + moved).clamp(
+                        crate::messages::VIEW_MIN,
+                        room.max(crate::messages::VIEW_MIN),
+                    ));
+                }
             }
             Drag::ListBar => self.drag_list_bar(event.position.y),
             Drag::Column {
@@ -1580,6 +1615,7 @@ impl Traffic {
             Action::Close if self.close_copy_menu(cx) => {}
             Action::Close if self.compare_pick.is_some() => self.cancel_compare(cx),
             Action::Close if self.screen == Screen::Compare => self.set_screen(Screen::Traffic, cx),
+            Action::Close if self.close_message(cx) => {}
             Action::Close => return false,
             Action::Shortcuts => self.set_shortcuts(!self.shortcuts_open, cx),
             Action::Filter => {

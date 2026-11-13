@@ -997,6 +997,9 @@ t51e7624c = Ancora nessun messaggio
 # {said} kept, of {size}
 t3558745a = { $said } conservati su { $size }
 
+# Close this message
+t351a1976 = Chiudi questo messaggio
+
 # The socket has closed.
 t8d883a0f = Il socket si è chiuso.
 

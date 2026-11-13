@@ -958,6 +958,9 @@ t51e7624c = Belum ada pesan
 # {said} kept, of {size}
 t3558745a = { $said } disimpan, dari { $size }
 
+# Close this message
+t351a1976 = Tutup pesan ini
+
 # The socket has closed.
 t8d883a0f = Soket sudah tertutup.
 

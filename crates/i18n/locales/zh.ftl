@@ -958,6 +958,9 @@ t51e7624c = 暂无消息
 # {said} kept, of {size}
 t3558745a = 已保留 { $said }，共 { $size }
 
+# Close this message
+t351a1976 = 关闭这条消息
+
 # The socket has closed.
 t8d883a0f = 套接字已关闭。
 

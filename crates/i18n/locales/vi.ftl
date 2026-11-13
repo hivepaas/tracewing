@@ -958,6 +958,9 @@ t51e7624c = Chưa có tin nhắn
 # {said} kept, of {size}
 t3558745a = Giữ { $said } trong { $size }
 
+# Close this message
+t351a1976 = Đóng message này
+
 # The socket has closed.
 t8d883a0f = Socket đã đóng.
 

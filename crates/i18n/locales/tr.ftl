@@ -991,6 +991,9 @@ t51e7624c = Henüz mesaj yok
 # {said} kept, of {size}
 t3558745a = { $size } içinden { $said } saklandı
 
+# Close this message
+t351a1976 = Bu mesajı kapat
+
 # The socket has closed.
 t8d883a0f = Soket kapandı.
 
