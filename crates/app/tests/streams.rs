@@ -17,6 +17,8 @@ use std::{
 use tracewing::{
     engine::{Engine, EngineOptions},
     inspector::Part,
+    layout::Place,
+    messages::{VIEW_H, VIEW_MIN},
     traffic::Traffic,
 };
 use tracewing_dev::benchkit;
@@ -53,6 +55,26 @@ fn shot(cx: &mut HeadlessAppContext, window: gpui::AnyWindowHandle, name: &str) 
         .unwrap()
         .save(out.join(format!("{name}.png")))
         .unwrap();
+}
+
+fn moved_to(y: f32) -> gpui::MouseMoveEvent {
+    gpui::MouseMoveEvent {
+        position: gpui::point(gpui::px(900.), gpui::px(y)),
+        pressed_button: Some(gpui::MouseButton::Left),
+        modifiers: Default::default(),
+    }
+}
+
+fn view_height(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>) -> f32 {
+    window
+        .update(cx, |view, _, _| {
+            view.inspector
+                .messages
+                .as_ref()
+                .and_then(|state| state.view_h)
+                .unwrap_or(VIEW_H)
+        })
+        .unwrap()
 }
 
 fn messages(view: &Traffic) -> usize {
@@ -186,15 +208,34 @@ fn streams_show_as_they_come() {
     // The message can be put away again, by the × on it or by Escape, and
     // the list is not taken away while it is open.
     window
-        .update(&mut cx, |view, _, cx| {
+        .update(&mut cx, |view, window, cx| {
             let state = view.inspector.messages.as_ref().unwrap();
             assert!(state.view_h.is_none(), "it starts at the usual height");
-            // Taller, as a drag on its edge makes it.
+            // Taller, by a real drag of the grip on its edge: down where the
+            // mouse went down, then up a hundred.
             view.begin_message_view_drag(gpui::px(400.), cx);
+            view.on_mouse_move(&moved_to(300.), window, cx);
             view.look(cx);
         })
         .unwrap();
     cx.run_until_parked();
+    let taller = view_height(&mut cx, window);
+    assert!(taller > VIEW_H + 50., "the drag made it taller: {taller}");
+    // And dragged the other way it stops, rather than taking the list away.
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.on_mouse_move(&moved_to(1800.), window, cx);
+            view.look(cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let least = view_height(&mut cx, window);
+    assert_eq!(least, VIEW_MIN, "it stops at its floor");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.cancel_drag(cx);
+        })
+        .unwrap();
     window
         .update(&mut cx, |view, _, cx| {
             assert!(view.close_message(cx), "the × puts it away");
@@ -218,6 +259,23 @@ fn streams_show_as_they_come() {
             .as_ref()
             .is_some_and(|m| m.view.is_some())
     });
+
+    // The panel under the list, with a message open in it: the squeeze the
+    // fix is for. The message takes its 240 and the list keeps rows to go
+    // back to, where before the message took the panel whole.
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.set_place(Place::Below, cx);
+            view.resize_inspector(true, window, cx);
+            view.resize_inspector(true, window, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "120-message-in-a-short-panel");
+    window
+        .update(&mut cx, |view, _, cx| view.set_place(Place::Beside, cx))
+        .unwrap();
+    cx.run_until_parked();
 
     // A message of the window's own: to the app, then to the server, which
     // echoes it. Each joins the list.

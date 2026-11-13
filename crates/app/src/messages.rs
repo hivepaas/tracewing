@@ -327,9 +327,11 @@ impl Traffic {
                 }
             });
             let tall = state.view_h.unwrap_or(VIEW_H).max(VIEW_MIN);
+            // No floor here: VIEW_MIN is how short a drag may make it, but a
+            // panel too short for both must still show some of each rather
+            // than push the message off the bottom.
             div()
                 .h(ui(tall))
-                .min_h(ui(VIEW_MIN))
                 .flex()
                 .flex_col()
                 .border_t_1()

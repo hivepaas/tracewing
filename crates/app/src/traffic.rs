@@ -1435,7 +1435,12 @@ impl Traffic {
         cx.notify();
     }
 
-    fn on_mouse_move(&mut self, event: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
+    pub fn on_mouse_move(
+        &mut self,
+        event: &MouseMoveEvent,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let Some(drag) = self.drag else {
             return;
         };
@@ -1555,6 +1560,9 @@ impl Traffic {
     fn on_mouse_up(&mut self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
         match self.drag.take() {
             Some(Drag::Inspector(place)) => self.set_place(place, cx),
+            // The chosen message's height is not part of the layout, and is
+            // gone with the message: there is nothing to write down.
+            Some(Drag::MessageView { .. }) => cx.notify(),
             Some(_) => {
                 self.save_layout();
                 cx.notify();
