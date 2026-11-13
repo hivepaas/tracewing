@@ -2315,6 +2315,9 @@ t2af18488 = La fenêtre
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Configurer, Trafic, Règles, En pause, Composer, Sessions, Paramètres
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = Précédent ou suivant, comme les boutons de la souris
+
 # Show or hide the sidebar
 t67adca04 = Afficher ou masquer la barre latérale
 

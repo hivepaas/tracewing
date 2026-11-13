@@ -2315,6 +2315,9 @@ t2af18488 = La finestra
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Configura, Traffico, Regole, In pausa, Componi, Sessioni, Impostazioni
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = Indietro o avanti, come i tasti del mouse
+
 # Show or hide the sidebar
 t67adca04 = Mostra o nascondi la barra laterale
 

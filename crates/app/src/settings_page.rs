@@ -591,6 +591,7 @@ impl Traffic {
             page.editing = None;
         }
         self.save_layout();
+        self.went();
         cx.notify();
     }
 
