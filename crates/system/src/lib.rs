@@ -319,7 +319,10 @@ pub fn recover(data_dir: &Path) -> Result<Recovered> {
     };
     let (addr, saved) = parse_journal(&text).with_context(|| format!("read {}", path.display()))?;
 
-    let recovered = if os::proxy_is(addr)? {
+    // Reading it can fail outright on a machine with no desktop to read, and
+    // then the journal stays where it is: it is the only record of what the
+    // settings were.
+    let recovered = if os::proxy_is(addr).context("read this computer's proxy setting")? {
         os::restore_proxy(&saved, addr).context("put the system proxy back")?;
         Recovered::PutBack
     } else {
@@ -371,7 +374,7 @@ pub fn watchdog(data_dir: &Path) -> Result<()> {
 fn name_itself() {
     // SAFETY: prctl takes a name of at most 16 bytes, ending in a zero, and
     // this one is written as such.
-    unsafe { libc::prctl(libc::PR_SET_NAME, c"tw-watchdog".as_ptr()) };
+    unsafe { libc::prctl(libc::PR_SET_NAME, c"trw-watchdog".as_ptr()) };
 }
 
 /// Only Linux has a name apart from the program's.

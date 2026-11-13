@@ -389,6 +389,20 @@ fn the_window_shows_real_traffic() {
         .unwrap();
     cx.run_until_parked();
     save(&mut cx, window.into(), "121-hex-chosen-on-both-sides");
+    // And in the dark, where a mark that is only weaker cannot be seen.
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.set_appearance(Appearance::Dark, window, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
+    save(&mut cx, window.into(), "122-hex-chosen-in-the-dark");
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.set_appearance(Appearance::Light, window, cx)
+        })
+        .unwrap();
+    cx.run_until_parked();
     window
         .update(&mut cx, |view, _, cx| {
             let BodyState::Shown(body) = &view.inspector.body else {

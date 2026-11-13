@@ -307,7 +307,11 @@ pub fn arm_timer(command: &[String], journal: &Path) -> Result<()> {
     }
     let dir = units_dir()?;
     fs::create_dir_all(&dir).with_context(|| format!("create {}", dir.display()))?;
-    for (name, body) in unit_files(command, journal) {
+    // What systemd knows of the session is not always what the session knows:
+    // the desktop's name may never reach the user manager, and then the
+    // command would not know where this machine keeps its proxy setting.
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP").ok();
+    for (name, body) in unit_files(command, journal, desktop.as_deref()) {
         let path = dir.join(name);
         fs::write(&path, &body).with_context(|| format!("write {}", path.display()))?;
     }
@@ -317,7 +321,11 @@ pub fn arm_timer(command: &[String], journal: &Path) -> Result<()> {
 }
 
 /// The two unit files, by name: what to run, and when to run it.
-fn unit_files(command: &[String], journal: &Path) -> [(&'static str, String); 2] {
+fn unit_files(
+    command: &[String],
+    journal: &Path,
+    desktop: Option<&str>,
+) -> [(&'static str, String); 2] {
     let exec = command
         .iter()
         .map(|part| unit_quote(part))
@@ -326,6 +334,14 @@ fn unit_files(command: &[String], journal: &Path) -> [(&'static str, String); 2]
     // A path is written as it is, except for the per-cent sign, which systemd
     // would read as the start of a name of its own.
     let journal = journal.display().to_string().replace('%', "%%");
+    let desktop = desktop
+        .map(|name| {
+            format!(
+                "Environment={}\n",
+                unit_quote(&format!("XDG_CURRENT_DESKTOP={name}"))
+            )
+        })
+        .unwrap_or_default();
     [
         (
             TIMER_SERVICE,
@@ -340,6 +356,7 @@ fn unit_files(command: &[String], journal: &Path) -> [(&'static str, String); 2]
                  [Service]\n\
                  Type=oneshot\n\
                  LogLevelMax=warning\n\
+                 {desktop}\
                  ExecStart={exec}\n"
             ),
         ),
@@ -1019,8 +1036,11 @@ mod tests {
             "--only-if-gone",
         ]
         .map(str::to_owned);
-        let [(service_name, service), (timer_name, timer)] =
-            unit_files(&command, Path::new("/d/sysproxy.journal"));
+        let [(service_name, service), (timer_name, timer)] = unit_files(
+            &command,
+            Path::new("/d/sysproxy.journal"),
+            Some("ubuntu:GNOME"),
+        );
         assert_eq!(service_name, "tracewing-proxy-recovery.service");
         assert_eq!(timer_name, "tracewing-proxy-recovery.timer");
         assert!(
@@ -1034,6 +1054,15 @@ mod tests {
             service.contains("ConditionPathExists=/d/sysproxy.journal"),
             "{service}"
         );
+        // systemd is not told what desktop this is unless the desktop tells
+        // it, and without that the command cannot know where the setting is.
+        assert!(
+            service.contains("Environment=\"XDG_CURRENT_DESKTOP=ubuntu:GNOME\"\n"),
+            "{service}"
+        );
+        let [(_, bare), _] = unit_files(&command, Path::new("/d/sysproxy.journal"), None);
+        assert!(!bare.contains("Environment="), "{bare}");
+
         // The first look as well as the ones after it, or there are none.
         assert!(timer.contains("OnActiveSec=1min"), "{timer}");
         assert!(timer.contains("OnUnitActiveSec=1min"), "{timer}");

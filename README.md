@@ -78,7 +78,7 @@ first, and nothing says why.
 
 tracewing puts the setting back when it is closed, when it next starts, and from
 a watchdog process the moment it dies. That watchdog runs under a name of its
-own, `tw-watchdog`, so that `pkill tracewing` — which matches every name with
+own, `trw-watchdog`, so that `pkill tracewing` — which matches every name with
 tracewing in it — does not take the safety net along with the app. It is a
 second of waiting and a line in `ps`, not a hidden thing: `pkill -f tracewing`
 still finds it. On Linux a systemd user timer stands

@@ -14,8 +14,8 @@ fn tracewing() -> Command {
 
 /// `tracewing recover`, with the XDG folders pointed inside `dir`. Putting the
 /// settings back takes the login recovery and the minute timer away with
-/// them, and on the machine this is built on those belong to whatever
-/// tracewing the person has running, not to a test.
+/// them, and on a machine somebody works on those belong to whatever
+/// tracewing they have running, not to a test.
 fn recover(dir: &std::path::Path) -> Command {
     let mut command = tracewing();
     command
@@ -24,6 +24,36 @@ fn recover(dir: &std::path::Path) -> Command {
         .env("HOME", dir)
         .env("XDG_CONFIG_HOME", dir.join("config"));
     command
+}
+
+/// What `recover` leaves behind, either way. On a machine with a desktop it
+/// says which of the two happened and the journal goes with it. On one without
+/// — a build runner — there is no setting to read, so it says what it could
+/// not do and keeps the journal: that is the only record of what the settings
+/// were, and throwing it away on a machine that cannot read them would lose
+/// them for the machine that can.
+fn it_put_them_back_or_said_why_not(out: &std::process::Output, journal: &std::path::Path) {
+    let said = String::from_utf8_lossy(&out.stdout);
+    if out.status.success() {
+        assert!(
+            said.contains("left alone") || said.contains("back as it was"),
+            "it says which of the two happened: {said}"
+        );
+        assert!(
+            !journal.exists(),
+            "and the journal goes either way, so it cannot be used twice"
+        );
+    } else {
+        let complaint = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            complaint.contains("read this computer's proxy setting"),
+            "{complaint}"
+        );
+        assert!(
+            journal.exists(),
+            "and the journal stays, being all that is left of the settings"
+        );
+    }
 }
 
 /// A journal as a killed run leaves one: the address it pointed the system
@@ -189,16 +219,7 @@ fn recover_says_what_it_did_and_leaves_a_stranger_alone() {
     // this machine now: it must not put somebody else's settings back.
     journal_of_a_killed_run(&dir);
     let out = recover(&dir).output().unwrap();
-    assert!(out.status.success(), "{out:?}");
-    let said = String::from_utf8_lossy(&out.stdout);
-    assert!(
-        said.contains("left alone") || said.contains("back as it was"),
-        "it says which of the two happened: {said}"
-    );
-    assert!(
-        !dir.join("sysproxy.journal").exists(),
-        "and the journal goes either way, so it cannot be used twice"
-    );
+    it_put_them_back_or_said_why_not(&out, &dir.join("sysproxy.journal"));
 
     std::fs::remove_dir_all(&dir).ok();
 }
@@ -228,23 +249,17 @@ fn recover_only_if_gone_leaves_a_running_app_alone() {
     // and that process taking over, when the half-made process holds a copy
     // of everything its parent had open, this lock among it.
     drop(held);
-    let said = (0..50)
+    let out = (0..50)
         .find_map(|_| {
             let out = recover(&dir).arg("--only-if-gone").output().unwrap();
-            assert!(out.status.success(), "{out:?}");
-            let said = String::from_utf8_lossy(&out.stdout).into_owned();
-            if said.contains("still running") {
+            if String::from_utf8_lossy(&out.stdout).contains("still running") {
                 std::thread::sleep(Duration::from_millis(20));
                 return None;
             }
-            Some(said)
+            Some(out)
         })
         .expect("it went on saying tracewing was running");
-    assert!(
-        said.contains("left alone") || said.contains("back as it was"),
-        "it says which of the two happened: {said}"
-    );
-    assert!(!journal.exists());
+    it_put_them_back_or_said_why_not(&out, &journal);
 
     std::fs::remove_dir_all(&dir).ok();
 }
