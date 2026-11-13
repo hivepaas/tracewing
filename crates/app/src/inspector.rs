@@ -115,6 +115,16 @@ impl FindBar {
     }
 }
 
+/// The most of the inspector's height its head takes, so that the part,
+/// below the inspector's own row, keeps some 40%; past it, the head scrolls.
+const HEAD_SHARE: f32 = 0.5;
+/// Shorter than this (design's size), the timing starts folded.
+const SHORT_H: f32 = 600.;
+/// Narrower than these, the decrypt row keeps its words for a tooltip, and the
+/// actions row keeps the first of its buttons and puts the rest in a menu.
+const NARROW_DECRYPT: f32 = 400.;
+const NARROW_ACTIONS: f32 = 520.;
+
 /// One of Find's switches.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FindSwitch {
@@ -189,9 +199,19 @@ pub struct InspectorState {
     /// A reading being looked at as a body of its own, which the body pane
     /// shows until it is closed.
     pub opened: Option<Opened>,
-    /// Whether the phases of the time are folded away. Worded as the negative
-    /// so that `Default` gives what the window has always done: show them.
-    pub timing_hidden: bool,
+    /// The phases of the time folded away (`Some(true)`) or shown, as last
+    /// chosen; `None` until then, which folds them in a short inspector and
+    /// shows them in a tall one.
+    pub timing_folded: Option<bool>,
+    /// The head over the part (title, chips, timing, tabs…), scrolled by
+    /// itself when it would leave the part too little room.
+    pub head: Scrolled,
+    /// The size the inspector was last drawn at, in pixels: how much of its
+    /// head it shows depends on it.
+    pub panel: std::rc::Rc<std::cell::Cell<gpui::Size<gpui::Pixels>>>,
+    /// The menu of the actions a narrow inspector keeps out of its row, open
+    /// where it was asked for.
+    pub more_menu: Option<gpui::Point<gpui::Pixels>>,
     /// How many have been opened, so that each gets a file of its own.
     opened_count: u64,
 }
@@ -847,6 +867,13 @@ impl Traffic {
             .bg(rgb(c.surface))
             // A press here makes Ctrl+F find in the inspector, not filter the list.
             .capture_any_mouse_down(cx.listener(|this, _, _, _| this.inspector_active = true))
+            .relative()
+            .child({
+                let panel = std::rc::Rc::clone(&self.inspector.panel);
+                gpui::canvas(move |b, _, _| panel.set(b.size), |_, _, _, _| {})
+                    .absolute()
+                    .size_full()
+            })
             .child(handle);
         let Some(detail) = self.inspector.detail.clone() else {
             return panel.child(
@@ -864,20 +891,42 @@ impl Traffic {
         let parts = self.render_parts(&detail, cx).into_any_element();
         let shown = self.render_part(&detail, cx);
         let find = self.render_find_bar(cx);
-        panel
-            .child(render_title(&detail))
-            .child(self.render_decrypt_choice(&detail, cx))
-            .child(render_chips(&detail, self.inspector.timing_hidden, {
-                let me = cx.entity().downgrade();
-                move |_: &mut gpui::Window, cx: &mut gpui::App| {
-                    let _ = me.update(cx, |this: &mut Traffic, cx| this.toggle_timing(cx));
-                }
-            }))
-            .children(render_timing(&detail).filter(|_| !self.inspector.timing_hidden))
-            .child(self.render_sides(cx))
-            .child(parts)
-            .children(find)
-            .child(shown)
+        let folded = self.timing_folded();
+        // The head never takes more than its share: past it, it scrolls by
+        // itself, and the part keeps the rest.
+        let head = self.inspector.head.clone();
+        let scrolls = head.handle.max_offset().y > px(0.);
+        let head = div()
+            .relative()
+            .flex()
+            .flex_col()
+            .flex_shrink_0()
+            .max_h(relative(HEAD_SHARE))
+            .child(
+                div()
+                    .id("inspector-head")
+                    .flex()
+                    .flex_col()
+                    .gap(ui(12.))
+                    .min_h_0()
+                    .overflow_y_scroll()
+                    .track_scroll(&head.handle)
+                    // Room for the bar, only when there is one.
+                    .when(scrolls, |d| d.pr(px(scrollbar::BAR_W)))
+                    .child(render_title(&detail))
+                    .child(self.render_decrypt_choice(&detail, cx))
+                    .child(render_chips(&detail, folded, {
+                        let me = cx.entity().downgrade();
+                        move |_: &mut gpui::Window, cx: &mut gpui::App| {
+                            let _ = me.update(cx, |this: &mut Traffic, cx| this.toggle_timing(cx));
+                        }
+                    }))
+                    .children(render_timing(&detail).filter(|_| !folded))
+                    .child(self.render_sides(cx))
+                    .child(parts),
+            )
+            .children(head.bars());
+        panel.child(head).children(find).child(shown)
     }
 
     /// Whether this host is decrypted, and the way to change that. An app that fails
@@ -897,6 +946,7 @@ impl Traffic {
         } else {
             tr!("If an app fails with this host, it may pin its certificates.")
         };
+        let narrow = self.inspector_narrower(NARROW_DECRYPT);
         div()
             .flex()
             .flex_row()
@@ -906,14 +956,18 @@ impl Traffic {
             .flex_shrink_0()
             .items_center()
             .gap(ui(10.))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(ui(180.))
-                    .text_size(ui(12.))
-                    .text_color(rgb(c.muted))
-                    .child(text),
-            )
+            // Narrow, the words go to the button's tooltip: the buttons are
+            // what is needed here.
+            .when(!narrow, |d| {
+                d.child(
+                    div()
+                        .flex_1()
+                        .min_w(ui(180.))
+                        .text_size(ui(12.))
+                        .text_color(rgb(c.muted))
+                        .child(text.clone()),
+                )
+            })
             .child(
                 div()
                     .id("make-rule")
@@ -937,6 +991,7 @@ impl Traffic {
             .child(
                 div()
                     .id("decrypt-choice")
+                    .when(narrow, |d| d.tooltip(tip(text.clone())))
                     .flex_shrink_0()
                     .h(ui(28.))
                     .px(ui(10.))
@@ -1422,6 +1477,35 @@ impl Traffic {
                             .font_weight(FontWeight::BOLD)
                             .child(label)
                     };
+                    // Narrow, the row keeps its first buttons, and the rest are in
+                    // a menu: it stays one row rather than three.
+                    if self.inspector_narrower(NARROW_ACTIONS) {
+                        let more = small("more-actions", "⋯".to_owned())
+                            .tooltip(tip(tr!("More")))
+                            .on_click(cx.listener(|view, e: &gpui::ClickEvent, _, cx| {
+                                view.inspector.more_menu = Some(e.position());
+                                cx.notify();
+                            }));
+                        return d
+                            .child(
+                                div()
+                                    .flex()
+                                    .flex_row()
+                                    .flex_wrap()
+                                    .gap(ui(6.))
+                                    .child(small("send-again", tr!("Send again")).on_click(
+                                        cx.listener(|view, _, _, cx| view.send_flow_again(cx)),
+                                    ))
+                                    .child(
+                                        small("edit-send", tr!("Edit and send")).on_click(
+                                            cx.listener(|view, _, _, cx| view.edit_flow(cx)),
+                                        ),
+                                    )
+                                    .child(self.render_copy_as(cx))
+                                    .child(more),
+                            )
+                            .children(self.render_more_menu(detail.id, cx));
+                    }
                     d.child(
                         div()
                             .flex()
@@ -1470,6 +1554,53 @@ impl Traffic {
                     )
                 },
             )
+    }
+
+    /// What a narrow inspector keeps out of its actions row: Copy as cURL and
+    /// the comparisons.
+    fn render_more_menu(&self, id: i64, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let at = self.inspector.more_menu?;
+        let me = cx.entity().downgrade();
+        let act = |f: fn(&mut Traffic, i64, &mut Context<Traffic>)| -> select::Act {
+            let me = me.clone();
+            std::rc::Rc::new(move |_: &mut gpui::Window, cx: &mut gpui::App| {
+                let _ = me.update(cx, |view, cx| {
+                    view.inspector.more_menu = None;
+                    f(view, id, cx);
+                    cx.notify();
+                });
+            })
+        };
+        let mut items = vec![
+            select::Item::new(
+                "more-copy-curl",
+                tr!("Copy as cURL"),
+                Some(act(|view, _, cx| view.copy_as_curl(cx))),
+            ),
+            select::Item::new(
+                "more-compare",
+                tr!("Compare with…"),
+                Some(act(|view, _, cx| view.start_compare(cx))),
+            ),
+        ];
+        if self.inspector.previous_call.is_some() {
+            items.push(select::Item::new(
+                "more-compare-previous",
+                tr!("Compare with the call before"),
+                Some(act(|view, id, cx| {
+                    if let Some(previous) = view.inspector.previous_call {
+                        view.compare(previous, id, cx);
+                    }
+                })),
+            ));
+        }
+        let close = cx.entity().downgrade();
+        Some(select::render_menu(at, items, move |_, cx| {
+            let _ = close.update(cx, |view, cx| {
+                view.inspector.more_menu = None;
+                cx.notify();
+            });
+        }))
     }
 
     /// "Copy as…" and, open, the languages it offers.
@@ -1958,8 +2089,33 @@ impl Traffic {
     /// detail behind the chip that says how long it took, so that chip is
     /// what folds them.
     pub fn toggle_timing(&mut self, cx: &mut Context<Self>) {
-        self.inspector.timing_hidden = !self.inspector.timing_hidden;
+        self.inspector.timing_folded = Some(!self.timing_folded());
         cx.notify();
+    }
+
+    /// Whether the phases of the time are folded: as chosen, or in a short
+    /// inspector until something is chosen.
+    pub fn timing_folded(&self) -> bool {
+        self.inspector
+            .timing_folded
+            .unwrap_or_else(|| self.inspector_size().is_some_and(|(_, h)| h < SHORT_H))
+    }
+
+    /// The inspector's size as last drawn, at the design's size; `None` before
+    /// it has been.
+    pub(crate) fn inspector_size(&self) -> Option<(f32, f32)> {
+        let size = self.inspector.panel.get();
+        (size.width > px(0.)).then(|| {
+            (
+                f32::from(size.width) / self.ui_scale(),
+                f32::from(size.height) / self.ui_scale(),
+            )
+        })
+    }
+
+    /// Narrower than `width` (design's size), as last drawn.
+    fn inspector_narrower(&self, width: f32) -> bool {
+        self.inspector_size().is_some_and(|(w, _)| w < width)
     }
 
     /// Closes what was opened, and shows the body itself again.

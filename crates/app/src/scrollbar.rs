@@ -68,34 +68,41 @@ impl Scrolled {
 
     /// `area`, which scrolls with [`Scrolled::handle`], with its bars over it.
     pub fn around(&self, area: impl IntoElement) -> AnyElement {
-        let (down, across) = (self.clone(), self.clone());
         div()
             .relative()
             .size_full()
             .child(area)
-            .child(
-                canvas(
-                    |_, _, _| (),
-                    move |bounds, _, window, _| down.paint(Axis::Down, bounds, window),
-                )
-                .absolute()
-                .top_0()
-                .bottom_0()
-                .right_0()
-                .w(px(BAR_W)),
-            )
-            .child(
-                canvas(
-                    |_, _, _| (),
-                    move |bounds, _, window, _| across.paint(Axis::Across, bounds, window),
-                )
-                .absolute()
-                .left_0()
-                .right(px(BAR_W))
-                .bottom_0()
-                .h(px(BAR_W)),
-            )
+            .children(self.bars())
             .into_any_element()
+    }
+
+    /// The bars alone, to lay over an area of the caller's own: up and down
+    /// over its right edge, sideways over its bottom. The area must be
+    /// positioned for them (relative).
+    pub fn bars(&self) -> [AnyElement; 2] {
+        let (down, across) = (self.clone(), self.clone());
+        [
+            canvas(
+                |_, _, _| (),
+                move |bounds, _, window, _| down.paint(Axis::Down, bounds, window),
+            )
+            .absolute()
+            .top_0()
+            .bottom_0()
+            .right_0()
+            .w(px(BAR_W))
+            .into_any_element(),
+            canvas(
+                |_, _, _| (),
+                move |bounds, _, window, _| across.paint(Axis::Across, bounds, window),
+            )
+            .absolute()
+            .left_0()
+            .right(px(BAR_W))
+            .bottom_0()
+            .h(px(BAR_W))
+            .into_any_element(),
+        ]
     }
 
     /// How much further the area scrolls that way, and how far it has.

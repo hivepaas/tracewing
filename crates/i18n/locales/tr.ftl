@@ -735,6 +735,9 @@ t1a435961 = Bul (Ctrl+F)
 # Save body
 te2c44424 = Gövdeyi kaydet
 
+# More
+t4f34d900 = Daha fazla
+
 # Send again
 tf5910557 = Yeniden gönder
 

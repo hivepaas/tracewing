@@ -396,7 +396,7 @@ fn graphql_cookies_and_tokens_are_read() {
     // they start shown, as they always have.
     assert!(
         !window
-            .update(&mut cx, |view, _, _| view.inspector.timing_hidden)
+            .update(&mut cx, |view, _, _| view.timing_folded())
             .unwrap(),
         "shown until someone says otherwise"
     );
@@ -406,7 +406,7 @@ fn graphql_cookies_and_tokens_are_read() {
     cx.run_until_parked();
     assert!(
         window
-            .update(&mut cx, |view, _, _| view.inspector.timing_hidden)
+            .update(&mut cx, |view, _, _| view.timing_folded())
             .unwrap()
     );
     shot(&mut cx, window.into(), "48-timing-folded");
@@ -417,7 +417,7 @@ fn graphql_cookies_and_tokens_are_read() {
     cx.run_until_parked();
     assert!(
         window
-            .update(&mut cx, |view, _, _| view.inspector.timing_hidden)
+            .update(&mut cx, |view, _, _| view.timing_folded())
             .unwrap(),
         "the choice outlives the flow it was made on"
     );

@@ -706,6 +706,9 @@ t1a435961 = Tìm (Ctrl+F)
 # Save body
 te2c44424 = Lưu body
 
+# More
+t4f34d900 = Thêm
+
 # Send again
 tf5910557 = Gửi lại
 

@@ -264,6 +264,54 @@ fn minus_and_plus_resize_the_inspector_by_a_tenth_of_the_window() {
     );
     shot(&mut cx, main.into(), "125-inspector-gives-way");
 
+    // As narrow as it goes: the head (title, chips, timing, tabs, actions)
+    // scrolls by itself, and the body keeps its share of the height.
+    press(&mut cx, main, &dir, false, 40);
+    for _ in 0..3 {
+        main.update(&mut cx, |_, window, _| window.refresh())
+            .unwrap();
+        cx.run_until_parked();
+    }
+    let (head_scrolls, panel_h) = main
+        .update(&mut cx, |view, _, _| {
+            (
+                view.inspector.head.handle.max_offset().y > px(0.),
+                view.inspector.panel.get().height,
+            )
+        })
+        .unwrap();
+    assert!(head_scrolls, "a narrow inspector's head scrolls by itself");
+    let body_h = main
+        .update(&mut cx, |_, _, cx| body.read(cx).drawn_bounds().size.height)
+        .unwrap();
+    assert!(
+        body_h >= panel_h * 0.35,
+        "the body keeps its share: {body_h:?} of {panel_h:?}"
+    );
+    shot(&mut cx, main.into(), "126-inspector-narrow");
+
+    // Below the list, short: the timing starts folded, and opened by hand it
+    // stays open.
+    main.update(&mut cx, |view, _, cx| view.set_place(Place::Below, cx))
+        .unwrap();
+    for _ in 0..3 {
+        main.update(&mut cx, |_, window, _| window.refresh())
+            .unwrap();
+        cx.run_until_parked();
+    }
+    let folded = main
+        .update(&mut cx, |view, _, _| view.timing_folded())
+        .unwrap();
+    assert!(folded, "a short inspector folds the timing");
+    main.update(&mut cx, |view, _, cx| view.toggle_timing(cx))
+        .unwrap();
+    cx.run_until_parked();
+    let folded = main
+        .update(&mut cx, |view, _, _| view.timing_folded())
+        .unwrap();
+    assert!(!folded, "opened by hand, it stays open");
+    shot(&mut cx, main.into(), "127-inspector-short");
+
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);
 }

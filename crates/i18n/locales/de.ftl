@@ -735,6 +735,9 @@ t1a435961 = Suchen (Strg+F)
 # Save body
 te2c44424 = Body speichern
 
+# More
+t4f34d900 = Mehr
+
 # Send again
 tf5910557 = Erneut senden
 
