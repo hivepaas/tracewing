@@ -168,6 +168,10 @@ pub struct InspectorState {
     pub rpc: Option<crate::rpc_view::Shown>,
     /// What is selected of the part shown, when it is not a body.
     pub select: Selection,
+    /// The readings pane's own, so that choosing in it is separate from
+    /// choosing in the part beside it -- and so that the menu to copy with
+    /// is drawn once rather than by both.
+    pub reads_select: Selection,
     /// How bodies are shown, kept from one flow to the next.
     pub body_mode: BodyMode,
     /// CSV and TSV shown as text rather than as a table, as last chosen.
@@ -2298,7 +2302,8 @@ impl Traffic {
     /// hides the body they are comparing against.
     fn render_reads(&mut self, cx: &mut Context<Self>) -> Div {
         let c = colors();
-        let sel = self.inspector.select.clone();
+        let sel = self.inspector.reads_select.clone();
+        sel.begin();
         let Some(reads) = &self.inspector.reads else {
             return div();
         };
@@ -2369,8 +2374,8 @@ impl Traffic {
                         }),
                     ),
             )
-            .child(
-                div()
+            .child({
+                let inside = div()
                     .flex_1()
                     .min_w_0()
                     .flex()
@@ -2429,7 +2434,12 @@ impl Traffic {
                             .text_size(ui(11.5))
                             .font_family(crate::mono_font())
                             .text_color(rgb(c.muted))
-                            .child(value),
+                            .child(match &field {
+                                Some(field) => {
+                                    sel.piece_under(field.clone(), value, "\n", Vec::new())
+                                }
+                                None => sel.piece(value, "\n", Vec::new()),
+                            }),
                     )
                     .child(
                         div()
@@ -2506,8 +2516,12 @@ impl Traffic {
                             .px(ui(6.))
                             .text_size(ui(12.))
                             .children(chosen.map(|reading| render_reading(&reading, &sel))),
-                    }),
-            )
+                    });
+                // What is in the pane is text to choose from and copy,
+                // like the views beside it: the presses go to the same
+                // selection, so a copy takes what was chosen here.
+                self.selectable(inside, &sel, cx)
+            })
     }
 
     /// The row where a reader builds a chain of their own: a step at a
@@ -2965,6 +2979,14 @@ impl Traffic {
     /// False when nothing is.
     pub fn copy_selection(&mut self, cx: &mut Context<Self>) -> bool {
         self.inspector.select.set_menu(None);
+        self.inspector.reads_select.set_menu(None);
+        // What was chosen in the readings pane comes first, wherever the
+        // part beside it keeps its own selection: the pane is what the
+        // reader was last in.
+        if let Some(copied) = self.copied_in_reads(cx) {
+            cx.notify();
+            return write_copied(copied, cx);
+        }
         let copied = match (&self.inspector.part, &self.inspector.body) {
             (Part::Body, BodyState::Shown(view)) => view.read(cx).selected_text(),
             (Part::Messages, _) => match self
@@ -2980,6 +3002,23 @@ impl Traffic {
         };
         cx.notify();
         write_copied(copied, cx)
+    }
+
+    /// What is chosen in the readings pane, if anything: the body a reading
+    /// opened there keeps its own selection, and the rest of the pane uses
+    /// the inspector's.
+    fn copied_in_reads(&self, cx: &gpui::App) -> Option<Copied> {
+        let reads = self.inspector.reads.as_ref()?;
+        if let Some(opened) = &reads.opened
+            && let OpenedAs::Body(view) = &opened.shown
+        {
+            let copied = view.read(cx).selected_text();
+            if !matches!(copied, Copied::Nothing) {
+                return Some(copied);
+            }
+        }
+        let copied = self.inspector.reads_select.selected_text();
+        (!matches!(copied, Copied::Nothing)).then_some(copied)
     }
 
     /// Closes the menu to copy with, wherever it is open. False if it is not.
@@ -3008,9 +3047,13 @@ impl Traffic {
             }
         }
         let compose = self.compose_page.as_ref().map(|page| page.select.clone());
-        for sel in [Some(self.inspector.select.clone()), compose]
-            .into_iter()
-            .flatten()
+        for sel in [
+            Some(self.inspector.select.clone()),
+            Some(self.inspector.reads_select.clone()),
+            compose,
+        ]
+        .into_iter()
+        .flatten()
         {
             if sel.menu().is_some() {
                 sel.set_menu(None);
