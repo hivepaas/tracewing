@@ -84,16 +84,28 @@ matches every name with tracewing in it, or `taskkill /IM tracewing.exe` — doe
 not take the safety net along with it. It is a second of waiting and a line in
 `ps` or Task Manager, not a hidden thing: `pkill -f tracewing` still finds it.
 
-On Linux and Windows a timer stands behind those: once a minute it looks for a
-journal left by a tracewing that is gone, which is the case the watchdog cannot
-cover, because whatever killed the app may have taken the watchdog too. **The
-network comes back by itself within a minute.** The timer is armed and disarmed
-with the setting, so nothing of it is left when the setting is off: a systemd
-user timer on Linux, a scheduled task on Windows, which runs without a session
-of its own and so puts no window on the screen. macOS has no such timer yet:
-there the next login is what puts it back.
+Behind those stands something the OS keeps, for the case the watchdog cannot
+cover — `pkill -f tracewing`, or a kill of everything at once:
 
-To have it back now, or on an OS with no timer, one command undoes it:
+- **Linux:** a systemd user timer. Once a minute it looks for a journal left by
+  a tracewing that is gone. **The network comes back by itself within a
+  minute.**
+- **macOS:** a launchd agent of the session's, a process that sleeps until the
+  app is gone and then puts the setting back. A kill takes it too, and launchd
+  starts it again at once: **the network comes back within a second** — within
+  a minute if everything was killed less than a minute after the setting was
+  turned on.
+- **Windows:** a scheduled task that looks once a minute, as the Linux timer
+  does. It runs without a session of its own, so it puts no window on the
+  screen.
+
+Each is armed and disarmed with the setting, so nothing of it runs when the
+setting is off. The macOS agent is not a login item and writes nothing to
+`~/Library/LaunchAgents`; after a kill, once it has put the setting back,
+launchd keeps only its name, with no process, until the session ends or
+tracewing next starts.
+
+To have it back now, one command undoes it:
 
 ```sh
 tracewing recover
@@ -103,7 +115,8 @@ It restores the settings tracewing wrote down before it changed them, and leaves
 them alone if they are no longer tracewing's. Starting tracewing again does the
 same. `tracewing recover --only-if-gone` is the same thing with a running
 tracewing left alone, which is what the timer runs and what a script of your own
-should run.
+should run. `tracewing recover --wait` waits for tracewing to go and then puts it
+back, which is what the macOS agent runs.
 
 ## Build from source
 

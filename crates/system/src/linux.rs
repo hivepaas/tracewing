@@ -381,7 +381,7 @@ fn unit_files(
     ]
 }
 
-pub fn disarm_timer() -> Result<()> {
+pub fn disarm_timer(_journal: &Path) -> Result<()> {
     let dir = units_dir()?;
     let units = [dir.join(TIMER_SERVICE), dir.join(TIMER_UNIT)];
     // Nothing was armed: say so without waking systemd to ask.

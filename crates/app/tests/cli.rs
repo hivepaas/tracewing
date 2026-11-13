@@ -268,6 +268,46 @@ fn recover_only_if_gone_leaves_a_running_app_alone() {
     std::fs::remove_dir_all(&dir).ok();
 }
 
+/// What the launchd agent runs on macOS: one process for the whole time the
+/// setting is on, which has to sleep through a healthy app and wake the moment
+/// it goes.
+#[test]
+fn recover_wait_waits_for_the_app_to_go() {
+    let dir = std::env::temp_dir().join(format!("tracewing-wait-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let journal = dir.join("sysproxy.journal");
+    journal_of_a_killed_run(&dir);
+
+    let held = tracewing_system::hold_alive(&dir).unwrap();
+    let mut waiting = recover(&dir)
+        .arg("--wait")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    std::thread::sleep(Duration::from_millis(500));
+    assert!(
+        waiting.try_wait().unwrap().is_none(),
+        "it waits for as long as the app is there"
+    );
+    assert!(journal.exists(), "and touches nothing meanwhile");
+
+    drop(held);
+    let until = Instant::now() + Duration::from_secs(20);
+    while waiting.try_wait().unwrap().is_none() {
+        assert!(
+            Instant::now() < until,
+            "it went on waiting after the app had gone"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let out = waiting.wait_with_output().unwrap();
+    it_put_them_back_or_said_why_not(&out, &journal);
+
+    std::fs::remove_dir_all(&dir).ok();
+}
+
 /// `pkill tracewing` matches every process whose name has tracewing in it, so
 /// before the watchdog took a name of its own, the one process whose job was
 /// to survive the app died with it — and the machine kept the proxy setting
