@@ -9,7 +9,10 @@
 
 mod common;
 
-use gpui::{AppContext as _, Entity, HeadlessAppContext, WindowHandle, px, size};
+use gpui::{
+    AppContext as _, Entity, HeadlessAppContext, Modifiers, MouseButton, MouseDownEvent,
+    MouseUpEvent, PlatformInput, WindowHandle, px, size,
+};
 use std::{
     path::PathBuf,
     sync::Arc,
@@ -410,6 +413,76 @@ fn find_in_the_body_and_in_a_table() {
     });
     cx.run_until_parked();
     shot(&mut cx, window.into(), "124-find-messages");
+
+    // A double click on a JSON-RPC value takes that value's word, not its
+    // name's ("hash"), on the same row: the view says a value before its name.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.new_compose(cx);
+            let page = view.compose_page.as_ref().unwrap();
+            type_in(&page.method.clone(), "POST", cx);
+            type_in(&page.url.clone(), &format!("{base}/rpc"), cx);
+            type_in(&page.headers.clone(), "content-type: application/json", cx);
+            type_in(
+                &page.body.clone(),
+                r#"{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt","params":["0x2df8175a692bdb2a19a77b3e09906844970cd1983d45f0cc72ac74f3c525e9bb"]}"#,
+                cx,
+            );
+            view.send_composed(cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the receipt", |view, _| {
+        view.compose_page
+            .as_ref()
+            .is_some_and(|p| p.answer.is_some() || p.problem.is_some())
+    });
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.close_find(window, cx);
+            view.set_screen(Screen::Traffic, cx);
+            view.select_place(3, cx);
+            view.set_side(tracewing::detail::Side::Response, cx);
+            view.set_part(Part::Rpc, cx);
+        })
+        .unwrap();
+    for _ in 0..3 {
+        window.update(&mut cx, |_, w, _| w.refresh()).unwrap();
+        cx.run_until_parked();
+    }
+    let (address, at) = window
+        .update(&mut cx, |view, _, _| {
+            let sel = &view.inspector.select;
+            (0..400u64)
+                .find_map(|key| {
+                    let text = sel.text_of(key)?;
+                    let bounds = sel.drawn_at(key)?;
+                    (text.len() == 66 && text.starts_with("0x"))
+                        .then(|| (text.to_string(), bounds.center()))
+                })
+                .expect("the hash asked for is drawn")
+        })
+        .unwrap();
+    for event in [
+        PlatformInput::MouseDown(MouseDownEvent {
+            button: MouseButton::Left,
+            position: at,
+            modifiers: Modifiers::default(),
+            click_count: 2,
+            first_mouse: false,
+        }),
+        PlatformInput::MouseUp(MouseUpEvent {
+            button: MouseButton::Left,
+            position: at,
+            modifiers: Modifiers::default(),
+            click_count: 2,
+        }),
+    ] {
+        common::mouse(&mut cx, window, event);
+    }
+    let picked = window
+        .update(&mut cx, |view, _, _| view.inspector.select.selected_text())
+        .unwrap();
+    assert_eq!(picked, tracewing::select::Copied::Text(address));
 
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);

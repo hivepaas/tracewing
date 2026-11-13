@@ -293,11 +293,24 @@ impl Selection {
             Ok(i) | Err(i) => i,
         };
         if !in_row.is_empty() {
+            // The piece the pointer is in, or past the end of: the nearest that
+            // starts at or before it, whatever order the view said its pieces
+            // in (a value said before its name, as JSON-RPC's are). Before
+            // them all, the first on the row.
             let (key, layout, bounds) = in_row
                 .iter()
-                .rev()
-                .find(|(_, _, b)| b.left() <= point.x)
-                .unwrap_or(&in_row[0]);
+                .filter(|(_, _, b)| b.left() <= point.x)
+                .max_by(|a, b| {
+                    f32::from(a.2.left())
+                        .total_cmp(&f32::from(b.2.left()))
+                        .then(a.0.cmp(&b.0))
+                })
+                .or_else(|| {
+                    in_row
+                        .iter()
+                        .min_by(|a, b| f32::from(a.2.left()).total_cmp(&f32::from(b.2.left())))
+                })
+                .expect("the row has a piece");
             let p = if point.x > bounds.right() {
                 // Past a wrapped piece's end, on its line.
                 Point::new(bounds.right(), point.y)
