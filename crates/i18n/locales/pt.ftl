@@ -2321,6 +2321,9 @@ t2af18488 = A janela
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Configurar, Tráfego, Regras, Pausados, Compor, Sessões, Configurações
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = Voltar ou avançar, como os botões do mouse
+
 # Show or hide the sidebar
 t67adca04 = Mostrar ou ocultar a barra lateral
 

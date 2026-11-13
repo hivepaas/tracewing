@@ -2185,6 +2185,9 @@ t2af18488 = 창
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = 시작하기, 트래픽, 규칙, 일시 정지됨, 작성, 세션, 설정
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = 뒤로 또는 앞으로 (마우스의 뒤로/앞으로 버튼처럼)
+
 # Show or hide the sidebar
 t67adca04 = 사이드바 표시 또는 숨기기
 

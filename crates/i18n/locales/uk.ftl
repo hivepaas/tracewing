@@ -2386,6 +2386,9 @@ t2af18488 = Вікно
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Підготовка, Трафік, Правила, Призупинені, Створити запит, Сеанси, Налаштування
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = Назад або вперед, як бічні кнопки миші
+
 # Show or hide the sidebar
 t67adca04 = Показати або сховати бічну панель
 

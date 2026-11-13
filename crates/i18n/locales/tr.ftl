@@ -2268,6 +2268,9 @@ t2af18488 = Pencere
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Kurulum, Trafik, Kurallar, Duraklatılanlar, Oluştur, Oturumlar, Ayarlar
 
+# Back or forward, as the mouse's own buttons do
+tad71f882 = Geri veya ileri, faredeki düğmeler gibi
+
 # Show or hide the sidebar
 t67adca04 = Kenar çubuğunu göster ya da gizle
 
