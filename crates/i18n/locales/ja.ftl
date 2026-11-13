@@ -1540,8 +1540,23 @@ t6dc463eb = フローなし
 # Name it to keep it
 t52c1a402 = 名前を付けると保持されます
 
+# Nothing wrong with it.
+t6bfd918c = 問題は見つかりませんでした。
+
+# SQLite found {count} problem: {first} | SQLite found {count} problems, the first: {first}
+tf756539b =
+    { $n ->
+       *[other] SQLite が問題を { $count } 件見つけました。最初の 1 件: { $first }
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · 別のバージョンで書き込まれたため開けません
+
+# {size} · damaged, so it cannot be opened
+tf94fb7c2 = { $size } · 壊れているため開けません
+
+# {size} · cannot be read: {why}
+t7dfb1f1b = { $size } · 読み取れません: { $why }
 
 # {count} flow · {size} | {count} flows · {size}
 t3f3c0eb4 =
@@ -1554,6 +1569,12 @@ t3cb3e6fc = 記録中
 
 # Export HAR
 t4d6458cc = HAR をエクスポート
+
+# Checking…
+t87f62cb7 = 確認中…
+
+# Check
+t592c8de7 = 確認
 
 # Delete for good?
 ta7737f13 = 完全に削除しますか？
@@ -1953,9 +1974,6 @@ t98416222 = 再検索
 
 # No browser found on this computer.
 t0e46bb34 = このコンピューターにブラウザーが見つかりません。
-
-# Check
-t592c8de7 = 確認
 
 # Open on its own
 t0da7783c = 個別に開く

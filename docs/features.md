@@ -81,7 +81,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Columns to show, hide, resize and sort | Beta | Free |
 | A sidebar of hosts and devices; pin a host, hide a noisy one | Beta | Free |
 | Filter by host, method, status class, gRPC status, JSON-RPC method and type; search every URL and body | Beta | Free |
-| Sessions: name them, keep them, open them again | Beta | Free |
+| Sessions: name them, keep them, open them again; one that cannot be read says which it is — written by another version, or damaged — and a check reads its pages and says what SQLite found, when you ask for it | Beta | Free |
 | A size limit per session, oldest flows dropped first | Beta | Free |
 | Compare two flows side by side | 1.x | Pro |
 

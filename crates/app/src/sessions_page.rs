@@ -18,7 +18,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tracewing_i18n::{tr, tr_n};
-use tracewing_store::session::{self, SessionInfo};
+use tracewing_store::session::{self, SessionInfo, Trouble};
 
 /// `1 Nov 2026, 14:05`, in the computer's time zone.
 pub fn when_text(micros: Option<i64>) -> String {
@@ -36,6 +36,10 @@ pub struct SessionsPage {
     names: HashMap<PathBuf, Entity<TextInput>>,
     /// Asked once to delete this one; a second press does it.
     pub deleting: Option<PathBuf>,
+    /// The session whose pages are being read through, while they are.
+    pub checking: Option<PathBuf>,
+    /// What the last check said, by the session it was asked about.
+    pub checked: HashMap<PathBuf, SharedString>,
     pub problem: Option<String>,
     loading: bool,
     pub files: FileState,
@@ -88,6 +92,52 @@ impl Traffic {
         cx.notify();
     }
 
+    /// Reads every page of a session's database and says what SQLite makes
+    /// of it. Asked for, never run by itself: a session of a million flows
+    /// is more than a gigabyte, and this screen lists every session there is.
+    pub fn check_session(&mut self, dir: &Path, cx: &mut Context<Self>) {
+        if self.sessions_page.checking.is_some() {
+            return;
+        }
+        self.sessions_page.checking = Some(dir.to_owned());
+        self.sessions_page.checked.remove(dir);
+        let path = dir.to_owned();
+        cx.spawn(async move |this, cx| {
+            let dir = path.clone();
+            let said = cx
+                .background_spawn(async move { session::check(&dir) })
+                .await;
+            let text: SharedString = match said {
+                Ok(lines) if lines.is_empty() => tr!("Nothing wrong with it.").into(),
+                Ok(lines) => {
+                    // A row has space for one of them. Cut, because SQLite's
+                    // own lines run long, and the page knows the rest.
+                    let first: String = lines[0].chars().take(90).collect();
+                    let first = match first.len() < lines[0].len() {
+                        true => format!("{first}…"),
+                        false => first,
+                    };
+                    tr_n!(
+                        lines.len(),
+                        "SQLite found {count} problem: {first}",
+                        "SQLite found {count} problems, the first: {first}",
+                        count = lines.len(),
+                        first = first
+                    )
+                    .into()
+                }
+                Err(e) => format!("{e:#}").into(),
+            };
+            let _ = this.update(cx, |this, cx| {
+                this.sessions_page.checking = None;
+                this.sessions_page.checked.insert(path, text);
+                cx.notify();
+            });
+        })
+        .detach();
+        cx.notify();
+    }
+
     pub fn delete_session(&mut self, dir: &Path, cx: &mut Context<Self>) {
         if self.is_in_use(dir) {
             return;
@@ -133,11 +183,22 @@ impl Traffic {
                     || (live && self.viewing.is_none());
                 let in_use = live || viewing;
                 let asked = page.deleting.as_deref() == Some(dir.as_path());
-                let facts: SharedString = if !about.readable {
-                    tr!(
-                        "{size} · written by another version, so it cannot be opened",
-                        size = size_text(about.bytes)
-                    )
+                let facts: SharedString = if let Some(trouble) = &about.trouble {
+                    let size = size_text(about.bytes);
+                    match trouble {
+                        Trouble::OtherVersion(_) => tr!(
+                            "{size} · written by another version, so it cannot be opened",
+                            size = size
+                        ),
+                        Trouble::Damaged(_) => {
+                            tr!("{size} · damaged, so it cannot be opened", size = size)
+                        }
+                        Trouble::Unreadable(why) => tr!(
+                            "{size} · cannot be read: {why}",
+                            size = size,
+                            why = why.clone()
+                        ),
+                    }
                     .into()
                 } else {
                     tr_n!(
@@ -150,6 +211,9 @@ impl Traffic {
                     .into()
                 };
                 let (open_dir, delete_dir, export_dir) = (dir.clone(), dir.clone(), dir.clone());
+                let check_dir = dir.clone();
+                let busy = page.checking.as_deref() == Some(dir.as_path());
+                let said = page.checked.get(&dir).cloned();
                 let button = |id: (&'static str, u64), label: String, loud: bool| {
                     div()
                         .id(id)
@@ -194,7 +258,10 @@ impl Traffic {
                                     .text_size(ui(12.))
                                     .text_color(rgb(c.muted))
                                     .child(facts),
-                            ),
+                            )
+                            .children(said.map(|said| {
+                                div().text_size(ui(12.)).text_color(rgb(c.text)).child(said)
+                            })),
                     )
                     .child(
                         div()
@@ -235,6 +302,20 @@ impl Traffic {
                             ),
                         )
                     })
+                    .child(
+                        button(
+                            ("session-check", key),
+                            if busy {
+                                tr!("Checking…")
+                            } else {
+                                tr!("Check")
+                            },
+                            false,
+                        )
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.check_session(&check_dir, cx);
+                        })),
+                    )
                     .when(!in_use, |d| {
                         d.child(
                             button(

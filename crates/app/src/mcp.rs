@@ -207,9 +207,9 @@ impl Server {
                 .next()
                 .context("tracewing has recorded no session yet")?,
         };
-        if !chosen.readable {
+        if let Some(trouble) = &chosen.trouble {
             bail!(
-                "session {} cannot be read by this version",
+                "session {} cannot be read: {trouble}",
                 session_id(&chosen.dir)
             );
         }

@@ -648,7 +648,15 @@ t6aef5c37 = Copy all
 t2fe8ff9f = Too large to copy all
 t6dc463eb = No flows
 t52c1a402 = Name it to keep it
+t6bfd918c = Nothing wrong with it.
+tf756539b =
+    { $n ->
+        [one] SQLite found { $count } problem: { $first }
+       *[other] SQLite found { $count } problems, the first: { $first }
+    }
 t878e5c80 = { $size } · written by another version, so it cannot be opened
+tf94fb7c2 = { $size } · damaged, so it cannot be opened
+t7dfb1f1b = { $size } · cannot be read: { $why }
 t3f3c0eb4 =
     { $n ->
         [one] { $count } flow · { $size }
@@ -656,6 +664,8 @@ t3f3c0eb4 =
     }
 t3cb3e6fc = Recording now
 t4d6458cc = Export HAR
+t87f62cb7 = Checking…
+t592c8de7 = Check
 ta7737f13 = Delete for good?
 tb69a8aec = Sessions
 t6391f080 = A session with a name is kept until you delete it. Of the others, the newest { $kept } stay.
@@ -797,7 +807,6 @@ td580efd4 = Browsers
 tce72f1ec = Each keeps its own idea of what to trust and where to send its traffic. Check opens the test page in it. Open on its own starts it with a profile of its own that goes through tracewing, the system proxy left alone.
 t98416222 = Look again
 t0e46bb34 = No browser found on this computer.
-t592c8de7 = Check
 t0da7783c = Open on its own
 t3c727cd5 = UDP port 443 is blocked on this computer, so apps fall back from HTTP/3 to HTTP/2 and go through tracewing. It stops when tracewing closes, or if it crashes.
 t64ab600f = Some apps speak HTTP/3, over UDP, and go around the proxy. Blocking UDP port 443 on this computer makes them fall back to HTTP/2 through tracewing. It takes an administrator's password, and stops when tracewing closes. A VPN that uses UDP port 443 stops working meanwhile.

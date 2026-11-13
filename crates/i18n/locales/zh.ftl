@@ -1540,8 +1540,23 @@ t6dc463eb = 无流量记录
 # Name it to keep it
 t52c1a402 = 命名后即可保留
 
+# Nothing wrong with it.
+t6bfd918c = 没有发现问题。
+
+# SQLite found {count} problem: {first} | SQLite found {count} problems, the first: {first}
+tf756539b =
+    { $n ->
+       *[other] SQLite 发现 { $count } 个问题，第一个：{ $first }
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · 由其他版本写入，无法打开
+
+# {size} · damaged, so it cannot be opened
+tf94fb7c2 = { $size } · 已损坏，无法打开
+
+# {size} · cannot be read: {why}
+t7dfb1f1b = { $size } · 无法读取：{ $why }
 
 # {count} flow · {size} | {count} flows · {size}
 t3f3c0eb4 =
@@ -1554,6 +1569,12 @@ t3cb3e6fc = 正在录制
 
 # Export HAR
 t4d6458cc = 导出 HAR
+
+# Checking…
+t87f62cb7 = 正在检查…
+
+# Check
+t592c8de7 = 检查
 
 # Delete for good?
 ta7737f13 = 永久删除？
@@ -1953,9 +1974,6 @@ t98416222 = 重新查找
 
 # No browser found on this computer.
 t0e46bb34 = 在这台电脑上没有找到浏览器。
-
-# Check
-t592c8de7 = 检查
 
 # Open on its own
 t0da7783c = 单独打开

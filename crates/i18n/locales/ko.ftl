@@ -1540,8 +1540,23 @@ t6dc463eb = 플로우 없음
 # Name it to keep it
 t52c1a402 = 이름을 지정하면 보관됩니다
 
+# Nothing wrong with it.
+t6bfd918c = 이상 없습니다.
+
+# SQLite found {count} problem: {first} | SQLite found {count} problems, the first: {first}
+tf756539b =
+    { $n ->
+       *[other] SQLite가 문제 { $count }개를 찾았습니다. 첫 번째: { $first }
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · 다른 버전에서 작성되어 열 수 없음
+
+# {size} · damaged, so it cannot be opened
+tf94fb7c2 = { $size } · 손상되어 열 수 없습니다
+
+# {size} · cannot be read: {why}
+t7dfb1f1b = { $size } · 읽을 수 없습니다: { $why }
 
 # {count} flow · {size} | {count} flows · {size}
 t3f3c0eb4 =
@@ -1554,6 +1569,12 @@ t3cb3e6fc = 지금 기록 중
 
 # Export HAR
 t4d6458cc = HAR 내보내기
+
+# Checking…
+t87f62cb7 = 확인 중…
+
+# Check
+t592c8de7 = 확인
 
 # Delete for good?
 ta7737f13 = 영구적으로 삭제할까요?
@@ -1953,9 +1974,6 @@ t98416222 = 다시 찾기
 
 # No browser found on this computer.
 t0e46bb34 = 이 컴퓨터에서 브라우저를 찾지 못했습니다.
-
-# Check
-t592c8de7 = 확인
 
 # Open on its own
 t0da7783c = 따로 열기

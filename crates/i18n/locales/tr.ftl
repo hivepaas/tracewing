@@ -1610,8 +1610,24 @@ t6dc463eb = Akış yok
 # Name it to keep it
 t52c1a402 = Saklamak için ad verin
 
+# Nothing wrong with it.
+t6bfd918c = Bir sorunu yok.
+
+# SQLite found {count} problem: {first} | SQLite found {count} problems, the first: {first}
+tf756539b =
+    { $n ->
+        [one] SQLite { $count } sorun buldu: { $first }
+       *[other] SQLite { $count } sorun buldu, ilki: { $first }
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · başka bir sürüm tarafından yazılmış, bu yüzden açılamıyor
+
+# {size} · damaged, so it cannot be opened
+tf94fb7c2 = { $size } · bozuk, bu yüzden açılamıyor
+
+# {size} · cannot be read: {why}
+t7dfb1f1b = { $size } · okunamıyor: { $why }
 
 # {count} flow · {size} | {count} flows · {size}
 t3f3c0eb4 =
@@ -1625,6 +1641,12 @@ t3cb3e6fc = Şu anda kaydediliyor
 
 # Export HAR
 t4d6458cc = HAR dışa aktar
+
+# Checking…
+t87f62cb7 = Kontrol ediliyor…
+
+# Check
+t592c8de7 = Denetle
 
 # Delete for good?
 ta7737f13 = Kalıcı olarak silinsin mi?
@@ -2032,9 +2054,6 @@ t98416222 = Yeniden bak
 
 # No browser found on this computer.
 t0e46bb34 = Bu bilgisayarda tarayıcı bulunamadı.
-
-# Check
-t592c8de7 = Denetle
 
 # Open on its own
 t0da7783c = Ayrı aç

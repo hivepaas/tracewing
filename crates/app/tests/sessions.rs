@@ -15,7 +15,10 @@ use tracewing::{
     inspector::BodyState,
     traffic::{Screen, Traffic},
 };
-use tracewing_store::{session, settings::StorageSettings};
+use tracewing_store::{
+    session::{self, Trouble},
+    settings::StorageSettings,
+};
 
 const ROWS: usize = 3000;
 
@@ -198,6 +201,57 @@ fn an_earlier_session_opens_again() {
     wait_for(&mut cx, window, "the shorter list", |view| {
         view.sessions_page.sessions.len() == 1
     });
+
+    // A session the disk has damaged is not one from another version, and
+    // the screen must not say it is: the two send a reader to different
+    // places. Half of this one's pages are gibberish.
+    let broken = sessions.join("1000000001");
+    tracewing_dev::seed::seed(&broken, ROWS as u64, true).unwrap();
+    let path = session::flows_db(&broken);
+    let mut bytes = std::fs::read(&path).unwrap();
+    let from = bytes.len() / 2;
+    for byte in &mut bytes[from..] {
+        *byte = 0x5a;
+    }
+    std::fs::write(&path, &bytes).unwrap();
+    window
+        .update(&mut cx, |view, _, cx| view.refresh_sessions(cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the damaged one listed", |view| {
+        view.sessions_page.sessions.len() == 2
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let about = view
+                .sessions_page
+                .sessions
+                .iter()
+                .find(|about| about.dir == broken)
+                .expect("listed");
+            assert!(!about.readable);
+            assert!(
+                matches!(about.trouble, Some(Trouble::Damaged(_))),
+                "damaged, not another version: {:?}",
+                about.trouble
+            );
+        })
+        .unwrap();
+
+    // Nothing has read its pages until this is asked for.
+    window
+        .update(&mut cx, |view, _, cx| view.check_session(&broken, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the check", |view| {
+        view.sessions_page.checked.contains_key(&broken)
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let said = view.sessions_page.checked[&broken].to_string();
+            assert!(said.contains("SQLite"), "it says what SQLite found: {said}");
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "19-session-damaged");
 
     drop(cx);
     std::fs::remove_dir_all(&dir).unwrap();
