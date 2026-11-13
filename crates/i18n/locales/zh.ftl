@@ -1759,6 +1759,24 @@ ta8606963 = { $key }：“{ $text }” 不是整数
 # {key}: must not be negative
 t9c4debaa = { $key }：不能为负数
 
+# {name} (default)
+td3f56fa8 = { $name }(默认)
+
+# System ({name})
+tb92a5ad0 = 系统({ $name })
+
+# Fonts
+t68a32cf9 = 字体
+
+# Interface
+t7d000dd0 = 界面
+
+# Code
+t795db914 = 代码
+
+# For code, the fonts on this computer whose letters are all as wide. Applies at once.
+t014e83f3 = 代码可用本机上所有字母等宽的字体。立即生效。
+
 # {size} (default)
 t5606e442 = { $size }(默认)
 

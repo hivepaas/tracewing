@@ -778,7 +778,7 @@ impl Traffic {
                 .flex()
                 .flex_col()
                 .gap(ui(2.))
-                .font_family(crate::MONO_FONT)
+                .font_family(crate::mono_font())
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(ui(12.))
                 .child(table_head())
@@ -960,7 +960,7 @@ impl Traffic {
                                 .rounded(ui(12.))
                                 .overflow_hidden()
                                 .bg(rgb(c.code))
-                                .font_family(crate::MONO_FONT)
+                                .font_family(crate::mono_font())
                                 .font_features(gpui::FontFeatures::disable_ligatures())
                                 .text_size(ui(12.))
                                 .child(if tree {

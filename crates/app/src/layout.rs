@@ -149,9 +149,18 @@ pub struct Layout {
     pub named: Vec<Named>,
     /// The part of Settings last open.
     pub settings_section: SettingsSection,
-    /// The body text size chosen, in px; `None` for the design's.
+    /// The body text size chosen, in px; `None` for the default.
     pub text_size: Option<u8>,
+    /// The interface's font: `None` for tracewing's own, [`SYSTEM_FONT`] for
+    /// the system's.
+    pub ui_font: Option<String>,
+    /// The font bodies, paths and numbers are shown in: a monospaced family
+    /// on this computer, `None` for tracewing's own.
+    pub code_font: Option<String>,
 }
+
+/// What [`Layout::ui_font`] holds for the system's own interface font.
+pub const SYSTEM_FONT: &str = "system";
 
 /// Where the panels are and how large, which columns show: what a named
 /// layout keeps. Not the look, the language, nor where the window is.
@@ -204,6 +213,8 @@ impl Default for Layout {
             named: Vec::new(),
             settings_section: SettingsSection::default(),
             text_size: None,
+            ui_font: None,
+            code_font: None,
         }
     }
 }

@@ -1883,6 +1883,24 @@ ta8606963 = { $key } : « { $text } » n'est pas un nombre entier
 # {key}: must not be negative
 t9c4debaa = { $key } : ne doit pas être négatif
 
+# {name} (default)
+td3f56fa8 = { $name } (par défaut)
+
+# System ({name})
+tb92a5ad0 = Système ({ $name })
+
+# Fonts
+t68a32cf9 = Polices
+
+# Interface
+t7d000dd0 = Interface
+
+# Code
+t795db914 = Code
+
+# For code, the fonts on this computer whose letters are all as wide. Applies at once.
+t014e83f3 = Pour le code, les polices de cet ordinateur dont toutes les lettres ont la même largeur. S’applique tout de suite.
+
 # {size} (default)
 t5606e442 = { $size } (par défaut)
 

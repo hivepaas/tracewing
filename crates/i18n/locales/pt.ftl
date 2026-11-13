@@ -1883,6 +1883,24 @@ ta8606963 = { $key }: "{ $text }" não é um número inteiro
 # {key}: must not be negative
 t9c4debaa = { $key }: não pode ser negativo
 
+# {name} (default)
+td3f56fa8 = { $name } (padrão)
+
+# System ({name})
+tb92a5ad0 = Sistema ({ $name })
+
+# Fonts
+t68a32cf9 = Fontes
+
+# Interface
+t7d000dd0 = Interface
+
+# Code
+t795db914 = Código
+
+# For code, the fonts on this computer whose letters are all as wide. Applies at once.
+t014e83f3 = Para o código, as fontes deste computador cujas letras têm todas a mesma largura. Vale na hora.
+
 # {size} (default)
 t5606e442 = { $size } (padrão)
 

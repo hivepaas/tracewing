@@ -387,6 +387,12 @@ pub struct Traffic {
     pub(crate) history: crate::history::History<crate::navigation::Location>,
     /// True while back or forward moves the window, which is not a place gone to.
     pub(crate) going: bool,
+    /// The font families on this computer, read once when a font chosen in
+    /// Settings needs them.
+    pub(crate) installed_fonts: Option<Vec<String>>,
+    /// Those of them whose letters are all as wide: what Settings offers for
+    /// code.
+    pub(crate) mono_fonts: Option<Vec<String>>,
     /// The slow network's fields, once the Rules screen has been shown.
     pub(crate) network_form: Option<crate::network::NetworkForm>,
 }
@@ -543,6 +549,8 @@ impl Traffic {
                 session: None,
             }),
             going: false,
+            installed_fonts: None,
+            mono_fonts: None,
             network_form: None,
             ids: None,
             generation: 0,
@@ -1528,6 +1536,32 @@ impl Traffic {
     }
 
     /// The body text size chosen, in px: the design's unless Settings say.
+    /// The font families on this computer, read once.
+    pub(crate) fn installed_fonts(&mut self, window: &Window) -> &[String] {
+        self.installed_fonts
+            .get_or_insert_with(|| window.text_system().all_font_names())
+    }
+
+    /// The interface's font and the code font, as chosen: tracewing's own
+    /// where nothing else is, or where what was chosen is no longer here.
+    pub(crate) fn fonts_chosen(&mut self, window: &Window) -> (String, String) {
+        let (ui, code) = (self.layout.ui_font.clone(), self.layout.code_font.clone());
+        if ui.is_none() && code.is_none() {
+            return (crate::FONT.to_owned(), crate::MONO_FONT.to_owned());
+        }
+        let installed = self.installed_fonts(window);
+        let ui = match ui.as_deref() {
+            Some(crate::layout::SYSTEM_FONT) => {
+                crate::system_ui_font(installed).unwrap_or_else(|| crate::FONT.to_owned())
+            }
+            _ => crate::FONT.to_owned(),
+        };
+        let code = code
+            .filter(|f| installed.iter().any(|i| i == f))
+            .unwrap_or_else(|| crate::MONO_FONT.to_owned());
+        (ui, code)
+    }
+
     pub fn text_size(&self) -> f32 {
         self.layout
             .text_size
@@ -1829,7 +1863,7 @@ impl Traffic {
                         div()
                             .flex_1()
                             .min_w_0()
-                            .font_family(crate::MONO_FONT)
+                            .font_family(crate::mono_font())
                             .font_features(gpui::FontFeatures::disable_ligatures())
                             .text_size(ui(12.5))
                             .child(self.filter_input.clone()),
@@ -2762,8 +2796,10 @@ impl Focusable for Traffic {
 impl Render for Traffic {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
-        // The text size chosen, for everything drawn in rems.
+        // The text size chosen, for everything drawn in rems, and the fonts.
         window.set_rem_size(crate::text_size::rem_for(self.text_size()));
+        let (face, mono) = self.fonts_chosen(window);
+        crate::use_fonts(face, mono);
         self.ui_scale = crate::text_size::scale(window);
         let setup =
             (self.screen == Screen::Setup).then(|| self.render_setup(cx).into_any_element());
@@ -2857,7 +2893,7 @@ impl Render for Traffic {
             .flex()
             .flex_row()
             .text_color(rgb(c.text))
-            .font_family(crate::FONT)
+            .font_family(crate::ui_font())
             .text_size(ui(13.))
             .child(self.render_rail(cx))
             .child(
@@ -3161,7 +3197,7 @@ fn render_row(
         let d = cell(column, width);
         match column {
             Column::Number => d
-                .font_family(crate::MONO_FONT)
+                .font_family(crate::mono_font())
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(ui(11.5))
                 .text_color(rgb(c.muted))
@@ -3197,7 +3233,7 @@ fn render_row(
             Column::Path => d
                 .flex()
                 .flex_row()
-                .font_family(crate::MONO_FONT)
+                .font_family(crate::mono_font())
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(ui(12.))
                 .children(
@@ -3231,7 +3267,7 @@ fn render_row(
                 })),
             Column::Operation => d
                 .pr(ui(8.))
-                .font_family(crate::MONO_FONT)
+                .font_family(crate::mono_font())
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(ui(12.))
                 .text_color(rgb(c.on_tonal))

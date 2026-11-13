@@ -1759,6 +1759,24 @@ ta8606963 = { $key }: "{ $text }" bukan bilangan bulat
 # {key}: must not be negative
 t9c4debaa = { $key }: tidak boleh negatif
 
+# {name} (default)
+td3f56fa8 = { $name } (bawaan)
+
+# System ({name})
+tb92a5ad0 = Sistem ({ $name })
+
+# Fonts
+t68a32cf9 = Fon
+
+# Interface
+t7d000dd0 = Antarmuka
+
+# Code
+t795db914 = Kode
+
+# For code, the fonts on this computer whose letters are all as wide. Applies at once.
+t014e83f3 = Untuk kode, fon di komputer ini yang semua hurufnya sama lebar. Langsung berlaku.
+
 # {size} (default)
 t5606e442 = { $size } (bawaan)
 

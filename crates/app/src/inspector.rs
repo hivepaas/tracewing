@@ -2191,7 +2191,7 @@ fn render_title(detail: &Detail) -> impl IntoElement {
                 .min_w_0()
                 .max_h(ui(58.))
                 .overflow_hidden()
-                .font_family(crate::MONO_FONT)
+                .font_family(crate::mono_font())
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(ui(12.5))
                 .line_height(relative(1.5))
@@ -2445,7 +2445,7 @@ fn render_connection(
     let heading = |text: String| {
         div()
             .pt(ui(6.))
-            .font_family(crate::FONT)
+            .font_family(crate::ui_font())
             .text_size(ui(11.))
             .font_weight(FontWeight::BOLD)
             .text_color(rgb(c.muted))
@@ -2469,7 +2469,7 @@ fn render_connection(
         .flex()
         .flex_col()
         .gap(ui(6.))
-        .font_family(crate::MONO_FONT)
+        .font_family(crate::mono_font())
         .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(ui(12.))
         .child(heading(tr!("CLIENT")))
@@ -2499,7 +2499,7 @@ fn render_connection(
                         .flex()
                         .items_center()
                         .bg(rgb(c.input))
-                        .font_family(crate::FONT)
+                        .font_family(crate::ui_font())
                         .child(input),
                 )
         }))
@@ -2523,7 +2523,7 @@ fn render_connection(
         return list
             .child(
                 div()
-                    .font_family(crate::FONT)
+                    .font_family(crate::ui_font())
                     .text_color(rgb(c.muted))
                     .child(sel.piece(why, "\n", Vec::new())),
             )
@@ -2567,7 +2567,7 @@ fn render_connection(
             .rounded(ui(10.))
             .bg(rgb(c.error_ground))
             .text_color(rgb(c.error))
-            .font_family(crate::FONT)
+            .font_family(crate::ui_font())
             .child(sel.piece(
                 tr!(
                     "tracewing would not go on with this server: {error}. If the app trusts it some other way, such as through a company CA, choose “Do not decrypt this host” and the app will check the server itself.",
@@ -2627,7 +2627,7 @@ fn render_certificate(cert: Certificate, now: i64, sel: &Selection) -> impl Into
         .gap(ui(3.))
         .child(
             div()
-                .font_family(crate::FONT)
+                .font_family(crate::ui_font())
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(c.text))
                 .child(sel.piece(
@@ -2719,7 +2719,7 @@ fn render_headers(
         .flex()
         .flex_col()
         .gap(ui(4.))
-        .font_family(crate::MONO_FONT)
+        .font_family(crate::mono_font())
         .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(ui(12.))
         .children(headers.iter().map(row))
@@ -2727,7 +2727,7 @@ fn render_headers(
             d.child(
                 div()
                     .pt(ui(10.))
-                    .font_family(crate::FONT)
+                    .font_family(crate::ui_font())
                     .text_size(ui(11.5))
                     .font_weight(FontWeight::BOLD)
                     .text_color(rgb(c.muted))
@@ -2764,7 +2764,7 @@ fn render_fields(
         .flex()
         .flex_col()
         .gap(ui(4.))
-        .font_family(crate::MONO_FONT)
+        .font_family(crate::mono_font())
         .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(ui(12.))
         .children(found.into_iter().map(|field| {
@@ -2852,7 +2852,7 @@ fn render_cookies(
         .flex()
         .flex_col()
         .gap(ui(8.))
-        .font_family(crate::MONO_FONT)
+        .font_family(crate::mono_font())
         .font_features(gpui::FontFeatures::disable_ligatures())
         .text_size(ui(12.))
         .children(found.into_iter().map(|cookie| {
@@ -2945,7 +2945,7 @@ fn render_reading(reading: &Reading, sel: &Selection) -> Div {
         .gap(ui(2.))
         .child(
             div()
-                .font_family(crate::FONT)
+                .font_family(crate::ui_font())
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(c.text))
                 .child(sel.piece(reading.label.clone(), "\n\n", Vec::new())),
@@ -2980,7 +2980,7 @@ fn render_jwt(jwt: Jwt, sel: &Selection) -> Div {
         .gap(ui(2.))
         .child(
             div()
-                .font_family(crate::FONT)
+                .font_family(crate::ui_font())
                 .font_weight(FontWeight::BOLD)
                 .text_color(rgb(c.text))
                 .child(sel.piece(title, "\n\n", Vec::new())),

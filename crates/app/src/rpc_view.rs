@@ -1362,7 +1362,7 @@ impl Traffic {
                     .flex_1()
                     .min_w_0()
                     .when(line.code, |d| {
-                        d.font_family(crate::MONO_FONT)
+                        d.font_family(crate::mono_font())
                             .font_features(gpui::FontFeatures::disable_ligatures())
                             .text_size(ui(12.))
                     })
@@ -1550,7 +1550,7 @@ impl Traffic {
                         .gap(ui(2.))
                         .child(
                             div()
-                                .font_family(crate::MONO_FONT)
+                                .font_family(crate::mono_font())
                                 .font_features(gpui::FontFeatures::disable_ligatures())
                                 .text_size(ui(12.))
                                 .child(path.display().to_string()),
@@ -1563,7 +1563,7 @@ impl Traffic {
                         )
                         .children(problems.into_iter().take(PROBLEMS_SHOWN).map(|problem| {
                             div()
-                                .font_family(crate::MONO_FONT)
+                                .font_family(crate::mono_font())
                                 .font_features(gpui::FontFeatures::disable_ligatures())
                                 .text_size(ui(11.5))
                                 .text_color(rgb(c.error))

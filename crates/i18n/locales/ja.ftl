@@ -1759,6 +1759,24 @@ ta8606963 = { $key }: "{ $text }" は整数ではありません
 # {key}: must not be negative
 t9c4debaa = { $key }: 負の値は指定できません
 
+# {name} (default)
+td3f56fa8 = { $name }(既定)
+
+# System ({name})
+tb92a5ad0 = システム({ $name })
+
+# Fonts
+t68a32cf9 = フォント
+
+# Interface
+t7d000dd0 = インターフェース
+
+# Code
+t795db914 = コード
+
+# For code, the fonts on this computer whose letters are all as wide. Applies at once.
+t014e83f3 = コードには、このコンピューターにある、すべての文字が同じ幅のフォントを使えます。すぐに反映されます。
+
 # {size} (default)
 t5606e442 = { $size }(既定)
 
