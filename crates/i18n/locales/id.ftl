@@ -2431,6 +2431,12 @@ t319ad6b9 = Proxy sistem aktif · { $addr }
 # This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
 tb0605c20 = Lalu lintas komputer ini datang ke sini. Kalau tracewing dimatikan paksa saat ini aktif, setelannya tertinggal dan jaringan berhenti: `tracewing recover` mengembalikannya.
 
+# No host has this in its name
+t838c1d44 = Tidak ada host yang namanya memuat ini
+
+# Hidden
+t3c2dfe59 = Tersembunyi
+
 # Apps
 t53d91aad = Aplikasi
 
@@ -2439,12 +2445,6 @@ t27acf320 = Perangkat
 
 # All hosts
 tfc7bfe37 = Semua host
-
-# No host has this in its name
-t838c1d44 = Tidak ada host yang namanya memuat ini
-
-# Hidden
-t3c2dfe59 = Tersembunyi
 
 # Hosts
 tcf9aefb4 = Host

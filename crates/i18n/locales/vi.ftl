@@ -2431,6 +2431,12 @@ t319ad6b9 = System proxy bật · { $addr }
 # This computer's traffic comes here. Killed with this on, tracewing leaves the setting behind and the network stops: `tracewing recover` puts it back.
 tb0605c20 = Traffic của máy này đi vào đây. Nếu tracewing bị giết khi đang bật, cài đặt còn lại và máy mất mạng: `tracewing recover` trả nó về.
 
+# No host has this in its name
+t838c1d44 = Không có host nào chứa chuỗi này
+
+# Hidden
+t3c2dfe59 = Đã ẩn
+
 # Apps
 t53d91aad = App
 
@@ -2439,12 +2445,6 @@ t27acf320 = Thiết bị
 
 # All hosts
 tfc7bfe37 = Tất cả host
-
-# No host has this in its name
-t838c1d44 = Không có host nào chứa chuỗi này
-
-# Hidden
-t3c2dfe59 = Đã ẩn
 
 # Hosts
 tcf9aefb4 = Host
