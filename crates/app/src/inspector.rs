@@ -654,8 +654,12 @@ impl Traffic {
                                         crate::bodyview::ToOpen::WholeLine { line, text } => {
                                             this.open_line(line, &text, cx);
                                         }
-                                        crate::bodyview::ToOpen::Value { text, field } => {
-                                            this.read_value(text, field, cx);
+                                        crate::bodyview::ToOpen::Value {
+                                                text,
+                                                field,
+                                                asked,
+                                        } => {
+                                            this.read_value_asked(text, field, asked, cx);
                                         }
                                     });
                                 }) as crate::bodyview::Opens
@@ -2068,12 +2072,32 @@ impl Traffic {
     /// who pressed a comma has not asked for anything, and taking away what
     /// they were reading would be an answer to a question they did not ask.
     pub fn read_value(&mut self, value: String, field: Option<String>, cx: &mut Context<Self>) {
+        self.read_value_asked(value, field, false, cx);
+    }
+
+    /// The same, with `asked` for a reader who said to read this and means
+    /// it: a double press, or the menu. Then the pane opens on whatever the
+    /// value turns out to be, which may be nothing, and says so.
+    pub fn read_value_asked(
+        &mut self,
+        value: String,
+        field: Option<String>,
+        asked: bool,
+        cx: &mut Context<Self>,
+    ) {
         let found = reading::of(&value, field.as_deref());
-        if found.is_empty() {
+        // Nothing to say, nobody asked, and nothing open: a press that was
+        // not about reading leaves the pane as it was. With the pane open,
+        // it moves to the value pressed either way -- showing the one
+        // before it is not "nothing to read", it is the wrong answer.
+        if found.is_empty() && !asked && self.inspector.reads.is_none() {
             return;
         }
         let from = field.clone().unwrap_or_else(|| tr!("this value"));
-        let opened = self.reading_body(&found[0], &from, cx);
+        let opened = found
+            .first()
+            .cloned()
+            .and_then(|reading| self.reading_body(&reading, &from, cx));
         // Beside the body, not instead of it: the inspector takes the pane's
         // width from the window where the window has it to give, so that
         // what is being read stays as wide as it was.
@@ -2580,11 +2604,11 @@ impl Traffic {
                                     .px(ui(6.))
                                     .pr(px(scrollbar::BAR_W + 4.))
                                     .text_size(ui(12.))
-                                    // A chain a reader asked for that reads
-                                    // as nothing says so. An empty pane
-                                    // looks like a pane that has not caught
-                                    // up rather than an answer.
-                                    .when(asking && chosen.is_none(), |d| {
+                                    // Nothing read, from a chain or from the
+                                    // value itself, says so. An empty pane
+                                    // looks like one that has not caught up
+                                    // rather than an answer.
+                                    .when(chosen.is_none(), |d| {
                                         d.child(div().p(ui(10.)).text_color(rgb(c.muted)).child(
                                             // A piece like the rest of
                                             // the pane: everything it
@@ -3105,6 +3129,28 @@ impl Traffic {
                             cx.notify();
                         });
                         cleared.set_menu(None);
+                    }) as select::Act),
+                ));
+            }
+            // Read what was dragged across, whatever it is: the way to
+            // read a part of a value, or one the view does not see.
+            if let Copied::Text(chosen) = sel.selected_text() {
+                let field = sel
+                    .bounds()
+                    .and_then(|(start, _)| sel.field_of(start.piece));
+                let me = me.clone();
+                items.push(select::Item::new(
+                    "read-this",
+                    tr!("Read this"),
+                    Some(Rc::new(move |_: &mut gpui::Window, cx: &mut gpui::App| {
+                        let _ = me.update(cx, |this: &mut Traffic, cx| {
+                            this.read_value_asked(
+                                chosen.clone(),
+                                field.as_ref().map(ToString::to_string),
+                                true,
+                                cx,
+                            );
+                        });
                     }) as select::Act),
                 ));
             }

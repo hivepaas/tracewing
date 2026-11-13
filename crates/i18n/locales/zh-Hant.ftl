@@ -136,6 +136,9 @@ tbdecf3c8 = 複製列
 # Copy column
 te26431fe = 複製欄
 
+# Read this
+tf389da1f = 解讀這個
+
 # Open this line
 t9bc3ec63 = 開啟這一行
 

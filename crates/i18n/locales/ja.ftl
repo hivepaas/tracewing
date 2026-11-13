@@ -136,6 +136,9 @@ tbdecf3c8 = 行をコピー
 # Copy column
 te26431fe = 列をコピー
 
+# Read this
+tf389da1f = これを読む
+
 # Open this line
 t9bc3ec63 = この行を開く
 

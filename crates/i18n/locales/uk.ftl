@@ -148,6 +148,9 @@ tbdecf3c8 = Копіювати рядок
 # Copy column
 te26431fe = Копіювати стовпець
 
+# Read this
+tf389da1f = Прочитати це
+
 # Open this line
 t9bc3ec63 = Відкрити цей рядок
 

@@ -1221,7 +1221,10 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
             };
             let body = body.clone();
             body.update(cx, |body, cx| {
-                assert!(body.read_value_at_spot(spot, cx), "the press is in a value");
+                assert!(
+                    body.read_value_at_spot(spot, false, cx),
+                    "the press is in a value"
+                );
             });
         })
         .unwrap();
@@ -1303,7 +1306,7 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
             };
             let body = body.clone();
             body.update(cx, |body, cx| {
-                assert!(body.read_value_at_spot(spot, cx));
+                assert!(body.read_value_at_spot(spot, false, cx));
             });
         })
         .unwrap();

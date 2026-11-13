@@ -144,6 +144,9 @@ tbdecf3c8 = Zeile kopieren
 # Copy column
 te26431fe = Spalte kopieren
 
+# Read this
+tf389da1f = Dies deuten
+
 # Open this line
 t9bc3ec63 = Diese Zeile öffnen
 

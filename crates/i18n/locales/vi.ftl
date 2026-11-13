@@ -136,6 +136,9 @@ tbdecf3c8 = Sao chép hàng
 # Copy column
 te26431fe = Sao chép cột
 
+# Read this
+tf389da1f = Đọc phần này
+
 # Open this line
 t9bc3ec63 = Mở dòng này
 

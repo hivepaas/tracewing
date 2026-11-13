@@ -136,6 +136,9 @@ tbdecf3c8 = 행 복사
 # Copy column
 te26431fe = 열 복사
 
+# Read this
+tf389da1f = 이것을 해석
+
 # Open this line
 t9bc3ec63 = 이 줄 열기
 

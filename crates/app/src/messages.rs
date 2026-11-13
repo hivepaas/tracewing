@@ -327,8 +327,8 @@ impl Traffic {
                                     crate::bodyview::ToOpen::WholeLine { line, text } => {
                                         this.open_line(line, &text, cx);
                                     }
-                                    crate::bodyview::ToOpen::Value { text, field } => {
-                                        this.read_value(text, field, cx);
+                                    crate::bodyview::ToOpen::Value { text, field, asked } => {
+                                        this.read_value_asked(text, field, asked, cx);
                                     }
                                 });
                             },

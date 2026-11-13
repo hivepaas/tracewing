@@ -136,6 +136,9 @@ tbdecf3c8 = 复制行
 # Copy column
 te26431fe = 复制列
 
+# Read this
+tf389da1f = 解读这个
+
 # Open this line
 t9bc3ec63 = 打开这一行
 

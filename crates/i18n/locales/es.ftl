@@ -146,6 +146,9 @@ tbdecf3c8 = Copiar fila
 # Copy column
 te26431fe = Copiar columna
 
+# Read this
+tf389da1f = Leer esto
+
 # Open this line
 t9bc3ec63 = Abrir esta línea
 
