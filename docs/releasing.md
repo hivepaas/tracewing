@@ -9,7 +9,7 @@ until the draft the tag makes is published by hand.
 | --- | --- | --- |
 | Linux x86_64, aarch64 | `tracewing_<v>_<amd64\|arm64>.deb`, `tracewing_<v>_<x86_64\|aarch64>.rpm` | `scripts/package_linux.sh` |
 | macOS aarch64, x86_64 | not yet: `tracewing_<v>_macos_<arch>.dmg` | — |
-| Windows x86_64 | not yet: `tracewing_<v>_windows_x86_64-setup.exe`, `.zip` | — |
+| Windows x86_64 | `tracewing_<v>_windows_x86_64-setup.exe`, `tracewing_<v>_windows_x86_64.zip` | `scripts/package_windows.sh` |
 
 and `SHA256SUMS`.
 
@@ -22,12 +22,24 @@ licenses of what it is built with.
   for Fedora and openSUSE; the `.rpm` is made with `rpmbuild` on Ubuntu, so it
   names the glibc it needs and an older system refuses it at install rather
   than tracewing failing when it starts.
-- Neither package is signed: `dnf` warns and goes on, and `zypper` needs
+- Neither Linux package is signed: `dnf` warns and goes on, and `zypper` needs
   `--no-gpg-checks`.
-- **macOS and Windows** are a row each in the matrix of
-  [release.yml](../.github/workflows/release.yml) and a packaging script each.
-  The download page names their files already, so a release before they exist
-  must say so there (`landing/src/data/downloads.ts` has `comingSoon` for it).
+- **Windows**: an NSIS installer, which asks whom for — everyone on the
+  computer, by default, into `C:\Program Files\tracewing` with an
+  administrator's permission (Windows asks), or the user alone into
+  `%LOCALAPPDATA%\Programs\tracewing` with none. `/ALLUSERS` or
+  `/CURRENTUSER` says it without the page, as `/S` does for a quiet install;
+  where tracewing is installed already, it goes there again, as it was. Its
+  folder goes in the PATH, so a terminal opened after runs `tracewing
+  capture`, and uninstalling takes it out again and runs `tracewing uninstall`
+  — the certificate authority out of the stores that trust it, and the system
+  proxy back. It is not signed: SmartScreen asks the first time (More info ›
+  Run anyway). The `.zip` is the same program to run from a folder, with no
+  installer.
+- **macOS** is a row in the matrix of
+  [release.yml](../.github/workflows/release.yml) and a packaging script. The
+  download page names its files already, so a release before it exists must
+  say so there (`landing/src/data/downloads.ts` has `comingSoon` for it).
 
 ## Cutting one
 
@@ -71,6 +83,18 @@ scripts/check_linux_package.sh dist/tracewing_*.rpm
 
 It needs `cargo-about` (`cargo install cargo-about --locked --features cli`)
 and, on Debian or Ubuntu, `dpkg-dev rpm cpio desktop-file-utils`.
+
+On Windows, from Git Bash or MSYS2 with NSIS 3 installed
+(`choco install nsis`):
+
+```sh
+cargo build --release --locked -p tracewing
+scripts/package_windows.sh
+pwsh scripts/check_windows_installer.ps1 dist/tracewing_*-setup.exe
+```
+
+That check installs tracewing on the machine it runs on, both ways, and
+uninstalls it again.
 
 `--install` goes further: it installs the package as a user does — the `.deb`
 here with `sudo`, the `.rpm` in a Fedora container with Docker — and then runs

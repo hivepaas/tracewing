@@ -97,6 +97,18 @@ enum Command {
         #[arg(long)]
         only_if_gone: bool,
     },
+    /// Undo what tracewing did to this computer: take the certificate
+    /// authority out of every store that trusts it, and put the system proxy
+    /// back.
+    ///
+    /// What to run before removing tracewing, and what its installer for
+    /// Windows runs when it is uninstalled. The sessions recorded and the
+    /// settings stay where they are: this says where.
+    Uninstall {
+        /// The data folder [default: the window's].
+        #[arg(long)]
+        data_dir: Option<PathBuf>,
+    },
     /// List the sessions recorded, the newest first.
     Sessions {
         /// The data folder [default: the window's].
@@ -112,6 +124,7 @@ pub fn is_command(arg: &str) -> bool {
         "capture"
             | "export"
             | "recover"
+            | "uninstall"
             | "sessions"
             | "help"
             | "--help"
@@ -195,6 +208,56 @@ pub fn run(args: &[String]) -> Result<()> {
                 }
             }
             Ok(())
+        }
+        Command::Uninstall { data_dir } => {
+            let dir = data_dir.unwrap_or_else(default_data_dir);
+            // The system proxy first: of the two, it is the one that takes
+            // the network away while it is wrong. A machine with no desktop
+            // to read has none of ours to put back either, so what it says is
+            // worth hearing and is no reason to stop.
+            match tracewing_system::recover(&dir) {
+                Ok(Recovered::PutBack) => println!("the system proxy is back as it was"),
+                Ok(_) => {}
+                Err(e) => eprintln!("the system proxy was left as it is: {e:#}"),
+            }
+            let ca = dir.join("ca.pem");
+            let mut failed = None;
+            if ca.exists() {
+                // Which stores hold it, said before they are emptied: a line
+                // that names them is the only way somebody can check this
+                // afterwards, and an authority nobody trusts is not news.
+                match tracewing_system::ca_locations(&ca) {
+                    Ok(places) if places.is_empty() => {
+                        println!("no store on this computer trusts tracewing's authority")
+                    }
+                    Ok(places) => {
+                        let names: Vec<_> = places.iter().map(|place| place.name.clone()).collect();
+                        match tracewing_system::ca_remove(&ca) {
+                            Ok(()) => println!(
+                                "tracewing's authority is out of {}: this computer no longer trusts it",
+                                names.join(", ")
+                            ),
+                            Err(e) => failed = Some(e),
+                        }
+                    }
+                    Err(e) => failed = Some(e),
+                }
+            } else {
+                println!(
+                    "no certificate authority of tracewing's in {}",
+                    dir.display()
+                );
+            }
+            println!(
+                "what tracewing recorded is still in {}: remove the folder to be rid of it",
+                dir.display()
+            );
+            // Said last, where somebody running this by hand will see it, and
+            // after everything that could be done has been.
+            match failed {
+                Some(e) => Err(e.context("take the authority out of this computer's stores")),
+                None => Ok(()),
+            }
         }
         Command::Sessions { data_dir } => {
             sessions(&data_dir.unwrap_or_else(default_data_dir));

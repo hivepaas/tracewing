@@ -12,18 +12,22 @@ fn tracewing() -> Command {
     Command::new(env!("CARGO_BIN_EXE_tracewing"))
 }
 
-/// `tracewing recover`, with the XDG folders pointed inside `dir`. Putting the
-/// settings back takes the login recovery and the minute timer away with
-/// them, and on a machine somebody works on those belong to whatever
-/// tracewing they have running, not to a test.
-fn recover(dir: &std::path::Path) -> Command {
+/// A command that may put the system proxy back, with the XDG folders pointed
+/// inside `dir`. Putting the settings back takes the login recovery and the
+/// minute timer away with them, and on a machine somebody works on those
+/// belong to whatever tracewing they have running, not to a test.
+fn in_its_own_folders(dir: &std::path::Path, name: &str) -> Command {
     let mut command = tracewing();
     command
-        .args(["recover", "--data-dir"])
+        .args([name, "--data-dir"])
         .arg(dir)
         .env("HOME", dir)
         .env("XDG_CONFIG_HOME", dir.join("config"));
     command
+}
+
+fn recover(dir: &std::path::Path) -> Command {
+    in_its_own_folders(dir, "recover")
 }
 
 /// What `recover` leaves behind, either way. On a machine with a desktop it
@@ -310,6 +314,55 @@ fn the_watchdog_is_not_caught_by_a_kill_of_the_app() {
     // journal, nothing to put back.
     drop(watchdog.stdin.take());
     assert!(watchdog.wait().unwrap().success());
+
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// What the installer for Windows runs when tracewing is removed, and what
+/// anybody can run by hand before removing it: it undoes what tracewing did
+/// to the computer and leaves alone what is the person's.
+#[test]
+fn uninstall_undoes_what_it_did_and_keeps_what_was_recorded() {
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir = std::env::temp_dir().join(format!("tracewing-uninstall-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    // A folder tracewing never used: there is nothing of its to undo.
+    let out = in_its_own_folders(&dir, "uninstall").output().unwrap();
+    assert!(out.status.success(), "{out:?}");
+    assert!(
+        String::from_utf8_lossy(&out.stdout).contains("no certificate authority"),
+        "{out:?}"
+    );
+
+    // A folder as a run leaves one: an authority of its own, and a session.
+    let recorded = tracewing()
+        .args([
+            "capture",
+            "--ca-key-in-file",
+            "--seconds",
+            "1",
+            "--data-dir",
+        ])
+        .arg(&dir)
+        .output()
+        .unwrap();
+    assert!(recorded.status.success(), "{recorded:?}");
+    assert!(dir.join("ca.pem").exists(), "it made no authority");
+
+    let out = in_its_own_folders(&dir, "uninstall").output().unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let said = String::from_utf8_lossy(&out.stdout);
+    // Which stores held it, or that none did: either way it is said, since a
+    // line naming them is all anybody has to check this by afterwards.
+    assert!(
+        said.contains("trusts tracewing's authority") || said.contains("no longer trusts it"),
+        "{said}"
+    );
+    // What was recorded is the person's: it says where it is and leaves it.
+    assert!(said.contains("is still in"), "{said}");
+    assert!(dir.join("sessions").is_dir(), "it took the sessions away");
 
     std::fs::remove_dir_all(&dir).ok();
 }

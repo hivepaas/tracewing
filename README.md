@@ -65,6 +65,7 @@ tracewing capture --seconds 60 --har api.har
 tracewing sessions
 tracewing export --har today.har --filter "host:api.example.com"
 tracewing recover                 # no network after tracewing was killed? this
+tracewing uninstall               # before removing tracewing: stop trusting its CA
 ```
 
 `tracewing help` lists the rest.
