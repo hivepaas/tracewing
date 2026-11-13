@@ -598,6 +598,18 @@ t620a039b = このボディを開けません: { $e }
 # Inspector
 t4def410e = インスペクタ
 
+# Narrower
+tb6914c4d = 幅を狭く
+
+# Shorter
+t397967e6 = 高さを低く
+
+# Wider
+t4b19aae8 = 幅を広く
+
+# Taller
+t245ae741 = 高さを高く
+
 # Choose a flow to see it here
 tc7be91e8 = フローを選択するとここに表示されます
 

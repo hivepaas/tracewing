@@ -598,6 +598,18 @@ t620a039b = 無法開啟此本文：{ $e }
 # Inspector
 t4def410e = 檢查器
 
+# Narrower
+tb6914c4d = 更窄
+
+# Shorter
+t397967e6 = 更矮
+
+# Wider
+t4b19aae8 = 更寬
+
+# Taller
+t245ae741 = 更高
+
 # Choose a flow to see it here
 tc7be91e8 = 選取一筆流量紀錄即可在此檢視
 

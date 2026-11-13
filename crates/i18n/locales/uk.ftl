@@ -649,6 +649,18 @@ t620a039b = Не вдається відкрити це тіло: { $e }
 # Inspector
 t4def410e = Інспектор
 
+# Narrower
+tb6914c4d = Вужче
+
+# Shorter
+t397967e6 = Нижче
+
+# Wider
+t4b19aae8 = Ширше
+
+# Taller
+t245ae741 = Вище
+
 # Choose a flow to see it here
 tc7be91e8 = Виберіть потік, щоб переглянути його тут
 

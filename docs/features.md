@@ -95,6 +95,7 @@ keyboard.
 |---|---|---|
 | The inspector beside the list or below it: drag it by its handle, use the toolbar's layout buttons, or a shortcut | Beta | Free |
 | Resize panels by dragging the dividers; hide the sidebar or the inspector | Beta | Free |
+| The inspector smaller or larger by a tenth of the window, at least 100 px, with the − and + buttons at the right of its title: its height below the list, its width beside it; never under 100 px, nor so large that the list has less than its least | Beta | Free |
 | Scroll bars on every part of the inspector that is longer than its pane (headers, connection, query, form, cookies, LLM, GraphQL, JSON-RPC, body): dragged, or pressed above or below the thumb to jump there. A body's lines wider than its pane go sideways, with a wheel that goes sideways, Shift and the wheel, or a bar along the bottom; the line numbers stay, and so does a note at the end of a line | Beta | Free |
 | Request and response as tabs, side by side, or one above the other | Beta | Free |
 | The layout is kept and restored at the next start | Beta | Free |

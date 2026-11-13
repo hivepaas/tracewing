@@ -1,0 +1,153 @@
+//! The inspector's − and + buttons: smaller or larger by a tenth of the window
+//! (at least 100 px) at a time, taller below the list and wider beside it, never under 100 px and never so large
+//! that the list has less than its own least.
+//!
+//! `cargo test --release -p tracewing --features headless --test inspector_size`
+
+#![cfg(all(feature = "headless", target_os = "linux"))]
+
+use gpui::{AppContext as _, HeadlessAppContext, WindowHandle, px, size};
+use std::{path::PathBuf, sync::Arc};
+use tracewing::{
+    engine::{Engine, EngineOptions},
+    layout::{LIST_MIN, Layout, Place},
+    traffic::{PANE_MIN, Screen, Traffic},
+};
+use tracewing_store::settings::StorageSettings;
+
+fn shot(cx: &mut HeadlessAppContext, window: gpui::AnyWindowHandle, name: &str) {
+    let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/shots");
+    std::fs::create_dir_all(&out).unwrap();
+    cx.capture_screenshot(window)
+        .unwrap()
+        .save(out.join(format!("{name}.png")))
+        .unwrap();
+}
+
+/// Presses − or + `times` times, and says the layout as it was kept.
+fn press(
+    cx: &mut HeadlessAppContext,
+    window: WindowHandle<Traffic>,
+    dir: &std::path::Path,
+    larger: bool,
+    times: usize,
+) -> Layout {
+    for _ in 0..times {
+        window
+            .update(cx, |view, window, cx| {
+                view.resize_inspector(larger, window, cx)
+            })
+            .unwrap();
+        cx.run_until_parked();
+    }
+    Layout::load(&dir.join("layout.toml"))
+}
+
+fn close(a: f32, b: f32) -> bool {
+    (a - b).abs() < 0.01
+}
+
+#[test]
+fn minus_and_plus_resize_the_inspector_by_a_tenth_of_the_window() {
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir = std::env::temp_dir().join(format!("tracewing-inspector-size-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let engine = Engine::start(EngineOptions {
+        data_dir: dir.clone(),
+        settings: StorageSettings {
+            disk_reserve_mib: 1,
+            ..StorageSettings::default()
+        },
+        rules: Default::default(),
+        traffic_rules: Default::default(),
+        ports: 20_440..20_450,
+        extra_roots: Vec::new(),
+        key_store: Default::default(),
+        find_apps: false,
+    })
+    .unwrap();
+    let text = Arc::new(gpui_wgpu::CosmicTextSystem::new(tracewing::FONT));
+    let mut cx = HeadlessAppContext::with_platform(text, Arc::new(tracewing::Assets), || {
+        gpui_platform::current_headless_renderer()
+    });
+    cx.update(tracewing::load_fonts);
+    let data_dir = dir.clone();
+    let main: WindowHandle<Traffic> = cx
+        .open_window(size(px(1440.), px(900.)), move |window, cx| {
+            cx.new(|cx| Traffic::new(engine, &data_dir, window, cx))
+        })
+        .unwrap();
+
+    // Below the list: − and + change its height, by a tenth of the window's
+    // but at least 100 px: the window is 900 high, so 100.
+    main.update(&mut cx, |view, _, cx| {
+        view.set_screen(Screen::Traffic, cx);
+        view.set_place(Place::Below, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    let start = Layout::default();
+    let shorter = press(&mut cx, main, &dir, false, 1);
+    assert!(
+        close(shorter.inspector_h, start.inspector_h - 100.),
+        "{}",
+        shorter.inspector_h
+    );
+    assert!(
+        close(shorter.inspector_w, start.inspector_w),
+        "the width is left alone"
+    );
+    let taller = press(&mut cx, main, &dir, true, 1);
+    assert!(
+        close(taller.inspector_h, start.inspector_h),
+        "{}",
+        taller.inspector_h
+    );
+    shot(&mut cx, main.into(), "118-inspector-size-below");
+    // Never under 100 px.
+    let least = press(&mut cx, main, &dir, false, 40);
+    assert_eq!(least.inspector_h, PANE_MIN);
+    // Nor so tall that the list has less than its least: the window is 900
+    // high, and the inspector stops short of it.
+    let most = press(&mut cx, main, &dir, true, 60);
+    assert!(most.inspector_h < 900. - LIST_MIN, "{}", most.inspector_h);
+    assert_eq!(
+        press(&mut cx, main, &dir, true, 1).inspector_h,
+        most.inspector_h,
+        "no further"
+    );
+
+    // Beside it: the width instead, by a tenth of the window's: 144 of 1440.
+    main.update(&mut cx, |view, _, cx| view.set_place(Place::Beside, cx))
+        .unwrap();
+    cx.run_until_parked();
+    let before = Layout::load(&dir.join("layout.toml"));
+    let narrower = press(&mut cx, main, &dir, false, 1);
+    assert!(
+        close(narrower.inspector_w, before.inspector_w - 144.),
+        "{}",
+        narrower.inspector_w
+    );
+    assert!(
+        close(narrower.inspector_h, before.inspector_h),
+        "the height is left alone"
+    );
+    let wider = press(&mut cx, main, &dir, true, 2);
+    assert!(
+        close(wider.inspector_w, before.inspector_w + 144.),
+        "{}",
+        wider.inspector_w
+    );
+    shot(&mut cx, main.into(), "119-inspector-size-beside");
+    assert_eq!(press(&mut cx, main, &dir, false, 40).inspector_w, PANE_MIN);
+    let widest = press(&mut cx, main, &dir, true, 60);
+    assert!(
+        widest.inspector_w < 1440. - LIST_MIN,
+        "{}",
+        widest.inspector_w
+    );
+
+    drop(cx);
+    let _ = std::fs::remove_dir_all(&dir);
+}

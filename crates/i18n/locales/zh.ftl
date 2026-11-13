@@ -598,6 +598,18 @@ t620a039b = 无法打开此正文：{ $e }
 # Inspector
 t4def410e = 检查器
 
+# Narrower
+tb6914c4d = 更窄
+
+# Shorter
+t397967e6 = 更矮
+
+# Wider
+t4b19aae8 = 更宽
+
+# Taller
+t245ae741 = 更高
+
 # Choose a flow to see it here
 tc7be91e8 = 选择一条流量记录以在此查看
 

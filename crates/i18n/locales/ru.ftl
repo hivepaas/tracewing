@@ -649,6 +649,18 @@ t620a039b = Не удаётся открыть это тело: { $e }
 # Inspector
 t4def410e = Инспектор
 
+# Narrower
+tb6914c4d = Уже
+
+# Shorter
+t397967e6 = Ниже
+
+# Wider
+t4b19aae8 = Шире
+
+# Taller
+t245ae741 = Выше
+
 # Choose a flow to see it here
 tc7be91e8 = Выберите поток, чтобы увидеть его здесь
 

@@ -598,6 +598,18 @@ t620a039b = Tidak bisa membuka body ini: { $e }
 # Inspector
 t4def410e = Inspektor
 
+# Narrower
+tb6914c4d = Lebih sempit
+
+# Shorter
+t397967e6 = Lebih pendek
+
+# Wider
+t4b19aae8 = Lebih lebar
+
+# Taller
+t245ae741 = Lebih tinggi
+
 # Choose a flow to see it here
 tc7be91e8 = Pilih flow untuk melihatnya di sini
 
