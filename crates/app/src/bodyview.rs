@@ -58,6 +58,8 @@ const INDENT_W: f32 = 14.;
 const INDENT_MAX: u32 = 40;
 const THUMB_MIN: f32 = 28.;
 const BAR_W: f32 = crate::scrollbar::BAR_W;
+/// The rounding of the well a body sits in, which the body reaches the bottom of.
+const CORNER: f32 = 16.;
 /// How often a window with a scan running looks at its progress.
 const SCAN_POLL: Duration = Duration::from_millis(50);
 /// Lines counted on either side of one whose rows are asked for.
@@ -945,11 +947,21 @@ impl BodyView {
     }
 
     /// The sideways thumb dragged to `x`, or pressed there.
+    /// Where the sideways bar starts, from the pane's left, and how long it
+    /// is: past the rounded corner, up to the bar that goes up and down.
+    fn across_track(&self) -> (f32, f32) {
+        let start = CORNER * self.scale;
+        (
+            start,
+            (f32::from(self.bounds.get().size.width) - BAR_W - start).max(1.),
+        )
+    }
+
     fn drag_x_to(&mut self, x: f32, cx: &mut Context<Self>) {
         let Some((x0, from)) = self.dragging_x else {
             return;
         };
-        let view = self.text_w() + (GUTTER_W + FOLD_W) * self.scale;
+        let (_, view) = self.across_track();
         if let Some((long, _)) = crate::scrollbar::thumb(view, self.max_x(), self.scroll_x) {
             let per = self.max_x() / (view - long).max(1.);
             self.scroll_x = (from + (x - x0) * per).clamp(0., self.max_x());
@@ -1675,7 +1687,7 @@ impl BodyView {
         let thumb_top = share as f32 * (list_height - thumb);
         // Sideways, once the lines in view have said how wide they are.
         self.scroll_x = self.scroll_x.min(self.max_x());
-        let across_view = f32::from(self.bounds.get().size.width) - BAR_W;
+        let (across_start, across_view) = self.across_track();
         let across = crate::scrollbar::thumb(across_view, self.max_x(), self.scroll_x);
         let bounds = Rc::clone(&self.bounds);
         let me = cx.entity().downgrade();
@@ -1830,6 +1842,8 @@ impl BodyView {
             .size_full()
             .relative()
             .overflow_hidden()
+            // Rounded as the well it sits in, whose bottom it reaches.
+            .rounded_b(ui(CORNER))
             .bg(rgb(c.code))
             .text_color(rgb(c.text))
             .font_family(crate::MONO_FONT)
@@ -1938,7 +1952,7 @@ impl BodyView {
                     div()
                         .id("body-bar-x")
                         .absolute()
-                        .left_0()
+                        .left(px(across_start))
                         .right(px(BAR_W))
                         .bottom_0()
                         .h(px(BAR_W))
@@ -1948,7 +1962,8 @@ impl BodyView {
                             cx.listener(move |this, event: &gpui::MouseDownEvent, _, cx| {
                                 // The bar's, not the start of a selection.
                                 cx.stop_propagation();
-                                let x = f32::from(event.position.x - this.bounds.get().left());
+                                let x = f32::from(event.position.x - this.bounds.get().left())
+                                    - across_start;
                                 // A press off the thumb brings its middle there first.
                                 if x < at || x > at + long {
                                     let track = (across_view - long).max(1.);
@@ -1966,7 +1981,8 @@ impl BodyView {
                                 .absolute()
                                 .left(px(at))
                                 .w(px(long))
-                                .top(px((BAR_W - crate::scrollbar::THUMB_W) / 2.))
+                                // On the pane's bottom edge.
+                                .bottom_0()
                                 .h(px(crate::scrollbar::THUMB_W))
                                 .rounded(px(crate::scrollbar::THUMB_W / 2.))
                                 .bg(rgb(if held { c.muted } else { c.splitter })),

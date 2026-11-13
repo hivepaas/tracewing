@@ -1686,7 +1686,9 @@ fn picture_well(path: std::path::PathBuf) -> AnyElement {
 
 fn body_well(well: Div, state: &BodyState) -> Div {
     match state {
-        BodyState::Shown(view) => well.py(ui(8.)).child(view.clone()),
+        // Room above the first line; none below, so the sideways bar sits on
+        // the well's bottom edge.
+        BodyState::Shown(view) => well.pt(ui(8.)).child(view.clone()),
         BodyState::Image(path, _) => well.child(
             div()
                 .size_full()
