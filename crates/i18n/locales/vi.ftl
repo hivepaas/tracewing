@@ -2833,6 +2833,9 @@ tb79773df = Server-Timing
 # Query fields
 t2f58f1e0 = Các trường query
 
+# An Amazon signature
+t001aa07c = Chữ ký Amazon
+
 # Basic authentication
 te161b66b = Xác thực Basic
 
@@ -3117,3 +3120,21 @@ tc01144d0 = không kiểm tra lại
 
 # data: URI, {media}
 t514d8ddb = data: URI, { $media }
+
+# Key
+tcd1ac90c = Khóa
+
+# Day
+t4954229d = Ngày
+
+# Region
+t492e789d = Vùng
+
+# Service
+tb643c704 = Dịch vụ
+
+# Headers signed
+t62bd9377 = Header đã ký
+
+# Signature
+tc049050d = Chữ ký

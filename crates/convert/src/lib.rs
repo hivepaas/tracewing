@@ -280,6 +280,7 @@ const CONVERTERS: &[Converter] = &[
     web::url,
     web::query,
     web::basic,
+    web::aws_sigv4,
     web::cache_control,
     web::status,
     web::cookie,
@@ -510,6 +511,12 @@ const KNOWN: &[Known] = &[
         group: Group::Web,
         run: web::query,
         name: || tr!("Query fields"),
+    },
+    Known {
+        id: "aws-sigv4",
+        group: Group::Web,
+        run: web::aws_sigv4,
+        name: || tr!("An Amazon signature"),
     },
     Known {
         id: "basic-auth",

@@ -2833,6 +2833,9 @@ tb79773df = Server-Timing
 # Query fields
 t2f58f1e0 = 查詢欄位
 
+# An Amazon signature
+t001aa07c = Amazon 簽章
+
 # Basic authentication
 te161b66b = Basic 驗證
 
@@ -3117,3 +3120,21 @@ tc01144d0 = 不再驗證
 
 # data: URI, {media}
 t514d8ddb = data: URI，{ $media }
+
+# Key
+tcd1ac90c = 金鑰
+
+# Day
+t4954229d = 日期
+
+# Region
+t492e789d = 區域
+
+# Service
+tb643c704 = 服務
+
+# Headers signed
+t62bd9377 = 已簽章的標頭
+
+# Signature
+tc049050d = 簽章

@@ -2833,6 +2833,9 @@ tb79773df = Server-Timing
 # Query fields
 t2f58f1e0 = 查询字段
 
+# An Amazon signature
+t001aa07c = Amazon 签名
+
 # Basic authentication
 te161b66b = Basic 认证
 
@@ -3117,3 +3120,21 @@ tc01144d0 = 不再校验
 
 # data: URI, {media}
 t514d8ddb = data: URI，{ $media }
+
+# Key
+tcd1ac90c = 密钥
+
+# Day
+t4954229d = 日期
+
+# Region
+t492e789d = 区域
+
+# Service
+tb643c704 = 服务
+
+# Headers signed
+t62bd9377 = 已签名的标头
+
+# Signature
+tc049050d = 签名

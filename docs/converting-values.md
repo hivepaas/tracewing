@@ -214,7 +214,7 @@ The values that come up daily. Every one of these is pure, offline and cheap.
 | Compression | gzip, Brotli, zstd, deflate, over a base64 or hex blob |
 | Identifiers | UUID version and variant, with the time inside a v1, v6 or v7; ULID; Snowflake (Twitter, Discord); MongoDB ObjectId; KSUID |
 | Numbers | An integer in hex and binary; a bitmask as the flags it sets; a byte count as `1 MiB` |
-| HTTP's own | A URL in parts; a query string or a form body as a table; `Authorization: Basic` as its user and password; `Cache-Control` as a sentence; a status code by meaning; `Retry-After`; a cookie's attributes; a `data:` URI as what it holds |
+| HTTP's own | A URL in parts; a query string or a form body as a table; `Authorization: Basic` as its user and password; `Cache-Control` as a sentence; a status code by meaning; `Retry-After`; a cookie's attributes; a `data:` URI as what it holds; an AWS SigV4 `Authorization` as the key, day, region, service and headers it was signed over |
 | Tracing | `traceparent` as trace id, span id and flags; B3; `X-Amzn-Trace-Id`; `Server-Timing` |
 
 ### Phase two — partly built
