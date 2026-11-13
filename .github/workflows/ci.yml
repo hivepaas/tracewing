@@ -78,17 +78,21 @@ jobs:
         if: runner.os == 'Linux'
         run: python3 scripts/i18n.py check
 
+      # --locked everywhere a dependency is resolved: a Cargo.lock that
+      # does not match the manifests is a build that cannot be repeated,
+      # and it should be caught here rather than at a tag, where the
+      # release jobs build with --locked and stop.
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --release -- -D warnings
+        run: cargo clippy --locked --workspace --all-targets --release -- -D warnings
 
       # They run in the window job below, on Linux; everywhere else they
       # should at least build.
       - name: Clippy (window tests)
         if: runner.os == 'Linux'
-        run: cargo clippy -p tracewing --all-targets --release --features headless -- -D warnings
+        run: cargo clippy --locked -p tracewing --all-targets --release --features headless -- -D warnings
 
       - name: Test
-        run: cargo test --workspace --release
+        run: cargo test --locked --workspace --release
 
   # The tests that draw the window. They were left out of CI for wanting a
   # GPU; Mesa's software Vulkan gives them one, so a change that moves what a
@@ -139,7 +143,7 @@ jobs:
         run: |
           icd=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
           echo "drawing with $icd"
-          VK_ICD_FILENAMES=$icd cargo test -p tracewing --release --features headless \
+          VK_ICD_FILENAMES=$icd cargo test --locked -p tracewing --release --features headless \
             -- --skip each_flow_says_which_program_sent_it
 
       # What the tests drew, to look at when one of them fails.
