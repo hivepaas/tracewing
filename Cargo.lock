@@ -8365,6 +8365,7 @@ dependencies = [
  "flate2",
  "http",
  "serde_json",
+ "sha3 0.10.9",
  "tracewing-i18n",
  "zstd",
 ]
@@ -8477,6 +8478,7 @@ dependencies = [
  "sha3 0.10.9",
  "time",
  "toml 0.9.12+spec-1.1.0",
+ "tracewing-convert",
  "tracing",
  "windows-sys 0.61.2",
  "zip",

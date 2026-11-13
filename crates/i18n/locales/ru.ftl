@@ -2788,6 +2788,48 @@ t88e6aa3c =
        *[other] сообщение из { $n } полей
     }
 
+# As EIP-55 writes it
+t23cd498d = Как это пишет EIP-55
+
+# Checksum
+t59e723b2 = Контрольная сумма
+
+# none in it, so nothing to check
+te7ec8c71 = её здесь нет, проверять нечего
+
+# holds
+t5a262a91 = сходится
+
+# does not hold: a digit is wrong
+tbc8974e3 = не сходится: один знак неверен
+
+# Known as
+t2d1b5c44 = Известен как
+
+# nobody: minted from, or burned to
+t5fe6920b = никто: отсюда выпускают, сюда сжигают
+
+# the chain's own coin, not a token
+t2bb477cf = собственная монета сети, а не токен
+
+# An address
+t2372877a = Адрес
+
+# An event's topic
+td0126fb7 = Топик события
+
+# Event
+td02b533f = Событие
+
+# Calls
+tc4ef94ce = Вызывает
+
+# Answers with
+t5bdbbcc4 = Отвечает
+
+# A call, by its four bytes
+t21c2b1a6 = Вызов, по его четырём байтам
+
 # base64url
 tadfc8ac3 = base64url
 

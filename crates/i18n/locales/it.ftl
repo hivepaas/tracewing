@@ -2706,6 +2706,48 @@ t88e6aa3c =
        *[other] un messaggio di { $n } campi
     }
 
+# As EIP-55 writes it
+t23cd498d = Come la scrive EIP-55
+
+# Checksum
+t59e723b2 = Checksum
+
+# none in it, so nothing to check
+te7ec8c71 = non c'è, quindi niente da controllare
+
+# holds
+t5a262a91 = torna
+
+# does not hold: a digit is wrong
+tbc8974e3 = non torna: una cifra è sbagliata
+
+# Known as
+t2d1b5c44 = Nota come
+
+# nobody: minted from, or burned to
+t5fe6920b = nessuno: da qui si conia, qui si brucia
+
+# the chain's own coin, not a token
+t2bb477cf = la moneta della catena, non un token
+
+# An address
+t2372877a = Un indirizzo
+
+# An event's topic
+td0126fb7 = Il topic di un evento
+
+# Event
+td02b533f = Evento
+
+# Calls
+tc4ef94ce = Chiama
+
+# Answers with
+t5bdbbcc4 = Risponde con
+
+# A call, by its four bytes
+t21c2b1a6 = Una chiamata, dai suoi quattro byte
+
 # base64url
 tadfc8ac3 = base64url
 

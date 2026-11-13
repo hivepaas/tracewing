@@ -2560,6 +2560,48 @@ t88e6aa3c =
        *[other] 一則有 { $n } 個欄位的訊息
     }
 
+# As EIP-55 writes it
+t23cd498d = EIP-55 的寫法
+
+# Checksum
+t59e723b2 = 校驗和
+
+# none in it, so nothing to check
+te7ec8c71 = 沒有校驗和，無從核對
+
+# holds
+t5a262a91 = 吻合
+
+# does not hold: a digit is wrong
+tbc8974e3 = 不吻合：有一位寫錯了
+
+# Known as
+t2d1b5c44 = 常被稱作
+
+# nobody: minted from, or burned to
+t5fe6920b = 無人：從這裡鑄造，燒到這裡
+
+# the chain's own coin, not a token
+t2bb477cf = 鏈自己的幣，不是代幣
+
+# An address
+t2372877a = 一個地址
+
+# An event's topic
+td0126fb7 = 事件的主題
+
+# Event
+td02b533f = 事件
+
+# Calls
+tc4ef94ce = 呼叫
+
+# Answers with
+t5bdbbcc4 = 回傳
+
+# A call, by its four bytes
+t21c2b1a6 = 一次呼叫，由開頭四位元組認出
+
 # base64url
 tadfc8ac3 = base64url
 

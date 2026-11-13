@@ -2652,6 +2652,48 @@ t88e6aa3c =
        *[other] { $n } alanlı bir mesaj
     }
 
+# As EIP-55 writes it
+t23cd498d = EIP-55 nasıl yazıyorsa
+
+# Checksum
+t59e723b2 = Sağlama
+
+# none in it, so nothing to check
+te7ec8c71 = içinde yok, denetlenecek bir şey de yok
+
+# holds
+t5a262a91 = tutuyor
+
+# does not hold: a digit is wrong
+tbc8974e3 = tutmuyor: bir hane yanlış
+
+# Known as
+t2d1b5c44 = Bilinen adı
+
+# nobody: minted from, or burned to
+t5fe6920b = kimse: buradan basılır, buraya yakılır
+
+# the chain's own coin, not a token
+t2bb477cf = zincirin kendi parası, jeton değil
+
+# An address
+t2372877a = Bir adres
+
+# An event's topic
+td0126fb7 = Bir olayın konusu
+
+# Event
+td02b533f = Olay
+
+# Calls
+tc4ef94ce = Çağırdığı
+
+# Answers with
+t5bdbbcc4 = Yanıtı
+
+# A call, by its four bytes
+t21c2b1a6 = Bir çağrı, ilk dört baytından
+
 # base64url
 tadfc8ac3 = base64url
 

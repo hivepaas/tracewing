@@ -37,6 +37,9 @@ pub struct Sample {
     pub what: &'static str,
 }
 
+/// The token the chain samples are of: USDC on mainnet, as a node writes it.
+const TOKEN: &str = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+
 /// The time the samples are written around, so that what the window says of
 /// them is the same from one run to the next: 2026-11-12 14:13:20 UTC.
 const WHEN: i64 = 1_794_492_800;
@@ -90,6 +93,11 @@ fn escape(text: &str) -> String {
         .replace('\n', r"\n")
         .replace('\r', r"\r")
         .replace('\t', r"\t")
+}
+
+/// An address in a word of calldata: twelve zero bytes, then the twenty.
+fn address_word(address: &str) -> String {
+    format!("{:0>64}", address.trim_start_matches("0x").to_lowercase())
 }
 
 fn b64(bytes: &[u8]) -> String {
@@ -424,6 +432,30 @@ fn build() -> Vec<Sample> {
             format!("data:image/png;base64,{}", b64(crate::benchkit::PICTURE)),
             "A data URI: what it holds, and the picture itself",
         ),
+        // What a chain writes.
+        field(
+            "address",
+            "token_address",
+            TOKEN.to_owned(),
+            "An address, written as EIP-55 writes it: the capitals check it",
+        ),
+        field(
+            "topic",
+            "log_topic",
+            "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef".to_owned(),
+            "A log's first topic, as the event it stands for",
+        ),
+        field(
+            "selector",
+            "call_data",
+            // transfer(address,uint256): to vitalik.eth, 1 USDC.
+            format!(
+                "0xa9059cbb{}{:064x}",
+                address_word("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"),
+                1_000_000u64
+            ),
+            "Calldata, named by the four bytes it starts with",
+        ),
         // Networks.
         field(
             "ipv6",
@@ -654,6 +686,7 @@ mod tests {
     #[test]
     fn every_kind_the_window_knows_is_here() {
         const KNOWN: &[&str] = &[
+            "address",
             "amazon-trace",
             "b3",
             "base64",
@@ -696,10 +729,12 @@ mod tests {
             "query",
             "radix",
             "saml",
+            "selector",
             "server-timing",
             "size",
             "snowflake",
             "status",
+            "topic",
             "traceparent",
             "ulid",
             "unix-ms",

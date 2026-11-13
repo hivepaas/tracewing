@@ -2560,6 +2560,48 @@ t88e6aa3c =
        *[other] một message có { $n } field
     }
 
+# As EIP-55 writes it
+t23cd498d = Cách EIP-55 viết
+
+# Checksum
+t59e723b2 = Checksum
+
+# none in it, so nothing to check
+te7ec8c71 = không có, nên không có gì để kiểm
+
+# holds
+t5a262a91 = khớp
+
+# does not hold: a digit is wrong
+tbc8974e3 = không khớp: sai một ký tự
+
+# Known as
+t2d1b5c44 = Được biết tới là
+
+# nobody: minted from, or burned to
+t5fe6920b = không ai: phát hành từ đây, đốt về đây
+
+# the chain's own coin, not a token
+t2bb477cf = đồng tiền của chính chain, không phải token
+
+# An address
+t2372877a = Một địa chỉ
+
+# An event's topic
+td0126fb7 = Topic của một sự kiện
+
+# Event
+td02b533f = Sự kiện
+
+# Calls
+tc4ef94ce = Gọi
+
+# Answers with
+t5bdbbcc4 = Trả về
+
+# A call, by its four bytes
+t21c2b1a6 = Một lời gọi, theo bốn byte đầu
+
 # base64url
 tadfc8ac3 = base64url
 

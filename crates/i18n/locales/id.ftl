@@ -2560,6 +2560,48 @@ t88e6aa3c =
        *[other] pesan dengan { $n } bidang
     }
 
+# As EIP-55 writes it
+t23cd498d = Seperti yang ditulis EIP-55
+
+# Checksum
+t59e723b2 = Checksum
+
+# none in it, so nothing to check
+te7ec8c71 = tidak ada, jadi tidak ada yang diperiksa
+
+# holds
+t5a262a91 = cocok
+
+# does not hold: a digit is wrong
+tbc8974e3 = tidak cocok: ada digit yang salah
+
+# Known as
+t2d1b5c44 = Dikenal sebagai
+
+# nobody: minted from, or burned to
+t5fe6920b = bukan siapa-siapa: dicetak dari sini, dibakar ke sini
+
+# the chain's own coin, not a token
+t2bb477cf = koin milik rantai itu sendiri, bukan token
+
+# An address
+t2372877a = Sebuah alamat
+
+# An event's topic
+td0126fb7 = Topic sebuah event
+
+# Event
+td02b533f = Event
+
+# Calls
+tc4ef94ce = Memanggil
+
+# Answers with
+t5bdbbcc4 = Menjawab dengan
+
+# A call, by its four bytes
+t21c2b1a6 = Sebuah panggilan, dari empat bytenya
+
 # base64url
 tadfc8ac3 = base64url
 

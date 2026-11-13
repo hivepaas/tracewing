@@ -98,8 +98,15 @@ pub fn paseto(input: &Input) -> Option<Reading> {
 /// A hash by the size it is. Which one it is cannot be told from the bytes,
 /// only which ones it could be.
 pub fn hash(input: &Input) -> Option<Reading> {
-    let text = input.text.trim_matches('"').trim_start_matches("0x");
+    let whole = input.text.trim_matches('"');
+    let text = whole.trim_start_matches("0x");
     if !text.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    // Twenty bytes behind an `0x` are an address, whatever else they are the
+    // size of: nobody writes a RIPEMD-160 that way, and reading one as a
+    // hash is how an address came to be called SHA-1.
+    if text.len() == 40 && whole.len() != text.len() {
         return None;
     }
     let said = match text.len() {

@@ -15,6 +15,7 @@
 use std::time::{Duration, Instant};
 
 mod binary;
+pub mod chain;
 mod encodings;
 mod ids;
 mod json;
@@ -247,6 +248,9 @@ pub type Converter = fn(&Input) -> Option<Reading>;
 /// Every converter, in the order a tie is broken.
 const CONVERTERS: &[Converter] = &[
     jwt::read,
+    chain::address,
+    chain::topic,
+    chain::selector,
     tokens::jwe,
     tokens::paseto,
     tokens::crypt,
