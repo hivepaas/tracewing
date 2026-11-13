@@ -1366,7 +1366,15 @@ impl Traffic {
                             .font_features(gpui::FontFeatures::disable_ligatures())
                             .text_size(ui(12.))
                     })
-                    .child(sel.piece(line.value.clone(), "\n", Vec::new()));
+                    // Under its own label, so that the converters read the
+                    // name as well as the value -- `exp` is a time, `size`
+                    // is a size -- and the pane says which field it is.
+                    .child(sel.piece_under(
+                        line.label.clone(),
+                        line.value.clone(),
+                        "\n",
+                        Vec::new(),
+                    ));
                 view = view.child(
                     div()
                         .flex()

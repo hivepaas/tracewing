@@ -780,6 +780,9 @@ t4df6b638 = Deutungen
 # Close the readings
 t60beaefd = Deutungen schließen
 
+# a guess
+t6af47169 = eine Vermutung
+
 # Read from {from}
 t6d510d3d = Gelesen aus { $from }
 

@@ -786,6 +786,9 @@ t4df6b638 = Leituras
 # Close the readings
 t60beaefd = Fechar as leituras
 
+# a guess
+t6af47169 = um palpite
+
 # Read from {from}
 t6d510d3d = Lido de { $from }
 

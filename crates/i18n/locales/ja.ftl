@@ -751,6 +751,9 @@ t4df6b638 = 読み取り
 # Close the readings
 t60beaefd = 読み取りを閉じる
 
+# a guess
+t6af47169 = 推測
+
 # Read from {from}
 t6d510d3d = { $from } から読み取り
 

@@ -751,6 +751,9 @@ t4df6b638 = Pembacaan
 # Close the readings
 t60beaefd = Tutup pembacaan
 
+# a guess
+t6af47169 = tebakan
+
 # Read from {from}
 t6d510d3d = Dibaca dari { $from }
 

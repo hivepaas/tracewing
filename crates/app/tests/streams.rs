@@ -205,6 +205,105 @@ fn streams_show_as_they_come() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "20-websocket-message");
 
+    // A value inside a message is read as one in a body is: the message's
+    // view is a body like any other, so a press in a value opens the pane
+    // beside it. It had none of that until the view was given the rules and
+    // the way to ask for the pane.
+    let sent = r#"{"created_at_ms":"1794492800123"}"#;
+    runtime
+        .block_on(async {
+            ws.send(Message::text(sent)).await?;
+            ws.next().await.unwrap()
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the message with a time in it", |view| {
+        view.inspector
+            .messages
+            .as_ref()
+            .is_some_and(|state| state.list.iter().any(|m| m.bytes as usize == sent.len()))
+    });
+    let place = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector.messages.as_ref().and_then(|state| {
+                state
+                    .list
+                    .iter()
+                    .position(|m| m.bytes as usize == sent.len())
+            })
+        })
+        .unwrap()
+        .expect("the message is in the list");
+    window
+        .update(&mut cx, |view, _, cx| view.choose_message(place, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "it to be shown", |view| {
+        view.inspector
+            .messages
+            .as_ref()
+            .and_then(|state| state.view.as_ref())
+            .is_some()
+    });
+    cx.run_until_parked();
+
+    let spot = window
+        .update(&mut cx, |view, _, cx| {
+            let body = view
+                .inspector
+                .messages
+                .as_ref()
+                .and_then(|state| state.view.clone())
+                .expect("the chosen message is shown");
+            let body = body.read(cx);
+            let lines = body.body().lines();
+            (0..lines).find_map(|line| {
+                let text = body.body().read_whole(line..line + 1).pop()?;
+                let at = text.find("1794492800123")?;
+                Some(tracewing::select::Spot {
+                    piece: line,
+                    at: at + 4,
+                })
+            })
+        })
+        .unwrap()
+        .expect("the time is in the message, laid out");
+    window
+        .update(&mut cx, |view, _, cx| {
+            let body = view
+                .inspector
+                .messages
+                .as_ref()
+                .and_then(|state| state.view.clone())
+                .unwrap();
+            body.update(cx, |body, cx| {
+                assert!(
+                    body.read_value_at_spot(spot, cx),
+                    "the press is inside the value"
+                );
+            });
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let (value, has_unix) = window
+        .update(&mut cx, |view, _, _| {
+            let reads = view
+                .inspector
+                .reads
+                .as_ref()
+                .expect("the pane opens from a message");
+            (
+                reads.value.clone(),
+                reads.found.iter().any(|reading| reading.id == "unix-ms"),
+            )
+        })
+        .unwrap();
+    assert_eq!(value.trim_matches('"'), "1794492800123", "the whole value");
+    assert!(has_unix, "and it is read as the time it is");
+    shot(&mut cx, window.into(), "126-readings-pane-in-a-message");
+    window
+        .update(&mut cx, |view, _, cx| view.close_reads(cx))
+        .unwrap();
+    cx.run_until_parked();
+
     // The message can be put away again, by the × on it or by Escape, and
     // the list is not taken away while it is open.
     window

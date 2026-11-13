@@ -751,6 +751,9 @@ t4df6b638 = 해석
 # Close the readings
 t60beaefd = 해석 닫기
 
+# a guess
+t6af47169 = 추측
+
 # Read from {from}
 t6d510d3d = { $from }에서 읽음
 
