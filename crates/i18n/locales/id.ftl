@@ -130,6 +130,9 @@ t0a4220dc = { $size } { $format } · { $count } baris JSON
 # The first {count} rows are shown.
 t16aa1c6d = Hanya { $count } baris pertama yang ditampilkan.
 
+# Open this line
+t9bc3ec63 = Buka baris ini
+
 # Forget how {field} is read
 tdb2d6aa8 = Lupakan cara { $field } dibaca
 

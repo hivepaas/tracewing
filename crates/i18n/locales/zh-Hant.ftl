@@ -130,6 +130,9 @@ t0a4220dc = { $size } { $format } · { $count } 行 JSON
 # The first {count} rows are shown.
 t16aa1c6d = 只顯示前 { $count } 列。
 
+# Open this line
+t9bc3ec63 = 開啟這一行
+
 # Forget how {field} is read
 tdb2d6aa8 = 忘記 { $field } 的解讀方式
 

@@ -130,6 +130,9 @@ t0a4220dc = { $size } { $format } · JSON { $count } 行
 # The first {count} rows are shown.
 t16aa1c6d = 最初の { $count } 行のみ表示しています。
 
+# Open this line
+t9bc3ec63 = この行を開く
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } の読み方を忘れる
 

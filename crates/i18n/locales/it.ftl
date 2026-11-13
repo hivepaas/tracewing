@@ -140,6 +140,9 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Sono mostrate solo le prime { $count } righe.
 
+# Open this line
+t9bc3ec63 = Apri questa riga
+
 # Forget how {field} is read
 tdb2d6aa8 = Dimentica come leggere { $field }
 

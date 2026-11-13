@@ -140,6 +140,9 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Seules les { $count } premières lignes sont affichées.
 
+# Open this line
+t9bc3ec63 = Ouvrir cette ligne
+
 # Forget how {field} is read
 tdb2d6aa8 = Oublier comment { $field } est lu
 

@@ -142,6 +142,9 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Показано лише перші { $count } рядків.
 
+# Open this line
+t9bc3ec63 = Відкрити цей рядок
+
 # Forget how {field} is read
 tdb2d6aa8 = Забути, як читається { $field }
 

@@ -130,6 +130,9 @@ t0a4220dc = { $size } { $format } · { $count } dòng JSON
 # The first {count} rows are shown.
 t16aa1c6d = Chỉ hiện { $count } dòng đầu tiên.
 
+# Open this line
+t9bc3ec63 = Mở dòng này
+
 # Forget how {field} is read
 tdb2d6aa8 = Quên cách đọc { $field }
 

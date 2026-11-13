@@ -1079,4 +1079,42 @@ fn a_line_too_long_opens_whole() {
     );
     cx.run_until_parked();
     shot(&mut cx, window.into(), "92-the-whole-line-opened");
+
+    // A line the reading did not cut can be opened too: one wider than the
+    // panel is cut by the panel, which says nothing about it.
+    window
+        .update(&mut cx, |view, _, cx| {
+            assert!(view.close_opened(cx));
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let (plain, plain_text) = window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            let body = body.read(cx).body();
+            let lines = body.lines().min(20);
+            (0..lines)
+                .find_map(|line| {
+                    let shown = body.read(line..line + 1).pop()?;
+                    let whole = body.read_whole(line..line + 1).pop()?;
+                    (shown.cut == 0 && whole.contains("note")).then_some((line, whole))
+                })
+                .expect("the note is a line the reading did not cut")
+        })
+        .unwrap();
+    let opened = cx.update(|cx| body.update(cx, |body, cx| body.open_whole_line(plain, cx)));
+    assert!(opened, "any line opens, not only one that was cut");
+    cx.run_until_parked();
+    let size = window
+        .update(&mut cx, |view, _, cx| {
+            let opened = view.inspector.opened.as_ref().expect("it stays open");
+            let OpenedAs::Body(shown) = &opened.shown else {
+                unreachable!()
+            };
+            shown.read(cx).body().size()
+        })
+        .unwrap();
+    assert_eq!(size as usize, plain_text.len());
 }

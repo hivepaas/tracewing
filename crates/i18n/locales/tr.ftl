@@ -138,6 +138,9 @@ t0a4220dc =
 # The first {count} rows are shown.
 t16aa1c6d = Yalnızca ilk { $count } satır gösteriliyor.
 
+# Open this line
+t9bc3ec63 = Bu satırı aç
+
 # Forget how {field} is read
 tdb2d6aa8 = { $field } nasıl okunduğunu unut
 
