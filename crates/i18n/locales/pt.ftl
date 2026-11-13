@@ -1663,8 +1663,24 @@ t6dc463eb = Nenhum fluxo
 # Name it to keep it
 t52c1a402 = Dê um nome para mantê-la
 
+# Nothing wrong with it.
+t6bfd918c = Não há nada de errado.
+
+# SQLite found {count} problem: {first} | SQLite found {count} problems, the first: {first}
+tf756539b =
+    { $n ->
+        [one] O SQLite encontrou { $count } problema: { $first }
+       *[other] O SQLite encontrou { $count } problemas, o primeiro: { $first }
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · gravada por outra versão, então não pode ser aberta
+
+# {size} · damaged, so it cannot be opened
+tf94fb7c2 = { $size } · danificada, por isso não pode ser aberta
+
+# {size} · cannot be read: {why}
+t7dfb1f1b = { $size } · não pode ser lida: { $why }
 
 # {count} flow · {size} | {count} flows · {size}
 t3f3c0eb4 =
@@ -1678,6 +1694,12 @@ t3cb3e6fc = Gravando agora
 
 # Export HAR
 t4d6458cc = Exportar HAR
+
+# Checking…
+t87f62cb7 = A verificar…
+
+# Check
+t592c8de7 = Verificar
 
 # Delete for good?
 ta7737f13 = Excluir de vez?
@@ -2087,9 +2109,6 @@ t98416222 = Procurar de novo
 
 # No browser found on this computer.
 t0e46bb34 = Nenhum navegador encontrado neste computador.
-
-# Check
-t592c8de7 = Verificar
 
 # Open on its own
 t0da7783c = Abrir à parte

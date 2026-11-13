@@ -1723,8 +1723,26 @@ t6dc463eb = Нет потоков
 # Name it to keep it
 t52c1a402 = Дайте имя, чтобы сохранить
 
+# Nothing wrong with it.
+t6bfd918c = С ней всё в порядке.
+
+# SQLite found {count} problem: {first} | SQLite found {count} problems, the first: {first}
+tf756539b =
+    { $n ->
+        [one] SQLite нашёл { $count } проблему: { $first }
+        [few] SQLite нашёл { $count } проблемы, первая: { $first }
+        [many] SQLite нашёл { $count } проблем, первая: { $first }
+       *[other] SQLite нашёл { $count } проблемы, первая: { $first }
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · записано другой версией, поэтому не открывается
+
+# {size} · damaged, so it cannot be opened
+tf94fb7c2 = { $size } · повреждена, поэтому её не открыть
+
+# {size} · cannot be read: {why}
+t7dfb1f1b = { $size } · не читается: { $why }
 
 # {count} flow · {size} | {count} flows · {size}
 t3f3c0eb4 =
@@ -1740,6 +1758,12 @@ t3cb3e6fc = Идёт запись
 
 # Export HAR
 t4d6458cc = Экспорт HAR
+
+# Checking…
+t87f62cb7 = Проверяется…
+
+# Check
+t592c8de7 = Проверить
 
 # Delete for good?
 ta7737f13 = Удалить навсегда?
@@ -2151,9 +2175,6 @@ t98416222 = Поискать снова
 
 # No browser found on this computer.
 t0e46bb34 = На этом компьютере браузеры не найдены.
-
-# Check
-t592c8de7 = Проверить
 
 # Open on its own
 t0da7783c = Открыть отдельно

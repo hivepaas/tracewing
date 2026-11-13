@@ -12,7 +12,7 @@
 //!   reason: deleting one took 6 ms, deleting the same rows from one database up
 //!   to 32 s, and left it larger and slower.
 
-use anyhow::{Result, bail};
+use anyhow::{Context as _, Result, bail};
 use rusqlite::{Connection, OpenFlags, Row, params};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -100,8 +100,50 @@ pub struct SessionInfo {
     /// When its first and last flow started, in microseconds since 1970.
     pub first_us: Option<i64>,
     pub last_us: Option<i64>,
-    /// False if this version cannot read it: an older one wrote it, or it is damaged.
+    /// False if this version cannot read it: `trouble` says why.
     pub readable: bool,
+    /// Why it cannot be read, where it cannot. `None` while it can.
+    pub trouble: Option<Trouble>,
+}
+
+/// Why a session cannot be read. The three are not the same thing to a
+/// reader: one is a version to be told about, one is a file to rescue or
+/// throw away, and one may be a disk going.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Trouble {
+    /// Its rows are of a format this version does not read: the number it
+    /// carries, against [`VERSION`].
+    OtherVersion(i64),
+    /// SQLite says the file is damaged, or is not a database at all.
+    Damaged(String),
+    /// It could not be opened or read: no permission, a disk that answers
+    /// with an error, a file that is not there any more.
+    Unreadable(String),
+}
+
+impl std::fmt::Display for Trouble {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Trouble::OtherVersion(version) => write!(
+                f,
+                "its rows are version {version}, and this tracewing reads {VERSION}"
+            ),
+            Trouble::Damaged(said) => write!(f, "the file is damaged: {said}"),
+            Trouble::Unreadable(said) => write!(f, "it could not be read: {said}"),
+        }
+    }
+}
+
+impl Trouble {
+    /// What SQLite's complaint means, where it means one of these.
+    fn of(error: &rusqlite::Error) -> Self {
+        let said = error.to_string();
+        match error.sqlite_error_code() {
+            Some(rusqlite::ErrorCode::DatabaseCorrupt)
+            | Some(rusqlite::ErrorCode::NotADatabase) => Trouble::Damaged(said),
+            _ => Trouble::Unreadable(said),
+        }
+    }
 }
 
 /// Rows of the format this version writes.
@@ -151,24 +193,30 @@ fn dir_bytes(dir: &Path) -> u64 {
 /// How many flows, and when the first and the last started.
 type Rows = (u64, Option<i64>, Option<i64>);
 
-fn read_rows(session: &Path) -> rusqlite::Result<Option<Rows>> {
+fn read_rows(session: &Path) -> Result<Rows, Trouble> {
     // Every earlier session is listed through here before it is opened.
     let path = flows_db(session);
     if path.exists() {
         let _ = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_WRITE)
             .and_then(|flows| upgrade(&flows));
     }
-    let flows = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    let version: i64 = flows.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+    let read = |e: rusqlite::Error| Trouble::of(&e);
+    let flows =
+        Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(read)?;
+    let version: i64 = flows
+        .query_row("PRAGMA user_version", [], |r| r.get(0))
+        .map_err(read)?;
     if version != VERSION {
-        return Ok(None);
+        return Err(Trouble::OtherVersion(version));
     }
     // Ids have no gaps, and the first and last are found by the primary key.
-    let (first, last): (Option<i64>, Option<i64>) = flows.query_row(
-        "SELECT (SELECT min(id) FROM flows), (SELECT max(id) FROM flows)",
-        [],
-        |r| Ok((r.get(0)?, r.get(1)?)),
-    )?;
+    let (first, last): (Option<i64>, Option<i64>) = flows
+        .query_row(
+            "SELECT (SELECT min(id) FROM flows), (SELECT max(id) FROM flows)",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .map_err(read)?;
     let at = |id: Option<i64>| -> rusqlite::Result<Option<i64>> {
         id.map(|id| {
             flows.query_row(
@@ -180,11 +228,12 @@ fn read_rows(session: &Path) -> rusqlite::Result<Option<Rows>> {
         .transpose()
     };
     let count = first.zip(last).map_or(0, |(a, b)| (b - a + 1) as u64);
-    Ok(Some((count, at(first)?, at(last)?)))
+    Ok((count, at(first).map_err(read)?, at(last).map_err(read)?))
 }
 
 pub fn info(session: &Path) -> SessionInfo {
-    let rows = read_rows(session).ok().flatten();
+    let read = read_rows(session);
+    let rows = read.as_ref().ok().copied();
     SessionInfo {
         dir: session.to_owned(),
         name: name_of(session),
@@ -192,8 +241,37 @@ pub fn info(session: &Path) -> SessionInfo {
         bytes: dir_bytes(session),
         first_us: rows.and_then(|r| r.1),
         last_us: rows.and_then(|r| r.2),
-        readable: rows.is_some(),
+        readable: read.is_ok(),
+        trouble: read.err(),
     }
+}
+
+/// What `PRAGMA quick_check` says about a session, a line a complaint, empty
+/// when it has none.
+///
+/// It reads every page of the database, so it is asked for and not run by
+/// itself: a session of a million flows is more than a gigabyte, and the
+/// screen that lists sessions touches every one of them.
+pub fn check(session: &Path) -> Result<Vec<String>> {
+    let path = flows_db(session);
+    let flows = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .with_context(|| format!("open {}", path.display()))?;
+    let mut said = flows.prepare("PRAGMA quick_check")?;
+    let rows: rusqlite::Result<Vec<String>> =
+        said.query_map([], |r| r.get::<_, String>(0))?.collect();
+    // A row can hold many lines, so a complaint is a line and not a row:
+    // counting rows said "3 problems" for pages and pages of them. "ok" is
+    // what it says about a database with nothing the matter, and
+    // "*** in database main ***" heads the list rather than being one of it.
+    Ok(rows?
+        .iter()
+        .flat_map(|row| row.lines())
+        .map(str::trim)
+        .filter(|line| {
+            !line.is_empty() && *line != "ok" && !(line.starts_with("***") && line.ends_with("***"))
+        })
+        .map(str::to_owned)
+        .collect())
 }
 
 fn session_dirs(sessions: &Path) -> Vec<PathBuf> {
@@ -732,6 +810,63 @@ mod tests {
             dir.exists(),
             "it has flows, so it counts as one of those kept"
         );
+        fs::remove_dir_all(&sessions).unwrap();
+    }
+
+    /// The three reasons are not one reason. A reader told "another version"
+    /// about a file the disk has damaged goes looking in the wrong place.
+    #[test]
+    fn why_a_session_cannot_be_read_is_kept() {
+        let sessions = temp("trouble");
+
+        // An older format: the version it carries, to be said.
+        let older = make(&sessions, "100", 3);
+        Connection::open(flows_db(&older))
+            .unwrap()
+            .execute_batch("PRAGMA user_version = 3;")
+            .unwrap();
+        let about = info(&older);
+        assert!(!about.readable);
+        assert_eq!(about.trouble, Some(Trouble::OtherVersion(3)));
+
+        // Not a database at all, which is what a file written over looks
+        // like: SQLite says so itself, and it is not a version to argue with.
+        let broken = make(&sessions, "101", 3);
+        fs::write(flows_db(&broken), b"this is not a database").unwrap();
+        let about = info(&broken);
+        assert!(!about.readable);
+        assert!(
+            matches!(about.trouble, Some(Trouble::Damaged(_))),
+            "{:?}",
+            about.trouble
+        );
+
+        // A database damaged in its middle: the header still reads, the
+        // pages do not. SQLite finds it when it reads them.
+        let eaten = make(&sessions, "102", 400);
+        let path = flows_db(&eaten);
+        let mut bytes = fs::read(&path).unwrap();
+        let from = bytes.len() / 2;
+        for byte in &mut bytes[from..] {
+            *byte = 0x5a;
+        }
+        fs::write(&path, &bytes).unwrap();
+        let about = info(&eaten);
+        assert!(!about.readable, "half of it is gibberish");
+        assert!(
+            matches!(about.trouble, Some(Trouble::Damaged(_))),
+            "{:?}",
+            about.trouble
+        );
+
+        // And the check says what SQLite makes of it, asked for and not run
+        // by itself.
+        let said = check(&eaten).unwrap_or_else(|e| vec![e.to_string()]);
+        assert!(!said.is_empty(), "it has something to complain about");
+        let good = make(&sessions, "103", 3);
+        assert_eq!(check(&good).unwrap(), Vec::<String>::new(), "nothing wrong");
+        assert_eq!(info(&good).trouble, None);
+
         fs::remove_dir_all(&sessions).unwrap();
     }
 

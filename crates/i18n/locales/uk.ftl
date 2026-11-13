@@ -1723,8 +1723,26 @@ t6dc463eb = Немає потоків
 # Name it to keep it
 t52c1a402 = Дайте назву, щоб зберегти
 
+# Nothing wrong with it.
+t6bfd918c = З нею все гаразд.
+
+# SQLite found {count} problem: {first} | SQLite found {count} problems, the first: {first}
+tf756539b =
+    { $n ->
+        [one] SQLite знайшов { $count } проблему: { $first }
+        [few] SQLite знайшов { $count } проблеми, перша: { $first }
+        [many] SQLite знайшов { $count } проблем, перша: { $first }
+       *[other] SQLite знайшов { $count } проблеми, перша: { $first }
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · записано іншою версією, тому не відкривається
+
+# {size} · damaged, so it cannot be opened
+tf94fb7c2 = { $size } · пошкоджена, тому її не відкрити
+
+# {size} · cannot be read: {why}
+t7dfb1f1b = { $size } · не читається: { $why }
 
 # {count} flow · {size} | {count} flows · {size}
 t3f3c0eb4 =
@@ -1740,6 +1758,12 @@ t3cb3e6fc = Іде запис
 
 # Export HAR
 t4d6458cc = Експортувати HAR
+
+# Checking…
+t87f62cb7 = Перевіряється…
+
+# Check
+t592c8de7 = Перевірити
 
 # Delete for good?
 ta7737f13 = Видалити назавжди?
@@ -2151,9 +2175,6 @@ t98416222 = Пошукати знову
 
 # No browser found on this computer.
 t0e46bb34 = На цьому комп’ютері браузерів не знайдено.
-
-# Check
-t592c8de7 = Перевірити
 
 # Open on its own
 t0da7783c = Відкрити окремо

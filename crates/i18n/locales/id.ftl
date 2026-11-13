@@ -1543,8 +1543,23 @@ t6dc463eb = Tidak ada flow
 # Name it to keep it
 t52c1a402 = Beri nama agar disimpan
 
+# Nothing wrong with it.
+t6bfd918c = Tidak ada yang salah.
+
+# SQLite found {count} problem: {first} | SQLite found {count} problems, the first: {first}
+tf756539b =
+    { $n ->
+       *[other] SQLite menemukan { $count } masalah, yang pertama: { $first }
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · ditulis oleh versi lain, jadi tidak bisa dibuka
+
+# {size} · damaged, so it cannot be opened
+tf94fb7c2 = { $size } · rusak, jadi tidak bisa dibuka
+
+# {size} · cannot be read: {why}
+t7dfb1f1b = { $size } · tidak bisa dibaca: { $why }
 
 # {count} flow · {size} | {count} flows · {size}
 t3f3c0eb4 =
@@ -1557,6 +1572,12 @@ t3cb3e6fc = Sedang merekam
 
 # Export HAR
 t4d6458cc = Ekspor HAR
+
+# Checking…
+t87f62cb7 = Memeriksa…
+
+# Check
+t592c8de7 = Periksa
 
 # Delete for good?
 ta7737f13 = Hapus permanen?
@@ -1956,9 +1977,6 @@ t98416222 = Cari lagi
 
 # No browser found on this computer.
 t0e46bb34 = Tidak ada browser yang ditemukan di komputer ini.
-
-# Check
-t592c8de7 = Periksa
 
 # Open on its own
 t0da7783c = Buka terpisah

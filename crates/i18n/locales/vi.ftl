@@ -1543,8 +1543,23 @@ t6dc463eb = Không có flow
 # Name it to keep it
 t52c1a402 = Đặt tên để giữ lại
 
+# Nothing wrong with it.
+t6bfd918c = Không có gì bất thường.
+
+# SQLite found {count} problem: {first} | SQLite found {count} problems, the first: {first}
+tf756539b =
+    { $n ->
+       *[other] SQLite tìm thấy { $count } vấn đề, cái đầu tiên: { $first }
+    }
+
 # {size} · written by another version, so it cannot be opened
 t878e5c80 = { $size } · do phiên bản khác ghi, nên không mở được
+
+# {size} · damaged, so it cannot be opened
+tf94fb7c2 = { $size } · hỏng, nên không mở được
+
+# {size} · cannot be read: {why}
+t7dfb1f1b = { $size } · không đọc được: { $why }
 
 # {count} flow · {size} | {count} flows · {size}
 t3f3c0eb4 =
@@ -1557,6 +1572,12 @@ t3cb3e6fc = Đang ghi
 
 # Export HAR
 t4d6458cc = Xuất HAR
+
+# Checking…
+t87f62cb7 = Đang kiểm tra…
+
+# Check
+t592c8de7 = Kiểm tra
 
 # Delete for good?
 ta7737f13 = Xoá vĩnh viễn?
@@ -1956,9 +1977,6 @@ t98416222 = Tìm lại
 
 # No browser found on this computer.
 t0e46bb34 = Không tìm thấy trình duyệt nào trên máy này.
-
-# Check
-t592c8de7 = Kiểm tra
 
 # Open on its own
 t0da7783c = Mở riêng

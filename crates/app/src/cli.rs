@@ -291,9 +291,9 @@ fn session_dir(data_dir: &Path, id: Option<&str>) -> Result<PathBuf> {
             .next()
             .context("nothing has been recorded yet")?,
     };
-    if !chosen.readable {
+    if let Some(trouble) = &chosen.trouble {
         bail!(
-            "this version cannot read the session {}",
+            "the session {} cannot be read: {trouble}",
             chosen.dir.display()
         );
     }
