@@ -9,8 +9,8 @@ name: Release
 # Release > Run workflow), builds and packages the branch the same way and
 # keeps the files as the run's artifacts: a rehearsal, with no release.
 #
-# Linux only for now. macOS and Windows are rows for this matrix and a
-# packaging script each, and the download page has their names already.
+# macOS is still to come: a row for this matrix and a packaging script, and
+# the download page has its names already.
 
 on:
   push:
@@ -23,6 +23,7 @@ on:
       - about.toml
       - scripts/package_*.sh
       - scripts/check_linux_package.sh
+      - scripts/check_windows_installer.ps1
   workflow_dispatch:
 
 concurrency:
@@ -67,6 +68,7 @@ jobs:
           # packages run on (2.35: Ubuntu 22.04, Debian 12).
           - { name: linux-x86_64, runner: ubuntu-22.04 }
           - { name: linux-aarch64, runner: ubuntu-22.04-arm }
+          - { name: windows-x86_64, runner: windows-latest }
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -75,6 +77,7 @@ jobs:
       # each download gives up sooner and the whole is tried again. dpkg-dev,
       # rpm and cpio are what the packaging itself needs.
       - name: "Linux packages (GPUI: Wayland, X11, Vulkan, fonts; packaging)"
+        if: runner.os == 'Linux'
         timeout-minutes: 10
         env:
           APT: -o Acquire::Retries=3 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
@@ -100,18 +103,33 @@ jobs:
         with:
           tool: cargo-about@0.9.3
 
+      - name: NSIS
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
+
       - name: Build
         run: cargo build --release --locked -p tracewing
 
       - name: Package
-        run: scripts/package_linux.sh
+        shell: bash
+        run: scripts/package_${{ runner.os == 'Windows' && 'windows' || 'linux' }}.sh
 
       # What each holds, then the .deb installed here and the program run from
       # it, and the .rpm in a Fedora container.
-      - name: Check, install and run
+      - name: Check, install and run (Linux)
+        if: runner.os == 'Linux'
         run: |
           scripts/check_linux_package.sh --install dist/tracewing_*.deb
           scripts/check_linux_package.sh --install dist/tracewing_*.rpm
+
+      # The installer, quiet: for the user and for everyone, again over itself,
+      # and uninstalled.
+      - name: Install and uninstall (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: scripts/check_windows_installer.ps1 (Get-Item dist/tracewing_*-setup.exe).FullName
 
       - uses: actions/upload-artifact@v4
         with:
