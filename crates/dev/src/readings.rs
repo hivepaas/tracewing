@@ -345,6 +345,38 @@ fn build() -> Vec<Sample> {
             "Seconds, said as a span",
         ),
         // Times, in a body, each kind in the field a real one would be in.
+        // Session cookies, which carry the whole session rather than a
+        // pointer to one. Each is built the way its framework builds it,
+        // signed with a key nobody has to know: nothing here checks a
+        // signature.
+        field(
+            "session-cookie",
+            "session",
+            "eyJfZnJlc2giOnRydWUsImNzcmZfdG9rZW4iOiI3YTZjMWYwZTliMmQ0YTNjOGU1ZjFiMGQ5YTdjM2UyZiIsInVzZXJfaWQiOiI0MiJ9.avXJgA.JIIA9KIUf0_-zlSlGQad890UH18"
+                .to_owned(),
+            "Flask's own: the session, and when itsdangerous signed it",
+        ),
+        field(
+            "session-cookie",
+            "sessionid",
+            ".eNpVjUEOwiAURO_C2hCglJYu3XsG8oFfQQ000CYa490tSRe6nXlv5k0MbGswW8ViLLg7Jk8m4m-Qrpm6nNYSLW0IPdpKL9nj43ywp9-BADXstp5HJyyHwSvsnbQdiJkj89qNdgA19yh9txP_cmzHUrSwYq0xJ4PPJZYXmbhgWjH2-QL4fzrR:1xRVYG:HNlCXgIAwYkFn-KG7MM3hFyz5wmXZRT-kG42zUp9UW0"
+                .to_owned(),
+            "Django's, whose payload is zlib under the leading dot",
+        ),
+        field(
+            "session-cookie",
+            "_app_session",
+            "eyJfcmFpbHMiOnsibWVzc2FnZSI6ImV5SmZZM055Wmw5MGIydGxiaUk2SWt0d1VUaDRWREYyVGpOdFYzazNUSHBTWWpSSWMwY2lMQ0p6WlhOemFXOXVYMmxrSWpvaU9XWTRZekppTVdFM1pEWmxOV00wWWpOaE1tWXhaVEJrT1dNNFlqZGhObVlpTENKMWMyVnlYMmxrSWpvME1uMD0iLCJleHAiOm51bGwsInB1ciI6ImNvb2tpZS5fYXBwX3Nlc3Npb24ifX0=--f02b85634fb949be4b1d7347b37f517b586c98bf"
+                .to_owned(),
+            "Rails signed, with its own wrapper taken off as well",
+        ),
+        field(
+            "session-cookie",
+            "_app_session_encrypted",
+            "5SWMR9cxKkQIOpkSlkrqu+AUzVRUSUBLobDaiACO+SEFt5wqGfc78M1t9r7Qlt9wyQ/jdEve0e3baRraXCYUXg==--y1hORMQ+1r0LwtnH--5NI+hB2OiAQZACe84xgPpQ=="
+                .to_owned(),
+            "Rails encrypted, which says what it is and that it needs the key",
+        ),
         field(
             "aws-sigv4",
             "x_amz_credential",
@@ -783,6 +815,7 @@ mod tests {
             "saml",
             "selector",
             "server-timing",
+            "session-cookie",
             "size",
             "snowflake",
             "status",

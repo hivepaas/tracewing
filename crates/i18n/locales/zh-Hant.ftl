@@ -2893,6 +2893,9 @@ t6da81e5b = JWE，加密的權杖
 # PASETO
 t309420ff = PASETO
 
+# A framework's session cookie
+t9e2ffd00 = 框架的工作階段 Cookie
+
 # SAML
 t015e7110 = SAML
 
@@ -3046,6 +3049,36 @@ t3890a578 = 建立於
 # Named
 t6055a346 = 名稱
 
+# Flask, signed by itsdangerous
+t68251d55 = Flask，由 itsdangerous 簽章
+
+# Django
+ta762cbfe = Django
+
+# Rails, signed
+t3c6b40ce = Rails，已簽章
+
+# Rails, encrypted
+tee1c631a = Rails，已加密
+
+# The session
+ta1d09f70 = 工作階段
+
+# a Ruby Marshal, which tracewing does not unpack
+t233296bb = Ruby Marshal，tracewing 不會解開
+
+# {n} bytes, in no format this knows
+t4da943df = { $n } 位元組，不是已知的格式
+
+# Framework
+t268bf6ab = 框架
+
+# Signed
+t27c3ab35 = 簽章時間
+
+# Signature
+tc049050d = 簽章
+
 # Trace
 t26f8e74e = 追蹤
 
@@ -3135,6 +3168,3 @@ tb643c704 = 服務
 
 # Headers signed
 t62bd9377 = 已簽章的標頭
-
-# Signature
-tc049050d = 簽章

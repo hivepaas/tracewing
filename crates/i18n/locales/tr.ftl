@@ -2986,6 +2986,9 @@ t6da81e5b = JWE, şifreli bir token
 # PASETO
 t309420ff = PASETO
 
+# A framework's session cookie
+t9e2ffd00 = Bir framework'ün oturum çerezi
+
 # SAML
 t015e7110 = SAML
 
@@ -3139,6 +3142,36 @@ t3890a578 = Oluşturuldu
 # Named
 t6055a346 = Adı
 
+# Flask, signed by itsdangerous
+t68251d55 = Flask, itsdangerous ile imzalı
+
+# Django
+ta762cbfe = Django
+
+# Rails, signed
+t3c6b40ce = Rails, imzalı
+
+# Rails, encrypted
+tee1c631a = Rails, şifreli
+
+# The session
+ta1d09f70 = Oturum
+
+# a Ruby Marshal, which tracewing does not unpack
+t233296bb = Ruby Marshal, tracewing bunu açmıyor
+
+# {n} bytes, in no format this knows
+t4da943df = { $n } bayt, bilinen bir biçimde değil
+
+# Framework
+t268bf6ab = Framework
+
+# Signed
+t27c3ab35 = İmzalandı
+
+# Signature
+tc049050d = İmza
+
 # Trace
 t26f8e74e = İzleme
 
@@ -3228,6 +3261,3 @@ tb643c704 = Hizmet
 
 # Headers signed
 t62bd9377 = İmzalanan başlıklar
-
-# Signature
-tc049050d = İmza

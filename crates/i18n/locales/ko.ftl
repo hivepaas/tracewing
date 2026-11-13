@@ -2893,6 +2893,9 @@ t6da81e5b = JWE, 암호화된 토큰
 # PASETO
 t309420ff = PASETO
 
+# A framework's session cookie
+t9e2ffd00 = 프레임워크의 세션 쿠키
+
 # SAML
 t015e7110 = SAML
 
@@ -3046,6 +3049,36 @@ t3890a578 = 생성
 # Named
 t6055a346 = 이름
 
+# Flask, signed by itsdangerous
+t68251d55 = Flask, itsdangerous로 서명
+
+# Django
+ta762cbfe = Django
+
+# Rails, signed
+t3c6b40ce = Rails, 서명됨
+
+# Rails, encrypted
+tee1c631a = Rails, 암호화됨
+
+# The session
+ta1d09f70 = 세션
+
+# a Ruby Marshal, which tracewing does not unpack
+t233296bb = Ruby Marshal, tracewing은 풀지 않습니다
+
+# {n} bytes, in no format this knows
+t4da943df = { $n } 바이트, 아는 형식이 아닙니다
+
+# Framework
+t268bf6ab = 프레임워크
+
+# Signed
+t27c3ab35 = 서명 시각
+
+# Signature
+tc049050d = 서명
+
 # Trace
 t26f8e74e = 트레이스
 
@@ -3135,6 +3168,3 @@ tb643c704 = 서비스
 
 # Headers signed
 t62bd9377 = 서명된 헤더
-
-# Signature
-tc049050d = 서명

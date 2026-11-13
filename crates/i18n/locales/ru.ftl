@@ -3124,6 +3124,9 @@ t6da81e5b = JWE, зашифрованный токен
 # PASETO
 t309420ff = PASETO
 
+# A framework's session cookie
+t9e2ffd00 = Сессионная cookie фреймворка
+
 # SAML
 t015e7110 = SAML
 
@@ -3277,6 +3280,36 @@ t3890a578 = Создано
 # Named
 t6055a346 = Имя
 
+# Flask, signed by itsdangerous
+t68251d55 = Flask, подписано itsdangerous
+
+# Django
+ta762cbfe = Django
+
+# Rails, signed
+t3c6b40ce = Rails, подписано
+
+# Rails, encrypted
+tee1c631a = Rails, зашифровано
+
+# The session
+ta1d09f70 = Сессия
+
+# a Ruby Marshal, which tracewing does not unpack
+t233296bb = Ruby Marshal, который tracewing не распаковывает
+
+# {n} bytes, in no format this knows
+t4da943df = { $n } байт, формат неизвестен
+
+# Framework
+t268bf6ab = Фреймворк
+
+# Signed
+t27c3ab35 = Подписано
+
+# Signature
+tc049050d = Подпись
+
 # Trace
 t26f8e74e = Трассировка
 
@@ -3366,6 +3399,3 @@ tb643c704 = Сервис
 
 # Headers signed
 t62bd9377 = Подписанные заголовки
-
-# Signature
-tc049050d = Подпись
