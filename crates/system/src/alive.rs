@@ -13,7 +13,7 @@
 use anyhow::{Context, Result};
 use std::{fs, io, path::Path};
 
-const ALIVE_FILE: &str = "sysproxy.alive";
+pub(crate) const ALIVE_FILE: &str = "sysproxy.alive";
 
 /// The lock, held for as long as the system proxy is the app's. It goes when
 /// this is dropped, and when the process ends in any way at all.
@@ -53,6 +53,41 @@ pub fn app_is_gone(data_dir: &Path) -> bool {
     }
 }
 
+/// Waits for the app that turned the system proxy on to go, however long that
+/// takes, and returns the moment it has.
+///
+/// The same lock as `app_is_gone`, asked to wait rather than to answer. A
+/// program forked in the meantime with a copy of the lock only makes this wait
+/// for it too, which is the right answer: the lock comes free when the last
+/// holder of it does. The lock is let go again on the way out, so that a
+/// tracewing started a moment later can take it.
+#[cfg(unix)]
+pub fn wait_until_gone(data_dir: &Path) -> io::Result<()> {
+    match open(&data_dir.join(ALIVE_FILE), false) {
+        Ok(file) => wait_for_lock(&file),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
+/// Windows: the app's handle shares the file with nobody, so the open itself
+/// is what waits, a second at a time, and the open that succeeds is the lock.
+#[cfg(windows)]
+pub fn wait_until_gone(data_dir: &Path) -> io::Result<()> {
+    const SHARING_VIOLATION: i32 = 32;
+    let path = data_dir.join(ALIVE_FILE);
+    loop {
+        match open(&path, false) {
+            Ok(_) => return Ok(()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
+            Err(e) if e.raw_os_error() == Some(SHARING_VIOLATION) => {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
+
 /// The file itself is never emptied or removed: the lock is all it is for, and
 /// a path that stays put is a path two processes can race for safely.
 fn open(path: &Path, create: bool) -> io::Result<fs::File> {
@@ -89,6 +124,21 @@ fn lock(file: &fs::File) -> io::Result<()> {
 #[cfg(windows)]
 fn lock(_file: &fs::File) -> io::Result<()> {
     Ok(())
+}
+
+#[cfg(unix)]
+fn wait_for_lock(file: &fs::File) -> io::Result<()> {
+    use std::os::unix::io::AsRawFd;
+    loop {
+        // SAFETY: a descriptor borrowed from a file that is open.
+        if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX) } == 0 {
+            return Ok(());
+        }
+        let e = io::Error::last_os_error();
+        if e.kind() != io::ErrorKind::Interrupted {
+            return Err(e);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -142,6 +192,33 @@ mod tests {
             gone_within(&dir, Duration::from_secs(5)),
             "dropped with the app's last breath"
         );
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    /// The agent on macOS waits rather than asks: it has to wake when the app
+    /// goes, and not before.
+    #[test]
+    fn a_wait_ends_when_the_app_does() {
+        let dir = folder("wait");
+        // A folder nothing has ever locked: no wait at all.
+        wait_until_gone(&dir).unwrap();
+
+        let held = hold_alive(&dir).unwrap();
+        let (done, ended) = std::sync::mpsc::channel();
+        let waiting = dir.clone();
+        std::thread::spawn(move || done.send(wait_until_gone(&waiting).is_ok()));
+        assert!(
+            ended.recv_timeout(Duration::from_millis(300)).is_err(),
+            "it waits for as long as the app holds the lock"
+        );
+        drop(held);
+        assert_eq!(
+            ended.recv_timeout(Duration::from_secs(10)),
+            Ok(true),
+            "and ends when the app lets it go"
+        );
+        // It let the lock go again on its way out, for the next tracewing.
+        assert!(gone_within(&dir, Duration::from_secs(5)));
         fs::remove_dir_all(&dir).ok();
     }
 

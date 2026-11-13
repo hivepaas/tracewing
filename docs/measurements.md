@@ -86,7 +86,11 @@ on its own proves nothing, because several clients go direct and still get one.
 
 **Recovery.** Before anything changes, the old settings go in a journal. A
 watchdog process waits on a pipe from the app, which closes however the app
-ends. The OS runs a recovery at the next login in case the watchdog dies too.
+ends. In case the watchdog dies too, Linux has a systemd timer and Windows a
+scheduled task that look once a minute, and macOS a launchd agent that waits
+for the app's lock to come free,
+which launchd starts again if it is killed; the OS also runs a recovery at the
+next login.
 
 | Case | Windows | macOS | GNOME | KDE |
 |---|---|---|---|---|
@@ -94,6 +98,8 @@ ends. The OS runs a recovery at the next login in case the watchdog dies too.
 | App killed: watchdog restores | yes | yes | yes | yes |
 | PAC/bypass settings come back exactly | yes | yes | yes | yes |
 | App and watchdog killed, then reboot and login | `RunOnce`: yes | LaunchAgent: yes | autostart written, login not run | same |
+| App killed by name (`pkill -9 tracewing`, `taskkill /IM tracewing.exe`) | watchdog `trw-watchdog.exe` left running | watchdog `trw-watchdog` left running (macOS 27, by hand): back in 0.5 s | not run | not run |
+| App and watchdog killed together (`pkill -9 -f tracewing`) | scheduled task: within a minute | launchd agent (macOS 27, by hand): back in 0.6 s, or by the minute if the setting was on for less than one | systemd timer: within a minute | same |
 | User chose another proxy meanwhile: left alone | yes | yes, after a fix | yes | not run |
 
 With the setting left on and nothing listening, the web really is gone

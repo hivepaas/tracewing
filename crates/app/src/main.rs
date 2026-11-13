@@ -15,7 +15,8 @@ use tracewing_system as system;
 
 /// `tracewing mcp`, which an AI tool starts to read the recorded traffic. And
 /// what the system crate runs this program for: `watchdog --data-dir D` when the
-/// app has gone, `sysproxy recover --data-dir D` at the next login, and on
+/// app has gone, `sysproxy recover --data-dir D` at the next login (the timer and
+/// the macOS agent run the public `recover`), and on
 /// Windows `block-quic --parent P --name N --data-dir D`, as administrator.
 fn helper_command(args: &[String]) -> Option<Result<()>> {
     let data_dir =

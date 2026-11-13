@@ -8,9 +8,11 @@
 //! - a watchdog process, which puts them back the moment the app dies, under
 //!   a name of its own so that a blanket kill of the app does not take the
 //!   safety net with it;
-//! - a timer, on the systems that have one, which looks once a minute for an
-//!   app that is gone and settings that are still its own — for when the
-//!   watchdog was killed along with the app, as `pkill tracewing` does;
+//! - something the OS itself keeps running, for when the watchdog was killed
+//!   along with the app, as `pkill tracewing` does: on Linux a timer that
+//!   looks once a minute for an app that is gone and settings that are still
+//!   its own, on macOS a launchd agent that waits for the app to go and that
+//!   launchd starts again if it is killed;
 //! - a recovery the OS runs at the next login, for when the machine went down
 //!   with everything on it.
 //!
@@ -42,7 +44,7 @@ pub mod android;
 pub mod ios_sim;
 pub mod launch;
 
-pub use alive::{Alive, app_is_gone, hold_alive};
+pub use alive::{Alive, app_is_gone, hold_alive, wait_until_gone};
 
 use anyhow::{Context, Result, bail};
 use hudsucker::rustls::{
@@ -61,10 +63,12 @@ use std::{
 use tracewing_proxy::ca::LocalCa;
 
 const JOURNAL_FILE: &str = "sysproxy.journal";
-/// The second name the watchdog is started under on Windows, beside the
-/// journal: see [`watchdog_program`].
+/// The second name the watchdog is started under on Windows and macOS, beside
+/// the journal: see [`watchdog_program`].
 #[cfg(windows)]
 const WATCHDOG_EXE: &str = "trw-watchdog.exe";
+#[cfg(target_os = "macos")]
+const WATCHDOG_EXE: &str = "trw-watchdog";
 const WATCHDOG_LOG: &str = "watchdog.log";
 /// The name issued in `verify_ca`; nothing ever connects to it.
 const PROBE_HOST: &str = "probe.invalid";
@@ -317,7 +321,7 @@ pub fn recover(data_dir: &Path) -> Result<Recovered> {
         // Nothing of ours is pending, so neither net has anything to put
         // back. A run that ended badly can still have left them armed, and a
         // timer nobody disarms wakes the machine once a minute for ever.
-        let _ = os::disarm_timer();
+        let _ = os::disarm_timer(&path);
         let _ = os::disarm_recovery();
         return Ok(Recovered::Nothing);
     };
@@ -335,7 +339,7 @@ pub fn recover(data_dir: &Path) -> Result<Recovered> {
     os::disarm_recovery()?;
     // The settings are what matter: a timer left on is worth saying and not
     // worth failing over, having just done the one thing it was there for.
-    if let Err(e) = os::disarm_timer() {
+    if let Err(e) = os::disarm_timer(&path) {
         tracing::warn!("the recovery timer stays on: {e:#}");
     }
     fs::remove_file(&path).with_context(|| format!("remove {}", path.display()))?;
@@ -349,6 +353,16 @@ pub fn recover_if_gone(data_dir: &Path) -> Result<Recovered> {
     if !app_is_gone(data_dir) {
         return Ok(Recovered::StillRunning);
     }
+    recover(data_dir)
+}
+
+/// Waits for the app that changed the settings to go, then puts them back.
+/// This is what the launchd agent runs on macOS: it costs a process that
+/// sleeps in the kernel, and gives the network back the moment the app has
+/// gone rather than up to a minute later.
+pub fn recover_when_gone(data_dir: &Path) -> Result<Recovered> {
+    let path = data_dir.join(alive::ALIVE_FILE);
+    wait_until_gone(data_dir).with_context(|| format!("wait on {}", path.display()))?;
     recover(data_dir)
 }
 
@@ -375,7 +389,8 @@ pub fn watchdog(data_dir: &Path) -> Result<()> {
 /// ends of its own accord a second after the app does. What it no longer does
 /// is die in the same breath as the app it is there to clean up after.
 ///
-/// Windows comes by the same name another way, in [`watchdog_program`].
+/// Windows and macOS come by the same name another way, in
+/// [`watchdog_program`].
 #[cfg(target_os = "linux")]
 fn name_itself() {
     // SAFETY: prctl takes a name of at most 16 bytes, ending in a zero, and
@@ -390,16 +405,22 @@ fn name_itself() {}
 /// What to start the watchdog as.
 ///
 /// On Linux it renames itself once it is running ([`name_itself`]). Windows
-/// has no such call: a process answers to the name of the file it was started
-/// from, so `taskkill /IM tracewing.exe` would take the watchdog with the app
-/// it is there to clean up after. It is started from a second name for the
+/// and macOS have no such call: a process answers to the name of the file it
+/// was started from, so `taskkill /IM tracewing.exe` or `pkill tracewing`
+/// would take the watchdog with the app it is there to clean up after. It is started from a second name for the
 /// same file instead — a hard link where the volume allows one, a copy where
 /// it does not — kept beside the journal and made again whenever the program
 /// it names has changed.
 ///
 /// Where none of that can be done, the program's own name: a watchdog that
 /// answers to `tracewing` is still a watchdog, and the timer stands behind it.
-#[cfg(windows)]
+///
+/// On macOS the link is to the program inside the app bundle. It runs from
+/// outside it as well: the signature is the file's own, and tracewing has no
+/// entitlements that would need the bundle's provisioning profile. A file a
+/// running watchdog was started from can be removed there, so the link is
+/// always the program as it is now.
+#[cfg(any(windows, target_os = "macos"))]
 fn watchdog_program(data_dir: &Path) -> Result<PathBuf> {
     let exe = std::env::current_exe()?;
     let named = data_dir.join(WATCHDOG_EXE);
@@ -428,7 +449,7 @@ fn watchdog_program(data_dir: &Path) -> Result<PathBuf> {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 fn watchdog_program(_data_dir: &Path) -> Result<PathBuf> {
     Ok(std::env::current_exe()?)
 }
@@ -473,13 +494,20 @@ fn recovery_command(data_dir: &Path) -> Result<Vec<String>> {
     ])
 }
 
+/// What the timer runs. The systemd timer starts it once a minute, and it
+/// answers at once; the launchd agent starts it once, and it waits.
 fn timer_command(data_dir: &Path) -> Result<Vec<String>> {
+    let when = if cfg!(target_os = "macos") {
+        "--wait"
+    } else {
+        "--only-if-gone"
+    };
     Ok(vec![
         std::env::current_exe()?.display().to_string(),
         "recover".to_owned(),
         "--data-dir".to_owned(),
         data_dir.display().to_string(),
-        "--only-if-gone".to_owned(),
+        when.to_owned(),
     ])
 }
 

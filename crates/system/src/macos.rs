@@ -1,5 +1,6 @@
 //! macOS: `networksetup` for the proxy of every network service, `security`
-//! for the keychains, a LaunchAgent for recovery at the next login.
+//! for the keychains, a LaunchAgent for recovery at the next login, and a
+//! launchd agent of the session's for a tracewing that is killed.
 //!
 //! Changing trust settings asks for the user's password, in a system dialog,
 //! whichever keychain the certificate goes in. There is no silent way, and
@@ -14,6 +15,12 @@ use super::{
 };
 
 const AGENT_LABEL: &str = "com.hivepaas.tracewing.proxy-recovery";
+/// The waiter's label, before the part that names its data folder.
+const WAITER_LABEL: &str = "com.hivepaas.tracewing.proxy-waiter";
+/// Where the waiter's plist is written for the moment launchd takes it in.
+const WAITER_PLIST: &str = "sysproxy.waiter.plist";
+/// What the waiter says, kept beside the watchdog's log.
+const WAITER_LOG: &str = "recovery.log";
 const SYSTEM_KEYCHAIN: &str = "/Library/Keychains/System.keychain";
 const CA_NAME: &str = "tracewing CA";
 const BYPASS: &[&str] = &["localhost", "127.0.0.1", "::1", "*.local"];
@@ -237,33 +244,126 @@ pub fn disarm_recovery() -> Result<()> {
     }
 }
 
-/// No timer here yet, and no pretence of one. Until there is one, a kill that
-/// takes the watchdog with it waits for the next login.
-///
-/// What it would be, for whoever writes it on a Mac — none of this should be
-/// written blind, which is why it is not written here:
-///
-/// - A second launchd agent beside [`arm_recovery`]'s, with `StartInterval`
-///   60 rather than `RunAtLoad`, running `tracewing recover --only-if-gone`,
-///   written and removed with the setting as the Linux timer is. `launchctl
-///   bootstrap gui/$UID` loads it; `bootout` takes it away.
-/// - The lock it judges by already works here: [`crate::app_is_gone`] is
-///   `flock`, the same as on Linux.
-/// - The watchdog needs a name of its own too, or `pkill tracewing` takes it
-///   with the app. macOS has no `prctl`, so it is Windows' way:
-///   `watchdog_program` in this crate's root, started from a hard link called
-///   `trw-watchdog` beside the journal.
-/// - Two things Linux needed that macOS may not: the timer's own environment
-///   (systemd's user manager is not told what the session knows, and the
-///   command could not find the proxy setting without it), and keeping the
-///   log quiet (a line a minute, for the whole of a session, is noise).
-///   Whatever the Mac turns out to need, say so where it is found.
-pub fn arm_timer(_command: &[String], _journal: &Path) -> Result<()> {
-    Ok(())
+/// The domain of this user's login session, which is where an agent runs
+/// with the session's access to the network settings.
+fn gui_domain() -> String {
+    // SAFETY: getuid cannot fail.
+    format!("gui/{}", unsafe { libc::getuid() })
 }
 
-pub fn disarm_timer() -> Result<()> {
-    Ok(())
+/// Waits, from a process launchd keeps, for the app to go, and then puts the
+/// settings back: the timer of Linux, without the minute.
+///
+/// launchd starts `command` at once and starts it again whenever it ends with
+/// the journal still there — a `pkill tracewing` takes it with the app, and
+/// launchd brings it straight back to find the app gone. Once the journal is
+/// gone it is left ended. It belongs to this session alone: it is not in
+/// `~/Library/LaunchAgents`, so it neither comes back at the next login (the
+/// login agent is there for that) nor appears among the login items. The
+/// plist is read once and removed, so nothing of it stays on disk.
+pub fn arm_timer(command: &[String], journal: &Path) -> Result<()> {
+    let dir = journal.parent().context("the journal has no folder")?;
+    let path = dir.join(WAITER_PLIST);
+    let plist = waiter_plist(
+        &waiter_label(journal),
+        command,
+        journal,
+        &dir.join(WAITER_LOG),
+    );
+    fs::write(&path, plist).with_context(|| format!("write {}", path.display()))?;
+    // One that is still there from before is replaced, not added to.
+    let _ = disarm_timer(journal);
+    let loaded = run(
+        "/bin/launchctl",
+        &["bootstrap", &gui_domain(), &path.display().to_string()],
+    );
+    let _ = fs::remove_file(&path);
+    loaded.map(|_| ())
+}
+
+/// One waiter for each data folder, as there is one journal for each: a
+/// tracewing with a folder of its own — a test's, say — never takes another's
+/// waiter away. The folder is named by a hash that does not change from one
+/// build of tracewing to the next, so that the version that disarms it finds
+/// what the version before it armed.
+fn waiter_label(journal: &Path) -> String {
+    let dir = journal.parent().unwrap_or(journal);
+    let dir = fs::canonicalize(dir).unwrap_or_else(|_| dir.to_owned());
+    // FNV-1a, 64 bits.
+    let hash = dir
+        .as_os_str()
+        .as_encoded_bytes()
+        .iter()
+        .fold(0xcbf2_9ce4_8422_2325_u64, |hash, &byte| {
+            (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+        });
+    format!("{WAITER_LABEL}.{hash:016x}")
+}
+
+fn waiter_plist(label: &str, command: &[String], journal: &Path, log: &Path) -> String {
+    let args: String = command
+        .iter()
+        .map(|part| format!("    <string>{}</string>\n", escape_xml(part)))
+        .collect();
+    let journal = escape_xml(&journal.display().to_string());
+    let log = escape_xml(&log.display().to_string());
+    // KeepAlive while the journal is there: a waiter killed or failed comes
+    // back, one that has put the settings back and removed the journal does
+    // not. ThrottleInterval bounds the coming back: one that has waited
+    // longer than it comes back at once, one that fails at once — the
+    // settings cannot be read, say — comes back once a minute, as on Linux.
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>{label}</string>
+  <key>ProgramArguments</key>
+  <array>
+{args}  </array>
+  <key>KeepAlive</key>
+  <dict>
+    <key>PathState</key>
+    <dict>
+      <key>{journal}</key>
+      <true/>
+    </dict>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>60</integer>
+  <key>StandardOutPath</key>
+  <string>{log}</string>
+  <key>StandardErrorPath</key>
+  <string>{log}</string>
+</dict>
+</plist>
+"#
+    )
+}
+
+pub fn disarm_timer(journal: &Path) -> Result<()> {
+    let label = waiter_label(journal);
+    // The waiter itself, having put the settings back: taking itself out of
+    // launchd would be launchd ending it before the journal goes. It ends on
+    // its own a moment later, and with no journal launchd leaves it ended: an
+    // entry with no process, until the session ends or tracewing next starts
+    // and finds nothing to recover, which takes it out.
+    if std::env::var("XPC_SERVICE_NAME").is_ok_and(|name| name == label) {
+        return Ok(());
+    }
+    let target = format!("{}/{label}", gui_domain());
+    // Nothing was armed: say so without asking launchd to remove it.
+    if Command::new("/bin/launchctl")
+        .args(["print", &target])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|status| !status.success())
+    {
+        return Ok(());
+    }
+    run("/bin/launchctl", &["bootout", &target]).map(|_| ())
 }
 
 fn login_keychain() -> Result<String> {
@@ -433,4 +533,77 @@ pub fn trust_in_profile(_profile: &Path, _cert_pem: &Path) -> Result<()> {
 /// The system proxy is always there to set, and the stores need no tool.
 pub fn environment() -> Environment {
     Environment::default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// launchd keeps the waiter while there is a journal and only then, and
+    /// reads every argument as written, whatever the data folder is called.
+    #[test]
+    fn the_waiter_lives_as_long_as_the_journal() {
+        let command = [
+            "/Applications/t & w.app/Contents/MacOS/tracewing",
+            "recover",
+            "--data-dir",
+            "/d/<x>",
+            "--wait",
+        ]
+        .map(str::to_owned);
+        let plist = waiter_plist(
+            "com.hivepaas.tracewing.proxy-waiter.0123456789abcdef",
+            &command,
+            Path::new("/d/<x>/sysproxy.journal"),
+            Path::new("/d/<x>/recovery.log"),
+        );
+        assert!(
+            plist.contains("<string>com.hivepaas.tracewing.proxy-waiter.0123456789abcdef</string>")
+        );
+        assert!(
+            plist.contains("<string>/Applications/t &amp; w.app/Contents/MacOS/tracewing</string>"),
+            "{plist}"
+        );
+        assert!(plist.contains("<string>/d/&lt;x&gt;</string>"), "{plist}");
+        assert!(
+            plist.contains(
+                "<key>PathState</key>\n    <dict>\n      <key>/d/&lt;x&gt;/sysproxy.journal</key>\n      <true/>"
+            ),
+            "{plist}"
+        );
+        assert!(plist.contains("<key>ThrottleInterval</key>\n  <integer>60</integer>"));
+        // Nothing that would bring it back at a login or with no journal.
+        assert!(!plist.contains("RunAtLoad"), "{plist}");
+        assert!(!plist.contains("SuccessfulExit"), "{plist}");
+        // The plist parses: plutil is on every Mac.
+        let file = std::env::temp_dir().join(format!("waiter-{}.plist", std::process::id()));
+        fs::write(&file, &plist).unwrap();
+        let lint = Command::new("/usr/bin/plutil")
+            .arg("-lint")
+            .arg(&file)
+            .output()
+            .unwrap();
+        fs::remove_file(&file).ok();
+        assert!(lint.status.success(), "{lint:?}");
+    }
+
+    /// The same folder, however it is spelled, is the same waiter; another
+    /// folder is another.
+    #[test]
+    fn a_waiter_for_each_data_folder() {
+        let dir = std::env::temp_dir().join(format!("waiter-label-{}", std::process::id()));
+        fs::create_dir_all(dir.join("sub")).unwrap();
+        let label = waiter_label(&dir.join("sysproxy.journal"));
+        assert!(
+            label.starts_with("com.hivepaas.tracewing.proxy-waiter."),
+            "{label}"
+        );
+        assert_eq!(
+            waiter_label(&dir.join("sub/../sysproxy.journal")),
+            label,
+            "the folder, not its spelling"
+        );
+        assert_ne!(waiter_label(&dir.join("sub/sysproxy.journal")), label);
+        fs::remove_dir_all(&dir).ok();
+    }
 }

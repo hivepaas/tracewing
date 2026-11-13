@@ -92,10 +92,15 @@ enum Command {
         #[arg(long)]
         data_dir: Option<PathBuf>,
         /// Put it back only if tracewing has gone, and leave a running app
-        /// alone. This is what the minute timer behind the setting runs, and
-        /// it is the safe one to put in a script of your own.
+        /// alone. This is what the minute timer behind the setting runs on
+        /// Linux, and it is the safe one to put in a script of your own.
         #[arg(long)]
         only_if_gone: bool,
+        /// Wait for tracewing to go, however long that takes, and put it back
+        /// the moment it has. This is what the agent behind the setting runs
+        /// on macOS.
+        #[arg(long, conflicts_with = "only_if_gone")]
+        wait: bool,
     },
     /// Undo what tracewing did to this computer: take the certificate
     /// authority out of every store that trusts it, and put the system proxy
@@ -188,9 +193,12 @@ pub fn run(args: &[String]) -> Result<()> {
         Command::Recover {
             data_dir,
             only_if_gone,
+            wait,
         } => {
             let dir = data_dir.unwrap_or_else(default_data_dir);
-            let outcome = if only_if_gone {
+            let outcome = if wait {
+                tracewing_system::recover_when_gone(&dir)?
+            } else if only_if_gone {
                 tracewing_system::recover_if_gone(&dir)?
             } else {
                 tracewing_system::recover(&dir)?

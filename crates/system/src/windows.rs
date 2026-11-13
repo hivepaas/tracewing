@@ -398,7 +398,7 @@ pub fn arm_timer(command: &[String], _journal: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn disarm_timer() -> Result<()> {
+pub fn disarm_timer(_journal: &Path) -> Result<()> {
     // Nothing was armed: say so without asking Task Scheduler to do anything.
     if !schtasks(&["/Query", "/TN", TASK_NAME])?.status.success() {
         return Ok(());
