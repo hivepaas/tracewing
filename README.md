@@ -78,17 +78,20 @@ listens on, so **every program on the machine loses the network** — browsers
 first, and nothing says why.
 
 tracewing puts the setting back when it is closed, when it next starts, and from
-a watchdog process the moment it dies. That watchdog runs under a name of its
-own, `trw-watchdog`, so that `pkill tracewing` — which matches every name with
-tracewing in it — does not take the safety net along with the app. It is a
-second of waiting and a line in `ps`, not a hidden thing: `pkill -f tracewing`
-still finds it. On Linux a systemd user timer stands
-behind those: once a minute it looks for a journal left by a tracewing that is
-gone, which is the case the watchdog cannot cover because `pkill tracewing`
-takes the watchdog with the app. **The network comes back by itself within a
-minute**, and the timer is armed and disarmed with the setting, so nothing of it
-is left when the setting is off. macOS and Windows have no such timer yet: there
-the next login is what puts it back.
+a watchdog process the moment it dies. That watchdog goes by a name of its own,
+`trw-watchdog`, so that ending the app by name — `pkill tracewing`, which
+matches every name with tracewing in it, or `taskkill /IM tracewing.exe` — does
+not take the safety net along with it. It is a second of waiting and a line in
+`ps` or Task Manager, not a hidden thing: `pkill -f tracewing` still finds it.
+
+On Linux and Windows a timer stands behind those: once a minute it looks for a
+journal left by a tracewing that is gone, which is the case the watchdog cannot
+cover, because whatever killed the app may have taken the watchdog too. **The
+network comes back by itself within a minute.** The timer is armed and disarmed
+with the setting, so nothing of it is left when the setting is off: a systemd
+user timer on Linux, a scheduled task on Windows, which runs without a session
+of its own and so puts no window on the screen. macOS has no such timer yet:
+there the next login is what puts it back.
 
 To have it back now, or on an OS with no timer, one command undoes it:
 

@@ -261,14 +261,155 @@ pub fn disarm_recovery() -> Result<()> {
     })
 }
 
-/// No timer here yet, and no pretence of one: a scheduled task would do what
-/// the systemd user timer does on Linux. Until there is one, a kill that takes
-/// the watchdog with it waits for the next login, which is when RunOnce runs.
-pub fn arm_timer(_command: &[String], _journal: &Path) -> Result<()> {
+const TASK_NAME: &str = "tracewing-proxy-recovery";
+
+/// schtasks, with no console window of its own.
+fn schtasks(args: &[&str]) -> Result<std::process::Output> {
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let mut command = std::process::Command::new("schtasks.exe");
+    command.args(args);
+    std::os::windows::process::CommandExt::creation_flags(&mut command, CREATE_NO_WINDOW);
+    command.output().context("run schtasks")
+}
+
+fn escape_xml(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
+/// Whose task it is: the account Task Scheduler is to run it as.
+///
+/// The name on its own, which Windows resolves against this machine and, on
+/// one that has joined a domain, against the domain. Not
+/// `%USERDOMAIN%\%USERNAME%`: on a machine that has joined nothing,
+/// `USERDOMAIN` holds the workgroup's name — `WORKGROUP` — and no account
+/// answers to that. Task Scheduler's words for it are "No mapping between
+/// account names and security IDs was done".
+fn whose() -> Result<String> {
+    std::env::var("USERNAME").context("USERNAME is not set")
+}
+
+/// The task's definition, as Task Scheduler keeps it.
+///
+/// Registered from XML rather than from `schtasks` arguments, because two
+/// things that matter here can only be said this way: that it runs **without
+/// the user's password** (S4U), and that it repeats for ever rather than for
+/// a day.
+///
+/// S4U is not a detail. tracewing is one program for the window and the
+/// command line, so it is built for the console; a task running in the user's
+/// own session would put a console window on their screen once a minute, for
+/// as long as the system proxy was on. S4U has no session and no desktop, so
+/// there is nothing to see.
+fn task_xml(command: &[String], user: &str) -> Result<String> {
+    let (program, args) = command.split_first().context("no program for the timer")?;
+    let arguments = args
+        .iter()
+        .map(|arg| {
+            if arg.contains(' ') {
+                format!("\"{arg}\"")
+            } else {
+                arg.clone()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    Ok(format!(
+        r#"<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Author>tracewing</Author>
+    <Description>Puts the system proxy back if tracewing is gone, so that the network comes back by itself.</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <TimeTrigger>
+      <StartBoundary>2000-01-01T00:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <Repetition>
+        <Interval>PT1M</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+    </TimeTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>{user}</UserId>
+      <LogonType>S4U</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <Hidden>true</Hidden>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <ExecutionTimeLimit>PT1M</ExecutionTimeLimit>
+    <AllowHardTerminate>true</AllowHardTerminate>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>{program}</Command>
+      <Arguments>{arguments}</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+"#,
+        user = escape_xml(user),
+        program = escape_xml(&program.to_string()),
+        arguments = escape_xml(&arguments),
+    ))
+}
+
+/// Runs `command` once a minute, for as long as the system proxy is ours.
+///
+/// A scheduled task, which goes on running after `taskkill` has taken both
+/// tracewing and the watchdog: Task Scheduler, not the app, is what starts
+/// it. It is registered when the system proxy goes on and deleted when it
+/// goes off, so nothing of it is left behind.
+pub fn arm_timer(command: &[String], _journal: &Path) -> Result<()> {
+    let xml = task_xml(command, &whose()?)?;
+    // Task Scheduler reads these as Unicode, and says nothing useful when
+    // they are not.
+    let mut bytes = vec![0xFF, 0xFE];
+    for unit in xml.encode_utf16() {
+        bytes.extend_from_slice(&unit.to_le_bytes());
+    }
+    let path = std::env::temp_dir().join(format!("{TASK_NAME}.xml"));
+    std::fs::write(&path, &bytes).with_context(|| format!("write {}", path.display()))?;
+    let out = schtasks(&[
+        "/Create",
+        "/TN",
+        TASK_NAME,
+        "/XML",
+        &path.display().to_string(),
+        "/F",
+    ]);
+    let _ = std::fs::remove_file(&path);
+    let out = out?;
+    if !out.status.success() {
+        bail!(
+            "schtasks would not take the task: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
     Ok(())
 }
 
 pub fn disarm_timer() -> Result<()> {
+    // Nothing was armed: say so without asking Task Scheduler to do anything.
+    if !schtasks(&["/Query", "/TN", TASK_NAME])?.status.success() {
+        return Ok(());
+    }
+    let out = schtasks(&["/Delete", "/TN", TASK_NAME, "/F"])?;
+    if !out.status.success() {
+        bail!(
+            "schtasks would not delete the task: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
     Ok(())
 }
 
@@ -472,4 +613,59 @@ pub fn trust_in_profile(_profile: &Path, _cert_pem: &Path) -> Result<()> {
 /// The system proxy is always there to set, and the stores need no tool.
 pub fn environment() -> Environment {
     Environment::default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The two things the XML is there for, which `schtasks` arguments cannot
+    /// say: that it runs without the user's password, and that it repeats for
+    /// ever rather than for a day.
+    #[test]
+    fn the_task_runs_every_minute_without_a_password() {
+        let command = [
+            r"C:\Program Files\tracewing\tracewing.exe",
+            "recover",
+            "--data-dir",
+            r"C:\d",
+            "--only-if-gone",
+        ]
+        .map(str::to_owned);
+        let xml = task_xml(&command, r"WORKGROUP\somebody").unwrap();
+        assert!(xml.contains("<LogonType>S4U</LogonType>"), "{xml}");
+        assert!(xml.contains("<Interval>PT1M</Interval>"), "{xml}");
+        assert!(
+            !xml.contains("<Duration>"),
+            "for ever, not for a day: {xml}"
+        );
+        assert!(
+            xml.contains(r"<UserId>WORKGROUP\somebody</UserId>"),
+            "{xml}"
+        );
+        // The program and what follows it are two fields, so a folder with a
+        // space in its name needs no quoting of the program itself.
+        assert!(
+            xml.contains(r"<Command>C:\Program Files\tracewing\tracewing.exe</Command>"),
+            "{xml}"
+        );
+        assert!(
+            xml.contains(r"<Arguments>recover --data-dir C:\d --only-if-gone</Arguments>"),
+            "{xml}"
+        );
+    }
+
+    /// A data folder may be anywhere and may be called anything, and XML has
+    /// characters of its own that must go in as text.
+    #[test]
+    fn a_folder_named_in_xml_characters_goes_in_as_text() {
+        let command = [r"C:\t.exe", "recover", "--data-dir", r"C:\a&b<c>"].map(str::to_owned);
+        let xml = task_xml(&command, "WORKGROUP\\a&b").unwrap();
+        assert!(xml.contains(r"C:\a&amp;b&lt;c&gt;"), "{xml}");
+        assert!(xml.contains(r"<UserId>WORKGROUP\a&amp;b</UserId>"), "{xml}");
+        // And a folder with a space in it is one argument, not two.
+        let spaced = [r"C:\t.exe", "recover", "--data-dir", r"C:\two words"].map(str::to_owned);
+        let xml = task_xml(&spaced, "me").unwrap();
+        assert!(xml.contains(r"&quot;C:\two words&quot;"), "{xml}");
+    }
 }
