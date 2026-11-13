@@ -4,11 +4,11 @@
 
 use std::{ops::Range, sync::Arc};
 
-use gpui::{AppContext as _, Context, HighlightStyle, ScrollStrategy, point, px, rgb};
+use gpui::{AppContext as _, Context, ScrollStrategy, point, px};
 use regex::Regex;
 
 use super::{BodyView, INDENT_MAX, INDENT_W};
-use crate::{body::Body, colors::colors, table, table::Table, wrap};
+use crate::{body::Body, table, table::Table, wrap};
 
 /// The most a search finds: past it the count says so, and stops.
 pub const FOUND_MAX: usize = 10_000;
@@ -41,14 +41,7 @@ pub struct FindCount {
     pub capped: bool,
 }
 
-/// Behind what Find found, the one it is at brighter.
-pub(super) fn found_style(now: bool) -> HighlightStyle {
-    let c = colors();
-    HighlightStyle {
-        background_color: Some(rgb(if now { c.found_now } else { c.found }).into()),
-        ..Default::default()
-    }
-}
+pub(super) use crate::find::found_style;
 
 /// Searches `from` on, a chunk: the hits, where the next chunk starts, and
 /// whether there is no more.

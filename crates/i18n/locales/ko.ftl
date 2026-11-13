@@ -700,8 +700,8 @@ tfa6e7203 = 폼 { $form }
 # Connection
 t09ea4ff9 = 연결
 
-# Find in the body (Ctrl+F)
-tb52d85cd = 본문에서 찾기 (Ctrl+F)
+# Find (Ctrl+F)
+t1a435961 = 찾기 (Ctrl+F)
 
 # Save body
 te2c44424 = 본문 저장

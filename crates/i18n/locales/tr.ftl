@@ -729,8 +729,8 @@ tfa6e7203 = Form { $form }
 # Connection
 t09ea4ff9 = Bağlantı
 
-# Find in the body (Ctrl+F)
-tb52d85cd = Gövdede bul (Ctrl+F)
+# Find (Ctrl+F)
+t1a435961 = Bul (Ctrl+F)
 
 # Save body
 te2c44424 = Gövdeyi kaydet

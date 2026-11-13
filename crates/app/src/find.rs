@@ -48,6 +48,15 @@ pub fn matcher(query: &str, options: FindOptions) -> Result<Option<Regex>, Strin
         })
 }
 
+/// Behind what Find found, the one it is at brighter.
+pub fn found_style(now: bool) -> gpui::HighlightStyle {
+    let c = crate::colors::colors();
+    gpui::HighlightStyle {
+        background_color: Some(gpui::rgb(if now { c.found_now } else { c.found }).into()),
+        ..Default::default()
+    }
+}
+
 /// Where `re` finds something in `text`: what it finds empty, as `^`, is
 /// passed over, as there is nothing to show of it.
 pub fn found(re: &Regex, text: &str) -> impl Iterator<Item = Range<usize>> {

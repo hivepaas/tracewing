@@ -700,8 +700,8 @@ tfa6e7203 = Form { $form }
 # Connection
 t09ea4ff9 = Koneksi
 
-# Find in the body (Ctrl+F)
-tb52d85cd = Cari di isi (Ctrl+F)
+# Find (Ctrl+F)
+t1a435961 = Cari (Ctrl+F)
 
 # Save body
 te2c44424 = Simpan body

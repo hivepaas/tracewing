@@ -859,6 +859,13 @@ impl Traffic {
                     .child(tr!("Choose a flow to see it here")),
             );
         };
+        // The part first: a part drawn whole says its pieces as it is made,
+        // and Find counts in them.
+        let parts = self.render_parts(&detail, cx).into_any_element();
+        let shown = self.render_part(&detail, cx);
+        let find = self
+            .render_find_bar(cx)
+            .filter(|_| self.inspector.part != Part::Messages);
         panel
             .child(render_title(&detail))
             .child(self.render_decrypt_choice(&detail, cx))
@@ -870,12 +877,9 @@ impl Traffic {
             }))
             .children(render_timing(&detail).filter(|_| !self.inspector.timing_hidden))
             .child(self.render_sides(cx))
-            .child(self.render_parts(&detail, cx))
-            .children(
-                self.render_find_bar(cx)
-                    .filter(|_| self.inspector.part == Part::Body),
-            )
-            .child(self.render_part(&detail, cx))
+            .child(parts)
+            .children(find)
+            .child(shown)
     }
 
     /// Whether this host is decrypted, and the way to change that. An app that fails
@@ -1350,7 +1354,8 @@ impl Traffic {
             .children(self.render_hex_switch(part, cx))
             .children(self.render_read_as_button(cx))
             .when(
-                part == Part::Body && matches!(self.inspector.body, BodyState::Shown(_)),
+                part != Part::Messages
+                    && (part != Part::Body || matches!(self.inspector.body, BodyState::Shown(_))),
                 |d| {
                     d.child(
                         div()
@@ -1364,7 +1369,7 @@ impl Traffic {
                             .reachable()
                             // On while Find is open; a press closes it again.
                             .bg(rgb(if finding { c.accent } else { c.chip }))
-                            .tooltip(tip(tr!("Find in the body (Ctrl+F)")))
+                            .tooltip(tip(tr!("Find (Ctrl+F)")))
                             .child(icon(
                                 "search",
                                 14.,

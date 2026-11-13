@@ -735,8 +735,8 @@ tfa6e7203 = Formulaire { $form }
 # Connection
 t09ea4ff9 = Connexion
 
-# Find in the body (Ctrl+F)
-tb52d85cd = Rechercher dans le corps (Ctrl+F)
+# Find (Ctrl+F)
+t1a435961 = Rechercher (Ctrl+F)
 
 # Save body
 te2c44424 = Enregistrer le corps

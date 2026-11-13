@@ -735,8 +735,8 @@ tfa6e7203 = Modulo { $form }
 # Connection
 t09ea4ff9 = Connessione
 
-# Find in the body (Ctrl+F)
-tb52d85cd = Trova nel corpo (Ctrl+F)
+# Find (Ctrl+F)
+t1a435961 = Trova (Ctrl+F)
 
 # Save body
 te2c44424 = Salva body

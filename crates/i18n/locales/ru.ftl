@@ -751,8 +751,8 @@ tfa6e7203 = Форма { $form }
 # Connection
 t09ea4ff9 = Подключение
 
-# Find in the body (Ctrl+F)
-tb52d85cd = Найти в теле (Ctrl+F)
+# Find (Ctrl+F)
+t1a435961 = Найти (Ctrl+F)
 
 # Save body
 te2c44424 = Сохранить тело
