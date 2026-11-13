@@ -2,8 +2,8 @@
 //! views name is written for body text at [`DRAWN_AT`] px and given in rems
 //! ([`ui`]), and the window's rem follows the body size chosen in Settings.
 //! So the whole window grows and shrinks together, text, rows and gaps, and
-//! nothing that fitted stops fitting. The design's size is the default: the
-//! window shows a lot, and was drawn for it.
+//! nothing that fitted stops fitting. The default, [`DEFAULT`], is a size
+//! larger than the design's: easier to read, and the window still shows a lot.
 //!
 //! Sizes a person chose by dragging, as a panel's width, stay in pixels.
 
@@ -11,6 +11,9 @@ use gpui::{Pixels, Rems, Window, px, rems};
 
 /// The body size the views' sizes are written for.
 pub const DRAWN_AT: f32 = 13.;
+
+/// The body size a window starts at, until another is chosen.
+pub const DEFAULT: u8 = 14;
 
 /// The body sizes Settings offer, in px.
 pub const CHOICES: [u8; 8] = [11, 12, 13, 14, 15, 16, 18, 20];
@@ -47,5 +50,6 @@ mod tests {
         assert_eq!(ui(13.).to_pixels(rem_for(DRAWN_AT)), px(13.));
         assert_eq!(ui(13.).to_pixels(rem_for(16.)), px(16.));
         assert!(CHOICES.contains(&(DRAWN_AT as u8)));
+        assert!(CHOICES.contains(&DEFAULT));
     }
 }

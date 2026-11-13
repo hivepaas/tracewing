@@ -66,7 +66,7 @@ const BAR_W: f32 = 10.;
 /// changes it many times a second.
 const SAVE_BOUNDS: Duration = Duration::from_millis(400);
 const THUMB_MIN: f32 = 28.;
-/// The least the inspector's - button leaves of it, wide or high.
+/// The least the inspector's - button leaves of it, wide or high, in pixels.
 pub const PANE_MIN: f32 = 100.;
 /// The least the inspector's - and + buttons move it by, in pixels.
 pub const STEP_MIN: f32 = 100.;
@@ -1392,8 +1392,11 @@ impl Traffic {
         let viewport = window.viewport_size();
         let sign = if larger { 1. } else { -1. };
         let fit = |now: f32, window: f32, room: f32| {
+            // Both in pixels on the screen, whatever the text size; the
+            // layout keeps sizes at the design's.
             let step = (window / 10.).max(STEP_MIN) / scale;
-            (now + sign * step).clamp(PANE_MIN, room.max(PANE_MIN))
+            let least = PANE_MIN / scale;
+            (now + sign * step).clamp(least, room.max(least))
         };
         match self.layout.place {
             Place::Beside => {
@@ -1509,7 +1512,8 @@ impl Traffic {
     pub fn text_size(&self) -> f32 {
         self.layout
             .text_size
-            .map_or(crate::text_size::DRAWN_AT, f32::from)
+            .unwrap_or(crate::text_size::DEFAULT)
+            .into()
     }
 
     fn list_max_scroll(&self) -> f32 {

@@ -79,6 +79,10 @@ fn minus_and_plus_resize_the_inspector_by_a_tenth_of_the_window() {
         })
         .unwrap();
 
+    // Sizes are kept at the design's (13 px text); the window draws at the
+    // default 14, so a pixel on the screen is 13/14 of one kept.
+    let kept = |px: f32| px * 13. / f32::from(tracewing::text_size::DEFAULT);
+
     // Below the list: − and + change its height, by a tenth of the window's
     // but at least 100 px: the window is 900 high, so 100.
     main.update(&mut cx, |view, _, cx| {
@@ -90,7 +94,7 @@ fn minus_and_plus_resize_the_inspector_by_a_tenth_of_the_window() {
     let start = Layout::default();
     let shorter = press(&mut cx, main, &dir, false, 1);
     assert!(
-        close(shorter.inspector_h, start.inspector_h - 100.),
+        close(shorter.inspector_h, start.inspector_h - kept(100.)),
         "{}",
         shorter.inspector_h
     );
@@ -107,7 +111,11 @@ fn minus_and_plus_resize_the_inspector_by_a_tenth_of_the_window() {
     shot(&mut cx, main.into(), "118-inspector-size-below");
     // Never under 100 px.
     let least = press(&mut cx, main, &dir, false, 40);
-    assert_eq!(least.inspector_h, PANE_MIN);
+    assert!(
+        close(least.inspector_h, kept(PANE_MIN)),
+        "{}",
+        least.inspector_h
+    );
     // Nor so tall that the list has less than its least: the window is 900
     // high, and the inspector stops short of it.
     let most = press(&mut cx, main, &dir, true, 60);
@@ -125,7 +133,7 @@ fn minus_and_plus_resize_the_inspector_by_a_tenth_of_the_window() {
     let before = Layout::load(&dir.join("layout.toml"));
     let narrower = press(&mut cx, main, &dir, false, 1);
     assert!(
-        close(narrower.inspector_w, before.inspector_w - 144.),
+        close(narrower.inspector_w, before.inspector_w - kept(144.)),
         "{}",
         narrower.inspector_w
     );
@@ -135,12 +143,13 @@ fn minus_and_plus_resize_the_inspector_by_a_tenth_of_the_window() {
     );
     let wider = press(&mut cx, main, &dir, true, 2);
     assert!(
-        close(wider.inspector_w, before.inspector_w + 144.),
+        close(wider.inspector_w, before.inspector_w + kept(144.)),
         "{}",
         wider.inspector_w
     );
     shot(&mut cx, main.into(), "119-inspector-size-beside");
-    assert_eq!(press(&mut cx, main, &dir, false, 40).inspector_w, PANE_MIN);
+    let narrowest = press(&mut cx, main, &dir, false, 40).inspector_w;
+    assert!(close(narrowest, kept(PANE_MIN)), "{narrowest}");
     let widest = press(&mut cx, main, &dir, true, 60);
     assert!(
         widest.inspector_w < 1440. - LIST_MIN,
