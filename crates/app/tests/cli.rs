@@ -13,9 +13,9 @@ fn tracewing() -> Command {
 }
 
 /// `tracewing recover`, with the XDG folders pointed inside `dir`. Putting the
-/// settings back takes the login recovery away with them, and on a machine
-/// somebody works on that entry belongs to whatever tracewing they have
-/// running, not to a test.
+/// settings back takes the login recovery and the minute timer away with
+/// them, and on a machine somebody works on those belong to whatever
+/// tracewing they have running, not to a test.
 fn recover(dir: &std::path::Path) -> Command {
     let mut command = tracewing();
     command
@@ -24,6 +24,36 @@ fn recover(dir: &std::path::Path) -> Command {
         .env("HOME", dir)
         .env("XDG_CONFIG_HOME", dir.join("config"));
     command
+}
+
+/// What `recover` leaves behind, either way. On a machine with a desktop it
+/// says which of the two happened and the journal goes with it. On one without
+/// — a build runner — there is no setting to read, so it says what it could
+/// not do and keeps the journal: that is the only record of what the settings
+/// were, and throwing it away on a machine that cannot read them would lose
+/// them for the machine that can.
+fn it_put_them_back_or_said_why_not(out: &std::process::Output, journal: &std::path::Path) {
+    let said = String::from_utf8_lossy(&out.stdout);
+    if out.status.success() {
+        assert!(
+            said.contains("left alone") || said.contains("back as it was"),
+            "it says which of the two happened: {said}"
+        );
+        assert!(
+            !journal.exists(),
+            "and the journal goes either way, so it cannot be used twice"
+        );
+    } else {
+        let complaint = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            complaint.contains("read this computer's proxy setting"),
+            "{complaint}"
+        );
+        assert!(
+            journal.exists(),
+            "and the journal stays, being all that is left of the settings"
+        );
+    }
 }
 
 /// A journal as a killed run leaves one: the address it pointed the system
@@ -189,32 +219,97 @@ fn recover_says_what_it_did_and_leaves_a_stranger_alone() {
     // this machine now: it must not put somebody else's settings back.
     journal_of_a_killed_run(&dir);
     let out = recover(&dir).output().unwrap();
+    it_put_them_back_or_said_why_not(&out, &dir.join("sysproxy.journal"));
+
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// What the minute timer runs, once a minute, for the whole of an ordinary
+/// session. A run of it against a healthy app has to come to nothing, or
+/// turning the system proxy on would take the network away a minute later.
+#[test]
+fn recover_only_if_gone_leaves_a_running_app_alone() {
+    let dir = std::env::temp_dir().join(format!("tracewing-if-gone-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let journal = dir.join("sysproxy.journal");
+    journal_of_a_killed_run(&dir);
+
+    // The lock an app holds for as long as the system proxy is its own, held
+    // here by the test: another process entirely, which is what the timer is.
+    let held = tracewing_system::hold_alive(&dir).unwrap();
+    let out = recover(&dir).arg("--only-if-gone").output().unwrap();
+    assert!(out.status.success(), "{out:?}");
     let said = String::from_utf8_lossy(&out.stdout);
-    if out.status.success() {
-        assert!(
-            said.contains("left alone") || said.contains("back as it was"),
-            "it says which of the two happened: {said}"
-        );
-        assert!(
-            !dir.join("sysproxy.journal").exists(),
-            "and the journal goes either way, so it cannot be used twice"
-        );
-    } else {
-        // A machine with no desktop, a build runner among them, has no system
-        // proxy setting that could have been changed. It says which half it
-        // could not do, and it keeps the journal: that is the only record of
-        // what the settings were, and throwing it away on a machine that
-        // cannot read them would lose them for the machine that can.
-        let complaint = String::from_utf8_lossy(&out.stderr);
-        assert!(
-            complaint.contains("read this computer's proxy setting"),
-            "{complaint}"
-        );
-        assert!(
-            dir.join("sysproxy.journal").exists(),
-            "and the journal stays, being all that is left of the settings"
-        );
-    }
+    assert!(said.contains("still running"), "{said}");
+    assert!(journal.exists(), "and the journal is left for the real end");
+
+    // The lock goes however the app ends. Now there is work to do — once no
+    // other test in this program is in the moment between starting a process
+    // and that process taking over, when the half-made process holds a copy
+    // of everything its parent had open, this lock among it.
+    drop(held);
+    let out = (0..50)
+        .find_map(|_| {
+            let out = recover(&dir).arg("--only-if-gone").output().unwrap();
+            if String::from_utf8_lossy(&out.stdout).contains("still running") {
+                std::thread::sleep(Duration::from_millis(20));
+                return None;
+            }
+            Some(out)
+        })
+        .expect("it went on saying tracewing was running");
+    it_put_them_back_or_said_why_not(&out, &journal);
+
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// `pkill tracewing` matches every process whose name has tracewing in it, so
+/// before the watchdog took a name of its own, the one process whose job was
+/// to survive the app died with it — and the machine kept the proxy setting
+/// and lost the network.
+#[cfg(target_os = "linux")]
+#[test]
+fn the_watchdog_is_not_caught_by_a_kill_of_the_app() {
+    let dir = std::env::temp_dir().join(format!("tracewing-watchdog-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let mut watchdog = tracewing()
+        .args(["watchdog", "--data-dir"])
+        .arg(&dir)
+        .env("HOME", &dir)
+        .env("XDG_CONFIG_HOME", dir.join("config"))
+        .stdin(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let comm = format!("/proc/{}/comm", watchdog.id());
+    // It is the program's own name until the watchdog has renamed itself,
+    // which is the first thing it does once it is running at all.
+    let name = (0..200)
+        .find_map(|_| {
+            let name = std::fs::read_to_string(&comm).unwrap_or_default();
+            if name.trim().is_empty() || name.trim() == "tracewing" {
+                std::thread::sleep(Duration::from_millis(10));
+                return None;
+            }
+            Some(name)
+        })
+        .unwrap_or_else(|| std::fs::read_to_string(&comm).unwrap_or_default());
+    assert!(
+        !name.contains("tracewing"),
+        "a name `pkill tracewing` would catch: {name}"
+    );
+
+    // And it hides from nobody: the command line is the one it was started
+    // with, which `pkill -f tracewing` reads.
+    let args = std::fs::read_to_string(format!("/proc/{}/cmdline", watchdog.id())).unwrap();
+    assert!(args.contains("tracewing"), "{args:?}");
+
+    // The app going is what it waits for, and then it has nothing to do: no
+    // journal, nothing to put back.
+    drop(watchdog.stdin.take());
+    assert!(watchdog.wait().unwrap().success());
 
     std::fs::remove_dir_all(&dir).ok();
 }

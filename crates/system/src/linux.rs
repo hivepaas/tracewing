@@ -6,7 +6,8 @@
 //!   most command-line programs. Chrome and Firefox do not read it: they read
 //!   NSS databases, one per browser and profile (`Scope::User`).
 //!
-//! Recovery at the next login is an XDG autostart entry.
+//! Recovery at the next login is an XDG autostart entry, and the minute timer
+//! behind it is a systemd user timer.
 
 use anyhow::{Context, Result, bail};
 use std::{
@@ -24,6 +25,8 @@ use super::{
 const NICKNAME: &str = "tracewing CA";
 const ANCHOR_NAME: &str = "tracewing-ca";
 const AUTOSTART_FILE: &str = "tracewing-proxy-recovery.desktop";
+const TIMER_SERVICE: &str = "tracewing-proxy-recovery.service";
+const TIMER_UNIT: &str = "tracewing-proxy-recovery.timer";
 const GNOME_BYPASS: &str = "['localhost', '127.0.0.0/8', '::1']";
 const KDE_BYPASS: &str = "localhost,127.0.0.1,::1";
 
@@ -233,11 +236,18 @@ fn home() -> Result<PathBuf> {
         .context("HOME is not set")
 }
 
-fn autostart_path() -> Result<PathBuf> {
-    let config = std::env::var_os("XDG_CONFIG_HOME")
+fn config_home() -> Result<PathBuf> {
+    std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
-        .map_or_else(|| Ok::<_, anyhow::Error>(home()?.join(".config")), Ok)?;
-    Ok(config.join("autostart").join(AUTOSTART_FILE))
+        .map_or_else(|| Ok::<_, anyhow::Error>(home()?.join(".config")), Ok)
+}
+
+fn autostart_path() -> Result<PathBuf> {
+    Ok(config_home()?.join("autostart").join(AUTOSTART_FILE))
+}
+
+fn units_dir() -> Result<PathBuf> {
+    Ok(config_home()?.join("systemd").join("user"))
 }
 
 /// Quotes one argument of an `Exec=` line, by the Desktop Entry rules.
@@ -270,6 +280,125 @@ pub fn disarm_recovery() -> Result<()> {
         Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
         _ => Ok(()),
     }
+}
+
+/// Quotes one argument of a unit file's `ExecStart=`, by systemd's rules: a
+/// double-quoted word, backslashes and quotes escaped inside it, and `%`
+/// doubled so that systemd does not read what follows as a specifier of its
+/// own. A data folder may be anywhere and may be called anything.
+fn unit_quote(part: &str) -> String {
+    let inner = part
+        .replace('\\', r"\\")
+        .replace('"', "\\\"")
+        .replace('%', "%%");
+    format!("\"{inner}\"")
+}
+
+/// Runs `command` once a minute, for as long as the system proxy is ours.
+///
+/// A systemd user timer, which goes with the user's session: it starts when
+/// they log in and stops when they log out, and it survives `pkill tracewing`
+/// because systemd, not the app, is what starts it. The service does nothing
+/// at all while there is no journal, and says so as a condition, so most
+/// minutes cost not even a process.
+pub fn arm_timer(command: &[String], journal: &Path) -> Result<()> {
+    if !on_path("systemctl") {
+        bail!("systemd is what runs the timer, and systemctl is not on the path");
+    }
+    let dir = units_dir()?;
+    fs::create_dir_all(&dir).with_context(|| format!("create {}", dir.display()))?;
+    // What systemd knows of the session is not always what the session knows:
+    // the desktop's name may never reach the user manager, and then the
+    // command would not know where this machine keeps its proxy setting.
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP").ok();
+    for (name, body) in unit_files(command, journal, desktop.as_deref()) {
+        let path = dir.join(name);
+        fs::write(&path, &body).with_context(|| format!("write {}", path.display()))?;
+    }
+    run("systemctl", &["--user", "daemon-reload"])?;
+    run("systemctl", &["--user", "enable", "--now", TIMER_UNIT])?;
+    Ok(())
+}
+
+/// The two unit files, by name: what to run, and when to run it.
+fn unit_files(
+    command: &[String],
+    journal: &Path,
+    desktop: Option<&str>,
+) -> [(&'static str, String); 2] {
+    let exec = command
+        .iter()
+        .map(|part| unit_quote(part))
+        .collect::<Vec<_>>()
+        .join(" ");
+    // A path is written as it is, except for the per-cent sign, which systemd
+    // would read as the start of a name of its own.
+    let journal = journal.display().to_string().replace('%', "%%");
+    let desktop = desktop
+        .map(|name| {
+            format!(
+                "Environment={}\n",
+                unit_quote(&format!("XDG_CURRENT_DESKTOP={name}"))
+            )
+        })
+        .unwrap_or_default();
+    [
+        (
+            TIMER_SERVICE,
+            // LogLevelMax keeps systemd from saying it has started and
+            // finished this, once a minute, for the whole of a session. What
+            // the command itself has to say still goes to the journal.
+            format!(
+                "[Unit]\n\
+                 Description=Put the system proxy back if tracewing is gone\n\
+                 ConditionPathExists={journal}\n\
+                 \n\
+                 [Service]\n\
+                 Type=oneshot\n\
+                 LogLevelMax=warning\n\
+                 {desktop}\
+                 ExecStart={exec}\n"
+            ),
+        ),
+        (
+            TIMER_UNIT,
+            // OnActiveSec for the first look after the timer is armed,
+            // OnUnitActiveSec for every one after that. Without the first
+            // there is no second: a minute after the last run, with no last
+            // run, is never.
+            "[Unit]\n\
+             Description=Look once a minute for a tracewing that left the system proxy behind\n\
+             \n\
+             [Timer]\n\
+             OnActiveSec=1min\n\
+             OnUnitActiveSec=1min\n\
+             AccuracySec=10s\n\
+             \n\
+             [Install]\n\
+             WantedBy=timers.target\n"
+                .to_owned(),
+        ),
+    ]
+}
+
+pub fn disarm_timer() -> Result<()> {
+    let dir = units_dir()?;
+    let units = [dir.join(TIMER_SERVICE), dir.join(TIMER_UNIT)];
+    // Nothing was armed: say so without waking systemd to ask.
+    if units.iter().all(|path| !path.exists()) {
+        return Ok(());
+    }
+    let stopped = run("systemctl", &["--user", "disable", "--now", TIMER_UNIT]);
+    for path in &units {
+        match fs::remove_file(path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                return Err(anyhow::Error::from(e).context(format!("remove {}", path.display())));
+            }
+            _ => {}
+        }
+    }
+    let _ = run("systemctl", &["--user", "daemon-reload"]);
+    stopped.map(|_| ())
 }
 
 /// The distribution's anchor directory and the command that applies it.
@@ -895,6 +1024,60 @@ mod tests {
         assert_eq!(certutil_package(rocky), Some("sudo dnf install nss-tools"));
         assert_eq!(certutil_package("ID=arch\n"), Some("sudo pacman -S nss"));
         assert_eq!(certutil_package("ID=nixos\n"), None);
+    }
+
+    #[test]
+    fn the_timer_looks_once_a_minute_and_only_with_something_to_put_back() {
+        let command = [
+            "/opt/t w/tracewing",
+            "recover",
+            "--data-dir",
+            "/d",
+            "--only-if-gone",
+        ]
+        .map(str::to_owned);
+        let [(service_name, service), (timer_name, timer)] = unit_files(
+            &command,
+            Path::new("/d/sysproxy.journal"),
+            Some("ubuntu:GNOME"),
+        );
+        assert_eq!(service_name, "tracewing-proxy-recovery.service");
+        assert_eq!(timer_name, "tracewing-proxy-recovery.timer");
+        assert!(
+            service.contains(
+                "ExecStart=\"/opt/t w/tracewing\" \"recover\" \"--data-dir\" \"/d\" \"--only-if-gone\""
+            ),
+            "{service}"
+        );
+        // Nothing to put back, nothing to start: most minutes of most days.
+        assert!(
+            service.contains("ConditionPathExists=/d/sysproxy.journal"),
+            "{service}"
+        );
+        // systemd is not told what desktop this is unless the desktop tells
+        // it, and without that the command cannot know where the setting is.
+        assert!(
+            service.contains("Environment=\"XDG_CURRENT_DESKTOP=ubuntu:GNOME\"\n"),
+            "{service}"
+        );
+        let [(_, bare), _] = unit_files(&command, Path::new("/d/sysproxy.journal"), None);
+        assert!(!bare.contains("Environment="), "{bare}");
+
+        // The first look as well as the ones after it, or there are none.
+        assert!(timer.contains("OnActiveSec=1min"), "{timer}");
+        assert!(timer.contains("OnUnitActiveSec=1min"), "{timer}");
+        assert!(timer.contains("WantedBy=timers.target"), "{timer}");
+    }
+
+    /// systemd reads `%` as the start of a specifier of its own and `\\` as an
+    /// escape, so a data folder with either in its name would start the wrong
+    /// command, or none.
+    #[test]
+    fn unit_lines_quote_what_systemd_reserves() {
+        assert_eq!(unit_quote("/home/a b/tracewing"), "\"/home/a b/tracewing\"");
+        assert_eq!(unit_quote("/home/100%/t"), "\"/home/100%%/t\"");
+        assert_eq!(unit_quote(r"/home/a\b"), r#""/home/a\\b""#);
+        assert_eq!(unit_quote(r#"/home/a"b"#), r#""/home/a\"b""#);
     }
 
     #[test]

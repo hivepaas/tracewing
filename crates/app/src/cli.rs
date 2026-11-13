@@ -91,6 +91,11 @@ enum Command {
         /// The data folder [default: the window's].
         #[arg(long)]
         data_dir: Option<PathBuf>,
+        /// Put it back only if tracewing has gone, and leave a running app
+        /// alone. This is what the minute timer behind the setting runs, and
+        /// it is the safe one to put in a script of your own.
+        #[arg(long)]
+        only_if_gone: bool,
     },
     /// List the sessions recorded, the newest first.
     Sessions {
@@ -167,15 +172,26 @@ pub fn run(args: &[String]) -> Result<()> {
             println!("{} written to {}", flows(n), out.path.display());
             Ok(())
         }
-        Command::Recover { data_dir } => {
+        Command::Recover {
+            data_dir,
+            only_if_gone,
+        } => {
             let dir = data_dir.unwrap_or_else(default_data_dir);
-            match tracewing_system::recover(&dir)? {
+            let outcome = if only_if_gone {
+                tracewing_system::recover_if_gone(&dir)?
+            } else {
+                tracewing_system::recover(&dir)?
+            };
+            match outcome {
                 Recovered::PutBack => println!("the system proxy is back as it was"),
                 Recovered::LeftAlone => {
                     println!("the system proxy is not tracewing's, so it was left alone")
                 }
                 Recovered::Nothing => {
                     println!("tracewing has not changed the system proxy: nothing to put back")
+                }
+                Recovered::StillRunning => {
+                    println!("tracewing is still running, so the system proxy was left as it is")
                 }
             }
             Ok(())

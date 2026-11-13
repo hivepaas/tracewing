@@ -261,6 +261,17 @@ pub fn disarm_recovery() -> Result<()> {
     })
 }
 
+/// No timer here yet, and no pretence of one: a scheduled task would do what
+/// the systemd user timer does on Linux. Until there is one, a kill that takes
+/// the watchdog with it waits for the next login, which is when RunOnce runs.
+pub fn arm_timer(_command: &[String], _journal: &Path) -> Result<()> {
+    Ok(())
+}
+
+pub fn disarm_timer() -> Result<()> {
+    Ok(())
+}
+
 struct Store(HCERTSTORE);
 
 impl Store {

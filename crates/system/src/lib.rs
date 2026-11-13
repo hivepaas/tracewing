@@ -5,9 +5,14 @@
 //! setting still on, every program on the machine loses the network, and
 //! nothing tells the user why. So three things stand behind it:
 //! - a journal of the previous settings, written before anything changes;
-//! - a watchdog process, which puts them back the moment the app dies;
-//! - a recovery the OS runs at the next login, for when the watchdog dies too
-//!   (a power cut, a killed process tree).
+//! - a watchdog process, which puts them back the moment the app dies, under
+//!   a name of its own so that a blanket kill of the app does not take the
+//!   safety net with it;
+//! - a timer, on the systems that have one, which looks once a minute for an
+//!   app that is gone and settings that are still its own — for when the
+//!   watchdog was killed along with the app, as `pkill tracewing` does;
+//! - a recovery the OS runs at the next login, for when the machine went down
+//!   with everything on it.
 //!
 //! Putting settings back only happens while they are still ours. If the user
 //! has chosen another proxy in the meantime, that choice stays.
@@ -32,9 +37,12 @@ mod quic;
 #[path = "quic_windows.rs"]
 mod quic;
 
+mod alive;
 pub mod android;
 pub mod ios_sim;
 pub mod launch;
+
+pub use alive::{Alive, app_is_gone, hold_alive};
 
 use anyhow::{Context, Result, bail};
 use hudsucker::rustls::{
@@ -221,6 +229,9 @@ pub struct TakenOver {
     /// The watchdog waits for this pipe to close, which happens however this
     /// process ends.
     watchdog: Option<(Child, ChildStdin)>,
+    /// The lock that tells the timer a running app from a dead one. `None`
+    /// where it could not be taken, and then no timer is armed either.
+    alive: Option<Alive>,
 }
 
 /// Points the system proxy at `addr`, journal and recovery first.
@@ -229,8 +240,25 @@ pub fn take_over(data_dir: &Path, addr: SocketAddr, watchdog: bool) -> Result<Ta
     fs::create_dir_all(data_dir)?;
 
     let saved = os::read_proxy()?;
+    // The lock before the journal, so that whatever finds a journal can trust
+    // the lock to say whether the app that wrote it is still here.
+    let alive = match hold_alive(data_dir) {
+        Ok(alive) => Some(alive),
+        Err(e) => {
+            tracing::warn!("no lock to tell a live app from a dead one: {e:#}");
+            None
+        }
+    };
     write_journal(data_dir, addr, &saved)?;
     os::arm_recovery(&recovery_command(data_dir)?)?;
+    // Without the lock the timer would have nothing to judge by, so it stays
+    // off: the watchdog and the next login are then the whole of the safety
+    // net, as they were before the timer existed.
+    if alive.is_some()
+        && let Err(e) = os::arm_timer(&timer_command(data_dir)?, &data_dir.join(JOURNAL_FILE))
+    {
+        tracing::warn!("no recovery timer, so a kill waits for the next login: {e:#}");
+    }
     let result = os::set_proxy(addr);
     if let Err(e) = result {
         recover(data_dir)?;
@@ -245,6 +273,7 @@ pub fn take_over(data_dir: &Path, addr: SocketAddr, watchdog: bool) -> Result<Ta
     Ok(TakenOver {
         data_dir: data_dir.to_owned(),
         watchdog,
+        alive,
     })
 }
 
@@ -255,6 +284,10 @@ impl TakenOver {
             drop(stdin);
             let _ = child.wait();
         }
+        // The lock goes last. A timer that wakes in the middle of this finds
+        // an app still running and leaves the work to the app, which is doing
+        // it.
+        drop(self.alive.take());
         Ok(recovered)
     }
 }
@@ -266,12 +299,22 @@ pub enum Recovered {
     PutBack,
     /// The journal was there, but the settings had changed since.
     LeftAlone,
+    /// The app is still running and the setting is still its own: there is
+    /// nothing to put back, and taking the network from a working app would
+    /// be the opposite of help. What the timer finds every minute of a
+    /// perfectly ordinary session.
+    StillRunning,
 }
 
 /// Puts back the settings in the journal, if there is one.
 pub fn recover(data_dir: &Path) -> Result<Recovered> {
     let path = data_dir.join(JOURNAL_FILE);
     let Ok(text) = fs::read_to_string(&path) else {
+        // Nothing of ours is pending, so neither net has anything to put
+        // back. A run that ended badly can still have left them armed, and a
+        // timer nobody disarms wakes the machine once a minute for ever.
+        let _ = os::disarm_timer();
+        let _ = os::disarm_recovery();
         return Ok(Recovered::Nothing);
     };
     let (addr, saved) = parse_journal(&text).with_context(|| format!("read {}", path.display()))?;
@@ -286,12 +329,28 @@ pub fn recover(data_dir: &Path) -> Result<Recovered> {
         Recovered::LeftAlone
     };
     os::disarm_recovery()?;
+    // The settings are what matter: a timer left on is worth saying and not
+    // worth failing over, having just done the one thing it was there for.
+    if let Err(e) = os::disarm_timer() {
+        tracing::warn!("the recovery timer stays on: {e:#}");
+    }
     fs::remove_file(&path).with_context(|| format!("remove {}", path.display()))?;
     Ok(recovered)
 }
 
+/// Puts the settings back, but only once the app that changed them has gone.
+/// This is what the timer runs, a minute at a time, and it is the one way to
+/// ask for a recovery without having to know whether the app is running.
+pub fn recover_if_gone(data_dir: &Path) -> Result<Recovered> {
+    if !app_is_gone(data_dir) {
+        return Ok(Recovered::StillRunning);
+    }
+    recover(data_dir)
+}
+
 /// The watchdog's body: wait for the app to go away, then clean up after it.
 pub fn watchdog(data_dir: &Path) -> Result<()> {
+    name_itself();
     let mut sink = [0u8; 64];
     let mut stdin = std::io::stdin();
     while stdin.read(&mut sink).is_ok_and(|n| n > 0) {}
@@ -304,6 +363,23 @@ pub fn watchdog(data_dir: &Path) -> Result<()> {
     writeln!(log, "app gone: {outcome:?}")?;
     outcome.map(|_| ())
 }
+
+/// The watchdog takes a name of its own, because the whole of its job is to
+/// outlive the app and `pkill tracewing` matches every name with tracewing in
+/// it — the app's safety net included. It hides from nothing: `ps` shows the
+/// same command line as before, `pkill -f tracewing` still finds it, and it
+/// ends of its own accord a second after the app does. What it no longer does
+/// is die in the same breath as the app it is there to clean up after.
+#[cfg(target_os = "linux")]
+fn name_itself() {
+    // SAFETY: prctl takes a name of at most 16 bytes, ending in a zero, and
+    // this one is written as such.
+    unsafe { libc::prctl(libc::PR_SET_NAME, c"trw-watchdog".as_ptr()) };
+}
+
+/// Only Linux has a name apart from the program's.
+#[cfg(not(target_os = "linux"))]
+fn name_itself() {}
 
 fn spawn_watchdog(data_dir: &Path) -> Result<(Child, ChildStdin)> {
     let mut command = Command::new(std::env::current_exe()?);
@@ -342,6 +418,16 @@ fn recovery_command(data_dir: &Path) -> Result<Vec<String>> {
         "recover".to_owned(),
         "--data-dir".to_owned(),
         data_dir.display().to_string(),
+    ])
+}
+
+fn timer_command(data_dir: &Path) -> Result<Vec<String>> {
+    Ok(vec![
+        std::env::current_exe()?.display().to_string(),
+        "recover".to_owned(),
+        "--data-dir".to_owned(),
+        data_dir.display().to_string(),
+        "--only-if-gone".to_owned(),
     ])
 }
 
@@ -392,6 +478,32 @@ mod tests {
         let text = fs::read_to_string(dir.join(JOURNAL_FILE)).unwrap();
         assert_eq!(parse_journal(&text).unwrap(), (addr, saved));
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// The whole point of the lock: the timer runs `recover_if_gone` once a
+    /// minute, and a run of it against a healthy app must be a no-op. If it
+    /// were not, turning the system proxy on would take the network away a
+    /// minute later.
+    #[test]
+    fn a_running_app_is_left_alone() {
+        let dir = std::env::temp_dir().join(format!("alive-journal-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let journal = dir.join(JOURNAL_FILE);
+        write_journal(&dir, "127.0.0.1:9090".parse().unwrap(), &Saved::default()).unwrap();
+
+        let held = hold_alive(&dir).unwrap();
+        assert_eq!(recover_if_gone(&dir).unwrap(), Recovered::StillRunning);
+        assert!(
+            journal.exists(),
+            "and the journal is still there to be used"
+        );
+
+        // The other half — gone, as a kill leaves it, and the settings put
+        // back — reaches into this machine's own autostart and timer, so it
+        // is the command's test that runs it, in folders of its own.
+        drop(held);
+        fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
