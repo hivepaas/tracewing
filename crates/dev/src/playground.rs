@@ -155,6 +155,11 @@ pub const ROUTES: &[(&str, &str, &[&str])] = &[
         "A page of web3 calls to send, one button each: calls, reverts, transactions, logs, receipts, batches",
         &[],
     ),
+    (
+        "/web3-ws",
+        "JSON-RPC over a WebSocket, as a node that is subscribed to: /web3 opens one",
+        &[],
+    ),
 ];
 
 /// Paths that want a body, and a body to send them. A link cannot ask for
@@ -477,6 +482,7 @@ async fn route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallibl
             body("application/json", chain::answer(&asked, fail))
         }
         "/web3" => body("text/html; charset=utf-8", web3_page()),
+        "/web3-ws" => web3_socket(req),
         "/ws.html" => body("text/html; charset=utf-8", WS_PAGE),
         "/ws" => websocket(
             req,
@@ -685,7 +691,9 @@ td,th{{padding:.25rem .75rem;text-align:left;vertical-align:top}}
 th{{padding-top:1.2rem;color:#555;border-bottom:1px solid #ddd}}
 button.p{{background:#f2f2f2;border:1px solid #ddd;border-radius:.4rem;padding:.15rem .5rem;cursor:pointer;font:13px ui-monospace,monospace;white-space:nowrap}}
 button.p:hover{{background:#e8e8e8}}
-.said{{margin-left:.5rem;color:#888;font:12px ui-monospace,monospace;word-break:break-all}}</style>
+.said{{margin-left:.5rem;color:#888;font:12px ui-monospace,monospace;word-break:break-all}}
+h2{{margin-top:2rem}}
+pre{{background:#f6f7f9;padding:.75rem;height:11rem;overflow:auto;font:12px ui-monospace,monospace;white-space:pre-wrap;word-break:break-all}}</style>
 </head><body>
 <h1>web3</h1>
 <p>Each button sends one JSON-RPC request to <code>/rpc</code>, as a wallet or
@@ -694,6 +702,18 @@ in <code>crates/store/testdata/jsonrpc</code> were captured from Ethereum
 mainnet, and the rest is written in the same shape.</p>
 <p><button id="all" class="p">Send every one, in turn</button>
 <span id="toll" class="said"></span></p>
+<h2>Live</h2>
+<p>A node at the end of a WebSocket: calls go down it and are answered on it,
+and what it is subscribed to arrives on its own, as notifications with no id.</p>
+<p><button id="open" class="p">Open</button>
+<button id="heads" class="p">subscribe newHeads</button>
+<button id="logs" class="p">subscribe logs</button>
+<button id="pending" class="p">subscribe pending</button>
+<button id="ask" class="p">eth_blockNumber</button>
+<button id="drop" class="p">unsubscribe heads</button>
+<button id="shut" class="p">Close</button>
+<span id="live" class="said">not open</span></p>
+<pre id="feed"></pre>
 <table>
 {rows}</table>
 <script>
@@ -717,6 +737,51 @@ async function send(button) {{
 for (const button of document.querySelectorAll("button[data-case]")) {{
   button.addEventListener("click", () => send(button));
 }}
+let socket = null;
+let asked = 0;
+const feed = document.getElementById("feed");
+const live = document.getElementById("live");
+function note(way, text) {{
+  feed.textContent += way + " " + text + "\n";
+  feed.scrollTop = feed.scrollHeight;
+}}
+function down(call) {{
+  if (!socket || socket.readyState !== WebSocket.OPEN) {{
+    live.textContent = "open it first";
+    return;
+  }}
+  asked += 1;
+  const text = JSON.stringify({{ jsonrpc: "2.0", id: asked, ...call }});
+  socket.send(text);
+  note("→", text);
+}}
+document.getElementById("open").addEventListener("click", () => {{
+  if (socket && socket.readyState <= WebSocket.OPEN) {{
+    return;
+  }}
+  const where = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/web3-ws";
+  socket = new WebSocket(where);
+  live.textContent = "opening " + where;
+  socket.addEventListener("open", () => {{ live.textContent = "open"; }});
+  socket.addEventListener("message", (event) => note("←", event.data));
+  socket.addEventListener("close", (event) => {{ live.textContent = "closed " + event.code; }});
+  socket.addEventListener("error", () => {{ live.textContent = "could not open"; }});
+}});
+document.getElementById("heads").addEventListener("click", () =>
+  down({{ method: "eth_subscribe", params: ["newHeads"] }}));
+document.getElementById("logs").addEventListener("click", () =>
+  down({{ method: "eth_subscribe", params: ["logs", {{ address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }}] }}));
+document.getElementById("pending").addEventListener("click", () =>
+  down({{ method: "eth_subscribe", params: ["newPendingTransactions"] }}));
+document.getElementById("ask").addEventListener("click", () =>
+  down({{ method: "eth_blockNumber", params: [] }}));
+document.getElementById("drop").addEventListener("click", () =>
+  down({{ method: "eth_unsubscribe", params: ["0xcd0c3e8af590364c09d0fa6a1210faf5"] }}));
+document.getElementById("shut").addEventListener("click", () => {{
+  if (socket) {{
+    socket.close(1000, "done");
+  }}
+}});
 document.getElementById("all").addEventListener("click", async () => {{
   const buttons = [...document.querySelectorAll("button[data-case]")];
   const toll = document.getElementById("toll");
@@ -1095,6 +1160,116 @@ struct WsOptions {
 /// A WebSocket that says hello with what came (some headers, and the
 /// subprotocol it took: the first offered), then does what `options` say,
 /// and sends back whatever it gets: a close with its code and reason too.
+/// A node at the end of a WebSocket: it answers calls as `/rpc` does, and
+/// what it is subscribed to comes down on its own, as notifications with no
+/// id. This is how a wallet or an indexer watches a chain.
+fn web3_socket(mut req: Request<Incoming>) -> Response<OriginBody> {
+    let upgrade = req
+        .headers()
+        .get(header::UPGRADE)
+        .is_some_and(|v| v.as_bytes().eq_ignore_ascii_case(b"websocket"));
+    let key = req.headers().get(header::SEC_WEBSOCKET_KEY).cloned();
+    let Some(key) = key.filter(|_| upgrade) else {
+        return with_status(
+            StatusCode::BAD_REQUEST,
+            body(
+                "text/plain; charset=utf-8",
+                "A node's WebSocket goes here. /web3 opens one.\n",
+            ),
+        );
+    };
+    tokio::spawn(async move {
+        let Ok(upgraded) = hyper::upgrade::on(&mut req).await else {
+            return;
+        };
+        let ws = WebSocketStream::from_raw_socket(TokioIo::new(upgraded), Role::Server, None).await;
+        let (mut sink, mut incoming) = ws.split();
+        // What this socket is subscribed to, and how much of each feed has
+        // come down it.
+        let mut feeds: Vec<(chain::Feed, u64)> = Vec::new();
+        let mut clock = tokio::time::interval(Duration::from_millis(1200));
+        clock.tick().await;
+        loop {
+            tokio::select! {
+                _ = clock.tick(), if !feeds.is_empty() => {
+                    let mut gone = false;
+                    for (feed, sent) in &mut feeds {
+                        if sink.send(Message::text(feed.notice(*sent))).await.is_err() {
+                            gone = true;
+                            break;
+                        }
+                        *sent += 1;
+                    }
+                    if gone {
+                        break;
+                    }
+                }
+                message = incoming.next() => match message {
+                    Some(Ok(Message::Text(asked))) => {
+                        let mut replies = Vec::new();
+                        for call in tracewing_store::jsonrpc::calls_in(asked.as_bytes()) {
+                            replies.push(match call.method.as_str() {
+                                "eth_subscribe" => match chain::Feed::asked(&call) {
+                                    Some(feed) => {
+                                        if !feeds.iter().any(|(had, _)| *had == feed) {
+                                            feeds.push((feed, 0));
+                                        }
+                                        chain::answered(&call, &format!(r#""{}""#, feed.handle()))
+                                    }
+                                    // A feed this node does not keep.
+                                    None => chain::not_known(&call),
+                                },
+                                "eth_unsubscribe" => {
+                                    let handle = call
+                                        .params
+                                        .as_ref()
+                                        .and_then(|p| p.get(0))
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or_default();
+                                    let had = chain::Feed::of_handle(handle)
+                                        .is_some_and(|feed| {
+                                            let before = feeds.len();
+                                            feeds.retain(|(kept, _)| *kept != feed);
+                                            feeds.len() < before
+                                        });
+                                    chain::answered(&call, if had { "true" } else { "false" })
+                                }
+                                _ => chain::answer(asked.as_bytes(), false),
+                            });
+                        }
+                        // A message that is not JSON-RPC at all is echoed, so
+                        // that a socket is still a socket to try.
+                        if replies.is_empty() {
+                            replies.push(asked.to_string());
+                        }
+                        for reply in replies {
+                            if sink.send(Message::text(reply)).await.is_err() {
+                                return;
+                            }
+                        }
+                    }
+                    Some(Ok(Message::Close(frame))) => {
+                        let _ = sink.send(Message::Close(frame)).await;
+                        break;
+                    }
+                    Some(Ok(_)) => {}
+                    _ => break,
+                },
+            }
+        }
+    });
+    Response::builder()
+        .status(StatusCode::SWITCHING_PROTOCOLS)
+        .header(header::UPGRADE, "websocket")
+        .header(header::CONNECTION, "Upgrade")
+        .header(
+            header::SEC_WEBSOCKET_ACCEPT,
+            derive_accept_key(key.as_bytes()),
+        )
+        .body(Full::new(Bytes::new()).boxed())
+        .expect("a valid answer")
+}
+
 fn websocket(mut req: Request<Incoming>, options: WsOptions) -> Response<OriginBody> {
     use hudsucker::tokio_tungstenite::tungstenite::protocol::{
         CloseFrame, frame::coding::CloseCode,
@@ -1335,7 +1510,7 @@ mod tests {
                 "/status/404" => 404,
                 "/redirect" => 302,
                 "/auth" => 401,
-                "/ws" => 400,
+                "/ws" | "/web3-ws" => 400,
                 _ => 200,
             };
             assert_eq!(status, expected, "{path}");
@@ -1423,6 +1598,129 @@ mod tests {
             "{page}"
         );
         assert!(!page.contains(r#"<a href="/rpc">"#), "{page}");
+    }
+
+    /// The node's socket answers what is asked on it, and what it is
+    /// subscribed to comes down on its own until it is unsubscribed.
+    #[tokio::test]
+    async fn the_node_s_socket_answers_and_then_keeps_sending() {
+        let base = start().await;
+        let url = format!("{}/web3-ws", base.replace("http", "ws"));
+        let (mut ws, _) = hudsucker::tokio_tungstenite::connect_async(url)
+            .await
+            .unwrap();
+        // A closure cannot hand back a future that borrows the socket, so
+        // the next message is taken where it is wanted.
+        macro_rules! said {
+            () => {
+                ws.next()
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .to_text()
+                    .unwrap()
+                    .to_owned()
+            };
+        }
+
+        // A call on the socket is answered on the socket, by its id.
+        ws.send(Message::text(
+            r#"{"jsonrpc":"2.0","id":3,"method":"eth_blockNumber","params":[]}"#,
+        ))
+        .await
+        .unwrap();
+        let reply = said!();
+        assert!(
+            reply.contains(r#""id":3"#) && reply.contains("0x192bbde"),
+            "{reply}"
+        );
+
+        // Subscribing is answered with a handle, and then the heads come.
+        ws.send(Message::text(
+            r#"{"jsonrpc":"2.0","id":4,"method":"eth_subscribe","params":["newHeads"]}"#,
+        ))
+        .await
+        .unwrap();
+        let handle = said!();
+        assert!(handle.contains(r#""id":4"#), "{handle}");
+        let handle = handle
+            .split(r#""result":""#)
+            .nth(1)
+            .and_then(|rest| rest.split('"').next())
+            .unwrap()
+            .to_owned();
+
+        let first = said!();
+        assert!(first.contains(r#""method":"eth_subscription""#), "{first}");
+        assert!(first.contains(&handle), "{first}");
+        assert!(
+            !first.contains(r#""id""#),
+            "a notification wants no reply: {first}"
+        );
+        let second = said!();
+        assert_ne!(
+            block_of(&first),
+            block_of(&second),
+            "each head is a block further on"
+        );
+
+        // And unsubscribing stops it: what comes next is the answer to the
+        // next call, not another head.
+        ws.send(Message::text(format!(
+            r#"{{"jsonrpc":"2.0","id":5,"method":"eth_unsubscribe","params":["{handle}"]}}"#
+        )))
+        .await
+        .unwrap();
+        let mut stopped = said!();
+        // A head already on its way is allowed before the answer.
+        while stopped.contains("eth_subscription") {
+            stopped = said!();
+        }
+        assert!(stopped.contains(r#""result":true"#), "{stopped}");
+        ws.send(Message::text(
+            r#"{"jsonrpc":"2.0","id":6,"method":"eth_chainId","params":[]}"#,
+        ))
+        .await
+        .unwrap();
+        let after = said!();
+        assert!(
+            after.contains(r#""id":6"#),
+            "nothing is still coming: {after}"
+        );
+    }
+
+    /// The block a head notice is of.
+    fn block_of(notice: &str) -> String {
+        notice
+            .split(r#""number":""#)
+            .nth(1)
+            .and_then(|rest| rest.split('"').next())
+            .unwrap_or_default()
+            .to_owned()
+    }
+
+    /// A feed this node does not keep is turned away, not quietly dropped.
+    #[tokio::test]
+    async fn a_feed_that_is_not_kept_is_said_so() {
+        let base = start().await;
+        let url = format!("{}/web3-ws", base.replace("http", "ws"));
+        let (mut ws, _) = hudsucker::tokio_tungstenite::connect_async(url)
+            .await
+            .unwrap();
+        ws.send(Message::text(
+            r#"{"jsonrpc":"2.0","id":1,"method":"eth_subscribe","params":["syncing"]}"#,
+        ))
+        .await
+        .unwrap();
+        let reply = ws
+            .next()
+            .await
+            .unwrap()
+            .unwrap()
+            .to_text()
+            .unwrap()
+            .to_owned();
+        assert!(reply.contains("-32601"), "{reply}");
     }
 
     /// Every button on the web3 page has to send something the node answers,

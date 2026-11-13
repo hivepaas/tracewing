@@ -7,7 +7,7 @@
 //! page offers, one button each, so that a window has more than one kind of
 //! web3 traffic in it.
 
-use std::sync::OnceLock;
+use std::{fmt::Write as _, sync::OnceLock};
 use tracewing_store::{jsonrpc, web3};
 
 /// Traffic captured from mainnet, kept with the store's samples so that the
@@ -406,6 +406,125 @@ fn build() -> Vec<Case> {
     ]
 }
 
+/// What a socket can be subscribed to, as `eth_subscribe` names it.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Feed {
+    /// A block as it is mined.
+    Heads,
+    /// The logs of a contract, as they are written.
+    Logs,
+    /// The hash of a transaction that has not been mined yet.
+    Pending,
+}
+
+impl Feed {
+    /// What `eth_subscribe` was asked for, if it is one this node has.
+    pub fn asked(call: &jsonrpc::Call) -> Option<Self> {
+        let what = call.params.as_ref()?.get(0)?.as_str()?;
+        Some(match what {
+            "newHeads" => Self::Heads,
+            "logs" => Self::Logs,
+            "newPendingTransactions" => Self::Pending,
+            _ => return None,
+        })
+    }
+
+    /// The handle it is given, which `eth_unsubscribe` is called with. One
+    /// for each feed, so that a window shows which is which.
+    pub fn handle(self) -> &'static str {
+        match self {
+            Self::Heads => "0xcd0c3e8af590364c09d0fa6a1210faf5",
+            Self::Logs => "0x9ce59a13059e417087c02d3236a0b1cc",
+            Self::Pending => "0x5a3f1e8b2c7d4a6f9b0e3c5d7a1f4b8e",
+        }
+    }
+
+    /// The handle, as the id of a subscription a client holds.
+    pub fn of_handle(handle: &str) -> Option<Self> {
+        [Self::Heads, Self::Logs, Self::Pending]
+            .into_iter()
+            .find(|feed| feed.handle().eq_ignore_ascii_case(handle))
+    }
+
+    /// The `n`th thing to come down this feed, as the node sends it: a
+    /// notification, which has no id and wants no reply.
+    pub fn notice(self, n: u64) -> String {
+        let result = match self {
+            Self::Heads => head(n),
+            Self::Logs => log(n),
+            Self::Pending => format!("\"{}\"", pending_hash(n)),
+        };
+        format!(
+            concat!(
+                r#"{{"jsonrpc":"2.0","method":"eth_subscription","#,
+                r#""params":{{"subscription":"{}","result":{}}}}}"#
+            ),
+            self.handle(),
+            result
+        )
+    }
+}
+
+/// A block as it is mined, counting on from the one the samples were taken
+/// at so that a window sees the number move.
+fn head(n: u64) -> String {
+    let number = 0x192_bbde + n;
+    format!(
+        concat!(
+            r#"{{"number":"{number:#x}","hash":"{hash}","#,
+            r#""parentHash":"{parent}","timestamp":"{time:#x}","#,
+            r#""gasLimit":"0x1c9c380","gasUsed":"0x{used:x}","#,
+            r#""baseFeePerGas":"0x{fee:x}","miner":"{TOKEN}"}}"#
+        ),
+        number = number,
+        hash = hash_like(0x6865_6164, n),
+        parent = hash_like(0x6865_6164, n.wrapping_sub(1)),
+        time = 0x6a4f_1b20 + n * 12,
+        used = 0x1a2_b3c4 + n * 977,
+        fee = 0x14ab_fc31 + n * 131,
+        TOKEN = TOKEN
+    )
+}
+
+/// One of the logs that were captured, over and over as the feed goes on.
+fn log(n: u64) -> String {
+    static LOGS: OnceLock<Vec<String>> = OnceLock::new();
+    let logs = LOGS.get_or_init(|| {
+        let captured: serde_json::Value =
+            serde_json::from_str(captured!("get_logs.res.json")).expect("the sample is JSON");
+        captured["result"]
+            .as_array()
+            .expect("an array of logs")
+            .iter()
+            .map(ToString::to_string)
+            .collect()
+    });
+    logs[(n as usize) % logs.len()].clone()
+}
+
+/// A transaction that has been heard of but not mined.
+fn pending_hash(n: u64) -> String {
+    hash_like(0x7065_6e64, n)
+}
+
+/// Thirty-two bytes that look like a hash and are the same for the same
+/// `what` and `n`: a hash of a few digits with the rest zeros fools nobody,
+/// least of all a window showing it beside a real one.
+fn hash_like(what: u64, n: u64) -> String {
+    let mut seed = what ^ n.wrapping_mul(0x9e37_79b9_7f4a_7c15);
+    let mut out = String::from("0x");
+    for _ in 0..4 {
+        // A word at a time, each stirred from the last.
+        seed ^= seed >> 30;
+        seed = seed.wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        seed ^= seed >> 27;
+        seed = seed.wrapping_mul(0x94d0_49bb_1331_11eb);
+        seed ^= seed >> 31;
+        let _ = write!(out, "{seed:016x}");
+    }
+    out
+}
+
 /// What the node answers, with `fail` making every call revert.
 pub fn answer(body: &[u8], fail: bool) -> String {
     let calls = jsonrpc::calls_in(body);
@@ -419,6 +538,31 @@ pub fn answer(body: &[u8], fail: bool) -> String {
     } else {
         replies.join("")
     }
+}
+
+/// A reply to that call, with its id: for the answers a socket works out
+/// for itself, such as what it has just been subscribed to.
+pub fn answered(call: &jsonrpc::Call, result: &str) -> String {
+    let id = call
+        .id
+        .as_ref()
+        .map_or_else(|| "null".to_owned(), ToString::to_string);
+    self::result(&id, result)
+}
+
+/// What a node says when it is asked for a feed it does not keep.
+pub fn not_known(call: &jsonrpc::Call) -> String {
+    let id = call
+        .id
+        .as_ref()
+        .map_or_else(|| "null".to_owned(), ToString::to_string);
+    format!(
+        concat!(
+            r#"{{"jsonrpc":"2.0","id":{id},"error":{{"code":-32601,"#,
+            r#""message":"this node does not keep that feed"}}}}"#
+        ),
+        id = id
+    )
 }
 
 /// What a node says when a gateway turns the request away.
@@ -860,6 +1004,47 @@ mod tests {
         let args = web3::returned("((bool,bytes)[])", &bytes)
             .unwrap_or_else(|| panic!("four tuples: {data}"));
         assert!(args[0].text.contains("true"), "{}", args[0].text);
+    }
+
+    #[test]
+    fn what_comes_down_a_feed_is_shaped_like_a_chain() {
+        let looks_like_a_hash = |hash: &str| {
+            hash.len() == 66
+                && hash.starts_with("0x")
+                && hash[2..].chars().all(|c| c.is_ascii_hexdigit())
+        };
+        let read = |text: &str| {
+            serde_json::from_str::<serde_json::Value>(text)
+                .unwrap_or_else(|trouble| panic!("{trouble}: {text}"))
+        };
+
+        let first = read(&Feed::Heads.notice(0));
+        assert_eq!(first["method"], "eth_subscription");
+        assert!(first["id"].is_null(), "a notification has no id");
+        assert_eq!(first["params"]["subscription"], Feed::Heads.handle());
+        let head = &first["params"]["result"];
+        for name in ["hash", "parentHash"] {
+            let hash = head[name].as_str().unwrap_or_default();
+            assert!(looks_like_a_hash(hash), "{name} is {hash}");
+        }
+        // A block further on each time, and its parent is the one before.
+        let next = read(&Feed::Heads.notice(1));
+        assert_eq!(head["hash"], next["params"]["result"]["parentHash"]);
+        assert_ne!(head["number"], next["params"]["result"]["number"]);
+
+        // The logs are the ones that were captured, topics and all.
+        let logged = read(&Feed::Logs.notice(0));
+        let log = &logged["params"]["result"];
+        assert!(
+            log["topics"].as_array().is_some_and(|t| t.len() == 3),
+            "{log}"
+        );
+        assert_ne!(Feed::Logs.notice(0), Feed::Logs.notice(1));
+
+        // And a pending transaction is a hash on its own.
+        let pending = read(&Feed::Pending.notice(0));
+        let hash = pending["params"]["result"].as_str().unwrap_or_default();
+        assert!(looks_like_a_hash(hash), "{hash}");
     }
 
     #[test]
