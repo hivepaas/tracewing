@@ -7,6 +7,7 @@
 
 use crate::{
     benchkit::{self, OriginBody},
+    chain,
     seed::Rng,
 };
 use anyhow::Context as _;
@@ -148,6 +149,11 @@ pub const ROUTES: &[(&str, &str, &[&str])] = &[
         "/rpc",
         "JSON-RPC (POST), as an Ethereum node answers; ?fail=1 reverts, in a 200",
         &["?fail=1"],
+    ),
+    (
+        "/web3",
+        "A page of web3 calls to send, one button each: calls, reverts, transactions, logs, receipts, batches",
+        &[],
     ),
 ];
 
@@ -453,11 +459,24 @@ async fn route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallibl
         "/echo" => echo(req).await,
         "/rpc" => {
             let fail = query.iter().any(|(key, _)| key == "fail");
-            body(
-                "application/json",
-                benchkit::rpc_reply(&read_body(req).await, fail),
-            )
+            // A gateway that turns the request away, and a node that is slow
+            // to answer: both are what a client meets, and neither is a
+            // broken request.
+            let limited = query.iter().any(|(key, _)| key == "limit");
+            let wait = number("ms", 0).min(30_000);
+            let asked = read_body(req).await;
+            if wait > 0 {
+                tokio::time::sleep(Duration::from_millis(wait)).await;
+            }
+            if limited {
+                return Ok(with_status(
+                    StatusCode::TOO_MANY_REQUESTS,
+                    body("application/json", chain::too_many()),
+                ));
+            }
+            body("application/json", chain::answer(&asked, fail))
         }
+        "/web3" => body("text/html; charset=utf-8", web3_page()),
         "/ws.html" => body("text/html; charset=utf-8", WS_PAGE),
         "/ws" => websocket(
             req,
@@ -612,6 +631,101 @@ for (const button of document.querySelectorAll("button[data-url]")) {{
     }}
   }});
 }}
+</script>
+</body></html>
+"#
+    )
+}
+
+/// The web3 page: every case of `chain::cases()` as a button that sends it,
+/// so that a window can be filled with one kind of call after another
+/// without a wallet or a chain anywhere.
+fn web3_page() -> String {
+    let mut rows = String::new();
+    let mut group = "";
+    for case in chain::cases() {
+        if case.group != group {
+            group = case.group;
+            let _ = writeln!(
+                rows,
+                r#"<tr><th colspan="2">{}</th></tr>"#,
+                escape_xml(group)
+            );
+        }
+        let _ = writeln!(
+            rows,
+            concat!(
+                r#"<tr><td><button class="p" data-case="{}">{}</button></td>"#,
+                r#"<td>{} <span class="said"></span></td></tr>"#
+            ),
+            escape_xml(case.id),
+            escape_xml(case.name),
+            escape_xml(case.what)
+        );
+    }
+    let mut sends = String::from("{");
+    for (at, case) in chain::cases().iter().enumerate() {
+        if at > 0 {
+            sends.push(',');
+        }
+        let _ = write!(
+            sends,
+            r#""{}":["{}","{}"]"#,
+            js_text(case.id),
+            js_text(&case.url),
+            js_text(&case.body)
+        );
+    }
+    sends.push('}');
+    format!(
+        r#"<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>web3</title>
+<style>body{{font:15px system-ui,sans-serif;margin:2rem;max-width:64rem}}
+td,th{{padding:.25rem .75rem;text-align:left;vertical-align:top}}
+th{{padding-top:1.2rem;color:#555;border-bottom:1px solid #ddd}}
+button.p{{background:#f2f2f2;border:1px solid #ddd;border-radius:.4rem;padding:.15rem .5rem;cursor:pointer;font:13px ui-monospace,monospace;white-space:nowrap}}
+button.p:hover{{background:#e8e8e8}}
+.said{{margin-left:.5rem;color:#888;font:12px ui-monospace,monospace;word-break:break-all}}</style>
+</head><body>
+<h1>web3</h1>
+<p>Each button sends one JSON-RPC request to <code>/rpc</code>, as a wallet or
+a library would. What comes back is what a node said: the calls and answers
+in <code>crates/store/testdata/jsonrpc</code> were captured from Ethereum
+mainnet, and the rest is written in the same shape.</p>
+<p><button id="all" class="p">Send every one, in turn</button>
+<span id="toll" class="said"></span></p>
+<table>
+{rows}</table>
+<script>
+const sends = {sends};
+async function send(button) {{
+  const [url, body] = sends[button.dataset.case];
+  const said = button.closest("tr").querySelector(".said");
+  said.textContent = "sending…";
+  try {{
+    const answer = await fetch(url, {{
+      method: "POST",
+      headers: {{ "content-type": "application/json" }},
+      body,
+    }});
+    const text = await answer.text();
+    said.textContent = answer.status + " " + text.slice(0, 160);
+  }} catch (trouble) {{
+    said.textContent = String(trouble);
+  }}
+}}
+for (const button of document.querySelectorAll("button[data-case]")) {{
+  button.addEventListener("click", () => send(button));
+}}
+document.getElementById("all").addEventListener("click", async () => {{
+  const buttons = [...document.querySelectorAll("button[data-case]")];
+  const toll = document.getElementById("toll");
+  for (const [at, button] of buttons.entries()) {{
+    toll.textContent = `${{at + 1}} of ${{buttons.length}}`;
+    await send(button);
+  }}
+  toll.textContent = `${{buttons.length}} sent`;
+}});
 </script>
 </body></html>
 "#
@@ -1309,6 +1423,64 @@ mod tests {
             "{page}"
         );
         assert!(!page.contains(r#"<a href="/rpc">"#), "{page}");
+    }
+
+    /// Every button on the web3 page has to send something the node answers,
+    /// and the page has to offer every case there is.
+    #[tokio::test]
+    async fn the_web3_page_sends_what_the_node_answers() {
+        let base = start().await;
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let page = client
+            .get(format!("{base}/web3"))
+            .send()
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+        for case in chain::cases() {
+            assert!(
+                page.contains(&format!(r#"data-case="{}""#, case.id)),
+                "{} is not on the page",
+                case.id
+            );
+            let answer = client
+                .post(format!("{base}{}", case.url))
+                .header("content-type", "application/json")
+                .body(case.body.clone())
+                .send()
+                .await
+                .unwrap();
+            let status = answer.status().as_u16();
+            let wanted = if case.id == "rate-limited" { 429 } else { 200 };
+            assert_eq!(status, wanted, "{}", case.id);
+            let said = answer.text().await.unwrap();
+            assert!(said.contains("jsonrpc"), "{}: {said}", case.id);
+            if case.group != "Batches and trouble" {
+                assert!(!said.contains("-32600"), "{}: {said}", case.id);
+            }
+        }
+    }
+
+    /// The slow case waits before it answers, which is the point of it.
+    #[tokio::test]
+    async fn a_slow_call_takes_the_time_it_was_asked_for() {
+        let base = start().await;
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let began = std::time::Instant::now();
+        let said = client
+            .post(format!("{base}/rpc?ms=300"))
+            .header("content-type", "application/json")
+            .body(r#"{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber"}"#)
+            .send()
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+        assert!(began.elapsed() >= Duration::from_millis(300));
+        assert!(said.contains("0x192bbde"), "{said}");
     }
 
     /// Whether a listed parameter asks for something big or slow on purpose.
