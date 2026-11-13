@@ -326,6 +326,25 @@ fn the_system_proxy_and_the_settings_from_the_window() {
         .unwrap();
     cx.run_until_parked();
     save_shot(&mut cx, window.into(), "85-setup-lacking");
+    // Below the browsers: a terminal, the line for one of the user's own, and
+    // the Node.js that would go around both.
+    let scroll = |cx: &mut HeadlessAppContext, by: f32| {
+        cx.update_window(window.into(), |_, window, cx| {
+            window.dispatch_event(
+                gpui::PlatformInput::ScrollWheel(gpui::ScrollWheelEvent {
+                    position: gpui::point(px(900.), px(500.)),
+                    delta: gpui::ScrollDelta::Pixels(gpui::point(px(0.), px(-by))),
+                    ..Default::default()
+                }),
+                cx,
+            );
+        })
+        .unwrap();
+        cx.run_until_parked();
+    };
+    scroll(&mut cx, 700.);
+    save_shot(&mut cx, window.into(), "86-setup-terminal");
+    scroll(&mut cx, -700.);
     window
         .update(&mut cx, |view, _, cx| {
             view.install_certificate(Scope::User, cx)
