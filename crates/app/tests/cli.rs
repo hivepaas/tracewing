@@ -1,4 +1,4 @@
-//! `tracewing capture`, `export`, `sessions` and `recover`, as a terminal runs
+//! `tracewing capture`, `env`, `export`, `sessions` and `recover`, as a terminal runs
 //! them: the program itself, recording with no window, then its HAR.
 //!
 //! `cargo test --release -p tracewing --test cli`
@@ -264,6 +264,97 @@ fn recover_only_if_gone_leaves_a_running_app_alone() {
         })
         .expect("it went on saying tracewing was running");
     it_put_them_back_or_said_why_not(&out, &journal);
+
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// A terminal of the user's own, sent to whichever tracewing is running on the
+/// data folder, and told plainly when none is.
+#[test]
+fn env_takes_a_terminal_through_what_is_running() {
+    let dir = std::env::temp_dir().join(format!("tracewing-env-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let env = |extra: &[&str]| {
+        tracewing()
+            .arg("env")
+            .args(extra)
+            .arg("--data-dir")
+            .arg(&dir)
+            .output()
+            .unwrap()
+    };
+
+    let out = env(&[]);
+    assert!(!out.status.success());
+    let said = String::from_utf8_lossy(&out.stderr);
+    assert!(said.contains("tracewing is not running"), "{said}");
+    assert!(out.stdout.is_empty(), "nothing for a shell to run");
+
+    let mut capture = tracewing()
+        .args([
+            "capture",
+            "--port",
+            "20341",
+            "--seconds",
+            "30",
+            "--ca-key-in-file",
+        ])
+        .arg("--data-dir")
+        .arg(&dir)
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while !dir.join("ca.pem").exists() || !dir.join("proxy-address").exists() {
+        assert!(Instant::now() < deadline, "it starts");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+
+    let out = env(&["--shell", "sh"]);
+    let lines = String::from_utf8_lossy(&out.stdout).into_owned();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(
+        lines.contains("export HTTPS_PROXY='http://127.0.0.1:20341'\n"),
+        "{lines}"
+    );
+    let bundle = dir.join("terminal-roots.pem");
+    let ca = std::fs::read_to_string(dir.join("ca.pem")).unwrap();
+    assert!(std::fs::read_to_string(&bundle).unwrap().starts_with(&ca));
+    // As a shell reads them.
+    #[cfg(unix)]
+    {
+        let script = format!("{lines}printf '%s|%s' \"$https_proxy\" \"$SSL_CERT_FILE\"");
+        let read = Command::new("/bin/sh")
+            .args(["-c", &script])
+            .output()
+            .unwrap();
+        assert_eq!(
+            String::from_utf8_lossy(&read.stdout),
+            format!("http://127.0.0.1:20341|{}", bundle.display())
+        );
+    }
+    let out = env(&["--shell", "powershell"]);
+    assert!(
+        String::from_utf8_lossy(&out.stdout)
+            .contains("$env:HTTPS_PROXY = 'http://127.0.0.1:20341'"),
+    );
+
+    capture.kill().unwrap();
+    capture.wait().unwrap();
+    // A killed run leaves its address behind, where nothing listens now.
+    assert!(dir.join("proxy-address").exists());
+    let out = env(&[]);
+    assert!(!out.status.success());
+    let said = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        said.contains("nothing listens at 127.0.0.1:20341"),
+        "{said}"
+    );
 
     std::fs::remove_dir_all(&dir).ok();
 }

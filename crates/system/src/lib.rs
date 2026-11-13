@@ -171,10 +171,17 @@ pub struct Environment {
     /// `certutil` is missing, which browsers on Linux need to be told to
     /// trust the CA: the command that installs it, where known.
     pub no_certutil: Option<Option<&'static str>>,
+    /// The Node.js a terminal runs sends its requests straight out, whatever
+    /// `HTTPS_PROXY` says, so Open a terminal does not take it through: its
+    /// version.
+    pub old_node: Option<String>,
 }
 
 pub fn environment() -> Environment {
-    os::environment()
+    Environment {
+        old_node: launch::node_past_the_proxy(),
+        ..os::environment()
+    }
 }
 
 /// Asks the OS's own verifier whether it would accept a certificate from this

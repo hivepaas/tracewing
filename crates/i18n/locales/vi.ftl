@@ -2101,11 +2101,17 @@ t88231e40 = Chặn HTTP/3
 # Or one app at a time
 t91c63f1c = Hoặc từng app một
 
-# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
-tc21013a9 = Một terminal đi qua tracewing, còn system proxy và mọi app khác vẫn giữ nguyên. Với trình duyệt, nút Mở riêng trong mục Trình duyệt làm điều tương tự với một profile riêng.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
+t7168eeaa = Một terminal đi qua tracewing, còn system proxy và mọi app khác vẫn giữ nguyên: curl, git, Python, Go, và các AI agent như Claude Code, Codex hay Gemini CLI chạy trong đó. Muốn các công cụ AI của một editor cũng đi qua, hãy thoát editor rồi mở lại nó từ terminal đó, như code . với VS Code. Với trình duyệt, nút Mở riêng trong mục Trình duyệt làm điều tương tự với một profile riêng.
 
 # Open a terminal
 t4b629c72 = Mở terminal
+
+# In a terminal of your own, such as an editor's, this does the same:
+tb10fcc10 = Trong một terminal của riêng bạn, như terminal của editor, lệnh này làm điều tương tự:
+
+# Node.js {version}, which this computer's terminals run, sends its requests straight out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of those, then open the terminal again.
+td5af8287 = Node.js { $version }, bản mà các terminal trên máy này chạy, gửi request thẳng ra ngoài, không qua tracewing. Node đọc proxy từ bản 22.21 và 24.5 trở đi: hãy cài một trong hai bản đó rồi mở lại terminal.
 
 # iPhone and iPad
 ta550cc97 = iPhone và iPad

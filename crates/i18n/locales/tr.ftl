@@ -2183,11 +2183,17 @@ t88231e40 = HTTP/3'ü engelle
 # Or one app at a time
 t91c63f1c = Ya da tek tek uygulamalar
 
-# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
-tc21013a9 = Sistem proxy'si ve diğer tüm uygulamalar olduğu gibi kalırken tracewing üzerinden geçen bir terminal. Bir tarayıcı için Tarayıcılar'daki Ayrı aç, aynısını kendi profiliyle yapar.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
+t7168eeaa = Sistem proxy'si ve diğer tüm uygulamalar olduğu gibi kalırken tracewing üzerinden geçen bir terminal: curl, git, Python, Go ve içinde başlatılan Claude Code, Codex veya Gemini CLI gibi yapay zekâ ajanları. Bir düzenleyicinin yapay zekâ araçlarının da geçmesi için düzenleyiciyi kapatıp o terminalden yeniden başlatın; VS Code için code . bunu yapar. Bir tarayıcı için Tarayıcılar'daki Ayrı aç, aynısını kendi profiliyle yapar.
 
 # Open a terminal
 t4b629c72 = Terminal aç
+
+# In a terminal of your own, such as an editor's, this does the same:
+tb10fcc10 = Kendi terminalinizde, örneğin bir düzenleyicinin terminalinde, bu aynısını yapar:
+
+# Node.js {version}, which this computer's terminals run, sends its requests straight out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of those, then open the terminal again.
+td5af8287 = Bu bilgisayarın terminallerinin çalıştırdığı Node.js { $version }, isteklerini tracewing'e uğramadan doğrudan gönderir. Node proxy'yi 22.21 ve 24.5'ten itibaren okur: bunlardan birini kurun, sonra terminali yeniden açın.
 
 # iPhone and iPad
 ta550cc97 = iPhone ve iPad

@@ -2101,11 +2101,17 @@ t88231e40 = HTTP/3 をブロック
 # Or one app at a time
 t91c63f1c = または、アプリごとに
 
-# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
-tc21013a9 = tracewing を通るターミナルです。システムプロキシや他のアプリはそのままです。ブラウザーなら、「ブラウザー」の「個別に開く」で専用プロファイルを使って同じことができます。
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
+t7168eeaa = tracewing を通るターミナルです。システムプロキシや他のアプリはそのままです。curl、git、Python、Go、そこで起動した Claude Code、Codex、Gemini CLI などの AI エージェントが通ります。エディターの AI ツールも通すには、エディターを終了し、そのターミナルから起動し直します（VS Code なら code .）。ブラウザーなら、「ブラウザー」の「個別に開く」で専用プロファイルを使って同じことができます。
 
 # Open a terminal
 t4b629c72 = ターミナルを開く
+
+# In a terminal of your own, such as an editor's, this does the same:
+tb10fcc10 = エディター内など、自分のターミナルでは次のコマンドで同じことができます:
+
+# Node.js {version}, which this computer's terminals run, sends its requests straight out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of those, then open the terminal again.
+td5af8287 = このコンピューターのターミナルが実行する Node.js { $version } は、tracewing を通らずにリクエストを直接送ります。Node がプロキシを読むのは 22.21 と 24.5 以降です。どちらかをインストールしてから、ターミナルを開き直してください。
 
 # iPhone and iPad
 ta550cc97 = iPhone と iPad

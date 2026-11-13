@@ -319,6 +319,7 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             view.system.environment = Environment {
                 no_system_proxy: Some("sway".into()),
                 no_certutil: Some(Some("sudo apt install libnss3-tools")),
+                old_node: Some("22.17.1".into()),
             };
             cx.notify();
         })

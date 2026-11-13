@@ -1,7 +1,8 @@
 //! `tracewing capture`, `export` and `sessions`: recording with no window, for
 //! a server, CI or a terminal, and what it recorded as HAR. The same data
 //! folder as the window's, with its CA, settings, rules, relay and client
-//! certificates. With no command, `tracewing` opens the window.
+//! certificates. `tracewing env` takes a terminal through whichever of the two
+//! is running. With no command, `tracewing` opens the window.
 
 use crate::{
     devices::Devices,
@@ -9,7 +10,7 @@ use crate::{
     filter::Filter,
 };
 use anyhow::{Context as _, Result, bail};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use rusqlite::{Connection, OpenFlags};
 use std::{
     path::{Path, PathBuf},
@@ -20,7 +21,7 @@ use tracewing_store::{
     har::{self, ExportOptions},
     session,
 };
-use tracewing_system::Recovered;
+use tracewing_system::{Recovered, launch::Shell};
 
 #[derive(Parser)]
 #[command(
@@ -59,6 +60,25 @@ enum Command {
         /// keychain: for a server or CI with no keychain.
         #[arg(long)]
         ca_key_in_file: bool,
+        /// The data folder [default: the window's].
+        #[arg(long)]
+        data_dir: Option<PathBuf>,
+    },
+    /// Print what takes a terminal's programs through tracewing — curl, git,
+    /// Python, Go, AI agents — for a terminal it did not open: an editor's,
+    /// iTerm's, a script's. `eval "$(tracewing env)"` sets it in sh, bash or
+    /// zsh; `tracewing env | Invoke-Expression` in PowerShell. It is what
+    /// Open a terminal on Set up sets: the proxy, and tracewing's CA beside
+    /// the system's roots for programs that read a file of them. The window,
+    /// or `tracewing capture`, must be running.
+    Env {
+        /// The proxy's port; the running one's if left out.
+        #[arg(long)]
+        port: Option<u16>,
+        /// The shell the lines are for [default: powershell on Windows, sh
+        /// elsewhere, which bash and zsh read too].
+        #[arg(long, value_enum)]
+        shell: Option<ShellName>,
         /// The data folder [default: the window's].
         #[arg(long)]
         data_dir: Option<PathBuf>,
@@ -127,6 +147,7 @@ pub fn is_command(arg: &str) -> bool {
     matches!(
         arg,
         "capture"
+            | "env"
             | "export"
             | "recover"
             | "uninstall"
@@ -137,6 +158,26 @@ pub fn is_command(arg: &str) -> bool {
             | "--version"
             | "-V"
     )
+}
+
+/// A shell `tracewing env` writes for.
+#[derive(Clone, Copy, ValueEnum)]
+enum ShellName {
+    Sh,
+    Fish,
+    Powershell,
+    Cmd,
+}
+
+impl From<ShellName> for Shell {
+    fn from(name: ShellName) -> Self {
+        match name {
+            ShellName::Sh => Shell::Sh,
+            ShellName::Fish => Shell::Fish,
+            ShellName::Powershell => Shell::PowerShell,
+            ShellName::Cmd => Shell::Cmd,
+        }
+    }
 }
 
 /// Runs the command `args` ask for, the program's name first.
@@ -171,6 +212,15 @@ pub fn run(args: &[String]) -> Result<()> {
                 filter,
                 without_secrets,
             }),
+        ),
+        Command::Env {
+            port,
+            shell,
+            data_dir,
+        } => env(
+            &data_dir.unwrap_or_else(default_data_dir),
+            port,
+            shell.map_or_else(Shell::native, Shell::from),
         ),
         Command::Export {
             har,
@@ -383,6 +433,55 @@ fn capture(
     if let Some(har) = har {
         let n = har.write(data_dir, &session)?;
         eprintln!("{} written to {}", flows(n), har.path.display());
+    }
+    Ok(())
+}
+
+/// The lines that take a shell through the proxy, on stdout for the shell to
+/// run; what is worth knowing about them on stderr, where `eval` leaves it.
+fn env(data_dir: &Path, port: Option<u16>, shell: Shell) -> Result<()> {
+    use std::io::IsTerminal as _;
+    let addr: std::net::SocketAddr = match port {
+        Some(port) => ([127, 0, 0, 1], port).into(),
+        None => std::fs::read_to_string(data_dir.join(crate::engine::PROXY_ADDRESS_FILE))
+            .ok()
+            .and_then(|text| text.trim().parse().ok())
+            .with_context(|| {
+                format!(
+                    "tracewing is not running on {}: open it, or start `tracewing capture`, \
+                     then run this again",
+                    data_dir.display()
+                )
+            })?,
+    };
+    // A file a killed run left says where nothing listens any more.
+    if std::net::TcpStream::connect_timeout(&addr, Duration::from_secs(1)).is_err() {
+        bail!("nothing listens at {addr}: open tracewing, or start `tracewing capture`");
+    }
+    let ca = data_dir.join("ca.pem");
+    if !ca.is_file() {
+        bail!("no CA in {} yet: open tracewing once", data_dir.display());
+    }
+    let vars = tracewing_system::launch::terminal_vars(addr, &ca, data_dir)?;
+    print!("{}", shell.set(&vars));
+    if let Some(version) = tracewing_system::launch::node_version_here()
+        .filter(|v| tracewing_system::launch::node_reads_proxy_env(v) == Some(false))
+    {
+        eprintln!(
+            "tracewing: Node.js {version} here goes straight out, past tracewing: \
+             Node reads HTTPS_PROXY from 22.21 and 24.5 on"
+        );
+    }
+    if std::io::stdout().is_terminal() {
+        eprintln!(
+            "tracewing: {}",
+            match shell {
+                Shell::Sh => "eval \"$(tracewing env)\" sets these",
+                Shell::Fish => "tracewing env --shell fish | source sets these",
+                Shell::PowerShell => "tracewing env | Invoke-Expression sets these",
+                Shell::Cmd => "run these lines in the console to set them",
+            }
+        );
     }
     Ok(())
 }
