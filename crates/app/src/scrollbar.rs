@@ -139,8 +139,9 @@ impl Scrolled {
                 point(bar.left() + (bar.size.width - px(THUMB_W)) / 2., start + at),
                 size(px(THUMB_W), long),
             ),
+            // On the area's bottom edge.
             Axis::Across => Bounds::new(
-                point(start + at, bar.top() + (bar.size.height - px(THUMB_W)) / 2.),
+                point(start + at, bar.bottom() - px(THUMB_W)),
                 size(long, px(THUMB_W)),
             ),
         };
