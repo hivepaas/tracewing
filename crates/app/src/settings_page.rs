@@ -595,21 +595,20 @@ impl Traffic {
         cx.notify();
     }
 
-    /// The body text size, `None` for the design's. Everything grows with it.
+    /// The body text size, `None` for the default. Everything grows with it.
     pub fn set_text_size(&mut self, size: Option<u8>, cx: &mut Context<Self>) {
-        self.layout.text_size = size.filter(|s| f32::from(*s) != crate::text_size::DRAWN_AT);
+        self.layout.text_size = size.filter(|s| *s != crate::text_size::DEFAULT);
         self.save_layout();
         cx.notify();
     }
 
-    /// The text size, from small to large, the design's marked.
+    /// The text size, from small to large, the default marked.
     fn render_text_size(&self, cx: &mut Context<Self>) -> gpui::Div {
         let c = colors();
         let chosen = self.text_size();
         let chips = crate::text_size::CHOICES.map(|size| {
             let on = f32::from(size) == chosen;
-            let design = f32::from(size) == crate::text_size::DRAWN_AT;
-            let label = if design {
+            let label = if size == crate::text_size::DEFAULT {
                 tr!("{size} (default)", size = size)
             } else {
                 size.to_string()

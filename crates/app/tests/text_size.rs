@@ -125,10 +125,10 @@ fn the_window_grows_with_the_text_size() {
         view.inspector.detail.is_some()
     });
     cx.run_until_parked();
-    // The design's size, as it always was.
+    // 14 by default: a size above the design's 13.
     main.update(&mut cx, |view, window, _| {
-        assert_eq!(view.text_size(), 13.);
-        assert_eq!(window.rem_size(), px(16.));
+        assert_eq!(view.text_size(), 14.);
+        assert_eq!(window.rem_size(), px(16. * 14. / 13.));
     })
     .unwrap();
 
@@ -169,7 +169,7 @@ fn the_window_grows_with_the_text_size() {
         tracewing::layout::SettingsSection::About
     );
 
-    // The design's again: nothing is kept for it.
+    // The design's 13 is a choice like any other now, and kept.
     main.update(&mut cx, |view, _, cx| view.set_text_size(Some(13), cx))
         .unwrap();
     cx.run_until_parked();
@@ -177,6 +177,13 @@ fn the_window_grows_with_the_text_size() {
         assert_eq!(window.rem_size(), px(16.))
     })
     .unwrap();
+    let kept = tracewing::layout::Layout::load(&dir.join("layout.toml"));
+    assert_eq!(kept.text_size, Some(13));
+
+    // The default again: nothing is kept for it.
+    main.update(&mut cx, |view, _, cx| view.set_text_size(Some(14), cx))
+        .unwrap();
+    cx.run_until_parked();
     let kept = tracewing::layout::Layout::load(&dir.join("layout.toml"));
     assert_eq!(kept.text_size, None);
     cx.run_until_parked();
