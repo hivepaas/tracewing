@@ -111,6 +111,13 @@ jobs:
         with:
           tool: cargo-about@0.9.3
 
+      # Where install-action has no build of it — Intel Macs — its fallback
+      # builds it from source without the `cli` feature, which is the program
+      # itself: what it leaves behind cannot be run.
+      - name: cargo-about, from source where it has no build
+        shell: bash
+        run: cargo about --version 2>/dev/null || cargo install cargo-about@0.9.3 --locked --features cli
+
       - name: NSIS
         if: runner.os == 'Windows'
         shell: pwsh
