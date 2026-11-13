@@ -15,6 +15,20 @@ programs, and none of them takes all.
 The two last leave the system proxy and every other app alone, which is what
 to use when only one program is being looked at.
 
+## The system proxy is not one setting
+
+It is a different thing on each system, and what has to obey it differs with
+it:
+
+| | What tracewing sets | What follows it |
+|---|---|---|
+| **macOS** | SystemConfiguration, per network service | CFNetwork and URLSession, so Safari and Mac apps. `localhost` and `127.0.0.1` go straight out whatever it says |
+| **Windows** | WinInet, **per user** | WinInet as it comes: Chromium, Office, and .NET's `HttpClient` where it reads that configuration. **WinHTTP does not follow it** — it has a setting of its own (`netsh winhttp set proxy`) unless the program asks for the user's, which is also why a service running as SYSTEM comes through nothing. Local addresses are left out by default |
+| **Linux** | GSettings for GNOME, the config file for KDE | only what reads them: Chromium, Electron, GNOME's own apps. **Linux has no proxy setting at the level of the system**, and a terminal knows nothing of this one |
+
+So on Linux the system proxy reaches the least, and a terminal or a browser on
+its own is usually the better way in.
+
 ## Browsers
 
 **Open on its own** starts the browser in a profile kept for tracewing, pointed
@@ -70,7 +84,53 @@ What does not come through, although started in such a terminal:
 - **Java**, which reads neither: start it with
   `-Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9090`, and add tracewing's
   `ca.pem` to the keystore it uses.
-- A program that pins a server's certificate, which no proxy can decrypt.
+- **Docker**, where the daemon and a container are two different problems.
+  The daemon's own traffic — pulling an image — does not inherit the
+  terminal's environment: on Linux it takes a systemd drop-in, and on Docker
+  Desktop its own proxy settings. A container's traffic takes the variables
+  set inside the container, tracewing's authority in the image, and a route to
+  this machine: `--network host` on Linux, `host.docker.internal` on Docker
+  Desktop, which has no host networking of that kind.
+- **A Windows service running as SYSTEM**, which reads neither this terminal
+  nor the user's own proxy setting: `netsh winhttp set proxy`.
+- **WSL**, which has a network stack of its own: set the variables in the WSL
+  shell, pointed at the Windows host's address rather than `127.0.0.1` —
+  unless it runs with `networkingMode=mirrored` (Windows 11 22H2 and after),
+  where `127.0.0.1` does reach the host.
+
+## Where a program looks for authorities
+
+A program can come through tracewing and still turn its certificate down, and
+the two are worth telling apart: the tables above are about what *reaches*
+tracewing, and this one is about what *trusts* it. A program that carries its
+own list of authorities is not helped by the authority being installed on the
+computer.
+
+| | Where it looks | What makes it work |
+|---|---|---|
+| Safari, Mac and Windows apps, Chrome and Edge, Go on macOS and Windows | the system's store | Set up, step 1. `SSL_CERT_FILE` is not read there, so Go on those two needs the authority installed |
+| **Firefox**, every profile its own | NSS, one store per profile | Set up installs it into each profile it finds, the one **Open on its own** makes included. On Linux that needs `certutil`, and step 1 says how to install it when it is missing |
+| **Python** `requests`, `httpx`, `pip` | `certifi` | `REQUESTS_CA_BUNDLE` or `SSL_CERT_FILE`, both of which a terminal sets |
+| **Node.js**, Deno, Bun | roots built into the binary | `NODE_EXTRA_CA_CERTS`, `DENO_CERT`, which a terminal sets; `--use-system-ca` on a new enough Node |
+| **Java** | its own `cacerts` | `keytool -importcert`, or `-Djavax.net.ssl.trustStore` |
+| **Flutter and Dart** | BoringSSL's own list | a `SecurityContext` in the app's code |
+| A **Rust** program on rustls with `webpki-roots` | roots compiled in | nothing from outside: it has to be built against `rustls-native-certs` |
+
+## What no way in can reach
+
+- **A program that pins a server's certificate.** tracewing can tunnel it
+  untouched and show the connection, and that is all anyone can honestly do.
+- **Anything that is not HTTP**: DNS, SSH, SMTP, raw TCP and UDP, WebRTC.
+- **A client that insists on HTTP/3.** tracewing takes `Alt-Svc` out of
+  responses and can block UDP 443 so that clients fall back to HTTP/2; one
+  that refuses to fall back is out of reach until HTTP/3 is built.
+- **The system's own traffic** — Windows Update, `softwareupdate`, Apple
+  push — which tracewing tunnels untouched on purpose: decrypting it breaks
+  updates and tells nobody anything.
+
+Every "does not" on this page has the same root: tracewing waits to be told
+about. Taking traffic without any of that, from apps that were never told, is
+designed in [design/capture-modes.md](design/capture-modes.md).
 
 ## AI agents
 

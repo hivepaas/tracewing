@@ -22,6 +22,7 @@ use tracewing_proxy::{
     pause::{Paused, Pauses, Stage, Verdict},
     rules::HostRules,
     run_proxy,
+    source::{Flow, Given, Lan, Target},
     throttle::{Conditions, Network},
     traffic_rules::{Action, AskWith, TrafficRule, TrafficRules},
 };
@@ -43,6 +44,9 @@ struct Harness {
     pauses: Arc<Pauses>,
     network: Arc<Network>,
     other_devices: Arc<OtherDevices>,
+    /// Where a connection taken on its way is put in, as a source that took
+    /// it from the OS would.
+    taken: tokio::sync::mpsc::Sender<Flow>,
     live: Arc<Live>,
     relay: Arc<tracewing_proxy::relay::Relay>,
     tls_keys: Arc<tracewing_proxy::key_log::TlsKeys>,
@@ -123,6 +127,7 @@ impl Harness {
         let sockets = Arc::new(tracewing_proxy::sockets::Sockets::default());
         let client_certs = Arc::new(tracewing_proxy::client_certs::ClientCerts::default());
         let scripts = Arc::new(tracewing_proxy::script::Scripts::default());
+        let (given, taken) = Given::channel();
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -146,7 +151,10 @@ impl Harness {
                 find_apps: true,
                 stop_limit: Duration::from_secs(1),
                 live: Arc::clone(&live),
-                other_devices: Some(Arc::clone(&other_devices)),
+                sources: vec![
+                    Box::new(Lan::new(Arc::clone(&other_devices))),
+                    Box::new(given),
+                ],
                 relay: Arc::clone(&relay),
                 tls_keys: Arc::clone(&tls_keys),
                 sockets: Arc::clone(&sockets),
@@ -172,6 +180,7 @@ impl Harness {
             pauses,
             network,
             other_devices,
+            taken,
             live,
             dir,
             proxy_url,
@@ -4071,5 +4080,61 @@ async fn rules_apply_while_paused() {
     assert_eq!(res.status(), 451);
     let (summary, conn, dir) = h.finish(0).await;
     assert_eq!(summary.written, 0);
+    clean_up(conn, dir);
+}
+
+/// A connection taken on its way — what a local-mode source will hand over,
+/// from an app that was never told a proxy exists — is recorded like any
+/// other, as the program the source named and from the address it really came
+/// from rather than the loopback it reaches the proxy over.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_taken_connection_is_recorded_as_the_app_that_made_it() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let h = Harness::start("taken").await;
+    let port = h.playground_port;
+    let (mut client, its_end) = tokio::io::duplex(64 * 1024);
+    h.taken
+        .send(Flow {
+            stream: Box::new(its_end),
+            client: "192.168.1.13:51234".parse().unwrap(),
+            to: Target::Named {
+                host: "localhost".to_owned(),
+                port,
+            },
+            who: Some(tracewing_store::app::App {
+                pid: 4123,
+                name: "node".to_owned(),
+                path: Some("/usr/bin/node".to_owned()),
+            }),
+        })
+        .await
+        .unwrap();
+    // It asks for no proxy and says no CONNECT: it just starts talking.
+    client
+        .write_all(b"GET /json HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        .await
+        .unwrap();
+    let mut said = Vec::new();
+    client.read_to_end(&mut said).await.unwrap();
+    let said = String::from_utf8_lossy(&said);
+    assert!(said.starts_with("HTTP/1.1 200"), "{said}");
+
+    let (summary, conn, dir) = h.finish(1).await;
+    assert_eq!(summary.written, 1);
+    let (client_addr, app, pid, path, host): (String, Option<String>, Option<i64>, String, String) =
+        conn.query_row(
+            "SELECT client, app, app_pid, path, host FROM flows",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        client_addr, "192.168.1.13:51234",
+        "the client the source saw, not the loopback the handover came over"
+    );
+    assert_eq!(app.as_deref(), Some("node"), "named by the source");
+    assert_eq!(pid, Some(4123), "and not looked for by address");
+    assert_eq!(path, "/json");
+    assert_eq!(host, format!("localhost:{port}"));
     clean_up(conn, dir);
 }

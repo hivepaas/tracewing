@@ -7,6 +7,7 @@ pub mod ca_key;
 pub mod capture;
 pub mod client_certs;
 pub mod company_ca;
+pub mod handover;
 pub mod key_log;
 pub mod lan;
 pub mod ntlm;
@@ -15,6 +16,7 @@ pub mod relay;
 pub mod rules;
 pub mod script;
 pub mod sockets;
+pub mod source;
 pub mod throttle;
 pub mod traffic_rules;
 pub mod upstream;
@@ -35,6 +37,7 @@ use hudsucker::{
     },
 };
 use rules::HostRules;
+use source::{Found, Port, Source, Stop, Took};
 use std::{
     net::{Ipv4Addr, SocketAddr},
     path::PathBuf,
@@ -44,7 +47,7 @@ use std::{
     },
     time::Duration,
 };
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::mpsc};
 use tracewing_store::{
     search,
     session::{self, Shared},
@@ -106,9 +109,9 @@ pub struct ProxyOptions {
     pub stop_limit: Duration,
     /// The settings that apply as they change. They start as `settings` has them.
     pub live: Arc<Live>,
-    /// Whether other devices on the network may use the proxy, switched while
-    /// it runs. `None` keeps them out.
-    pub other_devices: Option<Arc<lan::OtherDevices>>,
+    /// Where traffic comes from, besides the proxy port itself: other devices
+    /// on the network today, and whatever is added after. See [`source`].
+    pub sources: Vec<Box<dyn Source>>,
     /// Another proxy that connections to servers go through, as a company's.
     /// Changes apply to the next connection.
     pub relay: Arc<relay::Relay>,
@@ -215,6 +218,8 @@ pub async fn run_proxy(
         Arc::clone(&opts.traffic_rules),
     );
 
+    // What a source knew of each connection it handed over, for the handler.
+    let handed = Arc::new(handover::Handed::default());
     let handler = FlowHandler::new(
         recorder,
         opts.settings.log_max(),
@@ -236,46 +241,46 @@ pub async fn run_proxy(
             connector: connector.clone(),
             sockets: Arc::clone(&opts.sockets),
             scripts: Arc::clone(&opts.scripts),
+            handed: Arc::clone(&handed),
         },
     );
     let stop_limit = opts.stop_limit;
     let pauses = opts.pauses;
+    let serving = Serve {
+        ca: ca::SharedCa(Arc::new(ca)),
+        connector,
+        handler: handler.clone(),
+        proxy: own_addr,
+        handed,
+    };
+    // Every source, and every listener they opened, stops with this.
+    let (stop_tx, stop) = tokio::sync::watch::channel(false);
     let (stopping_tx, stopping) = tokio::sync::oneshot::channel();
-    let ca = ca::SharedCa(Arc::new(ca));
-    // The listeners for other devices stop with this one.
-    let (lan_stop_tx, lan_stop) = tokio::sync::watch::channel(false);
-    let lan = opts.other_devices.map(|devices| {
-        let serve = LanServe {
-            ca: ca.clone(),
-            connector: connector.clone(),
-            handler: handler.clone(),
-        };
-        tokio::spawn(serve_other_devices(
-            serve,
-            devices,
-            own_addr.port(),
-            lan_stop,
-        ))
+    tokio::spawn(async move {
+        shutdown.await;
+        // Held, they would keep their connections, and the stop, waiting.
+        pauses.release_all();
+        let _ = stop_tx.send(true);
+        let _ = stopping_tx.send(());
     });
-    let proxy = Proxy::builder()
-        .with_listener(listener)
-        .with_ca(ca)
-        .with_http_connector(connector)
-        .with_http_handler(handler.clone())
-        .with_graceful_shutdown(async move {
-            shutdown.await;
-            let _ = lan_stop_tx.send(true);
-            // Held, they would keep their connections, and the stop, waiting.
-            pauses.release_all();
-            let _ = stopping_tx.send(());
-        })
-        .build()?;
+
+    let (found, took) = Found::channel();
+    // The proxy port goes first: it is what a taken connection is handed to.
+    let ours = Box::new(source::ProxyPort::new(listener)) as Box<dyn Source>;
+    for source in std::iter::once(ours).chain(opts.sources) {
+        let name = source.name();
+        source
+            .start(own_addr, found.clone(), stop.clone())
+            .with_context(|| format!("start {name}"))?;
+    }
+    // With ours gone, the channel closes once the last source has ended.
+    drop(found);
 
     let reporter = opts
         .stats_every
         .map(|every| tokio::spawn(report(Arc::clone(&stats), every)));
     tokio::select! {
-        result = proxy.start() => result?,
+        result = serve(took, serving, stop) => result?,
         _ = async {
             let _ = stopping.await;
             tokio::time::sleep(stop_limit).await;
@@ -283,9 +288,6 @@ pub async fn run_proxy(
     }
     if let Some(reporter) = reporter {
         reporter.abort();
-    }
-    if let Some(lan) = lan {
-        let _ = tokio::time::timeout(stop_limit, lan).await;
     }
 
     // The index goes first, with the writer still there to keep the session to its
@@ -343,89 +345,101 @@ pub async fn run_proxy(
     })
 }
 
-/// What a listener for other devices is served with: the same as the
-/// loopback's, so its flows go to the same session under the same rules.
-struct LanServe {
+/// What every listener is served with, so that each one's flows go to the
+/// same session under the same rules.
+#[derive(Clone)]
+struct Serve {
     ca: ca::SharedCa,
     connector: upstream::TimedConnector,
     handler: FlowHandler,
+    /// Where a taken connection is handed to: the proxy port itself.
+    proxy: SocketAddr,
+    handed: Arc<handover::Handed>,
 }
 
-/// How often the addresses this machine has on its networks are looked at
-/// while other devices may use the proxy.
-const LAN_LOOK_EVERY: Duration = Duration::from_secs(3);
-
-/// Listens for other devices on each of this machine's addresses, on the
-/// loopback's port, while they may: an address that comes gets a listener,
-/// and one that goes, or all of them when the switch goes off, has its
-/// listener stopped. Connections it took are left to end on their own, as
-/// a phone's may be in the middle of something.
-async fn serve_other_devices(
-    serve: LanServe,
-    devices: Arc<lan::OtherDevices>,
-    port: u16,
-    mut stop: tokio::sync::watch::Receiver<bool>,
-) {
-    let mut running: std::collections::BTreeMap<
-        std::net::Ipv4Addr,
-        tokio::sync::oneshot::Sender<()>,
-    > = std::collections::BTreeMap::new();
-    loop {
-        let wanted: Vec<std::net::Ipv4Addr> = if devices.is_on() {
-            lan::addresses()
-        } else {
-            Vec::new()
-        };
-        running.retain(|ip, _| wanted.contains(ip));
-        let mut problem = None;
-        for ip in wanted {
-            if running.contains_key(&ip) {
-                continue;
-            }
-            match TcpListener::bind((ip, port)).await {
-                Ok(listener) => {
-                    let _ = socket2::SockRef::from(&listener).set_tcp_nodelay(true);
-                    let (stop_one, stopped) = tokio::sync::oneshot::channel::<()>();
-                    let built = Proxy::builder()
-                        .with_listener(listener)
-                        .with_ca(serve.ca.clone())
-                        .with_http_connector(serve.connector.clone())
-                        .with_http_handler(serve.handler.clone())
-                        .with_graceful_shutdown(async move {
-                            let _ = stopped.await;
-                        })
-                        .build();
-                    match built {
-                        Ok(proxy) => {
-                            tokio::spawn(async move {
-                                if let Err(e) = proxy.start().await {
-                                    tracing::warn!("listening on {ip}: {e:#}");
-                                }
-                            });
-                            running.insert(ip, stop_one);
-                        }
-                        Err(e) => problem = Some(format!("{ip}:{port}: {e:#}")),
-                    }
-                }
-                Err(e) => problem = Some(format!("{ip}:{port}: {e}")),
-            }
-        }
-        devices.listen_at(
-            running
-                .keys()
-                .map(|ip| SocketAddr::new((*ip).into(), port))
-                .collect(),
-            problem,
-        );
+/// Serves what the sources find, until they have all ended and nothing they
+/// left behind is still being served.
+///
+/// A listener and a single taken connection are the two shapes traffic
+/// arrives in; [`source`] says why the first cannot be reduced to the second.
+async fn serve(mut took: mpsc::Receiver<Took>, serving: Serve, stop: Stop) -> Result<()> {
+    let mut running = tokio::task::JoinSet::new();
+    let mut taking = true;
+    while taking || !running.is_empty() {
         tokio::select! {
-            _ = tokio::time::sleep(LAN_LOOK_EVERY), if devices.is_on() => {}
-            _ = devices.changed().notified() => {}
-            _ = stop.changed() => break,
+            found = took.recv(), if taking => match found {
+                Some(Took::Port(port)) => {
+                    running.spawn(serve_port(serving.clone(), port, stop.clone()));
+                }
+                Some(Took::Flow(flow)) => {
+                    let serving = serving.clone();
+                    running.spawn(async move {
+                        // One taken connection going wrong is not the proxy's end.
+                        if let Err(e) = handover::give(flow, serving.proxy, &serving.handed).await {
+                            tracing::warn!("{e:#}");
+                        }
+                        Ok(())
+                    });
+                }
+                None => taking = false,
+            },
+            Some(ended) = running.join_next(), if !running.is_empty() => match ended {
+                Ok(result) => result?,
+                Err(e) if e.is_panic() => std::panic::resume_unwind(e.into_panic()),
+                Err(_) => {}
+            },
         }
     }
-    // Dropping each sender stops its listener.
-    running.clear();
-    devices.listen_at(Vec::new(), None);
+    Ok(())
+}
+
+/// Serves one listener of clients that say where they are going, until it is
+/// taken away on its own or everything stops.
+async fn serve_port(serving: Serve, port: Port, stop: Stop) -> Result<()> {
+    let Port {
+        listener,
+        name,
+        until,
+        essential,
+    } = port;
+    let built = Proxy::builder()
+        .with_listener(listener)
+        .with_ca(serving.ca)
+        .with_http_connector(serving.connector)
+        .with_http_handler(serving.handler)
+        .with_graceful_shutdown(async move {
+            tokio::select! {
+                _ = taken_away(until) => {}
+                _ = source::stopped(stop) => {}
+            }
+        })
+        .build();
+    let served = match built {
+        Ok(proxy) => proxy.start().await.map_err(anyhow::Error::new),
+        Err(e) => Err(anyhow::Error::new(e)),
+    };
+    match served {
+        Ok(()) => Ok(()),
+        // Without the port clients are told to use there is no proxy at all;
+        // one address of many that other devices reach is a warning.
+        Err(e) if essential => Err(e).with_context(|| format!("serving {name}")),
+        Err(e) => {
+            tracing::warn!("{name}: {e:#}");
+            Ok(())
+        }
+    }
+}
+
+/// This listener alone being taken away: an address other devices reached
+/// this machine at, which has gone. A listener with nothing to take it away
+/// waits here for ever, and the stop ends it instead.
+async fn taken_away(until: Option<tokio::sync::oneshot::Receiver<()>>) {
+    match until {
+        Some(until) => {
+            let _ = until.await;
+        }
+        None => std::future::pending().await,
+    }
 }
 
 /// How the proxy checks servers, and the checker on its own, which the
