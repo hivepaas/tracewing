@@ -53,6 +53,15 @@ fn minus_and_plus_resize_the_inspector_by_a_tenth_of_the_window() {
     let dir = std::env::temp_dir().join(format!("tracewing-inspector-size-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let listener = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let port = listener.local_addr().unwrap().port();
+    runtime.spawn(tracewing_dev::playground::serve(listener));
     let engine = Engine::start(EngineOptions {
         data_dir: dir.clone(),
         settings: StorageSettings {
@@ -156,6 +165,104 @@ fn minus_and_plus_resize_the_inspector_by_a_tenth_of_the_window() {
         "{}",
         widest.inspector_w
     );
+
+    // Made as wide as it goes with the sidebar hidden, then the sidebar shown
+    // again: the inspector gives way rather than going past the window's
+    // edge, its body and scroll bars with it; the width chosen is kept.
+    main.update(&mut cx, |view, _, cx| {
+        view.new_compose(cx);
+        let page = view.compose_page.as_ref().unwrap();
+        let url = format!("http://localhost:{port}/json");
+        page.url
+            .clone()
+            .update(cx, |input, cx| input.set_text(&url, 0..0, cx));
+        view.send_composed(cx);
+    })
+    .unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    while !main
+        .update(&mut cx, |view, _, _| {
+            view.compose_page
+                .as_ref()
+                .is_some_and(|p| p.answer.is_some())
+        })
+        .unwrap()
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "waiting for the answer"
+        );
+        cx.run_until_parked();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    main.update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+    while !main
+        .update(&mut cx, |view, _, cx| {
+            view.look(cx);
+            view.count() == 1
+        })
+        .unwrap()
+    {
+        assert!(std::time::Instant::now() < deadline, "waiting for the flow");
+        cx.run_until_parked();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    main.update(&mut cx, |view, _, cx| {
+        view.select_place(0, cx);
+        view.set_side(tracewing::detail::Side::Response, cx);
+        view.set_part(tracewing::inspector::Part::Body, cx);
+    })
+    .unwrap();
+    let toggle_sidebar = |cx: &mut HeadlessAppContext| {
+        main.update(cx, |view, window, cx| {
+            view.do_key(tracewing::shortcuts::Action::Sidebar, window, cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+    };
+    while !main
+        .update(&mut cx, |view, _, cx| {
+            view.look(cx);
+            matches!(
+                view.inspector.body,
+                tracewing::inspector::BodyState::Shown(_)
+            )
+        })
+        .unwrap()
+    {
+        assert!(std::time::Instant::now() < deadline, "waiting for the body");
+        cx.run_until_parked();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    toggle_sidebar(&mut cx);
+    let chosen = press(&mut cx, main, &dir, true, 60).inspector_w;
+    toggle_sidebar(&mut cx);
+    for _ in 0..3 {
+        main.update(&mut cx, |_, window, _| window.refresh())
+            .unwrap();
+        cx.run_until_parked();
+    }
+    let body = main
+        .update(&mut cx, |view, _, _| match &view.inspector.body {
+            tracewing::inspector::BodyState::Shown(body) => Some(body.clone()),
+            _ => None,
+        })
+        .unwrap()
+        .expect("the flow's body is shown");
+    let right = main
+        .update(&mut cx, |_, _, cx| body.read(cx).drawn_bounds().right())
+        .unwrap();
+    assert!(
+        right <= px(1440.),
+        "the body ends inside the window: {right:?}"
+    );
+    assert_eq!(
+        Layout::load(&dir.join("layout.toml")).inspector_w,
+        chosen,
+        "the width chosen is kept for when there is room"
+    );
+    shot(&mut cx, main.into(), "125-inspector-gives-way");
 
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);
