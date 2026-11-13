@@ -210,7 +210,9 @@ impl Engine {
             find_apps: opts.find_apps,
             stop_limit: std::time::Duration::from_secs(2),
             live: Arc::clone(&live),
-            other_devices: Some(Arc::clone(&other_devices)),
+            sources: vec![Box::new(tracewing_proxy::source::Lan::new(Arc::clone(
+                &other_devices,
+            )))],
             relay: Arc::clone(&relay),
             tls_keys: Arc::clone(&tls_keys),
             sockets: Arc::clone(&sockets),

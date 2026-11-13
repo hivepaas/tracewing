@@ -234,6 +234,10 @@ pub struct FlowHandler {
     pauses: Arc<Pauses>,
     /// Which program each connection is from, when that is looked for.
     apps: Option<Apps>,
+    /// What a source knew of the connections it handed over. One taken on its
+    /// way reaches the proxy over the loopback, and this says who it really
+    /// is; see [`crate::handover`].
+    handed: Arc<crate::handover::Handed>,
     /// See `StorageSettings::hide_http3`.
     live: Arc<Live>,
     /// The network traffic goes through, slow on purpose or not.
@@ -274,6 +278,7 @@ pub struct Controls {
     pub check: Arc<Check>,
     pub pauses: Arc<Pauses>,
     pub apps: Option<Apps>,
+    pub handed: Arc<crate::handover::Handed>,
     /// The settings that apply as they change.
     pub live: Arc<Live>,
     /// Changes apply to the next request.
@@ -307,6 +312,7 @@ impl FlowHandler {
             check: controls.check,
             pauses: controls.pauses,
             apps: controls.apps,
+            handed: controls.handed,
             live: controls.live,
             network: controls.network,
             relay: controls.relay,
@@ -395,8 +401,19 @@ impl FlowHandler {
         }
     }
 
-    fn app_of(&self, client: SocketAddr) -> Option<Arc<AppAnswer>> {
-        self.apps.as_ref()?.of(client, false)
+    /// Who is at the other end: the address to put on the flow, and the
+    /// program behind it. A connection a source took on its way arrives over
+    /// the loopback with what the source was told kept aside, so there is
+    /// nothing to look for; every client that asked for the proxy has its
+    /// program looked for by the address it came from.
+    fn client_of(&self, from: SocketAddr) -> (SocketAddr, Option<Arc<AppAnswer>>) {
+        match self.handed.of(from) {
+            Some(known) => (known.client, known.app),
+            None => (
+                from,
+                self.apps.as_ref().and_then(|apps| apps.of(from, false)),
+            ),
+        }
     }
 
     /// A rule's answer: no server was asked, so none is on record.
@@ -669,6 +686,7 @@ impl HttpHandler for FlowHandler {
             // A new connection, and the first the proxy hears of it.
             if let Some(apps) = &self.apps
                 && self.recording.load(Ordering::Relaxed)
+                && self.handed.of(ctx.client_addr).is_none()
             {
                 apps.of(ctx.client_addr, true);
             }
@@ -766,11 +784,16 @@ impl HttpHandler for FlowHandler {
         }
         // Paused: traffic goes through as if nothing were watching, rules and all.
         let recording = self.recording.load(Ordering::Relaxed);
-        let flow =
-            recording.then(|| Arc::new(Flow::start(self.recorder.clone(), ctx.client_addr, &req)));
+        // Asked for only while recording: looking for a program is work.
+        let (client, app) = if recording {
+            self.client_of(ctx.client_addr)
+        } else {
+            (ctx.client_addr, None)
+        };
+        let flow = recording.then(|| Arc::new(Flow::start(self.recorder.clone(), client, &req)));
         if let Some(flow) = &flow {
             let mut record = flow.lock();
-            record.app = self.app_of(ctx.client_addr);
+            record.app = app;
             if !plan.names.is_empty() {
                 record.rule = Some(plan.names.join(", "));
             }
@@ -869,15 +892,16 @@ impl HttpHandler for FlowHandler {
             .unwrap_or_else(|e| e.into_inner())
             .leaves_alone(host);
         if leave && self.recording.load(Ordering::Relaxed) {
+            let (client, app) = self.client_of(ctx.client_addr);
             self.recorder.submit(FlowRecord {
                 started_us: unix_micros(),
-                client: ctx.client_addr.to_string(),
+                client: client.to_string(),
                 kind: "tunnel",
                 method: "CONNECT".to_owned(),
                 scheme: "https".to_owned(),
                 host: without_default_port(host, "https").to_owned(),
                 client_version: format!("{:?}", req.version()),
-                app: self.app_of(ctx.client_addr),
+                app,
                 status: Some(200),
                 request: BodyRecord {
                     complete: true,

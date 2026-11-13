@@ -333,7 +333,7 @@ async fn main() -> Result<()> {
                     find_apps: !no_apps,
                     stop_limit: Duration::from_secs(5),
                     live: Default::default(),
-                    other_devices: None,
+                    sources: Vec::new(),
                     relay,
                     // As browsers and curl, it writes them where SSLKEYLOGFILE says.
                     tls_keys: Arc::new(tracewing_proxy::key_log::TlsKeys::from_env()),
