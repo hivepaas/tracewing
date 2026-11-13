@@ -1118,3 +1118,235 @@ fn a_line_too_long_opens_whole() {
         .unwrap();
     assert_eq!(size as usize, plain_text.len());
 }
+
+/// Pressing a value reads it in the pane beside the body: the whole value,
+/// without dragging across it, and the body still there to compare against.
+#[test]
+fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir = std::env::temp_dir().join(format!("tracewing-reads-pane-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let listener = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let port = listener.local_addr().unwrap().port();
+    runtime.spawn(tracewing_dev::playground::serve(listener));
+    let engine = Engine::start(EngineOptions {
+        data_dir: dir.clone(),
+        settings: StorageSettings {
+            disk_reserve_mib: 1,
+            ..StorageSettings::default()
+        },
+        rules: Default::default(),
+        traffic_rules: Default::default(),
+        ports: 20_460..20_470,
+        extra_roots: Vec::new(),
+        key_store: Default::default(),
+        find_apps: false,
+    })
+    .unwrap();
+    while !dir.join("ca.pem").exists() {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+
+    let text = Arc::new(gpui_wgpu::CosmicTextSystem::new(tracewing::FONT));
+    let mut cx = HeadlessAppContext::with_platform(text, Arc::new(tracewing::Assets), || {
+        gpui_platform::current_headless_renderer()
+    });
+    cx.update(tracewing::load_fonts);
+    let data_dir = dir.clone();
+    let window: WindowHandle<Traffic> = cx
+        .open_window(size(px(1440.), px(900.)), move |window, cx| {
+            cx.new(|cx| Traffic::new(engine, &data_dir, window, cx))
+        })
+        .unwrap();
+
+    // One of every kind of value the window can read.
+    get(
+        &mut cx,
+        window,
+        &format!("http://localhost:{port}/readings"),
+    );
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Traffic, cx);
+            view.select_place(0, cx);
+            view.set_part(Part::Body, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+
+    // Where a field's value sits in the body, line and all.
+    let spot_in = |cx: &mut HeadlessAppContext, field: &str| -> (Spot, String) {
+        window
+            .update(cx, |view, _, cx| {
+                let BodyState::Shown(body) = &view.inspector.body else {
+                    unreachable!()
+                };
+                let body = body.read(cx);
+                let lines = body.body().lines();
+                for line in 0..lines {
+                    let text = body.body().read_whole(line..line + 1).pop().unwrap();
+                    if let Some((from, to)) = value_of(&text, field) {
+                        // A press in the middle of it, as a reader's would be.
+                        return (
+                            Spot {
+                                piece: line,
+                                at: (from + to) / 2,
+                            },
+                            text[from..to].trim_matches('"').to_owned(),
+                        );
+                    }
+                }
+                panic!("no {field} in the body");
+            })
+            .unwrap()
+    };
+
+    // A time in milliseconds: pressing anywhere in it takes the whole value.
+    let (spot, value) = spot_in(&mut cx, "created_at_ms");
+    let before = window
+        .update(&mut cx, |view, _, _| view.layout_width())
+        .unwrap();
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            let body = body.clone();
+            body.update(cx, |body, cx| {
+                assert!(body.read_value_at_spot(spot, cx), "the press is in a value");
+            });
+        })
+        .unwrap();
+    cx.run_until_parked();
+
+    let wider = window
+        .update(&mut cx, |view, _, _| view.layout_width())
+        .unwrap();
+    let (read_value, field, ways, has_unix) = window
+        .update(&mut cx, |view, _, _| {
+            let reads = view.inspector.reads.as_ref().expect("the pane is open");
+            (
+                reads.value.clone(),
+                reads.field.clone(),
+                reads.found.len(),
+                reads.found.iter().any(|reading| reading.id == "unix-ms"),
+            )
+        })
+        .unwrap();
+    assert_eq!(read_value.trim_matches('"'), value, "the whole value");
+    // The pane takes its width from the window, not from the body.
+    assert!(
+        wider > before,
+        "the inspector grew to hold the pane: {before} to {wider}"
+    );
+    assert_eq!(field.as_deref(), Some("created_at_ms"));
+    assert!(has_unix, "a time in milliseconds is one of the ways");
+    assert!(ways > 1, "a number is more than one thing: {ways}");
+
+    // And the selection follows, so a copy takes the value and nothing else.
+    let selected = window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            match body.read(cx).selected_text() {
+                tracewing::select::Copied::Text(text) => text,
+                other => panic!("{other:?}"),
+            }
+        })
+        .unwrap();
+    assert_eq!(selected.trim_matches('"'), value, "what a copy would take");
+    shot(&mut cx, window.into(), "123-readings-pane");
+
+    // Another way of reading the same value, chosen in the pane.
+    window
+        .update(&mut cx, |view, _, cx| view.choose_reading(1, cx))
+        .unwrap();
+    cx.run_until_parked();
+    let at = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector.reads.as_ref().map(|reads| reads.at)
+        })
+        .unwrap();
+    assert_eq!(at, Some(1), "the pane shows the one that was chosen");
+
+    // A value that holds a body: it opens inside the pane, and the body it
+    // came from stays where it was.
+    let (spot, _) = spot_in(&mut cx, "payload");
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                unreachable!()
+            };
+            let body = body.clone();
+            body.update(cx, |body, cx| {
+                assert!(body.read_value_at_spot(spot, cx));
+            });
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let (label, lines, took_the_body) = window
+        .update(&mut cx, |view, _, cx| {
+            let reads = view.inspector.reads.as_ref().expect("the pane is open");
+            let opened = reads.opened.as_ref().expect("base64 holds a body");
+            (
+                opened.label.to_string(),
+                match &opened.shown {
+                    OpenedAs::Body(view) => view.read(cx).body().lines(),
+                    OpenedAs::Picture(..) => 0,
+                },
+                view.inspector.opened.is_some(),
+            )
+        })
+        .unwrap();
+    // The shortest way first: base64, whose body is the JSON it held.
+    assert_eq!(label, "base64", "it says what read it");
+    assert!(lines >= 4, "the JSON inside, laid out: {lines}");
+    assert!(
+        !took_the_body,
+        "the body it came from is still the body: nothing took its place"
+    );
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "124-readings-pane-body");
+
+    // And the step further in is one of the ways, with its chain said.
+    let further = window
+        .update(&mut cx, |view, _, cx| {
+            let reads = view.inspector.reads.as_ref().expect("the pane is open");
+            let at = reads
+                .found
+                .iter()
+                .position(|reading| reading.id == "json")
+                .expect("the JSON inside the base64 is one of the ways");
+            view.choose_reading(at, cx);
+            view.inspector
+                .reads
+                .as_ref()
+                .and_then(|reads| reads.opened.as_ref())
+                .map(|opened| opened.label.to_string())
+        })
+        .unwrap();
+    assert_eq!(further.as_deref(), Some("base64 → json"));
+
+    // Escape puts the pane away and gives the body its width back.
+    let closed = window
+        .update(&mut cx, |view, _, cx| {
+            let was = view.inspector.reads.is_some();
+            view.close_reads(cx);
+            (was, view.inspector.reads.is_some())
+        })
+        .unwrap();
+    assert_eq!(closed, (true, false));
+    let after = window
+        .update(&mut cx, |view, _, _| view.layout_width())
+        .unwrap();
+    assert_eq!(after, before, "and the width goes back when it closes");
+}

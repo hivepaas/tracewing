@@ -765,11 +765,20 @@ t1e92fb27 = Dieses Bild kann nicht dargestellt werden. Speichern Sie den Body, u
 # Opening…
 tc40f2321 = Wird geöffnet…
 
+# this value
+t8a86fa50 = dieser Wert
+
 # The whole line
 t17d1ec47 = Die ganze Zeile
 
 # line {number}
 t1942c7ae = Zeile { $number }
+
+# Readings
+t4df6b638 = Deutungen
+
+# Close the readings
+t60beaefd = Deutungen schließen
 
 # Read from {from}
 t6d510d3d = Gelesen aus { $from }

@@ -771,11 +771,20 @@ t1e92fb27 = Esta imagen no se puede mostrar. Guarda el cuerpo para verla.
 # Opening…
 tc40f2321 = Abriendo…
 
+# this value
+t8a86fa50 = este valor
+
 # The whole line
 t17d1ec47 = La línea entera
 
 # line {number}
 t1942c7ae = línea { $number }
+
+# Readings
+t4df6b638 = Lecturas
+
+# Close the readings
+t60beaefd = Cerrar las lecturas
 
 # Read from {from}
 t6d510d3d = Leído de { $from }

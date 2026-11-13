@@ -9,6 +9,9 @@ use tracewing_i18n::tr;
 pub const SIDEBAR_MIN: f32 = 140.;
 pub const SIDEBAR_MAX: f32 = 480.;
 pub const INSPECTOR_MIN: f32 = 280.;
+/// How narrow the readings pane may be dragged, and how wide. Narrower than
+/// this and a decoded body is a column of single words.
+pub const READS_MIN: f32 = 180.;
 pub const LIST_MIN: f32 = 240.;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -132,6 +135,8 @@ pub struct Layout {
     pub inspector_w: f32,
     /// Below it.
     pub inspector_h: f32,
+    /// The readings pane, beside the body.
+    pub reads_w: f32,
     /// `None` until the window has been seen once.
     pub window: Option<WindowState>,
     /// The list's columns: which are hidden, and how wide.
@@ -203,6 +208,7 @@ impl Default for Layout {
             sidebar_w: 220.,
             inspector_w: 460.,
             inspector_h: 380.,
+            reads_w: 300.,
             window: None,
             columns: Columns::default(),
             hosts: HostMarks::default(),

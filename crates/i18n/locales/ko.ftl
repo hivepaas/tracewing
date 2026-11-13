@@ -736,11 +736,20 @@ t1e92fb27 = 이 이미지를 표시할 수 없습니다. 본문을 저장해서 
 # Opening…
 tc40f2321 = 여는 중…
 
+# this value
+t8a86fa50 = 이 값
+
 # The whole line
 t17d1ec47 = 줄 전체
 
 # line {number}
 t1942c7ae = { $number }번째 줄
+
+# Readings
+t4df6b638 = 해석
+
+# Close the readings
+t60beaefd = 해석 닫기
 
 # Read from {from}
 t6d510d3d = { $from }에서 읽음

@@ -736,11 +736,20 @@ t1e92fb27 = Không vẽ được hình này. Hãy lưu body để xem.
 # Opening…
 tc40f2321 = Đang mở…
 
+# this value
+t8a86fa50 = giá trị này
+
 # The whole line
 t17d1ec47 = Nguyên dòng
 
 # line {number}
 t1942c7ae = dòng { $number }
+
+# Readings
+t4df6b638 = Cách đọc
+
+# Close the readings
+t60beaefd = Đóng phần đọc
 
 # Read from {from}
 t6d510d3d = Đọc từ { $from }

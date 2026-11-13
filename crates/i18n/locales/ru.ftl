@@ -787,11 +787,20 @@ t1e92fb27 = Это изображение не удаётся отобразит
 # Opening…
 tc40f2321 = Открытие…
 
+# this value
+t8a86fa50 = это значение
+
 # The whole line
 t17d1ec47 = Вся строка
 
 # line {number}
 t1942c7ae = строка { $number }
+
+# Readings
+t4df6b638 = Прочтения
+
+# Close the readings
+t60beaefd = Закрыть прочтения
 
 # Read from {from}
 t6d510d3d = Прочитано из { $from }

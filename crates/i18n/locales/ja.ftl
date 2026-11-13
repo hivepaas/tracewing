@@ -736,11 +736,20 @@ t1e92fb27 = この画像は表示できません。ボディを保存して確�
 # Opening…
 tc40f2321 = 開いています…
 
+# this value
+t8a86fa50 = この値
+
 # The whole line
 t17d1ec47 = 行全体
 
 # line {number}
 t1942c7ae = { $number } 行目
+
+# Readings
+t4df6b638 = 読み取り
+
+# Close the readings
+t60beaefd = 読み取りを閉じる
 
 # Read from {from}
 t6d510d3d = { $from } から読み取り

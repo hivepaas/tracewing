@@ -43,6 +43,9 @@ pub enum ToOpen {
     Reading(Reading, String),
     /// A line too long to be shown whole, by its number and its whole text.
     WholeLine { line: u64, text: String },
+    /// A value a reader pressed, to be read in a pane of its own: the value
+    /// as it stands, and the field it sat under.
+    Value { text: String, field: Option<String> },
 }
 
 /// What opens one: a body view has no pane of its own, so it asks the window.
@@ -369,6 +372,60 @@ impl BodyView {
     /// The key the selection sits under, for the converters: the `created_at`
     /// of `"created_at": 1763000000`. A body is indexed by line and carries no
     /// path, so the name comes off the line itself.
+    /// Takes the whole value under `point` and asks the window to read it
+    /// beside the body. Nothing happens where the press was not in a value.
+    fn read_value_at(&mut self, point: gpui::Point<gpui::Pixels>, cx: &mut Context<Self>) {
+        if let Some(spot) = self.select.spot_at(point) {
+            self.read_value_at_spot(spot, cx);
+        }
+    }
+
+    /// The same from a spot rather than a point, which is what a press
+    /// becomes and what a test can hand over.
+    pub fn read_value_at_spot(&mut self, spot: Spot, cx: &mut Context<Self>) -> bool {
+        let Some((range, value, field)) = self.value_at(spot) else {
+            return false;
+        };
+        self.select.select(
+            Spot {
+                piece: spot.piece,
+                at: range.start,
+            },
+            Spot {
+                piece: spot.piece,
+                at: range.end,
+            },
+        );
+        if let Some(opens) = &self.opens {
+            let opens = opens.clone();
+            let what = ToOpen::Value { text: value, field };
+            cx.defer(move |cx| opens(what, cx));
+        }
+        cx.notify();
+        true
+    }
+
+    /// The whole value the press landed in, and the field it sits under:
+    /// `created_at` and `1794492800` of `  "created_at": 1794492800,`.
+    ///
+    /// A reader should not have to drag across a value exactly to have it
+    /// read -- and dragging it exactly is work, since a word ends at every
+    /// dot of a JWT and every dash of a date. The view already knows where
+    /// the value is, since that is what it underlines.
+    fn value_at(&self, spot: Spot) -> Option<(std::ops::Range<usize>, String, Option<String>)> {
+        if self.hex() {
+            return None;
+        }
+        let (line, at) = self.line_spot(spot);
+        let text = self.shown().read_whole(line..line + 1).pop()?;
+        let (field, value) = reading::field_and_value(&text)?;
+        let start = (value.as_ptr() as usize).checked_sub(text.as_ptr() as usize)?;
+        let range = start..start + value.len();
+        range
+            .contains(&at)
+            .then(|| (range.clone(), value.to_owned(), Some(field.to_owned())))
+    }
+
     fn selected_field(&self) -> Option<String> {
         let (start, _) = self.select.bounds()?;
         let (line, at) = self.line_spot(start);
@@ -1928,10 +1985,17 @@ impl BodyView {
             }))
             .on_mouse_up(
                 gpui::MouseButton::Left,
-                cx.listener(|this, _, _, cx| {
+                cx.listener(|this, e: &gpui::MouseUpEvent, _, cx| {
                     this.dragging = false;
                     if this.dragging_x.take().is_some() {
                         cx.notify();
+                    }
+                    // A press that went nowhere, inside a value: the whole
+                    // value is taken and read, so that nobody has to drag
+                    // across a JWT exactly to have it read. A drag is left
+                    // alone -- what was dragged is what was meant.
+                    if e.click_count == 1 && this.select.is_empty() {
+                        this.read_value_at(e.position, cx);
                     }
                 }),
             )

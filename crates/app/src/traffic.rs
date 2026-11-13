@@ -226,6 +226,12 @@ pub enum Drag {
     InspectorSize,
     /// The inspector itself, by its handle, and where it would go now.
     Inspector(Place),
+    /// The edge of the readings pane, by where the mouse went down and how
+    /// wide the pane was then.
+    ReadsSize {
+        from_x: f32,
+        from_w: f32,
+    },
     /// The top edge of the chosen message, by where the mouse went down and
     /// how tall it was then.
     MessageView {
@@ -1515,6 +1521,16 @@ impl Traffic {
         cx.notify();
     }
 
+    /// Takes hold of the readings pane's edge, to give it more of the
+    /// inspector or less.
+    pub fn begin_reads_drag(&mut self, x: gpui::Pixels, cx: &mut Context<Self>) {
+        self.drag = Some(Drag::ReadsSize {
+            from_x: f32::from(x),
+            from_w: self.layout.reads_w,
+        });
+        cx.notify();
+    }
+
     /// Takes hold of the edge above the chosen message, to give it more of
     /// the panel or less.
     pub fn begin_message_view_drag(&mut self, y: gpui::Pixels, cx: &mut Context<Self>) {
@@ -1577,6 +1593,18 @@ impl Traffic {
             },
             Drag::Inspector(_) => {
                 self.drag = Some(Drag::Inspector(self.place_under(event.position)));
+            }
+            Drag::ReadsSize { from_x, from_w } => {
+                // Left is wider. Both sides keep a floor: a pane too narrow
+                // says nothing, and a body too narrow is a column of single
+                // words.
+                let moved = (from_x - f32::from(event.position.x)) / scale;
+                let whole = match self.layout.place {
+                    Place::Beside => self.layout.inspector_w,
+                    Place::Below => f32::from(content.size.width) / scale,
+                };
+                let room = (whole - crate::layout::READS_MIN).max(crate::layout::READS_MIN);
+                self.layout.reads_w = (from_w + moved).clamp(crate::layout::READS_MIN, room);
             }
             Drag::MessageView { from_y, from_h } => {
                 // Up is taller, and the list keeps a floor of its own.
@@ -1768,6 +1796,7 @@ impl Traffic {
             }
             Action::Close if self.compare_pick.is_some() => self.cancel_compare(cx),
             Action::Close if self.screen == Screen::Compare => self.set_screen(Screen::Traffic, cx),
+            Action::Close if self.close_reads(cx) => {}
             Action::Close if self.close_message(cx) => {}
             Action::Close => return false,
             Action::Shortcuts => self.set_shortcuts(!self.shortcuts_open, cx),
