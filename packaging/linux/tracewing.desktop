@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=tracewing
+GenericName=HTTP Debugging Proxy
+Comment=See, pause and change every request an app makes
+Exec=tracewing
+Icon=tracewing
+Terminal=false
+Categories=Development;Debugger;
+Keywords=http;https;proxy;debug;api;rest;grpc;websocket;capture;har;mitm;
+StartupWMClass=tracewing

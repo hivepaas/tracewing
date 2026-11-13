@@ -1,0 +1,47 @@
+# The licenses tracewing's crates may be under, for `cargo about`
+# (scripts/package_linux.sh writes the program's third-party licenses with
+# it). A crate under any other stops the package until it is looked at.
+# For a crate under several, the first of these is the one listed.
+accepted = [
+    "MIT",
+    "Apache-2.0",
+    # Apache-2.0 with an exception that only loosens it.
+    "Apache-2.0 WITH LLVM-exception",
+    "Unicode-3.0",
+    "BSD-3-Clause",
+    "BSD-2-Clause",
+    "ISC",
+    "Zlib",
+    "CC0-1.0",
+    "MPL-2.0",
+    "0BSD",
+    # The root certificates of webpki-roots, which the proxy falls back to.
+    "CDLA-Permissive-2.0",
+    # The fonts the window is drawn in.
+    "OFL-1.1",
+]
+# Only what is built into the program: not what builds it.
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+# tracewing's own crates are not published: they are listed. Its own, the only
+# crates under the GPL, the template leaves out.
+private = { ignore = false }
+
+
+[tracewing]
+accepted = ["GPL-3.0-or-later"]
+
+[tracewing-convert]
+accepted = ["GPL-3.0-or-later"]
+
+[tracewing-i18n]
+accepted = ["GPL-3.0-or-later"]
+
+[tracewing-proxy]
+accepted = ["GPL-3.0-or-later"]
+
+[tracewing-store]
+accepted = ["GPL-3.0-or-later"]
+
+[tracewing-system]
+accepted = ["GPL-3.0-or-later"]
