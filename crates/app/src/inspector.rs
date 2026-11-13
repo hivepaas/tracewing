@@ -199,6 +199,9 @@ pub struct InspectorState {
     /// A reading being looked at as a body of its own, which the body pane
     /// shows until it is closed.
     pub opened: Option<Opened>,
+    /// The value a reader pressed, and what it can be read as: the pane
+    /// beside the body, which stays on that value until another is pressed.
+    pub reads: Option<Reads>,
     /// The phases of the time folded away (`Some(true)`) or shown, as last
     /// chosen; `None` until then, which folds them in a short inspector and
     /// shows them in a tall one.
@@ -227,6 +230,25 @@ pub struct Opened {
     pub shown: OpenedAs,
     /// The file the bytes went into, to take away when it closes.
     path: std::path::PathBuf,
+}
+
+/// A value being read beside the body: what was pressed, every way it can be
+/// read, and which of them is being shown.
+///
+/// A menu could only ever say one line about each; this says all of them at
+/// once and keeps the body in view, which is what a reader is comparing it
+/// against.
+pub struct Reads {
+    /// The value as it stands in the body or the header.
+    pub value: String,
+    /// The field it sat under, which the converters read as well.
+    pub field: Option<String>,
+    /// Every way it can be read, best first.
+    pub found: Vec<Reading>,
+    /// Which of them is being shown.
+    pub at: usize,
+    /// The body of the one being shown, where it holds bytes.
+    pub opened: Option<Opened>,
 }
 
 /// What was opened: a body to read, or a picture to look at.
@@ -604,6 +626,9 @@ impl Traffic {
                                         }
                                         crate::bodyview::ToOpen::WholeLine { line, text } => {
                                             this.open_line(line, &text, cx);
+                                        }
+                                        crate::bodyview::ToOpen::Value { text, field } => {
+                                            this.read_value(text, field, cx);
                                         }
                                     });
                                 }) as crate::bodyview::Opens
@@ -1671,7 +1696,24 @@ impl Traffic {
             })
     }
 
+    /// The part chosen, with the readings pane beside it where a value is
+    /// being read. The pane sits beside the body rather than in its place,
+    /// so that the value and what it was read as are in view together.
     fn render_part(&mut self, detail: &Detail, cx: &mut Context<Self>) -> Div {
+        let shown = self.render_part_alone(detail, cx);
+        if self.inspector.reads.is_none() || self.inspector.part != Part::Body {
+            return shown;
+        }
+        div()
+            .flex_1()
+            .min_h_0()
+            .flex()
+            .flex_row()
+            .child(shown)
+            .child(self.render_reads(cx))
+    }
+
+    fn render_part_alone(&mut self, detail: &Detail, cx: &mut Context<Self>) -> Div {
         let c = colors();
         // What Settings says about the underline, taken as the pane draws, so
         // that the switch takes hold without anything being told.
@@ -1937,6 +1979,70 @@ fn body_well(well: Div, state: &BodyState) -> Div {
 }
 
 impl Traffic {
+    /// Reads a value beside the body: every way it can be read, the first of
+    /// them shown. Pressing another value moves the pane to it.
+    ///
+    /// A value nothing can be made of leaves the pane as it was: a reader
+    /// who pressed a comma has not asked for anything, and taking away what
+    /// they were reading would be an answer to a question they did not ask.
+    pub fn read_value(&mut self, value: String, field: Option<String>, cx: &mut Context<Self>) {
+        let found = reading::of(&value, field.as_deref());
+        if found.is_empty() {
+            return;
+        }
+        let from = field.clone().unwrap_or_else(|| tr!("this value"));
+        let opened = self.reading_body(&found[0], &from, cx);
+        // Beside the body, not instead of it: the inspector takes the pane's
+        // width from the window where the window has it to give, so that
+        // what is being read stays as wide as it was.
+        if self.inspector.reads.is_none() && self.layout.place == crate::layout::Place::Beside {
+            let room = self.inspector_room().map_or(f32::MAX, |(wide, _)| wide);
+            self.layout.inspector_w = (self.layout.inspector_w + self.layout.reads_w).min(room);
+            self.save_layout();
+        }
+        self.inspector.reads = Some(Reads {
+            value,
+            field,
+            found,
+            at: 0,
+            opened,
+        });
+        self.inspector.part = Part::Body;
+        cx.notify();
+    }
+
+    /// Shows another of the ways the value in the pane can be read.
+    pub fn choose_reading(&mut self, at: usize, cx: &mut Context<Self>) {
+        let Some(reads) = &self.inspector.reads else {
+            return;
+        };
+        let Some(reading) = reads.found.get(at).cloned() else {
+            return;
+        };
+        let from = reads.field.clone().unwrap_or_else(|| tr!("this value"));
+        let opened = self.reading_body(&reading, &from, cx);
+        if let Some(reads) = self.inspector.reads.as_mut() {
+            reads.at = at;
+            reads.opened = opened;
+        }
+        cx.notify();
+    }
+
+    /// Puts the pane away and gives the body its width back.
+    pub fn close_reads(&mut self, cx: &mut Context<Self>) -> bool {
+        if self.inspector.reads.take().is_none() {
+            return false;
+        }
+        // What the pane was given back, so the body is the width it was.
+        if self.layout.place == crate::layout::Place::Beside {
+            self.layout.inspector_w =
+                (self.layout.inspector_w - self.layout.reads_w).max(crate::layout::INSPECTOR_MIN);
+        }
+        self.save_layout();
+        cx.notify();
+        true
+    }
+
     /// Opens a reading that holds bytes as a body of its own: the JSON inside
     /// base64, what gzip held. The bytes go into a file beside the others,
     /// because a body is read from a file however it was made.
@@ -2020,6 +2126,245 @@ impl Traffic {
         self.inspector.part = Part::Body;
         cx.notify();
         true
+    }
+
+    /// The same bytes made into a body, handed back rather than put in the
+    /// body's place: the readings pane keeps its own.
+    fn body_of(
+        &mut self,
+        bytes: &[u8],
+        extension: &str,
+        content_type: Option<&str>,
+        label: SharedString,
+        from: SharedString,
+        cx: &mut Context<Self>,
+    ) -> Option<Opened> {
+        let had = self.inspector.opened.take();
+        let made = self.open_in_pane(bytes, extension, content_type, label, from, cx);
+        let mine = self.inspector.opened.take();
+        self.inspector.opened = had;
+        mine.filter(|_| made)
+    }
+
+    /// What a reading holds, as a body, for the pane to show. `None` where
+    /// the reading is a line or a table: those are said in the pane itself.
+    fn reading_body(
+        &mut self,
+        reading: &Reading,
+        from: &str,
+        cx: &mut Context<Self>,
+    ) -> Option<Opened> {
+        let Shown::Bytes { kind, bytes } = &reading.shown else {
+            return None;
+        };
+        let (extension, content_type) = match kind {
+            Kind::Json => ("json", Some("application/json")),
+            Kind::Xml => ("xml", Some("application/xml")),
+            Kind::Text => ("txt", Some("text/plain")),
+            Kind::Binary => ("bin", None),
+        };
+        let bytes = bytes.clone();
+        self.body_of(
+            &bytes,
+            extension,
+            content_type,
+            reading.chain.join(" → ").into(),
+            from.to_owned().into(),
+            cx,
+        )
+    }
+
+    /// The pane beside the body: the value a reader pressed, every way it
+    /// can be read, and the one being read now.
+    ///
+    /// All of them at once, rather than a menu of one line each -- the
+    /// readings of a value are what a reader is choosing between, and a menu
+    /// hides the body they are comparing against.
+    fn render_reads(&mut self, cx: &mut Context<Self>) -> Div {
+        let c = colors();
+        let sel = self.inspector.select.clone();
+        let Some(reads) = &self.inspector.reads else {
+            return div();
+        };
+        let value = cut_to(&reads.value, 300);
+        let field = reads.field.clone();
+        let at = reads.at;
+        let ways: Vec<(usize, String, String, bool)> = reads
+            .found
+            .iter()
+            .enumerate()
+            .map(|(n, reading)| {
+                let chain = if reading.chain.len() > 1 {
+                    reading.chain.join(" → ")
+                } else {
+                    String::new()
+                };
+                (n, reading.label.clone(), chain, n == at)
+            })
+            .collect();
+        let chosen = reads.found.get(at).cloned();
+        let body = reads.opened.as_ref().map(|opened| {
+            (
+                opened.label.clone(),
+                match &opened.shown {
+                    OpenedAs::Body(view) => view.clone().into_any_element(),
+                    OpenedAs::Picture(path, _) => picture_well(path.clone()),
+                },
+            )
+        });
+        div()
+            .w(ui(self.layout.reads_w))
+            .flex_shrink_0()
+            .flex()
+            .flex_row()
+            // The edge is dragged to give the pane more of the inspector or
+            // less, as the inspector's own edge is.
+            .child(
+                div()
+                    .id("reads-edge")
+                    .w(ui(8.))
+                    .h_full()
+                    .flex_shrink_0()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .cursor(gpui::CursorStyle::ResizeLeftRight)
+                    .child(
+                        div()
+                            .w(ui(3.))
+                            .h(ui(28.))
+                            .rounded_full()
+                            .bg(rgb(c.splitter)),
+                    )
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(|this, e: &MouseDownEvent, _, cx| {
+                            this.begin_reads_drag(e.position.x, cx);
+                        }),
+                    ),
+            )
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .flex()
+                    .flex_col()
+                    .rounded(ui(16.))
+                    .overflow_hidden()
+                    .bg(rgb(c.surface))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .items_center()
+                            .gap(ui(6.))
+                            .px(ui(10.))
+                            .py(ui(8.))
+                            .border_b_1()
+                            .border_color(rgb(c.line))
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .min_w_0()
+                                    .text_size(ui(12.))
+                                    .font_weight(FontWeight::BOLD)
+                                    .text_color(rgb(c.text))
+                                    .child(match &field {
+                                        Some(field) => field.clone(),
+                                        None => tr!("Readings"),
+                                    }),
+                            )
+                            .child(
+                                div()
+                                    .id("close-reads")
+                                    .px(ui(6.))
+                                    .rounded(ui(8.))
+                                    .cursor_pointer()
+                                    .reachable()
+                                    .text_size(ui(12.))
+                                    .text_color(rgb(c.muted))
+                                    .hover(|s| s.bg(rgb(c.chip)).text_color(rgb(c.text)))
+                                    .tooltip(tip(tr!("Close the readings")))
+                                    .child("✕")
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.close_reads(cx);
+                                    })),
+                            ),
+                    )
+                    // The value as it stands, so that what is being read is
+                    // in front of the reader beside what it was read as.
+                    .child(
+                        div()
+                            .px(ui(10.))
+                            .py(ui(6.))
+                            .text_size(ui(11.5))
+                            .font_family(crate::mono_font())
+                            .text_color(rgb(c.muted))
+                            .child(value),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .px(ui(6.))
+                            .pb(ui(6.))
+                            .gap(ui(2.))
+                            .children(ways.into_iter().map(|(n, label, chain, now)| {
+                                div()
+                                    .id(("way", n))
+                                    .px(ui(6.))
+                                    .py(ui(3.))
+                                    .rounded(ui(8.))
+                                    .cursor_pointer()
+                                    .reachable()
+                                    .text_size(ui(12.))
+                                    .when(now, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
+                                    .when(!now, |d| {
+                                        d.text_color(rgb(c.text)).hover(|s| s.bg(rgb(c.chip)))
+                                    })
+                                    .child(label)
+                                    .when(!chain.is_empty(), |d| {
+                                        d.child(
+                                            div()
+                                                .text_size(ui(11.))
+                                                .text_color(rgb(c.muted))
+                                                .font_family(crate::mono_font())
+                                                .child(chain),
+                                        )
+                                    })
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.choose_reading(n, cx);
+                                    }))
+                            })),
+                    )
+                    // What the chosen one says: a body of its own where it
+                    // holds bytes, and the reading itself where it does not.
+                    .child(match body {
+                        Some((label, shown)) => div()
+                            .flex_1()
+                            .min_h_0()
+                            .flex()
+                            .flex_col()
+                            .border_t_1()
+                            .border_color(rgb(c.line))
+                            .child(
+                                div()
+                                    .px(ui(10.))
+                                    .py(ui(4.))
+                                    .text_size(ui(11.))
+                                    .text_color(rgb(c.muted))
+                                    .child(label),
+                            )
+                            .child(div().flex_1().min_h_0().child(shown)),
+                        None => div()
+                            .flex_1()
+                            .min_h_0()
+                            .overflow_hidden()
+                            .px(ui(6.))
+                            .text_size(ui(12.))
+                            .children(chosen.map(|reading| render_reading(&reading, &sel))),
+                    }),
+            )
     }
 
     /// What was opened, over the body it came out of, with the way back.
@@ -3139,6 +3484,15 @@ fn render_cookies(
 }
 
 /// What a token claims, under the header or cookie that carries it.
+/// `text`, cut at a character to at most `most`, with a sign that it was cut.
+fn cut_to(text: &str, most: usize) -> String {
+    if text.chars().count() <= most {
+        return text.to_owned();
+    }
+    let kept: String = text.chars().take(most).collect();
+    format!("{kept}…")
+}
+
 /// A reading under the field it was read from, as a token's claims are.
 fn render_reading(reading: &Reading, sel: &Selection) -> Div {
     let c = colors();

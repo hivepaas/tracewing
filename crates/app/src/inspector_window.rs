@@ -216,6 +216,12 @@ impl Traffic {
     }
 
     /// Where the inspector goes in the main window.
+    /// How wide the inspector is, for a test to watch it make room for the
+    /// readings pane and give it back.
+    pub fn layout_width(&self) -> f32 {
+        self.layout.inspector_w
+    }
+
     pub fn inspector_place(&self) -> crate::layout::Place {
         self.layout.place
     }

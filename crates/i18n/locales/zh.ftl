@@ -736,11 +736,20 @@ t1e92fb27 = 无法显示此图片。请保存正文后查看。
 # Opening…
 tc40f2321 = 正在打开…
 
+# this value
+t8a86fa50 = 此值
+
 # The whole line
 t17d1ec47 = 整行
 
 # line {number}
 t1942c7ae = 第 { $number } 行
+
+# Readings
+t4df6b638 = 解读
+
+# Close the readings
+t60beaefd = 关闭解读
 
 # Read from {from}
 t6d510d3d = 读自 { $from }

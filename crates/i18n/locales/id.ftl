@@ -736,11 +736,20 @@ t1e92fb27 = Gambar ini tidak bisa ditampilkan. Simpan body-nya untuk melihatnya.
 # Opening…
 tc40f2321 = Membuka…
 
+# this value
+t8a86fa50 = nilai ini
+
 # The whole line
 t17d1ec47 = Seluruh baris
 
 # line {number}
 t1942c7ae = baris { $number }
+
+# Readings
+t4df6b638 = Pembacaan
+
+# Close the readings
+t60beaefd = Tutup pembacaan
 
 # Read from {from}
 t6d510d3d = Dibaca dari { $from }

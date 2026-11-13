@@ -765,11 +765,20 @@ t1e92fb27 = Bu resim çizilemiyor. Görmek için gövdeyi kaydedin.
 # Opening…
 tc40f2321 = Açılıyor…
 
+# this value
+t8a86fa50 = bu değer
+
 # The whole line
 t17d1ec47 = Satırın tamamı
 
 # line {number}
 t1942c7ae = satır { $number }
+
+# Readings
+t4df6b638 = Okumalar
+
+# Close the readings
+t60beaefd = Okumaları kapat
 
 # Read from {from}
 t6d510d3d = { $from } içinden okundu
