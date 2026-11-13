@@ -708,12 +708,6 @@ t1e92fb27 = Bu resim çizilemiyor. Görmek için gövdeyi kaydedin.
 # Opening…
 tc40f2321 = Açılıyor…
 
-# The whole line
-t17d1ec47 = Satırın tamamı
-
-# line {number}
-t1942c7ae = satır { $number }
-
 # Read from {from}
 t6d510d3d = { $from } içinden okundu
 
@@ -2267,9 +2261,6 @@ t2af18488 = Pencere
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Kurulum, Trafik, Kurallar, Duraklatılanlar, Oluştur, Oturumlar, Ayarlar
-
-# Back or forward, as the mouse's own buttons do
-tad71f882 = Geri veya ileri, faredeki düğmeler gibi
 
 # Show or hide the sidebar
 t67adca04 = Kenar çubuğunu göster ya da gizle

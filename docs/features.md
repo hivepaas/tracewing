@@ -173,7 +173,6 @@ keyboard.
 | Feature | Milestone | Plan |
 |---|---|---|
 | Text size, from 11 to 20 px (13 by default), in Settings › General: lists, bodies and everything around them grow with it, as when zooming; panel widths dragged at one size keep their place at another; kept in `layout.toml` | Beta | Free |
-| Back and forward, as in a browser: the mouse's own buttons, or Alt+Left and Alt+Right, through the screens, the parts of Settings and the session on show; going somewhere new forgets what was ahead, and a text field keeps Alt+Left and Alt+Right | Beta | Free |
 | Light and dark; keyboard first: Tab through fields and buttons (Enter or Space presses one), keys for the list, the inspector's sides and parts, saving a body, and what is held on Paused | Beta | Free |
 | 15 languages: English, German, Spanish, French, Indonesian, Italian, Brazilian Portuguese, Turkish, Vietnamese, Russian, Ukrainian, Japanese, Korean, simplified and traditional Chinese | 1.0 | Free |
 | Signed builds: Windows (Microsoft Store and an installer), macOS (notarized, with the helper), Linux (`.deb`, `.rpm`, AppImage) | 1.0 | — |

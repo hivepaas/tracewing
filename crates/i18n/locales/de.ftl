@@ -708,12 +708,6 @@ t1e92fb27 = Dieses Bild kann nicht dargestellt werden. Speichern Sie den Body, u
 # Opening…
 tc40f2321 = Wird geöffnet…
 
-# The whole line
-t17d1ec47 = Die ganze Zeile
-
-# line {number}
-t1942c7ae = Zeile { $number }
-
 # Read from {from}
 t6d510d3d = Gelesen aus { $from }
 
@@ -2303,9 +2297,6 @@ t2af18488 = Das Fenster
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Einrichten, Traffic, Regeln, Angehalten, Erstellen, Sitzungen, Einstellungen
-
-# Back or forward, as the mouse's own buttons do
-tad71f882 = Zurück oder vor, wie die Maustasten dafür
 
 # Show or hide the sidebar
 t67adca04 = Seitenleiste ein- oder ausblenden

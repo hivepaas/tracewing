@@ -730,12 +730,6 @@ t1e92fb27 = Это изображение не удаётся отобразит
 # Opening…
 tc40f2321 = Открытие…
 
-# The whole line
-t17d1ec47 = Вся строка
-
-# line {number}
-t1942c7ae = строка { $number }
-
 # Read from {from}
 t6d510d3d = Прочитано из { $from }
 
@@ -2385,9 +2379,6 @@ t2af18488 = Окно
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Настройка, Трафик, Правила, На паузе, Конструктор, Сессии, Настройки
-
-# Back or forward, as the mouse's own buttons do
-tad71f882 = Назад или вперёд, как боковые кнопки мыши
 
 # Show or hide the sidebar
 t67adca04 = Показать или скрыть боковую панель

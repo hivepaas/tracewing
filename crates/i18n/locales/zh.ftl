@@ -679,12 +679,6 @@ t1e92fb27 = 无法显示此图片。请保存正文后查看。
 # Opening…
 tc40f2321 = 正在打开…
 
-# The whole line
-t17d1ec47 = 整行
-
-# line {number}
-t1942c7ae = 第 { $number } 行
-
 # Read from {from}
 t6d510d3d = 读自 { $from }
 
@@ -2184,9 +2178,6 @@ t2af18488 = 窗口
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = 配置、流量、规则、已暂停、编写、会话、设置
-
-# Back or forward, as the mouse's own buttons do
-tad71f882 = 后退或前进，与鼠标的侧键相同
 
 # Show or hide the sidebar
 t67adca04 = 显示或隐藏侧边栏

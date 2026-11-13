@@ -33,10 +33,10 @@ use crate::{
 };
 use gpui::{
     Anchor, Bounds, ClickEvent, Context, Div, Entity, FocusHandle, Focusable, FontWeight,
-    KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, NavigationDirection,
-    Pixels, Point, Render, ScrollStrategy, ScrollWheelEvent, SharedString, Stateful,
-    UniformListScrollHandle, Window, WindowAppearance, anchored, canvas, deferred, div, point,
-    prelude::*, px, rgb, rgba, uniform_list,
+    KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, Render,
+    ScrollStrategy, ScrollWheelEvent, SharedString, Stateful, UniformListScrollHandle, Window,
+    WindowAppearance, anchored, canvas, deferred, div, point, prelude::*, px, rgb, rgba,
+    uniform_list,
 };
 use rusqlite::{Connection, OpenFlags};
 use std::{
@@ -372,11 +372,7 @@ pub struct Traffic {
     /// A message to send into the open socket the inspector shows.
     pub socket_message: Entity<TextInput>,
     /// The list of keyboard shortcuts is open over the window.
-    pub(crate) shortcuts_open: bool,
-    /// Where the window has been, for back and forward.
-    pub(crate) history: crate::history::History<crate::navigation::Location>,
-    /// True while back or forward moves the window, which is not a place gone to.
-    pub(crate) going: bool,
+    shortcuts_open: bool,
     /// The slow network's fields, once the Rules screen has been shown.
     pub(crate) network_form: Option<crate::network::NetworkForm>,
 }
@@ -527,12 +523,6 @@ impl Traffic {
             layout_name,
             socket_message,
             shortcuts_open: false,
-            history: crate::history::History::new(crate::navigation::Location {
-                screen: Screen::Traffic,
-                section: None,
-                session: None,
-            }),
-            going: false,
             network_form: None,
             ids: None,
             generation: 0,
@@ -615,7 +605,6 @@ impl Traffic {
         if !self.layout.setup_seen {
             self.screen = Screen::Setup;
         }
-        self.history = crate::history::History::new(self.here());
     }
 
     fn rules_path(&self) -> PathBuf {
@@ -660,7 +649,6 @@ impl Traffic {
         if screen == Screen::Setup {
             self.start_ca_check(cx);
         }
-        self.went();
         cx.notify();
     }
 
@@ -732,13 +720,11 @@ impl Traffic {
                 self.system.problem = Some(tr!("The search index: {e}", e = format!("{e:#}")))
             }
         }
-        self.went();
     }
 
     pub fn back_to_live(&mut self, cx: &mut Context<Self>) {
         self.viewing = None;
         self.show_session(cx);
-        self.went();
     }
 
     fn leave_catching_up(&mut self, cx: &mut Context<Self>) {
@@ -1515,16 +1501,12 @@ impl Traffic {
         let keys = &event.keystroke;
         // A text field has the keyboard when the window itself does not.
         let typing = !self.focus.is_focused(window);
-        let Some(action) = shortcuts::history_action_of(&keys.key, &keys.modifiers, typing)
-            .or_else(|| {
-                action_of(
-                    &keys.key,
-                    keys.modifiers.secondary(),
-                    keys.modifiers.shift,
-                    typing,
-                )
-            })
-        else {
+        let Some(action) = action_of(
+            &keys.key,
+            keys.modifiers.secondary(),
+            keys.modifiers.shift,
+            typing,
+        ) else {
             return;
         };
         if self.do_key(action, window, cx) {
@@ -1594,8 +1576,6 @@ impl Traffic {
             Action::Record => self.toggle_recording(cx),
             Action::Clear if in_list => self.clear(cx),
             Action::Go(screen) => self.set_screen(screen, cx),
-            Action::Back => return self.go(true, cx),
-            Action::Forward => return self.go(false, cx),
             _ => return false,
         }
         true
@@ -2720,19 +2700,6 @@ impl Render for Traffic {
             .on_key_down(cx.listener(Self::on_key))
             .on_mouse_move(cx.listener(Self::on_mouse_move))
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
-            // The mouse's own back and forward buttons, as in a browser.
-            .on_mouse_down(
-                MouseButton::Navigate(NavigationDirection::Back),
-                cx.listener(|this, _, _, cx| {
-                    this.go(true, cx);
-                }),
-            )
-            .on_mouse_down(
-                MouseButton::Navigate(NavigationDirection::Forward),
-                cx.listener(|this, _, _, cx| {
-                    this.go(false, cx);
-                }),
-            )
             .flex_1()
             .min_h_0()
             .w_full()

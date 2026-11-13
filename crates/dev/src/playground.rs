@@ -53,10 +53,6 @@ const BIG_MB_MAX: usize = 500;
 pub const ROUTES: &[(&str, &str)] = &[
     ("/json", "JSON: a few orders"),
     ("/json_big", "JSON of 10 MB (?mb=N for another size)"),
-    (
-        "/json_long",
-        "JSON whose one value is too long for a line: base64 of more JSON",
-    ),
     ("/xml", "XML: the same orders"),
     ("/xml_big", "XML of 10 MB (?mb=N)"),
     ("/soap", "A SOAP answer, all on one line"),
@@ -307,7 +303,6 @@ async fn route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallibl
         "/" | "/index.html" => body("text/html; charset=utf-8", index()),
         "/json" => body("application/json", orders_json(0)),
         "/json_big" => body("application/json", orders_json(big())),
-        "/json_long" => body("application/json", long_value_json()),
         "/xml" => body("application/xml; charset=utf-8", orders_xml(0)),
         "/xml_big" => body("application/xml; charset=utf-8", orders_xml(big())),
         "/soap" => body("text/xml; charset=utf-8", benchkit::SOAP_XML),
@@ -531,16 +526,6 @@ fn escape_xml(text: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
-}
-
-/// One value far past what a line of the window shows, so that what is cut
-/// off, and the way to the rest of it, can be tried by hand. It is base64 of
-/// JSON, so the value reads as something once it is opened.
-fn long_value_json() -> String {
-    use base64::Engine as _;
-    let inside = orders_json(3 * 1024);
-    let blob = base64::engine::general_purpose::STANDARD.encode(inside.as_bytes());
-    format!(r#"{{"id":1,"blob":"{blob}","note":"the blob is base64 of the orders"}}"#)
 }
 
 fn orders_json(target: usize) -> String {
