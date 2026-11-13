@@ -805,6 +805,12 @@ t60beaefd = Закрити прочитання
 # a guess
 t6af47169 = здогад
 
+# Read as
+t8c0f1d8b = Прочитати як
+
+# choose…
+te030653c = вибрати…
+
 # Read from {from}
 t6d510d3d = Прочитано з { $from }
 
@@ -1332,9 +1338,6 @@ t70ff68f9 =
         [many] і ще { $count }: введіть, щоб звузити
        *[other] і ще { $count }: введіть, щоб звузити
     }
-
-# Read as
-t8c0f1d8b = Прочитати як
 
 # Copy reading
 td38c5cc8 = Копіювати прочитане
@@ -2917,8 +2920,170 @@ td8d653d6 =
        *[other] { $n } рядка
     }
 
+# Times
+tec53a755 = Час
+
+# Names and ids
+t74dee54c = Імена та ідентифікатори
+
+# Tracing
+t1d5a82d9 = Трасування
+
+# The web's own
+t500d90ac = Своє у вебі
+
+# Networks
+t18ac79a2 = Мережі
+
+# Data
+t3f5279c5 = Дані
+
+# Encodings
+taf58dad9 = Кодування
+
+# Packed
+t6d550b01 = Запаковане
+
+# Tokens and keys
+t50973c5a = Токени та ключі
+
+# Numbers
+td63c77c9 = Числа
+
+# Chains
+t109ecadf = Ланцюжки
+
+# Unix seconds
+t6edf5796 = Unix-секунди
+
+# Unix milliseconds
+t0d28f4b7 = Unix-мілісекунди
+
+# Unix microseconds
+tc705fe24 = Unix-мікросекунди
+
+# Unix nanoseconds
+t235cb430 = Unix-наносекунди
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, без зони: прочитано як UTC
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET-тіки
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = Секунди з 2001 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = Секунди з 1904 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = Дні з 1899 (таблиця)
+
+# Seconds
+t7e12f48a = Секунди
+
+# Trace context
+ta58c7c95 = Контекст трасування
+
+# B3 trace
+tb4f9b9bb = Трасування B3
+
+# Amazon trace
+t122e82a4 = Трасування Amazon
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Query fields
+t2f58f1e0 = Поля запиту
+
+# Basic authentication
+te161b66b = Аутентифікація Basic
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Код статусу
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI
+teee15f8f = data: URI
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Діапазон адрес
+
+# A MAC address
+t6d968a53 = MAC-адреса
+
 # As an address
 t9c53ba7c = Як адреса
+
+# As a port
+t9fea9931 = Як порт
+
+# JSON
+tdfbd7fc3 = JSON
+
+# Protobuf
+taac68056 = Protobuf
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# JWE, an encrypted token
+t6da81e5b = JWE, зашифрований токен
+
+# PASETO
+t309420ff = PASETO
+
+# SAML
+t015e7110 = SAML
+
+# PEM
+tf70119c9 = PEM
+
+# A hashed password
+t0157a1e6 = Хешований пароль
+
+# A hash, by its size
+te82b53c8 = Хеш, судячи з розміру
+
+# As a size
+ta9175b27 = Як розмір
+
+# In hex and binary
+tc31ef85f = У hex і двійковому вигляді
+
+# Bits set
+tb67e8e09 = Встановлені біти
 
 # this machine
 t8bdabc70 = ця машина
@@ -2947,12 +3112,6 @@ tc1fb8957 = IPv4 всередині
 # What it is
 t065b8fa0 = Що це
 
-# IPv6
-t43fe7378 = IPv6
-
-# A range of addresses
-t889c22f2 = Діапазон адрес
-
 # From
 t18743595 = Від
 
@@ -2962,86 +3121,17 @@ t41f59644 = До
 # How many
 tc31ec050 = Скільки
 
-# As a port
-t9fea9931 = Як порт
-
 # to many, not to one
 t660024a1 = багатьом, а не одному
 
 # given by hand, not by the maker
 tc16b0e31 = задано вручну, не виробником
 
-# A MAC address
-t6d968a53 = MAC-адреса
-
-# In hex and binary
-tc31ef85f = У hex і двійковому вигляді
-
-# Bits set
-tb67e8e09 = Встановлені біти
-
-# As a size
-ta9175b27 = Як розмір
-
-# gzip
-t1a451735 = gzip
-
-# zlib
-t7c5452c4 = zlib
-
-# deflate
-t1dfa0080 = deflate
-
-# zstd
-tcfa9c52a = zstd
-
-# Brotli
-t5b0660bd = Brotli
-
 # in {amount}
 tfda57c3e = через { $amount }
 
 # {amount} ago
 t5f968014 = { $amount } тому
-
-# Unix seconds
-t6edf5796 = Unix-секунди
-
-# Unix milliseconds
-t0d28f4b7 = Unix-мілісекунди
-
-# Unix microseconds
-tc705fe24 = Unix-мікросекунди
-
-# Unix nanoseconds
-t235cb430 = Unix-наносекунди
-
-# ISO 8601
-t402bdff3 = ISO 8601
-
-# ISO 8601, no zone: read as UTC
-t3bb6c7ca = ISO 8601, без зони: прочитано як UTC
-
-# HTTP-date
-te55df34c = HTTP-date
-
-# Seconds
-t7e12f48a = Секунди
-
-# Windows FILETIME
-t8582ebf1 = Windows FILETIME
-
-# .NET ticks
-t8c35aaf6 = .NET-тіки
-
-# Seconds since 2001 (Apple)
-t4bd1d35a = Секунди з 2001 (Apple)
-
-# Seconds since 1904 (HFS+)
-tc7a82a5d = Секунди з 1904 (HFS+)
-
-# Days since 1899 (spreadsheet)
-td7bc06f2 = Дні з 1899 (таблиця)
 
 # Key wrapped with
 ted680adb = Ключ запаковано через
@@ -3058,9 +3148,6 @@ tbfad8752 = Решта
 # encrypted: it needs the key, which tracewing does not have
 tacb4301a = зашифровано: потрібен ключ, якого tracewing не має
 
-# JWE, an encrypted token
-t6da81e5b = JWE, зашифрований токен
-
 # What it is for
 t7f5984ef = Для чого
 
@@ -3072,9 +3159,6 @@ tf7f41fd7 = відкритий ключ, підписано
 
 # The claims
 t5918e3d1 = Твердження
-
-# PASETO
-t309420ff = PASETO
 
 # MD5, or MD4, or NTLM
 t562aaed5 = MD5, MD4 або NTLM
@@ -3093,9 +3177,6 @@ ta4d7ea95 = SHA-384
 
 # SHA-512, or SHA3-512, or BLAKE2b
 t275da5bd = SHA-512, SHA3-512 або BLAKE2b
-
-# A hash, by its size
-te82b53c8 = Хеш, судячи з розміру
 
 # Made by
 te8ff7e65 = Зроблено через
@@ -3124,12 +3205,6 @@ tefb8e7ad = SHA-256 crypt
 # SHA-512 crypt
 t9dcf716c = SHA-512 crypt
 
-# A hashed password
-t0157a1e6 = Хешований пароль
-
-# PEM
-tf70119c9 = PEM
-
 # What it holds
 tff372c62 = Що всередині
 
@@ -3147,12 +3222,6 @@ t3890a578 = Створено
 
 # Named
 t6055a346 = Ім'я
-
-# SAML
-t015e7110 = SAML
-
-# Trace context
-ta58c7c95 = Контекст трасування
 
 # Trace
 t26f8e74e = Трасування
@@ -3172,17 +3241,8 @@ t62366ffa = ні
 # Parent span
 t3cf3f9c3 = Батьківський спан
 
-# B3 trace
-tb4f9b9bb = Трасування B3
-
 # Began
 t3a1b8566 = Початок
-
-# Amazon trace
-t122e82a4 = Трасування Amazon
-
-# Server-Timing
-tb79773df = Server-Timing
 
 # Took
 tcea1562e = Тривалість
@@ -3202,17 +3262,11 @@ t98976d50 = полів: { $n }
 # Fragment
 t7889e7fd = Фрагмент
 
-# Query fields
-t2f58f1e0 = Поля запиту
-
 # Field
 t0fb83d07 = Поле
 
 # Value
 td147f96a = Значення
-
-# Basic authentication
-te161b66b = Аутентифікація Basic
 
 # Password
 t2cc30838 = Пароль
@@ -3240,15 +3294,6 @@ t0f7f5bf9 = не використовується, коли застарів
 
 # never checked again
 tc01144d0 = більше не перевіряється
-
-# Cache-Control
-t3868d34d = Cache-Control
-
-# Status code
-t20b704bc = Код статусу
-
-# Cookie
-tbdbabadf = Cookie
 
 # data: URI, {media}
 t514d8ddb = data:-URI, { $media }

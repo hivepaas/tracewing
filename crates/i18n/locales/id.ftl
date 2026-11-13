@@ -754,6 +754,12 @@ t60beaefd = Tutup pembacaan
 # a guess
 t6af47169 = tebakan
 
+# Read as
+t8c0f1d8b = Baca sebagai
+
+# choose…
+te030653c = pilih…
+
 # Read from {from}
 t6d510d3d = Dibaca dari { $from }
 
@@ -1227,9 +1233,6 @@ t134c9a06 = Otomatis (path gRPC atau messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = dan { $count } lagi: ketik untuk mempersempit
-
-# Read as
-t8c0f1d8b = Baca sebagai
 
 # Copy reading
 td38c5cc8 = Salin hasil baca
@@ -2686,8 +2689,170 @@ td8d653d6 =
        *[other] { $n } baris
     }
 
+# Times
+tec53a755 = Waktu
+
+# Names and ids
+t74dee54c = Nama dan id
+
+# Tracing
+t1d5a82d9 = Pelacakan
+
+# The web's own
+t500d90ac = Milik web sendiri
+
+# Networks
+t18ac79a2 = Jaringan
+
+# Data
+t3f5279c5 = Data
+
+# Encodings
+taf58dad9 = Pengodean
+
+# Packed
+t6d550b01 = Terkompresi
+
+# Tokens and keys
+t50973c5a = Token dan kunci
+
+# Numbers
+td63c77c9 = Angka
+
+# Chains
+t109ecadf = Rantai
+
+# Unix seconds
+t6edf5796 = Detik Unix
+
+# Unix milliseconds
+t0d28f4b7 = Milidetik Unix
+
+# Unix microseconds
+tc705fe24 = Mikrodetik Unix
+
+# Unix nanoseconds
+t235cb430 = Nanodetik Unix
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, tanpa zona: dibaca sebagai UTC
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET ticks
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = Detik sejak 2001 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = Detik sejak 1904 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = Hari sejak 1899 (lembar sebar)
+
+# Seconds
+t7e12f48a = Detik
+
+# Trace context
+ta58c7c95 = Konteks trace
+
+# B3 trace
+tb4f9b9bb = Trace B3
+
+# Amazon trace
+t122e82a4 = Trace Amazon
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Query fields
+t2f58f1e0 = Bidang query
+
+# Basic authentication
+te161b66b = Autentikasi Basic
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Kode status
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI
+teee15f8f = data: URI
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Rentang alamat
+
+# A MAC address
+t6d968a53 = Alamat MAC
+
 # As an address
 t9c53ba7c = Sebagai alamat
+
+# As a port
+t9fea9931 = Sebagai port
+
+# JSON
+tdfbd7fc3 = JSON
+
+# Protobuf
+taac68056 = Protobuf
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# JWE, an encrypted token
+t6da81e5b = JWE, token terenkripsi
+
+# PASETO
+t309420ff = PASETO
+
+# SAML
+t015e7110 = SAML
+
+# PEM
+tf70119c9 = PEM
+
+# A hashed password
+t0157a1e6 = Kata sandi yang di-hash
+
+# A hash, by its size
+te82b53c8 = Sebuah hash, dari ukurannya
+
+# As a size
+ta9175b27 = Sebagai ukuran
+
+# In hex and binary
+tc31ef85f = Dalam hex dan biner
+
+# Bits set
+tb67e8e09 = Bit yang diset
 
 # this machine
 t8bdabc70 = mesin ini
@@ -2716,12 +2881,6 @@ tc1fb8957 = IPv4 di dalamnya
 # What it is
 t065b8fa0 = Apa ini
 
-# IPv6
-t43fe7378 = IPv6
-
-# A range of addresses
-t889c22f2 = Rentang alamat
-
 # From
 t18743595 = Dari
 
@@ -2731,86 +2890,17 @@ t41f59644 = Sampai
 # How many
 tc31ec050 = Berapa banyak
 
-# As a port
-t9fea9931 = Sebagai port
-
 # to many, not to one
 t660024a1 = ke banyak, bukan ke satu
 
 # given by hand, not by the maker
 tc16b0e31 = diberikan manual, bukan oleh pabrikan
 
-# A MAC address
-t6d968a53 = Alamat MAC
-
-# In hex and binary
-tc31ef85f = Dalam hex dan biner
-
-# Bits set
-tb67e8e09 = Bit yang diset
-
-# As a size
-ta9175b27 = Sebagai ukuran
-
-# gzip
-t1a451735 = gzip
-
-# zlib
-t7c5452c4 = zlib
-
-# deflate
-t1dfa0080 = deflate
-
-# zstd
-tcfa9c52a = zstd
-
-# Brotli
-t5b0660bd = Brotli
-
 # in {amount}
 tfda57c3e = dalam { $amount }
 
 # {amount} ago
 t5f968014 = { $amount } lalu
-
-# Unix seconds
-t6edf5796 = Detik Unix
-
-# Unix milliseconds
-t0d28f4b7 = Milidetik Unix
-
-# Unix microseconds
-tc705fe24 = Mikrodetik Unix
-
-# Unix nanoseconds
-t235cb430 = Nanodetik Unix
-
-# ISO 8601
-t402bdff3 = ISO 8601
-
-# ISO 8601, no zone: read as UTC
-t3bb6c7ca = ISO 8601, tanpa zona: dibaca sebagai UTC
-
-# HTTP-date
-te55df34c = HTTP-date
-
-# Seconds
-t7e12f48a = Detik
-
-# Windows FILETIME
-t8582ebf1 = Windows FILETIME
-
-# .NET ticks
-t8c35aaf6 = .NET ticks
-
-# Seconds since 2001 (Apple)
-t4bd1d35a = Detik sejak 2001 (Apple)
-
-# Seconds since 1904 (HFS+)
-tc7a82a5d = Detik sejak 1904 (HFS+)
-
-# Days since 1899 (spreadsheet)
-td7bc06f2 = Hari sejak 1899 (lembar sebar)
 
 # Key wrapped with
 ted680adb = Kunci dibungkus dengan
@@ -2827,9 +2917,6 @@ tbfad8752 = Sisanya
 # encrypted: it needs the key, which tracewing does not have
 tacb4301a = terenkripsi: perlu kuncinya, yang tidak dimiliki tracewing
 
-# JWE, an encrypted token
-t6da81e5b = JWE, token terenkripsi
-
 # What it is for
 t7f5984ef = Untuk apa
 
@@ -2841,9 +2928,6 @@ tf7f41fd7 = kunci publik, ditandatangani
 
 # The claims
 t5918e3d1 = Klaimnya
-
-# PASETO
-t309420ff = PASETO
 
 # MD5, or MD4, or NTLM
 t562aaed5 = MD5, MD4, atau NTLM
@@ -2862,9 +2946,6 @@ ta4d7ea95 = SHA-384
 
 # SHA-512, or SHA3-512, or BLAKE2b
 t275da5bd = SHA-512, SHA3-512, atau BLAKE2b
-
-# A hash, by its size
-te82b53c8 = Sebuah hash, dari ukurannya
 
 # Made by
 te8ff7e65 = Dibuat oleh
@@ -2893,12 +2974,6 @@ tefb8e7ad = SHA-256 crypt
 # SHA-512 crypt
 t9dcf716c = SHA-512 crypt
 
-# A hashed password
-t0157a1e6 = Kata sandi yang di-hash
-
-# PEM
-tf70119c9 = PEM
-
 # What it holds
 tff372c62 = Apa isinya
 
@@ -2916,12 +2991,6 @@ t3890a578 = Dibuat
 
 # Named
 t6055a346 = Nama
-
-# SAML
-t015e7110 = SAML
-
-# Trace context
-ta58c7c95 = Konteks trace
 
 # Trace
 t26f8e74e = Trace
@@ -2941,17 +3010,8 @@ t62366ffa = tidak
 # Parent span
 t3cf3f9c3 = Span induk
 
-# B3 trace
-tb4f9b9bb = Trace B3
-
 # Began
 t3a1b8566 = Mulai
-
-# Amazon trace
-t122e82a4 = Trace Amazon
-
-# Server-Timing
-tb79773df = Server-Timing
 
 # Took
 tcea1562e = Lama
@@ -2971,17 +3031,11 @@ t98976d50 = { $n } bidang
 # Fragment
 t7889e7fd = Fragmen
 
-# Query fields
-t2f58f1e0 = Bidang query
-
 # Field
 t0fb83d07 = Bidang
 
 # Value
 td147f96a = Nilai
-
-# Basic authentication
-te161b66b = Autentikasi Basic
 
 # Password
 t2cc30838 = Sandi
@@ -3009,15 +3063,6 @@ t0f7f5bf9 = tidak dipakai setelah usang
 
 # never checked again
 tc01144d0 = tidak diperiksa lagi
-
-# Cache-Control
-t3868d34d = Cache-Control
-
-# Status code
-t20b704bc = Kode status
-
-# Cookie
-tbdbabadf = Cookie
 
 # data: URI, {media}
 t514d8ddb = URI data:, { $media }

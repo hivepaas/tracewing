@@ -754,6 +754,12 @@ t60beaefd = Đóng phần đọc
 # a guess
 t6af47169 = phỏng đoán
 
+# Read as
+t8c0f1d8b = Đọc như
+
+# choose…
+te030653c = chọn…
+
 # Read from {from}
 t6d510d3d = Đọc từ { $from }
 
@@ -1227,9 +1233,6 @@ t134c9a06 = Tự động (path gRPC hoặc messageType)
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = và { $count } message khác: gõ để thu hẹp
-
-# Read as
-t8c0f1d8b = Đọc như
 
 # Copy reading
 td38c5cc8 = Copy phần đã đọc
@@ -2686,8 +2689,170 @@ td8d653d6 =
        *[other] { $n } dòng
     }
 
+# Times
+tec53a755 = Thời gian
+
+# Names and ids
+t74dee54c = Tên và định danh
+
+# Tracing
+t1d5a82d9 = Theo vết
+
+# The web's own
+t500d90ac = Của riêng web
+
+# Networks
+t18ac79a2 = Mạng
+
+# Data
+t3f5279c5 = Dữ liệu
+
+# Encodings
+taf58dad9 = Mã hoá
+
+# Packed
+t6d550b01 = Nén
+
+# Tokens and keys
+t50973c5a = Token và khoá
+
+# Numbers
+td63c77c9 = Số
+
+# Chains
+t109ecadf = Chuỗi
+
+# Unix seconds
+t6edf5796 = Unix giây
+
+# Unix milliseconds
+t0d28f4b7 = Unix milligiây
+
+# Unix microseconds
+tc705fe24 = Unix microgiây
+
+# Unix nanoseconds
+t235cb430 = Unix nanogiây
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601, không có zone: đọc như UTC
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET ticks
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = Giây từ 2001 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = Giây từ 1904 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = Ngày từ 1899 (bảng tính)
+
+# Seconds
+t7e12f48a = Giây
+
+# Trace context
+ta58c7c95 = Trace context
+
+# B3 trace
+tb4f9b9bb = Trace B3
+
+# Amazon trace
+t122e82a4 = Trace Amazon
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Query fields
+t2f58f1e0 = Các trường query
+
+# Basic authentication
+te161b66b = Xác thực Basic
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = Mã trạng thái
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI
+teee15f8f = data: URI
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = Một dải địa chỉ
+
+# A MAC address
+t6d968a53 = Một địa chỉ MAC
+
 # As an address
 t9c53ba7c = Dạng địa chỉ
+
+# As a port
+t9fea9931 = Dạng port
+
+# JSON
+tdfbd7fc3 = JSON
+
+# Protobuf
+taac68056 = Protobuf
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# JWE, an encrypted token
+t6da81e5b = JWE, một token đã mã hóa
+
+# PASETO
+t309420ff = PASETO
+
+# SAML
+t015e7110 = SAML
+
+# PEM
+tf70119c9 = PEM
+
+# A hashed password
+t0157a1e6 = Một mật khẩu đã hash
+
+# A hash, by its size
+te82b53c8 = Một hash, đoán theo độ dài
+
+# As a size
+ta9175b27 = Dạng kích thước
+
+# In hex and binary
+tc31ef85f = Dạng hex và binary
+
+# Bits set
+tb67e8e09 = Các bit được set
 
 # this machine
 t8bdabc70 = máy này
@@ -2716,12 +2881,6 @@ tc1fb8957 = IPv4 bên trong
 # What it is
 t065b8fa0 = Nó là gì
 
-# IPv6
-t43fe7378 = IPv6
-
-# A range of addresses
-t889c22f2 = Một dải địa chỉ
-
 # From
 t18743595 = Từ
 
@@ -2731,86 +2890,17 @@ t41f59644 = Đến
 # How many
 tc31ec050 = Bao nhiêu
 
-# As a port
-t9fea9931 = Dạng port
-
 # to many, not to one
 t660024a1 = tới nhiều máy, không phải một
 
 # given by hand, not by the maker
 tc16b0e31 = do người đặt, không phải do hãng
 
-# A MAC address
-t6d968a53 = Một địa chỉ MAC
-
-# In hex and binary
-tc31ef85f = Dạng hex và binary
-
-# Bits set
-tb67e8e09 = Các bit được set
-
-# As a size
-ta9175b27 = Dạng kích thước
-
-# gzip
-t1a451735 = gzip
-
-# zlib
-t7c5452c4 = zlib
-
-# deflate
-t1dfa0080 = deflate
-
-# zstd
-tcfa9c52a = zstd
-
-# Brotli
-t5b0660bd = Brotli
-
 # in {amount}
 tfda57c3e = sau { $amount }
 
 # {amount} ago
 t5f968014 = { $amount } trước
-
-# Unix seconds
-t6edf5796 = Unix giây
-
-# Unix milliseconds
-t0d28f4b7 = Unix milligiây
-
-# Unix microseconds
-tc705fe24 = Unix microgiây
-
-# Unix nanoseconds
-t235cb430 = Unix nanogiây
-
-# ISO 8601
-t402bdff3 = ISO 8601
-
-# ISO 8601, no zone: read as UTC
-t3bb6c7ca = ISO 8601, không có zone: đọc như UTC
-
-# HTTP-date
-te55df34c = HTTP-date
-
-# Seconds
-t7e12f48a = Giây
-
-# Windows FILETIME
-t8582ebf1 = Windows FILETIME
-
-# .NET ticks
-t8c35aaf6 = .NET ticks
-
-# Seconds since 2001 (Apple)
-t4bd1d35a = Giây từ 2001 (Apple)
-
-# Seconds since 1904 (HFS+)
-tc7a82a5d = Giây từ 1904 (HFS+)
-
-# Days since 1899 (spreadsheet)
-td7bc06f2 = Ngày từ 1899 (bảng tính)
 
 # Key wrapped with
 ted680adb = Key bọc bằng
@@ -2827,9 +2917,6 @@ tbfad8752 = Phần còn lại
 # encrypted: it needs the key, which tracewing does not have
 tacb4301a = đã mã hóa: cần key, mà tracewing không có
 
-# JWE, an encrypted token
-t6da81e5b = JWE, một token đã mã hóa
-
 # What it is for
 t7f5984ef = Dùng để làm gì
 
@@ -2841,9 +2928,6 @@ tf7f41fd7 = public key, đã ký
 
 # The claims
 t5918e3d1 = Các claim
-
-# PASETO
-t309420ff = PASETO
 
 # MD5, or MD4, or NTLM
 t562aaed5 = MD5, MD4, hoặc NTLM
@@ -2862,9 +2946,6 @@ ta4d7ea95 = SHA-384
 
 # SHA-512, or SHA3-512, or BLAKE2b
 t275da5bd = SHA-512, SHA3-512, hoặc BLAKE2b
-
-# A hash, by its size
-te82b53c8 = Một hash, đoán theo độ dài
 
 # Made by
 te8ff7e65 = Tạo bởi
@@ -2893,12 +2974,6 @@ tefb8e7ad = SHA-256 crypt
 # SHA-512 crypt
 t9dcf716c = SHA-512 crypt
 
-# A hashed password
-t0157a1e6 = Một mật khẩu đã hash
-
-# PEM
-tf70119c9 = PEM
-
 # What it holds
 tff372c62 = Chứa gì
 
@@ -2916,12 +2991,6 @@ t3890a578 = Tạo lúc
 
 # Named
 t6055a346 = Tên
-
-# SAML
-t015e7110 = SAML
-
-# Trace context
-ta58c7c95 = Trace context
 
 # Trace
 t26f8e74e = Trace
@@ -2941,17 +3010,8 @@ t62366ffa = không
 # Parent span
 t3cf3f9c3 = Span cha
 
-# B3 trace
-tb4f9b9bb = Trace B3
-
 # Began
 t3a1b8566 = Bắt đầu
-
-# Amazon trace
-t122e82a4 = Trace Amazon
-
-# Server-Timing
-tb79773df = Server-Timing
 
 # Took
 tcea1562e = Mất
@@ -2971,17 +3031,11 @@ t98976d50 = { $n } trường
 # Fragment
 t7889e7fd = Fragment
 
-# Query fields
-t2f58f1e0 = Các trường query
-
 # Field
 t0fb83d07 = Trường
 
 # Value
 td147f96a = Giá trị
-
-# Basic authentication
-te161b66b = Xác thực Basic
 
 # Password
 t2cc30838 = Mật khẩu
@@ -3009,15 +3063,6 @@ t0f7f5bf9 = hết hạn là không dùng nữa
 
 # never checked again
 tc01144d0 = không kiểm tra lại
-
-# Cache-Control
-t3868d34d = Cache-Control
-
-# Status code
-t20b704bc = Mã trạng thái
-
-# Cookie
-tbdbabadf = Cookie
 
 # data: URI, {media}
 t514d8ddb = data: URI, { $media }

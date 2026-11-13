@@ -249,6 +249,19 @@ pub struct Reads {
     pub at: usize,
     /// The body of the one being shown, where it holds bytes.
     pub opened: Option<Opened>,
+    /// The chain a reader is building by hand, a converter at a time. Empty
+    /// until they ask for one.
+    pub asked: Vec<&'static str>,
+    /// What that chain reads as. `None` with an `asked` that is not empty
+    /// means it reads as nothing, which is an answer and is said as one.
+    pub said: Option<Reading>,
+    /// Which step of it has its menu open, and where the menu goes; the
+    /// group chosen in that menu, once one is.
+    pub menu: Option<(
+        usize,
+        Option<tracewing_convert::Group>,
+        gpui::Point<gpui::Pixels>,
+    )>,
 }
 
 /// What was opened: a body to read, or a picture to look at.
@@ -2038,6 +2051,9 @@ impl Traffic {
             found,
             at: 0,
             opened,
+            asked: Vec::new(),
+            said: None,
+            menu: None,
         });
         cx.notify();
     }
@@ -2054,6 +2070,75 @@ impl Traffic {
         let opened = self.reading_body(&reading, &from, cx);
         if let Some(reads) = self.inspector.reads.as_mut() {
             reads.at = at;
+            reads.opened = opened;
+        }
+        cx.notify();
+    }
+
+    /// Sets one step of the chain a reader is building, and runs what they
+    /// have so far. Steps after the one set are dropped: changing the third
+    /// of three keeps the first two, changing the first keeps nothing.
+    pub fn ask_for(&mut self, step: usize, id: &'static str, cx: &mut Context<Self>) {
+        let Some(reads) = self.inspector.reads.as_mut() else {
+            return;
+        };
+        reads.asked.truncate(step);
+        reads.asked.push(id);
+        reads.menu = None;
+        self.run_asked(cx);
+    }
+
+    /// Drops the chain and goes back to what the search found.
+    pub fn ask_nothing(&mut self, cx: &mut Context<Self>) {
+        let Some(reads) = self.inspector.reads.as_mut() else {
+            return;
+        };
+        reads.asked.clear();
+        reads.said = None;
+        reads.menu = None;
+        let at = reads.at;
+        let chosen = reads.found.get(at).cloned();
+        let from = reads.field.clone().unwrap_or_else(|| tr!("this value"));
+        let opened = chosen.and_then(|reading| self.reading_body(&reading, &from, cx));
+        if let Some(reads) = self.inspector.reads.as_mut() {
+            reads.opened = opened;
+        }
+        cx.notify();
+    }
+
+    /// Opens, moves or closes the menu of converters for a step.
+    pub fn ask_menu(
+        &mut self,
+        at: Option<(
+            usize,
+            Option<tracewing_convert::Group>,
+            gpui::Point<gpui::Pixels>,
+        )>,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(reads) = self.inspector.reads.as_mut() {
+            reads.menu = at;
+            cx.notify();
+        }
+    }
+
+    /// Runs the chain as it stands and keeps what it said.
+    fn run_asked(&mut self, cx: &mut Context<Self>) {
+        let Some(reads) = self.inspector.reads.as_ref() else {
+            return;
+        };
+        let (value, field, asked) = (
+            reads.value.clone(),
+            reads.field.clone(),
+            reads.asked.clone(),
+        );
+        let said = reading::read_with(&asked, &value, field.as_deref());
+        let from = field.unwrap_or_else(|| tr!("this value"));
+        let opened = said
+            .as_ref()
+            .and_then(|reading| self.reading_body(reading, &from, cx));
+        if let Some(reads) = self.inspector.reads.as_mut() {
+            reads.said = said;
             reads.opened = opened;
         }
         cx.notify();
@@ -2220,6 +2305,7 @@ impl Traffic {
         let value = cut_to(&reads.value, 300);
         let field = reads.field.clone();
         let at = reads.at;
+        let asking = !reads.asked.is_empty();
         let ways: Vec<(usize, String, String, bool, bool)> = reads
             .found
             .iter()
@@ -2234,10 +2320,15 @@ impl Traffic {
                 // by their size and an address by where they are, and a
                 // reader has to be able to tell which they are being shown.
                 let guess = reading.confidence == tracewing_convert::Confidence::Possible;
-                (n, reading.label.clone(), chain, n == at, guess)
+                (n, reading.label.clone(), chain, n == at && !asking, guess)
             })
             .collect();
-        let chosen = reads.found.get(at).cloned();
+        // What the detail area shows: the chain a reader asked for, where
+        // they asked for one, and what the search found otherwise.
+        let chosen = match asking {
+            true => reads.said.clone(),
+            false => reads.found.get(at).cloned(),
+        };
         let body = reads.opened.as_ref().map(|opened| {
             (
                 opened.label.clone(),
@@ -2385,6 +2476,10 @@ impl Traffic {
                                     }))
                             })),
                     )
+                    // A chain of a reader's own, built a converter at a
+                    // time: what the search did not find, or what it found
+                    // and the reader does not agree with.
+                    .child(self.render_asked(cx))
                     // What the chosen one says: a body of its own where it
                     // holds bytes, and the reading itself where it does not.
                     .child(match body {
@@ -2413,6 +2508,179 @@ impl Traffic {
                             .children(chosen.map(|reading| render_reading(&reading, &sel))),
                     }),
             )
+    }
+
+    /// The row where a reader builds a chain of their own: a step at a
+    /// time, each one showing what it gave, and a next step offered only
+    /// where the one before gave bytes -- nothing else can be read on.
+    fn render_asked(&mut self, cx: &mut Context<Self>) -> Div {
+        let c = colors();
+        let Some(reads) = &self.inspector.reads else {
+            return div();
+        };
+        let named = tracewing_convert::named();
+        let name_of = |id: &str| {
+            named
+                .iter()
+                .find(|one| one.id == id)
+                .map_or_else(|| id.to_owned(), |one| one.name.clone())
+        };
+        let steps: Vec<(usize, String)> = reads
+            .asked
+            .iter()
+            .enumerate()
+            .map(|(at, id)| (at, name_of(id)))
+            .collect();
+        // Only bytes can be handed to another converter, and three steps is
+        // as deep as a chain goes.
+        let goes_on = reads.said.as_ref().is_some_and(tracewing_convert::goes_on);
+        let another = steps.is_empty() || (goes_on && steps.len() < 3);
+        let menu = reads.menu;
+        let step = |at: usize, label: String, chosen: bool| {
+            div()
+                .id(("asked", at))
+                .px(ui(6.))
+                .py(ui(2.))
+                .rounded(ui(8.))
+                .cursor_pointer()
+                .reachable()
+                .text_size(ui(11.5))
+                .border_1()
+                .border_color(rgb(c.splitter))
+                .text_color(rgb(if chosen { c.text } else { c.muted }))
+                .hover(|s| s.bg(rgb(c.chip)))
+                .child(label)
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, e: &MouseDownEvent, _, cx| {
+                        this.ask_menu(Some((at, None, e.position)), cx);
+                    }),
+                )
+        };
+        div()
+            .flex()
+            .flex_col()
+            .gap(ui(4.))
+            .px(ui(10.))
+            .py(ui(6.))
+            .border_t_1()
+            .border_color(rgb(c.line))
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .items_center()
+                    .gap(ui(4.))
+                    .child(
+                        div()
+                            .text_size(ui(11.))
+                            .text_color(rgb(c.muted))
+                            .child(tr!("Read as")),
+                    )
+                    .children(steps.iter().enumerate().flat_map(|(n, (at, label))| {
+                        let mut out = Vec::new();
+                        if n > 0 {
+                            out.push(
+                                div()
+                                    .text_size(ui(11.))
+                                    .text_color(rgb(c.faint))
+                                    .child("→")
+                                    .into_any_element(),
+                            );
+                        }
+                        out.push(step(*at, label.clone(), true).into_any_element());
+                        out
+                    }))
+                    .when(another, |d| {
+                        let at = steps.len();
+                        d.child(step(
+                            at,
+                            if steps.is_empty() {
+                                tr!("choose…")
+                            } else {
+                                "+".to_owned()
+                            },
+                            false,
+                        ))
+                    })
+                    .when(!steps.is_empty(), |d| {
+                        d.child(
+                            div()
+                                .id("asked-none")
+                                .px(ui(6.))
+                                .rounded(ui(8.))
+                                .cursor_pointer()
+                                .reachable()
+                                .text_size(ui(11.))
+                                .text_color(rgb(c.muted))
+                                .hover(|s| s.bg(rgb(c.chip)).text_color(rgb(c.text)))
+                                .child("✕")
+                                .on_click(cx.listener(|this, _, _, cx| this.ask_nothing(cx))),
+                        )
+                    }),
+            )
+            .children(menu.map(|(at, group, where_)| self.render_ask_menu(at, group, where_, cx)))
+    }
+
+    /// The menu a step opens: the groups first, then what is in the group,
+    /// since sixty readings in one list is a list to read rather than a
+    /// menu to pick from.
+    fn render_ask_menu(
+        &mut self,
+        step: usize,
+        group: Option<tracewing_convert::Group>,
+        at: gpui::Point<gpui::Pixels>,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        use tracewing_convert::Group;
+        let named = tracewing_convert::named();
+        let items: Vec<select::Item> = match group {
+            None => {
+                let mut groups: Vec<Group> = Vec::new();
+                for one in &named {
+                    if !groups.contains(&one.group) {
+                        groups.push(one.group);
+                    }
+                }
+                groups
+                    .into_iter()
+                    .map(|group| {
+                        let me = cx.entity().downgrade();
+                        select::Item::new(
+                            "ask-group",
+                            group.name(),
+                            Some(Rc::new(move |_: &mut gpui::Window, cx: &mut gpui::App| {
+                                let _ = me.update(cx, |this: &mut Traffic, cx| {
+                                    this.ask_menu(Some((step, Some(group), at)), cx);
+                                });
+                            }) as select::Act),
+                        )
+                    })
+                    .collect()
+            }
+            Some(group) => named
+                .into_iter()
+                .filter(|one| one.group == group)
+                .map(|one| {
+                    let me = cx.entity().downgrade();
+                    let id = one.id;
+                    select::Item::new(
+                        one.id,
+                        one.name,
+                        Some(Rc::new(move |_: &mut gpui::Window, cx: &mut gpui::App| {
+                            let _ = me.update(cx, |this: &mut Traffic, cx| {
+                                this.ask_for(step, id, cx);
+                            });
+                        }) as select::Act),
+                    )
+                })
+                .collect(),
+        };
+        let me = cx.entity().downgrade();
+        select::render_menu(at, items, move |_, cx| {
+            let _ = me.update(cx, |this: &mut Traffic, cx| this.ask_menu(None, cx));
+        })
     }
 
     /// What was opened, over the body it came out of, with the way back.

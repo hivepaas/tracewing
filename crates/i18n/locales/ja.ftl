@@ -754,6 +754,12 @@ t60beaefd = 読み取りを閉じる
 # a guess
 t6af47169 = 推測
 
+# Read as
+t8c0f1d8b = 別の読み方
+
+# choose…
+te030653c = 選ぶ…
+
 # Read from {from}
 t6d510d3d = { $from } から読み取り
 
@@ -1227,9 +1233,6 @@ t134c9a06 = 自動（gRPC のパスまたは messageType）
 
 # and {count} more: type to narrow them | and {count} more: type to narrow them
 t70ff68f9 = ほかに { $count } 件: 入力して絞り込み
-
-# Read as
-t8c0f1d8b = 別の読み方
 
 # Copy reading
 td38c5cc8 = 読んだ内容をコピー
@@ -2686,8 +2689,170 @@ td8d653d6 =
        *[other] { $n } 行
     }
 
+# Times
+tec53a755 = 時刻
+
+# Names and ids
+t74dee54c = 名前と ID
+
+# Tracing
+t1d5a82d9 = トレース
+
+# The web's own
+t500d90ac = ウェブ固有のもの
+
+# Networks
+t18ac79a2 = ネットワーク
+
+# Data
+t3f5279c5 = データ
+
+# Encodings
+taf58dad9 = エンコード
+
+# Packed
+t6d550b01 = 圧縮
+
+# Tokens and keys
+t50973c5a = トークンと鍵
+
+# Numbers
+td63c77c9 = 数
+
+# Chains
+t109ecadf = チェーン
+
+# Unix seconds
+t6edf5796 = Unix秒
+
+# Unix milliseconds
+t0d28f4b7 = Unixミリ秒
+
+# Unix microseconds
+tc705fe24 = Unixマイクロ秒
+
+# Unix nanoseconds
+t235cb430 = Unixナノ秒
+
+# ISO 8601
+t402bdff3 = ISO 8601
+
+# ISO 8601, no zone: read as UTC
+t3bb6c7ca = ISO 8601、ゾーンなし: UTCとして読みました
+
+# HTTP-date
+te55df34c = HTTP-date
+
+# Windows FILETIME
+t8582ebf1 = Windows FILETIME
+
+# .NET ticks
+t8c35aaf6 = .NET ticks
+
+# Seconds since 2001 (Apple)
+t4bd1d35a = 2001年からの秒 (Apple)
+
+# Seconds since 1904 (HFS+)
+tc7a82a5d = 1904年からの秒 (HFS+)
+
+# Days since 1899 (spreadsheet)
+td7bc06f2 = 1899年からの日数 (表計算)
+
+# Seconds
+t7e12f48a = 秒
+
+# Trace context
+ta58c7c95 = トレースコンテキスト
+
+# B3 trace
+tb4f9b9bb = B3トレース
+
+# Amazon trace
+t122e82a4 = Amazonトレース
+
+# Server-Timing
+tb79773df = Server-Timing
+
+# Query fields
+t2f58f1e0 = クエリのフィールド
+
+# Basic authentication
+te161b66b = Basic認証
+
+# Cache-Control
+t3868d34d = Cache-Control
+
+# Status code
+t20b704bc = ステータスコード
+
+# Cookie
+tbdbabadf = Cookie
+
+# data: URI
+teee15f8f = data: URI
+
+# IPv6
+t43fe7378 = IPv6
+
+# A range of addresses
+t889c22f2 = アドレスの範囲
+
+# A MAC address
+t6d968a53 = MACアドレス
+
 # As an address
 t9c53ba7c = アドレスとして
+
+# As a port
+t9fea9931 = ポートとして
+
+# JSON
+tdfbd7fc3 = JSON
+
+# Protobuf
+taac68056 = Protobuf
+
+# gzip
+t1a451735 = gzip
+
+# zlib
+t7c5452c4 = zlib
+
+# deflate
+t1dfa0080 = deflate
+
+# zstd
+tcfa9c52a = zstd
+
+# Brotli
+t5b0660bd = Brotli
+
+# JWE, an encrypted token
+t6da81e5b = JWE、暗号化されたトークン
+
+# PASETO
+t309420ff = PASETO
+
+# SAML
+t015e7110 = SAML
+
+# PEM
+tf70119c9 = PEM
+
+# A hashed password
+t0157a1e6 = ハッシュ化されたパスワード
+
+# A hash, by its size
+te82b53c8 = サイズから見たハッシュ
+
+# As a size
+ta9175b27 = サイズとして
+
+# In hex and binary
+tc31ef85f = 16進数と2進数で
+
+# Bits set
+tb67e8e09 = 立っているビット
 
 # this machine
 t8bdabc70 = このマシン
@@ -2716,12 +2881,6 @@ tc1fb8957 = 中のIPv4
 # What it is
 t065b8fa0 = これは何か
 
-# IPv6
-t43fe7378 = IPv6
-
-# A range of addresses
-t889c22f2 = アドレスの範囲
-
 # From
 t18743595 = 開始
 
@@ -2731,86 +2890,17 @@ t41f59644 = 終了
 # How many
 tc31ec050 = いくつ
 
-# As a port
-t9fea9931 = ポートとして
-
 # to many, not to one
 t660024a1 = 1対1ではなく1対多
 
 # given by hand, not by the maker
 tc16b0e31 = メーカーではなく手動で設定
 
-# A MAC address
-t6d968a53 = MACアドレス
-
-# In hex and binary
-tc31ef85f = 16進数と2進数で
-
-# Bits set
-tb67e8e09 = 立っているビット
-
-# As a size
-ta9175b27 = サイズとして
-
-# gzip
-t1a451735 = gzip
-
-# zlib
-t7c5452c4 = zlib
-
-# deflate
-t1dfa0080 = deflate
-
-# zstd
-tcfa9c52a = zstd
-
-# Brotli
-t5b0660bd = Brotli
-
 # in {amount}
 tfda57c3e = { $amount }後
 
 # {amount} ago
 t5f968014 = { $amount }前
-
-# Unix seconds
-t6edf5796 = Unix秒
-
-# Unix milliseconds
-t0d28f4b7 = Unixミリ秒
-
-# Unix microseconds
-tc705fe24 = Unixマイクロ秒
-
-# Unix nanoseconds
-t235cb430 = Unixナノ秒
-
-# ISO 8601
-t402bdff3 = ISO 8601
-
-# ISO 8601, no zone: read as UTC
-t3bb6c7ca = ISO 8601、ゾーンなし: UTCとして読みました
-
-# HTTP-date
-te55df34c = HTTP-date
-
-# Seconds
-t7e12f48a = 秒
-
-# Windows FILETIME
-t8582ebf1 = Windows FILETIME
-
-# .NET ticks
-t8c35aaf6 = .NET ticks
-
-# Seconds since 2001 (Apple)
-t4bd1d35a = 2001年からの秒 (Apple)
-
-# Seconds since 1904 (HFS+)
-tc7a82a5d = 1904年からの秒 (HFS+)
-
-# Days since 1899 (spreadsheet)
-td7bc06f2 = 1899年からの日数 (表計算)
 
 # Key wrapped with
 ted680adb = 鍵のラップ方式
@@ -2827,9 +2917,6 @@ tbfad8752 = 残り
 # encrypted: it needs the key, which tracewing does not have
 tacb4301a = 暗号化済み: 鍵が必要ですが tracewing は持っていません
 
-# JWE, an encrypted token
-t6da81e5b = JWE、暗号化されたトークン
-
 # What it is for
 t7f5984ef = 用途
 
@@ -2841,9 +2928,6 @@ tf7f41fd7 = 公開鍵・署名
 
 # The claims
 t5918e3d1 = クレーム
-
-# PASETO
-t309420ff = PASETO
 
 # MD5, or MD4, or NTLM
 t562aaed5 = MD5、MD4、または NTLM
@@ -2862,9 +2946,6 @@ ta4d7ea95 = SHA-384
 
 # SHA-512, or SHA3-512, or BLAKE2b
 t275da5bd = SHA-512、SHA3-512、または BLAKE2b
-
-# A hash, by its size
-te82b53c8 = サイズから見たハッシュ
 
 # Made by
 te8ff7e65 = 作成方式
@@ -2893,12 +2974,6 @@ tefb8e7ad = SHA-256 crypt
 # SHA-512 crypt
 t9dcf716c = SHA-512 crypt
 
-# A hashed password
-t0157a1e6 = ハッシュ化されたパスワード
-
-# PEM
-tf70119c9 = PEM
-
 # What it holds
 tff372c62 = 中身
 
@@ -2916,12 +2991,6 @@ t3890a578 = 作成
 
 # Named
 t6055a346 = 名前
-
-# SAML
-t015e7110 = SAML
-
-# Trace context
-ta58c7c95 = トレースコンテキスト
 
 # Trace
 t26f8e74e = トレース
@@ -2941,17 +3010,8 @@ t62366ffa = いいえ
 # Parent span
 t3cf3f9c3 = 親スパン
 
-# B3 trace
-tb4f9b9bb = B3トレース
-
 # Began
 t3a1b8566 = 開始
-
-# Amazon trace
-t122e82a4 = Amazonトレース
-
-# Server-Timing
-tb79773df = Server-Timing
 
 # Took
 tcea1562e = 所要時間
@@ -2971,17 +3031,11 @@ t98976d50 = { $n } 個のフィールド
 # Fragment
 t7889e7fd = フラグメント
 
-# Query fields
-t2f58f1e0 = クエリのフィールド
-
 # Field
 t0fb83d07 = フィールド
 
 # Value
 td147f96a = 値
-
-# Basic authentication
-te161b66b = Basic認証
 
 # Password
 t2cc30838 = パスワード
@@ -3009,15 +3063,6 @@ t0f7f5bf9 = 古くなったら使わない
 
 # never checked again
 tc01144d0 = 再確認しない
-
-# Cache-Control
-t3868d34d = Cache-Control
-
-# Status code
-t20b704bc = ステータスコード
-
-# Cookie
-tbdbabadf = Cookie
 
 # data: URI, {media}
 t514d8ddb = data: URI、{ $media }
