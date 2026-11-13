@@ -768,6 +768,9 @@ tc40f2321 = Açılıyor…
 # this value
 t8a86fa50 = bu değer
 
+# Find a reading
+t3e5b868d = Bir okuma bul
+
 # The whole line
 t17d1ec47 = Satırın tamamı
 
@@ -791,6 +794,9 @@ t8c0f1d8b = Şu olarak oku
 
 # choose…
 te030653c = seç…
+
+# Nothing by that name
+t9e47dd8f = Bu adda bir şey yok
 
 # Read from {from}
 t6d510d3d = { $from } içinden okundu

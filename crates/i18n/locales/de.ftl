@@ -768,6 +768,9 @@ tc40f2321 = Wird geöffnet…
 # this value
 t8a86fa50 = dieser Wert
 
+# Find a reading
+t3e5b868d = Eine Deutung finden
+
 # The whole line
 t17d1ec47 = Die ganze Zeile
 
@@ -791,6 +794,9 @@ t8c0f1d8b = Lesen als
 
 # choose…
 te030653c = wählen…
+
+# Nothing by that name
+t9e47dd8f = Nichts mit diesem Namen
 
 # Read from {from}
 t6d510d3d = Gelesen aus { $from }

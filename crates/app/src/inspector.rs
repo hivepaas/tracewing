@@ -220,6 +220,9 @@ pub struct InspectorState {
     /// query's fields run past the pane's height, and there has to be a way
     /// down to the rest of them.
     pub reads_scroll: Scrolled,
+    /// The box above the "Read as" menu, while it is open: sixty readings
+    /// in two levels is more than a reader can look down.
+    pub ask_find: Option<(Entity<TextInput>, gpui::Subscription)>,
     /// The size the inspector was last drawn at, in pixels: how much of its
     /// head it shows depends on it.
     pub panel: std::rc::Rc<std::cell::Cell<gpui::Size<gpui::Pixels>>>,
@@ -2148,12 +2151,52 @@ impl Traffic {
             Option<tracewing_convert::Group>,
             gpui::Point<gpui::Pixels>,
         )>,
+        window: &mut gpui::Window,
         cx: &mut Context<Self>,
     ) {
+        if self.inspector.reads.is_none() {
+            return;
+        }
+        match at.is_some() {
+            // The box is made as the menu opens and goes with it, so what
+            // was typed last time is not waiting there the next.
+            true => {
+                if self.inspector.ask_find.is_none() {
+                    let input = cx.new(|cx| TextInput::said(|| tr!("Find a reading"), cx));
+                    let changed =
+                        cx.subscribe(&input, |_, _, _: &crate::input::Changed, cx| cx.notify());
+                    self.inspector.ask_find = Some((input, changed));
+                }
+                if let Some((input, _)) = &self.inspector.ask_find {
+                    let handle = gpui::Focusable::focus_handle(input.read(cx), cx);
+                    window.focus(&handle, cx);
+                }
+            }
+            false => self.inspector.ask_find = None,
+        }
         if let Some(reads) = self.inspector.reads.as_mut() {
             reads.menu = at;
-            cx.notify();
         }
+        cx.notify();
+    }
+
+    /// Shuts the "Read as" menu. False where none is open, so Escape falls
+    /// through to whatever is behind it.
+    pub fn close_ask_menu(&mut self, cx: &mut Context<Self>) -> bool {
+        let open = self
+            .inspector
+            .reads
+            .as_ref()
+            .is_some_and(|reads| reads.menu.is_some());
+        if !open {
+            return false;
+        }
+        self.inspector.ask_find = None;
+        if let Some(reads) = self.inspector.reads.as_mut() {
+            reads.menu = None;
+        }
+        cx.notify();
+        true
     }
 
     /// Runs the chain as it stands and keeps what it said.
@@ -2622,11 +2665,11 @@ impl Traffic {
                 .child(label)
                 .on_mouse_down(
                     MouseButton::Left,
-                    cx.listener(move |this, e: &MouseDownEvent, _, cx| {
+                    cx.listener(move |this, e: &MouseDownEvent, window, cx| {
                         // The press belongs to the menu, not to the text
                         // under it: it does not start a selection.
                         cx.stop_propagation();
-                        this.ask_menu(Some((at, None, e.position)), cx);
+                        this.ask_menu(Some((at, None, e.position)), window, cx);
                     }),
                 )
         };
@@ -2708,51 +2751,110 @@ impl Traffic {
     ) -> AnyElement {
         use tracewing_convert::Group;
         let named = tracewing_convert::named();
-        let items: Vec<select::Item> = match group {
-            None => {
-                let mut groups: Vec<Group> = Vec::new();
-                for one in &named {
-                    if !groups.contains(&one.group) {
-                        groups.push(one.group);
-                    }
-                }
-                groups
+        let typed = self
+            .inspector
+            .ask_find
+            .as_ref()
+            .map(|(input, _)| input.read(cx).text().trim().to_lowercase())
+            .unwrap_or_default();
+        // Typed into, the menu stops being two levels and becomes one: what
+        // a reader is looking for is a name, not a group it might be under.
+        let group = if typed.is_empty() { group } else { None };
+        let items: Vec<select::Item> = if !typed.is_empty() {
+            let found: Vec<_> = named
+                .into_iter()
+                .filter(|one| {
+                    one.name.to_lowercase().contains(&typed) || one.id.contains(typed.as_str())
+                })
+                .collect();
+            if found.is_empty() {
+                vec![select::Item::new(
+                    "no-reading",
+                    tr!("Nothing by that name"),
+                    None,
+                )]
+            } else {
+                found
                     .into_iter()
-                    .map(|group| {
+                    .map(|one| {
                         let me = cx.entity().downgrade();
+                        let id = one.id;
                         select::Item::new(
-                            "ask-group",
-                            group.name(),
+                            one.id,
+                            // The group comes with it: what a name means is
+                            // often the company it keeps.
+                            format!("{}  ·  {}", one.name, one.group.name()),
                             Some(Rc::new(move |_: &mut gpui::Window, cx: &mut gpui::App| {
                                 let _ = me.update(cx, |this: &mut Traffic, cx| {
-                                    this.ask_menu(Some((step, Some(group), at)), cx);
+                                    this.ask_for(step, id, cx);
                                 });
                             }) as select::Act),
                         )
                     })
                     .collect()
             }
-            Some(group) => named
-                .into_iter()
-                .filter(|one| one.group == group)
-                .map(|one| {
-                    let me = cx.entity().downgrade();
-                    let id = one.id;
-                    select::Item::new(
-                        one.id,
-                        one.name,
-                        Some(Rc::new(move |_: &mut gpui::Window, cx: &mut gpui::App| {
-                            let _ = me.update(cx, |this: &mut Traffic, cx| {
-                                this.ask_for(step, id, cx);
-                            });
-                        }) as select::Act),
-                    )
-                })
-                .collect(),
+        } else {
+            match group {
+                None => {
+                    let mut groups: Vec<Group> = Vec::new();
+                    for one in &named {
+                        if !groups.contains(&one.group) {
+                            groups.push(one.group);
+                        }
+                    }
+                    groups
+                        .into_iter()
+                        .map(|group| {
+                            let me = cx.entity().downgrade();
+                            select::Item::new(
+                                "ask-group",
+                                group.name(),
+                                Some(Rc::new(
+                                    move |window: &mut gpui::Window, cx: &mut gpui::App| {
+                                        let _ = me.update(cx, |this: &mut Traffic, cx| {
+                                            this.ask_menu(
+                                                Some((step, Some(group), at)),
+                                                window,
+                                                cx,
+                                            );
+                                        });
+                                    },
+                                ) as select::Act),
+                            )
+                        })
+                        .collect()
+                }
+                Some(group) => named
+                    .into_iter()
+                    .filter(|one| one.group == group)
+                    .map(|one| {
+                        let me = cx.entity().downgrade();
+                        let id = one.id;
+                        select::Item::new(
+                            one.id,
+                            one.name,
+                            Some(Rc::new(move |_: &mut gpui::Window, cx: &mut gpui::App| {
+                                let _ = me.update(cx, |this: &mut Traffic, cx| {
+                                    this.ask_for(step, id, cx);
+                                });
+                            }) as select::Act),
+                        )
+                    })
+                    .collect(),
+            }
         };
+        let head = self.inspector.ask_find.as_ref().map(|(input, _)| {
+            div()
+                .px(ui(6.))
+                .py(ui(4.))
+                .border_b_1()
+                .border_color(rgb(colors().line))
+                .child(input.clone())
+                .into_any_element()
+        });
         let me = cx.entity().downgrade();
-        select::render_menu(at, items, move |_, cx| {
-            let _ = me.update(cx, |this: &mut Traffic, cx| this.ask_menu(None, cx));
+        select::render_menu_headed(at, head, items, move |window, cx| {
+            let _ = me.update(cx, |this: &mut Traffic, cx| this.ask_menu(None, window, cx));
         })
     }
 

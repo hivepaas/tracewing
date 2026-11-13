@@ -1512,13 +1512,63 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
         .unwrap();
     cx.run_until_parked();
 
+    // The menu of readings opens with a box to narrow it down: sixty of
+    // them in two levels is more than anyone can look down.
+    window
+        .update(&mut cx, |view, window, cx| {
+            view.ask_menu(
+                Some((0, None, gpui::point(gpui::px(10.), gpui::px(10.)))),
+                window,
+                cx,
+            );
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let box_is_there = window
+        .update(&mut cx, |view, _, _| view.inspector.ask_find.is_some())
+        .unwrap();
+    assert!(box_is_there, "the menu opens with a box to type in");
+
+    // Typed into, the menu is one list of what matches rather than groups.
+    let (found, missed) = window
+        .update(&mut cx, |view, _, cx| {
+            let (input, _) = view.inspector.ask_find.as_ref().expect("the box");
+            input.update(cx, |input, cx| input.set_text("unix", 0..0, cx));
+            let typed = input.read(cx).text().to_lowercase();
+            let named = tracewing_convert::named();
+            let found: Vec<&str> = named
+                .iter()
+                .filter(|one| one.name.to_lowercase().contains(&typed) || one.id.contains(&typed))
+                .map(|one| one.id)
+                .collect();
+            (found.contains(&"unix-ms"), found.contains(&"cookie"))
+        })
+        .unwrap();
+    assert!(found, "what was typed is found");
+    assert!(!missed, "and what was not is left out");
+
+    // Escape shuts the menu before it shuts anything else.
+    let (menu_gone, pane_still) = window
+        .update(&mut cx, |view, _, cx| {
+            let closed = view.close_ask_menu(cx);
+            (closed, view.inspector.reads.is_some())
+        })
+        .unwrap();
+    assert!(menu_gone, "the menu closes");
+    assert!(pane_still, "and the pane is still open behind it");
+    let box_gone = window
+        .update(&mut cx, |view, _, _| view.inspector.ask_find.is_none())
+        .unwrap();
+    assert!(box_gone, "what was typed does not wait for the next time");
+
     // A menu opened in the pane stays open: the press that opened it must
     // not be taken as a press on the value under it, which would build the
     // pane again and take the menu with it.
     window
-        .update(&mut cx, |view, _, cx| {
+        .update(&mut cx, |view, window, cx| {
             view.ask_menu(
                 Some((0, None, gpui::point(gpui::px(10.), gpui::px(10.)))),
+                window,
                 cx,
             );
         })
@@ -1540,7 +1590,7 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
         .unwrap();
     assert!(open, "the menu is still up after the press that opened it");
     window
-        .update(&mut cx, |view, _, cx| view.ask_menu(None, cx))
+        .update(&mut cx, |view, window, cx| view.ask_menu(None, window, cx))
         .unwrap();
     cx.run_until_parked();
 
