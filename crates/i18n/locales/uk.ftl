@@ -730,6 +730,12 @@ t1e92fb27 = Це зображення не вдається показати. З
 # Opening…
 tc40f2321 = Відкриття…
 
+# The whole line
+t17d1ec47 = Увесь рядок
+
+# line {number}
+t1942c7ae = рядок { $number }
+
 # Read from {from}
 t6d510d3d = Прочитано з { $from }
 

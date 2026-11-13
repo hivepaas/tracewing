@@ -679,6 +679,12 @@ t1e92fb27 = 無法顯示此圖片。請儲存本文後檢視。
 # Opening…
 tc40f2321 = 正在開啟…
 
+# The whole line
+t17d1ec47 = 整行
+
+# line {number}
+t1942c7ae = 第 { $number } 行
+
 # Read from {from}
 t6d510d3d = 讀自 { $from }
 

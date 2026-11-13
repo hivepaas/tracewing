@@ -679,6 +679,12 @@ t1e92fb27 = Không vẽ được hình này. Hãy lưu body để xem.
 # Opening…
 tc40f2321 = Đang mở…
 
+# The whole line
+t17d1ec47 = Nguyên dòng
+
+# line {number}
+t1942c7ae = dòng { $number }
+
 # Read from {from}
 t6d510d3d = Đọc từ { $from }
 
