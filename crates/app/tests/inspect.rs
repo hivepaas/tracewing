@@ -392,6 +392,43 @@ fn graphql_cookies_and_tokens_are_read() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "45-connection-reused");
 
+    // The phases of the time fold away behind the chip that totals them, and
+    // they start shown, as they always have.
+    assert!(
+        !window
+            .update(&mut cx, |view, _, _| view.inspector.timing_hidden)
+            .unwrap(),
+        "shown until someone says otherwise"
+    );
+    window
+        .update(&mut cx, |view, _, cx| view.toggle_timing(cx))
+        .unwrap();
+    cx.run_until_parked();
+    assert!(
+        window
+            .update(&mut cx, |view, _, _| view.inspector.timing_hidden)
+            .unwrap()
+    );
+    shot(&mut cx, window.into(), "48-timing-folded");
+    // Another flow keeps the choice: it is about the window, not the flow.
+    window
+        .update(&mut cx, |view, _, cx| view.select_place(0, cx))
+        .unwrap();
+    cx.run_until_parked();
+    assert!(
+        window
+            .update(&mut cx, |view, _, _| view.inspector.timing_hidden)
+            .unwrap(),
+        "the choice outlives the flow it was made on"
+    );
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.toggle_timing(cx);
+            view.select_place(1, cx);
+        })
+        .unwrap();
+    cx.run_until_parked();
+
     // The list goes out as a HAR, without secrets when asked...
     let har_path = dir.join("out.har");
     window

@@ -724,6 +724,9 @@ t2d65757d = GraphQL: { $operation }
 # RPC: {method}
 tf8162891 = RPC: { $method }
 
+# Where the time went
+tb12d299a = Ke mana waktunya pergi
+
 # Over connection {id}, made before: no time went on connecting.
 t84144a81 = Lewat koneksi { $id }, yang dibuat sebelumnya: tidak ada waktu untuk menyambung.
 
