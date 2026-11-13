@@ -679,12 +679,6 @@ t1e92fb27 = 이 이미지를 표시할 수 없습니다. 본문을 저장해서 
 # Opening…
 tc40f2321 = 여는 중…
 
-# The whole line
-t17d1ec47 = 줄 전체
-
-# line {number}
-t1942c7ae = { $number }번째 줄
-
 # Read from {from}
 t6d510d3d = { $from }에서 읽음
 
@@ -2184,9 +2178,6 @@ t2af18488 = 창
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = 시작하기, 트래픽, 규칙, 일시 정지됨, 작성, 세션, 설정
-
-# Back or forward, as the mouse's own buttons do
-tad71f882 = 뒤로 또는 앞으로 (마우스의 뒤로/앞으로 버튼처럼)
 
 # Show or hide the sidebar
 t67adca04 = 사이드바 표시 또는 숨기기

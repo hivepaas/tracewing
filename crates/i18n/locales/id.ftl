@@ -679,12 +679,6 @@ t1e92fb27 = Gambar ini tidak bisa ditampilkan. Simpan body-nya untuk melihatnya.
 # Opening…
 tc40f2321 = Membuka…
 
-# The whole line
-t17d1ec47 = Seluruh baris
-
-# line {number}
-t1942c7ae = baris { $number }
-
 # Read from {from}
 t6d510d3d = Dibaca dari { $from }
 
@@ -2184,9 +2178,6 @@ t2af18488 = Jendela
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Siapkan, Lalu Lintas, Aturan, Dijeda, Susun, Sesi, Setelan
-
-# Back or forward, as the mouse's own buttons do
-tad71f882 = Mundur atau maju, seperti tombol mouse
 
 # Show or hide the sidebar
 t67adca04 = Tampilkan atau sembunyikan sidebar

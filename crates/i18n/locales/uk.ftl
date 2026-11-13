@@ -730,12 +730,6 @@ t1e92fb27 = Це зображення не вдається показати. З
 # Opening…
 tc40f2321 = Відкриття…
 
-# The whole line
-t17d1ec47 = Увесь рядок
-
-# line {number}
-t1942c7ae = рядок { $number }
-
 # Read from {from}
 t6d510d3d = Прочитано з { $from }
 
@@ -2385,9 +2379,6 @@ t2af18488 = Вікно
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Підготовка, Трафік, Правила, Призупинені, Створити запит, Сеанси, Налаштування
-
-# Back or forward, as the mouse's own buttons do
-tad71f882 = Назад або вперед, як бічні кнопки миші
 
 # Show or hide the sidebar
 t67adca04 = Показати або сховати бічну панель

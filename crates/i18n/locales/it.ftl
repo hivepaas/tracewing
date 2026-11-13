@@ -714,12 +714,6 @@ t1e92fb27 = Questa immagine non può essere mostrata. Salva il body per guardarl
 # Opening…
 tc40f2321 = Apertura…
 
-# The whole line
-t17d1ec47 = L'intera riga
-
-# line {number}
-t1942c7ae = riga { $number }
-
 # Read from {from}
 t6d510d3d = Letto da { $from }
 
@@ -2320,9 +2314,6 @@ t2af18488 = La finestra
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Configura, Traffico, Regole, In pausa, Componi, Sessioni, Impostazioni
-
-# Back or forward, as the mouse's own buttons do
-tad71f882 = Indietro o avanti, come i tasti del mouse
 
 # Show or hide the sidebar
 t67adca04 = Mostra o nascondi la barra laterale

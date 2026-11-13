@@ -15,8 +15,8 @@ use crate::colors::colors;
 
 /// The strip the bar takes over the area's edge, and the thumb in it: as
 /// wide as the body's.
-pub const BAR_W: f32 = 16.;
-pub const THUMB_W: f32 = 12.;
+pub const BAR_W: f32 = 13.;
+pub const THUMB_W: f32 = 9.;
 /// The shortest the thumb gets, however long what scrolls.
 const THUMB_MIN: f32 = 28.;
 

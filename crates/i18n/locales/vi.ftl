@@ -679,12 +679,6 @@ t1e92fb27 = Không vẽ được hình này. Hãy lưu body để xem.
 # Opening…
 tc40f2321 = Đang mở…
 
-# The whole line
-t17d1ec47 = Nguyên dòng
-
-# line {number}
-t1942c7ae = dòng { $number }
-
 # Read from {from}
 t6d510d3d = Đọc từ { $from }
 
@@ -2184,9 +2178,6 @@ t2af18488 = Cửa sổ
 
 # Set up, Traffic, Rules, Paused, Compose, Sessions, Settings
 t9df89562 = Thiết lập, Traffic, Quy tắc, Tạm dừng, Soạn request, Phiên, Cài đặt
-
-# Back or forward, as the mouse's own buttons do
-tad71f882 = Lùi lại hoặc tiến tới, như hai nút bên hông chuột
 
 # Show or hide the sidebar
 t67adca04 = Hiện hoặc ẩn thanh bên

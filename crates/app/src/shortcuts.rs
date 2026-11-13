@@ -42,9 +42,6 @@ pub enum Action {
     Record,
     Clear,
     Go(Screen),
-    /// Back or forward through the places the window has shown.
-    Back,
-    Forward,
     Shortcuts,
     Close,
 }
@@ -120,24 +117,6 @@ pub fn action_of(key: &str, secondary: bool, shift: bool, typing: bool) -> Optio
     }
 }
 
-/// Alt+Left and Alt+Right: back and forward, as in a browser. A text field
-/// with the keyboard keeps them, for moving by words.
-pub fn history_action_of(key: &str, modifiers: &gpui::Modifiers, typing: bool) -> Option<Action> {
-    let alt_alone = modifiers.alt
-        && !modifiers.shift
-        && !modifiers.control
-        && !modifiers.platform
-        && !modifiers.function;
-    if !alt_alone || typing {
-        return None;
-    }
-    match key {
-        "left" => Some(Action::Back),
-        "right" => Some(Action::Forward),
-        _ => None,
-    }
-}
-
 /// The keys as this OS writes them: `mod+shift+c` is ⌘⇧C on macOS, and
 /// Ctrl+Shift+C elsewhere.
 pub fn label(keys: &str) -> String {
@@ -150,10 +129,6 @@ pub fn label(keys: &str) -> String {
                 "mod" => "Ctrl",
                 "shift" if mac => "⇧",
                 "shift" => "Shift",
-                "alt" if mac => "⌥",
-                "alt" => "Alt",
-                "left" => "←",
-                "right" => "→",
                 "enter" if mac => "↩",
                 "enter" => "Enter",
                 "up" => "↑",
@@ -228,10 +203,6 @@ pub fn list() -> Vec<Group> {
                 (
                     "mod+1 … mod+7",
                     tr!("Set up, Traffic, Rules, Paused, Compose, Sessions, Settings"),
-                ),
-                (
-                    "alt+left / alt+right",
-                    tr!("Back or forward, as the mouse's own buttons do"),
                 ),
                 ("mod+b", tr!("Show or hide the sidebar")),
                 ("mod+i", tr!("Show or hide the inspector")),
@@ -347,29 +318,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn alt_and_an_arrow_go_back_and_forward_unless_a_field_has_the_keys() {
-        let alt = gpui::Modifiers {
-            alt: true,
-            ..Default::default()
-        };
-        assert_eq!(history_action_of("left", &alt, false), Some(Action::Back));
-        assert_eq!(
-            history_action_of("right", &alt, false),
-            Some(Action::Forward)
-        );
-        assert_eq!(history_action_of("left", &alt, true), None, "typed");
-        let none = gpui::Modifiers::default();
-        assert_eq!(history_action_of("left", &none, false), None);
-        let alt_shift = gpui::Modifiers {
-            alt: true,
-            shift: true,
-            ..Default::default()
-        };
-        assert_eq!(history_action_of("left", &alt_shift, false), None);
-        assert_eq!(history_action_of("up", &alt, false), None);
-    }
-
-    #[test]
     fn keys_do_what_the_list_says() {
         assert_eq!(action_of("f", true, false, true), Some(Action::Filter));
         assert_eq!(action_of("c", true, true, false), Some(Action::CopyCurl));
@@ -428,15 +376,8 @@ mod tests {
                     }
                     let secondary = parts.contains(&"mod");
                     let shift = parts.contains(&"shift");
-                    let modifiers = gpui::Modifiers {
-                        alt: parts.contains(&"alt"),
-                        shift,
-                        ..Default::default()
-                    };
                     assert!(
-                        history_action_of(key, &modifiers, false)
-                            .or(action_of(key, secondary, shift, false))
-                            .is_some(),
+                        action_of(key, secondary, shift, false).is_some(),
                         "{alt}: {what}"
                     );
                 }
