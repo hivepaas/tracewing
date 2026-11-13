@@ -115,6 +115,9 @@ impl FindBar {
     }
 }
 
+/// The height of the method in the title, and of the URL's first line beside it.
+const TITLE_H: f32 = 24.;
+
 /// The most of the inspector's height its head takes, so that the part,
 /// below the inspector's own row, keeps some 40%; past it, the head scrolls.
 const HEAD_SHARE: f32 = 0.5;
@@ -3121,6 +3124,10 @@ fn note(text: impl Into<SharedString>) -> Div {
 
 fn render_title(detail: &Detail) -> impl IntoElement {
     let c = colors();
+    // A long URL wraps under its first line, so the row keeps to the top; the
+    // first line is set in the middle of the method's height, so that one line
+    // sits level with it.
+    let url_line = 12.5 * 1.5;
     div()
         .flex()
         .flex_row()
@@ -3130,8 +3137,10 @@ fn render_title(detail: &Detail) -> impl IntoElement {
         .child(
             div()
                 .flex_shrink_0()
+                .h(ui(TITLE_H))
+                .flex()
+                .items_center()
                 .px(ui(9.))
-                .py(ui(3.))
                 .rounded(ui(8.))
                 .bg(rgb(c.tonal))
                 .text_color(rgb(c.on_tonal))
@@ -3143,6 +3152,7 @@ fn render_title(detail: &Detail) -> impl IntoElement {
             div()
                 .flex_1()
                 .min_w_0()
+                .pt(ui((TITLE_H - url_line) / 2.))
                 .max_h(ui(58.))
                 .overflow_hidden()
                 .font_family(crate::mono_font())
