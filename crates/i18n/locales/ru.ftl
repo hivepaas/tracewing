@@ -736,6 +736,12 @@ t1e92fb27 = Это изображение не удаётся отобразит
 # Opening…
 tc40f2321 = Открытие…
 
+# The whole line
+t17d1ec47 = Вся строка
+
+# line {number}
+t1942c7ae = строка { $number }
+
 # Read from {from}
 t6d510d3d = Прочитано из { $from }
 
