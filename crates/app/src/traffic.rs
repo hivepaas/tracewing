@@ -70,6 +70,8 @@ const SAVE_BOUNDS: Duration = Duration::from_millis(400);
 const THUMB_MIN: f32 = 28.;
 /// The least the inspector's - button leaves of it, wide or high, in pixels.
 pub const PANE_MIN: f32 = 100.;
+/// A divider between panels, at the design's size.
+const SPLITTER_W: f32 = 10.;
 /// The least the inspector's - and + buttons move it by, in pixels.
 pub const STEP_MIN: f32 = 100.;
 
@@ -1462,12 +1464,33 @@ impl Traffic {
         cx.notify();
     }
 
+    /// The most the inspector can take, wide beside the list and high below
+    /// it, at the design's size: what is left of the content once the
+    /// sidebar, the dividers and the list's least are taken out. `None` before
+    /// the content has been laid out once.
+    pub(crate) fn inspector_room(&self) -> Option<(f32, f32)> {
+        let content = self.content.get();
+        if content.size.width <= px(0.) {
+            return None;
+        }
+        let scale = self.ui_scale;
+        let sidebar = if self.layout.sidebar_shown {
+            self.layout.sidebar_w + SPLITTER_W
+        } else {
+            0.
+        };
+        Some((
+            f32::from(content.size.width) / scale - sidebar - SPLITTER_W - LIST_MIN,
+            f32::from(content.size.height) / scale - SPLITTER_W - LIST_MIN,
+        ))
+    }
+
     /// The inspector larger, or smaller, by a tenth of the window but at least
     /// [`STEP_MIN`]: wider or narrower beside the list, taller or shorter below
     /// it. Never under [`PANE_MIN`], and never so large that the list has less
     /// than it is given when the divider is dragged.
     pub fn resize_inspector(&mut self, larger: bool, window: &Window, cx: &mut Context<Self>) {
-        let content = self.content.get();
+        let (room_w, room_h) = self.inspector_room().unwrap_or((f32::MAX, f32::MAX));
         let scale = self.ui_scale;
         let viewport = window.viewport_size();
         let sign = if larger { 1. } else { -1. };
@@ -1480,14 +1503,12 @@ impl Traffic {
         };
         match self.layout.place {
             Place::Beside => {
-                let room = f32::from(content.size.width) / scale - LIST_MIN;
                 self.layout.inspector_w =
-                    fit(self.layout.inspector_w, f32::from(viewport.width), room);
+                    fit(self.layout.inspector_w, f32::from(viewport.width), room_w);
             }
             Place::Below => {
-                let room = f32::from(content.size.height) / scale - LIST_MIN;
                 self.layout.inspector_h =
-                    fit(self.layout.inspector_h, f32::from(viewport.height), room);
+                    fit(self.layout.inspector_h, f32::from(viewport.height), room_h);
             }
         }
         self.save_layout();
@@ -1540,14 +1561,14 @@ impl Traffic {
             }
             Drag::InspectorSize => match self.layout.place {
                 Place::Beside => {
-                    let room = f32::from(content.size.width) / scale - LIST_MIN;
+                    let room = self.inspector_room().map_or(f32::MAX, |(w, _)| w);
                     self.layout.inspector_w =
                         (f32::from(content.origin.x + content.size.width - event.position.x)
                             / scale)
                             .clamp(INSPECTOR_MIN, room.max(INSPECTOR_MIN));
                 }
                 Place::Below => {
-                    let room = f32::from(content.size.height) / scale - LIST_MIN;
+                    let room = self.inspector_room().map_or(f32::MAX, |(_, h)| h);
                     self.layout.inspector_h =
                         (f32::from(content.origin.y + content.size.height - event.position.y)
                             / scale)
@@ -2515,9 +2536,9 @@ impl Traffic {
             .justify_center()
             .flex_shrink_0();
         let holder = if vertical {
-            holder.w(ui(10.)).h_full().cursor_col_resize()
+            holder.w(ui(SPLITTER_W)).h_full().cursor_col_resize()
         } else {
-            holder.h(ui(10.)).w_full().cursor_row_resize()
+            holder.h(ui(SPLITTER_W)).w_full().cursor_row_resize()
         };
         holder
             .child(handle.rounded(ui(3.)).bg(rgb(c.splitter)))
@@ -2918,6 +2939,17 @@ impl Render for Traffic {
         // In its own window, the inspector leaves the list all the room.
         let center = if shown && !self.inspector_detached() {
             let inspector = self.render_inspector(cx).into_any_element();
+            // As large as it was made, unless the window is now too small for
+            // it and the list together: then the list keeps its least and the
+            // inspector gives way, rather than going past the window's edge.
+            // What was chosen is kept for when there is room again.
+            let (inspector_w, inspector_h) = match self.inspector_room() {
+                Some((w, h)) => (
+                    self.layout.inspector_w.min(w.max(PANE_MIN)),
+                    self.layout.inspector_h.min(h.max(PANE_MIN)),
+                ),
+                None => (self.layout.inspector_w, self.layout.inspector_h),
+            };
             match place {
                 Place::Beside => div()
                     .flex_1()
@@ -2929,7 +2961,7 @@ impl Render for Traffic {
                     .child(self.splitter("split-inspector", Drag::InspectorSize, true, cx))
                     .child(
                         div()
-                            .w(ui(self.layout.inspector_w))
+                            .w(ui(inspector_w))
                             .flex_shrink_0()
                             .h_full()
                             .child(inspector),
@@ -2944,7 +2976,7 @@ impl Render for Traffic {
                     .child(self.splitter("split-inspector", Drag::InspectorSize, false, cx))
                     .child(
                         div()
-                            .h(ui(self.layout.inspector_h))
+                            .h(ui(inspector_h))
                             .flex_shrink_0()
                             .w_full()
                             .child(inspector),

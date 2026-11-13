@@ -900,13 +900,16 @@ impl Traffic {
         div()
             .flex()
             .flex_row()
+            // In a narrow inspector the buttons go under the words, rather than
+            // squeezing them to a letter a line.
+            .flex_wrap()
             .flex_shrink_0()
             .items_center()
             .gap(ui(10.))
             .child(
                 div()
                     .flex_1()
-                    .min_w_0()
+                    .min_w(ui(180.))
                     .text_size(ui(12.))
                     .text_color(rgb(c.muted))
                     .child(text),
