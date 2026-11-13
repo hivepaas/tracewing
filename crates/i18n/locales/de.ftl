@@ -627,6 +627,18 @@ t620a039b = Dieser Body kann nicht geöffnet werden: { $e }
 # Inspector
 t4def410e = Inspektor
 
+# Narrower
+tb6914c4d = Schmaler
+
+# Shorter
+t397967e6 = Niedriger
+
+# Wider
+t4b19aae8 = Breiter
+
+# Taller
+t245ae741 = Höher
+
 # Choose a flow to see it here
 tc7be91e8 = Wählen Sie einen Flow, um ihn hier zu sehen
 

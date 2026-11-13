@@ -14,7 +14,7 @@ use crate::{
     flows::{size_text, time_text},
     input::TextInput,
     jwt::{self, Jwt},
-    layout::Sides,
+    layout::{Place, Sides},
     messages::MessagesState,
     reading,
     remembered::Remembered,
@@ -740,7 +740,55 @@ impl Traffic {
                         ),
                 )
             })
-            .child(eyebrow(tr!("Inspector")));
+            .child(eyebrow(tr!("Inspector")))
+            // Smaller and larger, a tenth of the window at a time: wider or
+            // narrower beside the list, taller or shorter below it.
+            .when(!detached, |row| {
+                let beside = self.layout.place == Place::Beside;
+                let button = |id: &'static str, label: &'static str, tip_text: String| {
+                    div()
+                        .id(id)
+                        .size(ui(28.))
+                        .rounded(ui(10.))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .cursor_pointer()
+                        .reachable()
+                        .bg(rgb(c.input))
+                        .hover(|d| d.bg(rgb(c.chip)))
+                        .text_size(ui(16.))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(rgb(c.muted))
+                        .tooltip(tip(tip_text))
+                        .child(label)
+                };
+                row.child(div().flex_1())
+                    .child(
+                        button(
+                            "inspector-smaller",
+                            "−",
+                            if beside {
+                                tr!("Narrower")
+                            } else {
+                                tr!("Shorter")
+                            },
+                        )
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.resize_inspector(false, window, cx)
+                        })),
+                    )
+                    .child(
+                        button(
+                            "inspector-larger",
+                            "+",
+                            if beside { tr!("Wider") } else { tr!("Taller") },
+                        )
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.resize_inspector(true, window, cx)
+                        })),
+                    )
+            });
         let panel = div()
             .size_full()
             .p(ui(14.))

@@ -633,6 +633,18 @@ t620a039b = Impossibile aprire questo body: { $e }
 # Inspector
 t4def410e = Ispettore
 
+# Narrower
+tb6914c4d = Più stretto
+
+# Shorter
+t397967e6 = Più basso
+
+# Wider
+t4b19aae8 = Più largo
+
+# Taller
+t245ae741 = Più alto
+
 # Choose a flow to see it here
 tc7be91e8 = Scegli un flow per vederlo qui
 

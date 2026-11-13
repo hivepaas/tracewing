@@ -627,6 +627,18 @@ t620a039b = Bu gövde açılamıyor: { $e }
 # Inspector
 t4def410e = İnceleyici
 
+# Narrower
+tb6914c4d = Daha dar
+
+# Shorter
+t397967e6 = Daha kısa
+
+# Wider
+t4b19aae8 = Daha geniş
+
+# Taller
+t245ae741 = Daha uzun
+
 # Choose a flow to see it here
 tc7be91e8 = Burada görmek için bir akış seçin
 

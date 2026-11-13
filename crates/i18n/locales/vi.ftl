@@ -598,6 +598,18 @@ t620a039b = Không mở được body này: { $e }
 # Inspector
 t4def410e = Chi tiết
 
+# Narrower
+tb6914c4d = Hẹp hơn
+
+# Shorter
+t397967e6 = Thấp hơn
+
+# Wider
+t4b19aae8 = Rộng hơn
+
+# Taller
+t245ae741 = Cao hơn
+
 # Choose a flow to see it here
 tc7be91e8 = Chọn một flow để xem ở đây
 

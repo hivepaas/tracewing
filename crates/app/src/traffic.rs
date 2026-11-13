@@ -66,6 +66,10 @@ const BAR_W: f32 = 10.;
 /// changes it many times a second.
 const SAVE_BOUNDS: Duration = Duration::from_millis(400);
 const THUMB_MIN: f32 = 28.;
+/// The least the inspector's - button leaves of it, wide or high.
+pub const PANE_MIN: f32 = 100.;
+/// The least the inspector's - and + buttons move it by, in pixels.
+pub const STEP_MIN: f32 = 100.;
 
 /// What the worker thread does: anything that may read a large part of a session.
 enum Job {
@@ -1369,6 +1373,35 @@ impl Traffic {
 
     pub fn cancel_drag(&mut self, cx: &mut Context<Self>) {
         self.drag = None;
+        cx.notify();
+    }
+
+    /// The inspector larger, or smaller, by a tenth of the window but at least
+    /// [`STEP_MIN`]: wider or narrower beside the list, taller or shorter below
+    /// it. Never under [`PANE_MIN`], and never so large that the list has less
+    /// than it is given when the divider is dragged.
+    pub fn resize_inspector(&mut self, larger: bool, window: &Window, cx: &mut Context<Self>) {
+        let content = self.content.get();
+        let scale = self.ui_scale;
+        let viewport = window.viewport_size();
+        let sign = if larger { 1. } else { -1. };
+        let fit = |now: f32, window: f32, room: f32| {
+            let step = (window / 10.).max(STEP_MIN) / scale;
+            (now + sign * step).clamp(PANE_MIN, room.max(PANE_MIN))
+        };
+        match self.layout.place {
+            Place::Beside => {
+                let room = f32::from(content.size.width) / scale - LIST_MIN;
+                self.layout.inspector_w =
+                    fit(self.layout.inspector_w, f32::from(viewport.width), room);
+            }
+            Place::Below => {
+                let room = f32::from(content.size.height) / scale - LIST_MIN;
+                self.layout.inspector_h =
+                    fit(self.layout.inspector_h, f32::from(viewport.height), room);
+            }
+        }
+        self.save_layout();
         cx.notify();
     }
 

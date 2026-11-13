@@ -633,6 +633,18 @@ t620a039b = Impossible d'ouvrir ce corps : { $e }
 # Inspector
 t4def410e = Inspecteur
 
+# Narrower
+tb6914c4d = Plus étroit
+
+# Shorter
+t397967e6 = Moins haut
+
+# Wider
+t4b19aae8 = Plus large
+
+# Taller
+t245ae741 = Plus haut
+
 # Choose a flow to see it here
 tc7be91e8 = Choisissez un flow pour le voir ici
 

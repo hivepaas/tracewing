@@ -598,6 +598,18 @@ t620a039b = 이 본문을 열 수 없습니다: { $e }
 # Inspector
 t4def410e = 인스펙터
 
+# Narrower
+tb6914c4d = 좁게
+
+# Shorter
+t397967e6 = 낮게
+
+# Wider
+t4b19aae8 = 넓게
+
+# Taller
+t245ae741 = 높게
+
 # Choose a flow to see it here
 tc7be91e8 = 플로우를 선택하면 여기에 표시됩니다
 
