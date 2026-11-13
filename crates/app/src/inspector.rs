@@ -519,11 +519,16 @@ impl Traffic {
                             // it asks the window to.
                             let opens = {
                                 let me = cx.entity().downgrade();
-                                Rc::new(move |reading: Reading, from: String, cx: &mut gpui::App| {
-                                    let _ = me.update(cx, |this: &mut Traffic, cx| {
-                                        this.open_reading(&reading, &from, cx);
+                                Rc::new(move |what: crate::bodyview::ToOpen, cx: &mut gpui::App| {
+                                    let _ = me.update(cx, |this: &mut Traffic, cx| match what {
+                                        crate::bodyview::ToOpen::Reading(reading, from) => {
+                                            this.open_reading(&reading, &from, cx);
+                                        }
+                                        crate::bodyview::ToOpen::WholeLine { line, text } => {
+                                            this.open_line(line, &text, cx);
+                                        }
                                     });
-                                }) as crate::bodyview::OpensReading
+                                }) as crate::bodyview::Opens
                             };
                             // MessagePack, CBOR or Protobuf, shown as the JSON made of it.
                             let json = json.and_then(|(json, name)| {
@@ -1626,6 +1631,42 @@ impl Traffic {
             Kind::Text => ("txt", Some("text/plain")),
             Kind::Binary => ("bin", None),
         };
+        self.open_in_pane(
+            bytes,
+            extension,
+            content_type,
+            reading.chain.join(" → ").into(),
+            from.to_owned().into(),
+            cx,
+        )
+    }
+
+    /// Opens a line the body view had to cut, whole, as a body of its own:
+    /// text wraps there, so what did not fit on one line is all there, and it
+    /// can be searched, selected, copied and read like any other body.
+    pub fn open_line(&mut self, line: u64, text: &str, cx: &mut Context<Self>) -> bool {
+        self.open_in_pane(
+            text.as_bytes(),
+            "txt",
+            Some("text/plain"),
+            tr!("The whole line").into(),
+            tr!("line {number}", number = line + 1).into(),
+            cx,
+        )
+    }
+
+    /// Bytes shown in the body pane as a body of their own. They go into a
+    /// file beside the data folder, because a body is read from a file
+    /// however it was made.
+    fn open_in_pane(
+        &mut self,
+        bytes: &[u8],
+        extension: &str,
+        content_type: Option<&str>,
+        label: SharedString,
+        from: SharedString,
+        cx: &mut Context<Self>,
+    ) -> bool {
         let folder = self.data_dir.join("opened");
         if std::fs::create_dir_all(&folder).is_err() {
             return false;
@@ -1652,8 +1693,8 @@ impl Traffic {
             },
         };
         self.inspector.opened = Some(Opened {
-            label: reading.chain.join(" → ").into(),
-            from: from.to_owned().into(),
+            label,
+            from,
             shown,
             path,
         });
