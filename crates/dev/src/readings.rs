@@ -247,9 +247,14 @@ fn build() -> Vec<Sample> {
             "Thu, 12 Nov 2026 14:13:20 GMT".to_owned(),
             "The date an HTTP header writes",
         ),
+        // Not under `cache-control` itself: a header that tells a browser to
+        // keep the answer for an hour is obeyed, and the next look at this
+        // route never leaves the browser -- so there is nothing to catch in
+        // the window, which is the one thing this route is for. The reading
+        // goes by the value, not the name, so it reads here all the same.
         header(
             "cache-control",
-            "cache-control",
+            "x-cache-control",
             "public, max-age=3600, stale-while-revalidate=60, immutable".to_owned(),
             "What each part of it means, in words",
         ),

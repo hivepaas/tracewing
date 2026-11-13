@@ -497,6 +497,11 @@ async fn route(req: Request<Incoming>) -> Result<Response<OriginBody>, Infallibl
         "/web3-ws" => web3_socket(req),
         "/readings" => {
             let mut response = body("application/json; charset=utf-8", readings::body());
+            // A route to look at over and over: the browser has to ask every
+            // time, or the window has nothing to show the second time.
+            response
+                .headers_mut()
+                .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
             for (name, value) in readings::headers() {
                 if let (Ok(name), Ok(value)) = (
                     http::HeaderName::from_bytes(name.as_bytes()),
@@ -1838,6 +1843,35 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(missing.status(), 404);
+    }
+
+    /// A route for looking at again and again must not tell the browser to
+    /// keep it: a cached answer never leaves the browser, so the window has
+    /// nothing to catch the second time. This is what happened.
+    #[tokio::test]
+    async fn the_readings_route_is_never_kept_by_a_browser() {
+        let base = start().await;
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let answer = client.get(format!("{base}/readings")).send().await.unwrap();
+        assert_eq!(
+            answer
+                .headers()
+                .get("cache-control")
+                .and_then(|value| value.to_str().ok()),
+            Some("no-store")
+        );
+        // And nothing else in it tells a browser to keep it either: the
+        // sample that says an hour is carried under a name nobody obeys.
+        for (name, value) in answer.headers() {
+            let said = value.to_str().unwrap_or_default();
+            if said.contains("max-age") {
+                assert_eq!(
+                    name.as_str(),
+                    "x-cache-control",
+                    "{name} would be obeyed: {said}"
+                );
+            }
+        }
     }
 
     /// The slow case waits before it answers, which is the point of it.
