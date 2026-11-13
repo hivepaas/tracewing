@@ -1456,6 +1456,38 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
         other => panic!("{other:?}"),
     }
 
+    // A menu opened in the pane stays open: the press that opened it must
+    // not be taken as a press on the value under it, which would build the
+    // pane again and take the menu with it.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.ask_menu(
+                Some((0, None, gpui::point(gpui::px(10.), gpui::px(10.)))),
+                cx,
+            );
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let open = window
+        .update(&mut cx, |view, _, cx| {
+            let sel = view.inspector.reads_select.clone();
+            // What the mouse-up over the pane would do while the menu is up.
+            let piece = (0..80u64).find(|piece| sel.text_of(*piece).is_some());
+            if let Some(piece) = piece {
+                view.read_piece(&sel, piece, cx);
+            }
+            view.inspector
+                .reads
+                .as_ref()
+                .is_some_and(|reads| reads.menu.is_some())
+        })
+        .unwrap();
+    assert!(open, "the menu is still up after the press that opened it");
+    window
+        .update(&mut cx, |view, _, cx| view.ask_menu(None, cx))
+        .unwrap();
+    cx.run_until_parked();
+
     // Escape puts the pane away and gives the body its width back.
     let closed = window
         .update(&mut cx, |view, _, cx| {
