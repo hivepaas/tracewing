@@ -610,14 +610,12 @@ mod tests {
     }
 
     /// Every sample has to read as the kind it is filed under, with the
-    /// field it is carried in taken into account.
+    /// field it is carried in taken into account. All of them at once, so
+    /// that one that stops reading does not hide the others.
     #[test]
     fn each_value_reads_as_what_it_is_here_for() {
         let mut amiss = Vec::new();
         for sample in samples() {
-            if NOT_YET.contains(&sample.id) {
-                continue;
-            }
             let ids = reads(sample);
             if !ids.contains(&sample.id) {
                 amiss.push(format!("{} under {}: {ids:?}", sample.id, sample.name));
@@ -626,32 +624,27 @@ mod tests {
         assert!(amiss.is_empty(), "{}", amiss.join("\n"));
     }
 
-    /// Four kinds the window has a converter for and cannot reach from a
-    /// value, because the step before them has nothing to go on.
-    ///
-    /// `encodings::decoded` only makes a reading of what it unpacked when
-    /// `interesting` recognises it: text, JSON, XML, or bytes with a magic
-    /// number. Raw deflate, brotli and protobuf have no magic number, so
-    /// base64 of any of them reads as nothing at all and the chain stops
-    /// before the converter that would have read it -- SAML included, which
-    /// is always base64 of deflate.
-    ///
-    /// The values are here anyway, so that the fix has something to be tried
-    /// against. When it lands this test fails, and the ids move up.
-    const NOT_YET: &[&str] = &["brotli", "deflate", "protobuf", "saml"];
-
+    /// The ones that travel inside something else have to be reached
+    /// through it, chain and all: raw deflate, Brotli and protobuf say
+    /// nothing about themselves at the front, so these are the samples that
+    /// a chain used to stop one step short of.
     #[test]
-    fn the_chains_that_cannot_be_reached_yet_are_the_ones_we_know_of() {
-        for sample in samples() {
-            let ids = reads(sample);
-            let reached = ids.contains(&sample.id);
-            assert_eq!(
-                reached,
-                !NOT_YET.contains(&sample.id),
-                "{} under {}: {ids:?}",
-                sample.id,
-                sample.name
-            );
+    fn what_travels_inside_base64_is_reached_through_it() {
+        for id in [
+            "gzip", "zlib", "deflate", "zstd", "brotli", "protobuf", "saml",
+        ] {
+            let sample = samples()
+                .iter()
+                .find(|sample| sample.id == id)
+                .unwrap_or_else(|| panic!("a sample for {id}"));
+            let shown = as_shown(sample);
+            let input = Input::new(&shown, WHEN + 60, 7 * 3600).under(Some(sample.name));
+            let reading = tracewing_convert::readings(&input)
+                .into_iter()
+                .find(|reading| reading.id == id)
+                .unwrap_or_else(|| panic!("{id} is not reached"));
+            assert_eq!(reading.chain.first(), Some(&"base64"), "{id}: {reading:?}");
+            assert!(reading.chain.contains(&id), "{id}: {reading:?}");
         }
     }
 

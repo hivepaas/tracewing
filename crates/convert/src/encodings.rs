@@ -10,6 +10,25 @@ use tracewing_i18n::tr;
 /// neither text, nor JSON, nor a format anybody names are not a reading: they
 /// are what any eight characters turn into when read as base64.
 pub fn interesting(bytes: &[u8]) -> Option<Kind> {
+    if let Some(kind) = recognised(bytes) {
+        return Some(kind);
+    }
+    // Formats with nothing at the front to say what they are: raw deflate,
+    // Brotli, protobuf. Unpacking or parsing them is the only way to know
+    // they are there, and without that answer a chain that reaches one
+    // through base64 stops a step short of it -- which is every SAML
+    // response, since those are always base64 of deflate.
+    if crate::packed::unpacks_to_something(bytes) || crate::binary::reads_as_protobuf(bytes) {
+        return Some(Kind::Binary);
+    }
+    None
+}
+
+/// What these bytes say they are: text, JSON, XML, or a format whose first
+/// bytes name it. Nothing is unpacked or parsed to find out, so this is what
+/// the formats that have to be unpacked are measured against -- without
+/// that, telling deflate from deflate-inside-deflate would go on forever.
+pub(crate) fn recognised(bytes: &[u8]) -> Option<Kind> {
     if bytes.len() < 4 {
         return None;
     }

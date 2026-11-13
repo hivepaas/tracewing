@@ -369,4 +369,39 @@ mod tests {
         );
         assert!(by_id(&read("<html><body>no saml here</body></html>"), "saml").is_none());
     }
+
+    /// How a SAML response actually travels: deflated, then base64, in a
+    /// form field. Until the chain could see deflate with nothing at its
+    /// front to name it, this read as nothing at all -- the converter above
+    /// was never reached by anything but a test.
+    #[test]
+    fn saml_is_read_the_way_it_travels() {
+        use base64::Engine as _;
+        use std::io::Write as _;
+        let xml = concat!(
+            r#"<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" "#,
+            r#"ID="_8e8dc5f6" Version="2.0" IssueInstant="2026-11-12T14:13:20Z" "#,
+            r#"Destination="https://app.example.com/acs">"#,
+            r#"<saml:Issuer>https://idp.example.org/metadata</saml:Issuer>"#,
+            r#"</samlp:Response>"#
+        );
+        let mut packed =
+            flate2::write::DeflateEncoder::new(Vec::new(), flate2::Compression::fast());
+        packed.write_all(xml.as_bytes()).unwrap();
+        let travelling = base64::engine::general_purpose::STANDARD.encode(packed.finish().unwrap());
+
+        let found = read(&travelling);
+        let saml = by_id(&found, "saml").expect("the SAML in it");
+        assert_eq!(saml.chain, vec!["base64", "deflate", "saml"]);
+        let Shown::Fields(fields) = &saml.shown else {
+            panic!("fields: {saml:?}")
+        };
+        assert_eq!(fields[0].1, "Response");
+        assert!(
+            fields
+                .iter()
+                .any(|(_, value)| value == "https://idp.example.org/metadata"),
+            "{fields:?}"
+        );
+    }
 }
