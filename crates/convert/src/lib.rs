@@ -260,6 +260,7 @@ const CONVERTERS: &[Converter] = &[
     chain::selector,
     tokens::jwe,
     tokens::paseto,
+    tokens::session_cookie,
     tokens::crypt,
     tokens::pem,
     tokens::saml,
@@ -697,6 +698,12 @@ const KNOWN: &[Known] = &[
         group: Group::Tokens,
         run: tokens::paseto,
         name: || tr!("PASETO"),
+    },
+    Known {
+        id: "session-cookie",
+        group: Group::Tokens,
+        run: tokens::session_cookie,
+        name: || tr!("A framework's session cookie"),
     },
     Known {
         id: "saml",

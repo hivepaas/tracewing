@@ -6,7 +6,10 @@
 //! bytes themselves.
 
 use crate::{Confidence, Input, Reading, Shown};
-use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use base64::{
+    Engine as _,
+    engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
+};
 use serde_json::{Map, Value};
 use tracewing_i18n::tr;
 
@@ -258,6 +261,259 @@ pub fn saml(input: &Input) -> Option<Reading> {
     ))
 }
 
+/// The frameworks whose session cookies can be told apart by their shape
+/// alone.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Framework {
+    Flask,
+    Django,
+    RailsSigned,
+    RailsEncrypted,
+}
+
+impl Framework {
+    fn said(self) -> String {
+        match self {
+            Self::Flask => tr!("Flask, signed by itsdangerous"),
+            Self::Django => tr!("Django"),
+            Self::RailsSigned => tr!("Rails, signed"),
+            Self::RailsEncrypted => tr!("Rails, encrypted"),
+        }
+    }
+}
+
+/// What a session cookie came apart into: the session itself where it can be
+/// had, when it was signed where that is written down, and the signature.
+struct Session {
+    framework: Framework,
+    /// None where the session is encrypted rather than only signed.
+    payload: Option<Vec<u8>>,
+    at: Option<i64>,
+    signature: String,
+}
+
+/// Whether a count of seconds is near enough to now to have been written by
+/// a framework signing a cookie: 2011 to 2096. A number outside that is some
+/// other number.
+fn plausible(at: &i64) -> bool {
+    (1_300_000_000..4_000_000_000).contains(at)
+}
+
+fn base64url(part: &str) -> Option<Vec<u8>> {
+    let part = part.trim_end_matches('=');
+    if part.is_empty()
+        || !part
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
+    {
+        return None;
+    }
+    URL_SAFE_NO_PAD.decode(part).ok()
+}
+
+/// The payload of itsdangerous and of Django alike: base64url, and zlib
+/// under a leading dot where packing it came out shorter.
+fn payload_bytes(part: &str) -> Option<Vec<u8>> {
+    match part.strip_prefix('.') {
+        Some(packed) => {
+            use std::io::Read as _;
+            let bytes = base64url(packed)?;
+            let mut out = Vec::new();
+            flate2::read::ZlibDecoder::new(bytes.as_slice())
+                .take(crate::MAX_INPUT as u64)
+                .read_to_end(&mut out)
+                .ok()?;
+            (!out.is_empty()).then_some(out)
+        }
+        None => base64url(part),
+    }
+}
+
+/// itsdangerous writes the time as the fewest big-endian bytes that hold it,
+/// then base64url.
+fn stamped(part: &str) -> Option<i64> {
+    let bytes = base64url(part)?;
+    if bytes.is_empty() || bytes.len() > 8 {
+        return None;
+    }
+    Some(
+        bytes
+            .iter()
+            .fold(0i64, |at, byte| at << 8 | i64::from(*byte)),
+    )
+}
+
+/// Django writes the time in base62, digits before uppercase before lower.
+fn base62(part: &str) -> Option<i64> {
+    const ALPHABET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    if part.is_empty() || part.len() > 11 {
+        return None;
+    }
+    part.bytes().try_fold(0i64, |at, byte| {
+        let digit = ALPHABET.iter().position(|a| *a == byte)? as i64;
+        at.checked_mul(62)?.checked_add(digit)
+    })
+}
+
+/// A signature at the end of a cookie, as base64url: long enough to be one.
+fn signed(part: &str) -> bool {
+    part.len() >= 20 && base64url(part).is_some()
+}
+
+/// `payload.timestamp.signature`, which is itsdangerous and so is Flask.
+fn flask(text: &str) -> Option<Session> {
+    let mut parts = text.rsplitn(3, '.');
+    let signature = parts.next()?;
+    let at = stamped(parts.next()?).filter(plausible)?;
+    let payload = payload_bytes(parts.next()?)?;
+    signed(signature).then(|| Session {
+        framework: Framework::Flask,
+        payload: Some(payload),
+        at: Some(at),
+        signature: signature.to_owned(),
+    })
+}
+
+/// `payload:timestamp:signature`, which is `django.core.signing`. The time
+/// has to read as a time: two colons in a value are easy to come by, and the
+/// rest of the shape is the same as everything else base64.
+fn django(text: &str) -> Option<Session> {
+    let mut parts = text.rsplitn(3, ':');
+    let signature = parts.next()?;
+    let at = base62(parts.next()?).filter(plausible)?;
+    let payload = payload_bytes(parts.next()?)?;
+    signed(signature).then(|| Session {
+        framework: Framework::Django,
+        payload: Some(payload),
+        at: Some(at),
+        signature: signature.to_owned(),
+    })
+}
+
+/// Rails, where `--` separates. Two parts and a hex HMAC is the signed
+/// cookie of Rails 4, whose payload can be read; three parts is the
+/// encrypted one of Rails 5.2 on, whose payload cannot.
+fn rails(text: &str) -> Option<Session> {
+    let parts: Vec<&str> = text.split("--").collect();
+    match parts.as_slice() {
+        [body, signature]
+            if signature.len() == 40 && signature.bytes().all(|b| b.is_ascii_hexdigit()) =>
+        {
+            Some(Session {
+                framework: Framework::RailsSigned,
+                payload: Some(STANDARD.decode(body).ok()?),
+                at: None,
+                signature: (*signature).to_owned(),
+            })
+        }
+        // The initialisation vector is 12 bytes and the tag 16, each written
+        // base64: 16 characters and 24, which is what tells this from a
+        // signed cookie that happens to hold two dashes.
+        [body, iv, tag]
+            if body.len() >= 16
+                && iv.len() == 16
+                && tag.len() == 24
+                && STANDARD.decode(iv).is_ok()
+                && STANDARD.decode(tag).is_ok() =>
+        {
+            Some(Session {
+                framework: Framework::RailsEncrypted,
+                payload: None,
+                at: None,
+                signature: (*tag).to_owned(),
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Rails wraps its own payload once more, to say what the message is for and
+/// when it runs out. What is inside that is the session.
+fn unwrapped(bytes: &[u8], fields: &mut Vec<(String, String)>) -> Option<Vec<u8>> {
+    let Ok(Value::Object(outer)) = serde_json::from_slice::<Value>(bytes) else {
+        return None;
+    };
+    let wrapper = outer.get("_rails")?.as_object()?;
+    if let Some(purpose) = wrapper.get("pur").and_then(Value::as_str) {
+        fields.push((tr!("What it is for"), purpose.to_owned()));
+    }
+    STANDARD.decode(wrapper.get("message")?.as_str()?).ok()
+}
+
+/// The session as a reader wants it: a JSON object's fields by name, and
+/// anything else said for what it is.
+fn laid_out(bytes: &[u8], fields: &mut Vec<(String, String)>) {
+    if let Ok(Value::Object(session)) = serde_json::from_slice::<Value>(bytes) {
+        for (key, value) in session {
+            fields.push((
+                key,
+                match value {
+                    Value::String(text) => text,
+                    other => other.to_string(),
+                },
+            ));
+        }
+    } else if bytes.starts_with(b"\x04\x08") {
+        fields.push((
+            tr!("The session"),
+            tr!("a Ruby Marshal, which tracewing does not unpack"),
+        ));
+    } else if let Ok(text) = std::str::from_utf8(bytes) {
+        fields.push((tr!("The session"), text.to_owned()));
+    } else {
+        fields.push((
+            tr!("The session"),
+            tr!("{n} bytes, in no format this knows", n = bytes.len()),
+        ));
+    }
+}
+
+/// What a framework's session cookie carries, without the key that signed it.
+///
+/// Flask, Django and Rails each keep the session in the cookie rather than on
+/// the server, so the whole of it travels in every request: the user id, the
+/// flags, a CSRF token, when it was signed. Only changing one needs the key.
+/// Reading one is a matter of taking the signature off the end and the zlib
+/// off the front -- which is exactly what nobody wants to do by hand at the
+/// moment they are wondering why a login did not stick.
+pub fn session_cookie(input: &Input) -> Option<Reading> {
+    let text = input.text.trim().trim_matches('"');
+    if text.len() < 24 || text.len() > crate::MAX_INPUT || text.contains(char::is_whitespace) {
+        return None;
+    }
+    let session = flask(text)
+        .or_else(|| django(text))
+        .or_else(|| rails(text))?;
+    let mut fields = vec![(tr!("Framework"), session.framework.said())];
+    if let Some(at) = session.at {
+        fields.push((
+            tr!("Signed"),
+            format!(
+                "{}, {}",
+                crate::times::local_time_at(at, input.offset),
+                crate::times::relative(at, input.now)
+            ),
+        ));
+    }
+    match &session.payload {
+        Some(bytes) => {
+            let inner = unwrapped(bytes, &mut fields);
+            laid_out(inner.as_deref().unwrap_or(bytes), &mut fields);
+        }
+        None => fields.push((
+            tr!("The session"),
+            tr!("encrypted: it needs the key, which tracewing does not have"),
+        )),
+    }
+    fields.push((tr!("Signature"), session.signature));
+    Some(Reading::new(
+        "session-cookie",
+        tr!("A framework's session cookie"),
+        Confidence::Certain,
+        Shown::Fields(fields),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -308,6 +564,127 @@ mod tests {
         let found = fields(&local, "paseto");
         assert!(found.last().unwrap().1.contains("needs the key"));
         assert!(by_id(&read("v9.local.abcdefgh"), "paseto").is_none());
+    }
+
+    /// A signature is never checked here, so a plausible one will do: 27
+    /// base64url characters, as HMAC-SHA1 comes out.
+    const SIG: &str = "JIIA9KIUf0_-zlSlGQad890UH18";
+
+    fn stamp(at: u32) -> String {
+        URL_SAFE_NO_PAD.encode(at.to_be_bytes())
+    }
+
+    #[test]
+    fn a_flask_cookie_reads_as_its_session() {
+        let payload = URL_SAFE_NO_PAD.encode(r#"{"user_id":"42","_fresh":true}"#);
+        let cookie = format!("{payload}.{}.{SIG}", stamp(crate::tests::NOW as u32));
+        let found = fields(&cookie, "session-cookie");
+        let said: Vec<(&str, &str)> = found
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect();
+        assert!(said[0].1.contains("Flask"), "{said:?}");
+        assert!(
+            said.iter().any(|(name, value)| *name == "Signed"
+                && value.starts_with("2026-11-12 21:13:20 (+07:00)")),
+            "{said:?}"
+        );
+        assert!(said.contains(&("user_id", "42")));
+        assert!(said.contains(&("_fresh", "true")));
+        assert!(said.contains(&("Signature", SIG)));
+    }
+
+    #[test]
+    fn a_django_cookie_has_its_zlib_taken_off_first() {
+        use std::io::Write as _;
+        let session = r#"{"_auth_user_id":"42","_session_expiry":1209600}"#;
+        let mut packed = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::best());
+        packed.write_all(session.as_bytes()).unwrap();
+        let payload = URL_SAFE_NO_PAD.encode(packed.finish().unwrap());
+        // 1xRVYG is 1794492800 in the base62 Django writes times in.
+        // 32 bytes of signature, as HMAC-SHA256 gives: 43 characters.
+        let signature = URL_SAFE_NO_PAD.encode([0x5au8; 32]);
+        let cookie = format!(".{payload}:1xRVYG:{signature}");
+        let found = fields(&cookie, "session-cookie");
+        let said: Vec<(&str, &str)> = found
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect();
+        assert_eq!(said[0].1, "Django");
+        assert!(
+            said.iter().any(|(name, value)| *name == "Signed"
+                && value.starts_with("2026-11-12 21:13:20 (+07:00)")),
+            "{said:?}"
+        );
+        assert!(said.contains(&("_auth_user_id", "42")));
+        assert!(said.contains(&("_session_expiry", "1209600")));
+    }
+
+    #[test]
+    fn a_rails_cookie_is_unwrapped_once_more() {
+        let inner = STANDARD.encode(r#"{"session_id":"9f8c2b1a","user_id":42}"#);
+        let wrapped = STANDARD.encode(format!(
+            r#"{{"_rails":{{"message":"{inner}","exp":null,"pur":"cookie._session_id"}}}}"#
+        ));
+        let cookie = format!("{wrapped}--5e8da9fa1e0402217940caaf6feb89ce976a72d6");
+        let found = fields(&cookie, "session-cookie");
+        let said: Vec<(&str, &str)> = found
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect();
+        assert_eq!(said[0].1, "Rails, signed");
+        assert!(said.contains(&("What it is for", "cookie._session_id")));
+        assert!(said.contains(&("session_id", "9f8c2b1a")));
+        assert!(said.contains(&("user_id", "42")));
+        // Nothing here says when it was signed, so nothing is made up.
+        assert!(!said.iter().any(|(name, _)| *name == "Signed"));
+    }
+
+    #[test]
+    fn a_rails_encrypted_cookie_says_it_needs_the_key() {
+        let cookie = format!(
+            "{}--{}--{}",
+            STANDARD.encode([7u8; 48]),
+            STANDARD.encode([1u8; 12]),
+            STANDARD.encode([2u8; 16])
+        );
+        let found = fields(&cookie, "session-cookie");
+        assert_eq!(found[0].1, "Rails, encrypted");
+        assert!(found[1].1.contains("needs the key"), "{found:?}");
+    }
+
+    #[test]
+    fn a_marshal_payload_is_named_rather_than_guessed_at() {
+        let cookie = format!(
+            "{}--5e8da9fa1e0402217940caaf6feb89ce976a72d6",
+            STANDARD.encode(b"\x04\x08o:\x17ActionDispatch")
+        );
+        let found = fields(&cookie, "session-cookie");
+        assert!(found[1].1.contains("Marshal"), "{found:?}");
+    }
+
+    #[test]
+    fn what_is_not_a_session_cookie_is_not_one() {
+        let jwt = format!("{}.{}.sig", part(r#"{"alg":"HS256"}"#), part(r#"{"a":1}"#));
+        assert!(by_id(&read(&jwt), "session-cookie").is_none());
+        // A time that is not a time: some other value with two dots in it.
+        let payload = URL_SAFE_NO_PAD.encode(r#"{"a":1}"#);
+        assert!(by_id(&read(&format!("{payload}.AAAA.{SIG}")), "session-cookie").is_none());
+        // A signature too short to be one.
+        assert!(
+            by_id(
+                &read(&format!(
+                    "{payload}.{}.sig",
+                    stamp(crate::tests::NOW as u32)
+                )),
+                "session-cookie"
+            )
+            .is_none()
+        );
+        // Two dashes in a value, with no hex signature after them.
+        assert!(by_id(&read("eyJhIjoxfQ--not-a-signature"), "session-cookie").is_none());
+        // Base62 is not base64: an `_` in the time is not Django's.
+        assert!(by_id(&read(&format!("{payload}:1xR_YG:{SIG}")), "session-cookie").is_none());
     }
 
     #[test]
