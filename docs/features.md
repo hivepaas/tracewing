@@ -174,6 +174,7 @@ keyboard.
 | Feature | Milestone | Plan |
 |---|---|---|
 | Text size, from 11 to 20 px (14 by default), in Settings › General: lists, bodies and everything around them grow with it, as when zooming; panel widths dragged at one size keep their place at another; kept in `layout.toml` | Beta | Free |
+| Fonts, in Settings › General: the interface in tracewing's own (Nunito) or the system's; code (bodies, headers, paths, numbers) in tracewing's own (JetBrains Mono) or any monospaced font on the computer, each offered drawn in itself; applied at once, kept in `layout.toml`, and tracewing's own again if a chosen font is gone | Beta | Free |
 | Back and forward, as in a browser: the mouse's own buttons, or Alt+Left and Alt+Right, through the screens, the parts of Settings and the session on show; going somewhere new forgets what was ahead, and a text field keeps Alt+Left and Alt+Right | Beta | Free |
 | Light and dark; keyboard first: Tab through fields and buttons (Enter or Space presses one), keys for the list, the inspector's sides and parts, saving a body, and what is held on Paused | Beta | Free |
 | 15 languages: English, German, Spanish, French, Indonesian, Italian, Brazilian Portuguese, Turkish, Vietnamese, Russian, Ukrainian, Japanese, Korean, simplified and traditional Chinese | 1.0 | Free |

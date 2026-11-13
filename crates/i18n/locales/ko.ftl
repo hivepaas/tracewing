@@ -1759,6 +1759,24 @@ ta8606963 = { $key }: "{ $text }"은(는) 정수가 아닙니다
 # {key}: must not be negative
 t9c4debaa = { $key }: 음수일 수 없습니다
 
+# {name} (default)
+td3f56fa8 = { $name } (기본값)
+
+# System ({name})
+tb92a5ad0 = 시스템 ({ $name })
+
+# Fonts
+t68a32cf9 = 글꼴
+
+# Interface
+t7d000dd0 = 인터페이스
+
+# Code
+t795db914 = 코드
+
+# For code, the fonts on this computer whose letters are all as wide. Applies at once.
+t014e83f3 = 코드에는 이 컴퓨터에 있는, 모든 글자 폭이 같은 글꼴을 쓸 수 있습니다. 바로 적용됩니다.
+
 # {size} (default)
 t5606e442 = { $size } (기본값)
 

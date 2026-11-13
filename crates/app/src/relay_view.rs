@@ -157,7 +157,7 @@ impl Traffic {
                 .py(ui(8.))
                 .rounded(ui(12.))
                 .bg(rgb(c.input))
-                .font_family(crate::MONO_FONT)
+                .font_family(crate::mono_font())
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .child(input)
         };

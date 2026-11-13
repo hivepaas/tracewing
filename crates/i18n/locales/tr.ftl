@@ -1833,6 +1833,24 @@ ta8606963 = { $key }: "{ $text }" bir tam sayı değil
 # {key}: must not be negative
 t9c4debaa = { $key }: negatif olamaz
 
+# {name} (default)
+td3f56fa8 = { $name } (varsayılan)
+
+# System ({name})
+tb92a5ad0 = Sistem ({ $name })
+
+# Fonts
+t68a32cf9 = Yazı tipleri
+
+# Interface
+t7d000dd0 = Arayüz
+
+# Code
+t795db914 = Kod
+
+# For code, the fonts on this computer whose letters are all as wide. Applies at once.
+t014e83f3 = Kod için, bu bilgisayardaki tüm harfleri aynı genişlikte olan yazı tipleri. Hemen uygulanır.
+
 # {size} (default)
 t5606e442 = { $size } (varsayılan)
 

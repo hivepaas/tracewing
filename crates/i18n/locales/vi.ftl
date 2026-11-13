@@ -1759,6 +1759,24 @@ ta8606963 = { $key }: "{ $text }" không phải là số nguyên
 # {key}: must not be negative
 t9c4debaa = { $key }: không được là số âm
 
+# {name} (default)
+td3f56fa8 = { $name } (mặc định)
+
+# System ({name})
+tb92a5ad0 = Hệ thống ({ $name })
+
+# Fonts
+t68a32cf9 = Phông chữ
+
+# Interface
+t7d000dd0 = Giao diện
+
+# Code
+t795db914 = Code
+
+# For code, the fonts on this computer whose letters are all as wide. Applies at once.
+t014e83f3 = Với code: các phông chữ trên máy này có mọi chữ cái rộng bằng nhau. Áp dụng ngay.
+
 # {size} (default)
 t5606e442 = { $size } (mặc định)
 

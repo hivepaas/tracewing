@@ -602,6 +602,142 @@ impl Traffic {
         cx.notify();
     }
 
+    /// The interface in tracewing's own font, or the system's.
+    pub fn set_ui_font(&mut self, system: bool, cx: &mut Context<Self>) {
+        self.layout.ui_font = system.then(|| crate::layout::SYSTEM_FONT.to_owned());
+        self.save_layout();
+        cx.notify();
+    }
+
+    /// The code in `font`, `None` for tracewing's own.
+    pub fn set_code_font(&mut self, font: Option<String>, cx: &mut Context<Self>) {
+        self.layout.code_font = font.filter(|f| f != crate::MONO_FONT);
+        self.save_layout();
+        cx.notify();
+    }
+
+    /// The monospaced families on this computer, tracewing's own first: those
+    /// whose i, M and W are as wide. Found once.
+    pub fn mono_fonts(&mut self, window: &Window) -> Vec<String> {
+        if let Some(found) = &self.mono_fonts {
+            return found.clone();
+        }
+        let names = self.installed_fonts(window).to_vec();
+        let text = window.text_system();
+        let mut found: Vec<String> = names
+            .into_iter()
+            .filter(|name| !name.starts_with('.') && name != crate::MONO_FONT)
+            .filter(|name| {
+                let id = text.resolve_font(&gpui::font(name.clone()));
+                let wide = |c| {
+                    text.advance(id, gpui::px(12.), c)
+                        .ok()
+                        .map(|s| f32::from(s.width))
+                };
+                match (wide('i'), wide('M'), wide('W')) {
+                    (Some(i), Some(m), Some(w)) => {
+                        i > 0. && (i - m).abs() < 0.01 && (m - w).abs() < 0.01
+                    }
+                    _ => false,
+                }
+            })
+            .collect();
+        found.sort_by_key(|name| name.to_lowercase());
+        found.dedup();
+        found.insert(0, crate::MONO_FONT.to_owned());
+        self.mono_fonts = Some(found.clone());
+        found
+    }
+
+    /// The fonts: the interface's, tracewing's own or the system's, and the
+    /// code's, of the monospaced fonts on this computer. Each is drawn in
+    /// itself.
+    fn render_fonts(&mut self, window: &Window, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let system = crate::system_ui_font(self.installed_fonts(window));
+        let monos = self.mono_fonts(window);
+        let ui_system = self.layout.ui_font.as_deref() == Some(crate::layout::SYSTEM_FONT);
+        let code = self
+            .layout
+            .code_font
+            .clone()
+            .unwrap_or_else(|| crate::MONO_FONT.to_owned());
+        let chip = |id: gpui::ElementId, label: String, face: String, on: bool| {
+            div()
+                .id(id)
+                .h(ui(30.))
+                .px(ui(12.))
+                .rounded(ui(15.))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .reachable()
+                .font_family(face)
+                .text_size(ui(13.))
+                .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
+                .when(!on, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
+                .child(label)
+        };
+        let row = |name: String| {
+            div()
+                .px(ui(6.))
+                .pt(ui(4.))
+                .text_size(ui(12.))
+                .font_weight(FontWeight::SEMIBOLD)
+                .child(name)
+        };
+        let chips = || div().px(ui(6.)).flex().flex_row().flex_wrap().gap(ui(6.));
+        let own = chip(
+            "ui-font-own".into(),
+            tr!("{name} (default)", name = crate::FONT),
+            crate::FONT.to_owned(),
+            !ui_system,
+        )
+        .on_click(cx.listener(|this, _, _, cx| this.set_ui_font(false, cx)));
+        let theirs = system.map(|name| {
+            chip(
+                "ui-font-system".into(),
+                tr!("System ({name})", name = name.as_str()),
+                name.clone(),
+                ui_system,
+            )
+            .on_click(cx.listener(|this, _, _, cx| this.set_ui_font(true, cx)))
+        });
+        let codes = monos.into_iter().enumerate().map(|(i, name)| {
+            let label = if name == crate::MONO_FONT {
+                tr!("{name} (default)", name = name.as_str())
+            } else {
+                name.clone()
+            };
+            let on = name == code;
+            let pick = name.clone();
+            chip(("code-font", i).into(), label, name, on).on_click(
+                cx.listener(move |this, _, _, cx| this.set_code_font(Some(pick.clone()), cx)),
+            )
+        });
+        div()
+            .flex()
+            .flex_col()
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
+            .bg(rgb(c.surface))
+            .child(eyebrow(tr!("Fonts")).px(ui(6.)))
+            .child(row(tr!("Interface")))
+            .child(chips().child(own).children(theirs))
+            .child(row(tr!("Code")))
+            .child(chips().children(codes))
+            .child(
+                div()
+                    .px(ui(6.))
+                    .text_size(ui(12.))
+                    .text_color(rgb(c.muted))
+                    .child(tr!(
+                        "For code, the fonts on this computer whose letters are all as wide. Applies at once."
+                    )),
+            )
+    }
+
     /// The text size, from small to large, the default marked.
     fn render_text_size(&self, cx: &mut Context<Self>) -> gpui::Div {
         let c = colors();
@@ -724,7 +860,7 @@ impl Traffic {
                     .p(ui(10.))
                     .rounded(ui(12.))
                     .bg(rgb(c.input))
-                    .font_family(crate::MONO_FONT)
+                    .font_family(crate::mono_font())
                     .font_features(gpui::FontFeatures::disable_ligatures())
                     .child(page.no_decrypt.clone()),
             )
@@ -795,6 +931,7 @@ impl Traffic {
                     self.render_language(cx).into_any_element(),
                     self.render_appearance(cx).into_any_element(),
                     self.render_text_size(cx).into_any_element(),
+                    self.render_fonts(window, cx).into_any_element(),
                 ],
                 Vec::new(),
             ),
@@ -906,7 +1043,7 @@ impl Traffic {
                                     .flex()
                                     .items_center()
                                     .bg(rgb(c.input))
-                                    .font_family(crate::MONO_FONT)
+                                    .font_family(crate::mono_font())
                                     .font_features(gpui::FontFeatures::disable_ligatures())
                                     .child(input.clone()),
                             )
@@ -1110,7 +1247,7 @@ impl Traffic {
                         div()
                             .w(gpui::relative(0.34))
                             .flex_shrink_0()
-                            .font_family(crate::MONO_FONT)
+                            .font_family(crate::mono_font())
                             .text_size(ui(12.))
                             .font_weight(FontWeight::BOLD)
                             .child(field.clone()),
@@ -1119,7 +1256,7 @@ impl Traffic {
                         div()
                             .flex_1()
                             .min_w_0()
-                            .font_family(crate::MONO_FONT)
+                            .font_family(crate::mono_font())
                             .text_size(ui(12.))
                             .text_color(rgb(c.muted))
                             .child(if host.is_empty() {
@@ -1333,7 +1470,7 @@ impl Traffic {
                         div()
                             .flex_1()
                             .min_w_0()
-                            .font_family(crate::MONO_FONT)
+                            .font_family(crate::mono_font())
                             .text_size(ui(12.))
                             .text_color(rgb(if on { c.text } else { c.muted }))
                             .child(shown.clone()),

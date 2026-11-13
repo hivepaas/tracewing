@@ -247,7 +247,7 @@ impl Traffic {
                 .py(ui(8.))
                 .rounded(ui(12.))
                 .bg(rgb(c.input))
-                .font_family(crate::MONO_FONT)
+                .font_family(crate::mono_font())
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .child(input.clone())
         };
@@ -289,7 +289,7 @@ impl Traffic {
                 )
                 .child(
                     div()
-                        .font_family(crate::MONO_FONT)
+                        .font_family(crate::mono_font())
                         .font_features(gpui::FontFeatures::disable_ligatures())
                         .text_size(ui(12.))
                         .overflow_hidden()
@@ -320,7 +320,7 @@ impl Traffic {
             Some(paused) => {
                 let socket_line = || {
                     div()
-                        .font_family(crate::MONO_FONT)
+                        .font_family(crate::mono_font())
                         .font_features(gpui::FontFeatures::disable_ligatures())
                         .text_size(ui(12.))
                         .text_color(rgb(c.muted))
@@ -351,7 +351,7 @@ impl Traffic {
                             div()
                                 .flex_1()
                                 .min_w_0()
-                                .font_family(crate::MONO_FONT)
+                                .font_family(crate::mono_font())
                                 .font_features(gpui::FontFeatures::disable_ligatures())
                                 .text_size(ui(12.))
                                 .text_color(rgb(c.muted))

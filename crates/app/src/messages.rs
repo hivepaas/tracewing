@@ -233,7 +233,7 @@ impl Traffic {
                     .rounded(ui(8.))
                     .cursor_pointer()
                     .when(chosen, |d| d.bg(rgb(c.selected_row)))
-                    .font_family(crate::MONO_FONT)
+                    .font_family(crate::mono_font())
                     .font_features(gpui::FontFeatures::disable_ligatures())
                     .text_size(ui(12.))
                     .child(
@@ -549,7 +549,7 @@ impl Traffic {
                                     .py(ui(6.))
                                     .rounded(ui(10.))
                                     .bg(rgb(c.input))
-                                    .font_family(crate::MONO_FONT)
+                                    .font_family(crate::mono_font())
                                     .text_size(ui(12.5))
                                     .child(self.socket_message.clone())
                                     .on_key_down(cx.listener(

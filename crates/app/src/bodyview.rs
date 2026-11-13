@@ -250,6 +250,9 @@ pub struct BodyView {
     /// The cell a right click was on, as row and column: what Copy row and
     /// Copy column take.
     table_menu_cell: Option<(usize, usize)>,
+    /// A character's width in the table, at the design's size: measured in
+    /// the code font as it draws.
+    table_char_w: f32,
 }
 
 impl BodyView {
@@ -298,6 +301,7 @@ impl BodyView {
             table_scroll,
             table_bar,
             table_menu_cell: None,
+            table_char_w: 7.4,
         }
     }
 
@@ -989,12 +993,7 @@ impl BodyView {
     /// As many characters a row as the view is wide. The place in view stays
     /// on its line when the width changes.
     fn fit_cols(&mut self, window: &mut Window) {
-        let text_system = window.text_system();
-        let font = text_system.resolve_font(&gpui::font(crate::MONO_FONT));
-        let char_w = text_system
-            .advance(font, px(12. * self.scale), 'm')
-            .map_or(7.2, |size| f32::from(size.width))
-            .max(1.);
+        let char_w = mono_char_w(window, 12. * self.scale);
         let width =
             f32::from(self.bounds.get().size.width) - BAR_W - (GUTTER_W + FOLD_W + 8.) * self.scale;
         let cols = ((width / char_w).floor() as usize).max(8);
@@ -1320,6 +1319,9 @@ impl Render for BodyView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         match self.table.clone() {
             Some(table) if self.mode() == BodyMode::Table => {
+                // As wide as the code font's letters, whichever it is.
+                let scale = crate::text_size::scale(window);
+                self.table_char_w = mono_char_w(window, 12. * scale) / scale;
                 self.render_table(table, cx).into_any_element()
             }
             _ => self.render_text(window, cx).into_any_element(),
@@ -1327,8 +1329,15 @@ impl Render for BodyView {
     }
 }
 
-/// A character's width in the table, at its size of text, near enough.
-const TABLE_CHAR_W: f32 = 7.4;
+/// A character's width in the code font at `size` px, as the window draws it.
+fn mono_char_w(window: &Window, size: f32) -> f32 {
+    let text_system = window.text_system();
+    let font = text_system.resolve_font(&gpui::font(crate::mono_font()));
+    text_system
+        .advance(font, px(size), 'm')
+        .map_or(size * 0.6, |s| f32::from(s.width))
+        .max(1.)
+}
 
 impl BodyView {
     fn render_table(&mut self, table: Arc<Table>, cx: &mut Context<Self>) -> impl IntoElement {
@@ -1352,7 +1361,7 @@ impl BodyView {
             .size_full()
             .flex()
             .flex_col()
-            .font_family(crate::MONO_FONT)
+            .font_family(crate::mono_font())
             .font_features(gpui::FontFeatures::disable_ligatures())
             .text_size(ui(12.))
             .when(table.cut, |d| {
@@ -1361,7 +1370,7 @@ impl BodyView {
                         .px(ui(10.))
                         .pb(ui(4.))
                         .text_color(rgb(c.muted))
-                        .font_family(crate::FONT)
+                        .font_family(crate::ui_font())
                         .child(tr!(
                             "The first {count} rows are shown.",
                             count = crate::flows::group_digits(table::ROWS_MAX as u64)
@@ -1477,7 +1486,7 @@ impl BodyView {
             return Vec::new();
         };
         let digits = table.rows().to_string().len();
-        let number_w = digits as f32 * TABLE_CHAR_W + 16.;
+        let number_w = digits as f32 * self.table_char_w + 16.;
         range
             .map(|row| {
                 let cells = table.cells(row);
@@ -1506,7 +1515,7 @@ impl BodyView {
                             .map(|cell| table::shown(cell))
                             .unwrap_or_default();
                         div()
-                            .w(ui(*width as f32 * TABLE_CHAR_W + 14.))
+                            .w(ui(*width as f32 * self.table_char_w + 14.))
                             .h_full()
                             .flex_shrink_0()
                             .px(ui(7.))
@@ -1656,12 +1665,7 @@ impl BodyView {
             self.fit_cols(window);
             self.scroll_x = 0.;
         } else {
-            let text_system = window.text_system();
-            let font = text_system.resolve_font(&gpui::font(crate::MONO_FONT));
-            self.char_w = text_system
-                .advance(font, px(12. * self.scale), 'm')
-                .map_or(7.2, |size| f32::from(size.width))
-                .max(1.);
+            self.char_w = mono_char_w(window, 12. * self.scale);
         }
         let (rows, thumb, share) = if wrapping {
             // Every line's rows are not known: as many as the line in view
@@ -1846,7 +1850,7 @@ impl BodyView {
             .rounded_b(ui(CORNER))
             .bg(rgb(c.code))
             .text_color(rgb(c.text))
-            .font_family(crate::MONO_FONT)
+            .font_family(crate::mono_font())
             .font_features(gpui::FontFeatures::disable_ligatures())
             .text_size(ui(12.))
             .cursor(gpui::CursorStyle::IBeam)

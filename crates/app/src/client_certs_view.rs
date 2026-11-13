@@ -250,7 +250,7 @@ impl Traffic {
                             .flex()
                             .items_center()
                             .bg(rgb(c.input))
-                            .font_family(crate::MONO_FONT)
+                            .font_family(crate::mono_font())
                             .child(form.host.clone()),
                     )
                     .child(

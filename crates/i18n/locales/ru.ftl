@@ -1951,6 +1951,24 @@ ta8606963 = { $key }: "{ $text }" — не целое число
 # {key}: must not be negative
 t9c4debaa = { $key }: не может быть отрицательным
 
+# {name} (default)
+td3f56fa8 = { $name } (по умолчанию)
+
+# System ({name})
+tb92a5ad0 = Системный ({ $name })
+
+# Fonts
+t68a32cf9 = Шрифты
+
+# Interface
+t7d000dd0 = Интерфейс
+
+# Code
+t795db914 = Код
+
+# For code, the fonts on this computer whose letters are all as wide. Applies at once.
+t014e83f3 = Для кода — шрифты на этом компьютере, у которых все буквы одной ширины. Применяется сразу.
+
 # {size} (default)
 t5606e442 = { $size } (по умолчанию)
 

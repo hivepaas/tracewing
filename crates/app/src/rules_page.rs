@@ -797,7 +797,7 @@ impl Traffic {
                             div()
                                 .text_size(ui(12.))
                                 .text_color(rgb(c.muted))
-                                .font_family(crate::MONO_FONT)
+                                .font_family(crate::mono_font())
                                 .font_features(gpui::FontFeatures::disable_ligatures())
                                 .child(format!(
                                     "{}{}",
@@ -843,7 +843,7 @@ impl Traffic {
                                 div()
                                     .text_size(ui(12.))
                                     .text_color(rgb(color))
-                                    .font_family(crate::MONO_FONT)
+                                    .font_family(crate::mono_font())
                                     .font_features(gpui::FontFeatures::disable_ligatures())
                                     .overflow_hidden()
                                     .text_ellipsis()
@@ -872,7 +872,7 @@ impl Traffic {
                 .items_center()
                 .bg(rgb(c.input))
                 .when(mono, |d| {
-                    d.font_family(crate::MONO_FONT)
+                    d.font_family(crate::mono_font())
                         .font_features(gpui::FontFeatures::disable_ligatures())
                 })
                 .child(input.clone())
@@ -954,7 +954,7 @@ impl Traffic {
                             .py(ui(8.))
                             .rounded(ui(12.))
                             .bg(rgb(c.input))
-                            .font_family(crate::MONO_FONT)
+                            .font_family(crate::mono_font())
                             .font_features(gpui::FontFeatures::disable_ligatures())
                             .child(page.body.clone()),
                     )

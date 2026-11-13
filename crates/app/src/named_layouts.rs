@@ -195,7 +195,7 @@ impl Traffic {
                             .flex()
                             .items_center()
                             .bg(rgb(c.input))
-                            .font_family(crate::FONT)
+                            .font_family(crate::ui_font())
                             .child(self.layout_name.clone())
                             .on_key_down(cx.listener(
                                 |this, event: &KeyDownEvent, _: &mut Window, cx| {

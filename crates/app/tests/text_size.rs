@@ -189,6 +189,57 @@ fn the_window_grows_with_the_text_size() {
     cx.run_until_parked();
     shot(&mut cx, main.into(), "109-about");
 
+    // Fonts: the code's from the monospaced fonts on this computer,
+    // tracewing's own first; the interface's, its own or the system's. Each
+    // applies at once and is kept.
+    main.update(&mut cx, |view, _, cx| {
+        view.set_screen(Screen::Settings, cx);
+        view.show_settings_section(tracewing::layout::SettingsSection::General, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    let monos = main
+        .update(&mut cx, |view, window, _| view.mono_fonts(window))
+        .unwrap();
+    assert_eq!(
+        monos.first().map(String::as_str),
+        Some(tracewing::MONO_FONT)
+    );
+    if let Some(other) = monos.get(1).cloned() {
+        main.update(&mut cx, |view, _, cx| {
+            view.set_code_font(Some(other.clone()), cx)
+        })
+        .unwrap();
+        cx.run_until_parked();
+        assert_eq!(tracewing::mono_font().as_ref(), other.as_str());
+        let kept = tracewing::layout::Layout::load(&dir.join("layout.toml"));
+        assert_eq!(kept.code_font.as_deref(), Some(other.as_str()));
+    }
+    let system = main
+        .update(&mut cx, |view, window, _| {
+            tracewing::system_ui_font(&window.text_system().all_font_names())
+                .map(|name| (name, view.text_size()))
+        })
+        .unwrap();
+    if let Some((system, _)) = system {
+        main.update(&mut cx, |view, _, cx| view.set_ui_font(true, cx))
+            .unwrap();
+        cx.run_until_parked();
+        assert_eq!(tracewing::ui_font().as_ref(), system.as_str());
+    }
+    shot(&mut cx, main.into(), "120-settings-fonts");
+    // Back to tracewing's own: nothing is kept for them.
+    main.update(&mut cx, |view, _, cx| {
+        view.set_ui_font(false, cx);
+        view.set_code_font(None, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    assert_eq!(tracewing::ui_font().as_ref(), tracewing::FONT);
+    assert_eq!(tracewing::mono_font().as_ref(), tracewing::MONO_FONT);
+    let kept = tracewing::layout::Layout::load(&dir.join("layout.toml"));
+    assert_eq!((kept.ui_font, kept.code_font), (None, None));
+
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);
 }

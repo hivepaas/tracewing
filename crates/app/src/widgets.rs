@@ -77,7 +77,7 @@ impl Render for Tip {
             .bg(rgb(c.surface))
             .border_1()
             .border_color(rgb(c.window_edge))
-            .font_family(crate::FONT)
+            .font_family(crate::ui_font())
             .text_size(ui(13.))
             .text_color(rgb(c.text))
             .child(self.0.clone())

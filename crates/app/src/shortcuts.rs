@@ -276,7 +276,7 @@ impl Traffic {
                                     .rounded(ui(8.))
                                     .bg(rgb(c.chip))
                                     .text_color(rgb(c.on_chip))
-                                    .font_family(crate::MONO_FONT)
+                                    .font_family(crate::mono_font())
                                     .font_features(gpui::FontFeatures::disable_ligatures())
                                     .text_size(ui(12.))
                                     .child(row_label(keys)),

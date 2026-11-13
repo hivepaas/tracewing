@@ -478,7 +478,7 @@ pub fn render_menu(
                 .border_1()
                 .border_color(rgb(c.splitter))
                 .shadow_lg()
-                .font_family(crate::FONT)
+                .font_family(crate::ui_font())
                 .text_size(ui(13.))
                 .on_mouse_down_out(move |_, window, cx| on_close(window, cx))
                 .children(items.into_iter().enumerate().map(|(nth, item)| {

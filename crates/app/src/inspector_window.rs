@@ -69,7 +69,7 @@ impl Render for InspectorWindow {
             .pb(ui(10.))
             .flex()
             .text_color(rgb(c.text))
-            .font_family(crate::FONT)
+            .font_family(crate::ui_font())
             .text_size(ui(13.))
             .child(inspector);
         let switch = chrome::appearance_switch(appearance).on_click(move |_, window, cx| {

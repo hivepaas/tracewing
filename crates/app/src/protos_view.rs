@@ -237,7 +237,7 @@ impl Traffic {
                         .gap(ui(2.))
                         .child(
                             div()
-                                .font_family(crate::MONO_FONT)
+                                .font_family(crate::mono_font())
                                 .font_features(gpui::FontFeatures::disable_ligatures())
                                 .text_size(ui(12.))
                                 .child(path.display().to_string()),
@@ -250,7 +250,7 @@ impl Traffic {
                         )
                         .children(problems.into_iter().take(PROBLEMS_SHOWN).map(|problem| {
                             div()
-                                .font_family(crate::MONO_FONT)
+                                .font_family(crate::mono_font())
                                 .font_features(gpui::FontFeatures::disable_ligatures())
                                 .text_size(ui(11.5))
                                 .text_color(rgb(c.error))
@@ -370,7 +370,7 @@ impl Traffic {
                             .flex()
                             .items_center()
                             .bg(rgb(c.input))
-                            .font_family(crate::MONO_FONT)
+                            .font_family(crate::mono_font())
                             .font_features(gpui::FontFeatures::disable_ligatures())
                             .text_size(ui(12.))
                             .on_key_down(cx.listener(|this, ev: &gpui::KeyDownEvent, _, cx| {
@@ -505,7 +505,7 @@ impl Traffic {
                 .rounded(ui(8.))
                 .cursor_pointer()
                 .reachable()
-                .font_family(crate::MONO_FONT)
+                .font_family(crate::mono_font())
                 .font_features(gpui::FontFeatures::disable_ligatures())
                 .text_size(ui(12.))
                 .when(on, |d| d.bg(rgb(c.tonal)).text_color(rgb(c.on_tonal)))
@@ -571,7 +571,7 @@ impl Traffic {
                                 tr!("Automatic (gRPC path or messageType)").into(),
                                 chosen.is_none(),
                             )
-                            .font_family(crate::FONT)
+                            .font_family(crate::ui_font())
                             .on_click(cx.listener(|this, _, _, cx| this.read_body_as(None, cx))),
                         )
                         .children(matching.into_iter().take(MESSAGES_SHOWN).enumerate().map(
