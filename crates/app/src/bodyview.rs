@@ -193,6 +193,18 @@ pub struct BodyView {
     /// taller, as the text in them is.
     scale: f32,
     dragging: bool,
+    /// How far the lines are scrolled sideways, in pixels. Text that wraps
+    /// never is.
+    scroll_x: f32,
+    /// The widest line drawn so far, indent and all, in pixels: how far the
+    /// lines scroll sideways. It only grows, so scrolling down does not move
+    /// what is in view sideways.
+    widest: Cell<f32>,
+    /// A character's width in the font the lines are drawn in, as last drawn.
+    char_w: f32,
+    /// The sideways thumb's drag: where the pointer and the lines were when
+    /// it was pressed.
+    dragging_x: Option<(f32, f32)>,
     /// Where the view was last drawn: the height sets the scroll range, and a drag
     /// on the bar is measured from its top.
     bounds: Rc<Cell<Bounds<Pixels>>>,
@@ -264,6 +276,10 @@ impl BodyView {
             mode: BodyMode::Pretty,
             sub: 0.,
             dragging: false,
+            scroll_x: 0.,
+            widest: Cell::new(0.),
+            char_w: 7.2,
+            dragging_x: None,
             bounds: Rc::new(Cell::new(Bounds::default())),
             select: Selection::default(),
             focus,
@@ -295,6 +311,16 @@ impl BodyView {
 
     pub fn table(&self) -> Option<&Arc<Table>> {
         self.table.as_ref()
+    }
+
+    /// How far the lines are scrolled sideways, in pixels.
+    pub fn scroll_x(&self) -> f32 {
+        self.scroll_x
+    }
+
+    /// Where the lines were last drawn, in the window.
+    pub fn drawn_bounds(&self) -> Bounds<Pixels> {
+        self.bounds.get()
     }
 
     pub fn selection(&self) -> &Selection {
@@ -840,6 +866,8 @@ impl BodyView {
             self.raw = Some(raw);
         }
         self.mode = mode;
+        self.scroll_x = 0.;
+        self.widest.set(0.);
         self.drawn.clear();
         self.by_rule.borrow_mut().1.clear();
         self.marks.borrow_mut().clear();
@@ -883,13 +911,50 @@ impl BodyView {
     }
 
     fn on_wheel(&mut self, event: &ScrollWheelEvent, _: &mut Window, cx: &mut Context<Self>) {
-        let delta = f64::from(f32::from(event.delta.pixel_delta(px(self.line_h())).y));
-        if self.wrapping() {
-            self.scroll_wrapped(-delta);
-        } else {
-            self.set_position(self.position() - delta);
+        let moved = event.delta.pixel_delta(px(self.line_h()));
+        let (mut across, mut down) = (f32::from(moved.x), f32::from(moved.y));
+        // Shift turns a wheel that only goes up and down sideways.
+        if event.modifiers.shift && across == 0. {
+            (across, down) = (down, 0.);
+        }
+        if across != 0. && !self.wrapping() {
+            self.scroll_x = (self.scroll_x - across).clamp(0., self.max_x());
+        }
+        if down != 0. {
+            let delta = f64::from(down);
+            if self.wrapping() {
+                self.scroll_wrapped(-delta);
+            } else {
+                self.set_position(self.position() - delta);
+            }
         }
         cx.notify();
+    }
+
+    /// How wide the lines' text shows, between the gutter and the bar.
+    fn text_w(&self) -> f32 {
+        f32::from(self.bounds.get().size.width) - BAR_W - (GUTTER_W + FOLD_W) * self.scale
+    }
+
+    /// How far the lines scroll sideways: past the widest, a little room.
+    fn max_x(&self) -> f32 {
+        if self.wrapping() {
+            return 0.;
+        }
+        (self.widest.get() + 2. * self.char_w - self.text_w()).max(0.)
+    }
+
+    /// The sideways thumb dragged to `x`, or pressed there.
+    fn drag_x_to(&mut self, x: f32, cx: &mut Context<Self>) {
+        let Some((x0, from)) = self.dragging_x else {
+            return;
+        };
+        let view = self.text_w() + (GUTTER_W + FOLD_W) * self.scale;
+        if let Some((long, _)) = crate::scrollbar::thumb(view, self.max_x(), self.scroll_x) {
+            let per = self.max_x() / (view - long).max(1.);
+            self.scroll_x = (from + (x - x0) * per).clamp(0., self.max_x());
+            cx.notify();
+        }
     }
 
     fn drag_to(&mut self, y: Pixels, cx: &mut Context<Self>) {
@@ -1020,16 +1085,30 @@ impl BodyView {
                         .on_click(cx.listener(move |this, _, _, cx| this.toggle_fold(line, cx))),
                 }
             })
-            .child(div().w(ui(indent)).flex_shrink_0())
-            .child(
+            .child({
+                // How wide the line is, for how far the lines scroll sideways.
+                let wide = indent * self.scale
+                    + unicode_width::UnicodeWidthStr::width(text.as_ref()) as f32 * self.char_w;
+                if wide > self.widest.get() {
+                    self.widest.set(wide);
+                }
                 // The note below stays in view however long the text is. A fold's
-                // note follows the text, as the closer it stands for would.
+                // note follows the text, as the closer it stands for would. The
+                // text, indent and all, is moved sideways by laying it out further
+                // left, so that a press still finds the character under it.
                 div()
                     .when(!folded, |d| d.flex_1())
                     .min_w_0()
                     .overflow_hidden()
-                    .child(self.select.piece_at(key, text, highlights)),
-            );
+                    .child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .ml(px(-self.scroll_x))
+                            .child(div().w(ui(indent)).flex_shrink_0())
+                            .child(self.select.piece_at(key, text, highlights)),
+                    )
+            });
         if let FoldMark::Folded(closer, hidden) = mark {
             row = row.child(
                 div()
@@ -1305,20 +1384,33 @@ impl BodyView {
                             cx.notify();
                         }),
                     )
+                    .flex()
+                    .flex_col()
+                    // The head stays at the top while the rows go under it, and
+                    // goes sideways with them.
                     .child(
-                        self.table_bar.around(
-                            uniform_list(
-                                "table-rows",
-                                rows,
-                                cx.processor(|this, range: std::ops::Range<usize>, _, _| {
-                                    this.render_table_rows(range)
-                                }),
-                            )
-                            .size_full()
-                            .with_horizontal_sizing_behavior(
-                                ListHorizontalSizingBehavior::Unconstrained,
-                            )
-                            .track_scroll(&scroll),
+                        div().flex_shrink_0().overflow_hidden().child(
+                            div()
+                                .ml(self.table_bar.handle.offset().x)
+                                .children(self.render_table_rows(0..rows.min(1))),
+                        ),
+                    )
+                    .child(
+                        div().flex_1().min_h_0().child(
+                            self.table_bar.around(
+                                uniform_list(
+                                    "table-rows",
+                                    rows.saturating_sub(1),
+                                    cx.processor(|this, range: std::ops::Range<usize>, _, _| {
+                                        this.render_table_rows(range.start + 1..range.end + 1)
+                                    }),
+                                )
+                                .size_full()
+                                .with_horizontal_sizing_behavior(
+                                    ListHorizontalSizingBehavior::Unconstrained,
+                                )
+                                .track_scroll(&scroll),
+                            ),
                         ),
                     )
                     .children(follow)
@@ -1550,6 +1642,14 @@ impl BodyView {
         let wrapping = self.wrapping();
         if wrapping {
             self.fit_cols(window);
+            self.scroll_x = 0.;
+        } else {
+            let text_system = window.text_system();
+            let font = text_system.resolve_font(&gpui::font(crate::MONO_FONT));
+            self.char_w = text_system
+                .advance(font, px(12. * self.scale), 'm')
+                .map_or(7.2, |size| f32::from(size.width))
+                .max(1.);
         }
         let (rows, thumb, share) = if wrapping {
             // Every line's rows are not known: as many as the line in view
@@ -1573,6 +1673,10 @@ impl BodyView {
             )
         };
         let thumb_top = share as f32 * (list_height - thumb);
+        // Sideways, once the lines in view have said how wide they are.
+        self.scroll_x = self.scroll_x.min(self.max_x());
+        let across_view = f32::from(self.bounds.get().size.width) - BAR_W;
+        let across = crate::scrollbar::thumb(across_view, self.max_x(), self.scroll_x);
         let bounds = Rc::clone(&self.bounds);
         let me = cx.entity().downgrade();
         let follow = select::follow_drag(&self.select, {
@@ -1760,10 +1864,18 @@ impl BodyView {
                 if this.dragging {
                     this.drag_to(event.position.y, cx);
                 }
+                if this.dragging_x.is_some() {
+                    this.drag_x_to(f32::from(event.position.x), cx);
+                }
             }))
             .on_mouse_up(
                 gpui::MouseButton::Left,
-                cx.listener(|this, _, _, _| this.dragging = false),
+                cx.listener(|this, _, _, cx| {
+                    this.dragging = false;
+                    if this.dragging_x.take().is_some() {
+                        cx.notify();
+                    }
+                }),
             )
             .child(
                 canvas(
@@ -1806,17 +1918,61 @@ impl BodyView {
                             this.drag_to(event.position.y, cx);
                         }),
                     )
-                    .child(
-                        div()
-                            .absolute()
-                            .top(px(thumb_top))
-                            .h(px(thumb))
-                            .left(px((BAR_W - crate::scrollbar::THUMB_W) / 2.))
-                            .w(px(crate::scrollbar::THUMB_W))
-                            .rounded(px(crate::scrollbar::THUMB_W / 2.))
-                            .bg(rgb(c.splitter)),
-                    ),
+                    // None when every line fits, as the other bars.
+                    .when(thumb < list_height, |d| {
+                        d.child(
+                            div()
+                                .absolute()
+                                .top(px(thumb_top))
+                                .h(px(thumb))
+                                .left(px((BAR_W - crate::scrollbar::THUMB_W) / 2.))
+                                .w(px(crate::scrollbar::THUMB_W))
+                                .rounded(px(crate::scrollbar::THUMB_W / 2.))
+                                .bg(rgb(c.splitter)),
+                        )
+                    }),
             )
+            .when_some(across, |d, (long, at)| {
+                let held = self.dragging_x.is_some();
+                d.child(
+                    div()
+                        .id("body-bar-x")
+                        .absolute()
+                        .left_0()
+                        .right(px(BAR_W))
+                        .bottom_0()
+                        .h(px(BAR_W))
+                        .cursor(gpui::CursorStyle::Arrow)
+                        .on_mouse_down(
+                            gpui::MouseButton::Left,
+                            cx.listener(move |this, event: &gpui::MouseDownEvent, _, cx| {
+                                // The bar's, not the start of a selection.
+                                cx.stop_propagation();
+                                let x = f32::from(event.position.x - this.bounds.get().left());
+                                // A press off the thumb brings its middle there first.
+                                if x < at || x > at + long {
+                                    let track = (across_view - long).max(1.);
+                                    let max = this.max_x();
+                                    this.scroll_x =
+                                        (max * ((x - long / 2.).max(0.) / track)).clamp(0., max);
+                                }
+                                this.dragging_x =
+                                    Some((f32::from(event.position.x), this.scroll_x));
+                                cx.notify();
+                            }),
+                        )
+                        .child(
+                            div()
+                                .absolute()
+                                .left(px(at))
+                                .w(px(long))
+                                .top(px((BAR_W - crate::scrollbar::THUMB_W) / 2.))
+                                .h(px(crate::scrollbar::THUMB_W))
+                                .rounded(px(crate::scrollbar::THUMB_W / 2.))
+                                .bg(rgb(if held { c.muted } else { c.splitter })),
+                        ),
+                )
+            })
     }
 }
 

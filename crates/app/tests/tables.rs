@@ -266,6 +266,58 @@ fn csv_and_tsv_are_tables() {
     );
     shot(&mut cx, window.into(), "115-table-scrolled");
 
+    // The head stays at the top while the rows go under it.
+    let table = body(&mut cx, window);
+    let (head, first_row, cols) = window
+        .update(&mut cx, |_, _, cx| {
+            let body = table.read(cx);
+            let cols = body.table().unwrap().widths.len();
+            (
+                body.selection().drawn_at(0),
+                body.selection().drawn_at(cols as u64),
+                cols,
+            )
+        })
+        .unwrap();
+    assert!(head.is_some(), "the head is drawn after a scroll");
+    assert!(first_row.is_none(), "the first row has gone under it");
+
+    // Wider than the pane: the bar along the bottom takes it sideways, and
+    // the head goes with the rows, its columns over theirs.
+    assert!(
+        bar.handle.max_offset().x > px(0.),
+        "the table is wider than its pane"
+    );
+    let y = pane.bottom() - px(tracewing::scrollbar::BAR_W / 2.);
+    common::drag(
+        &mut cx,
+        window,
+        point(pane.left() + px(10.), y),
+        point(pane.left() + px(300.), y),
+    );
+    assert!(
+        bar.handle.offset().x < px(0.),
+        "the bottom thumb scrolled the table sideways"
+    );
+    window
+        .update(&mut cx, |_, window, _| window.refresh())
+        .unwrap();
+    cx.run_until_parked();
+    let (head, row) = window
+        .update(&mut cx, |_, _, cx| {
+            let sel = table.read(cx).selection().clone();
+            let row = (1..10_000u64)
+                .find_map(|r| sel.drawn_at(r * cols as u64 + 1))
+                .expect("a row is drawn");
+            (sel.drawn_at(1).expect("the head is drawn"), row)
+        })
+        .unwrap();
+    assert!(
+        (head.left() - row.left()).abs() < px(1.),
+        "the head's column is over the rows': {head:?} {row:?}"
+    );
+    shot(&mut cx, window.into(), "116-table-sideways");
+
     // JSON has no table, and Table chosen does not change it.
     window
         .update(&mut cx, |view, _, cx| view.select_place(2, cx))

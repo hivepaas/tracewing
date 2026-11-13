@@ -1,36 +1,64 @@
-//! A scroll bar for an area that scrolls up and down by itself (an
-//! `overflow_y_scroll` div), which gpui draws none for: a thumb over the
-//! area's right edge, shown only when there is more than fits, dragged, or
-//! pressed above or below to jump there.
+//! Scroll bars for an area that scrolls by itself (an `overflow_scroll` div,
+//! or a list), which gpui draws none for: a thumb over the area's right edge
+//! for up and down, and over its bottom edge for sideways, each shown only
+//! when there is more than fits that way, dragged, or pressed beside the thumb
+//! to jump there.
 
 use std::{cell::Cell, rc::Rc};
 
 use gpui::{
     AnyElement, Bounds, DispatchPhase, IntoElement, MouseButton, MouseDownEvent, MouseMoveEvent,
-    MouseUpEvent, Pixels, ScrollHandle, Window, canvas, div, fill, point, prelude::*, px, rgb,
-    size,
+    MouseUpEvent, Pixels, Point, ScrollHandle, Window, canvas, div, fill, point, prelude::*, px,
+    rgb, size,
 };
 
 use crate::colors::colors;
 
-/// The strip the bar takes over the area's edge, and the thumb in it: as
-/// wide as the body's.
+/// The strip a bar takes over the area's edge, and the thumb in it: as wide
+/// as the body's.
 pub const BAR_W: f32 = 13.;
 pub const THUMB_W: f32 = 9.;
-/// The shortest the thumb gets, however long what scrolls.
-const THUMB_MIN: f32 = 28.;
+/// The shortest a thumb gets, however long what scrolls.
+pub const THUMB_MIN: f32 = 28.;
 
-/// Where an area is scrolled to, and the thumb's drag while it lasts: kept
+/// A thumb's length, and how far along its track it is, for a bar `view`
+/// long over something that scrolls `max` further and has scrolled `done`.
+/// `None` when everything fits.
+pub fn thumb(view: f32, max: f32, done: f32) -> Option<(f32, f32)> {
+    if max <= 0. || view <= 0. {
+        return None;
+    }
+    let long = (view * view / (view + max)).max(THUMB_MIN).min(view);
+    Some((long, (view - long) * (done.clamp(0., max) / max)))
+}
+
+/// Up and down, or sideways.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Axis {
+    Down,
+    Across,
+}
+
+impl Axis {
+    fn of(self, p: Point<Pixels>) -> Pixels {
+        match self {
+            Axis::Down => p.y,
+            Axis::Across => p.x,
+        }
+    }
+}
+
+/// Where an area is scrolled to, and a thumb's drag while it lasts: kept
 /// from frame to frame by whoever draws the area.
 #[derive(Clone, Default)]
 pub struct Scrolled {
     pub handle: ScrollHandle,
-    /// Where the pointer and the area were when the thumb was pressed.
-    drag: Rc<Cell<Option<(Pixels, Pixels)>>>,
+    /// Which thumb was pressed, and where the pointer and the area were then.
+    drag: Rc<Cell<Option<(Axis, Pixels, Pixels)>>>,
 }
 
 impl Scrolled {
-    /// The bar for an area that already has a handle, such as a list's.
+    /// The bars for an area that already has a handle, such as a list's.
     pub fn of(handle: ScrollHandle) -> Self {
         Scrolled {
             handle,
@@ -38,9 +66,9 @@ impl Scrolled {
         }
     }
 
-    /// `area`, which scrolls with [`Scrolled::handle`], with the bar over it.
+    /// `area`, which scrolls with [`Scrolled::handle`], with its bars over it.
     pub fn around(&self, area: impl IntoElement) -> AnyElement {
-        let me = self.clone();
+        let (down, across) = (self.clone(), self.clone());
         div()
             .relative()
             .size_full()
@@ -48,7 +76,7 @@ impl Scrolled {
             .child(
                 canvas(
                     |_, _, _| (),
-                    move |bounds, _, window, _| me.paint(bounds, window),
+                    move |bounds, _, window, _| down.paint(Axis::Down, bounds, window),
                 )
                 .absolute()
                 .top_0()
@@ -56,39 +84,67 @@ impl Scrolled {
                 .right_0()
                 .w(px(BAR_W)),
             )
+            .child(
+                canvas(
+                    |_, _, _| (),
+                    move |bounds, _, window, _| across.paint(Axis::Across, bounds, window),
+                )
+                .absolute()
+                .left_0()
+                .right(px(BAR_W))
+                .bottom_0()
+                .h(px(BAR_W)),
+            )
             .into_any_element()
     }
 
-    /// The thumb's length and how far down it is, for a bar `view` high.
-    fn thumb(&self, view: Pixels) -> Option<(Pixels, Pixels)> {
-        let max = self.handle.max_offset().y;
-        if max <= px(0.) || view <= px(0.) {
-            return None;
-        }
-        let long = (view * (view / (view + max))).max(px(THUMB_MIN)).min(view);
-        let scrolled = (-self.handle.offset().y).clamp(px(0.), max);
-        Some((long, (view - long) * (scrolled / max)))
+    /// How much further the area scrolls that way, and how far it has.
+    fn reach(&self, axis: Axis) -> (Pixels, Pixels) {
+        let max = axis.of(self.handle.max_offset());
+        (
+            max,
+            (-axis.of(self.handle.offset())).clamp(px(0.), max.max(px(0.))),
+        )
     }
 
-    /// Scrolls the area to `to`, from its top.
-    fn scroll_to(&self, to: Pixels) {
-        let max = self.handle.max_offset().y;
-        let x = self.handle.offset().x;
-        self.handle
-            .set_offset(point(x, -to.clamp(px(0.), max.max(px(0.)))));
+    /// The thumb's length and how far along it is, for a bar `view` long.
+    fn thumb(&self, axis: Axis, view: Pixels) -> Option<(Pixels, Pixels)> {
+        let (max, done) = self.reach(axis);
+        thumb(f32::from(view), f32::from(max), f32::from(done)).map(|(l, a)| (px(l), px(a)))
     }
 
-    fn paint(&self, bar: Bounds<Pixels>, window: &mut Window) {
-        let Some((long, down)) = self.thumb(bar.size.height) else {
+    /// Scrolls the area to `to`, from its start, that way.
+    fn scroll_to(&self, axis: Axis, to: Pixels) {
+        let (max, _) = self.reach(axis);
+        let to = -to.clamp(px(0.), max.max(px(0.)));
+        let now = self.handle.offset();
+        self.handle.set_offset(match axis {
+            Axis::Down => point(now.x, to),
+            Axis::Across => point(to, now.y),
+        });
+    }
+
+    fn paint(&self, axis: Axis, bar: Bounds<Pixels>, window: &mut Window) {
+        let along = |b: Bounds<Pixels>| match axis {
+            Axis::Down => (b.top(), b.size.height),
+            Axis::Across => (b.left(), b.size.width),
+        };
+        let (start, view) = along(bar);
+        let Some((long, at)) = self.thumb(axis, view) else {
             return;
         };
         let c = colors();
-        let inset = (bar.size.width - px(THUMB_W)) / 2.;
-        let thumb = Bounds::new(
-            point(bar.left() + inset, bar.top() + down),
-            size(px(THUMB_W), long),
-        );
-        let color = if self.drag.get().is_some() {
+        let thumb = match axis {
+            Axis::Down => Bounds::new(
+                point(bar.left() + (bar.size.width - px(THUMB_W)) / 2., start + at),
+                size(px(THUMB_W), long),
+            ),
+            Axis::Across => Bounds::new(
+                point(start + at, bar.top() + (bar.size.height - px(THUMB_W)) / 2.),
+                size(long, px(THUMB_W)),
+            ),
+        };
+        let color = if self.drag.get().is_some_and(|(a, _, _)| a == axis) {
             c.muted
         } else {
             c.splitter
@@ -105,38 +161,40 @@ impl Scrolled {
             }
             // The bar's, not the start of a selection under it.
             cx.stop_propagation();
-            let Some((long, down)) = me.thumb(bar.size.height) else {
+            let Some((long, at)) = me.thumb(axis, view) else {
                 return;
             };
-            let max = me.handle.max_offset().y;
-            let y = e.position.y - bar.top();
+            let (max, _) = me.reach(axis);
+            let p = axis.of(e.position) - start;
             // A press off the thumb brings the thumb's middle there first.
-            if y < down || y > down + long {
-                let track = (bar.size.height - long).max(px(1.));
-                me.scroll_to(max * ((y - long / 2.).max(px(0.)) / track));
+            if p < at || p > at + long {
+                let track = (view - long).max(px(1.));
+                me.scroll_to(axis, max * ((p - long / 2.).max(px(0.)) / track));
             }
-            me.drag.set(Some((e.position.y, -me.handle.offset().y)));
+            let (_, done) = me.reach(axis);
+            me.drag.set(Some((axis, axis.of(e.position), done)));
             window.refresh();
         });
         let me = self.clone();
         window.on_mouse_event(move |e: &MouseMoveEvent, phase, window, _| {
-            let Some((y0, from)) = me.drag.get() else {
+            let Some((dragged, p0, from)) = me.drag.get() else {
                 return;
             };
-            if phase != DispatchPhase::Capture {
+            if phase != DispatchPhase::Capture || dragged != axis {
                 return;
             }
-            let Some((long, _)) = me.thumb(bar.size.height) else {
+            let Some((long, _)) = me.thumb(axis, view) else {
                 return;
             };
-            let track = (bar.size.height - long).max(px(1.));
-            let per = me.handle.max_offset().y / track;
-            me.scroll_to(from + (e.position.y - y0) * per);
+            let (max, _) = me.reach(axis);
+            let per = max / (view - long).max(px(1.));
+            me.scroll_to(axis, from + (axis.of(e.position) - p0) * per);
             window.refresh();
         });
         let me = self.clone();
         window.on_mouse_event(move |_: &MouseUpEvent, phase, window, _| {
-            if phase == DispatchPhase::Capture && me.drag.take().is_some() {
+            if phase == DispatchPhase::Capture && me.drag.get().is_some_and(|(a, _, _)| a == axis) {
+                me.drag.set(None);
                 window.refresh();
             }
         });
@@ -150,6 +208,17 @@ mod tests {
     #[test]
     fn nothing_to_scroll_has_no_thumb() {
         let s = Scrolled::default();
-        assert_eq!(s.thumb(px(300.)), None);
+        assert_eq!(s.thumb(Axis::Down, px(300.)), None);
+        assert_eq!(s.thumb(Axis::Across, px(300.)), None);
+        assert_eq!(thumb(300., 0., 0.), None);
+    }
+
+    #[test]
+    fn the_thumb_is_as_long_as_the_share_in_view_and_goes_along_it() {
+        // Half of it in view: a thumb half the bar, at the start, then at the end.
+        assert_eq!(thumb(200., 200., 0.), Some((100., 0.)));
+        assert_eq!(thumb(200., 200., 200.), Some((100., 100.)));
+        // A long way to go: never shorter than the least a hand can hold.
+        assert_eq!(thumb(200., 100_000., 0.).map(|(l, _)| l), Some(THUMB_MIN));
     }
 }

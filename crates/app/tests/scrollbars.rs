@@ -5,7 +5,10 @@
 
 #![cfg(all(feature = "headless", target_os = "linux"))]
 
-use gpui::{AppContext as _, Entity, HeadlessAppContext, WindowHandle, point, px, size};
+use gpui::{
+    AppContext as _, Entity, HeadlessAppContext, Modifiers, PlatformInput, ScrollDelta,
+    ScrollWheelEvent, TouchPhase, WindowHandle, point, px, size,
+};
 
 mod common;
 use std::{
@@ -17,7 +20,7 @@ use tracewing::{
     detail::Side,
     engine::{Engine, EngineOptions},
     input::TextInput,
-    inspector::Part,
+    inspector::{BodyState, Part},
     layout::Sides,
     traffic::{Screen, Traffic},
 };
@@ -179,6 +182,86 @@ fn a_part_longer_than_its_pane_has_a_bar_that_drags_it() {
     .unwrap();
     cx.run_until_parked();
     shot(&mut cx, main.into(), "112-body-scrollbar");
+
+    // Lines wider than the pane go sideways: the wheel with Shift held, or the
+    // bar along the bottom. A press still finds the character under it.
+    get(
+        &mut cx,
+        main,
+        &format!("http://localhost:{port}/json_long"),
+        "",
+    );
+    main.update(&mut cx, |view, _, cx| {
+        view.set_screen(Screen::Traffic, cx);
+        view.select_place(1, cx);
+    })
+    .unwrap();
+    wait_for(&mut cx, main, "the long JSON", |view| {
+        view.inspector
+            .detail
+            .as_ref()
+            .is_some_and(|d| d.url.contains("json_long"))
+    });
+    main.update(&mut cx, |view, _, cx| {
+        view.set_side(Side::Response, cx);
+        view.set_part(Part::Body, cx);
+    })
+    .unwrap();
+    wait_for(&mut cx, main, "its body", |view| {
+        matches!(&view.inspector.body, BodyState::Shown(_))
+    });
+    let body = main
+        .update(&mut cx, |view, _, _| match &view.inspector.body {
+            BodyState::Shown(body) => body.clone(),
+            _ => panic!("a body is shown"),
+        })
+        .unwrap();
+    let line = |cx: &mut HeadlessAppContext| {
+        main.update(cx, |_, _, cx| body.read(cx).selection().drawn_at(1))
+            .unwrap()
+            .expect("the long line is drawn")
+    };
+    let before = line(&mut cx);
+    let across_of = |cx: &mut HeadlessAppContext| {
+        main.update(cx, |_, _, cx| body.read(cx).scroll_x())
+            .unwrap()
+    };
+    assert_eq!(across_of(&mut cx), 0.);
+    common::mouse(
+        &mut cx,
+        main,
+        PlatformInput::ScrollWheel(ScrollWheelEvent {
+            position: before.center(),
+            delta: ScrollDelta::Pixels(point(px(0.), px(-300.))),
+            modifiers: Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+            touch_phase: TouchPhase::Moved,
+        }),
+    );
+    let across = across_of(&mut cx);
+    assert!(across > 0., "Shift and the wheel went sideways");
+    let after = line(&mut cx);
+    assert!(
+        (after.left() - (before.left() - px(across))).abs() < px(1.),
+        "the text is laid out further left by as much: {before:?} {after:?} {across}"
+    );
+    // A press at the far end of the bottom bar goes to the end.
+    let list = main
+        .update(&mut cx, |_, _, cx| body.read(cx).drawn_bounds())
+        .unwrap();
+    let end = point(
+        list.right() - px(tracewing::scrollbar::BAR_W + 4.),
+        list.bottom() - px(tracewing::scrollbar::BAR_W / 2.),
+    );
+    common::drag(&mut cx, main, end, end);
+    let further = across_of(&mut cx);
+    assert!(
+        further > across,
+        "the bar's end went further: {further} after {across}"
+    );
+    shot(&mut cx, main.into(), "117-body-sideways");
 
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);
