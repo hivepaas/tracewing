@@ -2098,11 +2098,17 @@ t88231e40 = HTTP/3 차단
 # Or one app at a time
 t91c63f1c = 또는 앱 하나씩
 
-# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
-tc21013a9 = tracewing을 거치는 터미널입니다. 시스템 프록시와 다른 앱은 그대로 둡니다. 브라우저라면 브라우저 항목의 따로 열기가 전용 프로필로 같은 일을 합니다.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
+t7168eeaa = tracewing을 거치는 터미널입니다. 시스템 프록시와 다른 앱은 그대로 둡니다. curl, git, Python, Go, 그리고 그 안에서 실행한 Claude Code, Codex, Gemini CLI 같은 AI 에이전트가 거칩니다. 편집기의 AI 도구도 거치게 하려면 편집기를 종료하고 그 터미널에서 다시 실행하세요. VS Code라면 code . 입니다. 브라우저라면 브라우저 항목의 따로 열기가 전용 프로필로 같은 일을 합니다.
 
 # Open a terminal
 t4b629c72 = 터미널 열기
+
+# In a terminal of your own, such as an editor's, this does the same:
+tb10fcc10 = 편집기 안의 터미널처럼 직접 쓰는 터미널에서는 이것이 같은 일을 합니다:
+
+# Node.js {version}, which this computer's terminals run, sends its requests straight out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of those, then open the terminal again.
+td5af8287 = 이 컴퓨터의 터미널이 실행하는 Node.js { $version }은 tracewing을 거치지 않고 요청을 바로 보냅니다. Node는 22.21과 24.5부터 프록시를 읽습니다. 둘 중 하나를 설치한 뒤 터미널을 다시 여세요.
 
 # iPhone and iPad
 ta550cc97 = iPhone 및 iPad

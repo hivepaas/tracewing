@@ -2302,11 +2302,17 @@ t88231e40 = Заблокувати HTTP/3
 # Or one app at a time
 t91c63f1c = Або по одному застосунку
 
-# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
-tc21013a9 = Термінал, що йде через tracewing, а системний проксі та інші застосунки лишаються як є. Для браузера те саме робить «Відкрити окремо» в розділі «Браузери», з власним профілем.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
+t7168eeaa = Термінал, що йде через tracewing, а системний проксі та інші застосунки лишаються як є: curl, git, Python, Go та ШІ-агенти на кшталт Claude Code, Codex чи Gemini CLI, запущені в ньому. Щоб через tracewing ішли й ШІ-інструменти редактора, закрийте редактор і запустіть його знову з цього термінала, як робить code . для VS Code. Для браузера те саме робить «Відкрити окремо» в розділі «Браузери», з власним профілем.
 
 # Open a terminal
 t4b629c72 = Відкрити термінал
+
+# In a terminal of your own, such as an editor's, this does the same:
+tb10fcc10 = У власному терміналі, наприклад у терміналі редактора, те саме робить це:
+
+# Node.js {version}, which this computer's terminals run, sends its requests straight out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of those, then open the terminal again.
+td5af8287 = Node.js { $version }, який запускають термінали цього комп'ютера, надсилає запити напряму, повз tracewing. Node читає проксі починаючи з 22.21 і 24.5: встановіть одну з цих версій і відкрийте термінал знову.
 
 # iPhone and iPad
 ta550cc97 = iPhone та iPad

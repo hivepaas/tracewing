@@ -45,10 +45,158 @@ pub struct Browser {
 
 /// Opens a terminal whose programs go through the proxy and trust its CA.
 pub fn open_terminal(addr: SocketAddr, ca_pem: &Path, data_dir: &Path) -> Result<()> {
+    let banner = format!("This terminal goes through tracewing at {addr}.");
+    os::open_terminal(&terminal_vars(addr, ca_pem, data_dir)?, &banner, data_dir)
+}
+
+/// What a terminal's programs read to go through the proxy, its bundle of
+/// roots written first: what Open a terminal sets, and what `tracewing env`
+/// says for a terminal of the user's own.
+pub fn terminal_vars(
+    addr: SocketAddr,
+    ca_pem: &Path,
+    data_dir: &Path,
+) -> Result<Vec<(&'static str, String)>> {
     let bundle = data_dir.join(TERMINAL_BUNDLE);
     write_bundle(ca_pem, &bundle)?;
-    let banner = format!("This terminal goes through tracewing at {addr}.");
-    os::open_terminal(&terminal_env(addr, ca_pem, &bundle), &banner, data_dir)
+    Ok(terminal_env(addr, ca_pem, &bundle))
+}
+
+/// A shell, for the lines that set variables in it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Shell {
+    /// sh, bash and zsh.
+    Sh,
+    Fish,
+    PowerShell,
+    /// Windows' `cmd`.
+    Cmd,
+}
+
+impl Shell {
+    /// What a terminal on this OS runs, most often.
+    pub fn native() -> Self {
+        if cfg!(windows) {
+            Self::PowerShell
+        } else {
+            Self::Sh
+        }
+    }
+
+    /// A line for each variable, which this shell runs to set it, quoted so
+    /// that a space or a quote in a path stays in it.
+    pub fn set(self, vars: &[(&str, String)]) -> String {
+        let mut out = String::new();
+        for (name, value) in vars {
+            let line = match self {
+                Self::Sh => format!("export {name}='{}'", value.replace('\'', r"'\''")),
+                Self::Fish => format!(
+                    "set -gx {name} '{}'",
+                    value.replace('\\', r"\\").replace('\'', r"\'")
+                ),
+                // An empty value takes the variable away, which for NO_PROXY
+                // is the same: nothing goes around the proxy.
+                Self::PowerShell => format!("$env:{name} = '{}'", value.replace('\'', "''")),
+                Self::Cmd => format!("set \"{name}={value}\""),
+            };
+            out.push_str(&line);
+            out.push('\n');
+        }
+        out
+    }
+}
+
+/// Whether Node.js of this version (`v22.17.1`, `22.17.1`) sends its requests
+/// through `HTTP_PROXY` and `HTTPS_PROXY` when `NODE_USE_ENV_PROXY` asks it
+/// to: from 22.21 and 24.5 on. 24.0 to 24.4 do it for `fetch` alone, which
+/// leaves out every library on `http` and `https`, so they count as not.
+/// `None` for what is no version.
+pub fn node_reads_proxy_env(version: &str) -> Option<bool> {
+    let mut parts = version.trim().trim_start_matches('v').split('.');
+    let major: u32 = parts.next()?.parse().ok()?;
+    let minor: u32 = parts.next()?.parse().ok()?;
+    Some(match major {
+        22 => minor >= 21,
+        24 => minor >= 5,
+        major => major >= 25,
+    })
+}
+
+/// The version of the Node.js a terminal would run, when that one sends its
+/// requests straight out whatever `HTTPS_PROXY` says. Asked of the user's
+/// own shell, started as a terminal starts it, since that is where nvm, fnm,
+/// Volta and Homebrew put Node on the `PATH` and an app opened from the
+/// desktop has none of them. On Windows, programs have the user's `PATH`.
+pub fn node_past_the_proxy() -> Option<String> {
+    #[cfg(unix)]
+    let version = {
+        let shell = std::env::var_os("SHELL").unwrap_or_else(|| "/bin/sh".into());
+        node_version_in(Path::new(&shell), std::time::Duration::from_secs(5))
+    };
+    #[cfg(windows)]
+    let version = node_version_here();
+    version.filter(|v| node_reads_proxy_env(v) == Some(false))
+}
+
+/// The version of the Node.js on this process's `PATH`: the one a program
+/// started from a terminal runs.
+pub fn node_version_here() -> Option<String> {
+    let mut command = Command::new("node");
+    command.arg("--version");
+    #[cfg(windows)]
+    std::os::windows::process::CommandExt::creation_flags(&mut command, 0x0800_0000);
+    let out = command
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    version_in(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// `node --version` as `shell` answers it, logged in and interactive as a
+/// terminal's is, so that its start-up files run. Given up after `wait`,
+/// with whatever it started, as such files can wait on a terminal it has not.
+#[cfg(unix)]
+fn node_version_in(shell: &Path, wait: std::time::Duration) -> Option<String> {
+    use std::io::Read;
+    let mut command = Command::new(shell);
+    command.args(["-l", "-i", "-c", "node --version"]);
+    std::os::unix::process::CommandExt::process_group(&mut command, 0);
+    let mut child = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    let deadline = std::time::Instant::now() + wait;
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) if std::time::Instant::now() < deadline => {
+                std::thread::sleep(std::time::Duration::from_millis(20))
+            }
+            _ => {
+                // The group: the shell and anything its files started.
+                let pid = child.id() as libc::pid_t;
+                // SAFETY: a signal to a process group of our own child's.
+                unsafe { libc::kill(-pid, libc::SIGKILL) };
+                let _ = child.wait();
+                return None;
+            }
+        }
+    }
+    let mut out = String::new();
+    child.stdout.take()?.read_to_string(&mut out).ok()?;
+    version_in(&out)
+}
+
+/// The last line that is a version, after whatever start-up files print.
+fn version_in(out: &str) -> Option<String> {
+    out.lines()
+        .rev()
+        .map(str::trim)
+        .find(|line| node_reads_proxy_env(line).is_some())
+        .map(|line| line.trim_start_matches('v').to_owned())
 }
 
 /// What a terminal's programs read. Most take a single file of every root
@@ -76,7 +224,8 @@ pub fn terminal_env(addr: SocketAddr, ca_pem: &Path, bundle: &Path) -> Vec<(&'st
         env.push((name, bundle.clone()));
     }
     env.push(("NODE_EXTRA_CA_CERTS", ca.clone()));
-    // Node reads HTTP_PROXY only when asked to (Node 24 and later).
+    // Node reads HTTP_PROXY only when asked to, and only from 22.21 and
+    // 24.5 on: see `node_reads_proxy_env`.
     env.push(("NODE_USE_ENV_PROXY", "1".to_owned()));
     env.push(("DENO_CERT", ca));
     env
@@ -320,6 +469,105 @@ mod tests {
         assert_eq!(get("NODE_EXTRA_CA_CERTS"), "/d/ca.pem");
         assert_eq!(get("NO_PROXY"), "", "localhost goes through too");
         assert_eq!(get("no_proxy"), "");
+    }
+
+    #[test]
+    fn node_reads_the_proxy_from_22_21_and_24_5() {
+        for (version, reads) in [
+            ("v20.19.0", false),
+            ("v22.17.1", false),
+            ("v22.20.9", false),
+            ("v22.21.0", true),
+            ("22.22.1", true),
+            ("v23.11.0", false),
+            ("v24.4.1", false),
+            ("v24.5.0", true),
+            ("v25.0.0", true),
+        ] {
+            assert_eq!(node_reads_proxy_env(version), Some(reads), "{version}");
+        }
+        assert_eq!(node_reads_proxy_env("command not found: node"), None);
+        assert_eq!(node_reads_proxy_env(""), None);
+    }
+
+    /// Paths with a space and a quote in them, as a home folder can have.
+    fn awkward() -> Vec<(&'static str, String)> {
+        vec![
+            (
+                "SSL_CERT_FILE",
+                r"/Users/O'Neil/My Data/roots.pem".to_owned(),
+            ),
+            ("NO_PROXY", String::new()),
+        ]
+    }
+
+    #[test]
+    fn each_shell_gets_lines_of_its_own() {
+        assert_eq!(
+            Shell::Sh.set(&awkward()),
+            "export SSL_CERT_FILE='/Users/O'\\''Neil/My Data/roots.pem'\nexport NO_PROXY=''\n"
+        );
+        assert_eq!(
+            Shell::Fish.set(&awkward()),
+            "set -gx SSL_CERT_FILE '/Users/O\\'Neil/My Data/roots.pem'\nset -gx NO_PROXY ''\n"
+        );
+        assert_eq!(
+            Shell::PowerShell.set(&awkward()),
+            "$env:SSL_CERT_FILE = '/Users/O''Neil/My Data/roots.pem'\n$env:NO_PROXY = ''\n"
+        );
+        assert_eq!(
+            Shell::Cmd.set(&[("HTTPS_PROXY", "http://127.0.0.1:9090".to_owned())]),
+            "set \"HTTPS_PROXY=http://127.0.0.1:9090\"\n"
+        );
+    }
+
+    /// sh itself reads the path back as it was.
+    #[cfg(unix)]
+    #[test]
+    fn sh_reads_the_lines_back_as_written() {
+        let script = format!("{}printf %s \"$SSL_CERT_FILE\"", Shell::Sh.set(&awkward()));
+        let out = Command::new("/bin/sh")
+            .args(["-c", &script])
+            .output()
+            .unwrap();
+        assert_eq!(
+            String::from_utf8_lossy(&out.stdout),
+            r"/Users/O'Neil/My Data/roots.pem"
+        );
+    }
+
+    /// A shell that says things as it starts, and one that never finishes.
+    #[cfg(unix)]
+    #[test]
+    fn node_is_asked_of_the_users_shell() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("tracewing-node-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let shell = |name: &str, body: &str| {
+            let path = dir.join(name);
+            fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
+            path
+        };
+        let wait = std::time::Duration::from_secs(5);
+        let chatty = shell(
+            "chatty",
+            r#"[ "$1 $2 $3 $4" = "-l -i -c node --version" ] || exit 9
+echo 'Welcome back!'
+echo v22.17.1
+echo"#,
+        );
+        assert_eq!(node_version_in(&chatty, wait).as_deref(), Some("22.17.1"));
+        let none = shell("none", "echo 'zsh: command not found: node'; exit 127");
+        assert_eq!(node_version_in(&none, wait), None);
+        let stuck = shell("stuck", "sleep 60 & sleep 60; echo v22.17.1");
+        let started = std::time::Instant::now();
+        assert_eq!(
+            node_version_in(&stuck, std::time::Duration::from_millis(300)),
+            None
+        );
+        assert!(started.elapsed() < std::time::Duration::from_secs(5));
+        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

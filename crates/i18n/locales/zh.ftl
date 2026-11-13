@@ -2098,11 +2098,17 @@ t88231e40 = 阻止 HTTP/3
 # Or one app at a time
 t91c63f1c = 或者逐个应用设置
 
-# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
-tc21013a9 = 一个经过 tracewing 的终端，系统代理和其他应用都保持原样。浏览器可用“浏览器”中的“单独打开”，以独立配置文件做到同样的事。
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
+t7168eeaa = 一个经过 tracewing 的终端，系统代理和其他应用都保持原样：curl、git、Python、Go，以及在其中启动的 Claude Code、Codex、Gemini CLI 等 AI 智能体都会经过。要让编辑器的 AI 工具也经过，请退出编辑器，再从该终端重新启动它，例如 VS Code 用 code .。浏览器可用“浏览器”中的“单独打开”，以独立配置文件做到同样的事。
 
 # Open a terminal
 t4b629c72 = 打开终端
+
+# In a terminal of your own, such as an editor's, this does the same:
+tb10fcc10 = 在你自己的终端中（例如编辑器内的），这行命令能做到同样的事：
+
+# Node.js {version}, which this computer's terminals run, sends its requests straight out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of those, then open the terminal again.
+td5af8287 = 这台电脑的终端所运行的 Node.js { $version } 会直接发出请求，不经过 tracewing。Node 从 22.21 和 24.5 起才读取代理：请安装其中一个版本，再重新打开终端。
 
 # iPhone and iPad
 ta550cc97 = iPhone 和 iPad

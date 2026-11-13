@@ -672,6 +672,7 @@ pub fn environment() -> Environment {
             .then(|| std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default()),
         no_certutil: (!on_path("certutil"))
             .then(|| certutil_package(&fs::read_to_string("/etc/os-release").unwrap_or_default())),
+        old_node: None,
     }
 }
 

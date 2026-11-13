@@ -2232,11 +2232,17 @@ t88231e40 = Bloquear HTTP/3
 # Or one app at a time
 t91c63f1c = O una app cada vez
 
-# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
-tc21013a9 = Una terminal que pasa por tracewing mientras el proxy del sistema y las demás apps quedan como están. Para un navegador, Abrir aparte en Navegadores hace lo mismo con un perfil propio.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
+t7168eeaa = Una terminal que pasa por tracewing mientras el proxy del sistema y las demás apps quedan como están: curl, git, Python, Go y agentes de IA como Claude Code, Codex o Gemini CLI iniciados en ella. Para que las herramientas de IA de un editor también pasen, cierra el editor y vuelve a abrirlo desde esa terminal, como hace code . con VS Code. Para un navegador, Abrir aparte en Navegadores hace lo mismo con un perfil propio.
 
 # Open a terminal
 t4b629c72 = Abrir un terminal
+
+# In a terminal of your own, such as an editor's, this does the same:
+tb10fcc10 = En una terminal propia, como la de un editor, esto hace lo mismo:
+
+# Node.js {version}, which this computer's terminals run, sends its requests straight out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of those, then open the terminal again.
+td5af8287 = Node.js { $version }, que ejecutan las terminales de este equipo, envía sus peticiones directamente, sin pasar por tracewing. Node lee el proxy a partir de 22.21 y 24.5: instala una de esas versiones y vuelve a abrir la terminal.
 
 # iPhone and iPad
 ta550cc97 = iPhone y iPad

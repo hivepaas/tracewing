@@ -27,7 +27,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Turn the system proxy on and off: macOS for an administrator, Windows per user, GNOME and KDE on Linux | Beta | Free |
 | macOS for a standard account, through a privileged helper (needs signed builds) | 1.0 | Free |
 | Put the system proxy back when tracewing quits or crashes (a watchdog, and a check at the next start) | Beta | Free |
-| Open a terminal or a browser that goes through tracewing, without touching the system proxy (environment variables; a separate profile for any Chromium-based browser or Firefox), servers on this computer (localhost) included | Beta | Free |
+| Open a terminal or a browser that goes through tracewing, without touching the system proxy (environment variables; a separate profile for any Chromium-based browser or Firefox), servers on this computer (localhost) included; `tracewing env` sets the same variables in a terminal of the user's own (sh, bash, zsh, fish, PowerShell, cmd), and Set up shows the line to run with the program's full path; a Node.js that ignores them (before 22.21, and 23 to 24.4) is named on Set up and by `tracewing env`. [Capturing an app](capturing.md) says which way takes which programs | Beta | Free |
 | Pause and resume capture | Beta | Free |
 | Hosts not to decrypt, tunneled untouched (Apple and Windows Update to start with) | Beta | Free |
 | Take offers of HTTP/3 (`Alt-Svc`) out of responses, so apps stay on HTTP/2 | Beta | Free |

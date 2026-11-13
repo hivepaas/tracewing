@@ -27,7 +27,7 @@ use tracewing_proxy::{
 use tracewing_system::{
     BrowserTrust, Scope,
     android::{Device, SetUp, Trust},
-    launch::Engine,
+    launch::{self, Engine},
 };
 
 /// The browser that sent a `User-Agent` and a `Sec-CH-UA`. Chromium's family
@@ -727,21 +727,84 @@ impl Traffic {
 
 impl Traffic {
     /// A terminal or a browser through tracewing, for when the system proxy
-    /// would take more than the one app being debugged.
+    /// would take more than the one app being debugged: a terminal opened
+    /// from here, or one of the user's own told by `tracewing env`. A Node.js
+    /// too old to read the proxy from the environment is said, as nothing on
+    /// it would show up and nothing else would say why.
     fn render_one_app(&mut self, cx: &mut Context<Self>) -> Div {
+        let exe = std::env::current_exe()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|_| "tracewing".to_owned());
+        let data_dir = (self.data_dir != tracewing_proxy::default_data_dir())
+            .then(|| self.data_dir.display().to_string());
+        let line = env_line(&exe, data_dir.as_deref(), launch::Shell::native());
+        let old_node = self.system.environment.old_node.clone();
         aside(
             tr!("Or one app at a time"),
             tr!(
                 "A terminal that goes through tracewing while the system proxy and every other \
-                 app are left as they are. For a browser, Open on its own in Browsers does the \
-                 same with a profile of its own."
+                 app are left as they are: curl, git, Python, Go, and AI agents such as Claude \
+                 Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, \
+                 quit the editor and start it again from that terminal, as code . does for VS \
+                 Code. For a browser, Open on its own in Browsers does the same with a profile \
+                 of its own."
             ),
         )
         .child(
             button("setup-terminal", tr!("Open a terminal"), false)
                 .on_click(cx.listener(|this, _, _, cx| this.open_terminal(cx))),
         )
+        .child(
+            div()
+                .w_full()
+                .flex()
+                .flex_col()
+                .gap(ui(8.))
+                .child(div().child(tr!(
+                    "In a terminal of your own, such as an editor's, this does the same:"
+                )))
+                .child(code_block("setup-env", line))
+                .when_some(old_node, |d, version| {
+                    d.child(marked(node_text(&version), Mark::Missing))
+                }),
+        )
     }
+}
+
+/// What a terminal of the user's own runs to go through tracewing:
+/// `tracewing env`, by the full path of this program, as an editor's terminal
+/// may not have it on its `PATH`, and with the data folder when it is not
+/// the one `env` reads by itself.
+pub fn env_line(exe: &str, data_dir: Option<&str>, shell: launch::Shell) -> String {
+    let quote = |text: &str| {
+        if text.contains(' ') {
+            format!("\"{text}\"")
+        } else {
+            text.to_owned()
+        }
+    };
+    let mut command = format!("{} env", quote(exe));
+    if let Some(dir) = data_dir {
+        command.push_str(&format!(" --data-dir {}", quote(dir)));
+    }
+    match shell {
+        launch::Shell::Sh => format!("eval \"$({command})\""),
+        launch::Shell::Fish => format!("{command} --shell fish | source"),
+        launch::Shell::PowerShell => format!("& {command} | Invoke-Expression"),
+        launch::Shell::Cmd => {
+            format!("for /f \"delims=\" %i in ('{command} --shell cmd') do %i")
+        }
+    }
+}
+
+/// Why a Node.js program in such a terminal does not show up.
+pub fn node_text(version: &str) -> String {
+    tr!(
+        "Node.js {version}, which this computer's terminals run, sends its requests straight \
+         out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of \
+         those, then open the terminal again.",
+        version = version
+    )
 }
 
 /// Which device's guide the Set up page shows.
@@ -1394,6 +1457,35 @@ impl Traffic {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_terminal_of_ones_own_is_told_how_to_go_through() {
+        let mac = "/Applications/tracewing.app/Contents/MacOS/tracewing";
+        assert_eq!(
+            env_line(mac, None, launch::Shell::Sh),
+            format!("eval \"$({mac} env)\"")
+        );
+        assert_eq!(
+            env_line(
+                "/opt/My Apps/tracewing",
+                Some("/d/my data"),
+                launch::Shell::Sh
+            ),
+            r#"eval "$("/opt/My Apps/tracewing" env --data-dir "/d/my data")""#
+        );
+        assert_eq!(
+            env_line(
+                r"C:\Program Files\tracewing\tracewing.exe",
+                None,
+                launch::Shell::PowerShell
+            ),
+            r#"& "C:\Program Files\tracewing\tracewing.exe" env | Invoke-Expression"#
+        );
+        assert_eq!(
+            env_line("tracewing", None, launch::Shell::Fish),
+            "tracewing env --shell fish | source"
+        );
+    }
 
     #[test]
     fn ai_tools_are_told_how_to_start_the_server() {

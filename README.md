@@ -14,6 +14,7 @@
   <a href="https://tracewing.app"><b>tracewing.app</b></a> ·
   <a href="https://tracewing.app/#get">Download</a> ·
   <a href="docs/features.md">Features</a> ·
+  <a href="docs/capturing.md">Capturing an app</a> ·
   <a href="docs/scripts.md">Scripts</a>
 </p>
 
@@ -64,6 +65,7 @@ tracewing's first release, 0.1, is on its way: it will be at **[tracewing.app](h
 tracewing capture --seconds 60 --har api.har
 tracewing sessions
 tracewing export --har today.har --filter "host:api.example.com"
+eval "$(tracewing env)"           # this shell's programs through tracewing
 tracewing recover                 # no network after tracewing was killed? this
 tracewing uninstall               # before removing tracewing: stop trusting its CA
 ```
@@ -124,7 +126,7 @@ back, which is what the macOS agent runs.
 make release
 ```
 
-Then point an app at `127.0.0.1:9090`. What it needs, the tests and a server to try it on: [docs/building.md](docs/building.md).
+Then point an app at `127.0.0.1:9090`: [docs/capturing.md](docs/capturing.md) says how, for browsers, command-line tools and AI agents. What it needs, the tests and a server to try it on: [docs/building.md](docs/building.md).
 
 ## 🐝 Made by HivePaaS
 

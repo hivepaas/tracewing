@@ -2216,11 +2216,17 @@ t88231e40 = HTTP/3 blockieren
 # Or one app at a time
 t91c63f1c = Oder eine App nach der anderen
 
-# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
-tc21013a9 = Ein Terminal, das über tracewing geht, während der Systemproxy und alle anderen Apps bleiben, wie sie sind. Für einen Browser tut Separat öffnen unter Browser dasselbe, mit einem eigenen Profil.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
+t7168eeaa = Ein Terminal, das über tracewing geht, während der Systemproxy und alle anderen Apps bleiben, wie sie sind: curl, git, Python, Go und KI-Agenten wie Claude Code, Codex oder Gemini CLI, die darin gestartet werden. Damit die KI-Tools eines Editors mitkommen, beende den Editor und starte ihn aus diesem Terminal neu, wie es code . für VS Code tut. Für einen Browser tut Separat öffnen unter Browser dasselbe, mit einem eigenen Profil.
 
 # Open a terminal
 t4b629c72 = Terminal öffnen
+
+# In a terminal of your own, such as an editor's, this does the same:
+tb10fcc10 = In einem eigenen Terminal, etwa dem eines Editors, tut dies dasselbe:
+
+# Node.js {version}, which this computer's terminals run, sends its requests straight out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of those, then open the terminal again.
+td5af8287 = Node.js { $version }, das die Terminals dieses Computers ausführen, schickt seine Anfragen direkt hinaus, an tracewing vorbei. Node liest den Proxy ab 22.21 und 24.5: Installiere eine dieser Versionen und öffne das Terminal dann erneut.
 
 # iPhone and iPad
 ta550cc97 = iPhone und iPad

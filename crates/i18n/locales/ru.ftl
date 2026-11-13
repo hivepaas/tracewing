@@ -2302,11 +2302,17 @@ t88231e40 = Блокировать HTTP/3
 # Or one app at a time
 t91c63f1c = Или по одному приложению
 
-# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
-tc21013a9 = Терминал, который идёт через tracewing, а системный прокси и остальные приложения остаются как есть. Для браузера то же самое делает «Открыть отдельно» в разделе «Браузеры», с собственным профилем.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
+t7168eeaa = Терминал, который идёт через tracewing, а системный прокси и остальные приложения остаются как есть: curl, git, Python, Go и ИИ-агенты вроде Claude Code, Codex или Gemini CLI, запущенные в нём. Чтобы через tracewing шли и ИИ-инструменты редактора, закройте редактор и запустите его снова из этого терминала, как делает code . для VS Code. Для браузера то же самое делает «Открыть отдельно» в разделе «Браузеры», с собственным профилем.
 
 # Open a terminal
 t4b629c72 = Открыть терминал
+
+# In a terminal of your own, such as an editor's, this does the same:
+tb10fcc10 = В своём терминале, например в терминале редактора, то же самое делает это:
+
+# Node.js {version}, which this computer's terminals run, sends its requests straight out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of those, then open the terminal again.
+td5af8287 = Node.js { $version }, который запускают терминалы этого компьютера, отправляет запросы напрямую, мимо tracewing. Node читает прокси начиная с 22.21 и 24.5: установите одну из этих версий и откройте терминал заново.
 
 # iPhone and iPad
 ta550cc97 = iPhone и iPad

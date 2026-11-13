@@ -2098,11 +2098,17 @@ t88231e40 = Blokir HTTP/3
 # Or one app at a time
 t91c63f1c = Atau satu aplikasi saja
 
-# A terminal that goes through tracewing while the system proxy and every other app are left as they are. For a browser, Open on its own in Browsers does the same with a profile of its own.
-tc21013a9 = Terminal yang lewat tracewing, sementara proxy sistem dan semua app lain dibiarkan apa adanya. Untuk browser, Buka terpisah di Browser melakukan hal yang sama dengan profil sendiri.
+# A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
+t7168eeaa = Terminal yang lewat tracewing, sementara proxy sistem dan semua app lain dibiarkan apa adanya: curl, git, Python, Go, dan agen AI seperti Claude Code, Codex, atau Gemini CLI yang dijalankan di dalamnya. Agar alat AI sebuah editor ikut lewat, tutup editor itu lalu jalankan lagi dari terminal tersebut, seperti code . untuk VS Code. Untuk browser, Buka terpisah di Browser melakukan hal yang sama dengan profil sendiri.
 
 # Open a terminal
 t4b629c72 = Buka terminal
+
+# In a terminal of your own, such as an editor's, this does the same:
+tb10fcc10 = Di terminal Anda sendiri, misalnya terminal editor, ini melakukan hal yang sama:
+
+# Node.js {version}, which this computer's terminals run, sends its requests straight out and past tracewing. Node reads the proxy from 22.21 and 24.5 on: install one of those, then open the terminal again.
+td5af8287 = Node.js { $version }, yang dijalankan terminal di komputer ini, mengirim permintaannya langsung keluar tanpa lewat tracewing. Node membaca proxy mulai 22.21 dan 24.5: instal salah satunya, lalu buka terminal lagi.
 
 # iPhone and iPad
 ta550cc97 = iPhone dan iPad
