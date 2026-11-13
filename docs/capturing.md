@@ -15,6 +15,20 @@ programs, and none of them takes all.
 The two last leave the system proxy and every other app alone, which is what
 to use when only one program is being looked at.
 
+## The system proxy is not one setting
+
+It is a different thing on each system, and what has to obey it differs with
+it:
+
+| | What tracewing sets | What follows it |
+|---|---|---|
+| **macOS** | SystemConfiguration, per network service | CFNetwork and URLSession, so Safari and Mac apps. `localhost` and `127.0.0.1` go straight out whatever it says |
+| **Windows** | WinInet, **per user** | WinInet and WinHTTP as they come, Chromium, .NET, Office. A service running as SYSTEM has its own setting (`netsh winhttp set proxy`), and local addresses are left out by default |
+| **Linux** | GSettings for GNOME, the config file for KDE | only what reads them: Chromium, Electron, GNOME's own apps. **Linux has no proxy setting at the level of the system**, and a terminal knows nothing of this one |
+
+So on Linux the system proxy reaches the least, and a terminal or a browser on
+its own is usually the better way in.
+
 ## Browsers
 
 **Open on its own** starts the browser in a profile kept for tracewing, pointed
@@ -70,7 +84,47 @@ What does not come through, although started in such a terminal:
 - **Java**, which reads neither: start it with
   `-Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9090`, and add tracewing's
   `ca.pem` to the keystore it uses.
-- A program that pins a server's certificate, which no proxy can decrypt.
+- **The Docker daemon**, which does not inherit the terminal's environment: it
+  takes a systemd drop-in of its own, and a container needs `--network host`
+  and tracewing's authority inside the image.
+- **A Windows service running as SYSTEM**, which reads neither this terminal
+  nor the user's own proxy setting: `netsh winhttp set proxy`.
+- **WSL**, which has a network stack of its own: set the variables in the WSL
+  shell, pointed at the Windows host's address rather than `127.0.0.1`.
+
+## Where a program looks for authorities
+
+A program can come through tracewing and still turn its certificate down, and
+the two are worth telling apart: the tables above are about what *reaches*
+tracewing, and this one is about what *trusts* it. A program that carries its
+own list of authorities is not helped by the authority being installed on the
+computer.
+
+| | Where it looks | What makes it work |
+|---|---|---|
+| Safari, Mac and Windows apps, Chrome and Edge, Go on macOS and Windows | the system's store | Set up, step 1. `SSL_CERT_FILE` is not read there, so Go on those two needs the authority installed |
+| **Firefox**, every profile its own | NSS, one store per profile | Set up installs it into each profile it finds, the one **Open on its own** makes included |
+| **Python** `requests`, `httpx`, `pip` | `certifi` | `REQUESTS_CA_BUNDLE` or `SSL_CERT_FILE`, both of which a terminal sets |
+| **Node.js**, Deno, Bun | roots built into the binary | `NODE_EXTRA_CA_CERTS`, `DENO_CERT`, which a terminal sets; `--use-system-ca` on a new enough Node |
+| **Java** | its own `cacerts` | `keytool -importcert`, or `-Djavax.net.ssl.trustStore` |
+| **Flutter and Dart** | BoringSSL's own list | a `SecurityContext` in the app's code |
+| A **Rust** program on rustls with `webpki-roots` | roots compiled in | nothing from outside: it has to be built against `rustls-native-certs` |
+
+## What no way in can reach
+
+- **A program that pins a server's certificate.** tracewing can tunnel it
+  untouched and show the connection, and that is all anyone can honestly do.
+- **Anything that is not HTTP**: DNS, SSH, SMTP, raw TCP and UDP, WebRTC.
+- **A client that insists on HTTP/3.** tracewing takes `Alt-Svc` out of
+  responses and can block UDP 443 so that clients fall back to HTTP/2; one
+  that refuses to fall back is out of reach until HTTP/3 is built.
+- **The system's own traffic** — Windows Update, `softwareupdate`, Apple
+  push — which tracewing tunnels untouched on purpose: decrypting it breaks
+  updates and tells nobody anything.
+
+Every "does not" on this page has the same root: tracewing waits to be told
+about. Taking traffic without any of that, from apps that were never told, is
+designed in [design/capture-modes.md](design/capture-modes.md).
 
 ## AI agents
 
