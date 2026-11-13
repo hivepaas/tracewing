@@ -70,6 +70,10 @@ const SAVE_BOUNDS: Duration = Duration::from_millis(400);
 const THUMB_MIN: f32 = 28.;
 /// The least the inspector's - button leaves of it, wide or high, in pixels.
 pub const PANE_MIN: f32 = 100.;
+/// The most of the sidebar's height its apps and its devices take; the hosts
+/// have the rest.
+const APPS_SHARE: f32 = 0.3;
+const DEVICES_SHARE: f32 = 0.2;
 /// A divider between panels, at the design's size.
 const SPLITTER_W: f32 = 10.;
 /// The least the inspector's - and + buttons move it by, in pixels.
@@ -400,6 +404,9 @@ pub struct Traffic {
     /// The font families on this computer, read once when a font chosen in
     /// Settings needs them.
     pub(crate) installed_fonts: Option<Vec<String>>,
+    /// The sidebar's lists, each scrolled by itself under a heading that
+    /// stays: apps, devices, hosts.
+    pub sidebar_scrolls: [crate::scrollbar::Scrolled; 3],
     /// The inspector was pressed in last, rather than the list: Ctrl+F then
     /// finds in it.
     pub(crate) inspector_active: bool,
@@ -563,6 +570,7 @@ impl Traffic {
             }),
             going: false,
             installed_fonts: None,
+            sidebar_scrolls: Default::default(),
             inspector_active: false,
             mono_fonts: None,
             network_form: None,
@@ -2179,71 +2187,76 @@ impl Traffic {
                         .child(group_digits(count)),
                 )
         };
-        div()
-            .id("hosts")
-            .w(ui(self.layout.sidebar_w))
-            .flex_shrink_0()
-            .h_full()
-            .p(ui(8.))
-            .rounded(ui(22.))
-            .flex()
-            .flex_col()
-            .gap(ui(2.))
-            .overflow_y_scroll()
-            .bg(rgb(c.surface))
-            .when(!self.apps.is_empty(), |d| {
-                d.child(
-                    div()
-                        .flex()
-                        .px(ui(6.))
-                        .py(ui(4.))
-                        .child(section_badge(tr!("Apps"))),
-                )
-                .children(self.apps.iter().map(|(app, count)| {
-                    let on = chosen_app.as_deref() == Some(app.as_ref());
-                    let name = app.to_string();
-                    line(format!("app-{app}").into(), app.clone(), *count, on).on_click(
-                        cx.listener(move |this, _, _, cx| {
-                            let next = (this.filter.exact_app.as_deref() != Some(name.as_str()))
-                                .then(|| name.clone());
-                            this.set_app(next, cx);
-                        }),
-                    )
-                }))
-                .child(div().h(ui(8.)).flex_shrink_0())
+        // Each section's heading stays; its list scrolls by itself under it,
+        // with a bar. Apps and devices take at most a share, the hosts the
+        // rest.
+        let [apps_scroll, devices_scroll, hosts_scroll] = self.sidebar_scrolls.clone();
+        let list = |id: &'static str, scroll: &crate::scrollbar::Scrolled| {
+            let scrolls = scroll.handle.max_offset().y > px(0.);
+            div()
+                .id(id)
+                .flex()
+                .flex_col()
+                .gap(ui(2.))
+                .min_h_0()
+                .overflow_y_scroll()
+                .track_scroll(&scroll.handle)
+                .when(scrolls, |d| d.pr(px(BAR_W)))
+        };
+        let section =
+            |share: Option<f32>, list: Stateful<Div>, scroll: &crate::scrollbar::Scrolled| {
+                div()
+                    .relative()
+                    .flex()
+                    .flex_col()
+                    .min_h_0()
+                    .map(|d| match share {
+                        Some(share) => d.flex_shrink_0().max_h(gpui::relative(share)),
+                        None => d.flex_1(),
+                    })
+                    .child(list.when(share.is_none(), |d| d.flex_1()))
+                    .children(scroll.bars())
+            };
+        let heading = |name: String| {
+            div()
+                .flex()
+                .flex_shrink_0()
+                .px(ui(6.))
+                .py(ui(4.))
+                .child(section_badge(name))
+        };
+        let apps: Vec<_> = self
+            .apps
+            .iter()
+            .map(|(app, count)| {
+                let on = chosen_app.as_deref() == Some(app.as_ref());
+                let name = app.to_string();
+                line(format!("app-{app}").into(), app.clone(), *count, on).on_click(cx.listener(
+                    move |this, _, _, cx| {
+                        let next = (this.filter.exact_app.as_deref() != Some(name.as_str()))
+                            .then(|| name.clone());
+                        this.set_app(next, cx);
+                    },
+                ))
             })
-            .when(!self.device_counts.is_empty(), |d| {
-                d.child(
-                    div()
-                        .flex()
-                        .px(ui(6.))
-                        .py(ui(4.))
-                        .child(section_badge(tr!("Devices"))),
-                )
-                .children(self.device_counts.iter().map(|(ip, count)| {
-                    let on = chosen_device.as_deref() == Some(ip.as_ref());
-                    let shown: SharedString = self.devices.shown(ip).to_owned().into();
-                    let ip = ip.to_string();
-                    line(format!("device-{ip}").into(), shown, *count, on).on_click(cx.listener(
-                        move |this, _, _, cx| {
-                            let next = (this.filter.exact_device.as_deref() != Some(ip.as_str()))
-                                .then(|| ip.clone());
-                            this.set_device(next, cx);
-                        },
-                    ))
-                }))
-                .child(div().h(ui(8.)).flex_shrink_0())
+            .collect();
+        let devices: Vec<_> = self
+            .device_counts
+            .iter()
+            .map(|(ip, count)| {
+                let on = chosen_device.as_deref() == Some(ip.as_ref());
+                let shown: SharedString = self.devices.shown(ip).to_owned().into();
+                let ip = ip.to_string();
+                line(format!("device-{ip}").into(), shown, *count, on).on_click(cx.listener(
+                    move |this, _, _, cx| {
+                        let next = (this.filter.exact_device.as_deref() != Some(ip.as_str()))
+                            .then(|| ip.clone());
+                        this.set_device(next, cx);
+                    },
+                ))
             })
-            .child(self.render_hosts_heading(cx))
-            .child(
-                line(
-                    "all-hosts".into(),
-                    tr!("All hosts").into(),
-                    total,
-                    chosen.is_none(),
-                )
-                .on_click(cx.listener(|this, _, _, cx| this.set_host(None, cx))),
-            )
+            .collect();
+        let hosts = list("host-list", &hosts_scroll)
             .when(none_match, |d| {
                 d.child(
                     div()
@@ -2266,19 +2279,54 @@ impl Traffic {
             }))
             .when(!hidden.is_empty(), |d| {
                 d.child(div().h(ui(8.)).flex_shrink_0())
-                    .child(
-                        div()
-                            .flex()
-                            .px(ui(6.))
-                            .py(ui(4.))
-                            .child(section_badge(tr!("Hidden"))),
-                    )
+                    .child(heading(tr!("Hidden")))
                     .children(
                         hidden
                             .into_iter()
                             .map(|host| self.host_line(host, false, true, cx)),
                     )
+            });
+        div()
+            .id("hosts")
+            .w(ui(self.layout.sidebar_w))
+            .flex_shrink_0()
+            .h_full()
+            .p(ui(8.))
+            .rounded(ui(22.))
+            .flex()
+            .flex_col()
+            .gap(ui(2.))
+            .overflow_hidden()
+            .bg(rgb(c.surface))
+            .when(!apps.is_empty(), |d| {
+                d.child(heading(tr!("Apps")))
+                    .child(section(
+                        Some(APPS_SHARE),
+                        list("app-list", &apps_scroll).children(apps),
+                        &apps_scroll,
+                    ))
+                    .child(div().h(ui(8.)).flex_shrink_0())
             })
+            .when(!devices.is_empty(), |d| {
+                d.child(heading(tr!("Devices")))
+                    .child(section(
+                        Some(DEVICES_SHARE),
+                        list("device-list", &devices_scroll).children(devices),
+                        &devices_scroll,
+                    ))
+                    .child(div().h(ui(8.)).flex_shrink_0())
+            })
+            .child(self.render_hosts_heading(cx).flex_shrink_0())
+            .child(
+                line(
+                    "all-hosts".into(),
+                    tr!("All hosts").into(),
+                    total,
+                    chosen.is_none(),
+                )
+                .on_click(cx.listener(|this, _, _, cx| this.set_host(None, cx))),
+            )
+            .child(section(None, hosts, &hosts_scroll))
     }
 
     /// "Hosts", and a field beside it that narrows them by name. Escape

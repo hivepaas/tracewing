@@ -79,7 +79,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 |---|---|---|
 | A million flows scroll at the display's refresh rate | Gate 0 | Free |
 | Columns to show, hide, resize and sort | Beta | Free |
-| A sidebar of hosts and devices; pin a host, hide a noisy one | Beta | Free |
+| A sidebar of apps, devices and hosts; pin a host, hide a noisy one. Each list scrolls by itself, with a scroll bar, under a heading that stays: Apps and Devices take at most a share of the height, the hosts the rest, under their filter and All hosts | Beta | Free |
 | Filter by host, method, status class, gRPC status, JSON-RPC method and type; search every URL and body | Beta | Free |
 | Sessions: name them, keep them, open them again; start a new one without restarting, which is how recording leaves a session you want to delete and how it comes back after the proxy has stopped; one that cannot be read says which it is — written by another version, or damaged — and a check reads its pages and says what SQLite found, when you ask for it | Beta | Free |
 | A size limit per session, oldest flows dropped first | Beta | Free |
