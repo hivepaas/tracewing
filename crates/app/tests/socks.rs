@@ -34,9 +34,13 @@ fn a_free_port() -> u16 {
 /// Each test here starts a proxy of its own, so each needs a port range of
 /// its own: the app takes the first free port in the range, and two test
 /// binaries given the same range will mostly miss each other and sometimes
-/// not. Every other file under `tests/` claims one range of ten, and the
-/// ranges in use end at `sidebar.rs`'s 20_480..20_490, so these three carry
-/// on from there.
+/// not. Every other file under `tests/` claims one range of ten, and these
+/// three carry on above the last of them.
+///
+/// The three, in the form a grep for the ranges in use will match, because
+/// this file passes them as arguments where every other file gives them to
+/// `EngineOptions` by name: `ports: 20_490..20_500`, `ports: 20_500..20_510`,
+/// `ports: 20_510..20_520`.
 ///
 /// A new test file takes the **next free ten above the top**, not a hole in
 /// the middle: the ranges are only greppable in the `ports:` form, and the
