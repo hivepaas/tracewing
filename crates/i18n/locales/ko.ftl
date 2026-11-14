@@ -1690,6 +1690,18 @@ t13e626b3 = 다른 기기에서 프록시 사용 허용
 # Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
 t76098911 = 네트워크에 있는 휴대폰과 다른 컴퓨터가 트래픽을 여기로 보낼 수 있게 됩니다. 같은 네트워크의 다른 사람도 마찬가지이므로, 신뢰할 수 없는 네트워크에서는 꺼 두세요.
 
+# Open a SOCKS5 port as well
+t376ca181 = SOCKS5 포트도 열기
+
+# For programs that speak SOCKS and not HTTP proxying: anything that reads ALL_PROXY, Firefox's own SOCKS setting, proxychains. Takes effect when tracewing starts again.
+tec249023 = HTTP 프록시가 아니라 SOCKS를 쓰는 프로그램을 위한 것입니다. ALL_PROXY를 읽는 모든 것, Firefox 자체 SOCKS 설정, proxychains. tracewing을 다시 시작하면 적용됩니다.
+
+# The port it listens on
+tce1108b9 = 수신 대기할 포트
+
+# 1080 is the port a SOCKS client picks when it is told nothing else. This computer only: other devices use the proxy port, whatever this says.
+tae174540 = 따로 지정하지 않으면 SOCKS 클라이언트는 1080을 고릅니다. 이 컴퓨터만 해당합니다. 다른 기기는 여기에 무엇이 적혀 있든 프록시 포트를 씁니다.
+
 # Servers
 tcd0cf113 = 서버
 

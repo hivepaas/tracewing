@@ -57,6 +57,32 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
             )],
         ),
         (
+            SettingsSection::Network,
+            // The protocol's name, as in the relay settings: not translated.
+            "SOCKS5".to_owned(),
+            vec![
+                row(
+                    "socks",
+                    tr!("Open a SOCKS5 port as well"),
+                    tr!(
+                        "For programs that speak SOCKS and not HTTP proxying: anything that reads \
+                         ALL_PROXY, Firefox's own SOCKS setting, proxychains. Takes effect when \
+                         tracewing starts again."
+                    ),
+                    "",
+                ),
+                row(
+                    "socks_port",
+                    tr!("The port it listens on"),
+                    tr!(
+                        "1080 is the port a SOCKS client picks when it is told nothing else. This \
+                         computer only: other devices use the proxy port, whatever this says."
+                    ),
+                    "",
+                ),
+            ],
+        ),
+        (
             SettingsSection::Certificates,
             tr!("Servers"),
             vec![row(
@@ -965,6 +991,10 @@ impl Traffic {
         };
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);
+        // A port the settings asked for that could not be opened. Said under
+        // the switch that asked for it, and said as it came: the address and
+        // the reason the system gave, which no wrapper of ours improves.
+        let socks_problem = self.engine.socks_problem.clone();
         // A problem shows under the setting being changed, or else at the top.
         let problem_under = page.problem.as_ref().and(page.editing);
         let field_of = |key: &str| {
@@ -1099,6 +1129,11 @@ impl Traffic {
                                         .text_color(rgb(c.muted))
                                         .child(row.help),
                                 )
+                                .when(key == "socks", |d| {
+                                    d.children(socks_problem.clone().map(|why| {
+                                        div().text_size(ui(12.)).text_color(rgb(c.error)).child(why)
+                                    }))
+                                })
                                 .when(problem_under == Some(key), |d| {
                                     d.children(page.problem.clone().map(|problem| {
                                         div()

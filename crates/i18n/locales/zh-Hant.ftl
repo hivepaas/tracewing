@@ -1690,6 +1690,18 @@ t13e626b3 = 允許其他裝置使用代理伺服器
 # Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
 t76098911 = 開啟後，你網路中的手機和其他電腦可以將流量傳送到這裡。但同一網路中的任何人也都可以：在不信任的網路上請保持關閉。
 
+# Open a SOCKS5 port as well
+t376ca181 = 同時開一個 SOCKS5 連接埠
+
+# For programs that speak SOCKS and not HTTP proxying: anything that reads ALL_PROXY, Firefox's own SOCKS setting, proxychains. Takes effect when tracewing starts again.
+tec249023 = 給說 SOCKS 而不走 HTTP 代理的程式：讀 ALL_PROXY 的一切、Firefox 自己的 SOCKS 設定、proxychains。重新啟動 tracewing 後生效。
+
+# The port it listens on
+tce1108b9 = 它監聽的連接埠
+
+# 1080 is the port a SOCKS client picks when it is told nothing else. This computer only: other devices use the proxy port, whatever this says.
+tae174540 = 沒有另行指定時，SOCKS 用戶端會選 1080。僅限這台電腦：其他裝置無論這裡寫什麼都走代理連接埠。
+
 # Servers
 tcd0cf113 = 伺服器
 

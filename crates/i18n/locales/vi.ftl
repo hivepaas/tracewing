@@ -1690,6 +1690,18 @@ t13e626b3 = Cho thiết bị khác dùng proxy
 # Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
 t76098911 = Điện thoại và máy tính khác trong mạng của bạn có thể gửi traffic qua đây. Bất kỳ ai khác trong mạng cũng vậy: hãy tắt khi ở mạng không tin cậy.
 
+# Open a SOCKS5 port as well
+t376ca181 = Mở thêm một cổng SOCKS5
+
+# For programs that speak SOCKS and not HTTP proxying: anything that reads ALL_PROXY, Firefox's own SOCKS setting, proxychains. Takes effect when tracewing starts again.
+tec249023 = Dành cho các chương trình nói SOCKS chứ không nói proxy HTTP: bất cứ thứ gì đọc ALL_PROXY, cài đặt SOCKS riêng của Firefox, proxychains. Có hiệu lực khi tracewing khởi động lại.
+
+# The port it listens on
+tce1108b9 = Cổng nó lắng nghe
+
+# 1080 is the port a SOCKS client picks when it is told nothing else. This computer only: other devices use the proxy port, whatever this says.
+tae174540 = 1080 là cổng một client SOCKS chọn khi không được chỉ định gì khác. Chỉ máy này: thiết bị khác vẫn dùng cổng proxy, bất kể ở đây ghi gì.
+
 # Servers
 tcd0cf113 = Server
 

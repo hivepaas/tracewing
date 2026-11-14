@@ -11,6 +11,7 @@ programs, and none of them takes all.
 | **The system proxy** — Set up, step 2 | Safari, Chrome and Edge as they are, Mac and Windows apps, desktop apps built on Electron (Claude, ChatGPT, Cursor, Slack, Discord) | Command-line tools; on macOS, `localhost` and `127.0.0.1` |
 | **A browser on its own** — Set up › Browsers › Open on its own | Chrome, Edge, Brave, Opera, Chromium and Firefox, in a profile of tracewing's, servers on this computer included | Safari, which has no such profile |
 | **A terminal** — Set up › Open a terminal, or `tracewing env` | What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code, Codex and Gemini CLI | Node.js before 22.21, and 23 to 24.4; Java |
+| **A SOCKS5 port** — Settings › SOCKS5 | What speaks SOCKS: anything reading `ALL_PROXY`, `git` with a `socks5h://` proxy, Firefox's own SOCKS setting, proxychains | Programs that read only `HTTP_PROXY` and `HTTPS_PROXY`, and anything with no SOCKS setting of its own |
 
 The two last leave the system proxy and every other app alone, which is what
 to use when only one program is being looked at.
@@ -97,6 +98,31 @@ What does not come through, although started in such a terminal:
   shell, pointed at the Windows host's address rather than `127.0.0.1` —
   unless it runs with `networkingMode=mirrored` (Windows 11 22H2 and after),
   where `127.0.0.1` does reach the host.
+
+## A SOCKS5 port
+
+Some programs speak SOCKS and not HTTP proxying, and some speak both but are
+more easily told about SOCKS. **Settings › SOCKS5** opens a port for them: off
+by default, 1080 unless another number is given, and on this computer only
+whatever **Other devices** says — a SOCKS5 port asks for no password and will
+connect wherever a client names. It is read when tracewing starts, so the
+switch takes effect at the next start.
+
+```sh
+ALL_PROXY=socks5h://127.0.0.1:1080 curl https://example.com
+git -c http.proxy=socks5h://127.0.0.1:1080 clone https://example.com/repo.git
+```
+
+The `h` is worth the keystroke: `socks5h://` leaves the name for tracewing to
+look up, so the flow is recorded as `example.com`, while plain `socks5://`
+resolves the name in the client and sends an address, which is what the flow
+is then named by. Firefox does the same thing with **Proxy DNS when using
+SOCKS v5** in its own Network Settings, and proxychains with `proxy_dns` in
+its configuration file.
+
+This is another place to tell a program about a proxy, not a way around a
+program that cannot be told at all. Those are in
+[design/capture-modes.md](design/capture-modes.md).
 
 ## Where a program looks for authorities
 

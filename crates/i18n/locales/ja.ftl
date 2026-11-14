@@ -1690,6 +1690,18 @@ t13e626b3 = 他のデバイスにプロキシの使用を許可
 # Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
 t76098911 = ネットワーク上のスマートフォンや他のコンピュータから、トラフィックをここに送れるようになります。同じネットワーク上の誰でも送れるため、信頼できないネットワークではオフにしておいてください。
 
+# Open a SOCKS5 port as well
+t376ca181 = SOCKS5 ポートも開く
+
+# For programs that speak SOCKS and not HTTP proxying: anything that reads ALL_PROXY, Firefox's own SOCKS setting, proxychains. Takes effect when tracewing starts again.
+tec249023 = HTTP プロキシではなく SOCKS を話すプログラムのために。ALL_PROXY を読むもの、Firefox 独自の SOCKS 設定、proxychains。tracewing の再起動後に有効になります。
+
+# The port it listens on
+tce1108b9 = 待ち受けるポート
+
+# 1080 is the port a SOCKS client picks when it is told nothing else. This computer only: other devices use the proxy port, whatever this says.
+tae174540 = ほかに指示がなければ、SOCKS クライアントは 1080 を選びます。このコンピュータのみ。他のデバイスは、ここに何を書いてもプロキシのポートを使います。
+
 # Servers
 tcd0cf113 = サーバー
 

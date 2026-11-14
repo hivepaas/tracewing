@@ -1814,6 +1814,18 @@ t13e626b3 = Autoriser les autres appareils à utiliser le proxy
 # Phones and other computers on your network can then send their traffic here. So can anyone else on it: leave this off on a network you do not trust.
 t76098911 = Les téléphones et autres ordinateurs de votre réseau peuvent alors envoyer leur trafic ici. Tout autre utilisateur du réseau aussi : laissez cette option désactivée sur un réseau auquel vous ne faites pas confiance.
 
+# Open a SOCKS5 port as well
+t376ca181 = Ouvrir aussi un port SOCKS5
+
+# For programs that speak SOCKS and not HTTP proxying: anything that reads ALL_PROXY, Firefox's own SOCKS setting, proxychains. Takes effect when tracewing starts again.
+tec249023 = Pour les programmes qui parlent SOCKS et non le proxy HTTP : tout ce qui lit ALL_PROXY, le réglage SOCKS propre à Firefox, proxychains. Prend effet au prochain démarrage de tracewing.
+
+# The port it listens on
+tce1108b9 = Le port sur lequel il écoute
+
+# 1080 is the port a SOCKS client picks when it is told nothing else. This computer only: other devices use the proxy port, whatever this says.
+tae174540 = 1080 est le port qu'un client SOCKS choisit quand rien d'autre ne lui est indiqué. Cet ordinateur seulement : les autres appareils utilisent le port du proxy, quoi qu'indique celui-ci.
+
 # Servers
 tcd0cf113 = Serveurs
 

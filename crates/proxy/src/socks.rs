@@ -1,6 +1,9 @@
 //! SOCKS5 in: tracewing as a proxy a client was told to use, for the programs
 //! that speak SOCKS and not HTTP proxying — anything reading `ALL_PROXY`,
-//! Firefox's own SOCKS setting, `ssh -D`, proxychains.
+//! Firefox's own SOCKS setting, `git` with a `socks5h://` proxy, proxychains.
+//! Not `ssh -D`, which an earlier version of this line had wrong: that makes
+//! ssh a SOCKS proxy of its own, and what it serves is what can be pointed
+//! here instead.
 //!
 //! It is a source of taken connections rather than a second proxy port,
 //! because once the handshake is over a SOCKS client says nothing further
@@ -59,25 +62,67 @@ const NO_ADDRESS: u8 = 8;
 const HANDSHAKE_WITHIN: Duration = Duration::from_secs(10);
 
 /// A SOCKS5 port of tracewing's own.
-pub struct Socks(TcpListener);
+pub struct Socks(Bound);
+
+/// Which runtime the port was bound in. The app binds its ports before the
+/// proxy's runtime exists, so that the window can say at once that a port was
+/// taken rather than report it from inside a thread; a tool or a test binds
+/// inside the runtime it is already in. `TcpListener::from_std` needs a
+/// runtime, so which it is has to survive until [`Source::start`], which runs
+/// in one. The proxy port does the same thing through `ProxyOptions`.
+enum Bound {
+    Runtime(TcpListener),
+    Std(std::net::TcpListener),
+}
 
 impl Socks {
+    /// Bound inside the runtime the proxy runs in.
     pub fn new(listener: TcpListener) -> Self {
-        Self(listener)
+        Self(Bound::Runtime(listener))
+    }
+
+    /// Bound before that runtime started, as the app does.
+    pub fn from_std(listener: std::net::TcpListener) -> Self {
+        Self(Bound::Std(listener))
+    }
+
+    fn at(&self) -> std::io::Result<SocketAddr> {
+        match &self.0 {
+            Bound::Runtime(listener) => listener.local_addr(),
+            Bound::Std(listener) => listener.local_addr(),
+        }
+    }
+
+    /// The listener as the runtime wants it. Nonblocking is set here rather
+    /// than left to whoever bound it: forgetting it blocks a whole worker
+    /// thread on an accept, which is a hang rather than an error.
+    fn listener(self) -> Result<TcpListener> {
+        match self.0 {
+            Bound::Runtime(listener) => Ok(listener),
+            Bound::Std(listener) => {
+                listener.set_nonblocking(true)?;
+                Ok(TcpListener::from_std(listener)?)
+            }
+        }
     }
 }
 
 impl Source for Socks {
     fn name(&self) -> String {
-        match self.0.local_addr() {
+        match self.at() {
             Ok(at) => format!("the SOCKS5 port at {at}"),
             Err(_) => "the SOCKS5 port".to_owned(),
         }
     }
 
     fn start(self: Box<Self>, proxy: SocketAddr, found: Found, stop: Stop) -> Result<()> {
-        let ours = self.0.local_addr()?;
-        tokio::spawn(take_them(self.0, Ours { proxy, socks: ours }, found, stop));
+        let ours = self.at()?;
+        tokio::spawn(take_them(
+            (*self).listener()?,
+            Ours { proxy, socks: ours },
+            found,
+            stop,
+        ));
         Ok(())
     }
 }
@@ -326,6 +371,33 @@ mod tests {
         );
         assert_eq!(flow.client, client.local_addr().unwrap());
         assert!(flow.who.is_none(), "the program is not known here yet");
+    }
+
+    /// A port bound before the runtime existed, as the app binds it so that
+    /// the window can say at once that the port was taken. The nonblocking
+    /// flag is set on the way in; without it an accept would block this
+    /// runtime's only thread, so the deadline is what tells a hang from a
+    /// failure.
+    #[tokio::test]
+    async fn a_port_bound_outside_the_runtime_serves_too() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let at = listener.local_addr().unwrap();
+        let (found, mut took) = Found::channel();
+        let (_stop_tx, stop) = watch::channel(false);
+        Box::new(Socks::from_std(listener))
+            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+            .unwrap();
+        let talking = async {
+            let mut client = TcpStream::connect(at).await.unwrap();
+            no_password(&mut client).await;
+            let request = [VERSION, CONNECT, 0, V4, 140, 82, 121, 4, 0x01, 0xbb];
+            assert_eq!(asked_for(&mut client, &request).await, reply(OK));
+            flow_of(took.recv().await)
+        };
+        let flow = tokio::time::timeout(Duration::from_secs(10), talking)
+            .await
+            .expect("it answers: a listener left blocking would never accept");
+        assert_eq!(flow.to, Target::Addr("140.82.121.4:443".parse().unwrap()));
     }
 
     #[tokio::test]
