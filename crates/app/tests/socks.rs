@@ -36,8 +36,15 @@ fn a_free_port() -> u16 {
 /// binaries given the same range will mostly miss each other and sometimes
 /// not. Every other file under `tests/` claims one range of ten, and the
 /// ranges in use end at `sidebar.rs`'s 20_480..20_490, so these three carry
-/// on from there. A new test file takes the next free ten rather than any
-/// round number.
+/// on from there.
+///
+/// A new test file takes the **next free ten above the top**, not a hole in
+/// the middle: the ranges are only greppable in the `ports:` form, and the
+/// hole at 20_340..20_350 is `cli.rs`, which passes a bare `--port` number
+/// and says so in a comment of its own. A range taken twice cannot fail a
+/// local run — `cargo test` runs one test binary at a time — so it fails
+/// only when two sessions run the suite at once, which is no way to find
+/// out.
 fn start(name: &str, settings: StorageSettings, ports: std::ops::Range<u16>) -> (Engine, PathBuf) {
     let _ = tracewing_proxy::crypto_provider().install_default();
     let dir = data_dir(name);
