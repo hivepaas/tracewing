@@ -874,7 +874,16 @@ pub fn could_read(text: &str) -> bool {
 /// that way — a field that held milliseconds now holding a word — there is
 /// nothing to draw, which is the honest answer and not a stale one.
 pub fn read_as(id: &str, input: &Input) -> Option<Reading> {
-    readings(input).into_iter().find(|found| found.id == id)
+    if let Some(found) = readings(input).into_iter().find(|found| found.id == id) {
+        return Some(found);
+    }
+    // What the search does not offer by itself is still read where a reader
+    // asked for it by name and a rule remembers that they did: a number
+    // under a field nobody would call a timeout is seconds if that is what
+    // the reader said it was. The search is tried first, since it is what
+    // finds a reading at the end of a chain.
+    let known = KNOWN.iter().find(|known| known.id == id)?;
+    read_with(&[known.id], input)
 }
 
 /// Every reading of `input`, best first, giving up after `budget`. A chain is
@@ -1043,15 +1052,17 @@ mod tests {
 
     #[test]
     fn a_guess_drawn_beside_a_value_says_it_is_a_guess() {
-        // A price is not a span of seconds, and `10d 1h` beside it would read
-        // as though it were.
-        let found = read("868617");
-        let span = by_id(&found, "duration").unwrap();
-        assert_eq!(span.confidence, Confidence::Possible);
-        assert_eq!(span.beside(), "10d 1h  (Seconds)");
-        assert_ne!(
-            found[0].id, "duration",
-            "a guess about a span leads nothing"
+        // A port is a port where the field says so and a guess where it does
+        // not, and `(As a port)` beside the number says which it is.
+        let found = read("443");
+        let port = by_id(&found, "port").unwrap();
+        assert_eq!(port.confidence, Confidence::Possible);
+        assert_eq!(port.beside(), "HTTPS  (As a port)");
+        assert_eq!(
+            by_id(&read_under("port", "443"), "port")
+                .unwrap()
+                .confidence,
+            Confidence::Likely
         );
         // What is certain says itself and no more.
         let certain = read_under("created_at", "1794492800");
