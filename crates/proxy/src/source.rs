@@ -68,6 +68,20 @@ pub trait Source: Send + 'static {
     /// taken connection is handed to, and the one a source has to leave out
     /// of what it captures, or it will capture tracewing itself.
     fn start(self: Box<Self>, proxy: SocketAddr, found: Found, stop: Stop) -> Result<()>;
+
+    /// The ports of tracewing's own that programs on this machine connect to.
+    /// [`crate::apps`] finds the program behind a connection by looking for a
+    /// socket whose far end is one of these, so a source that opens a port
+    /// clients reach has to say which it is, or the flows that come in there
+    /// carry no program's name.
+    ///
+    /// A source that hands over flows taken elsewhere has none: nothing on
+    /// this machine connected to tracewing, so there is no such socket to
+    /// find, and what the operating system told it about the program belongs
+    /// in [`Flow::who`].
+    fn own_ports(&self) -> Vec<u16> {
+        Vec::new()
+    }
 }
 
 /// What a source found: either a way for clients to reach the proxy, or one
@@ -175,6 +189,12 @@ impl ProxyPort {
 impl Source for ProxyPort {
     fn name(&self) -> String {
         "the proxy port".to_owned()
+    }
+
+    fn own_ports(&self) -> Vec<u16> {
+        self.0
+            .local_addr()
+            .map_or_else(|_| Vec::new(), |at| vec![at.port()])
     }
 
     fn start(self: Box<Self>, _proxy: SocketAddr, found: Found, _stop: Stop) -> Result<()> {

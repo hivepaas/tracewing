@@ -4292,24 +4292,7 @@ async fn a_socks5_client_is_recorded_by_the_name_it_asked_for() {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     let h = Harness::start("socks").await;
     let port = h.playground_port;
-    let mut client = tokio::net::TcpStream::connect(("127.0.0.1", h.socks_port))
-        .await
-        .unwrap();
-
-    // Version 5, one way in offered, and that way is no authentication.
-    client.write_all(&[5, 1, 0]).await.unwrap();
-    let mut agreed = [0u8; 2];
-    client.read_exact(&mut agreed).await.unwrap();
-    assert_eq!(agreed, [5, 0], "version 5, no authentication");
-
-    // CONNECT, to a name of nine characters, on the playground's port.
-    let mut request = vec![5, 1, 0, 3, 9];
-    request.extend_from_slice(b"localhost");
-    request.extend_from_slice(&port.to_be_bytes());
-    client.write_all(&request).await.unwrap();
-    let mut answer = [0u8; 10];
-    client.read_exact(&mut answer).await.unwrap();
-    assert_eq!(answer[..2], [5, 0], "it may go ahead: {answer:02x?}");
+    let mut client = socks5_to(h.socks_port, "localhost", port).await;
 
     // And from here it simply talks, as it would to the server itself.
     client
@@ -4335,5 +4318,67 @@ async fn a_socks5_client_is_recorded_by_the_name_it_asked_for() {
     );
     assert_eq!(path, "/json");
     assert_eq!(method, "GET");
+    clean_up(conn, dir);
+}
+
+/// A SOCKS5 client's handshake, written by hand: the greeting, then `CONNECT`
+/// to a name. What comes back is the socket, with the conversation left to the
+/// caller, which is exactly what a SOCKS5 client has at this point.
+async fn socks5_to(socks_port: u16, host: &str, port: u16) -> tokio::net::TcpStream {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let mut client = tokio::net::TcpStream::connect(("127.0.0.1", socks_port))
+        .await
+        .unwrap();
+
+    // Version 5, one way in offered, and that way is no authentication.
+    client.write_all(&[5, 1, 0]).await.unwrap();
+    let mut agreed = [0u8; 2];
+    client.read_exact(&mut agreed).await.unwrap();
+    assert_eq!(agreed, [5, 0], "version 5, no authentication");
+
+    // CONNECT, to the name and port asked for.
+    let mut request = vec![5, 1, 0, 3, host.len() as u8];
+    request.extend_from_slice(host.as_bytes());
+    request.extend_from_slice(&port.to_be_bytes());
+    client.write_all(&request).await.unwrap();
+    let mut answer = [0u8; 10];
+    client.read_exact(&mut answer).await.unwrap();
+    assert_eq!(answer[..2], [5, 0], "it may go ahead: {answer:02x?}");
+    client
+}
+
+/// The program behind a SOCKS5 connection is found, which it only is because
+/// `apps` is told that the SOCKS5 port is one of tracewing's own ways in: the
+/// client's socket goes to that port, not to the proxy's.
+///
+/// The server is asked to take its time, because the program is looked for
+/// while the request is on its way and the flow keeps only what was found by
+/// the time the answer comes back.
+#[tokio::test]
+async fn a_socks5_flow_says_which_program_sent_it() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let h = Harness::start("socks-app").await;
+    let mut client = socks5_to(h.socks_port, "localhost", h.playground_port).await;
+    client
+        .write_all(b"GET /slow?ms=300 HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        .await
+        .unwrap();
+    let mut said = Vec::new();
+    client.read_to_end(&mut said).await.unwrap();
+    let said = String::from_utf8_lossy(&said);
+    assert!(said.starts_with("HTTP/1.1 200"), "{said}");
+
+    let (_, conn, dir) = h.finish(1).await;
+    let (app, pid, path): (Option<String>, Option<i64>, Option<String>) = conn
+        .query_row("SELECT app, app_pid, app_path FROM flows", [], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        })
+        .unwrap();
+    // This test is the program that sent it.
+    assert_eq!(pid, Some(i64::from(std::process::id())));
+    assert!(
+        app.is_some_and(|app| !app.is_empty()),
+        "a name for it: {path:?}"
+    );
     clean_up(conn, dir);
 }

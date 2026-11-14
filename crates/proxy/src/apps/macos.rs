@@ -107,7 +107,7 @@ struct SocketFdInfo {
 /// Room for the whole of `socket_fdinfo`, which is about 800 bytes.
 type Buffer = [u64; 256];
 
-pub fn owners(clients: &[SocketAddr], proxy_port: u16, recent: &[u32]) -> Vec<Option<u32>> {
+pub fn owners(clients: &[SocketAddr], ours: &[u16], recent: &[u32]) -> Vec<Option<u32>> {
     let mut found = vec![None; clients.len()];
     let mut wanted: HashMap<SocketAddr, usize> = clients
         .iter()
@@ -122,7 +122,7 @@ pub fn owners(clients: &[SocketAddr], proxy_port: u16, recent: &[u32]) -> Vec<Op
     let mut buffer: Box<Buffer> = Box::new([0; 256]);
     for pid in pids {
         for fd in socket_fds(pid) {
-            let Some(local) = tcp_local(pid, fd, proxy_port, &mut buffer) else {
+            let Some(local) = tcp_local(pid, fd, ours, &mut buffer) else {
                 continue;
             };
             if let Some(i) = wanted.remove(&local) {
@@ -202,8 +202,8 @@ fn socket_fds(pid: u32) -> Vec<i32> {
         .collect()
 }
 
-/// The local address of a TCP socket connected to the proxy.
-fn tcp_local(pid: u32, fd: i32, proxy_port: u16, buffer: &mut Buffer) -> Option<SocketAddr> {
+/// The local address of a TCP socket connected to one of tracewing's ports.
+fn tcp_local(pid: u32, fd: i32, ours: &[u16], buffer: &mut Buffer) -> Option<SocketAddr> {
     let size = size_of::<Buffer>() as i32;
     // SAFETY: the buffer is as long as it says.
     let bytes = unsafe {
@@ -225,7 +225,7 @@ fn tcp_local(pid: u32, fd: i32, proxy_port: u16, buffer: &mut Buffer) -> Option<
     }
     let tcp = &info.tcp;
     // Ports are in network order in the low half.
-    if u16::from_be(tcp.insi_fport as u16) != proxy_port {
+    if !ours.contains(&u16::from_be(tcp.insi_fport as u16)) {
         return None;
     }
     let ip = if tcp.insi_vflag & INI_IPV4 != 0 {

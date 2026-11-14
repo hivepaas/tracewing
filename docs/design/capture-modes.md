@@ -307,14 +307,20 @@ bugs. It also gets `Target::Named` free from the protocol, where a source
 reading packets has to find the name in a ClientHello.
 
 Nothing is left of SOCKS5. The port is in Settings, off by default, on this
-computer only, with the switch read when tracewing starts; and
-[`apps`](../../crates/proxy/src/apps.rs) is told every port of tracewing's
-that clients reach it on, rather than only the proxy port, so a SOCKS5 flow
-carries the name of the program that sent it like any other. That second part
-was a change across three operating systems, and the cost of it is a note in
-`apps`: on Linux one netlink ask names one port, so the ports are tried in
-order with the proxy port first, and only a connection on another way in pays
-for a second ask.
+computer only, and read when tracewing starts.
+
+What the protocol did cost, beyond itself, was teaching
+[`apps`](../../crates/proxy/src/apps.rs) that tracewing has more than one way
+in. It finds the program behind a connection by looking for a socket whose far
+end is tracewing's port, and a SOCKS5 client's far end is the SOCKS5 port, so
+those flows arrived with no program against them. A source now says which
+ports of ours clients reach it on — `Source::own_ports` — and `apps` is given
+the lot, the proxy port first because that is where most connections come
+from. On Linux that order is what keeps the cost off the common case: one
+netlink ask names one port, so a client on the proxy port still costs one ask
+and only the others pay for a second. The look itself is started by the
+client's address either way, which is why a taken flow whose source named no
+program is now looked up like any client that asked.
 
 What is left:
 
