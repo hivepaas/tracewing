@@ -11,6 +11,12 @@ open an issue first so we can agree on the shape before you write it.
   checks and neither of which plain `cargo clippy` sees. The message check in
   particular fails on the *order* of the strings, so **moving** a `tr!` call
   is enough to break it: `python3 scripts/i18n.py update` puts it right.
+- **`make test` leaves out the tests that draw the window, and CI runs them.**
+  So those two together are not the whole of what CI will say. `make lint`
+  compiles them for clippy but nothing runs them until `make test-window`
+  does, which draws with no display and takes longer. Run it for anything
+  touching `crates/app` — including a change in a library underneath the
+  window, which breaks a window test often enough to be worth the wait.
 - **A pull request aimed at a branch rather than at `main` gets no CI run.**
   The workflow takes pushes to `main` and pull requests aimed at `main`, so a
   branch stacked on another branch sits there with no tick at all — which
