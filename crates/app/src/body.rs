@@ -529,6 +529,15 @@ impl Body {
     /// not cut at [`SHOWN_BYTES_MAX`], which a line of text, at most
     /// [`TEXT_LINE_MAX`] bytes, is not far past. Its offsets are the file's,
     /// a byte for a byte, from where the line starts.
+    ///
+    /// This is the **file's** line, not the line a view draws, and the name
+    /// says "whole" about the file and not about the window. In hex the two
+    /// are different strings numbered in different spaces -- a hex line is
+    /// sixteen bytes, a text line is as long as it is -- so an offset taken
+    /// from the dump means nothing here. A caller that wants what the reader
+    /// pressed wants the line as drawn; in the body view that is `line_text`.
+    /// Find wants this one, which is why it still hands back the file's line
+    /// in hex rather than refusing.
     pub fn read_whole(&self, range: Range<u64>) -> Vec<String> {
         if range.is_empty() || self.kind == Kind::Binary {
             return Vec::new();

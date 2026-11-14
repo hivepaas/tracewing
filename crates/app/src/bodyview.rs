@@ -488,7 +488,7 @@ impl BodyView {
     /// reader who pressed twice on a line of plain text means.
     fn word_at(&self, spot: Spot) -> Option<(std::ops::Range<usize>, String, Option<String>)> {
         let (line, at) = self.line_spot(spot);
-        let text = self.shown().read_whole(line..line + 1).pop()?;
+        let text = self.line_text(line)?;
         let range = crate::input::word_around(&text, at.min(text.len()));
         let word = text.get(range.clone())?.trim_matches('"').to_owned();
         (!word.trim().is_empty()).then_some((range, word, None))
@@ -501,6 +501,21 @@ impl BodyView {
     /// read -- and dragging it exactly is work, since a word ends at every
     /// dot of a JWT and every dash of a date. The view already knows where
     /// the value is, since that is what it underlines.
+    /// The line as it is drawn, which is what a press landed on.
+    ///
+    /// In hex that is the dump, not the file's line. `read_whole` gives back
+    /// the file's line: a different string, of a different length, numbered
+    /// in a different space -- a hex line is sixteen bytes and a text line is
+    /// as long as it is. An offset taken from the dump lands anywhere at all
+    /// in it, so a word read off it is a word nobody pressed, and the range
+    /// it comes back with marks bytes nobody chose.
+    fn line_text(&self, line: u64) -> Option<String> {
+        match self.hex() {
+            true => Some(self.shown().read_in(line..line + 1, true).pop()?.text),
+            false => self.shown().read_whole(line..line + 1).pop(),
+        }
+    }
+
     fn value_at(&self, spot: Spot) -> Option<(std::ops::Range<usize>, String, Option<String>)> {
         if self.hex() {
             return None;
@@ -516,6 +531,12 @@ impl BodyView {
     }
 
     fn selected_field(&self) -> Option<String> {
+        // A dump has no fields. Its text column holds whatever the bytes
+        // spell, quotes and colons included, so the search below would find
+        // `"session":` in a row of hex and call it the name of the value.
+        if self.hex() {
+            return None;
+        }
         let (start, _) = self.select.bounds()?;
         let (line, at) = self.line_spot(start);
         let text = self.shown().read_whole(line..line + 1).pop()?;
