@@ -258,6 +258,19 @@ fn build() -> Vec<Sample> {
             "public, max-age=3600, stale-while-revalidate=60, immutable".to_owned(),
             "What each part of it means, in words",
         ),
+        // Under its own name: a policy on a JSON answer has no document to
+        // apply to, so nothing here obeys it. `cache-control` above had to be
+        // renamed because the route sets one of its own; this collides with
+        // nothing.
+        header(
+            "csp",
+            "content-security-policy",
+            "default-src 'self'; script-src 'self' https://cdn.example.com 'nonce-Xm9pQ2'; \
+             style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; \
+             frame-ancestors 'none'; upgrade-insecure-requests"
+                .to_owned(),
+            "A policy a directive to a row, with the sources that are words in words",
+        ),
         header(
             "cookie",
             "set-cookie",
@@ -780,6 +793,7 @@ mod tests {
             "cocoa",
             "cookie",
             "crypt",
+            "csp",
             "data-uri",
             "deflate",
             "dotnet-ticks",
@@ -862,6 +876,7 @@ mod tests {
                 "basic-auth",
                 "cache-control",
                 "cookie",
+                "csp",
                 "duration",
                 "entities",
                 "excel-date",

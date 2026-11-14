@@ -3085,6 +3085,9 @@ te161b66b = Аутентифікація Basic
 # Cache-Control
 t3868d34d = Cache-Control
 
+# Content-Security-Policy
+tc6d9127c = Content-Security-Policy
+
 # Status code
 t20b704bc = Код статусу
 
@@ -3411,3 +3414,24 @@ tb643c704 = Сервіс
 
 # Headers signed
 t62bd9377 = Підписані заголовки
+
+# Directive
+t8d3da87a = Директива
+
+# Allowed
+t586f52e3 = Дозволено
+
+# nothing
+t527dae8a = нічого
+
+# this origin
+t2a5f5cfd = це джерело
+
+# inline code
+t4e304b19 = вбудований код
+
+# eval
+t08d22e0f = eval
+
+# anywhere
+tf5f4aec0 = звідки завгодно

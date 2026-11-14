@@ -283,6 +283,7 @@ const CONVERTERS: &[Converter] = &[
     web::basic,
     web::aws_sigv4,
     web::cache_control,
+    web::csp,
     web::status,
     web::cookie,
     web::data_uri,
@@ -530,6 +531,12 @@ const KNOWN: &[Known] = &[
         group: Group::Web,
         run: web::cache_control,
         name: || tr!("Cache-Control"),
+    },
+    Known {
+        id: "csp",
+        group: Group::Web,
+        run: web::csp,
+        name: || tr!("Content-Security-Policy"),
     },
     Known {
         id: "status",

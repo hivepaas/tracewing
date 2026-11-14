@@ -2983,6 +2983,9 @@ te161b66b = Basic-Authentifizierung
 # Cache-Control
 t3868d34d = Cache-Control
 
+# Content-Security-Policy
+tc6d9127c = Content-Security-Policy
+
 # Status code
 t20b704bc = Statuscode
 
@@ -3309,3 +3312,24 @@ tb643c704 = Dienst
 
 # Headers signed
 t62bd9377 = Signierte Header
+
+# Directive
+t8d3da87a = Direktive
+
+# Allowed
+t586f52e3 = Erlaubt
+
+# nothing
+t527dae8a = nichts
+
+# this origin
+t2a5f5cfd = dieser Ursprung
+
+# inline code
+t4e304b19 = Inline-Code
+
+# eval
+t08d22e0f = eval
+
+# anywhere
+tf5f4aec0 = überall

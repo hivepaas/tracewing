@@ -358,6 +358,117 @@ pub fn aws_sigv4(input: &Input) -> Option<Reading> {
     ))
 }
 
+/// A `Content-Security-Policy`, a row for each directive. A policy is written
+/// as one line and a real one runs to several hundred characters, so the
+/// directive a reader came to look at is somewhere in the middle of it and
+/// finding it means counting semicolons by eye.
+///
+/// The sources are kept as they were written, nonces and hashes and all: a
+/// reader comparing the nonce in the policy against the one on the tag needs
+/// those characters. What is put into words is the five sources that are a
+/// word rather than a place — `'self'`, `'none'`, the two unsafe ones and
+/// `*` — because those are what the policy actually says, and the quotes
+/// around them are noise once they have been read.
+pub fn csp(input: &Input) -> Option<Reading> {
+    /// The directives this knows by name. A policy is read when most of its
+    /// segments start with one of these, which keeps a semicolon-separated
+    /// list of anything else out without throwing away a whole policy over
+    /// one directive younger than this list: the standard grows, and a
+    /// reader with `plugin-types` in their policy wants the other nine rows
+    /// rather than nothing. What is not known here is still shown, as it was
+    /// written -- it is in the policy, whatever this list says.
+    const DIRECTIVES: [&str; 27] = [
+        "base-uri",
+        "block-all-mixed-content",
+        "child-src",
+        "connect-src",
+        "default-src",
+        "fenced-frame-src",
+        "font-src",
+        "form-action",
+        "frame-ancestors",
+        "frame-src",
+        "img-src",
+        "manifest-src",
+        "media-src",
+        "object-src",
+        "report-to",
+        "report-uri",
+        "require-trusted-types-for",
+        "sandbox",
+        "script-src",
+        "script-src-attr",
+        "script-src-elem",
+        "style-src",
+        "style-src-attr",
+        "style-src-elem",
+        "trusted-types",
+        "upgrade-insecure-requests",
+        "worker-src",
+    ];
+    let text = input.text.trim().trim_matches('"');
+    let mut rows = Vec::new();
+    let mut alone = 0;
+    let mut known = 0;
+    for segment in text.split(';').map(str::trim).filter(|s| !s.is_empty()) {
+        let mut words = segment.split_whitespace();
+        let name = words.next()?.to_ascii_lowercase();
+        if DIRECTIVES.contains(&name.as_str()) {
+            known += 1;
+        }
+        let sources: Vec<String> = words.map(said_source).collect();
+        if sources.is_empty() {
+            alone += 1;
+        }
+        let said = match sources.is_empty() {
+            true => tr!("yes"),
+            // A list, with commas, rather than the spaces the policy uses:
+            // half of these are words now and `this origin inline code eval`
+            // does not read as three things.
+            false => sources.join(", "),
+        };
+        rows.push(vec![name, said]);
+    }
+    // Most of it has to be directives this knows, or it is not a policy: a
+    // `Set-Cookie` is also words separated by semicolons.
+    let said = input.field_says(&["contentsecuritypolicy", "csp"]);
+    if known == 0 || known * 2 < rows.len() {
+        return None;
+    }
+    // And one directive on its own, with nothing after it, is a word that
+    // happens to be a directive's name — `sandbox` is one — unless the field
+    // says what it is or a reader asked for this reading by name.
+    if rows.len() == 1 && alone == 1 && !said && !input.asked {
+        return None;
+    }
+    Some(Reading::new(
+        "csp",
+        tr!("Content-Security-Policy"),
+        match said || known > 1 {
+            true => Confidence::Certain,
+            false => Confidence::Likely,
+        },
+        Shown::Table {
+            head: vec![tr!("Directive"), tr!("Allowed")],
+            rows,
+        },
+    ))
+}
+
+/// A source as the policy means it. The five that are words are said as
+/// words; everything else names a place, and a place is left exactly as it
+/// was written.
+fn said_source(source: &str) -> String {
+    match source.to_ascii_lowercase().as_str() {
+        "'none'" => tr!("nothing"),
+        "'self'" => tr!("this origin"),
+        "'unsafe-inline'" => tr!("inline code"),
+        "'unsafe-eval'" => tr!("eval"),
+        "*" => tr!("anywhere"),
+        _ => source.to_owned(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -529,5 +640,79 @@ mod tests {
             Shown::Bytes { bytes, .. } => assert_eq!(bytes, b"Hello, world!"),
             other => panic!("{other:?}"),
         }
+    }
+    fn table(text: &str, id: &str) -> Vec<Vec<String>> {
+        let found = read(text);
+        match by_id(&found, id).map(|r| &r.shown) {
+            Some(Shown::Table { rows, .. }) => rows.clone(),
+            other => panic!("no table for {id}: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_policy_comes_apart_by_directive() {
+        let rows = table(
+            "default-src 'self'; script-src 'self' https://cdn.example.com 'nonce-r4nd0m'; \
+             object-src 'none'; upgrade-insecure-requests; report-uri /csp-report",
+            "csp",
+        );
+        assert_eq!(rows.len(), 5);
+        assert_eq!(rows[0][0], "default-src");
+        assert_eq!(rows[2], vec!["object-src", "nothing"]);
+        // A directive that stands alone is set, and says so.
+        assert_eq!(rows[3], vec!["upgrade-insecure-requests", "yes"]);
+        assert_eq!(rows[4], vec!["report-uri", "/csp-report"]);
+        // A nonce is kept to the character: it is read to compare it against
+        // the one on the tag, and shortened it would answer nothing.
+        assert_eq!(
+            rows[1][1],
+            "this origin, https://cdn.example.com, 'nonce-r4nd0m'"
+        );
+    }
+
+    #[test]
+    fn the_sources_that_are_words_are_read_as_words() {
+        let rows = table(
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src *",
+            "csp",
+        );
+        assert_eq!(rows[0][1], "this origin, inline code, eval");
+        assert_eq!(rows[1], vec!["img-src", "anywhere"]);
+    }
+
+    /// A directive younger than the list here, or older: the policy is still
+    /// read, and the row says what the policy says.
+    #[test]
+    fn a_directive_this_does_not_know_does_not_lose_the_policy() {
+        let rows = table(
+            "default-src 'self'; plugin-types application/pdf; img-src 'self'",
+            "csp",
+        );
+        assert_eq!(rows.len(), 3);
+        assert_eq!(rows[1], vec!["plugin-types", "application/pdf"]);
+    }
+
+    #[test]
+    fn what_is_not_a_policy_is_not_read() {
+        // Every segment starts with a directive, which is what a list of
+        // anything else separated by semicolons does not do.
+        assert!(by_id(&read("path=/; domain=example.com; secure"), "csp").is_none());
+        assert!(by_id(&read("one; two; three"), "csp").is_none());
+        // One directive known out of four is not a policy either: the point
+        // of tolerating an unknown one is a policy with a stray, not a stray
+        // with a policy word in it.
+        assert!(
+            by_id(
+                &read("img-src 'self'; one thing; two things; three things"),
+                "csp"
+            )
+            .is_none()
+        );
+        // A directive's name on its own, with nothing after it, is a word:
+        // `sandbox` is one of those words.
+        assert!(by_id(&read("sandbox"), "csp").is_none());
+        // Under a field that says what it is, the same word is the policy it
+        // looks like.
+        assert!(by_id(&read_under("content-security-policy", "sandbox"), "csp").is_some());
     }
 }

@@ -2854,6 +2854,9 @@ te161b66b = Basic 认证
 # Cache-Control
 t3868d34d = Cache-Control
 
+# Content-Security-Policy
+tc6d9127c = Content-Security-Policy
+
 # Status code
 t20b704bc = 状态码
 
@@ -3180,3 +3183,24 @@ tb643c704 = 服务
 
 # Headers signed
 t62bd9377 = 已签名的标头
+
+# Directive
+t8d3da87a = 指令
+
+# Allowed
+t586f52e3 = 允许
+
+# nothing
+t527dae8a = 无
+
+# this origin
+t2a5f5cfd = 当前源
+
+# inline code
+t4e304b19 = 内联代码
+
+# eval
+t08d22e0f = eval
+
+# anywhere
+tf5f4aec0 = 任何来源

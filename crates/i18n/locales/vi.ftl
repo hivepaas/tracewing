@@ -2854,6 +2854,9 @@ te161b66b = Xác thực Basic
 # Cache-Control
 t3868d34d = Cache-Control
 
+# Content-Security-Policy
+tc6d9127c = Content-Security-Policy
+
 # Status code
 t20b704bc = Mã trạng thái
 
@@ -3180,3 +3183,24 @@ tb643c704 = Dịch vụ
 
 # Headers signed
 t62bd9377 = Header đã ký
+
+# Directive
+t8d3da87a = Chỉ thị
+
+# Allowed
+t586f52e3 = Cho phép
+
+# nothing
+t527dae8a = không gì
+
+# this origin
+t2a5f5cfd = origin này
+
+# inline code
+t4e304b19 = mã inline
+
+# eval
+t08d22e0f = eval
+
+# anywhere
+tf5f4aec0 = bất kỳ đâu
