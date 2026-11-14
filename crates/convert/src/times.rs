@@ -157,21 +157,31 @@ const SAYS_SPAN: &[&str] = &[
 const ENDS_SPAN: &[&str] = &["age", "secs", "seconds", "took", "every"];
 
 /// Seconds as a span a reader can hold in their head: `2h 30m`.
+///
+/// Only where the field says the number is a span. Nothing about a number
+/// says it is seconds -- every number is seconds if nobody says otherwise --
+/// so offering this for all of them put `7m 23s` beside the `443` of a
+/// `host:443` and beside every id, count and status in the body. A reader
+/// who means it still has it by name, under `Read as`.
 pub fn duration(input: &Input) -> Option<Reading> {
     let n = whole(input.text)?;
     // Past ten years it is not a timeout anybody set.
     if n == 0 || n > 315_360_000 {
         return None;
     }
-    let confidence = if input.field_says(SAYS_SPAN) || input.field_ends(ENDS_SPAN) {
-        Confidence::Likely
-    } else {
-        Confidence::Possible
-    };
+    let said = input.field_says(SAYS_SPAN) || input.field_ends(ENDS_SPAN);
+    if !said && !input.asked {
+        return None;
+    }
     Some(Reading::new(
         "duration",
         tr!("Seconds"),
-        confidence,
+        // Asked for by name, it is read whatever the field is called; the
+        // confidence still says which of the two happened.
+        match said {
+            true => Confidence::Likely,
+            false => Confidence::Possible,
+        },
         Shown::Line(span(n as u64)),
     ))
 }
@@ -411,16 +421,29 @@ mod tests {
     }
 
     #[test]
-    fn a_field_that_says_it_is_a_span_lifts_the_reading() {
-        assert_eq!(
-            by_id(&read("3600"), "duration").unwrap().confidence,
-            Confidence::Possible
-        );
+    fn a_span_is_read_where_the_field_says_so_and_nowhere_else() {
+        // Nothing about a number says it is seconds, so a bare one is not
+        // offered as a span at all: `7m 23s` beside the 443 of a host and
+        // beside every id and count in a body is noise, not a reading.
+        assert!(by_id(&read("3600"), "duration").is_none());
         assert_eq!(
             by_id(&read_under("expires_in", "3600"), "duration")
                 .unwrap()
                 .confidence,
             Confidence::Likely
         );
+        assert_eq!(
+            by_id(&read_under("took_secs", "3600"), "duration")
+                .unwrap()
+                .confidence,
+            Confidence::Likely
+        );
+        // Asked for by name -- from the pane, or by a rule that remembers a
+        // reader asking once -- it is read whatever the field is called, and
+        // says that it is a guess.
+        let input = crate::Input::new("3600", crate::tests::NOW, crate::tests::TZ);
+        let asked = crate::read_as("duration", &input).expect("asked for, it is read");
+        assert_eq!(asked.confidence, Confidence::Possible);
+        assert_eq!(line(&[asked], "duration"), "1h");
     }
 }

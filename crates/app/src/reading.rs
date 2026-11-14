@@ -11,9 +11,10 @@ use std::rc::Rc;
 use tracewing_convert::{Confidence, Input, Reading, Shown};
 use tracewing_i18n::tr;
 
-/// How many readings a menu offers at once. Past a few it is a list to read,
-/// not a menu to choose from.
-pub const MOST: usize = 4;
+/// How many readings a menu offers at once. Two, since the pane reads them
+/// all: a menu is for choosing the one to keep beside the value, and a list
+/// of ten to read belongs where it can be scrolled, selected and copied.
+pub const MOST: usize = 2;
 
 /// How many more it offers under `Read as`, for when the first few were not
 /// what the value is.
@@ -194,8 +195,20 @@ mod tests {
         let found = of("137", None);
         assert!(found.len() > 1);
         let items = items(&found, |_, _, _| {});
-        assert!(items.iter().all(|item| item.label.contains('(')));
+        // Every row but the heading says what the value would be read as.
+        assert!(
+            items
+                .iter()
+                .filter(|item| item.id != "read-as")
+                .all(|item| item.label.contains('(')),
+            "{:?}",
+            items.iter().map(|item| &item.label).collect::<Vec<_>>()
+        );
         assert!(items.len() <= MOST + 1 + MOST_MORE);
+        // The menu offers two and no more before the heading: the rest of
+        // them are a list to read, and the pane reads them.
+        let heading = items.iter().position(|item| item.id == "read-as");
+        assert_eq!(heading, (found.len() > MOST).then_some(MOST), "{heading:?}");
     }
 
     #[test]
