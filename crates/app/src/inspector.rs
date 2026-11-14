@@ -2136,6 +2136,52 @@ impl Traffic {
         cx.notify();
     }
 
+    /// Keeps the chosen reading for this field on this host, so that the
+    /// value -- and the same field in the next request, and in every request
+    /// after it -- reads itself.
+    ///
+    /// The menu over a body has the same two items, but a reader deciding
+    /// how a field should always be read is looking at the pane when they
+    /// decide, and making them close it and find the value again to say so
+    /// is asking them to do the work twice.
+    pub fn remember_reading(&mut self, cx: &mut Context<Self>) {
+        let Some(reads) = &self.inspector.reads else {
+            return;
+        };
+        // A chain built by hand is not a rule: a rule names one converter,
+        // and `read_as` runs that one.
+        let (Some(field), true) = (reads.field.clone(), reads.asked.is_empty()) else {
+            return;
+        };
+        let Some(id) = reads.found.get(reads.at).map(|reading| reading.id) else {
+            return;
+        };
+        let host = self.inspector.host();
+        let _ = self
+            .inspector
+            .remembered
+            .borrow_mut()
+            .remember(&host, &field, id);
+        // The caches that hold what a rule reads are keyed by the rules'
+        // version, so they let go of what they held by themselves.
+        cx.notify();
+    }
+
+    /// Drops the rule for this field, wherever it was made.
+    pub fn forget_reading(&mut self, cx: &mut Context<Self>) {
+        let Some(field) = self
+            .inspector
+            .reads
+            .as_ref()
+            .and_then(|reads| reads.field.clone())
+        else {
+            return;
+        };
+        let host = self.inspector.host();
+        let _ = self.inspector.remembered.borrow_mut().forget(&host, &field);
+        cx.notify();
+    }
+
     /// Sets one step of the chain a reader is building, and runs what they
     /// have so far. Steps after the one set are dropped: changing the third
     /// of three keeps the first two, changing the first keeps nothing.
@@ -2432,6 +2478,29 @@ impl Traffic {
             true => reads.said.clone(),
             false => reads.found.get(at).cloned(),
         };
+        // Always, and never again, for the field this value sits under: the
+        // same two the menu over a body offers, where the reader is looking.
+        let known = field.as_ref().is_some_and(|field| {
+            self.inspector
+                .remembered
+                .borrow()
+                .reading_for(&self.inspector.host(), field)
+                .is_some()
+        });
+        // Forgetting is offered whenever there is a rule, chain or no chain;
+        // remembering only where the search found the reading being shown,
+        // since a rule names one converter and a chain is not one.
+        let rule: Option<(bool, String)> = field.as_ref().and_then(|name| match known {
+            true => Some((
+                true,
+                tr!("Forget how {field} is read", field = name.as_str()),
+            )),
+            false if !asking && chosen.is_some() => Some((
+                false,
+                tr!("Always read {field} this way", field = name.as_str()),
+            )),
+            false => None,
+        });
         let body = reads.opened.as_ref().map(|opened| {
             (
                 opened.label.clone(),
@@ -2584,6 +2653,33 @@ impl Traffic {
                                     }))
                             })),
                     )
+                    // Under a line of its own: what follows is done to the
+                    // field rather than another way of reading the value,
+                    // and a row that sits in the list reads as one of it.
+                    .children(rule.map(|(known, label)| {
+                        div()
+                            .border_t_1()
+                            .border_color(rgb(c.line))
+                            .px(ui(6.))
+                            .pt(ui(6.))
+                            .child(
+                                div()
+                                    .id("reads-rule")
+                                    .px(ui(6.))
+                                    .py(ui(3.))
+                                    .rounded(ui(8.))
+                                    .cursor_pointer()
+                                    .reachable()
+                                    .text_size(ui(11.5))
+                                    .text_color(rgb(c.muted))
+                                    .hover(|s| s.bg(rgb(c.chip)).text_color(rgb(c.text)))
+                                    .child(label)
+                                    .on_click(cx.listener(move |this, _, _, cx| match known {
+                                        true => this.forget_reading(cx),
+                                        false => this.remember_reading(cx),
+                                    })),
+                            )
+                    }))
                     // A chain of a reader's own, built a converter at a
                     // time: what the search did not find, or what it found
                     // and the reader does not agree with.
