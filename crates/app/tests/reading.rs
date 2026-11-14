@@ -1296,6 +1296,47 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
         .unwrap();
     assert_eq!(at, Some(1), "the pane shows the one that was chosen");
 
+    // And kept from the pane, which is where a reader is looking when they
+    // decide how a field should always be read. The menu over a body could
+    // say this and the pane could not.
+    let (chosen_id, host) = window
+        .update(&mut cx, |view, _, _| {
+            let reads = view.inspector.reads.as_ref().expect("the pane is open");
+            (reads.found[1].id, view.inspector.host())
+        })
+        .unwrap();
+    window
+        .update(&mut cx, |view, _, cx| view.remember_reading(cx))
+        .unwrap();
+    let kept = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector
+                .remembered
+                .borrow()
+                .reading_for(&host, "created_at_ms")
+                .map(str::to_owned)
+        })
+        .unwrap();
+    assert_eq!(
+        kept.as_deref(),
+        Some(chosen_id),
+        "the pane kept the way that was chosen"
+    );
+    // And dropped again from the same place.
+    window
+        .update(&mut cx, |view, _, cx| view.forget_reading(cx))
+        .unwrap();
+    let kept = window
+        .update(&mut cx, |view, _, _| {
+            view.inspector
+                .remembered
+                .borrow()
+                .reading_for(&host, "created_at_ms")
+                .map(str::to_owned)
+        })
+        .unwrap();
+    assert_eq!(kept, None, "and dropped it again");
+
     // A value that holds a body: it opens inside the pane, and the body it
     // came from stays where it was.
     let (spot, _) = spot_in(&mut cx, "payload");
