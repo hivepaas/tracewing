@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  tracewing.app's entitlements, when it carries the network extension: to
+  install it and to save its configuration. The provisioning profile embedded
+  beside them must allow each (docs/releasing.md); without one, macOS refuses
+  to start the app, so scripts/package_macos.sh signs it without them.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.application-identifier</key>
+	<string>6KW3D6ZGQJ.com.hivepaas.tracewing</string>
+	<key>com.apple.developer.team-identifier</key>
+	<string>6KW3D6ZGQJ</string>
+	<key>com.apple.developer.networking.networkextension</key>
+	<array>
+		<string>app-proxy-provider-systemextension</string>
+	</array>
+	<key>com.apple.developer.system-extension.install</key>
+	<true/>
+</dict>
+</plist>

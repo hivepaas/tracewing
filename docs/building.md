@@ -34,6 +34,34 @@ with the system proxy on, open `http://playground.localhost:10000` or
 `https://playground.localhost:10443`: a name under `.localhost` goes through the
 proxy and still comes back to this computer.
 
+## The network extension (macOS)
+
+`crates/netext` is a transparent proxy that macOS runs in a system extension
+of its own: it takes the flows of the apps it is told of and hands each to
+tracewing's listener as a `CONNECT`, with the app's signing id and process id
+in an `X-Tracewing-App` header, so that those apps come through with no proxy
+setting. Every other flow, and every flow while nothing listens on tracewing's
+port, goes out as it would have.
+
+```sh
+cargo build --release -p tracewing-netext
+cargo test --release -p tracewing-netext   # what it decides, on every system
+```
+
+To run, it has to be in tracewing.app, signed with the Developer ID, with the
+two provisioning profiles and notarized ([releasing.md](releasing.md#signing-for-macos)),
+and the app in `/Applications`. macOS asks once to allow the extension
+(System Settings › General › Login Items & Extensions › Network Extensions)
+and once to allow its proxy configuration. Then:
+
+```sh
+systemextensionsctl list                   # installed, and allowed
+/usr/bin/log stream --level debug --predicate 'subsystem == "com.hivepaas.tracewing.proxy"'
+```
+
+(`/usr/bin/log`, as `log` is something else in zsh.) The app installs it and
+turns it on in a later change; until then it is packaged and does nothing.
+
 ## Packages
 
 A build of your own is a binary; a release is a package. On Linux, with

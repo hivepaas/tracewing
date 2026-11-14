@@ -37,6 +37,9 @@ accepted = ["GPL-3.0-or-later"]
 [tracewing-i18n]
 accepted = ["GPL-3.0-or-later"]
 
+[tracewing-netext]
+accepted = ["GPL-3.0-or-later"]
+
 [tracewing-proxy]
 accepted = ["GPL-3.0-or-later"]
 

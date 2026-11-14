@@ -127,6 +127,11 @@ jobs:
       - name: Build
         run: cargo build --release --locked -p tracewing
 
+      # macOS's alone; packaged only with the profiles that allow it.
+      - name: Build the network extension (macOS)
+        if: runner.os == 'macOS'
+        run: cargo build --release --locked -p tracewing-netext
+
       # A Developer ID for macOS, when the repository has one
       # (docs/releasing.md): a keychain of this run's own, and the notary's key
       # in a file the packaging script is told of. Without it, signed ad hoc.
@@ -136,7 +141,19 @@ jobs:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          MACOS_PROFILE_APP: ${{ secrets.MACOS_PROFILE_APP }}
+          MACOS_PROFILE_PROXY: ${{ secrets.MACOS_PROFILE_PROXY }}
         run: |
+          # The provisioning profiles the network extension needs, both or none.
+          if [ -n "$MACOS_PROFILE_APP" ] && [ -n "$MACOS_PROFILE_PROXY" ]; then
+            printf '%s' "$MACOS_PROFILE_APP" | base64 --decode > "$RUNNER_TEMP/tracewing.provisionprofile"
+            printf '%s' "$MACOS_PROFILE_PROXY" | base64 --decode > "$RUNNER_TEMP/tracewing-proxy.provisionprofile"
+            {
+              echo "MACOS_PROFILE_APP=$RUNNER_TEMP/tracewing.provisionprofile"
+              echo "MACOS_PROFILE_PROXY=$RUNNER_TEMP/tracewing-proxy.provisionprofile"
+              echo "MACOS_EXTENSION_EXPECTED=1"
+            } >> "$GITHUB_ENV"
+          fi
           keychain="$RUNNER_TEMP/signing.keychain-db"
           password="$(openssl rand -hex 24)"
           security create-keychain -p "$password" "$keychain"
@@ -172,7 +189,7 @@ jobs:
         if: always() && runner.os == 'macOS' && env.MACOS_SIGNING == 'true'
         run: |
           security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
-          rm -f "$RUNNER_TEMP/notary.p8"
+          rm -f "$RUNNER_TEMP/notary.p8" "$RUNNER_TEMP"/*.provisionprofile
 
       # What each holds, then the .deb installed here and the program run from
       # it, and the .rpm in a Fedora container.

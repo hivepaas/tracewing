@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The network extension's entitlements (crates/netext): a transparent proxy,
+  in the sandbox, which may connect to tracewing's listener. The app group is
+  the prefix of its NEMachServiceName (proxy-Info.plist).
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.application-identifier</key>
+	<string>6KW3D6ZGQJ.com.hivepaas.tracewing.proxy</string>
+	<key>com.apple.developer.team-identifier</key>
+	<string>6KW3D6ZGQJ</string>
+	<key>com.apple.developer.networking.networkextension</key>
+	<array>
+		<string>app-proxy-provider-systemextension</string>
+	</array>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>6KW3D6ZGQJ.com.hivepaas.tracewing</string>
+	</array>
+</dict>
+</plist>

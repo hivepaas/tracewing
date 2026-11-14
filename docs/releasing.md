@@ -15,7 +15,8 @@ and `SHA256SUMS`.
 
 One binary holds everything — the window, the proxy, the command line and the
 MCP server — so a package is the program, its launcher and icon, and the
-licenses of what it is built with.
+licenses of what it is built with. The Mac's has one more program, its network
+extension, when it is signed for people.
 
 - **Linux**: built on Ubuntu 22.04, so the packages run on glibc 2.35 and newer
   (Ubuntu 22.04, Debian 12). The `.deb` is for Debian and Ubuntu, the `.rpm`
@@ -53,8 +54,27 @@ The repository's secrets, as packwing's and shellwing's have them:
 The workflow uses them only if `MACOS_CERTIFICATE` is set, in a keychain of
 that run's own which it deletes afterwards. With the certificate and no API
 key the app is signed but not notarized, and Gatekeeper then refuses it
-downloaded; with neither, it is signed ad hoc. tracewing claims no entitlement
-a provisioning profile must allow, so there is none to embed.
+downloaded; with neither, it is signed ad hoc.
+
+The network extension (`crates/netext`, a transparent proxy) needs two
+provisioning profiles more, as its entitlements are ones a profile must allow:
+`MACOS_PROFILE_APP` and `MACOS_PROFILE_PROXY`, each a `.provisionprofile`
+in base64. They are the Developer ID profiles of the App IDs
+`com.hivepaas.tracewing` (with Network Extensions and System Extension) and
+`com.hivepaas.tracewing.proxy` (with Network Extensions), for the same
+certificate as `MACOS_CERTIFICATE`. With both, the app carries the extension in
+`Contents/Library/SystemExtensions/` and claims what installs it; with either
+missing, it carries neither, since macOS refuses to start a program that claims
+what no profile beside it allows. A profile made again on developer.apple.com
+(after a capability changes, or each year with the certificate) goes into its
+secret again:
+
+```sh
+gh secret set MACOS_PROFILE_APP < <(base64 -i tracewing.provisionprofile)
+gh secret set MACOS_PROFILE_PROXY < <(base64 -i tracewing-proxy.provisionprofile)
+```
+
+macOS installs the extension only notarized, even on the Mac that built it.
 
 **On a Mac**, with the certificate in the login keychain:
 
@@ -62,6 +82,18 @@ a provisioning profile must allow, so there is none to embed.
 cargo build --release --locked -p tracewing
 MACOS_SIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
   scripts/package_macos.sh
+```
+
+and with the network extension, notarized:
+
+```sh
+cargo build --release --locked -p tracewing -p tracewing-netext
+MACOS_SIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
+MACOS_PROFILE_APP=tracewing.provisionprofile \
+MACOS_PROFILE_PROXY=tracewing-proxy.provisionprofile \
+APPLE_API_KEY_PATH=AuthKey_ID.p8 APPLE_API_KEY_ID=ID APPLE_API_ISSUER_ID=issuer \
+  scripts/package_macos.sh
+MACOS_EXTENSION_EXPECTED=1 scripts/check_macos_app.sh dist/tracewing_*.dmg
 ```
 
 ## Cutting one

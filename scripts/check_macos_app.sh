@@ -63,6 +63,46 @@ codesign --verify --deep --strict "$APP" || wrong "the signature does not verify
 codesign --display --verbose=2 "$APP" 2>&1 | sed -n 's/^Authority=/  signed by /p' |
 	head -n 1 || true
 
+# The network extension, where the app was packaged with it: whole, signed,
+# and claiming what each profile allows. MACOS_EXTENSION_EXPECTED says it must
+# be there (CI, with the profiles).
+EXTENSION="$APP/Contents/Library/SystemExtensions/com.hivepaas.tracewing.proxy.systemextension"
+# An entitlement's value; plutil reads a dot as a step into the key, so the
+# dots of its name are escaped.
+entitled() {
+	codesign --display --entitlements - --xml "$1" 2>/dev/null |
+		plutil -extract "${2//./\\.}" xml1 -o - - 2>/dev/null
+}
+if [ -d "$EXTENSION" ]; then
+	for file in \
+		"Contents/MacOS/com.hivepaas.tracewing.proxy" \
+		"Contents/Info.plist" \
+		"Contents/embedded.provisionprofile" \
+		"Contents/Resources/THIRD-PARTY-LICENSES.txt"; do
+		[ -e "$EXTENSION/$file" ] || wrong "missing in the extension: $file"
+	done
+	[ -e "$APP/Contents/embedded.provisionprofile" ] || wrong "missing: Contents/embedded.provisionprofile"
+	said="$(plutil -extract CFBundleIdentifier raw -o - "$EXTENSION/Contents/Info.plist")"
+	[ "$said" = "com.hivepaas.tracewing.proxy" ] || wrong "the extension's id is $said"
+	said="$(plutil -extract CFBundleVersion raw -o - "$EXTENSION/Contents/Info.plist")"
+	[ "$said" = "$VERSION" ] || wrong "the extension says version $said, not $VERSION"
+	grep -q "^  objc2 " "$EXTENSION/Contents/Resources/THIRD-PARTY-LICENSES.txt" ||
+		wrong "no license for objc2 in the extension's THIRD-PARTY-LICENSES.txt"
+	codesign --verify --strict "$EXTENSION" || wrong "the extension's signature does not verify"
+	for bundle in "$APP" "$EXTENSION"; do
+		entitled "$bundle" com.apple.developer.networking.networkextension |
+			grep -q "<string>app-proxy-provider-systemextension</string>" ||
+			wrong "$(basename "$bundle") does not claim the transparent proxy"
+	done
+	entitled "$APP" com.apple.developer.system-extension.install | grep -q "<true/>" ||
+		wrong "tracewing.app may not install the extension"
+	entitled "$EXTENSION" com.apple.security.app-sandbox | grep -q "<true/>" ||
+		wrong "the extension is not in the sandbox"
+	echo "  with the network extension"
+elif [ "${MACOS_EXTENSION_EXPECTED:-}" = 1 ]; then
+	wrong "no network extension, though its profiles were given"
+fi
+
 [ "$FAILED" = 0 ] || { echo "$DMG is not as it should be" >&2; exit 1; }
 echo "  holds what it should"
 

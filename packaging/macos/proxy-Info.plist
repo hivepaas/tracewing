@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The network extension's Info.plist (crates/netext), in
+  tracewing.app/Contents/Library/SystemExtensions/: scripts/package_macos.sh
+  puts the version in. macOS replaces an installed extension by a newer
+  CFBundleVersion.
+-->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>tracewing</string>
+	<key>CFBundleExecutable</key>
+	<string>com.hivepaas.tracewing.proxy</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.hivepaas.tracewing.proxy</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>tracewing proxy</string>
+	<key>CFBundlePackageType</key>
+	<string>SYSX</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@VERSION@</string>
+	<key>CFBundleVersion</key>
+	<string>@VERSION@</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 HivePaaS. GPL-3.0-or-later.</string>
+	<key>NSSystemExtensionUsageDescription</key>
+	<string>Lets tracewing record the traffic of the apps you choose, without changing their proxy settings.</string>
+	<key>NetworkExtension</key>
+	<dict>
+		<!-- Under an app group of the extension's (proxy.entitlements). -->
+		<key>NEMachServiceName</key>
+		<string>6KW3D6ZGQJ.com.hivepaas.tracewing.proxy</string>
+		<key>NEProviderClasses</key>
+		<dict>
+			<key>com.apple.networkextension.app-proxy</key>
+			<string>TracewingProxy</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

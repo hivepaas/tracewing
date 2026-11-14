@@ -1,0 +1,23 @@
+[package]
+name = "tracewing-netext"
+description = "tracewing's network extension for macOS: a transparent proxy that hands the flows of the apps chosen to tracewing"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# Packaged as Contents/Library/SystemExtensions/com.hivepaas.tracewing.proxy.systemextension
+# in tracewing.app (scripts/package_macos.sh). A name with dots cannot be a
+# Cargo target's, so the script gives it the bundle's.
+[[bin]]
+name = "tracewing-netext"
+path = "src/main.rs"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block2.workspace = true
+log.workspace = true
+objc2.workspace = true
+objc2-foundation.workspace = true
+objc2-network-extension.workspace = true
+oslog.workspace = true
