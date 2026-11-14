@@ -378,6 +378,49 @@ fn the_window_shows_real_traffic() {
             }
         })
         .unwrap();
+    // Pressed twice in the dump, what is read is what the dump says there.
+    // The file's own line is a different string, numbered in a different
+    // space -- sixteen bytes to a hex line, as long as it is to a text one --
+    // so an offset taken from the dump lands anywhere at all in it: the word
+    // read would be one nobody pressed, and the bytes marked ones nobody
+    // chose.
+    window
+        .update(&mut cx, |view, _, cx| {
+            let BodyState::Shown(body) = &view.inspector.body else {
+                panic!()
+            };
+            let body = body.clone();
+            let line = body.read(cx).body().read_in(0..1, true)[0].text.clone();
+            // The digits of the eighth byte: far enough in that an offset
+            // into the file's line would not land on them by chance.
+            let at = 7 * 3;
+            assert!(
+                line[at..at + 2].chars().all(|c| c.is_ascii_hexdigit()),
+                "a full line of sixteen bytes: {line:?}"
+            );
+            body.update(cx, |body, cx| {
+                assert!(
+                    body.read_value_at_spot(
+                        tracewing::select::Spot {
+                            piece: tracewing::wrap::key(0, 0),
+                            at: at + 1,
+                        },
+                        true,
+                        cx,
+                    ),
+                    "the press landed on a byte"
+                );
+            });
+            match body.read(cx).selected_text() {
+                tracewing::select::Copied::Text(text) => {
+                    assert_eq!(text, line[at..at + 2], "the byte pressed, and only it");
+                }
+                other => panic!("{other:?}"),
+            }
+            body.read(cx).selection().clear();
+        })
+        .unwrap();
+
     // Wide enough that both sides of a hex line are in view: the characters
     // sit past sixteen bytes of digits, and hex does not wrap.
     window
