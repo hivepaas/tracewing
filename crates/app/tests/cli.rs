@@ -418,28 +418,52 @@ fn the_watchdog_is_not_caught_by_a_kill_of_the_app() {
         .stdin(Stdio::piped())
         .spawn()
         .unwrap();
-    let comm = format!("/proc/{}/comm", watchdog.id());
-    // It is the program's own name until the watchdog has renamed itself,
-    // which is the first thing it does once it is running at all.
-    let name = (0..200)
-        .find_map(|_| {
-            let name = std::fs::read_to_string(&comm).unwrap_or_default();
-            if name.trim().is_empty() || name.trim() == "tracewing" {
-                std::thread::sleep(Duration::from_millis(10));
+    // `/proc` has nothing to say about a process until its `exec` has gone
+    // through, and on a loaded machine that takes a moment — long enough that
+    // reading once made this test fail with an empty string and nothing to
+    // say why. So everything read of it here is polled.
+    fn until<T>(mut look: impl FnMut() -> Option<T>) -> Option<T> {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            if let Some(found) = look() {
+                return Some(found);
+            }
+            if Instant::now() > deadline {
                 return None;
             }
-            Some(name)
-        })
-        .unwrap_or_else(|| std::fs::read_to_string(&comm).unwrap_or_default());
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    let pid = watchdog.id();
+    // It hides from nobody: the command line is the one it was started with,
+    // which `pkill -f tracewing` reads.
+    let args = until(|| {
+        let args = std::fs::read_to_string(format!("/proc/{pid}/cmdline")).unwrap_or_default();
+        (!args.is_empty()).then_some(args)
+    });
+    if let Some(ended) = watchdog.try_wait().unwrap() {
+        panic!("the watchdog ended before anything could be read of it: {ended}");
+    }
+    let args = args.expect("a command line, once the watchdog has started");
+    assert!(
+        args.contains("tracewing"),
+        "a command line `pkill -f tracewing` would find: {args:?}"
+    );
+
+    // And the name is its own, once it has renamed itself, which is the first
+    // thing it does.
+    let name = until(|| {
+        let name = std::fs::read_to_string(format!("/proc/{pid}/comm")).unwrap_or_default();
+        let name = name.trim().to_owned();
+        (!name.is_empty() && name != "tracewing").then_some(name)
+    })
+    .unwrap_or_else(|| std::fs::read_to_string(format!("/proc/{pid}/comm")).unwrap_or_default());
+    assert!(!name.trim().is_empty(), "the watchdog never started");
     assert!(
         !name.contains("tracewing"),
         "a name `pkill tracewing` would catch: {name}"
     );
-
-    // And it hides from nobody: the command line is the one it was started
-    // with, which `pkill -f tracewing` reads.
-    let args = std::fs::read_to_string(format!("/proc/{}/cmdline", watchdog.id())).unwrap();
-    assert!(args.contains("tracewing"), "{args:?}");
 
     // The app going is what it waits for, and then it has nothing to do: no
     // journal, nothing to put back.
@@ -495,5 +519,54 @@ fn uninstall_undoes_what_it_did_and_keeps_what_was_recorded() {
     assert!(said.contains("is still in"), "{said}");
     assert!(dir.join("sessions").is_dir(), "it took the sessions away");
 
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// The watchdog's whole reason to exist, which nothing tested: the app goes,
+/// and whatever it did to the system proxy is undone. The app going is its
+/// end of the pipe closing, which happens however it died — a kill, a panic,
+/// a power of the plug.
+///
+/// On a machine with no desktop to read the setting from there is nothing to
+/// put back, so it says so and keeps the journal, exactly as `recover` does:
+/// see `it_put_them_back_or_said_why_not`.
+#[cfg(target_os = "linux")]
+#[test]
+fn the_watchdog_puts_the_setting_back_when_the_app_goes() {
+    let dir = std::env::temp_dir().join(format!("tracewing-watchdog-job-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let journal = dir.join("sysproxy.journal");
+    journal_of_a_killed_run(&dir);
+
+    let mut watchdog = tracewing()
+        .args(["watchdog", "--data-dir"])
+        .arg(&dir)
+        .env("HOME", &dir)
+        .env("XDG_CONFIG_HOME", dir.join("config"))
+        .stdin(Stdio::piped())
+        .spawn()
+        .unwrap();
+    // The app going, whatever took it: its end of the pipe closes.
+    drop(watchdog.stdin.take());
+    let ended = watchdog.wait().unwrap();
+
+    let log = std::fs::read_to_string(dir.join("watchdog.log")).unwrap_or_default();
+    assert!(
+        log.contains("app gone"),
+        "it writes down what it found, either way: {log:?}"
+    );
+    if ended.success() {
+        assert!(
+            !journal.exists(),
+            "the journal goes with the settings, so it cannot be used twice"
+        );
+    } else {
+        assert!(
+            journal.exists(),
+            "nothing could be read, so the journal stays: it is all that is \
+             left of what the settings were"
+        );
+    }
     std::fs::remove_dir_all(&dir).ok();
 }

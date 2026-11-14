@@ -414,6 +414,11 @@ fn capture(
         .build()?;
     runtime.block_on(async {
         tokio::select! {
+            // The only signal handler tracewing installs, and it belongs to
+            // this command. The watchdog deliberately has none: a handler
+            // there would let a signal cut its read of stdin short, which it
+            // would take for the app going. If you give the watchdog one, read
+            // the loop in `tracewing_system::watchdog` first.
             _ = tokio::signal::ctrl_c() => {}
             _ = async {
                 match seconds {

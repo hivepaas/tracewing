@@ -4138,3 +4138,139 @@ async fn a_taken_connection_is_recorded_as_the_app_that_made_it() {
     assert_eq!(host, format!("localhost:{port}"));
     clean_up(conn, dir);
 }
+
+/// Why a taken connection is not wrapped in `CONNECT`: inside a tunnel the
+/// proxy reads TLS and a plain `GET`, and tunnels the rest blind, so this
+/// `POST` would have gone through unseen. It is recorded with its body, and
+/// the playground's echo proves the server was asked properly too.
+///
+/// It hands over a bare address rather than a name, as a source that deals in
+/// packets would, so the flow is named by that address.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_taken_plain_post_is_recorded_body_and_all() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let h = Harness::start("taken-post").await;
+    let port = h.playground_port;
+    let (mut client, its_end) = tokio::io::duplex(64 * 1024);
+    h.taken
+        .send(Flow {
+            stream: Box::new(its_end),
+            client: "10.0.0.7:4000".parse().unwrap(),
+            to: Target::Addr(format!("127.0.0.1:{port}").parse().unwrap()),
+            who: None,
+        })
+        .await
+        .unwrap();
+    let body = r#"{"order":"X-9901"}"#;
+    client
+        .write_all(
+            format!(
+                "POST /echo HTTP/1.1\r\nHost: api.test\r\nContent-Type: application/json\r\n\
+                 Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            )
+            .as_bytes(),
+        )
+        .await
+        .unwrap();
+    let mut said = Vec::new();
+    client.read_to_end(&mut said).await.unwrap();
+    let said = String::from_utf8_lossy(&said);
+    assert!(said.starts_with("HTTP/1.1 200"), "{said}");
+    assert!(
+        said.contains(r#"\"order\":\"X-9901\""#),
+        "the server was asked with the body, and echoed it: {said}"
+    );
+
+    let (summary, conn, dir) = h.finish(1).await;
+    assert_eq!(summary.written, 1, "the POST was recorded, not tunnelled");
+    let (method, host, path, client_addr, req_bytes): (String, String, String, String, i64) = conn
+        .query_row(
+            "SELECT method, host, path, client, req_bytes FROM flows",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+        )
+        .unwrap();
+    assert_eq!(method, "POST");
+    assert_eq!(path, "/echo");
+    assert_eq!(client_addr, "10.0.0.7:4000");
+    assert_eq!(
+        host,
+        format!("127.0.0.1:{port}"),
+        "named by the address the source handed over, not by the Host header"
+    );
+    assert_eq!(
+        req_bytes,
+        body.len() as i64,
+        "the body was read, not missed"
+    );
+    let id: i64 = conn
+        .query_row("SELECT id FROM flows", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(
+        request_of(&conn, &dir, id).as_deref(),
+        Some(body.as_bytes()),
+        "and kept"
+    );
+    clean_up(conn, dir);
+}
+
+/// The other way in. A taken connection that starts a TLS handshake is given
+/// a tunnel on the client's behalf, because that is the only way the proxy
+/// will terminate TLS. The client here trusts nothing but the proxy's own
+/// authority, so a `200` means the proxy decrypted it rather than passing it
+/// along.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_taken_tls_connection_is_decrypted() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio_rustls::rustls::{ClientConfig, RootCertStore, pki_types::ServerName};
+    let h = Harness::start("taken-tls").await;
+    let port = h.playground_tls_port;
+    let (client, its_end) = tokio::io::duplex(64 * 1024);
+    h.taken
+        .send(Flow {
+            stream: Box::new(its_end),
+            client: "10.0.0.7:4001".parse().unwrap(),
+            to: Target::Named {
+                host: "localhost".to_owned(),
+                port,
+            },
+            who: None,
+        })
+        .await
+        .unwrap();
+
+    let mut roots = RootCertStore::empty();
+    for cert in CertificateDer::pem_file_iter(h.dir.join("ca/ca.pem")).unwrap() {
+        roots.add(cert.unwrap()).unwrap();
+    }
+    let config = ClientConfig::builder_with_provider(Arc::new(tracewing_proxy::crypto_provider()))
+        .with_safe_default_protocol_versions()
+        .unwrap()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    let mut tls = tokio_rustls::TlsConnector::from(Arc::new(config))
+        .connect(ServerName::try_from("localhost").unwrap(), client)
+        .await
+        .expect("the proxy's certificate, for a connection it was handed");
+    tls.write_all(b"GET /json HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        .await
+        .unwrap();
+    let mut said = Vec::new();
+    tls.read_to_end(&mut said).await.unwrap();
+    let said = String::from_utf8_lossy(&said);
+    assert!(said.starts_with("HTTP/1.1 200"), "{said}");
+
+    let (summary, conn, dir) = h.finish(1).await;
+    assert_eq!(summary.written, 1);
+    let (scheme, host, path, client_addr): (String, String, String, String) = conn
+        .query_row("SELECT scheme, host, path, client FROM flows", [], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        })
+        .unwrap();
+    assert_eq!(scheme, "https", "decrypted, not tunnelled");
+    assert_eq!(host, format!("localhost:{port}"));
+    assert_eq!(path, "/json");
+    assert_eq!(client_addr, "10.0.0.7:4001");
+    clean_up(conn, dir);
+}

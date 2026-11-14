@@ -416,6 +416,53 @@ impl FlowHandler {
         }
     }
 
+    /// A request from a connection taken on its way comes in origin form —
+    /// `POST /orders`, with the host in a header, or in HTTP/1.0 not at all —
+    /// because the client believes it is talking to the server. The proxy
+    /// needs the server in the URI, so this puts it there.
+    ///
+    /// What goes in is what the source knew, not what the client's `Host`
+    /// header says, even though the header usually reads better. The URI
+    /// decides where the proxy connects, and a name out of the header would
+    /// be looked up again here — which can answer with a different address
+    /// than the one the client was really going to, or with none at all. A
+    /// name the source itself read, out of a ClientHello or a SOCKS request,
+    /// is the same name by a safer route.
+    ///
+    /// So a source that hands over a bare address gets flows named by that
+    /// address, and the server is asked with it in the `Host` header, which
+    /// a server with several names on one address will answer wrongly.
+    /// Having both — the name to show and ask with, the address to connect
+    /// to — needs the connector to take a destination of its own, and that
+    /// is the next piece of work for a source that deals in packets.
+    ///
+    /// Everything else is left alone: a client that asked for the proxy sends
+    /// an absolute URI already, and a request to the proxy's own pages — the
+    /// test page, the revocation list — is origin form on purpose.
+    fn as_absolute(&self, from: SocketAddr, req: Request<Body>) -> Request<Body> {
+        if req.uri().authority().is_some() {
+            return req;
+        }
+        let Some(known) = self.handed.of(from) else {
+            return req;
+        };
+        let authority = known.to.authority();
+        let (mut parts, body) = req.into_parts();
+        let mut uri = parts.uri.clone().into_parts();
+        uri.scheme = Some(http::uri::Scheme::HTTP);
+        uri.authority = authority.parse().ok();
+        if uri.path_and_query.is_none() {
+            uri.path_and_query = Some(http::uri::PathAndQuery::from_static("/"));
+        }
+        match http::Uri::from_parts(uri) {
+            Ok(uri) => parts.uri = uri,
+            // Nothing to be done with a host that is not one: it goes on as
+            // it came and the proxy answers 400, as it would for any client.
+            Err(e) => tracing::warn!("a taken connection to {authority:?}: {e}"),
+        }
+        Request::from_parts(parts, body)
+    }
+
     /// A rule's answer: no server was asked, so none is on record.
     fn answer_as_rule(&mut self, flow: Option<Arc<Flow>>, res: Response<Body>) -> Response<Body> {
         let kept = flow.clone();
@@ -693,6 +740,7 @@ impl HttpHandler for FlowHandler {
             return req.into();
         }
         let req = with_http_scheme(req);
+        let req = self.as_absolute(ctx.client_addr, req);
         // Revocation checks ask for this while the handshake waits, directly or
         // through the system proxy. They are not traffic the user sent.
         if req.uri().path() == CRL_PATH && request_host(&req) == Some(self.crl.host.as_str()) {

@@ -378,7 +378,25 @@ pub fn watchdog(data_dir: &Path) -> Result<()> {
     name_itself();
     let mut sink = [0u8; 64];
     let mut stdin = std::io::stdin();
-    while stdin.read(&mut sink).is_ok_and(|n| n > 0) {}
+    // The pipe closing is the app going, however it went. A read cut short by
+    // a signal is not, and taking it for one would put the system proxy back
+    // under a tracewing that is still serving through it. Any other failure
+    // is read as the app going, which errs towards giving the network back.
+    //
+    // As things stand the interrupted arm cannot be reached: a read is cut
+    // short only by a signal this process catches, and the watchdog installs
+    // no handler — `tokio::signal` is the `capture` command's, not this one's.
+    // It is here for the day somebody gives the watchdog a handler, because
+    // on that day the failure would be silent and the symptom would be a
+    // machine that lost its proxy setting while tracewing was still using it.
+    loop {
+        match stdin.read(&mut sink) {
+            Ok(0) => break,
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(_) => break,
+        }
+    }
 
     let outcome = recover(data_dir);
     let mut log = fs::OpenOptions::new()
