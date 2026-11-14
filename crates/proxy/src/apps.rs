@@ -18,7 +18,7 @@ mod os;
 mod os;
 #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 mod os {
-    pub fn owners(clients: &[std::net::SocketAddr], _: u16, _: &[u32]) -> Vec<Option<u32>> {
+    pub fn owners(clients: &[std::net::SocketAddr], _: &[u16], _: &[u32]) -> Vec<Option<u32>> {
         vec![None; clients.len()]
     }
 
@@ -66,13 +66,16 @@ struct Ask {
 }
 
 impl Apps {
-    /// `proxy_port` is where clients connect, which tells their sockets apart
-    /// from the rest.
-    pub fn spawn(proxy_port: u16) -> std::io::Result<Self> {
+    /// `ours` is every port of tracewing's that clients connect to, which is
+    /// what tells their sockets apart from the rest: the proxy port, and a
+    /// port a source of its own opened, such as SOCKS5's. The port most
+    /// clients come in on goes first, because that is the one looked for
+    /// first.
+    pub fn spawn(ours: Vec<u16>) -> std::io::Result<Self> {
         let (tx, rx) = mpsc::channel();
         std::thread::Builder::new()
             .name("apps".into())
-            .spawn(move || look_for_apps(rx, proxy_port))?;
+            .spawn(move || look_for_apps(rx, &ours))?;
         Ok(Self {
             inner: Arc::new(Inner {
                 asks: Mutex::new(tx),
@@ -136,7 +139,7 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 }
 
 /// The thread: until the proxy lets go of [`Apps`].
-fn look_for_apps(asks: Receiver<Ask>, proxy_port: u16) {
+fn look_for_apps(asks: Receiver<Ask>, ours: &[u16]) {
     let mut processes: HashMap<u32, (Instant, App)> = HashMap::new();
     let mut recent: Vec<u32> = Vec::new();
     while let Ok(first) = asks.recv() {
@@ -147,7 +150,7 @@ fn look_for_apps(asks: Receiver<Ask>, proxy_port: u16) {
         clients.dedup();
         let owners: HashMap<SocketAddr, u32> = clients
             .iter()
-            .zip(os::owners(&clients, proxy_port, &recent))
+            .zip(os::owners(&clients, ours, &recent))
             .filter_map(|(client, owner)| Some((*client, owner?)))
             .collect();
         let now = Instant::now();
@@ -190,7 +193,7 @@ mod tests {
     fn a_connection_from_here_is_this_program() {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
-        let apps = Apps::spawn(port).unwrap();
+        let apps = Apps::spawn(vec![port]).unwrap();
         let client = TcpStream::connect(("127.0.0.1", port)).unwrap();
         let _server = listener.accept().unwrap();
         let answer = apps.of(client.local_addr().unwrap(), true).unwrap();
@@ -209,11 +212,44 @@ mod tests {
         assert!(Arc::ptr_eq(&answer, &again));
     }
 
+    /// A connection that came in on another of tracewing's ports, as a SOCKS5
+    /// client's does, is found as one to the proxy port is.
+    #[test]
+    fn a_connection_on_another_of_our_ports_is_found() {
+        let proxy = TcpListener::bind("127.0.0.1:0").unwrap();
+        let socks = TcpListener::bind("127.0.0.1:0").unwrap();
+        let socks_port = socks.local_addr().unwrap().port();
+        let apps = Apps::spawn(vec![proxy.local_addr().unwrap().port(), socks_port]).unwrap();
+        let client = TcpStream::connect(("127.0.0.1", socks_port)).unwrap();
+        let _server = socks.accept().unwrap();
+        let answer = apps.of(client.local_addr().unwrap(), true).unwrap();
+        let app = answer
+            .wait_until(Instant::now() + Duration::from_secs(10))
+            .expect("found");
+        assert_eq!(app.pid, std::process::id());
+    }
+
+    /// And a connection to a port that is none of ours is not: this program's
+    /// own traffic goes to plenty of them, and none of it is being proxied.
+    #[test]
+    fn a_connection_to_a_port_that_is_not_ours_is_not_found() {
+        let ours = TcpListener::bind("127.0.0.1:0").unwrap();
+        let elsewhere = TcpListener::bind("127.0.0.1:0").unwrap();
+        let apps = Apps::spawn(vec![ours.local_addr().unwrap().port()]).unwrap();
+        let client = TcpStream::connect(elsewhere.local_addr().unwrap()).unwrap();
+        let _server = elsewhere.accept().unwrap();
+        let answer = apps.of(client.local_addr().unwrap(), true).unwrap();
+        assert_eq!(
+            answer.wait_until(Instant::now() + Duration::from_secs(10)),
+            None
+        );
+    }
+
     #[test]
     fn many_connections_at_once_are_all_found() {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
-        let apps = Apps::spawn(port).unwrap();
+        let apps = Apps::spawn(vec![port]).unwrap();
         let clients: Vec<TcpStream> = (0..20)
             .map(|_| TcpStream::connect(("127.0.0.1", port)).unwrap())
             .collect();
@@ -234,7 +270,7 @@ mod tests {
     fn a_connection_that_is_not_there_has_no_program() {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
-        let apps = Apps::spawn(port).unwrap();
+        let apps = Apps::spawn(vec![port]).unwrap();
         let answer = apps.of("127.0.0.1:9".parse().unwrap(), true).unwrap();
         assert_eq!(
             answer.wait_until(Instant::now() + Duration::from_secs(10)),
@@ -245,7 +281,7 @@ mod tests {
 
     #[test]
     fn another_machine_is_not_looked_for() {
-        let apps = Apps::spawn(1).unwrap();
+        let apps = Apps::spawn(vec![1]).unwrap();
         // TEST-NET-1: never this machine's.
         assert!(apps.of("192.0.2.7:5000".parse().unwrap(), true).is_none());
         assert!(apps.is_local("127.0.0.1".parse().unwrap()));

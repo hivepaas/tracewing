@@ -16,10 +16,10 @@ use windows_sys::Win32::{
     },
 };
 
-pub fn owners(clients: &[SocketAddr], proxy_port: u16, _recent: &[u32]) -> Vec<Option<u32>> {
+pub fn owners(clients: &[SocketAddr], ours: &[u16], _recent: &[u32]) -> Vec<Option<u32>> {
     let mut by_local: HashMap<SocketAddr, u32> = HashMap::new();
     for row in table::<MIB_TCPROW_OWNER_PID>(AF_INET) {
-        if port(row.dwRemotePort) == proxy_port {
+        if ours.contains(&port(row.dwRemotePort)) {
             let ip = Ipv4Addr::from(row.dwLocalAddr.to_ne_bytes());
             by_local.insert(
                 SocketAddr::new(IpAddr::V4(ip), port(row.dwLocalPort)),
@@ -28,7 +28,7 @@ pub fn owners(clients: &[SocketAddr], proxy_port: u16, _recent: &[u32]) -> Vec<O
         }
     }
     for row in table::<MIB_TCP6ROW_OWNER_PID>(AF_INET6) {
-        if port(row.dwRemotePort) == proxy_port {
+        if ours.contains(&port(row.dwRemotePort)) {
             let ip = Ipv6Addr::from(row.ucLocalAddr).to_canonical();
             by_local.insert(SocketAddr::new(ip, port(row.dwLocalPort)), row.dwOwningPid);
         }

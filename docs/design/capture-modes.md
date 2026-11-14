@@ -306,13 +306,22 @@ but its own tests: the first real user of a seam is what finds the seam's
 bugs. It also gets `Target::Named` free from the protocol, where a source
 reading packets has to find the name in a ClientHello.
 
-Two things are left of SOCKS5, neither of them the protocol: a port in
-Settings, with the switch and the words to go with it, since nothing but
-`tracewing-dev proxy --socks` opens one today; and
-[`apps`](../../crates/proxy/src/apps.rs) knowing which port a connection came
-in on, because it looks for a socket whose far end is the proxy port and a
-SOCKS5 client's far end is the SOCKS5 port, so those flows have no program
-against them. That second one is a change across three operating systems.
+One thing is left of SOCKS5, and it is not the protocol: a port in Settings,
+with the switch and the words to go with it, since nothing but
+`tracewing-dev proxy --socks` opens one today.
+
+What the protocol did cost, beyond itself, was teaching
+[`apps`](../../crates/proxy/src/apps.rs) that tracewing has more than one way
+in. It finds the program behind a connection by looking for a socket whose far
+end is tracewing's port, and a SOCKS5 client's far end is the SOCKS5 port, so
+those flows arrived with no program against them. A source now says which
+ports of ours clients reach it on — `Source::own_ports` — and `apps` is given
+the lot, the proxy port first because that is where most connections come
+from. On Linux that order is what keeps the cost off the common case: one
+netlink ask names one port, so a client on the proxy port still costs one ask
+and only the others pay for a second. The look itself is started by the
+client's address either way, which is why a taken flow whose source named no
+program is now looked up like any client that asked.
 
 What is left:
 
