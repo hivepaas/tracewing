@@ -2857,6 +2857,9 @@ t3868d34d = Cache-Control
 # Content-Security-Policy
 tc6d9127c = Content-Security-Policy
 
+# Link
+t8e08e589 = Link
+
 # Status code
 t20b704bc = ステータスコード
 
@@ -3204,3 +3207,9 @@ t08d22e0f = eval
 
 # anywhere
 tf5f4aec0 = どこからでも
+
+# Relation
+tb4b329c1 = 関係
+
+# Where
+t91dad0f8 = 宛先
