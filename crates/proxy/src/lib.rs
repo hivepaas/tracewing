@@ -10,6 +10,7 @@ pub mod company_ca;
 pub mod handover;
 pub mod key_log;
 pub mod lan;
+pub mod name;
 pub mod ntlm;
 pub mod pause;
 pub mod relay;
