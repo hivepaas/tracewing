@@ -213,6 +213,170 @@ pub fn mac(input: &Input) -> Option<Reading> {
     ))
 }
 
+/// RFC 3492's numbers. They are the algorithm's, not this crate's, and mean
+/// nothing apart from it.
+const BASE: u32 = 36;
+const TMIN: u32 = 1;
+const TMAX: u32 = 26;
+const SKEW: u32 = 38;
+const DAMP: u32 = 700;
+const FIRST_BIAS: u32 = 72;
+const FIRST_N: u32 = 128;
+
+/// A name written in Punycode, as the name it stands for: `xn--bcher-kva`
+/// is `bücher`.
+///
+/// A host in a `Host` header, a certificate or a redirect that the reader
+/// cannot read is the whole reason for this. It is also why the reading says
+/// which characters are not ASCII and what their code points are:
+/// `xn--pypal-4ve` comes back as `pаypal`, which looks like a word a reader
+/// knows until the `а` turns out to be U+0430, Cyrillic. Telling those apart
+/// needs the code point, and nothing else here can show it.
+///
+/// What this does not do is judge. Saying a name is confusable needs the
+/// Unicode confusables table, which is a different piece of work and a
+/// dependency this crate does not have; what is here is the arithmetic of
+/// RFC 3492 and the characters laid out for a reader to see.
+pub fn punycode(input: &Input) -> Option<Reading> {
+    let text = input.text.trim().trim_matches('"');
+    // A host is 253 characters at the outside, and this is a host or it is
+    // nothing: a sentence with `xn--` in the middle is not a name.
+    if text.is_empty() || text.len() > 253 {
+        return None;
+    }
+    let mut labels = Vec::new();
+    let mut encoded = 0;
+    for label in text.split('.') {
+        let rest = label
+            .get(..4)
+            .filter(|prefix| prefix.eq_ignore_ascii_case("xn--"))
+            .map(|_| &label[4..])
+            .filter(|rest| !rest.is_empty());
+        match rest {
+            Some(rest) => {
+                labels.push(decode(rest)?);
+                encoded += 1;
+            }
+            // Every other label still has to be one, or this is prose.
+            None if !label.is_empty()
+                && label
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-') =>
+            {
+                labels.push(label.to_owned());
+            }
+            None => return None,
+        }
+    }
+    if encoded == 0 {
+        return None;
+    }
+    let name = labels.join(".");
+    let mut fields = vec![(tr!("Name"), name.clone())];
+    let odd = not_ascii(&name);
+    if !odd.is_empty() {
+        fields.push((tr!("Not ASCII"), odd));
+    }
+    Some(Reading::new(
+        "punycode",
+        tr!("Punycode"),
+        Confidence::Certain,
+        Shown::Fields(fields),
+    ))
+}
+
+/// RFC 3492's decoder, which is arithmetic and no tables at all. `encoded`
+/// is one label with its `xn--` already off.
+fn decode(encoded: &str) -> Option<String> {
+    // The last hyphen separates the characters that came through as
+    // themselves from the digits that carry the rest. The digits are
+    // alphanumeric, so a hyphen anywhere is this one.
+    let (basic, digits) = match encoded.rfind('-') {
+        Some(at) => (&encoded[..at], &encoded[at + 1..]),
+        None => ("", encoded),
+    };
+    if !basic.is_ascii() {
+        return None;
+    }
+    let mut out: Vec<char> = basic.chars().collect();
+    let digits: Vec<char> = digits.chars().collect();
+    let mut at = 0;
+    let mut n = FIRST_N;
+    let mut i: u32 = 0;
+    let mut bias = FIRST_BIAS;
+    while at < digits.len() {
+        let was = i;
+        let mut weight: u32 = 1;
+        let mut k = BASE;
+        loop {
+            let digit = value(*digits.get(at)?)?;
+            at += 1;
+            i = i.checked_add(digit.checked_mul(weight)?)?;
+            // `t` is `k - bias` held between the two bounds.
+            let t = k.saturating_sub(bias).clamp(TMIN, TMAX);
+            if digit < t {
+                break;
+            }
+            weight = weight.checked_mul(BASE - t)?;
+            k += BASE;
+        }
+        let length = out.len() as u32 + 1;
+        bias = adapt(i - was, length, was == 0);
+        n = n.checked_add(i / length)?;
+        i %= length;
+        out.insert(i as usize, char::from_u32(n)?);
+        i += 1;
+    }
+    Some(out.into_iter().collect())
+}
+
+/// A digit of base 36: letters first, whatever their case, then the numerals.
+fn value(c: char) -> Option<u32> {
+    match c {
+        'a'..='z' => Some(c as u32 - 'a' as u32),
+        'A'..='Z' => Some(c as u32 - 'A' as u32),
+        '0'..='9' => Some(c as u32 - '0' as u32 + 26),
+        _ => None,
+    }
+}
+
+/// How the bias moves after each character, so that a name of one script
+/// does not pay for the distance to it more than once. RFC 3492's own.
+fn adapt(delta: u32, length: u32, first: bool) -> u32 {
+    let mut delta = match first {
+        true => delta / DAMP,
+        false => delta / 2,
+    };
+    delta += delta / length;
+    let mut k = 0;
+    while delta > ((BASE - TMIN) * TMAX) / 2 {
+        delta /= BASE - TMIN;
+        k += BASE;
+    }
+    k + (((BASE - TMIN + 1) * delta) / (delta + SKEW))
+}
+
+/// The characters that are not ASCII, each once and in the order they first
+/// appear, with the code point beside them: what turns `pаypal` from a word
+/// a reader thinks they know into a question they can answer.
+fn not_ascii(name: &str) -> String {
+    let mut seen: Vec<char> = Vec::new();
+    for c in name.chars().filter(|c| !c.is_ascii()) {
+        if !seen.contains(&c) {
+            seen.push(c);
+        }
+    }
+    let mut said: Vec<String> = seen
+        .iter()
+        .take(8)
+        .map(|c| format!("{c} U+{:04X}", *c as u32))
+        .collect();
+    if seen.len() > 8 {
+        said.push("…".to_owned());
+    }
+    said.join(", ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -283,5 +447,70 @@ mod tests {
             "given by hand, not by the maker"
         );
         assert!(by_id(&read("00:1b:44:11:3a"), "mac").is_none());
+    }
+    fn name(text: &str) -> String {
+        fields(text, "punycode")
+            .into_iter()
+            .next()
+            .expect("a name")
+            .1
+    }
+
+    /// The expected sides of these came out of Python's own `punycode`
+    /// codec rather than from memory: an implementation of RFC 3492 that
+    /// shares no code with this one, which is the only thing that makes
+    /// them a test of the decoder rather than a record of its output.
+    #[test]
+    fn a_punycode_name_comes_back_as_itself() {
+        assert_eq!(name("xn--bcher-kva"), "bücher");
+        assert_eq!(name("xn--mnchen-3ya.de"), "münchen.de");
+        assert_eq!(name("xn--maana-pta.example.com"), "mañana.example.com");
+        assert_eq!(name("xn--wgv71a119e"), "日本語");
+        assert_eq!(name("xn--3B-ww4c5e180e575a65lsy2b"), "3年B組金八先生");
+        assert_eq!(
+            name("xn--Proprostnemluvesky-uyb24dma41a"),
+            "Pročprostěnemluvíčesky"
+        );
+        // The prefix is a prefix whatever its case.
+        assert_eq!(name("XN--bcher-kva.example"), "bücher.example");
+    }
+
+    /// The reason a reader opened it: `pаypal` is not `paypal`, and only the
+    /// code point says so.
+    #[test]
+    fn the_characters_that_are_not_ascii_are_named() {
+        let found = fields("xn--pypal-4ve.com", "punycode");
+        assert_eq!(found[0].1, "pаypal.com");
+        assert_eq!(found[1].1, "а U+0430");
+        // A name that is all ASCII once decoded has nothing to add, so the
+        // second line is not there at all.
+        let found = fields("xn--mnchen-3ya", "punycode");
+        assert_eq!(found.len(), 2, "münchen has a ü: {found:?}");
+        assert_eq!(found[1].1, "ü U+00FC");
+    }
+
+    #[test]
+    fn what_is_not_punycode_is_not_read() {
+        for text in [
+            // Nothing encoded in it.
+            "example.com",
+            "münchen.de",
+            // The prefix and nothing after it.
+            "xn--",
+            "xn--.com",
+            // Digits that are not digits of base 36.
+            "xn--!!!",
+            "xn--bcher-kva!",
+            // Prose with a name in the middle, and a URL rather than a name.
+            "the host is xn--bcher-kva today",
+            "https://xn--bcher-kva.example/path",
+            // An empty label is not a label.
+            "xn--bcher-kva..com",
+        ] {
+            assert!(
+                by_id(&read(text), "punycode").is_none(),
+                "read {text} as a name"
+            );
+        }
     }
 }

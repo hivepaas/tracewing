@@ -2968,6 +2968,9 @@ teee15f8f = data: URI
 # IPv6
 t43fe7378 = IPv6
 
+# Punycode
+t9ea30ee2 = Punycode
+
 # A range of addresses
 t889c22f2 = Bir adres aralığı
 
@@ -3072,6 +3075,9 @@ t660024a1 = bire değil, çoğa
 
 # given by hand, not by the maker
 tc16b0e31 = üretici değil, elle verilmiş
+
+# Not ASCII
+t181bc20d = ASCII değil
 
 # in {amount}
 tfda57c3e = { $amount } sonra

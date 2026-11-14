@@ -2875,6 +2875,9 @@ teee15f8f = data: URI
 # IPv6
 t43fe7378 = IPv6
 
+# Punycode
+t9ea30ee2 = Punycode
+
 # A range of addresses
 t889c22f2 = 주소 범위
 
@@ -2979,6 +2982,9 @@ t660024a1 = 하나가 아니라 여럿에게
 
 # given by hand, not by the maker
 tc16b0e31 = 제조사가 아니라 직접 지정
+
+# Not ASCII
+t181bc20d = ASCII 아님
 
 # in {amount}
 tfda57c3e = { $amount } 후

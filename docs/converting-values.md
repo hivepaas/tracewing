@@ -226,7 +226,7 @@ Narrower, and worth it for anyone debugging a backend.
 | Binary formats — **partly built** | Protobuf off the wire with no `.proto`: every field by number, how it was written, text where it is text, and a count for a message inside a message; a gRPC frame taken off first. MessagePack, CBOR and BSON are not here on purpose — `tracewing_store::binjson` already reads all three for a whole body, and the right move is to let a value reuse that rather than to write it twice; where `binjson` should live is a question for its own change |
 | Tokens and keys — **built** | JWE told from a JWS by its five parts, saying what wrapped the key and what encrypted the rest; PASETO, with a public token's claims read and a local one's said to need the key; SAML out of the chain that unpacks it, saying which message, from whom and to where; PEM, saying what it holds and how much DER; a JWK, or a whole JWKS a row at a time, saying what each key is and the size its modulus makes it; a hash named by the sizes it could be; bcrypt, argon2, SHA-crypt and PBKDF2 by their parameters; a framework's session cookie taken apart into the session it carries -- Flask's as itsdangerous writes it, Django's with the zlib off the front, Rails signed with its own wrapper off as well, and Rails encrypted said to need `secret_key_base` -- with the signature shown rather than checked. Reading a DER structure itself is still to come: it wants an ASN.1 parser, and `x509-parser` is the app's dependency, not this crate's |
 | With a secret the reader types | Verify a JWT's HMAC; verify a framework's signed cookie, whose payload is already read without the key under Tokens and keys; decrypt with a key given by hand, which is what Rails 5.2's encrypted cookie and Laravel's need |
-| Network — **built** | An IP as an integer, with what sort of address it is; IPv6 shortened and spelled out, with the IPv4 inside it; a CIDR as the range it holds; a port by what listens there; a MAC, with what its own bits say. A vendor from an OUI table is to come: the table is a megabyte of data to carry |
+| Network — **built** | An IP as an integer, with what sort of address it is; IPv6 shortened and spelled out, with the IPv4 inside it; a CIDR as the range it holds; a port by what listens there; a MAC, with what its own bits say; a Punycode name as the name it stands for, with the characters that are not ASCII and their code points. A vendor from an OUI table is to come: the table is a megabyte of data to carry |
 | Other epochs — **built** | Windows FILETIME and .NET ticks, which nothing else is large enough to be; Cocoa, HFS+ and a spreadsheet's serial, which a Unix time could be too, and so are only offered where the field says it is a time — or, for HFS+, past where a Unix time can reach |
 | Bytes as a thing — **built** | A picture shown as itself in the pane, and named with its size: `PNG 128×128`, read from the first bytes of a PNG, GIF or JPEG |
 
@@ -360,6 +360,13 @@ and MCP store.
   wants it gone once has to forget the rule and remember it again.
 - Does a `Fields` reading that runs long belong folded under the row, or in the
   inspector's own pane? Folding a 40-claim token under one line will read badly.
+- Punycode is decoded with RFC 3492's arithmetic and no tables, so it reads the
+  name and stops there. It also lists the characters that are not ASCII with
+  their code points, which is the point of opening it: `xn--pypal-4ve` comes
+  back as `pаypal`, a word a reader thinks they know until the `а` turns out to
+  be U+0430. Saying a name is *confusable* is a different piece of work -- it
+  needs the Unicode confusables table, a dependency this crate does not have --
+  so the reading lays the characters out and leaves the judgement to the reader.
 - An ISO 8601 duration reads as a span because the same length of time can be
   written several ways and only one of them is readable: `PT5400S`, `PT90M` and
   `PT1H30M` all say `1h 30m`. Years and months are not added into it. A month

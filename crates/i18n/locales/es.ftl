@@ -3023,6 +3023,9 @@ teee15f8f = data: URI
 # IPv6
 t43fe7378 = IPv6
 
+# Punycode
+t9ea30ee2 = Punycode
+
 # A range of addresses
 t889c22f2 = Un rango de direcciones
 
@@ -3127,6 +3130,9 @@ t660024a1 = a muchos, no a uno
 
 # given by hand, not by the maker
 tc16b0e31 = asignada a mano, no por el fabricante
+
+# Not ASCII
+t181bc20d = No ASCII
 
 # in {amount}
 tfda57c3e = en { $amount }
