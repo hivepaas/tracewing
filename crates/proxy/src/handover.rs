@@ -29,6 +29,12 @@
 //! the proxy do not come through here at all, so the path that has to carry a
 //! million flows is untouched.
 //!
+//! A client that says nothing in time is neither of those, and is given a
+//! tunnel: a protocol whose server greets first gets one that way. Inside it,
+//! hudsucker waits for the client's first bytes before it decides what to do
+//! with them, so such a connection is passed along rather than served — which
+//! is what raw TCP is until there is a mode for it.
+//!
 //! One limit is left, written up in
 //! [capture-modes.md](../../../docs/design/capture-modes.md): a flow handed
 //! over as an address is named by that address, and asks the server with it.
@@ -61,6 +67,13 @@ const ANSWER_MAX: usize = 8 * 1024;
 /// How much of the client's first word is read to tell TLS from the rest. A
 /// TLS record starts `0x16 0x03`: a handshake, of SSL 3.x or of any TLS.
 const PEEK: usize = 2;
+
+/// How long the client is given to say that much. An HTTP request and a TLS
+/// ClientHello both come at once, so something still silent after this is
+/// neither, and is given a tunnel rather than held here for ever: a protocol
+/// whose server greets first, or a connection somebody opened and thought
+/// better of.
+const FIRST_WORD_WITHIN: Duration = Duration::from_secs(2);
 
 /// What a source knew about a connection it handed over.
 #[derive(Clone)]
@@ -142,8 +155,13 @@ async fn tunnel(
     to_proxy: &mut TcpStream,
     to: &Target,
 ) -> Result<()> {
-    let first = first_bytes(stream).await?;
-    if first.starts_with(b"\x16\x03") {
+    let mut first = Vec::with_capacity(PEEK);
+    let waited = tokio::time::timeout(FIRST_WORD_WITHIN, first_bytes(stream, &mut first)).await;
+    let silent = waited.is_err();
+    if let Ok(read) = waited {
+        read?;
+    }
+    if silent || first.starts_with(b"\x16\x03") {
         // TLS. The proxy terminates it, but only inside a tunnel, so ask for
         // one on the client's behalf — it has no idea a proxy is involved.
         let authority = to.authority();
@@ -170,19 +188,25 @@ async fn tunnel(
     Ok(())
 }
 
-/// The client's first bytes, read and kept to be passed on: there is nothing
-/// to peek with on a `dyn Duplex`, so this reads them and hands them over
-/// with the rest. A client that says nothing and goes gives none.
-async fn first_bytes(stream: &mut Box<dyn crate::source::Duplex>) -> Result<Vec<u8>> {
-    let mut first = Vec::with_capacity(PEEK);
+/// The client's first bytes, read into `first` to be passed on with the rest:
+/// there is nothing to peek with on a `dyn Duplex`. A client that says
+/// nothing and goes gives none. It reads into a buffer the caller owns
+/// because the caller gives up on it after a while, and the byte or two that
+/// did arrive still have to be forwarded.
+async fn first_bytes(
+    stream: &mut Box<dyn crate::source::Duplex>,
+    first: &mut Vec<u8>,
+) -> Result<()> {
     let mut byte = [0u8; 1];
     while first.len() < PEEK {
+        // `read` loses nothing when it is cancelled, which is what the
+        // deadline above does to it.
         if stream.read(&mut byte).await? == 0 {
             break;
         }
         first.push(byte[0]);
     }
-    Ok(first)
+    Ok(())
 }
 
 /// Reads the answer to `CONNECT` and no further. A byte at a time, because
@@ -374,6 +398,46 @@ mod tests {
         assert!(
             handed.lock().is_empty(),
             "forgotten once the connection ends"
+        );
+    }
+
+    /// A client that says nothing is not a plain HTTP client, so it is given
+    /// a tunnel instead of being held for ever — and then a server that
+    /// greets first can reach it, which is the case this exists for.
+    #[tokio::test]
+    async fn a_client_that_says_nothing_is_given_a_tunnel_and_hears_the_server() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let proxy = listener.local_addr().unwrap();
+        let greeting = tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let mut head = Vec::new();
+            let mut byte = [0u8; 1];
+            while !head.ends_with(b"\r\n\r\n") {
+                if sock.read(&mut byte).await.unwrap() == 0 {
+                    break;
+                }
+                head.push(byte[0]);
+            }
+            sock.write_all(OK.as_bytes()).await.unwrap();
+            // As a mail or database server does: it speaks first.
+            sock.write_all(b"220 hello").await.unwrap();
+            sock.shutdown().await.unwrap();
+            String::from_utf8_lossy(&head).into_owned()
+        });
+        let (mut mine, theirs) = tokio::io::duplex(1024);
+        let handed = Handed::default();
+        let heard = async {
+            let mut said = String::new();
+            mine.read_to_string(&mut said).await.unwrap();
+            assert_eq!(said, "220 hello", "the server's greeting reached it");
+            drop(mine);
+        };
+        let (giving, ()) = tokio::join!(give(flow(theirs, None), proxy, &handed), heard);
+        giving.unwrap();
+        let head = greeting.await.unwrap();
+        assert!(
+            head.starts_with("CONNECT github.com:443 HTTP/1.1\r\n"),
+            "{head:?}"
         );
     }
 
