@@ -2,6 +2,12 @@
 //! them: the program itself, recording with no window, then its HAR.
 //!
 //! `cargo test --release -p tracewing --test cli`
+//!
+//! Its ports, claimed here because this file is the one that does not say it
+//! the usual way: `ports: 20_340..20_350`. It passes `--port` to the program
+//! as a bare number instead of giving a range to `EngineOptions`, so a grep
+//! for the ranges in use finds a hole here and it is not a free one. 20340
+//! and 20341 are taken below.
 
 use std::{
     process::{Command, Stdio},

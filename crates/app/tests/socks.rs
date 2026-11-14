@@ -31,6 +31,20 @@ fn a_free_port() -> u16 {
     listener.local_addr().unwrap().port()
 }
 
+/// Each test here starts a proxy of its own, so each needs a port range of
+/// its own: the app takes the first free port in the range, and two test
+/// binaries given the same range will mostly miss each other and sometimes
+/// not. Every other file under `tests/` claims one range of ten, and the
+/// ranges in use end at `sidebar.rs`'s 20_480..20_490, so these three carry
+/// on from there.
+///
+/// A new test file takes the **next free ten above the top**, not a hole in
+/// the middle: the ranges are only greppable in the `ports:` form, and the
+/// hole at 20_340..20_350 is `cli.rs`, which passes a bare `--port` number
+/// and says so in a comment of its own. A range taken twice cannot fail a
+/// local run — `cargo test` runs one test binary at a time — so it fails
+/// only when two sessions run the suite at once, which is no way to find
+/// out.
 fn start(name: &str, settings: StorageSettings, ports: std::ops::Range<u16>) -> (Engine, PathBuf) {
     let _ = tracewing_proxy::crypto_provider().install_default();
     let dir = data_dir(name);
@@ -70,7 +84,7 @@ fn the_switch_opens_a_socks5_port_on_the_number_asked_for() {
         socks_port: u64::from(port),
         ..StorageSettings::default()
     };
-    let (mut engine, dir) = start("on", settings, 20_260..20_270);
+    let (mut engine, dir) = start("on", settings, 20_490..20_500);
     let at = engine.socks.expect("a port was opened");
     assert_eq!(at, SocketAddr::from(([127, 0, 0, 1], port)));
     assert_eq!(engine.socks_problem, None);
@@ -81,7 +95,7 @@ fn the_switch_opens_a_socks5_port_on_the_number_asked_for() {
 
 #[test]
 fn switched_off_there_is_no_socks5_port() {
-    let (mut engine, dir) = start("off", StorageSettings::default(), 20_270..20_280);
+    let (mut engine, dir) = start("off", StorageSettings::default(), 20_500..20_510);
     assert_eq!(engine.socks, None);
     assert_eq!(engine.socks_problem, None, "none was asked for");
     engine.stop();
@@ -99,7 +113,7 @@ fn a_port_already_in_use_is_said_and_not_fatal() {
         socks_port: u64::from(port),
         ..StorageSettings::default()
     };
-    let (mut engine, dir) = start("taken", settings, 20_280..20_290);
+    let (mut engine, dir) = start("taken", settings, 20_510..20_520);
     assert_eq!(engine.socks, None, "it could not be opened");
     let why = engine.socks_problem.clone().expect("it says why");
     assert!(why.contains(&port.to_string()), "which port: {why}");
