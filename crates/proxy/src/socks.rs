@@ -21,11 +21,12 @@
 //!   reply is sent as soon as the request is understood. A destination that
 //!   turns out to be unreachable is a failure inside the conversation rather
 //!   than a SOCKS reply, which is what every lazy SOCKS proxy does.
-//! - **The flow has no program against it yet.** [`crate::apps`] finds the
-//!   program behind a connection by looking for a socket whose far end is the
-//!   proxy port, and a SOCKS client's far end is this port. Teaching it the
-//!   port each connection came in on is a change across three operating
-//!   systems, and the next piece of work here.
+//! - **The program is found by the port it came in on.** [`crate::apps`] looks
+//!   for a socket whose far end is one of tracewing's own ports, and this is
+//!   one of them: [`Source::own_ports`] is what says so. The flow is handed
+//!   over without a program against it, as the handshake says nothing about
+//!   one, and the program is looked for by the client's address as it is for
+//!   any client that asked.
 
 use crate::source::{Flow, Found, Source, Stop, Target, stopped};
 use anyhow::{Context, Result, bail};
@@ -73,6 +74,12 @@ impl Source for Socks {
             Ok(at) => format!("the SOCKS5 port at {at}"),
             Err(_) => "the SOCKS5 port".to_owned(),
         }
+    }
+
+    fn own_ports(&self) -> Vec<u16> {
+        self.0
+            .local_addr()
+            .map_or_else(|_| Vec::new(), |at| vec![at.port()])
     }
 
     fn start(self: Box<Self>, proxy: SocketAddr, found: Found, stop: Stop) -> Result<()> {

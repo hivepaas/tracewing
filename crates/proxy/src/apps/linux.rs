@@ -13,7 +13,7 @@ use std::{
     os::fd::{AsRawFd, FromRawFd, OwnedFd},
 };
 
-pub fn owners(clients: &[SocketAddr], proxy_port: u16, recent: &[u32]) -> Vec<Option<u32>> {
+pub fn owners(clients: &[SocketAddr], ours: &[u16], recent: &[u32]) -> Vec<Option<u32>> {
     let mut found = vec![None; clients.len()];
     // Another user's files cannot be read, so their sockets are not looked for.
     // SAFETY: geteuid cannot fail.
@@ -24,7 +24,7 @@ pub fn owners(clients: &[SocketAddr], proxy_port: u16, recent: &[u32]) -> Vec<Op
     let diag = Diag::open();
     for (i, client) in clients.iter().enumerate() {
         let client = canonical(*client);
-        match diag.as_ref().and_then(|diag| diag.find(client, proxy_port)) {
+        match diag.as_ref().and_then(|diag| diag.find(client, ours)) {
             Some((uid, inode)) if mine(uid) => {
                 inodes.insert(inode, i);
             }
@@ -43,7 +43,7 @@ pub fn owners(clients: &[SocketAddr], proxy_port: u16, recent: &[u32]) -> Vec<Op
                 let Some(socket) = Socket::parse(line) else {
                     continue;
                 };
-                if socket.remote_port != proxy_port || !mine(socket.uid) {
+                if !ours.contains(&socket.remote_port) || !mine(socket.uid) {
                     continue;
                 }
                 if let Some(&i) = missing.get(&canonical(socket.local)) {
@@ -191,10 +191,18 @@ impl Diag {
         })
     }
 
-    /// The owner and inode of the client's socket. It connected to an address of
-    /// this machine, and the kernel gives such a connection that address as its
-    /// own, so both ends have the client's.
-    fn find(&self, client: SocketAddr, proxy_port: u16) -> Option<(u32, u64)> {
+    /// The owner and inode of the client's socket, whichever of our ports it
+    /// came in on. One ask names one port, so a client that came in on the
+    /// first costs one and the rest cost one more each: the proxy port is
+    /// first because that is where most of them come from.
+    fn find(&self, client: SocketAddr, ours: &[u16]) -> Option<(u32, u64)> {
+        ours.iter().find_map(|&port| self.find_on(client, port))
+    }
+
+    /// The same, on one port. It connected to an address of this machine, and
+    /// the kernel gives such a connection that address as its own, so both
+    /// ends have the client's.
+    fn find_on(&self, client: SocketAddr, proxy_port: u16) -> Option<(u32, u64)> {
         match client.ip() {
             IpAddr::V4(ip) => self
                 .ask(libc::AF_INET as u8, &ip.octets(), client.port(), proxy_port)
@@ -343,7 +351,7 @@ mod tests {
         let port = listener.local_addr().unwrap().port();
         let client = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap();
         let diag = Diag::open().expect("sock_diag");
-        let (uid, inode) = diag.find(client.local_addr().unwrap(), port).unwrap();
+        let (uid, inode) = diag.find(client.local_addr().unwrap(), &[port]).unwrap();
         // SAFETY: geteuid cannot fail.
         assert_eq!(uid, unsafe { libc::geteuid() });
         let fd = format!("/proc/self/fd/{}", client.as_raw_fd());
@@ -351,9 +359,15 @@ mod tests {
             fs::read_link(fd).unwrap().to_str().unwrap(),
             format!("socket:[{inode}]")
         );
-        assert_eq!(diag.find("127.0.0.1:9".parse().unwrap(), port), None);
+        assert_eq!(diag.find("127.0.0.1:9".parse().unwrap(), &[port]), None);
         // A second ask on the same socket works as the first.
-        assert!(diag.find(client.local_addr().unwrap(), port).is_some());
+        assert!(diag.find(client.local_addr().unwrap(), &[port]).is_some());
+        // One of several ports: the ones before it are asked and found nothing.
+        let elsewhere = port.wrapping_add(1).max(1);
+        assert!(
+            diag.find(client.local_addr().unwrap(), &[elsewhere, port])
+                .is_some()
+        );
     }
 
     #[test]

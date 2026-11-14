@@ -219,6 +219,17 @@ pub async fn run_proxy(
         Arc::clone(&opts.traffic_rules),
     );
 
+    // The proxy port goes first: it is what a taken connection is handed to,
+    // and where most clients come in, which is the order `apps` asks in.
+    let ours = Box::new(source::ProxyPort::new(listener)) as Box<dyn Source>;
+    let sources: Vec<Box<dyn Source>> = std::iter::once(ours).chain(opts.sources).collect();
+    let mut ways_in: Vec<u16> = Vec::new();
+    for port in sources.iter().flat_map(|source| source.own_ports()) {
+        if !ways_in.contains(&port) {
+            ways_in.push(port);
+        }
+    }
+
     // What a source knew of each connection it handed over, for the handler.
     let handed = Arc::new(handover::Handed::default());
     let handler = FlowHandler::new(
@@ -234,7 +245,7 @@ pub async fn run_proxy(
             pauses: Arc::clone(&opts.pauses),
             apps: opts
                 .find_apps
-                .then(|| apps::Apps::spawn(listen_addr.port()))
+                .then(|| apps::Apps::spawn(ways_in))
                 .transpose()?,
             live: Arc::clone(&opts.live),
             network: opts.network,
@@ -266,9 +277,7 @@ pub async fn run_proxy(
     });
 
     let (found, took) = Found::channel();
-    // The proxy port goes first: it is what a taken connection is handed to.
-    let ours = Box::new(source::ProxyPort::new(listener)) as Box<dyn Source>;
-    for source in std::iter::once(ours).chain(opts.sources) {
+    for source in sources {
         let name = source.name();
         source
             .start(own_addr, found.clone(), stop.clone())
