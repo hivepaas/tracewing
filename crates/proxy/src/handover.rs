@@ -35,13 +35,25 @@
 //! with them, so such a connection is passed along rather than served — which
 //! is what raw TCP is until there is a mode for it.
 //!
-//! One limit is left, written up in
-//! [capture-modes.md](../../../docs/design/capture-modes.md): a flow handed
-//! over as an address is named by that address, and asks the server with it.
-//! A source that can read the ClientHello's `server_name`, or a SOCKS
-//! request's host, should hand over [`Target::Named`].
+//! A flow handed over as an address is **named by its hello**, where the
+//! client writes one: the first record is read here on its way past, the
+//! `server_name` out of it becomes the [`Target::Named`] the proxy is asked
+//! for, and `140.82.121.4:443` is called `github.com:443` instead. See
+//! [`named`] and [`crate::name`]. A source that named the flow itself keeps
+//! its own name, and a client that names nobody keeps the address.
+//!
+//! What is still missing is written up in
+//! [capture-modes.md](../../../docs/design/capture-modes.md): the name
+//! *replaces* the address rather than standing beside it, so the proxy
+//! resolves it again on its way out and may reach a different address than
+//! the client was going to. Only a plain `GET` or `POST` goes unnamed now —
+//! it carries a `Host` header, which `as_absolute` deliberately does not
+//! trust in place of what the source knew.
 
-use crate::source::{Flow, Target};
+use crate::{
+    name::{self, RECORD_HEAD, TLS_START},
+    source::{Flow, Target},
+};
 use anyhow::{Context, Result, bail};
 use std::{
     collections::HashMap,
@@ -64,9 +76,12 @@ const ANSWER_WITHIN: Duration = Duration::from_secs(10);
 /// that is not the proxy.
 const ANSWER_MAX: usize = 8 * 1024;
 
-/// How much of the client's first word is read to tell TLS from the rest. A
-/// TLS record starts `0x16 0x03`: a handshake, of SSL 3.x or of any TLS.
-const PEEK: usize = 2;
+/// How much of the client's first word is read to tell TLS from the rest: a
+/// TLS record starts [`TLS_START`], and anything else is a request to be
+/// read at the proxy port as it stands. Where it *is* TLS, the read goes on
+/// to the end of that record, because the name the client was going to is in
+/// it — see [`name`](crate::name).
+const PEEK: usize = TLS_START.len();
 
 /// How long the client is given to say that much. An HTTP request and a TLS
 /// ClientHello both come at once, so something still silent after this is
@@ -139,6 +154,20 @@ pub async fn give(flow: Flow, proxy: SocketAddr, handed: &Handed) -> Result<()> 
         to,
         who,
     } = flow;
+    // The client's first word comes first, before the proxy is told
+    // anything: it is what says whether this is TLS, and a TLS flow handed
+    // over as an address carries in that same record the name it was going
+    // to. Learning it here rather than after `remember` is what lets the
+    // flow be remembered under the name — the handler reads `Handed` once,
+    // and an entry corrected afterwards would be a race against it.
+    let mut first = Vec::with_capacity(PEEK);
+    let waited = tokio::time::timeout(FIRST_WORD_WITHIN, opening(&mut stream, &mut first)).await;
+    let silent = waited.is_err();
+    if let Ok(read) = waited {
+        read?;
+    }
+    let to = named(to, &first);
+
     let mut to_proxy = TcpStream::connect(proxy)
         .await
         .with_context(|| format!("hand a connection from {client} to the proxy at {proxy}"))?;
@@ -152,9 +181,53 @@ pub async fn give(flow: Flow, proxy: SocketAddr, handed: &Handed) -> Result<()> 
             app: who.map(told),
         },
     );
-    let result = tunnel(&mut stream, &mut to_proxy, &to).await;
+    let result = tunnel(&mut stream, &mut to_proxy, &to, &first, silent).await;
     handed.forget(from);
     result.with_context(|| format!("a connection from {client} to {}", to.authority()))
+}
+
+/// Where the flow was going, by name if its first record names it.
+///
+/// A source that reads packets knows an address and nothing else, so this is
+/// the one chance to learn the name: `140.82.121.4:443` becomes
+/// `github.com:443`, which is what the flow is called, what goes in the
+/// `Host` header, and what the proxy asks the server for — a server with
+/// several names on one address answers the wrong one otherwise.
+///
+/// What it buys is the connection out. [`upstream`](crate::upstream) takes
+/// the host from the URI, so an address there becomes a rustls
+/// `ServerName::IpAddress`: no SNI is sent, and the certificate is checked
+/// against the address, which a public certificate does not carry. A TLS
+/// flow taken as an address therefore failed on its way out, not merely read
+/// badly. The client's own side was never the problem — hudsucker issues its
+/// leaf from the SNI the client sent.
+///
+/// **The address is replaced, not kept alongside**, and that costs
+/// something. The proxy looks the name up again on its way out, so DNS here
+/// can answer with a different address than the client was going to — a
+/// CDN's nearer edge, a split-horizon answer — or with nothing at all, for a
+/// name only the client's own resolver knows. That last one is a connection
+/// that used to be made and now fails, which is the real price of this and
+/// not a theoretical one. It is the trade `socks5h://` has always made, for
+/// a handshake that works instead of one that cannot. Keeping both — the
+/// name to show and ask with, the address to connect to — needs the
+/// connector to take a destination of its own, written up in
+/// [capture-modes.md](../../../docs/design/capture-modes.md) and still to
+/// come.
+///
+/// A source that named the flow itself is left alone: it read the name from
+/// the same place or better, and may have one no record carries.
+fn named(to: Target, first: &[u8]) -> Target {
+    let Target::Addr(addr) = to else {
+        return to;
+    };
+    match name::in_client_hello(first) {
+        Some(host) => Target::Named {
+            host,
+            port: addr.port(),
+        },
+        None => Target::Addr(addr),
+    }
 }
 
 /// Two ways in, told apart by what the client says first.
@@ -162,14 +235,10 @@ async fn tunnel(
     stream: &mut Box<dyn crate::source::Duplex>,
     to_proxy: &mut TcpStream,
     to: &Target,
+    first: &[u8],
+    silent: bool,
 ) -> Result<()> {
-    let mut first = Vec::with_capacity(PEEK);
-    let waited = tokio::time::timeout(FIRST_WORD_WITHIN, first_bytes(stream, &mut first)).await;
-    let silent = waited.is_err();
-    if let Ok(read) = waited {
-        read?;
-    }
-    if silent || first.starts_with(b"\x16\x03") {
+    if silent || first.starts_with(TLS_START) {
         // TLS. The proxy terminates it, but only inside a tunnel, so ask for
         // one on the client's behalf — it has no idea a proxy is involved.
         let authority = to.authority();
@@ -191,7 +260,7 @@ async fn tunnel(
     // the server; `Handed` is how the handler learns which server that was.
     // A tunnel is no use for that: inside one, only TLS and a plain `GET`
     // are read, and a `POST` would pass through unseen.
-    to_proxy.write_all(&first).await?;
+    to_proxy.write_all(first).await?;
     tokio::io::copy_bidirectional(stream, to_proxy).await?;
     Ok(())
 }
@@ -199,20 +268,51 @@ async fn tunnel(
 /// The client's first bytes, read into `first` to be passed on with the rest:
 /// there is nothing to peek with on a `dyn Duplex`. A client that says
 /// nothing and goes gives none. It reads into a buffer the caller owns
-/// because the caller gives up on it after a while, and the byte or two that
-/// did arrive still have to be forwarded.
-async fn first_bytes(
+/// because the caller gives up on it after a while, and the bytes that did
+/// arrive still have to be forwarded.
+///
+/// Two bytes decide the shape. Anything but TLS stops there, because a
+/// request is read at the proxy port as it stands and reading further would
+/// wait on a client that has already said its piece — the next thing an HTTP
+/// client sends may be a whole response's worth of silence away.
+///
+/// TLS reads on to the end of the first record, which is where the name is.
+/// That costs nothing in the usual case, because a `ClientHello` arrives
+/// whole and in one go; a client that stalls half-way through one pays the
+/// same [`FIRST_WORD_WITHIN`] a silent client pays, and is then handed on
+/// with whatever arrived, named by its address. Slower than before for that
+/// one client, and no different for the rest.
+async fn opening(stream: &mut Box<dyn crate::source::Duplex>, first: &mut Vec<u8>) -> Result<()> {
+    read_upto(stream, first, PEEK).await?;
+    if !first.starts_with(TLS_START) {
+        return Ok(());
+    }
+    read_upto(stream, first, RECORD_HEAD).await?;
+    let Some(record) = name::record_len(first) else {
+        return Ok(()); // The header never arrived whole.
+    };
+    read_upto(stream, first, record).await
+}
+
+/// Reads until `first` holds `want` bytes, or the client stops. Never asks
+/// for more than that, so nothing is read that belongs to the conversation
+/// rather than to its opening.
+async fn read_upto(
     stream: &mut Box<dyn crate::source::Duplex>,
     first: &mut Vec<u8>,
+    want: usize,
 ) -> Result<()> {
-    let mut byte = [0u8; 1];
-    while first.len() < PEEK {
+    let mut chunk = [0u8; 1024];
+    while first.len() < want {
+        let room = (want - first.len()).min(chunk.len());
         // `read` loses nothing when it is cancelled, which is what the
-        // deadline above does to it.
-        if stream.read(&mut byte).await? == 0 {
+        // deadline above does to it: what it has already put in `first`
+        // stays there, and the caller forwards it either way.
+        let read = stream.read(&mut chunk[..room]).await?;
+        if read == 0 {
             break;
         }
-        first.push(byte[0]);
+        first.extend_from_slice(&chunk[..read]);
     }
     Ok(())
 }
@@ -464,5 +564,134 @@ mod tests {
         assert!(said.contains("github.com:443"), "{said}");
         assert!(handed.lock().is_empty(), "forgotten even when it failed");
         served.await.unwrap();
+    }
+
+    /// A flow as a source that reads packets hands one over: an address, and
+    /// nothing else to go on.
+    fn flow_to(stream: tokio::io::DuplexStream, to: Target) -> Flow {
+        Flow {
+            stream: Box::new(stream),
+            client: "192.168.1.13:51234".parse().unwrap(),
+            to,
+            who: None,
+        }
+    }
+
+    /// Writes its opening, hears the server out, and goes.
+    async fn opens_with(mut client: tokio::io::DuplexStream, what: Vec<u8>) {
+        client.write_all(&what).await.unwrap();
+        client.shutdown().await.unwrap();
+        let mut said = String::new();
+        client.read_to_string(&mut said).await.unwrap();
+        assert_eq!(said, "from the server");
+    }
+
+    /// The whole point of reading the hello: a flow that arrived as
+    /// `140.82.121.4:443` is asked for as `github.com:443`, so the server
+    /// answers for the name it holds a certificate for rather than for
+    /// whichever of its names happens to share that address.
+    #[tokio::test]
+    async fn a_flow_taken_as_an_address_is_asked_for_by_the_name_in_its_hello() {
+        let (proxy, served) = fake_proxy(OK).await;
+        let (mine, theirs) = tokio::io::duplex(4096);
+        let handed = Handed::default();
+        let hello = name::hello(&[name::sni("github.com")]);
+        let to = Target::Addr("140.82.121.4:443".parse().unwrap());
+        let (giving, ()) = tokio::join!(
+            give(flow_to(theirs, to), proxy, &handed),
+            opens_with(mine, hello.clone())
+        );
+        giving.unwrap();
+
+        let got = served.await.unwrap();
+        let head = String::from_utf8_lossy(&got[..got.len() - hello.len()]).to_string();
+        assert_eq!(
+            head, "CONNECT github.com:443 HTTP/1.1\r\nHost: github.com:443\r\n\r\n",
+            "asked for by name, where the address was all the source knew"
+        );
+        assert!(
+            got.ends_with(&hello),
+            "and the hello itself was passed on whole, not eaten by the look at it"
+        );
+    }
+
+    /// Reading it is allowed to fail. A client that names nobody — an old
+    /// one, or one talking to an address on purpose — leaves the flow
+    /// exactly as it arrived, which is how it was before any of this.
+    #[tokio::test]
+    async fn a_hello_that_names_nobody_leaves_the_flow_its_address() {
+        let (proxy, served) = fake_proxy(OK).await;
+        let (mine, theirs) = tokio::io::duplex(4096);
+        let handed = Handed::default();
+        let hello = name::hello(&[]);
+        let to = Target::Addr("140.82.121.4:443".parse().unwrap());
+        let (giving, ()) = tokio::join!(
+            give(flow_to(theirs, to), proxy, &handed),
+            opens_with(mine, hello.clone())
+        );
+        giving.unwrap();
+
+        let got = served.await.unwrap();
+        assert!(
+            String::from_utf8_lossy(&got).starts_with("CONNECT 140.82.121.4:443 "),
+            "{:?}",
+            String::from_utf8_lossy(&got[..got.len() - hello.len()])
+        );
+    }
+
+    /// A source that named the flow itself is not second-guessed. It read
+    /// the name from the same record or from a SOCKS request, and may hold
+    /// one the record cannot carry; a hello saying otherwise is the client
+    /// talking, not the OS.
+    #[tokio::test]
+    async fn a_name_the_source_knew_is_not_replaced_by_the_hello() {
+        let (proxy, served) = fake_proxy(OK).await;
+        let (mine, theirs) = tokio::io::duplex(4096);
+        let handed = Handed::default();
+        let hello = name::hello(&[name::sni("somewhere.else")]);
+        let (giving, ()) = tokio::join!(
+            give(flow(theirs, None), proxy, &handed),
+            opens_with(mine, hello.clone())
+        );
+        giving.unwrap();
+
+        let got = served.await.unwrap();
+        assert!(
+            String::from_utf8_lossy(&got).starts_with("CONNECT github.com:443 "),
+            "the source's own name stands"
+        );
+    }
+
+    /// A hello split across two segments, which is what a `ClientHello` with
+    /// a key share in it looks like on a real network. The name is only
+    /// there to be read if the read goes on until the record is whole, so
+    /// this is the test that the loop is a loop.
+    #[tokio::test]
+    async fn a_hello_that_arrives_in_two_pieces_is_still_read() {
+        let (proxy, served) = fake_proxy(OK).await;
+        let (mut mine, theirs) = tokio::io::duplex(4096);
+        let handed = Handed::default();
+        let hello = name::hello(&[name::sni("github.com"), (0x0033, vec![7; 600])]);
+        let (head, tail) = hello.split_at(8);
+        let to = Target::Addr("140.82.121.4:443".parse().unwrap());
+
+        let client = async {
+            mine.write_all(head).await.unwrap();
+            mine.flush().await.unwrap();
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            mine.write_all(tail).await.unwrap();
+            mine.shutdown().await.unwrap();
+            let mut said = String::new();
+            mine.read_to_string(&mut said).await.unwrap();
+        };
+        let (giving, ()) = tokio::join!(give(flow_to(theirs, to), proxy, &handed), client);
+        giving.unwrap();
+
+        let got = served.await.unwrap();
+        assert!(
+            String::from_utf8_lossy(&got).starts_with("CONNECT github.com:443 "),
+            "the record was waited for, not read once and given up on"
+        );
+        assert!(got.ends_with(&hello), "and all of it was passed on");
     }
 }

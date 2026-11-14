@@ -445,11 +445,18 @@ impl FlowHandler {
     /// is the same name by a safer route.
     ///
     /// So a source that hands over a bare address gets flows named by that
-    /// address, and the server is asked with it in the `Host` header, which
-    /// a server with several names on one address will answer wrongly.
+    /// address **here**, and the server is asked with it in the `Host`
+    /// header, which a server with several names on one address will answer
+    /// wrongly. This is the path where that is still true: a TLS flow is
+    /// named by the `server_name` in its hello, which
+    /// [`handover::named`](crate::handover) reads on the way past, while a
+    /// plain request carries only a `Host` header — and trusting that is the
+    /// very thing the paragraph above refuses to do.
+    ///
     /// Having both — the name to show and ask with, the address to connect
-    /// to — needs the connector to take a destination of its own, and that
-    /// is the next piece of work for a source that deals in packets.
+    /// to — still needs the connector to take a destination of its own.
+    /// Until it does, a named flow is resolved again on its way out, which
+    /// is the trade `socks5h://` has always made.
     ///
     /// Everything else is left alone: a client that asked for the proxy sends
     /// an absolute URI already, and a request to the proxy's own pages — the

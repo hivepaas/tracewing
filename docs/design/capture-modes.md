@@ -335,9 +335,44 @@ What is left:
    Wi-Fi proxy. The stack itself is tested with packets written by hand, so a
    device is the only part that needs an operating system.
 
-   Two things it does not do, both of which a device will want: it reads IPv4
-   only, and it hands flows over named by address, because a packet carries no
-   name. The name is in the first `ClientHello`, which is a reader of its own.
+   **The name is in**, in [`name.rs`](../../crates/proxy/src/name.rs). A
+   packet carries no name, so the stack hands a flow over as an address; the
+   first TLS record the client writes carries one, and
+   [`handover`](../../crates/proxy/src/handover.rs) reads the `server_name`
+   out of it as the flow goes past. So a flow the stack took is called
+   `github.com:443` rather than `140.82.121.4:443`, asks the server by the
+   name it holds a certificate for, and every source that deals in addresses
+   gets that for nothing — this one, WinDivert, the BPF helper. It is
+   parsed, not searched for: every length in a `ClientHello` comes from the
+   client, so a length that disagrees with the record ends the walk, and the
+   name is refused unless it is a plain DNS name. That last part is not
+   cosmetic — the name is formatted into a `CONNECT` line, and one holding a
+   carriage return would smuggle a second request into tracewing's own
+   proxy port.
+
+   This is not only about reading well. `upstream.rs` takes the host to ask
+   for from the URI, so an address there becomes a rustls
+   `ServerName::IpAddress`: no SNI goes out, and the server's certificate is
+   checked against the address, which no public certificate carries. A TLS
+   flow taken as an address **failed on the way out**. The client's own side
+   was never broken — hudsucker issues its leaf from the SNI the client
+   sent, so the client saw the name it expected all along.
+
+   What this does *not* do is keep the address beside the name: the name
+   replaces it, so the proxy resolves it again on the way out. That can
+   reach a different address than the client was going to — a CDN's nearer
+   edge, a split-horizon answer — or fail to resolve at all, for a name only
+   the client's own resolver knows. A connection that used to be made by
+   address can now fail, and that is the real price of this rather than a
+   theoretical one; it is the trade `socks5h://` has always made, for a
+   handshake that works instead of one that cannot. Holding both needs the
+   connector to take a destination of its own, and that is the piece still
+   to come.
+
+   One thing the stack does not do, which a device will want: it reads IPv4
+   only. `smoltcp` is already built here with `proto-ipv6` on, so what is
+   missing is this side of it — `peek` and the `Device` — and a phone on
+   WireGuard will bring IPv6 along whether or not we are ready for it.
 3. Local mode on Windows, which needs that stack, a kernel driver, and our
    installer signed first.
 4. Local mode on Linux, last for the reasons in its section.
