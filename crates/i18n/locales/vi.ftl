@@ -2875,6 +2875,9 @@ teee15f8f = data: URI
 # IPv6
 t43fe7378 = IPv6
 
+# Punycode
+t9ea30ee2 = Punycode
+
 # A range of addresses
 t889c22f2 = Một dải địa chỉ
 
@@ -2979,6 +2982,9 @@ t660024a1 = tới nhiều máy, không phải một
 
 # given by hand, not by the maker
 tc16b0e31 = do người đặt, không phải do hãng
+
+# Not ASCII
+t181bc20d = Không phải ASCII
 
 # in {amount}
 tfda57c3e = sau { $amount }

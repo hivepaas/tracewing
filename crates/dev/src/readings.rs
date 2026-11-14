@@ -455,6 +455,12 @@ fn build() -> Vec<Sample> {
             "A written time, as the reader's own and how far off",
         ),
         field(
+            "punycode",
+            "origin_host",
+            "xn--bcher-kva.example.com".to_owned(),
+            "The name it stands for, and which characters are not ASCII",
+        ),
+        field(
             "iso-8601-duration",
             "retention",
             "P1Y2M10DT2H30M".to_owned(),
@@ -872,6 +878,7 @@ mod tests {
             "percent",
             "port",
             "protobuf",
+            "punycode",
             "query",
             "quoted-printable",
             "radix",

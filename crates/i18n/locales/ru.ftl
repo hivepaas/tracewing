@@ -3106,6 +3106,9 @@ teee15f8f = data: URI
 # IPv6
 t43fe7378 = IPv6
 
+# Punycode
+t9ea30ee2 = Punycode
+
 # A range of addresses
 t889c22f2 = Диапазон адресов
 
@@ -3210,6 +3213,9 @@ t660024a1 = многим, а не одному
 
 # given by hand, not by the maker
 tc16b0e31 = задан вручную, не изготовителем
+
+# Not ASCII
+t181bc20d = Не ASCII
 
 # in {amount}
 tfda57c3e = через { $amount }

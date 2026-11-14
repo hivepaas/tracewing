@@ -291,6 +291,7 @@ const CONVERTERS: &[Converter] = &[
     web::cookie,
     web::data_uri,
     net::ipv6,
+    net::punycode,
     net::cidr,
     net::mac,
     json::in_string,
@@ -576,6 +577,12 @@ const KNOWN: &[Known] = &[
         group: Group::Network,
         run: net::ipv6,
         name: || tr!("IPv6"),
+    },
+    Known {
+        id: "punycode",
+        group: Group::Network,
+        run: net::punycode,
+        name: || tr!("Punycode"),
     },
     Known {
         id: "cidr",
