@@ -346,6 +346,31 @@ fn a_header_is_read_under_its_own_name() {
     cx.run_until_parked();
     shot(&mut cx, window.into(), "84-reading-under-a-header");
 
+    // A reading that holds a body of its own -- a token's claims, say -- is
+    // shown in the pane beside the part the reader is in. Making that body
+    // must leave them where they are: they came here to read headers, and
+    // the pane is beside the headers, not instead of them.
+    window
+        .update(&mut cx, |view, _, cx| {
+            assert_eq!(view.inspector.part, Part::Headers, "reading headers");
+            // Base64 of `{"sub":"42","name":"Ana"}`: what it holds is JSON,
+            // so the pane has a body to make of it.
+            let packed = "eyJzdWIiOiI0MiIsIm5hbWUiOiJBbmEifQ";
+            view.read_value_asked(packed.to_owned(), None, true, cx);
+            let reads = view.inspector.reads.as_ref().expect("the pane opened");
+            assert!(
+                reads.opened.is_some(),
+                "the claims are JSON, so the pane made a body of them"
+            );
+            assert_eq!(
+                view.inspector.part,
+                Part::Headers,
+                "the pane's own body must not take the reader to the body view"
+            );
+        })
+        .unwrap();
+    cx.run_until_parked();
+
     // The keyboard goes through the readings: the next one, then the next,
     // and round again to none.
     let first = window
