@@ -61,6 +61,10 @@ pub const LINE_HEIGHT: f32 = 20.;
 /// How many lines' worth of "is this worth reading" to keep. A reader who has
 /// scrolled past this many has not looked at the first of them.
 const MARKS_MAX: usize = 4096;
+/// How many lines' worth of what a rule reads to keep. The same reason, and
+/// the same number: a reading is heavier than a `bool`, but `reading::small`
+/// has already taken any body out of it, so it is a label and a line.
+const RULED_MAX: usize = 4096;
 
 const GUTTER_W: f32 = 52.;
 /// Where an object or an array is folded and unfolded, after the number.
@@ -80,6 +84,58 @@ const SCAN_POLL: Duration = Duration::from_millis(50);
 const ROWS_READ_AROUND: u64 = 64;
 /// Lines whose rows are kept counted, past which they are counted again.
 const ROWS_KEPT: usize = 100_000;
+
+/// An answer worked out once for a line and kept, with a bound on how many
+/// are kept at a time: a body of a million lines asks as it scrolls.
+///
+/// The bound belongs to the type and not to the caller: this is the third
+/// cache of this shape in the view, and `by_rule` went without one. It kept
+/// a reading for every line a rule read, for as long as the rules stood, so
+/// a body of hundreds of megabytes kept millions of them. Two callers out of
+/// three remembering to check a constant is not a bound.
+///
+/// `max` must be well past what one draw inserts -- a screenful, or the
+/// [`ROWS_READ_AROUND`] lines counted together -- or a draw throws away what
+/// the next draw asks for and nothing is ever kept.
+struct Kept<V> {
+    kept: HashMap<u64, V>,
+    max: usize,
+}
+
+impl<V> Kept<V> {
+    fn new(max: usize) -> Self {
+        Self {
+            kept: HashMap::new(),
+            max,
+        }
+    }
+
+    fn get(&self, key: u64) -> Option<&V> {
+        self.kept.get(&key)
+    }
+
+    /// Keeps `value` for `key`, never holding more than `max`. Past it the
+    /// lot goes rather than the oldest: a reader who has scrolled that far
+    /// is not looking at any of them, and choosing one costs more than
+    /// working the next screenful out again.
+    fn insert(&mut self, key: u64, value: V) {
+        if self.kept.len() >= self.max {
+            self.kept.clear();
+        }
+        self.kept.insert(key, value);
+    }
+
+    fn clear(&mut self) {
+        self.kept.clear();
+    }
+
+    /// Only the test asks: the bound is kept inside `insert`, so no caller
+    /// counts what is held.
+    #[cfg(test)]
+    fn len(&self) -> usize {
+        self.kept.len()
+    }
+}
 
 /// Objects and arrays folded away, each from its first line to the line that
 /// ends it. The first line stays in view; the rest, its closer too, do not.
@@ -201,7 +257,7 @@ pub struct BodyView {
     cols: usize,
     /// How many rows the lines read so far take at `cols`: a scroll asks of
     /// the same few lines again and again.
-    row_counts: RefCell<HashMap<u64, usize>>,
+    row_counts: RefCell<Kept<usize>>,
     folds: Folds,
     mode: BodyMode,
     sub: f32,
@@ -244,11 +300,13 @@ pub struct BodyView {
     /// says. Shared with the inspector, so a change takes hold at once.
     marks_on: reading::MarksOn,
     /// What those rules read, by piece, and the rules' version they were read
-    /// at: a frame must not read every line again on every draw.
-    by_rule: RefCell<(u64, HashMap<u64, Option<Reading>>)>,
+    /// at: a frame must not read every line again on every draw. [`Kept`]
+    /// bounds it: a million lines a rule reads would otherwise be a million
+    /// readings held for as long as the rule stood.
+    by_rule: RefCell<(u64, Kept<Option<Reading>>)>,
     /// Which pieces hold a value worth saying something about, by piece. The
     /// same reason, and the same answer kept.
-    marks: RefCell<HashMap<u64, bool>>,
+    marks: RefCell<Kept<bool>>,
     /// The line the right-click menu was opened over, which `Open this line`
     /// opens. A line wider than the panel is cut by the panel, not by the
     /// reading, so it carries no note saying there is more.
@@ -294,7 +352,7 @@ impl BodyView {
             scale: 1.,
             place: Place::default(),
             cols: 80,
-            row_counts: RefCell::default(),
+            row_counts: RefCell::new(Kept::new(ROWS_KEPT)),
             folds: Folds::default(),
             mode: BodyMode::Pretty,
             sub: 0.,
@@ -311,8 +369,8 @@ impl BodyView {
             rules: Rc::new(RefCell::new(Remembered::default())),
             host: SharedString::default(),
             marks_on: reading::MarksOn::default(),
-            by_rule: RefCell::new((0, HashMap::new())),
-            marks: RefCell::new(HashMap::new()),
+            by_rule: RefCell::new((0, Kept::new(RULED_MAX))),
+            marks: RefCell::new(Kept::new(MARKS_MAX)),
             menu_line: None,
             opens: None,
             table: None,
@@ -523,7 +581,7 @@ impl BodyView {
     /// How many rows `line` takes, wrapped. Lines around it are counted
     /// with it, as they are read in one go and a scroll goes there next.
     fn rows_of(&self, line: u64) -> usize {
-        if let Some(rows) = self.row_counts.borrow().get(&line) {
+        if let Some(rows) = self.row_counts.borrow().get(line) {
             return *rows;
         }
         let body = self.shown();
@@ -531,9 +589,6 @@ impl BodyView {
         let from = line.saturating_sub(ROWS_READ_AROUND);
         let to = (line + ROWS_READ_AROUND).min(lines);
         let mut counts = self.row_counts.borrow_mut();
-        if counts.len() > ROWS_KEPT {
-            counts.clear();
-        }
         let mut found = 1;
         for (at, text) in (from..).zip(body.read_whole(from..to)) {
             let rows = wrap::row_starts(&text, self.cols).len();
@@ -697,16 +752,12 @@ impl BodyView {
         }
         let (field, value) = reading::field_and_value(line)?;
         let at = (value.as_ptr() as usize).checked_sub(line.as_ptr() as usize)?;
-        let known = self.marks.borrow().get(&key).copied();
+        let known = self.marks.borrow().get(key).copied();
         let worth = match known {
             Some(worth) => worth,
             None => {
                 let worth = reading::worth_marking(value, Some(field));
-                let mut marks = self.marks.borrow_mut();
-                if marks.len() > MARKS_MAX {
-                    marks.clear();
-                }
-                marks.insert(key, worth);
+                self.marks.borrow_mut().insert(key, worth);
                 worth
             }
         };
@@ -723,7 +774,7 @@ impl BodyView {
     }
 
     /// What a remembered rule reads of this line, worked out once for each
-    /// line and kept until the rules change.
+    /// line and kept until the rules change or [`RULED_MAX`] are held.
     fn ruled(&self, key: u64, line: &str) -> Option<Reading> {
         let (id, version) = {
             let rules = self.rules.borrow();
@@ -741,7 +792,7 @@ impl BodyView {
             if kept.0 != version {
                 kept.0 = version;
                 kept.1.clear();
-            } else if let Some(found) = kept.1.get(&key) {
+            } else if let Some(found) = kept.1.get(key) {
                 return found.clone();
             }
         }
@@ -2220,6 +2271,32 @@ pub fn summary_in(body: &Body, hex: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The bound is the point: `Kept` is what the three per-line caches in
+    /// the view are, so a caller cannot hold a million answers by leaving a
+    /// check out. This covers the type; the fields' types are what put
+    /// `marked`, `ruled` and `rows_of` behind it.
+    #[test]
+    fn what_is_kept_is_bounded() {
+        let mut kept: Kept<u64> = Kept::new(8);
+        for key in 0..100 {
+            kept.insert(key, key * 2);
+            assert!(kept.len() <= 8, "{} kept at {key}", kept.len());
+            assert_eq!(kept.get(key), Some(&(key * 2)), "the newest is there");
+        }
+        // The lot goes, not the oldest: this is a cache to refill, not an
+        // LRU, and a reader who scrolled past them is not looking at them.
+        let mut kept: Kept<u64> = Kept::new(2);
+        kept.insert(1, 1);
+        kept.insert(2, 2);
+        kept.insert(3, 3);
+        assert_eq!(kept.len(), 1);
+        assert_eq!(kept.get(1), None);
+        assert_eq!(kept.get(2), None);
+        kept.clear();
+        assert_eq!(kept.len(), 0);
+        assert_eq!(kept.get(3), None);
+    }
 
     #[test]
     fn folds_hide_lines_and_rows_find_them() {
