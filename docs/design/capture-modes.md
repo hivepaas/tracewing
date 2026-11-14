@@ -152,20 +152,34 @@ The cost is one loopback hop per taken connection. **The proxy port's own
 traffic does not go through any of this** and is exactly as fast as before,
 which matters: it is the path that has to carry a million flows.
 
-Two things to know before building on it:
+There are two ways in, and the handover tells them apart by the first two
+bytes the client sends. **TLS** (`\x16\x03`) gets the `CONNECT` above, since a
+tunnel is the only place the proxy will terminate TLS. **Everything else** is
+passed on as it stands, to be read at the proxy port as any client's request
+is, and must not be wrapped: inside a tunnel hudsucker reads TLS and a plain
+`GET` and tunnels the rest blind, so a transparent `POST` would pass through
+unseen. A client that says nothing within two seconds is neither, and is
+given a tunnel.
 
-- **TLS is fully covered. Plain HTTP is not, yet.** Inside a `CONNECT` tunnel
-  hudsucker peeks four bytes: `\x16\x03` it treats as TLS, `GET ` it serves as
-  HTTP, and anything else it tunnels blind with a warning. So a transparent
-  plain-HTTP `POST` would pass through unseen. The fix is to rewrite such a
-  connection's request lines into absolute form (`POST http://host/path`)
-  rather than wrap it in `CONNECT`, which is a small HTTP/1 rewriter and the
-  natural next piece of work here.
-- **A source should name its target if it can.** hudsucker takes the
-  certificate's name from the ClientHello's SNI, so certificates are right
-  either way, but the flow's URI comes from the `CONNECT` authority. Hand over
-  `Target::Addr` and the flow list shows `140.82.121.4`; peek the SNI and hand
-  over `Target::Named` and it shows `github.com`.
+An earlier version of this page predicted a small HTTP/1 rewriter for that
+second way, to turn `POST /orders` into `POST http://host/orders`. It was not
+needed. The request only has to reach the proxy port, where hyper parses it
+and frames the connection already; what was missing was the server's name in
+the URI, which `capture.rs`'s `as_absolute` fills in from what the source
+knew. No parser of our own, and keep-alive comes free.
+
+One thing is left to know before building on it. **A source should name its
+target if it can.** The URI is built from what the source handed over, and it
+decides both what the flow is called and where the proxy connects, so a
+`Target::Addr` means a flow named `140.82.121.4` and a `Host:` header with an
+address in it, which a server with several names on one address will answer
+wrongly. A name is not taken from the client's own `Host` header instead,
+because that would be looked up again here and can answer with a different
+address than the one the client was going to. So: read the ClientHello's
+`server_name`, or the host out of a SOCKS request, and hand over
+`Target::Named`. Having both — the name to show and ask with, the address to
+connect to — needs the connector to take a destination of its own, and that
+is the next piece of work for a source that deals in packets.
 
 ## The sources to come
 
@@ -219,17 +233,27 @@ app that ignores the Wi-Fi proxy cannot be caught at all.
 The userspace TCP/IP stack is the keystone: Windows, Linux and WireGuard all
 need it, macOS does not. `smoltcp` is the obvious foundation.
 
-So the order is not the order of value, it is the order of dependency:
+So the order is not the order of value, it is the order of dependency. Two
+pieces are in already: the seam, and plain HTTP on a taken connection, which
+turned out not to need the rewriter this page once predicted. What is left:
 
-1. **Ask Apple for the entitlement.** Today. It is pure waiting.
-2. The seam — this change.
-3. The absolute-form rewriter, so plain HTTP is covered before the first real
-   transparent source exists.
-4. The TCP/IP stack, with **WireGuard** as its first user: it is the one with
-   no privilege problem and the clearest payoff.
-5. Local mode on macOS, if the entitlement came through.
-6. Local mode on Windows.
-7. Local mode on Linux.
+1. **SOCKS5.** Not an operating system at all: a listener, the RFC 1928
+   handshake, and what is left is a stream to a destination the client named,
+   which is a `Took::Flow` and nothing more. No privilege, no driver, all
+   three platforms from one implementation. It goes first because the taken
+   path otherwise has no caller but its tests, and the first real user of a
+   seam is what finds the seam's bugs — far cheaper to find them here than
+   inside a WireGuard stack where it is nobody's fault yet. It also gets
+   `Target::Named` for free, since SOCKS5 carries a domain name, and it
+   closes a real gap: `ALL_PROXY`, Firefox's own SOCKS setting, `ssh -D`.
+2. **Local mode on macOS.** Flow-level, so no TCP stack, and nothing to ask
+   Apple for: the least work of the three operating systems.
+3. The TCP/IP stack, with **WireGuard** as its first user: no privilege needed
+   on this machine, and it is what finally reaches a phone whose apps ignore
+   the Wi-Fi proxy.
+4. Local mode on Windows, which needs that stack, a kernel driver, and our
+   installer signed first.
+5. Local mode on Linux, last for the reasons in its section.
 
 ## What none of this changes
 
