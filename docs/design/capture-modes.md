@@ -369,10 +369,20 @@ What is left:
    connector to take a destination of its own, and that is the piece still
    to come.
 
-   One thing the stack does not do, which a device will want: it reads IPv4
-   only. `smoltcp` is already built here with `proto-ipv6` on, so what is
-   missing is this side of it — `peek` and the `Device` — and a phone on
-   WireGuard will bring IPv6 along whether or not we are ready for it.
+   **IPv6 is in** as well. `peek` reads either family — the version nibble
+   picks the reader, and a v6 header is a fixed forty bytes with the protocol
+   in `next_header` instead of `protocol` — and the rest of the stack never
+   needed telling, because it works in `IpAddress` throughout. A phone on
+   WireGuard brings IPv6 along whether or not we are ready for it, so this
+   was worth doing before the device rather than after.
+
+   Two packets are deliberately left alone, and they are the same case
+   twice: an IPv4 fragment that is not the first, and an IPv6 packet
+   carrying an extension header. In both the TCP header is not where `peek`
+   looks, so no connection is made and the stack drops the packet. A client
+   on a path that needs either is a client this does not catch — worth
+   knowing rather than discovering, and cheaper to fix when something real
+   needs it than to guess at now.
 3. Local mode on Windows, which needs that stack, a kernel driver, and our
    installer signed first.
 4. Local mode on Linux, last for the reasons in its section.
