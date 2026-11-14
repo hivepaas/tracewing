@@ -1,17 +1,30 @@
 //! Where traffic comes from.
 //!
-//! A source brings connections to tracewing. Today both of them are of the
-//! same kind: something was told to use the proxy — the system proxy setting,
-//! `HTTP_PROXY` in a terminal, a phone's Wi-Fi settings — and it connects and
-//! says where it wants to go. The sources that are to come take connections
-//! the OS hands over, from apps that were never told anything and may not know
-//! a proxy exists. See [capture-modes.md](../../../docs/design/capture-modes.md).
+//! A source brings connections to tracewing. See
+//! [capture-modes.md](../../../docs/design/capture-modes.md).
 //!
 //! What any source has to deliver is the same two things: where the connection
-//! was going, and who sent it. A client that asked says the first itself; a
-//! connection taken on its way did not, so its source has to know. The second
-//! is looked up by address for the ones that asked ([`crate::apps`]), and known
-//! in advance by a source that took the connection from the OS.
+//! was going, and who sent it. What differs is how much the client keeps
+//! saying about the first:
+//!
+//! - **It says so with every request.** An HTTP proxy's client sends an
+//!   absolute URI, or a `CONNECT` before each tunnel: the proxy port
+//!   ([`ProxyPort`]) and the addresses other devices reach ([`Lan`]). These
+//!   hand over a [`Took::Port`] and the core reads the rest off the wire.
+//! - **It says so once and then stops.** A SOCKS5 client names its
+//!   destination in the handshake and after that the socket carries nothing
+//!   but the conversation ([`crate::socks`]).
+//! - **It never says at all,** because it was never told a proxy exists: a
+//!   connection the operating system handed over. Nothing of these is built
+//!   yet, and [`Given`] is where they will arrive.
+//!
+//! The last two both hand over a [`Took::Flow`], with the destination the
+//! source knew. Which is why the shape of this interface is not "told or
+//! taken", as it looked when there were two sources: it is whether the
+//! destination is on the wire or in the source's hand.
+//!
+//! Who sent it is looked up by address for the ones that keep asking
+//! ([`crate::apps`]), and known in advance by a source the OS told.
 
 use crate::lan::OtherDevices;
 use anyhow::Result;

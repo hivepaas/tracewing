@@ -22,6 +22,7 @@ use tracewing_proxy::{
     pause::{Paused, Pauses, Stage, Verdict},
     rules::HostRules,
     run_proxy,
+    socks::Socks,
     source::{Flow, Given, Lan, Target},
     throttle::{Conditions, Network},
     traffic_rules::{Action, AskWith, TrafficRule, TrafficRules},
@@ -47,6 +48,8 @@ struct Harness {
     /// Where a connection taken on its way is put in, as a source that took
     /// it from the OS would.
     taken: tokio::sync::mpsc::Sender<Flow>,
+    /// tracewing's SOCKS5 port, for a client that was told to use it.
+    socks_port: u16,
     live: Arc<Live>,
     relay: Arc<tracewing_proxy::relay::Relay>,
     tls_keys: Arc<tracewing_proxy::key_log::TlsKeys>,
@@ -128,6 +131,8 @@ impl Harness {
         let client_certs = Arc::new(tracewing_proxy::client_certs::ClientCerts::default());
         let scripts = Arc::new(tracewing_proxy::script::Scripts::default());
         let (given, taken) = Given::channel();
+        let socks = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let socks_port = socks.local_addr().unwrap().port();
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -154,6 +159,7 @@ impl Harness {
                 sources: vec![
                     Box::new(Lan::new(Arc::clone(&other_devices))),
                     Box::new(given),
+                    Box::new(Socks::new(socks)),
                 ],
                 relay: Arc::clone(&relay),
                 tls_keys: Arc::clone(&tls_keys),
@@ -181,6 +187,7 @@ impl Harness {
             network,
             other_devices,
             taken,
+            socks_port,
             live,
             dir,
             proxy_url,
@@ -4272,5 +4279,61 @@ async fn a_taken_tls_connection_is_decrypted() {
     assert_eq!(host, format!("localhost:{port}"));
     assert_eq!(path, "/json");
     assert_eq!(client_addr, "10.0.0.7:4001");
+    clean_up(conn, dir);
+}
+
+/// A client told to use tracewing's SOCKS5 port, speaking RFC 1928 by hand so
+/// that the test is a second implementation of the handshake rather than the
+/// same one twice. It asks for a name, and the flow is recorded under that
+/// name: a SOCKS5 client says where it is going, so nothing has to be read
+/// out of a ClientHello to find out.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_socks5_client_is_recorded_by_the_name_it_asked_for() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let h = Harness::start("socks").await;
+    let port = h.playground_port;
+    let mut client = tokio::net::TcpStream::connect(("127.0.0.1", h.socks_port))
+        .await
+        .unwrap();
+
+    // Version 5, one way in offered, and that way is no authentication.
+    client.write_all(&[5, 1, 0]).await.unwrap();
+    let mut agreed = [0u8; 2];
+    client.read_exact(&mut agreed).await.unwrap();
+    assert_eq!(agreed, [5, 0], "version 5, no authentication");
+
+    // CONNECT, to a name of nine characters, on the playground's port.
+    let mut request = vec![5, 1, 0, 3, 9];
+    request.extend_from_slice(b"localhost");
+    request.extend_from_slice(&port.to_be_bytes());
+    client.write_all(&request).await.unwrap();
+    let mut answer = [0u8; 10];
+    client.read_exact(&mut answer).await.unwrap();
+    assert_eq!(answer[..2], [5, 0], "it may go ahead: {answer:02x?}");
+
+    // And from here it simply talks, as it would to the server itself.
+    client
+        .write_all(b"GET /json HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        .await
+        .unwrap();
+    let mut said = Vec::new();
+    client.read_to_end(&mut said).await.unwrap();
+    let said = String::from_utf8_lossy(&said);
+    assert!(said.starts_with("HTTP/1.1 200"), "{said}");
+
+    let (summary, conn, dir) = h.finish(1).await;
+    assert_eq!(summary.written, 1);
+    let (host, path, method): (String, String, String) = conn
+        .query_row("SELECT host, path, method FROM flows", [], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        })
+        .unwrap();
+    assert_eq!(
+        host,
+        format!("localhost:{port}"),
+        "the name the client asked for, not the address behind it"
+    );
+    assert_eq!(path, "/json");
+    assert_eq!(method, "GET");
     clean_up(conn, dir);
 }

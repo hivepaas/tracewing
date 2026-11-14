@@ -49,6 +49,10 @@ enum Command {
         /// Do not look for the program behind each connection.
         #[arg(long)]
         no_apps: bool,
+        /// Also listen for SOCKS5 clients here, for what speaks SOCKS and
+        /// not HTTP proxying: ALL_PROXY, Firefox's SOCKS setting, ssh -D.
+        #[arg(long)]
+        socks: Option<SocketAddr>,
         /// Stop cleanly after this many seconds.
         #[arg(long)]
         exit_after: Option<u64>,
@@ -261,6 +265,7 @@ async fn main() -> Result<()> {
             system_proxy,
             no_watchdog,
             no_apps,
+            socks,
             exit_after,
             relay,
             relay_bypass,
@@ -333,7 +338,14 @@ async fn main() -> Result<()> {
                     find_apps: !no_apps,
                     stop_limit: Duration::from_secs(5),
                     live: Default::default(),
-                    sources: Vec::new(),
+                    sources: match socks {
+                        Some(at) => {
+                            let listener = TcpListener::bind(at).await?;
+                            eprintln!("SOCKS5 on {}", listener.local_addr()?);
+                            vec![Box::new(tracewing_proxy::socks::Socks::new(listener))]
+                        }
+                        None => Vec::new(),
+                    },
                     relay,
                     // As browsers and curl, it writes them where SSLKEYLOGFILE says.
                     tls_keys: Arc::new(tracewing_proxy::key_log::TlsKeys::from_env()),
