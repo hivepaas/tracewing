@@ -294,27 +294,36 @@ app that ignores the Wi-Fi proxy cannot be caught at all.
 The userspace TCP/IP stack is the keystone: Windows, Linux and WireGuard all
 need it, macOS does not. `smoltcp` is the obvious foundation.
 
-So the order is not the order of value, it is the order of dependency. Two
-pieces are in already: the seam, and plain HTTP on a taken connection, which
-turned out not to need the rewriter this page once predicted. What is left:
+So the order is not the order of value, it is the order of dependency. Three
+pieces are in already: the seam; plain HTTP on a taken connection, which
+turned out not to need the rewriter this page once predicted; and **SOCKS5**,
+in [`socks.rs`](../../crates/proxy/src/socks.rs) — not an operating system at
+all, just a listener and the RFC 1928 handshake, after which what is left on
+the socket is a stream to a destination the client named, which is a
+`Took::Flow` and nothing more. It went first because it needs no privilege on
+any of the three platforms, and because the taken path otherwise had no caller
+but its own tests: the first real user of a seam is what finds the seam's
+bugs. It also gets `Target::Named` free from the protocol, where a source
+reading packets has to find the name in a ClientHello.
 
-1. **SOCKS5.** Not an operating system at all: a listener, the RFC 1928
-   handshake, and what is left is a stream to a destination the client named,
-   which is a `Took::Flow` and nothing more. No privilege, no driver, all
-   three platforms from one implementation. It goes first because the taken
-   path otherwise has no caller but its tests, and the first real user of a
-   seam is what finds the seam's bugs — far cheaper to find them here than
-   inside a WireGuard stack where it is nobody's fault yet. It also gets
-   `Target::Named` for free, since SOCKS5 carries a domain name, and it
-   closes a real gap: `ALL_PROXY`, Firefox's own SOCKS setting, `ssh -D`.
-2. **Local mode on macOS.** Flow-level, so no TCP stack, and nothing to ask
+Two things are left of SOCKS5, neither of them the protocol: a port in
+Settings, with the switch and the words to go with it, since nothing but
+`tracewing-dev proxy --socks` opens one today; and
+[`apps`](../../crates/proxy/src/apps.rs) knowing which port a connection came
+in on, because it looks for a socket whose far end is the proxy port and a
+SOCKS5 client's far end is the SOCKS5 port, so those flows have no program
+against them. That second one is a change across three operating systems.
+
+What is left:
+
+1. **Local mode on macOS.** Flow-level, so no TCP stack, and nothing to ask
    Apple for: the least work of the three operating systems.
-3. The TCP/IP stack, with **WireGuard** as its first user: no privilege needed
+2. The TCP/IP stack, with **WireGuard** as its first user: no privilege needed
    on this machine, and it is what finally reaches a phone whose apps ignore
    the Wi-Fi proxy.
-4. Local mode on Windows, which needs that stack, a kernel driver, and our
+3. Local mode on Windows, which needs that stack, a kernel driver, and our
    installer signed first.
-5. Local mode on Linux, last for the reasons in its section.
+4. Local mode on Linux, last for the reasons in its section.
 
 ## What none of this changes
 

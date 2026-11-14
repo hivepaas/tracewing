@@ -16,6 +16,7 @@ pub mod relay;
 pub mod rules;
 pub mod script;
 pub mod sockets;
+pub mod socks;
 pub mod source;
 pub mod throttle;
 pub mod traffic_rules;
