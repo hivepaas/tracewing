@@ -29,6 +29,15 @@
 #                               keychain this user can use; none: ad hoc
 #   APPLE_API_KEY_PATH, APPLE_API_KEY_ID, APPLE_API_ISSUER_ID
 #                               an App Store Connect API key, to notarize
+#
+# The network extension (crates/netext) goes in only with the Developer ID and
+# the two provisioning profiles that allow it, as macOS starts neither the app
+# nor the extension otherwise; it must be notarized too before macOS takes it:
+#
+#   cargo build --release --locked -p tracewing-netext
+#   MACOS_PROFILE_APP           the "tracewing Developer ID" profile
+#   MACOS_PROFILE_PROXY         the "tracewing proxy Developer ID" profile
+#   PROXY_BIN                   default target/release/tracewing-netext
 
 set -euo pipefail
 
@@ -77,10 +86,41 @@ cp "$WORK/THIRD-PARTY-LICENSES.txt" "$APP/Contents/Resources/THIRD-PARTY-LICENSE
 sed "s/@VERSION@/$VERSION/g" packaging/macos/Info.plist >"$APP/Contents/Info.plist"
 plutil -lint "$APP/Contents/Info.plist"
 
+## The network extension, where the profiles that allow it are given
+PROXY_BIN="${PROXY_BIN:-target/release/tracewing-netext}"
+PROFILE_APP="${MACOS_PROFILE_APP:-}"
+PROFILE_PROXY="${MACOS_PROFILE_PROXY:-}"
+EXTENSION=""
+if [ -n "$IDENTITY" ] && [ -n "$PROFILE_APP" ] && [ -n "$PROFILE_PROXY" ]; then
+	[ -x "$PROXY_BIN" ] || { echo "no build at $PROXY_BIN: cargo build --release -p tracewing-netext" >&2; exit 1; }
+	for profile in "$PROFILE_APP" "$PROFILE_PROXY"; do
+		[ -f "$profile" ] || { echo "no profile at $profile" >&2; exit 1; }
+	done
+	EXTENSION="$APP/Contents/Library/SystemExtensions/com.hivepaas.tracewing.proxy.systemextension"
+	mkdir -p "$EXTENSION/Contents/MacOS" "$EXTENSION/Contents/Resources"
+	cp "$PROXY_BIN" "$EXTENSION/Contents/MacOS/com.hivepaas.tracewing.proxy"
+	strip -x "$EXTENSION/Contents/MacOS/com.hivepaas.tracewing.proxy"
+	sed "s/@VERSION@/$VERSION/g" packaging/macos/proxy-Info.plist >"$EXTENSION/Contents/Info.plist"
+	plutil -lint "$EXTENSION/Contents/Info.plist"
+	cargo about generate --locked --fail -c about.toml -m crates/netext/Cargo.toml \
+		--target "$TARGET" -o "$EXTENSION/Contents/Resources/THIRD-PARTY-LICENSES.txt" packaging/licenses.hbs
+	cp "$PROFILE_PROXY" "$EXTENSION/Contents/embedded.provisionprofile"
+	cp "$PROFILE_APP" "$APP/Contents/embedded.provisionprofile"
+elif [ -n "$IDENTITY" ]; then
+	echo "warning: no MACOS_PROFILE_APP and MACOS_PROFILE_PROXY: no network extension in the app" >&2
+fi
+
 ## Signed: with the Developer ID where there is one, ad hoc where there is not
 if [ -z "$IDENTITY" ]; then
 	echo "warning: no MACOS_SIGN_IDENTITY: signed ad hoc, and Gatekeeper will ask the first time it opens" >&2
 	codesign --force --sign - --timestamp=none "$APP"
+elif [ -n "$EXTENSION" ]; then
+	# The extension first, as the app's signature covers it, each with the
+	# entitlements its profile allows.
+	codesign --force --sign "$IDENTITY" --options runtime --timestamp \
+		--entitlements packaging/macos/proxy.entitlements "$EXTENSION"
+	codesign --force --sign "$IDENTITY" --options runtime --timestamp \
+		--entitlements packaging/macos/tracewing.entitlements "$APP"
 else
 	# The hardened runtime and a secure timestamp, as notarizing requires.
 	codesign --force --sign "$IDENTITY" --options runtime --timestamp "$APP"
@@ -120,6 +160,8 @@ if [ -n "$IDENTITY" ] && [ -n "${APPLE_API_KEY_PATH:-}" ]; then
 	NOTARIZE=1
 elif [ -n "$IDENTITY" ]; then
 	echo "warning: not notarized (no APPLE_API_KEY_PATH): Gatekeeper refuses it downloaded" >&2
+	# Even on the Mac that built it.
+	[ -z "$EXTENSION" ] || echo "warning: macOS will not install the network extension until it is notarized" >&2
 fi
 
 ## Notarized, the app first: the disk image carries it with its ticket.
