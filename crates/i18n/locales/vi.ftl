@@ -2908,6 +2908,9 @@ t5b0660bd = Brotli
 # JWE, an encrypted token
 t6da81e5b = JWE, một token đã mã hóa
 
+# JWK, a key as JSON
+t063a0ebb = JWK, một khóa dạng JSON
+
 # PASETO
 t309420ff = PASETO
 
@@ -3096,6 +3099,36 @@ t27c3ab35 = Ký lúc
 
 # Signature
 tc049050d = Chữ ký
+
+# JWKS, a set of keys
+td89aa17c = JWKS, một tập khóa
+
+# Key id
+ta8d17bc9 = ID khóa
+
+# For
+t0f7e1b30 = Dùng cho
+
+# Careful
+t813659c7 = Lưu ý
+
+# the key itself is here
+t000be4dc = chính khóa nằm ở đây
+
+# the private half is here, not only the public one
+t3cd43df1 = nửa riêng tư nằm ở đây, không chỉ nửa công khai
+
+# private
+t62cb0d0c = riêng tư
+
+# {bits}-bit
+t24e38ecb = { $bits } bit
+
+# signing
+t3e8026b4 = ký
+
+# encryption
+t06fbc41c = mã hóa
 
 # Trace
 t26f8e74e = Trace

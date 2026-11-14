@@ -2908,6 +2908,9 @@ t5b0660bd = Brotli
 # JWE, an encrypted token
 t6da81e5b = JWE, 암호화된 토큰
 
+# JWK, a key as JSON
+t063a0ebb = JWK, JSON으로 된 키
+
 # PASETO
 t309420ff = PASETO
 
@@ -3096,6 +3099,36 @@ t27c3ab35 = 서명 시각
 
 # Signature
 tc049050d = 서명
+
+# JWKS, a set of keys
+td89aa17c = JWKS, 키 집합
+
+# Key id
+ta8d17bc9 = 키 ID
+
+# For
+t0f7e1b30 = 용도
+
+# Careful
+t813659c7 = 주의
+
+# the key itself is here
+t000be4dc = 키 자체가 여기 있음
+
+# the private half is here, not only the public one
+t3cd43df1 = 공개 부분만이 아니라 비공개 부분도 여기 있음
+
+# private
+t62cb0d0c = 비공개
+
+# {bits}-bit
+t24e38ecb = { $bits }비트
+
+# signing
+t3e8026b4 = 서명
+
+# encryption
+t06fbc41c = 암호화
 
 # Trace
 t26f8e74e = 트레이스

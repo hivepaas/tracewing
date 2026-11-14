@@ -3001,6 +3001,9 @@ t5b0660bd = Brotli
 # JWE, an encrypted token
 t6da81e5b = JWE, şifreli bir token
 
+# JWK, a key as JSON
+t063a0ebb = JWK, JSON olarak bir anahtar
+
 # PASETO
 t309420ff = PASETO
 
@@ -3189,6 +3192,36 @@ t27c3ab35 = İmzalandı
 
 # Signature
 tc049050d = İmza
+
+# JWKS, a set of keys
+td89aa17c = JWKS, bir anahtar kümesi
+
+# Key id
+ta8d17bc9 = Anahtar kimliği
+
+# For
+t0f7e1b30 = Kullanım
+
+# Careful
+t813659c7 = Dikkat
+
+# the key itself is here
+t000be4dc = anahtarın kendisi burada
+
+# the private half is here, not only the public one
+t3cd43df1 = yalnızca açık kısım değil, özel kısım da burada
+
+# private
+t62cb0d0c = özel
+
+# {bits}-bit
+t24e38ecb = { $bits } bit
+
+# signing
+t3e8026b4 = imzalama
+
+# encryption
+t06fbc41c = şifreleme
 
 # Trace
 t26f8e74e = İzleme

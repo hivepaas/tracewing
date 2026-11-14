@@ -2908,6 +2908,9 @@ t5b0660bd = Brotli
 # JWE, an encrypted token
 t6da81e5b = JWE, token terenkripsi
 
+# JWK, a key as JSON
+t063a0ebb = JWK, kunci sebagai JSON
+
 # PASETO
 t309420ff = PASETO
 
@@ -3096,6 +3099,36 @@ t27c3ab35 = Ditandatangani
 
 # Signature
 tc049050d = Tanda tangan
+
+# JWKS, a set of keys
+td89aa17c = JWKS, satu set kunci
+
+# Key id
+ta8d17bc9 = ID kunci
+
+# For
+t0f7e1b30 = Kegunaan
+
+# Careful
+t813659c7 = Perhatian
+
+# the key itself is here
+t000be4dc = kuncinya sendiri ada di sini
+
+# the private half is here, not only the public one
+t3cd43df1 = bagian privatnya ada di sini, bukan hanya yang publik
+
+# private
+t62cb0d0c = privat
+
+# {bits}-bit
+t24e38ecb = { $bits } bit
+
+# signing
+t3e8026b4 = penandatanganan
+
+# encryption
+t06fbc41c = enkripsi
 
 # Trace
 t26f8e74e = Trace

@@ -259,6 +259,7 @@ const CONVERTERS: &[Converter] = &[
     chain::topic,
     chain::selector,
     tokens::jwe,
+    tokens::jwk,
     tokens::paseto,
     tokens::session_cookie,
     tokens::crypt,
@@ -706,6 +707,12 @@ const KNOWN: &[Known] = &[
         group: Group::Tokens,
         run: tokens::jwe,
         name: || tr!("JWE, an encrypted token"),
+    },
+    Known {
+        id: "jwk",
+        group: Group::Tokens,
+        run: tokens::jwk,
+        name: || tr!("JWK, a key as JSON"),
     },
     Known {
         id: "paseto",

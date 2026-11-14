@@ -224,7 +224,7 @@ Narrower, and worth it for anyone debugging a backend.
 | Group | Readings |
 |---|---|
 | Binary formats — **partly built** | Protobuf off the wire with no `.proto`: every field by number, how it was written, text where it is text, and a count for a message inside a message; a gRPC frame taken off first. MessagePack, CBOR and BSON are not here on purpose — `tracewing_store::binjson` already reads all three for a whole body, and the right move is to let a value reuse that rather than to write it twice; where `binjson` should live is a question for its own change |
-| Tokens and keys — **built** | JWE told from a JWS by its five parts, saying what wrapped the key and what encrypted the rest; PASETO, with a public token's claims read and a local one's said to need the key; SAML out of the chain that unpacks it, saying which message, from whom and to where; PEM, saying what it holds and how much DER; a hash named by the sizes it could be; bcrypt, argon2, SHA-crypt and PBKDF2 by their parameters; a framework's session cookie taken apart into the session it carries -- Flask's as itsdangerous writes it, Django's with the zlib off the front, Rails signed with its own wrapper off as well, and Rails encrypted said to need `secret_key_base` -- with the signature shown rather than checked. Reading a DER structure itself is still to come: it wants an ASN.1 parser, and `x509-parser` is the app's dependency, not this crate's |
+| Tokens and keys — **built** | JWE told from a JWS by its five parts, saying what wrapped the key and what encrypted the rest; PASETO, with a public token's claims read and a local one's said to need the key; SAML out of the chain that unpacks it, saying which message, from whom and to where; PEM, saying what it holds and how much DER; a JWK, or a whole JWKS a row at a time, saying what each key is and the size its modulus makes it; a hash named by the sizes it could be; bcrypt, argon2, SHA-crypt and PBKDF2 by their parameters; a framework's session cookie taken apart into the session it carries -- Flask's as itsdangerous writes it, Django's with the zlib off the front, Rails signed with its own wrapper off as well, and Rails encrypted said to need `secret_key_base` -- with the signature shown rather than checked. Reading a DER structure itself is still to come: it wants an ASN.1 parser, and `x509-parser` is the app's dependency, not this crate's |
 | With a secret the reader types | Verify a JWT's HMAC; verify a framework's signed cookie, whose payload is already read without the key under Tokens and keys; decrypt with a key given by hand, which is what Rails 5.2's encrypted cookie and Laravel's need |
 | Network — **built** | An IP as an integer, with what sort of address it is; IPv6 shortened and spelled out, with the IPv4 inside it; a CIDR as the range it holds; a port by what listens there; a MAC, with what its own bits say. A vendor from an OUI table is to come: the table is a megabyte of data to carry |
 | Other epochs — **built** | Windows FILETIME and .NET ticks, which nothing else is large enough to be; Cocoa, HFS+ and a spreadsheet's serial, which a Unix time could be too, and so are only offered where the field says it is a time — or, for HFS+, past where a Unix time can reach |
@@ -360,6 +360,15 @@ and MCP store.
   wants it gone once has to forget the rule and remember it again.
 - Does a `Fields` reading that runs long belong folded under the row, or in the
   inspector's own pane? Folding a 40-claim token under one line will read badly.
+- A JWK is read because the JSON around it is already readable and that is the
+  trouble: `n` is three hundred characters of base64url that happen to say
+  2048-bit, and a one-letter `d` is the difference between a public set and a
+  published private key. Both are a line. The size comes from the field that
+  carries it -- the modulus for RSA, the key itself for `oct` -- and only a
+  modulus drops a leading zero byte, since RFC 7518 says a Base64urlUInt
+  carries none and producers emit one anyway, while for a symmetric key every
+  octet is key material and dropping one would understate it by eight bits.
+  A curve names its own size, so `P-256` is the whole answer.
 - A `Link` is a row for each link: the relation first, since a reader comes to
   this header looking for `next`. Both of its separators are characters its own
   values may hold -- a URI with a comma in a query, a quoted title with one in

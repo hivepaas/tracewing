@@ -2908,6 +2908,9 @@ t5b0660bd = Brotli
 # JWE, an encrypted token
 t6da81e5b = JWE，加密的令牌
 
+# JWK, a key as JSON
+t063a0ebb = JWK，以 JSON 表示的密钥
+
 # PASETO
 t309420ff = PASETO
 
@@ -3096,6 +3099,36 @@ t27c3ab35 = 签名时间
 
 # Signature
 tc049050d = 签名
+
+# JWKS, a set of keys
+td89aa17c = JWKS，一组密钥
+
+# Key id
+ta8d17bc9 = 密钥 ID
+
+# For
+t0f7e1b30 = 用途
+
+# Careful
+t813659c7 = 注意
+
+# the key itself is here
+t000be4dc = 密钥本身就在这里
+
+# the private half is here, not only the public one
+t3cd43df1 = 这里有私有部分，不只是公开部分
+
+# private
+t62cb0d0c = 私有
+
+# {bits}-bit
+t24e38ecb = { $bits } 位
+
+# signing
+t3e8026b4 = 签名
+
+# encryption
+t06fbc41c = 加密
 
 # Trace
 t26f8e74e = 追踪
