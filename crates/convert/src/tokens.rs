@@ -514,6 +514,175 @@ pub fn session_cookie(input: &Input) -> Option<Reading> {
     ))
 }
 
+/// Secret fields: the private half of an asymmetric key, or the whole of a
+/// symmetric one. A set published so the world can check signatures has no
+/// business carrying any of them.
+const SECRET: [&str; 7] = ["d", "p", "q", "dp", "dq", "qi", "k"];
+
+/// A JWK, or a whole JWKS, as what the keys are.
+///
+/// The JSON around them is already readable, and that is the trouble: what a
+/// reader cannot see is that `n` -- three hundred characters of base64url --
+/// says 2048-bit, or that a one-letter `d` has turned a public set into a
+/// published private key. Both are a line here.
+pub fn jwk(input: &Input) -> Option<Reading> {
+    let value: Value = serde_json::from_str(input.text.trim()).ok()?;
+    let object = value.as_object()?;
+    // A set is read to find one key in it, so a row each.
+    if let Some(keys) = object.get("keys").and_then(Value::as_array) {
+        let rows: Vec<Vec<String>> = keys
+            .iter()
+            .filter_map(Value::as_object)
+            .map(|key| {
+                vec![
+                    said(key, "kid"),
+                    what_it_is(key),
+                    what_for(key),
+                    said(key, "alg"),
+                ]
+            })
+            .filter(|row| !row[1].is_empty())
+            .collect();
+        if rows.is_empty() {
+            return None;
+        }
+        return Some(Reading::new(
+            "jwk",
+            tr!("JWKS, a set of keys"),
+            Confidence::Certain,
+            Shown::Table {
+                head: vec![
+                    tr!("Key id"),
+                    tr!("What it is"),
+                    tr!("For"),
+                    tr!("Algorithm"),
+                ],
+                rows,
+            },
+        ));
+    }
+    let kind = what_it_is(object);
+    if kind.is_empty() {
+        return None;
+    }
+    let mut fields = vec![(tr!("What it is"), kind)];
+    for (label, text) in [
+        (tr!("For"), what_for(object)),
+        (tr!("Algorithm"), said(object, "alg")),
+        (tr!("Key id"), said(object, "kid")),
+    ] {
+        if !text.is_empty() {
+            fields.push((label, text));
+        }
+    }
+    if let Some(certificates) = object.get("x5c").and_then(Value::as_array) {
+        fields.push((tr!("Certificates"), certificates.len().to_string()));
+    }
+    // Said plainly and not only marked, because this is the one thing here
+    // that is somebody's morning: a table cell has room for a word, and one
+    // key has room for the sentence.
+    if object.contains_key("k") {
+        fields.push((tr!("Careful"), tr!("the key itself is here")));
+    } else if SECRET.iter().any(|name| object.contains_key(*name)) {
+        fields.push((
+            tr!("Careful"),
+            tr!("the private half is here, not only the public one"),
+        ));
+    }
+    Some(Reading::new(
+        "jwk",
+        tr!("JWK, a key as JSON"),
+        Confidence::Certain,
+        Shown::Fields(fields),
+    ))
+}
+
+/// What a key is, in the words a reader wants: the family, the size where
+/// the family does not already say it, and whether the secret came too.
+fn what_it_is(key: &Map<String, Value>) -> String {
+    let kind = key.get("kty").and_then(Value::as_str).unwrap_or_default();
+    let mut what = match kind {
+        // The curve names the size, so `P-256` is the whole answer.
+        "EC" | "OKP" => match key.get("crv").and_then(Value::as_str) {
+            Some(curve) => format!("{kind} {curve}"),
+            None => kind.to_owned(),
+        },
+        // `n` is the modulus, and the modulus is the key's size.
+        "RSA" => sized(kind, modulus_bits(key, "n")),
+        "oct" => sized(kind, bits(key, "k")),
+        "" => return String::new(),
+        other => other.to_owned(),
+    };
+    if SECRET.iter().any(|name| key.contains_key(*name)) {
+        what.push_str(", ");
+        what.push_str(&tr!("private"));
+    }
+    what
+}
+
+fn sized(kind: &str, bits: Option<usize>) -> String {
+    match bits {
+        Some(bits) => format!("{kind} {}", tr!("{bits}-bit", bits = bits.to_string())),
+        None => kind.to_owned(),
+    }
+}
+
+/// The size of a base64url field, in bits. Every octet counts: for a
+/// symmetric key a leading zero is key material like any other byte, and
+/// dropping it would understate the key by eight bits a time.
+fn bits(key: &Map<String, Value>, name: &str) -> Option<usize> {
+    match URL_SAFE_NO_PAD.decode(key.get(name)?.as_str()?).ok()?.len() {
+        0 => None,
+        bytes => Some(bytes * 8),
+    }
+}
+
+/// The same for a modulus, where one leading zero byte may have come along
+/// to keep the number positive. RFC 7518 says it should not be there at all
+/// -- `n` is a Base64urlUInt and those carry no leading zero -- but
+/// producers emit one, and counting it would call every such key 2056-bit.
+/// Exactly one is dropped: past that, the bytes are the number.
+fn modulus_bits(key: &Map<String, Value>, name: &str) -> Option<usize> {
+    let bytes = URL_SAFE_NO_PAD.decode(key.get(name)?.as_str()?).ok()?;
+    let bytes = match bytes.split_first() {
+        Some((0, rest)) if !rest.is_empty() => rest,
+        _ => bytes.as_slice(),
+    };
+    match bytes.len() {
+        0 => None,
+        bytes => Some(bytes * 8),
+    }
+}
+
+/// What the key is for: `use`, or the operations where a key says those
+/// instead.
+fn what_for(key: &Map<String, Value>) -> String {
+    if let Some(what) = key.get("use").and_then(Value::as_str) {
+        return match what {
+            "sig" => tr!("signing"),
+            "enc" => tr!("encryption"),
+            other => other.to_owned(),
+        };
+    }
+    key.get("key_ops")
+        .and_then(Value::as_array)
+        .map(|ops| {
+            ops.iter()
+                .filter_map(Value::as_str)
+                .collect::<Vec<&str>>()
+                .join(", ")
+        })
+        .unwrap_or_default()
+}
+
+/// A string field as it was written, or nothing where it is absent.
+fn said(key: &Map<String, Value>, name: &str) -> String {
+    key.get(name)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -787,5 +956,94 @@ mod tests {
                 .any(|(_, value)| value == "https://idp.example.org/metadata"),
             "{fields:?}"
         );
+    }
+    fn table(text: &str, id: &str) -> Vec<Vec<String>> {
+        let found = read(text);
+        match by_id(&found, id).map(|r| &r.shown) {
+            Some(Shown::Table { rows, .. }) => rows.clone(),
+            other => panic!("no table for {id}: {other:?}"),
+        }
+    }
+
+    /// `n` is what says 2048, and nothing else in the key does.
+    #[test]
+    fn an_rsa_key_says_the_size_its_modulus_makes_it() {
+        let modulus = URL_SAFE_NO_PAD.encode([0x80u8; 256]);
+        let key = format!(
+            r#"{{"kty":"RSA","n":"{modulus}","e":"AQAB","alg":"RS256","use":"sig","kid":"2026-11"}}"#
+        );
+        let found = fields(&key, "jwk");
+        let said: Vec<(&str, &str)> = found
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect();
+        assert!(said.contains(&("What it is", "RSA 2048-bit")), "{said:?}");
+        assert!(said.contains(&("For", "signing")), "{said:?}");
+        assert!(said.contains(&("Algorithm", "RS256")), "{said:?}");
+        assert!(said.contains(&("Key id", "2026-11")), "{said:?}");
+
+        // A leading zero byte keeps the modulus positive and is not part of
+        // the number: the key is still 2048-bit, not 2056.
+        let mut padded = vec![0u8];
+        padded.extend_from_slice(&[0x80u8; 256]);
+        let key = format!(
+            r#"{{"kty":"RSA","n":"{}","e":"AQAB"}}"#,
+            URL_SAFE_NO_PAD.encode(&padded)
+        );
+        assert_eq!(fields(&key, "jwk")[0].1, "RSA 2048-bit");
+    }
+
+    /// A curve names its own size, so there is nothing to measure.
+    #[test]
+    fn a_set_is_a_row_for_each_key() {
+        let modulus = URL_SAFE_NO_PAD.encode([0x7fu8; 128]);
+        let set = format!(
+            r#"{{"keys":[
+                {{"kty":"EC","crv":"P-256","x":"AA","y":"AQ","use":"sig","kid":"ec"}},
+                {{"kty":"RSA","n":"{modulus}","e":"AQAB","alg":"RS256","kid":"rsa"}},
+                {{"kty":"OKP","crv":"Ed25519","x":"AA","key_ops":["verify"],"kid":"ed"}}
+            ]}}"#
+        );
+        let rows = table(&set, "jwk");
+        assert_eq!(rows.len(), 3);
+        assert_eq!(rows[0], vec!["ec", "EC P-256", "signing", ""]);
+        assert_eq!(rows[1], vec!["rsa", "RSA 1024-bit", "", "RS256"]);
+        // `key_ops` where a key says that instead of `use`.
+        assert_eq!(rows[2], vec!["ed", "OKP Ed25519", "verify", ""]);
+    }
+
+    /// The one thing here that is somebody's morning.
+    #[test]
+    fn a_secret_that_came_with_a_public_key_is_said_plainly() {
+        let key = r#"{"kty":"EC","crv":"P-256","x":"AA","y":"AQ","d":"c2VjcmV0"}"#;
+        let found = fields(key, "jwk");
+        assert_eq!(found[0].1, "EC P-256, private");
+        assert!(
+            found
+                .iter()
+                .any(|(name, value)| name == "Careful" && value.contains("private half")),
+            "{found:?}"
+        );
+        // A symmetric key is all secret, and `k` is where it sits.
+        let key = r#"{"kty":"oct","k":"AAAAAAAAAAAAAAAAAAAAAA","alg":"HS256"}"#;
+        let found = fields(key, "jwk");
+        assert_eq!(found[0].1, "oct 128-bit, private");
+        assert!(
+            found
+                .iter()
+                .any(|(name, value)| name == "Careful" && value == "the key itself is here"),
+            "{found:?}"
+        );
+    }
+
+    #[test]
+    fn what_is_not_a_key_is_not_read() {
+        // JSON, and readable as JSON, but nothing says it is a key.
+        assert!(by_id(&read(r#"{"name":"ana","age":7}"#), "jwk").is_none());
+        assert!(by_id(&read(r#"{"kty":""}"#), "jwk").is_none());
+        // A set with nothing in it, and a set whose members are not keys.
+        assert!(by_id(&read(r#"{"keys":[]}"#), "jwk").is_none());
+        assert!(by_id(&read(r#"{"keys":[{"id":1}]}"#), "jwk").is_none());
+        assert!(by_id(&read("not json at all"), "jwk").is_none());
     }
 }

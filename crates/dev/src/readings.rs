@@ -210,6 +210,30 @@ fn pem() -> String {
     out
 }
 
+/// A JWKS as an identity provider serves one: a signing key whose size is
+/// in its modulus and nowhere else, and a curve key whose name is its size.
+fn jwks() -> String {
+    // The top bit set, so no leading zero: 256 octets, and 2048-bit.
+    let modulus: Vec<u8> = (0..256).map(|n| ((n * 11 % 251) | 0x80) as u8).collect();
+    format!(
+        concat!(
+            "{{\n",
+            "  \"keys\": [\n",
+            "    {{\"kty\": \"RSA\", \"use\": \"sig\", \"alg\": \"RS256\", ",
+            "\"kid\": \"2026-11\", \"e\": \"AQAB\",\n",
+            "     \"n\": \"{modulus}\"}},\n",
+            "    {{\"kty\": \"EC\", \"use\": \"sig\", \"alg\": \"ES256\", ",
+            "\"kid\": \"2026-05\", \"crv\": \"P-256\",\n",
+            "     \"x\": \"{x}\", \"y\": \"{y}\"}}\n",
+            "  ]\n",
+            "}}\n"
+        ),
+        modulus = b64url(&modulus),
+        x = b64url(&[0x3c; 32]),
+        y = b64url(&[0x5e; 32]),
+    )
+}
+
 fn build() -> Vec<Sample> {
     let header = |id, name, value: String, what| Sample {
         id,
@@ -711,6 +735,12 @@ fn build() -> Vec<Sample> {
         // `\n`, and what the window then has is escaped text, not a PEM. It
         // gets a body of its own instead.
         alone(
+            "jwk",
+            "jwks.json",
+            jwks(),
+            "A JWKS at /readings/jwks.json: what each key is, and the size its modulus makes it",
+        ),
+        alone(
             "pem",
             "certificate.pem",
             pem(),
@@ -824,6 +854,7 @@ mod tests {
             "iso-8601-naive",
             "json-in-string",
             "jwe",
+            "jwk",
             "jwt",
             "ksuid",
             "link",
@@ -893,6 +924,7 @@ mod tests {
                 "excel-date",
                 "flags",
                 "iso-8601-naive",
+                "jwk",
                 "jwt",
                 "link",
                 "pem",

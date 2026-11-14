@@ -3037,6 +3037,9 @@ t5b0660bd = Brotli
 # JWE, an encrypted token
 t6da81e5b = JWE, ein verschlüsseltes Token
 
+# JWK, a key as JSON
+t063a0ebb = JWK, ein Schlüssel als JSON
+
 # PASETO
 t309420ff = PASETO
 
@@ -3225,6 +3228,36 @@ t27c3ab35 = Signiert
 
 # Signature
 tc049050d = Signatur
+
+# JWKS, a set of keys
+td89aa17c = JWKS, ein Satz Schlüssel
+
+# Key id
+ta8d17bc9 = Schlüssel-ID
+
+# For
+t0f7e1b30 = Zweck
+
+# Careful
+t813659c7 = Achtung
+
+# the key itself is here
+t000be4dc = der Schlüssel selbst steht hier
+
+# the private half is here, not only the public one
+t3cd43df1 = der private Teil steht hier, nicht nur der öffentliche
+
+# private
+t62cb0d0c = privat
+
+# {bits}-bit
+t24e38ecb = { $bits } Bit
+
+# signing
+t3e8026b4 = Signieren
+
+# encryption
+t06fbc41c = Verschlüsselung
 
 # Trace
 t26f8e74e = Trace
