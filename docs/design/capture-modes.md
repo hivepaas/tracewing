@@ -45,7 +45,7 @@ work the source is:
 | Hands over | **flows** | packets | packets |
 | Needs our own TCP stack | no | **yes** | **yes** |
 | Privilege | the user approves a system extension | Administrator | root, for `bpf()` |
-| Shipping | Developer ID, notarized, packaged as a system extension | a signed `.sys` driver alongside the app | kernel 6.8 or newer |
+| Shipping | Developer ID, notarized, packaged as a system extension | WinDivert's own signed `.sys` beside our executable; nothing of ours to sign | kernel 6.8 or newer |
 | Knows the app by | audit token, so bundle id | PID | name, first 16 characters only (`task->comm`) |
 
 mitmproxy has all three and is worth reading before starting any of them; the
@@ -236,10 +236,40 @@ The rest, in the order it will bite:
 ### Local mode, Windows
 
 A redirector process running as Administrator, using WinDivert to take packets
-by PID and re-inject ours. Packets, so it needs the TCP stack. WinDivert is
-dual-licensed LGPLv3/GPLv2, which fits this project, and its prebuilt driver is
-signed — but it is a kernel driver we would be shipping, with everything that
-means for the installer and for antivirus noise.
+by PID and re-inject ours. Packets, so it needs the TCP stack.
+
+Nothing here has to be signed by us. WinDivert asks only for Administrator —
+`WinDivertOpen()` fails with error 5 without it — and says nothing about the
+program that calls it. The driver does have to be signed, and the official
+`WinDivert64.sys` already is, so it is shipped as it comes; only a driver we
+built ourselves would need signing, and an unsigned one fails with error 577.
+There is no installer to write either: `WinDivert.dll` and the `.sys` beside
+our executable, and the driver installs itself silently on the first
+`WinDivertOpen()`. Uninstalling is deleting the files, with `sc delete` or
+`windivertctl uninstall` to take the loaded one away before a reboot does.
+
+**Take the LGPLv3 branch.** WinDivert is "LGPLv3 or GPLv2, at your choice",
+and only the first of those fits GPL-3.0-or-later: GPL-2.0-only would not.
+
+Two things to weigh before committing to it, neither of them about signing:
+
+- **Security software blocks the driver**, which WinDivert's own
+  documentation gives an error number for (1275). Our Windows installer is
+  not signed today, and an unsigned executable that elevates to
+  Administrator and drops a kernel driver next to itself is the shape
+  antivirus heuristics like most. Signing the installer is not something
+  WinDivert requires; it is something this source would make necessary.
+- **WinDivert looks dormant.** 2.2.2 is from September 2022 and the
+  repository was last pushed to in March 2023; the driver's signing
+  certificate has expired and holds only because the signature is
+  timestamped. A kernel driver with nobody behind it to re-sign is a real
+  dependency risk if Microsoft tightens policy or blocklists it.
+
+The alternative, a WFP callout driver of our own, is where signing does
+become ours: an EV certificate and attestation signing through Microsoft's
+Partner Center, every time the driver changes. Much more expensive than
+WinDivert, and a reason this stays at sixth rather than a reason to start it
+sooner.
 
 ### Local mode, Linux
 
