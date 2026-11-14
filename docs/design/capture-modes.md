@@ -326,9 +326,18 @@ What is left:
 
 1. **Local mode on macOS.** Flow-level, so no TCP stack, and nothing to ask
    Apple for: the least work of the three operating systems.
-2. The TCP/IP stack, with **WireGuard** as its first user: no privilege needed
-   on this machine, and it is what finally reaches a phone whose apps ignore
-   the Wi-Fi proxy.
+2. The TCP/IP stack is **in**, in [`stack.rs`](../../crates/proxy/src/stack.rs):
+   packets in, [`Took::Flow`](../../crates/proxy/src/source.rs) out, on
+   `smoltcp`, answering each `SYN` as the server the client was going to. What
+   is left of it is a device to feed it — nothing reads a real packet yet —
+   and **WireGuard** is the first one to build: no privilege needed on this
+   machine, and it is what finally reaches a phone whose apps ignore the
+   Wi-Fi proxy. The stack itself is tested with packets written by hand, so a
+   device is the only part that needs an operating system.
+
+   Two things it does not do, both of which a device will want: it reads IPv4
+   only, and it hands flows over named by address, because a packet carries no
+   name. The name is in the first `ClientHello`, which is a reader of its own.
 3. Local mode on Windows, which needs that stack, a kernel driver, and our
    installer signed first.
 4. Local mode on Linux, last for the reasons in its section.
