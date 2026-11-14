@@ -2830,6 +2830,9 @@ td7bc06f2 = 1899年からの日数 (表計算)
 # Seconds
 t7e12f48a = 秒
 
+# ISO 8601 duration
+tcbc53069 = ISO 8601 の期間
+
 # Trace context
 ta58c7c95 = トレースコンテキスト
 

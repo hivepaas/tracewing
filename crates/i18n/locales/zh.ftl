@@ -2830,6 +2830,9 @@ td7bc06f2 = 自 1899 年起的天数（电子表格）
 # Seconds
 t7e12f48a = 秒
 
+# ISO 8601 duration
+tcbc53069 = ISO 8601 时长
+
 # Trace context
 ta58c7c95 = 追踪上下文
 

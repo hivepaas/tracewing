@@ -207,7 +207,7 @@ The values that come up daily. Every one of these is pure, offline and cheap.
 
 | Group | Readings |
 |---|---|
-| Times | Unix seconds, milliseconds, microseconds, nanoseconds, told apart by magnitude and shown as both when truly ambiguous; ISO 8601 and RFC 3339 as local time and as "4 minutes ago"; HTTP-date, as `Date`, `Expires` and `Last-Modified` carry it |
+| Times | Unix seconds, milliseconds, microseconds, nanoseconds, told apart by magnitude and shown as both when truly ambiguous; ISO 8601 and RFC 3339 as local time and as "4 minutes ago"; HTTP-date, as `Date`, `Expires` and `Last-Modified` carry it; an ISO 8601 duration as a span, with years and months left as they were written |
 | Durations | Seconds as `2h 30m`, where the field says the number is one: `max-age`, `expires_in`, `retry-after`, a name ending in `age`, `secs` or `took`. Nothing about a number says it is seconds, so a bare one is read as a span only when a reader asks for it |
 | Encodings | base64, base64url, hex, percent-encoding, `\uXXXX` escapes, HTML entities |
 | JSON in a string | Unescaped and laid out — the most common of all of these |
@@ -360,6 +360,14 @@ and MCP store.
   wants it gone once has to forget the rule and remember it again.
 - Does a `Fields` reading that runs long belong folded under the row, or in the
   inspector's own pane? Folding a 40-claim token under one line will read badly.
+- An ISO 8601 duration reads as a span because the same length of time can be
+  written several ways and only one of them is readable: `PT5400S`, `PT90M` and
+  `PT1H30M` all say `1h 30m`. Years and months are not added into it. A month
+  is not a number of seconds -- how many depends on which month, and on where
+  the duration starts, which a value on its own does not say -- so `P14M` says
+  `1y 2mo` and stops there. `M` is months before the `T` and minutes after it,
+  the one thing this format is famous for getting wrong, so the reading says
+  `1mo` for one and `1m` for the other and never turns one into the other.
 - A JWK is read because the JSON around it is already readable and that is the
   trouble: `n` is three hundred characters of base64url that happen to say
   2048-bit, and a one-letter `d` is the difference between a public set and a

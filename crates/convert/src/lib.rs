@@ -267,6 +267,7 @@ const CONVERTERS: &[Converter] = &[
     tokens::saml,
     times::unix,
     times::iso,
+    times::iso_duration,
     times::http_date,
     times::filetime,
     times::dotnet_ticks,
@@ -449,6 +450,12 @@ const KNOWN: &[Known] = &[
         group: Group::Times,
         run: times::duration,
         name: || tr!("Seconds"),
+    },
+    Known {
+        id: "iso-8601-duration",
+        group: Group::Times,
+        run: times::iso_duration,
+        name: || tr!("ISO 8601 duration"),
     },
     Known {
         id: "uuid",

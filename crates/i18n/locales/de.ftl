@@ -2959,6 +2959,9 @@ td7bc06f2 = Tage seit 1899 (Tabelle)
 # Seconds
 t7e12f48a = Sekunden
 
+# ISO 8601 duration
+tcbc53069 = ISO-8601-Dauer
+
 # Trace context
 ta58c7c95 = Trace-Kontext
 

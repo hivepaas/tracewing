@@ -2978,6 +2978,9 @@ td7bc06f2 = Días desde 1899 (hoja de cálculo)
 # Seconds
 t7e12f48a = Segundos
 
+# ISO 8601 duration
+tcbc53069 = Duración ISO 8601
+
 # Trace context
 ta58c7c95 = Contexto de traza
 

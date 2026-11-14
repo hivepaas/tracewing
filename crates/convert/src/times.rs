@@ -304,6 +304,149 @@ pub fn span(seconds: u64) -> String {
     said.join(" ")
 }
 
+/// An ISO 8601 duration -- `PT1H30M`, `P3D`, `P1Y2M10DT2H30M` -- as a span a
+/// reader can take in. A configuration value written this way is common and
+/// unreadable in equal measure, and `PT5400S` saying `1h 30m` is the whole
+/// point of reading it at all.
+///
+/// `M` is months before the `T` and minutes after it, which is the mistake
+/// this format is famous for, so the reading says `1mo` for one and `1m` for
+/// the other and never silently turns one into the other.
+///
+/// Years and months are left as years and months. A month is not a number of
+/// seconds -- how many depends on which month, and on where the duration
+/// starts, which a value in isolation does not say -- so only the part below
+/// days is added up. The rest of the format is exact: a week is seven days
+/// and a day is 86400 seconds, whatever the calendar does around them.
+pub fn iso_duration(input: &Input) -> Option<Reading> {
+    let span = Iso8601Duration::parse(input.text.trim().trim_matches('"'))?;
+    Some(Reading::new(
+        "iso-8601-duration",
+        tr!("ISO 8601 duration"),
+        Confidence::Certain,
+        Shown::Line(span.said()),
+    ))
+}
+
+/// The parts of one, kept as they were written: years and months apart from
+/// the seconds, because they cannot be added to them.
+struct Iso8601Duration {
+    negative: bool,
+    months: f64,
+    seconds: f64,
+}
+
+impl Iso8601Duration {
+    fn parse(text: &str) -> Option<Self> {
+        // The format has no letters but its own, so one case is every case.
+        let text = text.to_ascii_uppercase();
+        let (negative, rest) = match text.strip_prefix('-') {
+            Some(rest) => (true, rest),
+            None => (false, text.strip_prefix('+').unwrap_or(&text)),
+        };
+        let rest = rest.strip_prefix('P')?;
+        let (date, time) = match rest.split_once('T') {
+            Some((date, time)) => (date, time),
+            None => (rest, ""),
+        };
+        let date = pairs(date, "YMWD")?;
+        let time = pairs(time, "HMS")?;
+        // `P` on its own, and `PT` on its own, are not durations.
+        if date.is_empty() && time.is_empty() {
+            return None;
+        }
+        let mut months = 0.0;
+        let mut seconds = 0.0;
+        for (unit, many) in date {
+            match unit {
+                'Y' => months += many * 12.0,
+                'M' => months += many,
+                'W' => seconds += many * 7.0 * 86_400.0,
+                _ => seconds += many * 86_400.0,
+            }
+        }
+        for (unit, many) in time {
+            match unit {
+                'H' => seconds += many * 3_600.0,
+                'M' => seconds += many * 60.0,
+                _ => seconds += many,
+            }
+        }
+        Some(Self {
+            negative,
+            months,
+            seconds,
+        })
+    }
+
+    /// The span in words, the date part as itself and the rest added up.
+    fn said(&self) -> String {
+        let mut said = Vec::new();
+        let years = (self.months / 12.0).floor();
+        if years > 0.0 {
+            said.push(format!("{}y", rounded(years)));
+        }
+        let months = self.months - years * 12.0;
+        if months > 0.0 {
+            said.push(format!("{}mo", rounded(months)));
+        }
+        let mut left = self.seconds;
+        for (size, unit) in [(86_400.0, "d"), (3_600.0, "h"), (60.0, "m")] {
+            let many = (left / size).floor();
+            if many > 0.0 {
+                said.push(format!("{}{unit}", rounded(many)));
+                left -= many * size;
+            }
+        }
+        // Seconds last, and the only place a fraction is left: `PT0.5S` is a
+        // real thing to write and rounding it away would be a lie. Nothing
+        // at all becomes `0s`, since a duration of zero is still a duration.
+        if left > 0.0 || said.is_empty() {
+            said.push(format!("{}s", rounded(left)));
+        }
+        match self.negative {
+            true => format!("-{}", said.join(" ")),
+            false => said.join(" "),
+        }
+    }
+}
+
+/// Three decimal places at most, and no trailing zeros: `0.5`, not `0.500`.
+fn rounded(many: f64) -> String {
+    let rounded = (many * 1_000.0).round() / 1_000.0;
+    format!("{rounded}")
+}
+
+/// The `number designator` pairs of one half of a duration, left to right.
+///
+/// A designator may be used once and never after one that comes later in
+/// `order`, so `P1M2Y` and `P1Y2Y` are both refused. That, with a number
+/// required in front of every designator and a designator after every
+/// number, is what keeps a word beginning with P out of here.
+fn pairs(text: &str, order: &str) -> Option<Vec<(char, f64)>> {
+    let mut found: Vec<(char, f64)> = Vec::new();
+    let mut least = 0;
+    let mut rest = text;
+    while !rest.is_empty() {
+        // A number with no designator after it ends the string, which `find`
+        // reports as nothing found; a designator with no number is at zero.
+        let end = rest
+            .find(|c: char| !(c.is_ascii_digit() || c == '.' || c == ','))
+            .filter(|end| *end > 0)?;
+        // A comma is a decimal point in ISO 8601, and some writers use it.
+        let many: f64 = rest[..end].replace(',', ".").parse().ok()?;
+        if !many.is_finite() || many < 0.0 {
+            return None;
+        }
+        let unit = rest[end..].chars().next()?;
+        let at = order.find(unit).filter(|at| *at >= least)?;
+        least = at + 1;
+        found.push((unit, many));
+        rest = &rest[end + unit.len_utf8()..];
+    }
+    Some(found)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -445,5 +588,55 @@ mod tests {
         let asked = crate::read_as("duration", &input).expect("asked for, it is read");
         assert_eq!(asked.confidence, Confidence::Possible);
         assert_eq!(line(&[asked], "duration"), "1h");
+    }
+    fn iso_span(text: &str) -> String {
+        line(&read(text), "iso-8601-duration")
+    }
+
+    /// The reason to read one at all: the same length of time can be written
+    /// several ways and only one of them is readable.
+    #[test]
+    fn an_iso_duration_is_said_as_a_span() {
+        assert_eq!(iso_span("PT1H30M"), "1h 30m");
+        assert_eq!(iso_span("PT5400S"), "1h 30m");
+        assert_eq!(iso_span("PT90M"), "1h 30m");
+        assert_eq!(iso_span("P1Y2M10DT2H30M"), "1y 2mo 10d 2h 30m");
+        // A week is seven days exactly, whatever the calendar does.
+        assert_eq!(iso_span("P1W"), "7d");
+        // Lower case, a sign, a comma for a decimal point, and a zero that
+        // is still a duration.
+        assert_eq!(iso_span("pt1h"), "1h");
+        assert_eq!(iso_span("-PT1H"), "-1h");
+        assert_eq!(iso_span("PT0,5S"), "0.5s");
+        assert_eq!(iso_span("PT0S"), "0s");
+    }
+
+    /// `M` is months before the `T` and minutes after it, which is the one
+    /// thing this format is famous for getting wrong.
+    #[test]
+    fn a_month_and_a_minute_are_never_confused() {
+        assert_eq!(iso_span("P1M"), "1mo");
+        assert_eq!(iso_span("PT1M"), "1m");
+        // And a month stays a month: how many seconds it is depends on which
+        // month and on where the duration starts, neither of which a value
+        // on its own says.
+        assert_eq!(iso_span("P14M"), "1y 2mo");
+    }
+
+    #[test]
+    fn what_is_not_an_iso_duration_is_not_read() {
+        for text in [
+            // A P and nothing to go with it.
+            "P", "PT", "PASSWORD", "P2P",
+            // A number with no designator, and a designator with no number.
+            "P1", "PY", "P1D2", // A designator that is not one of this half's.
+            "PT1X", "P1H", // Out of order, and said twice.
+            "P1M2Y", "P1Y2Y", "PT1M2H",
+        ] {
+            assert!(
+                by_id(&read(text), "iso-8601-duration").is_none(),
+                "read {text} as a duration"
+            );
+        }
     }
 }

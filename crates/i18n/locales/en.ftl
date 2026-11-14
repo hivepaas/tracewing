@@ -1123,6 +1123,7 @@ t4bd1d35a = Seconds since 2001 (Apple)
 tc7a82a5d = Seconds since 1904 (HFS+)
 td7bc06f2 = Days since 1899 (spreadsheet)
 t7e12f48a = Seconds
+tcbc53069 = ISO 8601 duration
 ta58c7c95 = Trace context
 tb4f9b9bb = B3 trace
 t122e82a4 = Amazon trace

@@ -2978,6 +2978,9 @@ td7bc06f2 = Dias desde 1899 (planilha)
 # Seconds
 t7e12f48a = Segundos
 
+# ISO 8601 duration
+tcbc53069 = Duração ISO 8601
+
 # Trace context
 ta58c7c95 = Contexto de trace
 

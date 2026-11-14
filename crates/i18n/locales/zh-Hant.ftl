@@ -2830,6 +2830,9 @@ td7bc06f2 = 自 1899 年起的天數（試算表）
 # Seconds
 t7e12f48a = 秒
 
+# ISO 8601 duration
+tcbc53069 = ISO 8601 時長
+
 # Trace context
 ta58c7c95 = 追蹤內容
 
