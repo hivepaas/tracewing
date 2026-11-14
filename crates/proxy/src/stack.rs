@@ -25,12 +25,20 @@
 //! - Hands each connection over as a [`Flow`] whose stream is the bytes the
 //!   client sent, and writes back out as packets whatever the proxy answers.
 //!
+//! - Reads **IPv4 and IPv6**. Both are only parsed as far as deciding whether
+//!   a packet opens a connection; the rest is `smoltcp`'s. An IPv4 fragment
+//!   and an IPv6 packet carrying an extension header are both left alone, for
+//!   the same reason: the TCP header is not where this looks, so no
+//!   connection is made and the stack drops the packet.
+//!
 //! What it does not do: connect to anybody, route, speak ARP (these are IP
 //! packets, with no Ethernet frame around them), or know which program sent
 //! anything. A packet carries addresses and nothing else, so these flows
-//! arrive as [`Target::Addr`] and with no program against them — the name in
-//! a TLS `ClientHello` and the program behind the four addresses are both
-//! work of their own, and neither is here.
+//! arrive as [`Target::Addr`] and with no program against them. The name is
+//! then read further on, out of the client's first TLS record, by
+//! [`crate::handover`] and [`crate::name`] — so a flow from here is asked
+//! for by name even though nothing here knows one. The program behind the
+//! four addresses is still work of its own and is not here.
 //!
 //! See [capture-modes.md](../../../docs/design/capture-modes.md).
 
@@ -41,11 +49,11 @@ use smoltcp::{
     phy::{Checksum, Device as PhyDevice, DeviceCapabilities, Medium, RxToken, TxToken},
     socket::tcp,
     time::Instant as Moment,
-    wire::{HardwareAddress, IpAddress, IpCidr, Ipv4Address},
+    wire::{HardwareAddress, IpAddress, IpCidr, Ipv4Address, Ipv6Address},
 };
 use std::{
     collections::{HashMap, VecDeque},
-    net::{IpAddr, Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -142,19 +150,27 @@ pub(crate) struct Peek {
     pub opening: bool,
 }
 
-/// IPv4 and TCP only. A packet this does not understand is handed to the stack
-/// anyway, which drops what it does not want: this is only here to decide
-/// whether to make a connection first.
+/// What carries TCP, in the `protocol` of an IPv4 header and the
+/// `next_header` of an IPv6 one.
+const TCP: u8 = 6;
+
+/// The least a TCP header is, which is all of it this reads.
+const TCP_HEAD: usize = 20;
+
+/// IPv4, IPv6 and TCP only. A packet this does not understand is handed to
+/// the stack anyway, which drops what it does not want: this is only here to
+/// decide whether to make a connection first.
 pub(crate) fn peek(packet: &[u8]) -> Option<Peek> {
-    const TCP: u8 = 6;
-    let first = *packet.first()?;
-    if first >> 4 != 4 {
-        // IPv6 is not done here yet: no connection is made for it, so the
-        // stack has nothing listening and the packet goes nowhere.
-        return None;
+    match *packet.first()? >> 4 {
+        4 => peek_v4(packet),
+        6 => peek_v6(packet),
+        _ => None,
     }
-    let header = usize::from(first & 0x0f) * 4;
-    if header < 20 || packet.len() < header + 20 || packet[9] != TCP {
+}
+
+fn peek_v4(packet: &[u8]) -> Option<Peek> {
+    let header = usize::from(packet[0] & 0x0f) * 4;
+    if header < 20 || packet.len() < header + TCP_HEAD || packet[9] != TCP {
         return None;
     }
     // A fragment that is not the first carries no TCP header, and the first
@@ -165,13 +181,36 @@ pub(crate) fn peek(packet: &[u8]) -> Option<Peek> {
     }
     let from = Ipv4Addr::new(packet[12], packet[13], packet[14], packet[15]);
     let to = Ipv4Addr::new(packet[16], packet[17], packet[18], packet[19]);
-    let tcp = &packet[header..];
-    let flags = tcp[13];
+    ends(&packet[header..], from.into(), to.into())
+}
+
+/// IPv6's header is a fixed forty bytes, and what follows it is named by
+/// `next_header` instead of by a protocol field at a fixed place. An
+/// extension header — hop-by-hop options, routing, a fragment — therefore
+/// puts the TCP header somewhere this does not look, so a packet carrying
+/// one is left alone rather than guessed at: no connection is made, the
+/// stack drops it, and a client on a path that needs them is a client this
+/// does not catch. That is the same answer an IPv4 fragment gets, for the
+/// same reason, and it is worth knowing rather than discovering.
+fn peek_v6(packet: &[u8]) -> Option<Peek> {
+    const HEAD: usize = 40;
+    if packet.len() < HEAD + TCP_HEAD || packet[6] != TCP {
+        return None;
+    }
+    let from = Ipv6Addr::from(<[u8; 16]>::try_from(&packet[8..24]).ok()?);
+    let to = Ipv6Addr::from(<[u8; 16]>::try_from(&packet[24..40]).ok()?);
+    ends(&packet[HEAD..], from.into(), to.into())
+}
+
+/// The ports and the flags, which sit in the same place whichever IP carried
+/// them there.
+fn ends(tcp: &[u8], from: IpAddr, to: IpAddr) -> Option<Peek> {
     const SYN: u8 = 0x02;
     const ACK: u8 = 0x10;
+    let flags = tcp[13];
     Some(Peek {
-        from: SocketAddr::new(from.into(), u16::from_be_bytes([tcp[0], tcp[1]])),
-        to: SocketAddr::new(to.into(), u16::from_be_bytes([tcp[2], tcp[3]])),
+        from: SocketAddr::new(from, u16::from_be_bytes([tcp[0], tcp[1]])),
+        to: SocketAddr::new(to, u16::from_be_bytes([tcp[2], tcp[3]])),
         opening: flags & SYN != 0 && flags & ACK == 0,
     })
 }
@@ -309,15 +348,33 @@ async fn run(wire: Wire, most: usize, found: Found, stop: Stop) {
     config.random_seed = seed();
     let mut iface = Interface::new(config, &mut device, moment(started));
     // Every destination is somebody else's address, so the interface has to
-    // answer for all of them; the address and route are what give it
-    // somewhere to send from.
+    // answer for all of them. `set_any_ip` is what does that, and in 0.14 it
+    // does it alone: `InterfaceInner::has_ip_addr` returns `true` before
+    // looking at anything when `any_ip` is set, so neither the addresses nor
+    // the routes below are consulted on the way in.
+    //
+    // They are kept anyway, and the reason is worth writing down because no
+    // test here can show it. `set_any_ip`'s own documentation says the
+    // interface accepts a prefix only when a route names one of its
+    // addresses as the gateway — which the implementation short-circuits.
+    // Satisfying the documented contract costs four lines; relying on the
+    // short-circuit would mean a `smoltcp` upgrade that honours its own
+    // documentation stops every connection, with nothing failing here to say
+    // so. Taking them out passes all twelve tests, which is the measure of
+    // what the tests cover rather than of what the stack needs.
     iface.set_any_ip(true);
     iface.update_ip_addrs(|addrs| {
         let _ = addrs.push(IpCidr::new(IpAddress::v4(0, 0, 0, 0), 0));
+        let _ = addrs.push(IpCidr::new(IpAddress::v6(0, 0, 0, 0, 0, 0, 0, 0), 0));
     });
     let _ = iface
         .routes_mut()
         .add_default_ipv4_route(Ipv4Address::new(0, 0, 0, 0));
+    // The same for IPv6, for the reason above and not because a test needs
+    // it.
+    let _ = iface
+        .routes_mut()
+        .add_default_ipv6_route(Ipv6Address::UNSPECIFIED);
     let mut sockets = SocketSet::new(Vec::new());
     let mut conns: HashMap<SocketHandle, Conn> = HashMap::new();
     let woken = Arc::new(Notify::new());
@@ -537,7 +594,8 @@ mod tests {
     use super::*;
     use crate::source::Took;
     use smoltcp::wire::{
-        IpProtocol, Ipv4Packet, Ipv4Repr, TcpControl, TcpPacket, TcpRepr, TcpSeqNumber,
+        IpProtocol, Ipv4Packet, Ipv4Repr, Ipv6Packet, Ipv6Repr, TcpControl, TcpPacket, TcpRepr,
+        TcpSeqNumber,
     };
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -565,9 +623,6 @@ mod tests {
         /// together, so that a mistake of mine in `peek` cannot be hidden by
         /// the same mistake in the test's hand-rolled header.
         fn packet(&self, control: TcpControl, payload: &[u8]) -> Vec<u8> {
-            let (IpAddr::V4(from), IpAddr::V4(to)) = (self.from.ip(), self.to.ip()) else {
-                panic!("IPv4 only here");
-            };
             let tcp = TcpRepr {
                 src_port: self.from.port(),
                 dst_port: self.to.port(),
@@ -582,23 +637,50 @@ mod tests {
                 timestamp: None,
                 payload,
             };
-            let ip = Ipv4Repr {
-                src_addr: from,
-                dst_addr: to,
-                next_header: IpProtocol::Tcp,
-                payload_len: tcp.buffer_len(),
-                hop_limit: 64,
-            };
             let caps = Default::default();
-            let mut bytes = vec![0u8; ip.buffer_len() + tcp.buffer_len()];
-            ip.emit(&mut Ipv4Packet::new_unchecked(&mut bytes), &caps);
-            tcp.emit(
-                &mut TcpPacket::new_unchecked(&mut bytes[ip.buffer_len()..]),
-                &from.into(),
-                &to.into(),
-                &caps,
-            );
-            bytes
+            // The TCP header is the same either way; only the IP header
+            // around it differs, and `smoltcp` writes both, so a mistake of
+            // mine in `peek` cannot be hidden by the same mistake here.
+            match (self.from.ip(), self.to.ip()) {
+                (IpAddr::V4(from), IpAddr::V4(to)) => {
+                    let ip = Ipv4Repr {
+                        src_addr: from,
+                        dst_addr: to,
+                        next_header: IpProtocol::Tcp,
+                        payload_len: tcp.buffer_len(),
+                        hop_limit: 64,
+                    };
+                    let mut bytes = vec![0u8; ip.buffer_len() + tcp.buffer_len()];
+                    ip.emit(&mut Ipv4Packet::new_unchecked(&mut bytes), &caps);
+                    tcp.emit(
+                        &mut TcpPacket::new_unchecked(&mut bytes[ip.buffer_len()..]),
+                        &from.into(),
+                        &to.into(),
+                        &caps,
+                    );
+                    bytes
+                }
+                (IpAddr::V6(from), IpAddr::V6(to)) => {
+                    let ip = Ipv6Repr {
+                        src_addr: from,
+                        dst_addr: to,
+                        next_header: IpProtocol::Tcp,
+                        payload_len: tcp.buffer_len(),
+                        hop_limit: 64,
+                    };
+                    let mut bytes = vec![0u8; ip.buffer_len() + tcp.buffer_len()];
+                    // IPv6 has no header checksum, so `emit` takes none.
+                    ip.emit(&mut Ipv6Packet::new_unchecked(&mut bytes));
+                    tcp.emit(
+                        &mut TcpPacket::new_unchecked(&mut bytes[ip.buffer_len()..]),
+                        &from.into(),
+                        &to.into(),
+                        &caps,
+                    );
+                    bytes
+                }
+                _ => panic!("both ends of one connection are the same kind of address"),
+            }
         }
 
         /// A packet, with the sequence number moved on by what it occupies:
@@ -618,20 +700,37 @@ mod tests {
 
         /// Takes in what the stack sent back, so the next packet answers it.
         fn heard(&mut self, packet: &[u8]) -> (TcpControl, Vec<u8>) {
-            let ip = Ipv4Packet::new_checked(packet).expect("an IPv4 packet");
-            let tcp = TcpPacket::new_checked(ip.payload()).expect("a TCP packet");
-            let repr = TcpRepr::parse(
-                &tcp,
-                &ip.src_addr().into(),
-                &ip.dst_addr().into(),
-                &Default::default(),
-            )
-            .expect("a TCP header");
+            let (control, seq, payload) = match packet.first().map(|b| b >> 4) {
+                Some(4) => {
+                    let ip = Ipv4Packet::new_checked(packet).expect("an IPv4 packet");
+                    let tcp = TcpPacket::new_checked(ip.payload()).expect("a TCP packet");
+                    let repr = TcpRepr::parse(
+                        &tcp,
+                        &ip.src_addr().into(),
+                        &ip.dst_addr().into(),
+                        &Default::default(),
+                    )
+                    .expect("a TCP header");
+                    (repr.control, repr.seq_number, repr.payload.to_vec())
+                }
+                Some(6) => {
+                    let ip = Ipv6Packet::new_checked(packet).expect("an IPv6 packet");
+                    let tcp = TcpPacket::new_checked(ip.payload()).expect("a TCP packet");
+                    let repr = TcpRepr::parse(
+                        &tcp,
+                        &ip.src_addr().into(),
+                        &ip.dst_addr().into(),
+                        &Default::default(),
+                    )
+                    .expect("a TCP header");
+                    (repr.control, repr.seq_number, repr.payload.to_vec())
+                }
+                other => panic!("an IP packet, not one starting {other:?}"),
+            };
             // What it sent, plus one for a SYN or a FIN, is what to acknowledge.
-            let counts =
-                usize::from(repr.control != TcpControl::None && repr.control != TcpControl::Psh);
-            self.ack = Some(repr.seq_number + repr.payload.len() + counts);
-            (repr.control, repr.payload.to_vec())
+            let counts = usize::from(control != TcpControl::None && control != TcpControl::Psh);
+            self.ack = Some(seq + payload.len() + counts);
+            (control, payload)
         }
     }
 
@@ -903,11 +1002,146 @@ mod tests {
         assert!(!peek(&syn_ack).unwrap().opening);
         // Data in the middle is not an opening either.
         assert!(!peek(&client.packet(TcpControl::Psh, b"x")).unwrap().opening);
-        // Not IPv4, not TCP, too short: nothing to say.
-        assert_eq!(peek(&[0x60, 0, 0, 0]), None);
+        // Not an IP version it knows, too short to hold a header, not TCP:
+        // nothing to say.
+        assert_eq!(peek(&[0x50, 0, 0, 0]), None);
+        assert_eq!(peek(&[0x60, 0, 0, 0]), None, "IPv6, but four bytes of it");
         assert_eq!(peek(&[]), None);
         let mut udp = client.packet(TcpControl::Syn, &[]);
         udp[9] = 17;
         assert_eq!(peek(&udp), None);
+    }
+
+    /// The same, where the addresses are forty bytes of header away and the
+    /// protocol is named by `next_header` instead of by `protocol`.
+    #[test]
+    fn what_an_ipv6_packet_says_about_where_it_is_going() {
+        let client = Client::new("[2001:db8::7]:51004", "[2606:50c0:8000::153]:443");
+        let syn = client.packet(TcpControl::Syn, &[]);
+        assert_eq!(syn[0] >> 4, 6, "an IPv6 packet, as smoltcp wrote it");
+        assert_eq!(
+            peek(&syn),
+            Some(Peek {
+                from: client.from,
+                to: client.to,
+                opening: true
+            })
+        );
+
+        // An extension header moves the TCP header, so this is left alone
+        // rather than read as though the TCP header were where it usually
+        // is: byte 6 says what follows, and 0 is hop-by-hop options.
+        let mut extended = syn.clone();
+        extended[6] = 0;
+        assert_eq!(peek(&extended), None, "hop-by-hop options, not TCP");
+
+        let mut udp = syn.clone();
+        udp[6] = 17;
+        assert_eq!(peek(&udp), None);
+
+        // The fixed header alone, with no room for a TCP header after it.
+        assert_eq!(peek(&syn[..40]), None);
+
+        let mut answering = Client::new("[2001:db8::7]:51004", "[2606:50c0:8000::153]:443");
+        answering.ack = Some(TcpSeqNumber(5));
+        assert!(
+            !peek(&answering.packet(TcpControl::Syn, &[]))
+                .unwrap()
+                .opening
+        );
+    }
+
+    /// A connection over IPv6, end to end: reading the packet is only half
+    /// of it, and this is the half that shows the stack answers as the
+    /// server the client was going to over IPv6 as well.
+    ///
+    /// It does **not** test the interface's IPv6 address or route. Taking
+    /// both out leaves this green, because `set_any_ip` short-circuits the
+    /// check that would have consulted them — see the note in `run`. Said
+    /// here because the obvious reading of this test is the wrong one.
+    #[tokio::test]
+    async fn a_connection_over_ipv6_is_answered_and_carries_bytes() {
+        let mut running = start(8);
+        let mut client = Client::new("[2001:db8::7]:51005", "[2606:50c0:8000::153]:443");
+        let flow = running.connect(&mut client).await;
+        assert_eq!(flow.client, client.from);
+        assert_eq!(
+            flow.to,
+            Target::Addr(client.to),
+            "named by where the client was going, which is all a packet says"
+        );
+        let mut stream = flow.stream;
+
+        let get = client.send(TcpControl::Psh, b"GET / HTTP/1.1\r\n\r\n");
+        running.into.send(get).await.unwrap();
+        let mut said = [0u8; 18];
+        tokio::time::timeout(Duration::from_secs(5), stream.read_exact(&mut said))
+            .await
+            .expect("the client's bytes reach the stream")
+            .unwrap();
+        assert_eq!(&said, b"GET / HTTP/1.1\r\n\r\n");
+
+        stream
+            .write_all(b"HTTP/1.1 204 No Content\r\n\r\n")
+            .await
+            .unwrap();
+        let mut back = Vec::new();
+        for _ in 0..8 {
+            let packet = running.next().await;
+            assert_eq!(packet[0] >> 4, 6, "answered over IPv6, as it arrived");
+            let (_, payload) = client.heard(&packet);
+            back.extend_from_slice(&payload);
+            if back.ends_with(b"\r\n\r\n") {
+                break;
+            }
+        }
+        assert_eq!(
+            String::from_utf8_lossy(&back),
+            "HTTP/1.1 204 No Content\r\n\r\n"
+        );
+    }
+
+    /// Both at once, which is what a device will hand over: a phone with a
+    /// dual-stack network uses whichever the name resolved to, flow by flow.
+    #[tokio::test]
+    async fn the_two_families_are_told_apart_and_not_mixed_up() {
+        let mut running = start(8);
+        let mut four = Client::new("10.0.0.7:51006", "140.82.121.4:443");
+        let mut six = Client::new("[2001:db8::7]:51006", "[2606:50c0:8000::153]:443");
+
+        let a = running.connect(&mut four).await;
+        let b = running.connect(&mut six).await;
+        assert_eq!(a.to, Target::Addr(four.to));
+        assert_eq!(b.to, Target::Addr(six.to));
+        assert!(a.client.is_ipv4() && b.client.is_ipv6());
+
+        // The same client port on each: if the two were sorted by port alone
+        // they would be one connection, and one of these streams would carry
+        // the other's bytes.
+        let mut a_stream = a.stream;
+        let mut b_stream = b.stream;
+        running
+            .into
+            .send(four.send(TcpControl::Psh, b"four"))
+            .await
+            .unwrap();
+        running
+            .into
+            .send(six.send(TcpControl::Psh, b"six"))
+            .await
+            .unwrap();
+
+        let mut got_four = [0u8; 4];
+        tokio::time::timeout(Duration::from_secs(5), a_stream.read_exact(&mut got_four))
+            .await
+            .expect("the IPv4 client's bytes")
+            .unwrap();
+        let mut got_six = [0u8; 3];
+        tokio::time::timeout(Duration::from_secs(5), b_stream.read_exact(&mut got_six))
+            .await
+            .expect("the IPv6 client's bytes")
+            .unwrap();
+        assert_eq!(&got_four, b"four");
+        assert_eq!(&got_six, b"six");
     }
 }
