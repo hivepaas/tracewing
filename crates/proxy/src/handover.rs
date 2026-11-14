@@ -73,6 +73,14 @@ const PEEK: usize = 2;
 /// neither, and is given a tunnel rather than held here for ever: a protocol
 /// whose server greets first, or a connection somebody opened and thought
 /// better of.
+///
+/// It is paid **once per connection**, not once. Connections opened at the
+/// same time wait at the same time, but a client that opens one, waits for a
+/// greeting, uses it and opens the next pays it again each time — ten of
+/// those is twenty seconds of a database client looking broken. The way out,
+/// when a source that deals in packets needs one, is to look at where the
+/// connection was going: a destination port of 25, 3306 or 5432 is not HTTP
+/// and could go straight to a tunnel with no wait at all.
 const FIRST_WORD_WITHIN: Duration = Duration::from_secs(2);
 
 /// What a source knew about a connection it handed over.

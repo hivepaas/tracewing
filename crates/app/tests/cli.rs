@@ -521,3 +521,52 @@ fn uninstall_undoes_what_it_did_and_keeps_what_was_recorded() {
 
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// The watchdog's whole reason to exist, which nothing tested: the app goes,
+/// and whatever it did to the system proxy is undone. The app going is its
+/// end of the pipe closing, which happens however it died — a kill, a panic,
+/// a power of the plug.
+///
+/// On a machine with no desktop to read the setting from there is nothing to
+/// put back, so it says so and keeps the journal, exactly as `recover` does:
+/// see `it_put_them_back_or_said_why_not`.
+#[cfg(target_os = "linux")]
+#[test]
+fn the_watchdog_puts_the_setting_back_when_the_app_goes() {
+    let dir = std::env::temp_dir().join(format!("tracewing-watchdog-job-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let journal = dir.join("sysproxy.journal");
+    journal_of_a_killed_run(&dir);
+
+    let mut watchdog = tracewing()
+        .args(["watchdog", "--data-dir"])
+        .arg(&dir)
+        .env("HOME", &dir)
+        .env("XDG_CONFIG_HOME", dir.join("config"))
+        .stdin(Stdio::piped())
+        .spawn()
+        .unwrap();
+    // The app going, whatever took it: its end of the pipe closes.
+    drop(watchdog.stdin.take());
+    let ended = watchdog.wait().unwrap();
+
+    let log = std::fs::read_to_string(dir.join("watchdog.log")).unwrap_or_default();
+    assert!(
+        log.contains("app gone"),
+        "it writes down what it found, either way: {log:?}"
+    );
+    if ended.success() {
+        assert!(
+            !journal.exists(),
+            "the journal goes with the settings, so it cannot be used twice"
+        );
+    } else {
+        assert!(
+            journal.exists(),
+            "nothing could be read, so the journal stays: it is all that is \
+             left of what the settings were"
+        );
+    }
+    std::fs::remove_dir_all(&dir).ok();
+}
