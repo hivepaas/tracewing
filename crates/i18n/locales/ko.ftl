@@ -2854,6 +2854,9 @@ te161b66b = Basic 인증
 # Cache-Control
 t3868d34d = Cache-Control
 
+# Content-Security-Policy
+tc6d9127c = Content-Security-Policy
+
 # Status code
 t20b704bc = 상태 코드
 
@@ -3180,3 +3183,24 @@ tb643c704 = 서비스
 
 # Headers signed
 t62bd9377 = 서명된 헤더
+
+# Directive
+t8d3da87a = 지시문
+
+# Allowed
+t586f52e3 = 허용
+
+# nothing
+t527dae8a = 없음
+
+# this origin
+t2a5f5cfd = 이 출처
+
+# inline code
+t4e304b19 = 인라인 코드
+
+# eval
+t08d22e0f = eval
+
+# anywhere
+tf5f4aec0 = 어디서나

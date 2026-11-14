@@ -2854,6 +2854,9 @@ te161b66b = Autentikasi Basic
 # Cache-Control
 t3868d34d = Cache-Control
 
+# Content-Security-Policy
+tc6d9127c = Content-Security-Policy
+
 # Status code
 t20b704bc = Kode status
 
@@ -3180,3 +3183,24 @@ tb643c704 = Layanan
 
 # Headers signed
 t62bd9377 = Header yang ditandatangani
+
+# Directive
+t8d3da87a = Direktif
+
+# Allowed
+t586f52e3 = Diizinkan
+
+# nothing
+t527dae8a = tidak ada
+
+# this origin
+t2a5f5cfd = origin ini
+
+# inline code
+t4e304b19 = kode inline
+
+# eval
+t08d22e0f = eval
+
+# anywhere
+tf5f4aec0 = dari mana saja

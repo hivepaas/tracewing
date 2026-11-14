@@ -2854,6 +2854,9 @@ te161b66b = Basic認証
 # Cache-Control
 t3868d34d = Cache-Control
 
+# Content-Security-Policy
+tc6d9127c = Content-Security-Policy
+
 # Status code
 t20b704bc = ステータスコード
 
@@ -3180,3 +3183,24 @@ tb643c704 = サービス
 
 # Headers signed
 t62bd9377 = 署名対象ヘッダー
+
+# Directive
+t8d3da87a = ディレクティブ
+
+# Allowed
+t586f52e3 = 許可
+
+# nothing
+t527dae8a = なし
+
+# this origin
+t2a5f5cfd = このオリジン
+
+# inline code
+t4e304b19 = インラインコード
+
+# eval
+t08d22e0f = eval
+
+# anywhere
+tf5f4aec0 = どこからでも

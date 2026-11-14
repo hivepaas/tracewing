@@ -2854,6 +2854,9 @@ te161b66b = Basic 驗證
 # Cache-Control
 t3868d34d = Cache-Control
 
+# Content-Security-Policy
+tc6d9127c = Content-Security-Policy
+
 # Status code
 t20b704bc = 狀態碼
 
@@ -3180,3 +3183,24 @@ tb643c704 = 服務
 
 # Headers signed
 t62bd9377 = 已簽章的標頭
+
+# Directive
+t8d3da87a = 指令
+
+# Allowed
+t586f52e3 = 允許
+
+# nothing
+t527dae8a = 無
+
+# this origin
+t2a5f5cfd = 目前來源
+
+# inline code
+t4e304b19 = 內嵌程式碼
+
+# eval
+t08d22e0f = eval
+
+# anywhere
+tf5f4aec0 = 任何來源

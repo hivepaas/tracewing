@@ -214,7 +214,7 @@ The values that come up daily. Every one of these is pure, offline and cheap.
 | Compression | gzip, Brotli, zstd, deflate, over a base64 or hex blob |
 | Identifiers | UUID version and variant, with the time inside a v1, v6 or v7; ULID; Snowflake (Twitter, Discord); MongoDB ObjectId; KSUID |
 | Numbers | An integer in hex and binary; a bitmask as the flags it sets; a byte count as `1 MiB` |
-| HTTP's own | A URL in parts; a query string or a form body as a table; `Authorization: Basic` as its user and password; `Cache-Control` as a sentence; a status code by meaning; `Retry-After`; a cookie's attributes; a `data:` URI as what it holds; an AWS SigV4 `Authorization` as the key, day, region, service and headers it was signed over |
+| HTTP's own | A URL in parts; a query string or a form body as a table; `Authorization: Basic` as its user and password; `Cache-Control` as a sentence; a status code by meaning; `Retry-After`; a cookie's attributes; a `data:` URI as what it holds; an AWS SigV4 `Authorization` as the key, day, region, service and headers it was signed over; a `Content-Security-Policy` as a row for each directive |
 | Tracing | `traceparent` as trace id, span id and flags; B3; `X-Amzn-Trace-Id`; `Server-Timing` |
 
 ### Phase two — partly built
@@ -360,6 +360,15 @@ and MCP store.
   wants it gone once has to forget the rule and remember it again.
 - Does a `Fields` reading that runs long belong folded under the row, or in the
   inspector's own pane? Folding a 40-claim token under one line will read badly.
+- A `Content-Security-Policy` is a row for each directive, with the sources
+  kept as they were written and only the five that are words rather than
+  places -- `'self'`, `'none'`, the two unsafe ones, `*` -- put into words. A
+  nonce or a hash is kept to the character, because a reader opens the policy
+  to compare one against a tag. The sources are joined with commas rather than
+  the spaces the policy uses, since `this origin inline code eval` does not
+  read as three things; that is not the `Cache-Control` trap below, because
+  these are short noun phrases and a list of those translates, where a
+  sentence assembled from fragments does not.
 - `Cache-Control` is said by joining fragments with commas — `kept 2h 30m`,
   `by anyone`, `checked every time`. That is English word order with English
   punctuation, and it came out stiff in every other language it was translated
