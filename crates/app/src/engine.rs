@@ -123,6 +123,13 @@ pub struct Engine {
     pub failure: Arc<Mutex<Option<String>>>,
     /// Whether other devices may use the proxy, and where it listens for them.
     pub other_devices: Arc<OtherDevices>,
+    /// Where the SOCKS5 port listens, when the settings asked for one and it
+    /// could be opened. `None` is both "not asked for" and "could not be",
+    /// which `socks_problem` tells apart.
+    pub socks: Option<SocketAddr>,
+    /// Why there is no SOCKS5 port although the settings asked for one, for
+    /// Settings to say. The usual reason is that something else has 1080.
+    pub socks_problem: Option<String>,
     /// The other settings that apply as they change.
     pub live: Arc<Live>,
     /// The ports it was given to listen on, kept so that starting again
@@ -153,6 +160,20 @@ impl Engine {
         let session = sessions.join(next_session_name(&sessions));
         let ports = opts.ports.clone();
         let (listener, addr) = bind(opts.ports)?;
+        // The SOCKS5 port is bound here, before the proxy's runtime exists,
+        // for the same reason the proxy port is: a port already in use is
+        // then said in the window rather than from inside a thread. It is
+        // not fatal — everything that can use the proxy port still can.
+        let (socks, socks_problem) = if opts.settings.socks {
+            let at = opts.settings.socks_at();
+            match std::net::TcpListener::bind(at) {
+                Ok(listener) => (Some(listener), None),
+                Err(e) => (None, Some(format!("{at}: {e}"))),
+            }
+        } else {
+            (None, None)
+        };
+        let socks_at = socks.as_ref().and_then(|l| l.local_addr().ok());
         let other_devices = Arc::new(OtherDevices::new(opts.settings.other_devices));
         let live = Arc::new(Live::new(&opts.settings));
 
@@ -210,9 +231,15 @@ impl Engine {
             find_apps: opts.find_apps,
             stop_limit: std::time::Duration::from_secs(2),
             live: Arc::clone(&live),
-            sources: vec![Box::new(tracewing_proxy::source::Lan::new(Arc::clone(
-                &other_devices,
-            )))],
+            sources: {
+                let mut sources: Vec<Box<dyn tracewing_proxy::source::Source>> = vec![Box::new(
+                    tracewing_proxy::source::Lan::new(Arc::clone(&other_devices)),
+                )];
+                if let Some(listener) = socks {
+                    sources.push(Box::new(tracewing_proxy::socks::Socks::from_std(listener)));
+                }
+                sources
+            },
             relay: Arc::clone(&relay),
             tls_keys: Arc::clone(&tls_keys),
             sockets: Arc::clone(&sockets),
@@ -256,6 +283,8 @@ impl Engine {
             pauses,
             failure,
             other_devices,
+            socks: socks_at,
+            socks_problem,
             live,
             extra_roots: opts.extra_roots,
             relay,

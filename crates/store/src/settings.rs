@@ -64,6 +64,16 @@ pub struct StorageSettings {
     /// token, something packed — so that a reader knows there is something
     /// there to read. Applies at once.
     pub mark_readings: bool,
+    /// Open a SOCKS5 port as well as the proxy port, for the programs that
+    /// speak SOCKS and not HTTP proxying: anything reading `ALL_PROXY`,
+    /// Firefox's own SOCKS setting, proxychains. On this machine
+    /// only, whatever `other_devices` says, because a SOCKS5 port asks for no
+    /// password and reaches any address a client names. Read when tracewing
+    /// starts.
+    pub socks: bool,
+    /// Which port that is. 1080 is the one every SOCKS client suggests, and
+    /// the one a program told only "SOCKS" will try.
+    pub socks_port: u64,
 }
 
 impl Default for StorageSettings {
@@ -88,6 +98,8 @@ impl Default for StorageSettings {
             ai_secrets: false,
             ai_actions: false,
             mark_readings: true,
+            socks: false,
+            socks_port: 1080,
         }
     }
 }
@@ -164,6 +176,14 @@ impl StorageSettings {
                 self.log_max_kib
             );
         }
+        // Checked whether or not it is on: a number that cannot work is
+        // worth saying so about before the switch is turned on.
+        if !(1..=65535).contains(&self.socks_port) {
+            bail!(
+                "socks_port must be 1 to 65535, not {}: a client has to be told which port to use",
+                self.socks_port
+            );
+        }
         if self.session_max_mib < 64 {
             bail!(
                 "session_max_mib must be at least 64, not {}: one body can be larger than that",
@@ -203,6 +223,12 @@ impl StorageSettings {
 
     pub fn spool_budget(&self) -> u64 {
         self.spool_budget_mib * MIB
+    }
+
+    /// Where the SOCKS5 port listens when it is on. `check` has already
+    /// refused a number no port can have.
+    pub fn socks_at(&self) -> std::net::SocketAddr {
+        (std::net::Ipv4Addr::LOCALHOST, self.socks_port as u16).into()
     }
 }
 
@@ -246,6 +272,11 @@ mod tests {
         assert!(parse("compress_level = 20").is_err());
         assert!(parse("session_max_mib = 1").is_err());
         assert!(parse("log_max_kib = 4096").is_err());
+        // No port is 0 or past 65535, and a SOCKS5 client has to be told one.
+        assert!(parse("socks_port = 0").is_err());
+        assert!(parse("socks_port = 70000").is_err());
+        let settings = parse("socks = true\nsocks_port = 1080").unwrap();
+        assert_eq!(settings.socks_at(), "127.0.0.1:1080".parse().unwrap());
     }
 
     #[test]

@@ -50,7 +50,7 @@ enum Command {
         #[arg(long)]
         no_apps: bool,
         /// Also listen for SOCKS5 clients here, for what speaks SOCKS and
-        /// not HTTP proxying: ALL_PROXY, Firefox's SOCKS setting, ssh -D.
+        /// not HTTP proxying: ALL_PROXY, Firefox's SOCKS setting, proxychains.
         #[arg(long)]
         socks: Option<SocketAddr>,
         /// Stop cleanly after this many seconds.

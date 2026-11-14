@@ -306,9 +306,8 @@ but its own tests: the first real user of a seam is what finds the seam's
 bugs. It also gets `Target::Named` free from the protocol, where a source
 reading packets has to find the name in a ClientHello.
 
-One thing is left of SOCKS5, and it is not the protocol: a port in Settings,
-with the switch and the words to go with it, since nothing but
-`tracewing-dev proxy --socks` opens one today.
+Nothing is left of SOCKS5. The port is in Settings, off by default, on this
+computer only, and read when tracewing starts.
 
 What the protocol did cost, beyond itself, was teaching
 [`apps`](../../crates/proxy/src/apps.rs) that tracewing has more than one way

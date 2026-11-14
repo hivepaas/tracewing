@@ -28,6 +28,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | macOS for a standard account, through a privileged helper (needs signed builds) | 1.0 | Free |
 | Put the system proxy back when tracewing quits or crashes (a watchdog, and a check at the next start) | Beta | Free |
 | Open a terminal or a browser that goes through tracewing, without touching the system proxy (environment variables; a separate profile for any Chromium-based browser or Firefox), servers on this computer (localhost) included; `tracewing env` sets the same variables in a terminal of the user's own (sh, bash, zsh, fish, PowerShell, cmd), and Set up shows the line to run with the program's full path; a Node.js that ignores them (before 22.21, and 23 to 24.4) is named on Set up and by `tracewing env`. [Capturing an app](capturing.md) says which way takes which programs | Beta | Free |
+| Listen for SOCKS5 clients too, on a port of its own (RFC 1928, no authentication, `CONNECT`): for what reads `ALL_PROXY`, `git` with a `socks5h://` proxy, Firefox's own SOCKS setting, proxychains; the name the client asked for kept as the flow's host; off by default, switched on in Settings with the port, on this computer only, read when tracewing starts | Beta | Free |
 | Pause and resume capture | Beta | Free |
 | Hosts not to decrypt, tunneled untouched (Apple and Windows Update to start with) | Beta | Free |
 | Take offers of HTTP/3 (`Alt-Svc`) out of responses, so apps stay on HTTP/2 | Beta | Free |
