@@ -2346,6 +2346,8 @@ impl Traffic {
     /// Bytes shown in the body pane as a body of their own. They go into a
     /// file beside the data folder, because a body is read from a file
     /// however it was made.
+    /// Opens `bytes` in the body's place, as a body: the reader is taken
+    /// there, so the part shown becomes [`Part::Body`].
     fn open_in_pane(
         &mut self,
         bytes: &[u8],
@@ -2355,16 +2357,42 @@ impl Traffic {
         from: SharedString,
         cx: &mut Context<Self>,
     ) -> bool {
+        let Some(opened) = self.made_body(bytes, extension, content_type, label, from, cx) else {
+            return false;
+        };
+        self.inspector.opened = Some(opened);
+        self.inspector.part = Part::Body;
+        cx.notify();
+        true
+    }
+
+    /// The same bytes made into a body and handed back, taking the reader
+    /// nowhere: the readings pane shows one of its own beside the part the
+    /// reader is in, and must not move them to the body to do it.
+    ///
+    /// This is its own function rather than `open_in_pane` with the damage
+    /// undone afterwards, which is what it was. Putting `opened` back left
+    /// `part` where `open_in_pane` had set it, so reading a header that
+    /// holds JSON moved the reader from Headers to Body.
+    fn made_body(
+        &mut self,
+        bytes: &[u8],
+        extension: &str,
+        content_type: Option<&str>,
+        label: SharedString,
+        from: SharedString,
+        cx: &mut Context<Self>,
+    ) -> Option<Opened> {
         let folder = self.data_dir.join("opened");
         if std::fs::create_dir_all(&folder).is_err() {
-            return false;
+            return None;
         }
         // One at a time, and a name of its own each time: the last one may
         // still be mapped into memory while this one is written.
         self.inspector.opened_count = self.inspector.opened_count.wrapping_add(1);
         let path = folder.join(format!("{}.{extension}", self.inspector.opened_count));
         if std::fs::write(&path, bytes).is_err() {
-            return false;
+            return None;
         }
         // A picture is to look at, not to read, and needs no body behind it.
         let shown = match tracewing_convert::picture(bytes) {
@@ -2376,37 +2404,16 @@ impl Traffic {
                 }
                 Err(_) => {
                     let _ = std::fs::remove_file(&path);
-                    return false;
+                    return None;
                 }
             },
         };
-        self.inspector.opened = Some(Opened {
+        Some(Opened {
             label,
             from,
             shown,
             path,
-        });
-        self.inspector.part = Part::Body;
-        cx.notify();
-        true
-    }
-
-    /// The same bytes made into a body, handed back rather than put in the
-    /// body's place: the readings pane keeps its own.
-    fn body_of(
-        &mut self,
-        bytes: &[u8],
-        extension: &str,
-        content_type: Option<&str>,
-        label: SharedString,
-        from: SharedString,
-        cx: &mut Context<Self>,
-    ) -> Option<Opened> {
-        let had = self.inspector.opened.take();
-        let made = self.open_in_pane(bytes, extension, content_type, label, from, cx);
-        let mine = self.inspector.opened.take();
-        self.inspector.opened = had;
-        mine.filter(|_| made)
+        })
     }
 
     /// What a reading holds, as a body, for the pane to show. `None` where
@@ -2427,7 +2434,7 @@ impl Traffic {
             Kind::Binary => ("bin", None),
         };
         let bytes = bytes.clone();
-        self.body_of(
+        self.made_body(
             &bytes,
             extension,
             content_type,
