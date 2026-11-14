@@ -120,6 +120,21 @@ fn other_devices_are_counted_found_and_named() {
         std::thread::sleep(Duration::from_millis(5));
     }
 
+    // The listener other devices reach is opened by a task inside the proxy's
+    // own thread, so it is not there the moment the engine returns. Curling
+    // this machine's network address before it is bound fails with "Could not
+    // connect to server", which is what it did on a pull request that had
+    // nothing to do with any of this.
+    let devices = Arc::clone(&engine.other_devices);
+    let deadline = Instant::now() + Duration::from_secs(20);
+    while devices.listening().is_empty() {
+        assert!(
+            Instant::now() < deadline,
+            "waiting for the listener other devices use"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+
     let text = Arc::new(gpui_wgpu::CosmicTextSystem::new(tracewing::FONT));
     let mut cx = HeadlessAppContext::with_platform(text, Arc::new(tracewing::Assets), || {
         gpui_platform::current_headless_renderer()

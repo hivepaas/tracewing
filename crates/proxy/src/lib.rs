@@ -18,6 +18,7 @@ pub mod script;
 pub mod sockets;
 pub mod socks;
 pub mod source;
+pub mod stack;
 pub mod throttle;
 pub mod traffic_rules;
 pub mod upstream;
