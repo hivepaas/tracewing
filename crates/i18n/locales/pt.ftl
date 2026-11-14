@@ -3005,6 +3005,9 @@ t3868d34d = Cache-Control
 # Content-Security-Policy
 tc6d9127c = Content-Security-Policy
 
+# Link
+t8e08e589 = Link
+
 # Status code
 t20b704bc = Código de status
 
@@ -3352,3 +3355,9 @@ t08d22e0f = eval
 
 # anywhere
 tf5f4aec0 = qualquer lugar
+
+# Relation
+tb4b329c1 = Relação
+
+# Where
+t91dad0f8 = Destino

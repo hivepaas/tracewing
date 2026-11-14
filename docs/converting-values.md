@@ -214,7 +214,7 @@ The values that come up daily. Every one of these is pure, offline and cheap.
 | Compression | gzip, Brotli, zstd, deflate, over a base64 or hex blob |
 | Identifiers | UUID version and variant, with the time inside a v1, v6 or v7; ULID; Snowflake (Twitter, Discord); MongoDB ObjectId; KSUID |
 | Numbers | An integer in hex and binary; a bitmask as the flags it sets; a byte count as `1 MiB` |
-| HTTP's own | A URL in parts; a query string or a form body as a table; `Authorization: Basic` as its user and password; `Cache-Control` as a sentence; a status code by meaning; `Retry-After`; a cookie's attributes; a `data:` URI as what it holds; an AWS SigV4 `Authorization` as the key, day, region, service and headers it was signed over; a `Content-Security-Policy` as a row for each directive |
+| HTTP's own | A URL in parts; a query string or a form body as a table; `Authorization: Basic` as its user and password; `Cache-Control` as a sentence; a status code by meaning; `Retry-After`; a cookie's attributes; a `data:` URI as what it holds; an AWS SigV4 `Authorization` as the key, day, region, service and headers it was signed over; a `Content-Security-Policy` as a row for each directive; a `Link` as its links, by relation |
 | Tracing | `traceparent` as trace id, span id and flags; B3; `X-Amzn-Trace-Id`; `Server-Timing` |
 
 ### Phase two — partly built
@@ -360,6 +360,14 @@ and MCP store.
   wants it gone once has to forget the rule and remember it again.
 - Does a `Fields` reading that runs long belong folded under the row, or in the
   inspector's own pane? Folding a 40-claim token under one line will read badly.
+- A `Link` is a row for each link: the relation first, since a reader comes to
+  this header looking for `next`. Both of its separators are characters its own
+  values may hold -- a URI with a comma in a query, a quoted title with one in
+  the middle of a sentence -- so the split tracks whether it is inside the
+  angle brackets or the quotes, and `rel` is what it needs to see before it
+  will call a bracketed URI a `Link` at all. It is also the one reading here
+  that cannot trim a surrounding quote the way the others do, since a `Link`
+  ends in one whenever its last parameter is quoted.
 - A `Content-Security-Policy` is a row for each directive, with the sources
   kept as they were written and only the five that are words rather than
   places -- `'self'`, `'none'`, the two unsafe ones, `*` -- put into words. A

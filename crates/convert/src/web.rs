@@ -469,6 +469,124 @@ fn said_source(source: &str) -> String {
     }
 }
 
+/// A `Link` header as its links. An API that pages says where the next page
+/// is here rather than in the body, so a reader stepping through one page at
+/// a time comes to this header for a URL and finds it wrapped in a syntax
+/// built for machines.
+///
+/// Splitting it is the work. Commas separate the links and semicolons the
+/// parameters, but a URI may hold either character and so may a quoted
+/// title, so the split has to know whether it is inside the angle brackets,
+/// inside the quotes, or in neither.
+pub fn link(input: &Input) -> Option<Reading> {
+    // Not `trim_matches('"')`, which every other reading here can afford: a
+    // `Link` ends in a quote whenever its last parameter is quoted, and
+    // trimming that one would leave `rel="next` to be parsed.
+    let text = input.text.trim();
+    let text = match text.len() > 1 && text.starts_with('"') && text.ends_with('"') {
+        true => &text[1..text.len() - 1],
+        false => text,
+    };
+    let mut rows = Vec::new();
+    let mut related = 0;
+    for one in split_outside(text, ',') {
+        let one = one.trim();
+        if one.is_empty() {
+            continue;
+        }
+        // A member that is not `<uri>` is not a malformed link, it is not a
+        // `Link` header: the brackets are the one part of the syntax that is
+        // never optional.
+        let (where_to, rest) = one.strip_prefix('<')?.split_once('>')?;
+        let mut relation = String::new();
+        let mut about = Vec::new();
+        for (name, value) in parameters(rest) {
+            match name.as_str() {
+                "rel" => relation = value,
+                "title" | "title*" | "type" => about.push(value),
+                _ => {}
+            }
+        }
+        if !relation.is_empty() {
+            related += 1;
+        }
+        rows.push(vec![relation, where_to.trim().to_owned(), about.join(", ")]);
+    }
+    // `rel` is what the header is for, and a reader looking for `next` is
+    // looking for a `rel`. Without one this is a URI in brackets, which the
+    // reader can see for themselves -- unless the field says what it is, or
+    // they asked for this reading by name.
+    let said = input.field_says(&["link"]);
+    if rows.is_empty() || (related == 0 && !said && !input.asked) {
+        return None;
+    }
+    Some(Reading::new(
+        "link",
+        tr!("Link"),
+        match said || related > 0 {
+            true => Confidence::Certain,
+            false => Confidence::Likely,
+        },
+        Shown::Table {
+            head: vec![tr!("Relation"), tr!("Where"), tr!("About")],
+            rows,
+        },
+    ))
+}
+
+/// The parameters after a link's URI: `; rel="next"; type=text/html`, each
+/// name lowercased and each value unquoted.
+///
+/// The first of a repeated name wins and the rest are dropped, which is what
+/// RFC 8288 says a parser must do with them. It matters for `rel` above all:
+/// a header that says `rel="next"` twice with different values is one a
+/// reader is already suspicious of, and taking the last would show them
+/// something no client acts on.
+fn parameters(rest: &str) -> Vec<(String, String)> {
+    let mut seen: Vec<String> = Vec::new();
+    split_outside(rest, ';')
+        .into_iter()
+        .filter_map(|part| {
+            let (name, value) = part.trim().split_once('=')?;
+            let name = name.trim().to_ascii_lowercase();
+            if seen.contains(&name) {
+                return None;
+            }
+            let value = value.trim();
+            let value = match value.len() > 1 && value.starts_with('"') && value.ends_with('"') {
+                true => &value[1..value.len() - 1],
+                false => value,
+            };
+            seen.push(name.clone());
+            Some((name, value.to_owned()))
+        })
+        .collect()
+}
+
+/// `text` cut at every `by` that is outside the angle brackets and outside
+/// the quotes. Those inside belong to a URI or to a title and are not
+/// separators at all, which is the whole difficulty of reading this header.
+fn split_outside(text: &str, by: char) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    let mut angle = false;
+    let mut quoted = false;
+    for (at, c) in text.char_indices() {
+        match c {
+            '"' if !angle => quoted = !quoted,
+            '<' if !quoted => angle = true,
+            '>' if !quoted => angle = false,
+            c if c == by && !angle && !quoted => {
+                out.push(&text[start..at]);
+                start = at + c.len_utf8();
+            }
+            _ => {}
+        }
+    }
+    out.push(&text[start..]);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -714,5 +832,56 @@ mod tests {
         // Under a field that says what it is, the same word is the policy it
         // looks like.
         assert!(by_id(&read_under("content-security-policy", "sandbox"), "csp").is_some());
+    }
+    #[test]
+    fn a_link_header_comes_apart_by_relation() {
+        let rows = table(
+            "</users?page=2>; rel=\"next\", </users?page=10>; rel=\"last\", \
+             </style.css>; rel=preload; as=style; type=text/css",
+            "link",
+        );
+        assert_eq!(rows[0], vec!["next", "/users?page=2", ""]);
+        assert_eq!(rows[1], vec!["last", "/users?page=10", ""]);
+        // Unquoted parameters are as valid as quoted ones, and `as` is not a
+        // thing a reader needs said back to them.
+        assert_eq!(rows[2], vec!["preload", "/style.css", "text/css"]);
+    }
+
+    /// The whole difficulty of this header: both separators are characters a
+    /// URI and a title are allowed to hold.
+    #[test]
+    fn a_comma_inside_a_uri_or_a_title_is_not_a_separator() {
+        let rows = table(
+            "<https://api.example.com/search?q=a,b&f=1;2>; rel=\"next\"; \
+             title=\"Next, please\", </p/1>; rel=\"prev\"",
+            "link",
+        );
+        assert_eq!(rows.len(), 2, "two links, not four: {rows:?}");
+        assert_eq!(rows[0][1], "https://api.example.com/search?q=a,b&f=1;2");
+        assert_eq!(rows[0][2], "Next, please");
+        assert_eq!(rows[1], vec!["prev", "/p/1", ""]);
+    }
+
+    /// RFC 8288: a parameter said twice is the first one, and the rest are
+    /// ignored. `rel` is the one that matters -- the last would show a reader
+    /// a relation no client of theirs is acting on.
+    #[test]
+    fn a_parameter_said_twice_is_the_first_of_them() {
+        let rows = table(
+            "</p/2>; rel=\"next\"; rel=\"prev\"; title=\"first\"; title=\"second\"",
+            "link",
+        );
+        assert_eq!(rows[0], vec!["next", "/p/2", "first"]);
+    }
+
+    #[test]
+    fn what_is_not_a_link_header_is_not_read() {
+        // The angle brackets are the one part of the syntax never left out.
+        assert!(by_id(&read("https://example.com/page/2"), "link").is_none());
+        // A URI in brackets and nothing else says no more than the URI does.
+        assert!(by_id(&read("<https://example.com/>"), "link").is_none());
+        assert!(by_id(&read("<div>; class=x"), "link").is_none());
+        // Under a field that says what it is, the same value is the header.
+        assert!(by_id(&read_under("link", "<https://example.com/>"), "link").is_some());
     }
 }

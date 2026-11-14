@@ -272,6 +272,16 @@ fn build() -> Vec<Sample> {
             "A policy a directive to a row, with the sources that are words in words",
         ),
         header(
+            "link",
+            "link",
+            "<https://api.example.com/orders?page=3>; rel=\"next\", \
+             <https://api.example.com/orders?page=9>; rel=\"last\", \
+             <https://api.example.com/orders?q=paid,unpaid>; rel=\"search\"; \
+             title=\"By state, either one\""
+                .to_owned(),
+            "Where each link goes, and a comma inside a URI that is not a separator",
+        ),
+        header(
             "cookie",
             "set-cookie",
             format!("session={jwt}; Path=/; Max-Age=3600; HttpOnly; SameSite=Lax"),
@@ -816,6 +826,7 @@ mod tests {
             "jwe",
             "jwt",
             "ksuid",
+            "link",
             "mac",
             "object-id",
             "paseto",
@@ -883,6 +894,7 @@ mod tests {
                 "flags",
                 "iso-8601-naive",
                 "jwt",
+                "link",
                 "pem",
                 "port",
                 "radix",
