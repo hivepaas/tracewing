@@ -68,7 +68,7 @@ fn search_chunk(
         }
         return (hits, to, to >= rows);
     }
-    let dump = hex || body.kind() == crate::body::Kind::Binary;
+    let dump = body.dumped(hex);
     let lines = body.lines_in(hex);
     let to = lines.min(from + CHUNK);
     let texts: Vec<String> = if dump {
@@ -224,7 +224,7 @@ impl BodyView {
             return;
         }
         let line = hit.at;
-        let text = if self.hex() || self.shown().kind() == crate::body::Kind::Binary {
+        let text = if self.shown().dumped(self.hex()) {
             self.shown()
                 .read_in(line..line + 1, true)
                 .pop()

@@ -449,6 +449,14 @@ impl Body {
         self.kind
     }
 
+    /// Whether a view showing this body with `hex` on draws a dump rather
+    /// than text. Binary is dumped whatever the mode, having no lines of its
+    /// own, so "is this hex" and "is this drawn as a dump" are not the same
+    /// question -- and everything that asks has to ask the second one.
+    pub fn dumped(&self, hex: bool) -> bool {
+        hex || self.kind == Kind::Binary
+    }
+
     /// The first bytes, as `kind` was told from.
     pub fn head(&self) -> &[u8] {
         &self.map[..self.map.len().min(SNIFF_BYTES)]
@@ -502,7 +510,7 @@ impl Body {
 
     /// As [`Self::read`], or with `hex` from a dump of its bytes.
     pub fn read_in(&self, range: Range<u64>, hex: bool) -> Vec<Line> {
-        if hex || self.kind == Kind::Binary {
+        if self.dumped(hex) {
             return range.map(|line| self.hex_line(line)).collect();
         }
         if range.is_empty() {
@@ -535,9 +543,14 @@ impl Body {
     /// are different strings numbered in different spaces -- a hex line is
     /// sixteen bytes, a text line is as long as it is -- so an offset taken
     /// from the dump means nothing here. A caller that wants what the reader
-    /// pressed wants the line as drawn; in the body view that is `line_text`.
-    /// Find wants this one, which is why it still hands back the file's line
-    /// in hex rather than refusing.
+    /// pressed wants the line as drawn; in the body view that is `line_text`,
+    /// and Find asks [`Body::dumped`] for the same reason.
+    ///
+    /// What wants this one is the wrap arithmetic, which needs the file's
+    /// line untruncated to work out how many rows it takes, and which only
+    /// runs where the view is not drawing a dump. That is a caller with a
+    /// right to ask, which is why this still answers in hex rather than
+    /// refusing.
     pub fn read_whole(&self, range: Range<u64>) -> Vec<String> {
         if range.is_empty() || self.kind == Kind::Binary {
             return Vec::new();

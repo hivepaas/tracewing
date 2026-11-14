@@ -509,6 +509,15 @@ impl BodyView {
     /// as long as it is. An offset taken from the dump lands anywhere at all
     /// in it, so a word read off it is a word nobody pressed, and the range
     /// it comes back with marks bytes nobody chose.
+    ///
+    /// This asks the mode and not [`Body::dumped`], deliberately. A binary
+    /// body is drawn as a dump in Raw too, where `self.hex()` is false, and
+    /// there this answers `None`: `read_whole` has nothing for `Kind::Binary`
+    /// and a press does nothing, which is what it did before this existed.
+    /// Asking `dumped` instead would make a press on a binary dump select the
+    /// byte under it, as it does in hex -- a new behaviour on the default
+    /// view of every binary body, and one that wants a test of its own and a
+    /// flow fetching `/binary`, not a line in a description.
     fn line_text(&self, line: u64) -> Option<String> {
         match self.hex() {
             true => Some(self.shown().read_in(line..line + 1, true).pop()?.text),
