@@ -411,7 +411,11 @@ impl FlowHandler {
             // A source the operating system told names the program itself. One
             // that only took a connection — SOCKS5 — leaves it to be looked
             // for by the client's address, as a client that asked is, which
-            // works because the port it came in on is one of ours.
+            // works because the port it came in on is one of ours. `None`
+            // here means the source does not know, not that it looked and
+            // found nothing: a source that looks puts what it found in
+            // `Flow::who`, or this asks the operating system again for an
+            // answer it already has.
             Some(known) => (
                 known.client,
                 known.app.or_else(|| {

@@ -219,11 +219,16 @@ pub async fn run_proxy(
         Arc::clone(&opts.traffic_rules),
     );
 
-    // The proxy port goes first: it is what a taken connection is handed to,
-    // and where most clients come in, which is the order `apps` asks in.
+    // The proxy port goes first, from the address already resolved above: it
+    // is where most clients come in, which is the order `apps` asks in. Taken
+    // from here rather than from the source, so that being first depends on
+    // nothing about how the sources are ordered, and so that an address that
+    // could not be read would have stopped the proxy at `listen_addr` instead
+    // of quietly leaving `apps` with no port to look for.
+    let mut ways_in: Vec<u16> = vec![listen_addr.port()];
     let ours = Box::new(source::ProxyPort::new(listener)) as Box<dyn Source>;
     let sources: Vec<Box<dyn Source>> = std::iter::once(ours).chain(opts.sources).collect();
-    let mut ways_in: Vec<u16> = Vec::new();
+    // The proxy port's own answer is swallowed here, having been seeded.
     for port in sources.iter().flat_map(|source| source.own_ports()) {
         if !ways_in.contains(&port) {
             ways_in.push(port);
