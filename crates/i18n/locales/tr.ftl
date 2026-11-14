@@ -2923,6 +2923,9 @@ td7bc06f2 = 1899'dan beri gün (hesap tablosu)
 # Seconds
 t7e12f48a = Saniye
 
+# ISO 8601 duration
+tcbc53069 = ISO 8601 süresi
+
 # Trace context
 ta58c7c95 = İzleme bağlamı
 

@@ -2978,6 +2978,9 @@ td7bc06f2 = Jours depuis 1899 (tableur)
 # Seconds
 t7e12f48a = Secondes
 
+# ISO 8601 duration
+tcbc53069 = Durée ISO 8601
+
 # Trace context
 ta58c7c95 = Contexte de trace
 

@@ -2830,6 +2830,9 @@ td7bc06f2 = Ngày từ 1899 (bảng tính)
 # Seconds
 t7e12f48a = Giây
 
+# ISO 8601 duration
+tcbc53069 = Khoảng thời gian ISO 8601
+
 # Trace context
 ta58c7c95 = Trace context
 

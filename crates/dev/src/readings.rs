@@ -455,6 +455,12 @@ fn build() -> Vec<Sample> {
             "A written time, as the reader's own and how far off",
         ),
         field(
+            "iso-8601-duration",
+            "retention",
+            "P1Y2M10DT2H30M".to_owned(),
+            "A written span: years and months as themselves, the rest added up",
+        ),
+        field(
             "iso-8601-naive",
             "run_at",
             "2026-11-12 14:13:20".to_owned(),
@@ -851,6 +857,7 @@ mod tests {
             "ip-number",
             "ipv6",
             "iso-8601",
+            "iso-8601-duration",
             "iso-8601-naive",
             "json-in-string",
             "jwe",

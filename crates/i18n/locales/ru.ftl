@@ -3061,6 +3061,9 @@ td7bc06f2 = Дни с 1899 (таблица)
 # Seconds
 t7e12f48a = Секунды
 
+# ISO 8601 duration
+tcbc53069 = Длительность ISO 8601
+
 # Trace context
 ta58c7c95 = Контекст трассировки
 

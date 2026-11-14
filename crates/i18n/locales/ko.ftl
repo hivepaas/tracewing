@@ -2830,6 +2830,9 @@ td7bc06f2 = 1899년부터의 일수 (스프레드시트)
 # Seconds
 t7e12f48a = 초
 
+# ISO 8601 duration
+tcbc53069 = ISO 8601 기간
+
 # Trace context
 ta58c7c95 = 트레이스 컨텍스트
 

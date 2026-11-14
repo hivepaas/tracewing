@@ -2830,6 +2830,9 @@ td7bc06f2 = Hari sejak 1899 (lembar sebar)
 # Seconds
 t7e12f48a = Detik
 
+# ISO 8601 duration
+tcbc53069 = Durasi ISO 8601
+
 # Trace context
 ta58c7c95 = Konteks trace
 
