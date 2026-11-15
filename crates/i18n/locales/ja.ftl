@@ -2176,8 +2176,8 @@ t95e7a36a = 答えは保存されるので、このページは前回のとこ�
 # The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
 tab552f0c = これはターミナルが行います。その中で起動したものは tracewing のルート証明書をファイルから読むので、このコンピューターには何もインストールされず、ほかは何も変わりません。
 
-# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
-t42c38a18 = Java は独自の証明書ストアを持ち、システムのものも環境変数も読みません。そのストアは tracewing がまだ代わりに書けないので、下のフラグで自分のものを渡してください。
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
+t5951384c = Java は独自の証明書ストアを持ち、システムのものも環境変数も読みません。tracewing が自分のフォルダーにストアを書き出しました。下のフラグが JVM をそこへ向けます。あなたのものには何も触れず、作成に JDK も要りません。
 
 # The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
 t38958f05 = tracewing の証明書はスマートフォン自身に入れてもらう必要があります。端末の種類ごとの手順は下のガイドにあります。

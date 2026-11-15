@@ -2176,8 +2176,8 @@ t95e7a36a = Câu trả lời được giữ lại, nên trang này mở đúng c
 # The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
 tab552f0c = Terminal tự đặt: những gì chạy trong đó đọc các CA gốc của tracewing từ một file, nên không có gì được cài lên máy này và không có gì khác bị đổi.
 
-# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
-t42c38a18 = Java giữ một kho CA riêng và không đọc cả kho của hệ thống lẫn các biến môi trường. tracewing chưa ghi hộ bạn kho đó được: hãy truyền cho nó một kho, bằng các cờ bên dưới.
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
+t5951384c = Java giữ một kho CA riêng và không đọc cả kho của hệ thống lẫn các biến môi trường. tracewing đã ghi cho nó một kho, trong thư mục của chính tracewing, và các cờ bên dưới trỏ JVM tới đó: không có gì của bạn bị đụng tới, và cũng không cần JDK để tạo ra nó.
 
 # The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
 t38958f05 = Điện thoại phải tự cài chứng chỉ của tracewing — các hướng dẫn bên dưới nói cách làm cho từng loại thiết bị.

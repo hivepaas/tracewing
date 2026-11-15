@@ -166,7 +166,36 @@ silence:
 A browser and a terminal carry no such line: they are opened, not left on, so
 there is no moment to ask from.
 
-What is not built yet: Java's truststore.
+**And Java has its truststore**, which was the last of the four decisions:
+written lazily, when the step is drawn, and checked against the authority
+rather than written once — so somebody who never runs a Java program never
+gets the file, and somebody who does gets one that matches the authority as
+it is now.
+
+Three things about it were found by trying it against a real JDK rather than
+reasoning about it, and each fails **quietly** — not with "this file is
+wrong" but with a store a JVM reads as empty, which looks exactly like
+tracewing's authority being refused:
+
+- **A PKCS#12 holding a certificate is not a Java truststore.** The entry has
+  to be a *trustedCertEntry*, which is an Oracle attribute on the bag.
+  `openssl pkcs12 -nokeys` writes the certificate without it and a JVM finds
+  no trust anchors at all. `p12-keystore` writes it, which is why that is the
+  dependency rather than something hand-rolled.
+- **The password cannot be empty.** An empty one leaves the store looking
+  empty too, with or without `trustStorePassword`. So it is `changeit`, the
+  JDK's own conventional one; a truststore holds nothing secret.
+- **`http.nonProxyHosts` has to be emptied.** A JVM's default excludes
+  `localhost` and `127.*`, so with the store right and both proxy flags set, a
+  program talking to a server on this computer still goes straight past
+  tracewing. This one only showed up when the whole chain was run — a real
+  JVM, through a real capture, to a real TLS server — and the store was
+  provably right by then.
+
+The store carries this machine's own roots as well as tracewing's authority,
+for the same reason the terminal's bundle does: a host tracewing is told not
+to decrypt is answered by the real server, and a store holding only
+tracewing's would fail on exactly those hosts.
 
 ## What the wizard is, now that it is built
 

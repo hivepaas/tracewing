@@ -43,6 +43,7 @@ mod alive;
 pub mod android;
 pub mod extension;
 pub mod ios_sim;
+pub mod java;
 pub mod launch;
 
 pub use alive::{Alive, app_is_gone, hold_alive, wait_until_gone};

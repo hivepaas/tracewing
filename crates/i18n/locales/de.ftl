@@ -2290,8 +2290,8 @@ t95e7a36a = Die Antwort wird behalten, also öffnet sich diese Seite dort, wo Si
 # The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
 tab552f0c = Das Terminal setzt es: was darin startet, liest tracewings Wurzelzertifikate aus einer Datei — auf diesem Computer wird nichts installiert und nichts anderes geändert.
 
-# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
-t42c38a18 = Java hält einen eigenen Zertifikatsspeicher und liest weder den des Systems noch die Variablen. tracewing kann diesen Speicher noch nicht für Sie schreiben: übergeben Sie einen, mit den Flags unten.
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
+t5951384c = Java hält einen eigenen Zertifikatsspeicher und liest weder den des Systems noch die Variablen. tracewing hat ihm einen geschrieben, im eigenen Ordner, und die Flags unten verweisen eine JVM darauf: nichts von Ihnen wird angetastet, und für das Erstellen ist kein JDK nötig.
 
 # The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
 t38958f05 = Das Smartphone muss tracewings Zertifikat selbst installieren — die Anleitungen unten sagen, wie das je Gerät geht.

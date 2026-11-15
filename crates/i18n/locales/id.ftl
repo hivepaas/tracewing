@@ -2176,8 +2176,8 @@ t95e7a36a = Jawabannya disimpan, jadi halaman ini terbuka di tempat kamu meningg
 # The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
 tab552f0c = Terminal yang mengaturnya: apa pun yang dijalankan di dalamnya membaca sertifikat akar tracewing dari sebuah file, jadi tidak ada yang dipasang di komputer ini dan tidak ada hal lain yang diubah.
 
-# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
-t42c38a18 = Java punya penyimpanan sertifikat sendiri dan tidak membaca milik sistem maupun variabel lingkungan. tracewing belum bisa menuliskan penyimpanan itu untukmu: berikan satu padanya, dengan flag di bawah.
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
+t5951384c = Java punya penyimpanan sertifikat sendiri dan tidak membaca milik sistem maupun variabel lingkungan. tracewing sudah menuliskan satu untuknya, di folder tracewing sendiri, dan flag di bawah mengarahkan JVM ke sana: tidak ada milikmu yang disentuh, dan tidak perlu JDK untuk membuatnya.
 
 # The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
 t38958f05 = Ponsel harus memasang sertifikat tracewing sendiri — panduan di bawah menjelaskan caranya untuk tiap jenis perangkat.

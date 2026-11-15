@@ -2305,8 +2305,8 @@ t95e7a36a = A resposta é guardada, por isso esta página abre onde você a deix
 # The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
 tab552f0c = Quem faz isso é o terminal: o que for iniciado nele lê as raízes do tracewing de um arquivo, por isso nada é instalado neste computador e nada mais é alterado.
 
-# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
-t42c38a18 = O Java mantém um repositório de autoridades próprio e não lê nem o do sistema nem as variáveis. O tracewing ainda não consegue escrever esse repositório para você: passe um a ele, com as opções abaixo.
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
+t5951384c = O Java mantém um repositório de autoridades próprio e não lê nem o do sistema nem as variáveis. O tracewing escreveu um para ele, na própria pasta, e as opções abaixo apontam a JVM para lá: nada seu é tocado e não é preciso nenhum JDK para criá-lo.
 
 # The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
 t38958f05 = O celular tem de instalar o certificado do tracewing por conta própria — os guias abaixo explicam como, para cada tipo de dispositivo.

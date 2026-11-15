@@ -2254,8 +2254,8 @@ t95e7a36a = Yanıt saklanır, böylece bu sayfa bıraktığınız yerden açıl�
 # The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
 tab552f0c = Bunu terminal yapar: içinde başlayan her şey tracewing'in kök sertifikalarını bir dosyadan okur, yani bu bilgisayara hiçbir şey kurulmaz ve başka hiçbir şey değişmez.
 
-# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
-t42c38a18 = Java kendi sertifika deposunu tutar ve ne sistemin deposunu ne de değişkenleri okur. tracewing o depoyu sizin için henüz yazamıyor: aşağıdaki bayraklarla ona bir depo verin.
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
+t5951384c = Java kendi sertifika deposunu tutar ve ne sistemin deposunu ne de değişkenleri okur. tracewing ona bir tane yazdı, kendi klasöründe, ve aşağıdaki bayraklar bir JVM'yi oraya yönlendirir: sizden hiçbir şeye dokunulmaz ve bunu oluşturmak için JDK gerekmez.
 
 # The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
 t38958f05 = tracewing'in sertifikasını telefonun kendisi kurmalı — aşağıdaki kılavuzlar her cihaz türü için nasıl olduğunu anlatır.

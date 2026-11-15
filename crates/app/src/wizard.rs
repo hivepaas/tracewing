@@ -98,7 +98,8 @@ pub enum Trust {
     /// Nothing is installed anywhere: the terminal sets `SSL_CERT_FILE`,
     /// `NODE_EXTRA_CA_CERTS` and `REQUESTS_CA_BUNDLE` for what it starts.
     TheTerminal,
-    /// A store of Java's own, which tracewing does not write yet.
+    /// A store of Java's own, which tracewing writes and hands over with the
+    /// flags that point a JVM at it.
     JavaItself,
     /// The phone, by the guide for it.
     ThePhone,
@@ -185,8 +186,10 @@ pub fn route(target: Target) -> Route {
 /// somebody to look for a bug in their program.
 pub fn tracewing_can_trust(trust: Trust) -> bool {
     match trust {
-        Trust::SystemStore | Trust::TheTerminal => true,
-        Trust::JavaItself | Trust::ThePhone | Trust::Unknown => false,
+        // Java's is tracewing's to write: a PKCS#12 of its own, in the data
+        // directory, which touches nothing of the user's and needs no JDK.
+        Trust::SystemStore | Trust::TheTerminal | Trust::JavaItself => true,
+        Trust::ThePhone | Trust::Unknown => false,
     }
 }
 
@@ -228,17 +231,17 @@ mod tests {
         );
     }
 
-    /// Java is the case the wizard must not claim to have handled: the way in
-    /// is the proxy, the trust is Java's own, and tracewing does not write
-    /// that store yet.
+    /// Java reads neither the system's store nor the variables, so its way in
+    /// is the proxy and its trust is its own file — which tracewing writes,
+    /// since `tracewing_system::java` landed.
     #[test]
-    fn java_is_the_proxy_with_a_trust_tracewing_cannot_do_yet() {
+    fn java_is_the_proxy_with_a_store_of_its_own() {
         let route = route(Target::Java);
         assert_eq!(route.way, Way::SystemProxy);
         assert_eq!(route.trust, Trust::JavaItself);
         assert!(
-            !tracewing_can_trust(route.trust),
-            "a step claimed as done sends somebody hunting a bug in their own program"
+            tracewing_can_trust(route.trust),
+            "tracewing writes that store now, so the step is not somebody else's"
         );
     }
 
@@ -246,7 +249,7 @@ mod tests {
     /// do. Written as a list so that making one of them automatic is a change
     /// to this test and not a silent one.
     #[test]
-    fn tracewing_trusts_for_two_of_the_five_and_says_so_for_the_rest() {
+    fn tracewing_trusts_for_three_of_the_five_and_says_so_for_the_rest() {
         let ours: Vec<Trust> = [
             Trust::SystemStore,
             Trust::TheTerminal,
@@ -257,7 +260,10 @@ mod tests {
         .into_iter()
         .filter(|trust| tracewing_can_trust(*trust))
         .collect();
-        assert_eq!(ours, vec![Trust::SystemStore, Trust::TheTerminal]);
+        assert_eq!(
+            ours,
+            vec![Trust::SystemStore, Trust::TheTerminal, Trust::JavaItself]
+        );
     }
 
     /// A phone's cards are the guides for it, and a Mac app's is the one that

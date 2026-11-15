@@ -2176,8 +2176,8 @@ t95e7a36a = 回答會留著，所以這頁會從你上次離開的地方開啟�
 # The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
 tab552f0c = 這由終端機負責：在它裡面啟動的東西從一個檔案讀取 tracewing 的根憑證，所以這台電腦上不裝任何東西，別的也都不變。
 
-# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
-t42c38a18 = Java 自帶一個憑證庫，既不讀系統的，也不讀環境變數。那個庫 tracewing 還不能替你寫：用下面的參數給它一個。
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
+t5951384c = Java 自帶一個憑證庫，既不讀系統的，也不讀環境變數。tracewing 已經在自己的資料夾裡給它寫了一個，下面的參數把 JVM 指向那裡：你的東西一點都沒動，建立它也不需要 JDK。
 
 # The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
 t38958f05 = tracewing 的憑證得由手機自己裝 — 下面的指南按裝置類型說明怎麼做。
