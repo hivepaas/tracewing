@@ -1205,7 +1205,14 @@ fn a_value_pressed_is_read_in_the_pane_beside_the_body() {
             view.set_part(Part::Body, cx);
         })
         .unwrap();
-    cx.run_until_parked();
+    // Waited for, not assumed: these tests run on the real dispatcher, so the
+    // body is read on a background thread of its own and `run_until_parked`
+    // can return while that read is still going. On an idle machine it is
+    // there every time, which is why the one place in this file that assumed
+    // it failed in CI and never here. The other body below already waits.
+    wait_for(&mut cx, window, "the body laid out", |view, _| {
+        matches!(view.inspector.body, BodyState::Shown(_))
+    });
 
     // Where a field's value sits in the body, line and all.
     let spot_in = |cx: &mut HeadlessAppContext, field: &str| -> (Spot, String) {
