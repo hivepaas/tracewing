@@ -565,8 +565,16 @@ What is left, and what no longer is:
    would have: the extension does the hand-off before it answers macOS, so
    it can still say no.
 
-   What is left is the app's end: installing the extension, the key, and
-   saving and starting the configuration with the capture.
+   **And tracewing starts it.** `tracewing capture --app` opens the port
+   on the loopback wherever there is room, makes a key for that run alone,
+   installs the extension if it has to, saves the configuration with both,
+   and stops the proxy when it ends
+   ([`crates/system/src/extension`](../../crates/system/src/extension.rs)).
+   No key is kept between runs, so a configuration a killed run left behind
+   names a port and a key nobody answers for, and the extension sends every
+   flow out as it would have. What is left is the window's end — choosing the
+   apps on Set up — and choosing a program that has no signing id of its own
+   (Go's `a.out`, Homebrew's builds) by its file.
 2. The TCP/IP stack is **in**, in [`stack.rs`](../../crates/proxy/src/stack.rs):
    packets in, [`Took::Flow`](../../crates/proxy/src/source.rs) out, on
    `smoltcp`, answering each `SYN` as the server the client was going to. What

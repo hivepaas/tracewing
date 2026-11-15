@@ -34,6 +34,17 @@ struct Cli {
     command: Command,
 }
 
+#[derive(Subcommand, Clone, Copy)]
+enum ExtensionAction {
+    /// Install it, or bring the installed one to this version. macOS asks
+    /// for it to be allowed the first time.
+    Install,
+    /// Whether it is installed and allowed, and whether its proxy runs.
+    Status,
+    /// Remove its proxy configuration, then the extension itself.
+    Uninstall,
+}
+
 #[derive(Subcommand)]
 enum Command {
     /// Record traffic with no window, until Ctrl+C or --seconds. Point a
@@ -63,6 +74,21 @@ enum Command {
         /// The data folder [default: the window's].
         #[arg(long)]
         data_dir: Option<PathBuf>,
+        /// Take this app's traffic too, with no proxy settings of its own,
+        /// through tracewing's network extension: its signing id, which
+        /// `codesign -dv <its program>` says (com.apple.curl,
+        /// com.anthropic.claude-code). As often as there are apps. macOS,
+        /// from tracewing.app in /Applications; the extension is installed
+        /// the first time, and macOS asks for it to be allowed.
+        #[arg(long = "app", value_name = "SIGNING_ID")]
+        apps: Vec<String>,
+    },
+    /// macOS's network extension, which takes apps' traffic with no proxy
+    /// settings of their own (`capture --app`): install it, say how it is,
+    /// or remove it.
+    Extension {
+        #[command(subcommand)]
+        action: ExtensionAction,
     },
     /// Print what takes a terminal's programs through tracewing — curl, git,
     /// Python, Go, AI agents — for a terminal it did not open: an editor's,
@@ -148,6 +174,7 @@ pub fn is_command(arg: &str) -> bool {
         arg,
         "capture"
             | "env"
+            | "extension"
             | "export"
             | "recover"
             | "uninstall"
@@ -202,17 +229,26 @@ pub fn run(args: &[String]) -> Result<()> {
             without_secrets,
             ca_key_in_file,
             data_dir,
-        } => capture(
-            &data_dir.unwrap_or_else(default_data_dir),
-            ca_key_in_file,
-            port,
-            seconds.map(Duration::from_secs),
-            har.map(|path| HarOut {
+            apps,
+        } => {
+            let data_dir = data_dir.unwrap_or_else(default_data_dir);
+            let har = har.map(|path| HarOut {
                 path,
                 filter,
                 without_secrets,
-            }),
-        ),
+            });
+            let seconds = seconds.map(Duration::from_secs);
+            if apps.is_empty() {
+                capture(&data_dir, ca_key_in_file, port, seconds, har, apps)
+            } else {
+                // macOS answers the extension's calls on the main queue,
+                // which this thread serves while another records.
+                tracewing_system::extension::serve_main_thread_while(move || {
+                    capture(&data_dir, ca_key_in_file, port, seconds, har, apps)
+                })
+            }
+        }
+        Command::Extension { action } => extension(action),
         Command::Env {
             port,
             shell,
@@ -365,6 +401,7 @@ fn capture(
     port: Option<u16>,
     seconds: Option<Duration>,
     har: Option<HarOut>,
+    apps: Vec<String>,
 ) -> Result<()> {
     std::fs::create_dir_all(data_dir).with_context(|| format!("create {}", data_dir.display()))?;
     let ports = port.map_or(PORTS, |port| port..port.saturating_add(1));
@@ -375,7 +412,7 @@ fn capture(
     if let Some(problem) = problem {
         eprintln!("tracewing: left out, as it cannot be read: {problem}");
     }
-    let engine = Engine::start(options)?;
+    let engine = Engine::start_with_apps(options, apps.clone())?;
     // The CA is made, or read, as the proxy starts.
     let ca = data_dir.join("ca.pem");
     let deadline = Instant::now() + Duration::from_secs(30);
@@ -402,6 +439,11 @@ fn capture(
         engine.addr,
         ca.display()
     );
+    let extension = match (&engine.extension, &engine.extension_problem) {
+        (Some(config), _) => Some(ExtensionRunning::start(config)?),
+        (None, Some(problem)) => bail!("no port for the network extension: {problem}"),
+        (None, None) => None,
+    };
     eprintln!(
         "{}",
         match seconds {
@@ -428,6 +470,8 @@ fn capture(
             } => {}
         }
     });
+    // The apps' flows go out as they would have before tracewing stops.
+    drop(extension);
     // Every flow written before anything reads them.
     drop(engine);
     let recorded = session::list(&data_dir.join("sessions"))
@@ -440,6 +484,84 @@ fn capture(
         eprintln!("{} written to {}", flows(n), har.path.display());
     }
     Ok(())
+}
+
+/// macOS's network extension, running for `capture --app`: stopped when this
+/// goes, however the capture ends.
+struct ExtensionRunning;
+
+impl ExtensionRunning {
+    fn start(config: &tracewing_system::extension::Config) -> Result<Self> {
+        use tracewing_system::extension;
+        extension::install(&|| {
+            eprintln!(
+                "  macOS waits for tracewing's network extension to be allowed: {}",
+                extension::WHERE_TO_ALLOW
+            );
+        })?;
+        extension::start(config)?;
+        eprintln!(
+            "  and, with no proxy settings of their own: {}",
+            config.apps.join(", ")
+        );
+        Ok(Self)
+    }
+}
+
+impl Drop for ExtensionRunning {
+    fn drop(&mut self) {
+        if let Err(e) = tracewing_system::extension::stop() {
+            eprintln!("tracewing: the network extension's proxy did not stop: {e:#}");
+        }
+    }
+}
+
+fn extension(action: ExtensionAction) -> Result<()> {
+    use tracewing_system::extension::{self, Installed, Running};
+    let waiting = || {
+        eprintln!(
+            "macOS waits for this to be allowed: {}",
+            extension::WHERE_TO_ALLOW
+        )
+    };
+    extension::serve_main_thread_while(move || match action {
+        ExtensionAction::Install => {
+            extension::install(&waiting)?;
+            println!("tracewing's network extension is installed and allowed");
+            Ok(())
+        }
+        ExtensionAction::Uninstall => {
+            extension::uninstall(&waiting)?;
+            println!("tracewing's network extension is removed");
+            Ok(())
+        }
+        ExtensionAction::Status => {
+            let status = extension::status()?;
+            println!(
+                "extension: {}",
+                match status.installed {
+                    Installed::Yes => "installed and allowed".to_owned(),
+                    Installed::WaitingForApproval => format!(
+                        "installed, waiting to be allowed in {}",
+                        extension::WHERE_TO_ALLOW
+                    ),
+                    Installed::No => "not installed".to_owned(),
+                    Installed::Unknown => "not known: only tracewing.app may ask macOS".to_owned(),
+                }
+            );
+            println!(
+                "proxy: {}",
+                match status.running {
+                    Running::None => "no configuration saved",
+                    Running::Off => "off",
+                    Running::Starting => "starting",
+                    Running::On => "on",
+                    Running::Stopping => "stopping",
+                }
+            );
+            Ok(())
+        }
+    })
 }
 
 /// The lines that take a shell through the proxy, on stdout for the shell to

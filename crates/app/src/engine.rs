@@ -135,6 +135,14 @@ pub struct Engine {
     pub wireguard: Option<SocketAddr>,
     /// Why there is no tunnel although the settings asked for one.
     pub wireguard_problem: Option<String>,
+    /// What macOS's network extension is to be given, when tracewing was
+    /// started to take apps' flows through it: the port opened for it here,
+    /// a key made for this run, the apps, and tracewing's other ports.
+    /// Starting the extension with it is the caller's, as it waits on macOS
+    /// (`tracewing_system::extension`).
+    pub extension: Option<tracewing_system::extension::Config>,
+    /// Why there is no port for the extension although apps were asked for.
+    pub extension_problem: Option<String>,
     /// The keys the tunnel was started with, so that the configuration a
     /// phone needs can be written again whenever it is asked for. Not public:
     /// one of them is a private key, and what Settings wants is
@@ -194,6 +202,14 @@ impl Engine {
     }
 
     pub fn start(opts: EngineOptions) -> Result<Self> {
+        Self::start_with_apps(opts, Vec::new())
+    }
+
+    /// Starts it as [`Self::start`] does, and with a port for macOS's network
+    /// extension to hand over the flows of `apps`, signing ids, when there
+    /// are any. The extension itself is started by the caller, with
+    /// [`Self::extension`].
+    pub fn start_with_apps(opts: EngineOptions, apps: Vec<String>) -> Result<Self> {
         let sessions = opts.data_dir.join("sessions");
         session::forget_old(&sessions, opts.settings.sessions_kept);
         let session = sessions.join(next_session_name(&sessions));
@@ -227,6 +243,35 @@ impl Engine {
             (None, None)
         };
         let wireguard_at = wireguard.as_ref().and_then(|s| s.local_addr().ok());
+        // The extension's port, on the loopback and wherever there is room,
+        // as the extension is told it each run; and a key for this run alone.
+        let (extension, extension_problem) = if apps.is_empty() {
+            (None, None)
+        } else {
+            match std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))
+                .map_err(anyhow::Error::from)
+                .and_then(|listener| {
+                    let key = tracewing_system::extension::Key::new()
+                        .map_err(|e| anyhow::anyhow!("no randomness for a key: {e}"))?;
+                    Ok((listener, key))
+                }) {
+                Ok(opened) => (Some(opened), None),
+                Err(e) => (None, Some(format!("{e:#}"))),
+            }
+        };
+        let extension_config = extension.as_ref().and_then(|(listener, key)| {
+            Some(tracewing_system::extension::Config {
+                port: listener.local_addr().ok()?.port(),
+                key: key.clone(),
+                apps: apps.clone(),
+                // A flow already going to tracewing goes on as it is.
+                own: [Some(addr), socks_at]
+                    .into_iter()
+                    .flatten()
+                    .map(|at| at.port())
+                    .collect(),
+            })
+        });
         // The keys, made on the first run and kept in the keychain. A
         // failure here is the tunnel's alone: it is said and the port is not
         // served, rather than stopping a proxy that would otherwise work.
@@ -305,6 +350,11 @@ impl Engine {
                 if let Some(listener) = socks {
                     sources.push(Box::new(tracewing_proxy::socks::Socks::from_std(listener)));
                 }
+                if let Some((listener, key)) = extension {
+                    sources.push(Box::new(tracewing_proxy::extension::ExtensionPort::new(
+                        listener, key,
+                    )));
+                }
                 if let (Some(socket), Some(keys)) = (wireguard, &wireguard_keys) {
                     sources.push(Box::new(tracewing_proxy::wireguard::Endpoint::new(
                         socket,
@@ -368,6 +418,8 @@ impl Engine {
             wireguard: wireguard_at,
             wireguard_keys,
             wireguard_problem,
+            extension: extension_config,
+            extension_problem,
             live,
             extra_roots: opts.extra_roots,
             relay,

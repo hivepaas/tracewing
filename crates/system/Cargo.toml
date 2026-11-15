@@ -9,6 +9,8 @@ publish.workspace = true
 
 [dependencies]
 tracewing-proxy.workspace = true
+tracewing-handoff.workspace = true
+tracewing-netext.workspace = true
 anyhow.workspace = true
 base64.workspace = true
 clap.workspace = true
@@ -20,6 +22,14 @@ md-5.workspace = true
 x509-parser = "0.18"
 tracing.workspace = true
 serde_json.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block2.workspace = true
+dispatch2.workspace = true
+objc2.workspace = true
+objc2-foundation.workspace = true
+objc2-network-extension.workspace = true
+objc2-system-extensions.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows-sys.workspace = true

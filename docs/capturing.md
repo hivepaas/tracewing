@@ -12,6 +12,7 @@ programs, and none of them takes all.
 | **A browser on its own** — Set up › Browsers › Open on its own | Chrome, Edge, Brave, Opera, Chromium and Firefox, in a profile of tracewing's, servers on this computer included | Safari, which has no such profile |
 | **A terminal** — Set up › Open a terminal, or `tracewing env` | What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code, Codex and Gemini CLI | Node.js before 22.21, and 23 to 24.4; Java |
 | **A SOCKS5 port** — Settings › SOCKS5 | What speaks SOCKS: anything reading `ALL_PROXY`, `git` with a `socks5h://` proxy, Firefox's own SOCKS setting, proxychains | Programs that read only `HTTP_PROXY` and `HTTPS_PROXY`, and anything with no SOCKS setting of its own |
+| **One app, as it is** — `tracewing capture --app`, macOS | Whatever the app named sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, Python from Apple, its `localhost` too | Programs that carry no signing id of their own (below); UDP, so HTTP/3 |
 | **A phone over WireGuard** — Settings › WireGuard | Everything the phone sends once it joins the tunnel, apps that ignore its proxy setting included | Apps that pin their own certificates; anything on the phone before tracewing's authority is installed there |
 
 The two last leave the system proxy and every other app alone, which is what
@@ -125,6 +126,39 @@ This is another place to tell a program about a proxy, not a way around a
 program that cannot be told at all. Those are in
 [design/capture-modes.md](design/capture-modes.md), and how all of these are
 meant to be presented is in [design/setup-flow.md](design/setup-flow.md).
+
+## One app, as it is (macOS)
+
+Every way in above tells a program where the proxy is. On a Mac, tracewing can
+instead have macOS hand it an app's connections, with nothing in the app told
+and nothing else on the computer changed: its network extension, a
+transparent proxy that takes the flows of the apps it is given and leaves
+every other flow alone. From the command line, for now:
+
+```sh
+/Applications/tracewing.app/Contents/MacOS/tracewing capture \
+  --app com.apple.curl --app com.anthropic.claude-code
+```
+
+- **The app is named by its signing id**, which `codesign -dv` says of its
+  program: `codesign -dv /usr/bin/curl 2>&1 | grep Identifier`. A Mac app's
+  is its bundle id. Each flow is recorded as the program that made it, with
+  its process id.
+- **Only tracewing.app in `/Applications` has the extension**, signed and
+  notarized; a build of your own says so. The first time, macOS asks for the
+  extension to be allowed (System Settings › General › Login Items &
+  Extensions › Network Extensions) and for tracewing to add a proxy
+  configuration (Allow). `tracewing extension status` says where it is.
+- **The app still has to trust tracewing's authority** to have its HTTPS
+  read: the CA in the keychain for a Mac app, `NODE_EXTRA_CA_CERTS` or its own
+  setting for the rest, as below.
+- **A program built without a name of its own cannot be named.** Every Go
+  program `go build` makes is `a.out`, and what Homebrew builds is named after
+  its file and a hash that changes with each version (`git-55554944…`).
+  Choosing those by their file is still to come.
+- When the capture stops, so does the proxy. If tracewing is killed instead,
+  the extension finds nothing answering for tracewing and every flow goes out
+  as it would have; `tracewing extension uninstall` removes it.
 
 ## A phone, over WireGuard
 

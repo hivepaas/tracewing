@@ -68,9 +68,13 @@ webpki-roots = "1.0.11"
 block2 = "0.6.2"
 log = "0.4"
 objc2 = "0.6.5"
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "NSArray", "NSData", "NSDictionary", "NSError", "NSObject", "NSString"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "NSArray", "NSData", "NSDictionary", "NSError", "NSObject", "NSString", "NSThread"] }
 objc2-network-extension = { version = "0.3.2", default-features = false, features = ["std", "block2"] }
 oslog = "0.2"
+# And tracewing's end of it (crates/system/src/extension).
+dispatch2 = { version = "0.3", default-features = false, features = ["std", "objc2"] }
+objc2-system-extensions = { version = "0.3.2", default-features = false, features = ["std", "dispatch2"] }
+tracewing-netext = { path = "crates/netext" }
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_NetworkManagement_IpHelper",

@@ -6,8 +6,8 @@
 //! Its ports, claimed here because this file is the one that does not say it
 //! the usual way: `ports: 20_340..20_350`. It passes `--port` to the program
 //! as a bare number instead of giving a range to `EngineOptions`, so a grep
-//! for the ranges in use finds a hole here and it is not a free one. 20340
-//! and 20341 are taken below.
+//! for the ranges in use finds a hole here and it is not a free one. 20340,
+//! 20341 and 20342 are taken below.
 
 use std::{
     process::{Command, Stdio},
@@ -575,4 +575,51 @@ fn the_watchdog_puts_the_setting_back_when_the_app_goes() {
         );
     }
     std::fs::remove_dir_all(&dir).ok();
+}
+
+/// `capture --app` needs tracewing's network extension, which only the signed
+/// tracewing.app on a Mac has. Anything else says so and records nothing,
+/// rather than recording without the app it was asked for; and `extension
+/// status` answers wherever it runs.
+#[test]
+fn an_app_is_taken_only_where_the_extension_can_be() {
+    let dir = std::env::temp_dir().join(format!("tracewing-cli-app-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = tracewing()
+        .args([
+            "capture",
+            "--app",
+            "com.apple.curl",
+            "--port",
+            "20342",
+            "--seconds",
+            "1",
+        ])
+        .args(["--ca-key-in-file", "--data-dir"])
+        .arg(&dir)
+        .output()
+        .unwrap();
+    let said = String::from_utf8_lossy(&out.stderr);
+    assert!(!out.status.success(), "{said}");
+    // Elsewhere: macOS's alone. On a Mac, from target/: not signed for it.
+    assert!(said.contains("macOS"), "{said}");
+    assert!(
+        !said.contains("Stops in"),
+        "it did not go on to record: {said}"
+    );
+
+    let status = tracewing().args(["extension", "status"]).output().unwrap();
+    let said = String::from_utf8_lossy(&status.stdout);
+    assert!(status.status.success(), "{status:?}");
+    assert!(
+        said.starts_with("extension: ") && said.contains("\nproxy: "),
+        "{said}"
+    );
+    #[cfg(not(target_os = "macos"))]
+    assert_eq!(
+        said,
+        "extension: not installed\nproxy: no configuration saved\n"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }
