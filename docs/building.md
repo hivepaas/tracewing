@@ -62,11 +62,16 @@ systemextensionsctl list                   # installed, and allowed
 /usr/bin/log stream --level debug --predicate 'subsystem == "com.hivepaas.tracewing.proxy"'
 ```
 
-(`/usr/bin/log`, as `log` is something else in zsh.) The app installs it and
-turns it on in a later change. Until then, the core without a window takes
-its flows by hand, with a key of your own that the extension's configuration
-is given too (`port`, `key`, `apps` and `own`, in
-[`flow.rs`](../crates/netext/src/flow.rs)):
+(`/usr/bin/log`, as `log` is something else in zsh.) The program in the app
+installs it and starts it: `tracewing capture --app <signing id>` does both
+and stops it at the end, and `tracewing extension install|status|uninstall`
+do each ([capturing.md](capturing.md#one-app-as-it-is-macos)). The calls are in
+`crates/system/src/extension`; they wait on macOS, which answers on the main
+queue, so the command line lends its main thread while it records.
+
+Without the app, the core without a window takes the extension's flows by
+hand, with a key of your own that the extension's configuration is given too
+(`port`, `key`, `apps` and `own`, in [`flow.rs`](../crates/netext/src/flow.rs)):
 
 ```sh
 KEY="$(openssl rand -hex 32)"     # the same one goes in the configuration
