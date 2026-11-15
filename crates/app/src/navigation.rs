@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use gpui::Context;
 
-use crate::layout::SettingsSection;
+use crate::layout::{SettingsSection, Way};
 use crate::traffic::{Screen, Traffic};
 
 /// A place the window can show again.
@@ -14,6 +14,10 @@ pub struct Location {
     pub screen: Screen,
     /// The part open, on Settings.
     pub section: Option<SettingsSection>,
+    /// The way in open, on Settings › Capture. A tab is a place the window
+    /// has shown, as a part of Settings is: somebody who read the WireGuard
+    /// tab and then the terminal one expects Back to be the way to the first.
+    pub way: Option<Way>,
     /// The earlier session on show, or none for the one recording.
     pub session: Option<PathBuf>,
 }
@@ -24,6 +28,9 @@ impl Traffic {
         Location {
             screen: self.screen,
             section: (self.screen == Screen::Settings).then_some(self.layout.settings_section),
+            way: (self.screen == Screen::Settings
+                && self.layout.settings_section == SettingsSection::Capture)
+                .then_some(self.layout.capture_way),
             session: self.viewing.clone(),
         }
     }
@@ -64,6 +71,9 @@ impl Traffic {
         }
         if let Some(section) = to.section {
             self.show_settings_section(section, cx);
+        }
+        if let Some(way) = to.way {
+            self.show_way(way, cx);
         }
         self.set_screen(to.screen, cx);
         self.going = false;

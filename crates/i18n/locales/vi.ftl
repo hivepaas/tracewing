@@ -940,6 +940,9 @@ t7f8fa9c0 = Simulator không nhận: { $why }
 # General
 t5561fd0b = Chung
 
+# Capture
+t2fbb5e61 = Bắt traffic
+
 # Network
 t6974ad65 = Mạng
 
@@ -957,6 +960,21 @@ t294d7ea4 = Công cụ AI
 
 # About
 t58e096de = Mô tả
+
+# System proxy
+tb5cdad84 = System proxy
+
+# A browser
+t666f4ecc = Trình duyệt
+
+# A terminal
+t7e7408e4 = Terminal
+
+# Other devices
+t9e7d8362 = Thiết bị khác
+
+# Apps
+t53d91aad = App
 
 # Light
 t8ad2f8cf = Sáng
@@ -1681,9 +1699,6 @@ t17bccaf2 = Bắt đầu phiên mới
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = File HAR export ra bỏ đi cookie, token, key và mật khẩu, trong header, URL và body
 
-# Other devices
-t9e7d8362 = Thiết bị khác
-
 # Let other devices use the proxy
 t13e626b3 = Cho thiết bị khác dùng proxy
 
@@ -1842,6 +1857,69 @@ ta8606963 = { $key }: "{ $text }" không phải là số nguyên
 
 # {key}: must not be negative
 t9c4debaa = { $key }: không được là số âm
+
+# Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking.
+t2c56e95c = Các app dùng thiết lập proxy của máy này: phần lớn trình duyệt, và mọi thứ đi qua networking của hệ thống.
+
+# Java, which reads no proxy setting of the system's; programs with a setting of their own; and on macOS, anything sent to localhost.
+t51cd6bad = Java, vốn không đọc thiết lập proxy nào của hệ thống; các chương trình có thiết lập riêng; và trên macOS, mọi thứ gửi tới localhost.
+
+# Chrome, Edge, Brave, Opera, Chromium and Firefox, each in a profile of tracewing's — the system proxy left alone.
+tdacc78b6 = Chrome, Edge, Brave, Opera, Chromium và Firefox, mỗi cái trong một profile của tracewing — system proxy được để nguyên.
+
+# Safari, which has no profile of its own: use the system proxy for it.
+t2bea398a = Safari, vốn không có profile riêng: hãy dùng system proxy cho nó.
+
+# What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code and Codex.
+t336769d4 = Những gì được chạy trong đó: curl, git, Python, Go, Deno, Bun, và các AI agent như Claude Code và Codex.
+
+# Node.js before 22.21, and 23 to 24.4; Java, which reads neither the proxy nor the trust variables.
+t91fa7c81 = Node.js trước 22.21, và 23 đến 24.4; Java, vốn không đọc cả proxy lẫn các biến tin cậy.
+
+# A phone or another computer on your network, once it is told {addr} as its proxy by hand.
+t8246bdeb = Một điện thoại hoặc một máy tính khác trong mạng của bạn, sau khi được chỉ { $addr } làm proxy bằng tay.
+
+# Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those.
+t8cd55aad = Những gì trên thiết bị đó bỏ qua thiết lập proxy của nó, mà trên điện thoại là phần lớn app: tunnel bắt được những cái đó.
+
+# What speaks SOCKS: anything reading ALL_PROXY, git with a socks5h:// proxy, Firefox's own SOCKS setting, proxychains.
+t9ebae2ee = Những gì nói SOCKS: mọi thứ đọc ALL_PROXY, git với proxy socks5h://, thiết lập SOCKS riêng của Firefox, proxychains.
+
+# Programs that read only HTTP_PROXY and HTTPS_PROXY, and anything with no SOCKS setting of its own.
+t576f0cf9 = Các chương trình chỉ đọc HTTP_PROXY và HTTPS_PROXY, và mọi thứ không có thiết lập SOCKS riêng.
+
+# Everything a phone sends once it joins the tunnel, apps that ignore the phone's proxy setting included.
+t0d857250 = Mọi thứ điện thoại gửi sau khi nó vào tunnel, kể cả các app bỏ qua thiết lập proxy của điện thoại.
+
+# Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
+tb457dd67 = Các app chỉ tin chứng chỉ riêng của chúng, và mọi thứ gửi trước khi CA của tracewing được cài lên điện thoại.
+
+# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
+t018f7b7c = Mọi thứ một app được nêu tên gửi qua TCP, dù nó có đọc thiết lập proxy hay không: Node bản nào cũng được, Java, và cả localhost của nó.
+
+# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
+t3f6bf403 = UDP, nên cả HTTP/3; và các chương trình không có signing id riêng, như mọi thứ go build tạo ra.
+
+# Turn off
+tcd03e04b = Tắt
+
+# Turn on
+t65a0c5a7 = Bật
+
+# Open from Set up
+tf0ad42dc = Mở từ Thiết lập
+
+# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
+t5b4d06d6 = Hiện đặt từ dòng lệnh: lệnh này nêu các app cần bắt, cài extension lần đầu, và xin macOS cho phép.
+
+# macOS only: it is macOS that hands an app's connections over.
+t71872556 = Chỉ macOS: chính macOS là bên chuyển các kết nối của app sang.
+
+# Catches
+tf5f3fe08 = Bắt được
+
+# Does not catch
+t8fd1679e = Không bắt được
 
 # {name} (default)
 td3f56fa8 = { $name } (mặc định)
@@ -2037,12 +2115,6 @@ tdcc53241 = Đưa traffic của máy này qua tracewing, với các app dùng th
 
 # Turn on the system proxy
 t52b88441 = Bật system proxy
-
-# Turn off
-tcd03e04b = Tắt
-
-# Turn on
-t65a0c5a7 = Bật
 
 # Check it in your browser
 tbed6e83a = Kiểm tra trong trình duyệt
@@ -2472,9 +2544,6 @@ t838c1d44 = Không có host nào chứa chuỗi này
 
 # Hidden
 t3c2dfe59 = Đã ẩn
-
-# Apps
-t53d91aad = App
 
 # Devices
 t27acf320 = Thiết bị

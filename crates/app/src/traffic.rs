@@ -566,6 +566,7 @@ impl Traffic {
             history: crate::history::History::new(crate::navigation::Location {
                 screen: Screen::Traffic,
                 section: None,
+                way: None,
                 session: None,
             }),
             going: false,

@@ -940,6 +940,9 @@ t7f8fa9c0 = Simulator tidak menerimanya: { $why }
 # General
 t5561fd0b = Umum
 
+# Capture
+t2fbb5e61 = Tangkap
+
 # Network
 t6974ad65 = Jaringan
 
@@ -957,6 +960,21 @@ t294d7ea4 = Alat AI
 
 # About
 t58e096de = Keterangan
+
+# System proxy
+tb5cdad84 = Proxy sistem
+
+# A browser
+t666f4ecc = Sebuah browser
+
+# A terminal
+t7e7408e4 = Sebuah terminal
+
+# Other devices
+t9e7d8362 = Perangkat lain
+
+# Apps
+t53d91aad = Aplikasi
 
 # Light
 t8ad2f8cf = Terang
@@ -1681,9 +1699,6 @@ t17bccaf2 = Mulai sesi baru
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = File HAR yang diekspor tidak menyertakan cookie, token, kunci, dan kata sandi, di header, URL, dan body
 
-# Other devices
-t9e7d8362 = Perangkat lain
-
 # Let other devices use the proxy
 t13e626b3 = Izinkan perangkat lain memakai proxy
 
@@ -1842,6 +1857,69 @@ ta8606963 = { $key }: "{ $text }" bukan bilangan bulat
 
 # {key}: must not be negative
 t9c4debaa = { $key }: tidak boleh negatif
+
+# Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking.
+t2c56e95c = App yang memakai setelan proxy komputer ini: sebagian besar browser, dan apa pun yang lewat jaringan sistem.
+
+# Java, which reads no proxy setting of the system's; programs with a setting of their own; and on macOS, anything sent to localhost.
+t51cd6bad = Java, yang tidak membaca setelan proxy sistem mana pun; program dengan setelan sendiri; dan di macOS, apa pun yang dikirim ke localhost.
+
+# Chrome, Edge, Brave, Opera, Chromium and Firefox, each in a profile of tracewing's — the system proxy left alone.
+tdacc78b6 = Chrome, Edge, Brave, Opera, Chromium dan Firefox, masing-masing dalam profil milik tracewing — proxy sistem dibiarkan apa adanya.
+
+# Safari, which has no profile of its own: use the system proxy for it.
+t2bea398a = Safari, yang tidak punya profil sendiri: pakai proxy sistem untuknya.
+
+# What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code and Codex.
+t336769d4 = Apa pun yang dijalankan di dalamnya: curl, git, Python, Go, Deno, Bun, dan agen AI seperti Claude Code dan Codex.
+
+# Node.js before 22.21, and 23 to 24.4; Java, which reads neither the proxy nor the trust variables.
+t91fa7c81 = Node.js sebelum 22.21, dan 23 sampai 24.4; Java, yang tidak membaca proxy maupun variabel kepercayaan.
+
+# A phone or another computer on your network, once it is told {addr} as its proxy by hand.
+t8246bdeb = Sebuah ponsel atau komputer lain di jaringanmu, setelah diberi { $addr } sebagai proxy secara manual.
+
+# Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those.
+t8cd55aad = Apa pun di perangkat itu yang mengabaikan setelan proxy-nya, yang di ponsel berarti hampir semua app: tunnel yang menangkap itu.
+
+# What speaks SOCKS: anything reading ALL_PROXY, git with a socks5h:// proxy, Firefox's own SOCKS setting, proxychains.
+t9ebae2ee = Apa pun yang berbicara SOCKS: yang membaca ALL_PROXY, git dengan proxy socks5h://, setelan SOCKS milik Firefox, proxychains.
+
+# Programs that read only HTTP_PROXY and HTTPS_PROXY, and anything with no SOCKS setting of its own.
+t576f0cf9 = Program yang hanya membaca HTTP_PROXY dan HTTPS_PROXY, dan apa pun yang tidak punya setelan SOCKS sendiri.
+
+# Everything a phone sends once it joins the tunnel, apps that ignore the phone's proxy setting included.
+t0d857250 = Semua yang dikirim ponsel setelah masuk ke tunnel, termasuk app yang mengabaikan setelan proxy ponsel itu.
+
+# Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
+tb457dd67 = App yang hanya mempercayai sertifikatnya sendiri, dan apa pun yang dikirim sebelum CA tracewing dipasang di ponsel.
+
+# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
+t018f7b7c = Apa pun yang dikirim app yang disebut lewat TCP, baik membaca setelan proxy atau tidak: Node versi apa saja, Java, dan localhost-nya juga.
+
+# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
+t3f6bf403 = UDP, jadi HTTP/3; dan program tanpa signing id sendiri, seperti semua yang dibuat go build.
+
+# Turn off
+tcd03e04b = Matikan
+
+# Turn on
+t65a0c5a7 = Aktifkan
+
+# Open from Set up
+tf0ad42dc = Buka dari Siapkan
+
+# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
+t5b4d06d6 = Untuk sekarang diatur dari baris perintah: ini menyebut app yang akan ditangkap, memasang extension pada kali pertama, dan meminta izin macOS.
+
+# macOS only: it is macOS that hands an app's connections over.
+t71872556 = Hanya macOS: macOS sendirilah yang menyerahkan koneksi sebuah app.
+
+# Catches
+tf5f3fe08 = Tertangkap
+
+# Does not catch
+t8fd1679e = Tidak tertangkap
 
 # {name} (default)
 td3f56fa8 = { $name } (bawaan)
@@ -2037,12 +2115,6 @@ tdcc53241 = Mengirim lalu lintas komputer ini lewat tracewing, untuk aplikasi ya
 
 # Turn on the system proxy
 t52b88441 = Aktifkan proxy sistem
-
-# Turn off
-tcd03e04b = Matikan
-
-# Turn on
-t65a0c5a7 = Aktifkan
 
 # Check it in your browser
 tbed6e83a = Periksa di browser
@@ -2472,9 +2544,6 @@ t838c1d44 = Tidak ada host yang namanya memuat ini
 
 # Hidden
 t3c2dfe59 = Tersembunyi
-
-# Apps
-t53d91aad = Aplikasi
 
 # Devices
 t27acf320 = Perangkat

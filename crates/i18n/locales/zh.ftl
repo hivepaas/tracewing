@@ -940,6 +940,9 @@ t7f8fa9c0 = 模拟器未接受：{ $why }
 # General
 t5561fd0b = 通用
 
+# Capture
+t2fbb5e61 = 抓取
+
 # Network
 t6974ad65 = 网络
 
@@ -957,6 +960,21 @@ t294d7ea4 = AI 工具
 
 # About
 t58e096de = 说明
+
+# System proxy
+tb5cdad84 = 系统代理
+
+# A browser
+t666f4ecc = 浏览器
+
+# A terminal
+t7e7408e4 = 终端
+
+# Other devices
+t9e7d8362 = 其他设备
+
+# Apps
+t53d91aad = 应用
 
 # Light
 t8ad2f8cf = 浅色
@@ -1681,9 +1699,6 @@ t17bccaf2 = 开始新会话
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = 导出的 HAR 文件会去掉标头、URL 和正文中的 Cookie、令牌、密钥和密码
 
-# Other devices
-t9e7d8362 = 其他设备
-
 # Let other devices use the proxy
 t13e626b3 = 允许其他设备使用代理
 
@@ -1842,6 +1857,69 @@ ta8606963 = { $key }：“{ $text }” 不是整数
 
 # {key}: must not be negative
 t9c4debaa = { $key }：不能为负数
+
+# Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking.
+t2c56e95c = 使用这台电脑代理设置的应用：大多数浏览器，以及走系统网络的一切。
+
+# Java, which reads no proxy setting of the system's; programs with a setting of their own; and on macOS, anything sent to localhost.
+t51cd6bad = 不读系统任何代理设置的 Java；有自己设置的程序；以及在 macOS 上发往 localhost 的一切。
+
+# Chrome, Edge, Brave, Opera, Chromium and Firefox, each in a profile of tracewing's — the system proxy left alone.
+tdacc78b6 = Chrome、Edge、Brave、Opera、Chromium 和 Firefox，各自在 tracewing 的专用配置文件里 — 系统代理保持原样。
+
+# Safari, which has no profile of its own: use the system proxy for it.
+t2bea398a = 没有专用配置文件的 Safari：请用系统代理抓它。
+
+# What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code and Codex.
+t336769d4 = 在其中启动的东西：curl、git、Python、Go、Deno、Bun，以及 Claude Code、Codex 这类 AI 智能体。
+
+# Node.js before 22.21, and 23 to 24.4; Java, which reads neither the proxy nor the trust variables.
+t91fa7c81 = 22.21 之前的 Node.js，以及 23 到 24.4；还有既不读代理也不读信任变量的 Java。
+
+# A phone or another computer on your network, once it is told {addr} as its proxy by hand.
+t8246bdeb = 你网络里的一台手机或另一台电脑，在手动把 { $addr } 设为它的代理之后。
+
+# Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those.
+t8cd55aad = 那台设备上忽略自身代理设置的东西，在手机上几乎是所有应用：那些要靠隧道抓。
+
+# What speaks SOCKS: anything reading ALL_PROXY, git with a socks5h:// proxy, Firefox's own SOCKS setting, proxychains.
+t9ebae2ee = 会说 SOCKS 的东西：读 ALL_PROXY 的一切、用 socks5h:// 代理的 git、Firefox 自己的 SOCKS 设置、proxychains。
+
+# Programs that read only HTTP_PROXY and HTTPS_PROXY, and anything with no SOCKS setting of its own.
+t576f0cf9 = 只读 HTTP_PROXY 和 HTTPS_PROXY 的程序，以及没有自己 SOCKS 设置的一切。
+
+# Everything a phone sends once it joins the tunnel, apps that ignore the phone's proxy setting included.
+t0d857250 = 手机加入隧道后发出的一切，包括忽略手机代理设置的应用。
+
+# Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
+tb457dd67 = 只信任自带证书的应用，以及在 tracewing 的 CA 装到手机上之前发出的一切。
+
+# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
+t018f7b7c = 指定的应用通过 TCP 发出的一切，无论它是否读取任何代理设置：任何版本的 Node、Java，连它的 localhost 也算。
+
+# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
+t3f6bf403 = UDP，所以也包括 HTTP/3；以及没有自己签名标识的程序，比如 go build 生成的一切。
+
+# Turn off
+tcd03e04b = 关闭
+
+# Turn on
+t65a0c5a7 = 开启
+
+# Open from Set up
+tf0ad42dc = 从配置页打开
+
+# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
+t5b4d06d6 = 目前从命令行指定：它列出要抓的应用，首次会安装扩展，并请 macOS 允许。
+
+# macOS only: it is macOS that hands an app's connections over.
+t71872556 = 仅 macOS：交出应用连接的是 macOS 自己。
+
+# Catches
+tf5f3fe08 = 能抓到
+
+# Does not catch
+t8fd1679e = 抓不到
 
 # {name} (default)
 td3f56fa8 = { $name }(默认)
@@ -2037,12 +2115,6 @@ tdcc53241 = 让使用系统设置的应用将本机流量经由 tracewing 发送
 
 # Turn on the system proxy
 t52b88441 = 开启系统代理
-
-# Turn off
-tcd03e04b = 关闭
-
-# Turn on
-t65a0c5a7 = 开启
 
 # Check it in your browser
 tbed6e83a = 在浏览器中检查
@@ -2472,9 +2544,6 @@ t838c1d44 = 没有名称包含此内容的主机
 
 # Hidden
 t3c2dfe59 = 已隐藏
-
-# Apps
-t53d91aad = 应用
 
 # Devices
 t27acf320 = 设备

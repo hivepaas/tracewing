@@ -977,6 +977,9 @@ t7f8fa9c0 = Il simulatore non l'ha accettato: { $why }
 # General
 t5561fd0b = Generali
 
+# Capture
+t2fbb5e61 = Cattura
+
 # Network
 t6974ad65 = Rete
 
@@ -994,6 +997,21 @@ t294d7ea4 = Strumenti di IA
 
 # About
 t58e096de = Descrizione
+
+# System proxy
+tb5cdad84 = Proxy di sistema
+
+# A browser
+t666f4ecc = Un browser
+
+# A terminal
+t7e7408e4 = Un terminale
+
+# Other devices
+t9e7d8362 = Altri dispositivi
+
+# Apps
+t53d91aad = App
 
 # Light
 t8ad2f8cf = Chiaro
@@ -1805,9 +1823,6 @@ t17bccaf2 = Inizia una nuova sessione
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = I file HAR esportati tralasciano cookie, token, chiavi e password, negli header, negli URL e nei body
 
-# Other devices
-t9e7d8362 = Altri dispositivi
-
 # Let other devices use the proxy
 t13e626b3 = Consenti ad altri dispositivi di usare il proxy
 
@@ -1966,6 +1981,69 @@ ta8606963 = { $key }: "{ $text }" non è un numero intero
 
 # {key}: must not be negative
 t9c4debaa = { $key }: non deve essere negativo
+
+# Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking.
+t2c56e95c = Le app che usano l'impostazione proxy di questo computer: la maggior parte dei browser e tutto ciò che passa dalla rete del sistema.
+
+# Java, which reads no proxy setting of the system's; programs with a setting of their own; and on macOS, anything sent to localhost.
+t51cd6bad = Java, che non legge alcuna impostazione proxy del sistema; i programmi con un'impostazione propria; e su macOS tutto ciò che è inviato a localhost.
+
+# Chrome, Edge, Brave, Opera, Chromium and Firefox, each in a profile of tracewing's — the system proxy left alone.
+tdacc78b6 = Chrome, Edge, Brave, Opera, Chromium e Firefox, ognuno in un profilo di tracewing — il proxy di sistema resta com'è.
+
+# Safari, which has no profile of its own: use the system proxy for it.
+t2bea398a = Safari, che non ha un profilo proprio: per lui usa il proxy di sistema.
+
+# What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code and Codex.
+t336769d4 = Ciò che viene avviato al suo interno: curl, git, Python, Go, Deno, Bun e agenti IA come Claude Code e Codex.
+
+# Node.js before 22.21, and 23 to 24.4; Java, which reads neither the proxy nor the trust variables.
+t91fa7c81 = Node.js prima della 22.21, e dalla 23 alla 24.4; Java, che non legge né il proxy né le variabili di fiducia.
+
+# A phone or another computer on your network, once it is told {addr} as its proxy by hand.
+t8246bdeb = Un telefono o un altro computer della tua rete, una volta che gli è stato indicato { $addr } come proxy a mano.
+
+# Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those.
+t8cd55aad = Tutto ciò che su quel dispositivo ignora la sua impostazione proxy, che su un telefono sono quasi tutte le app: a quelle ci pensa un tunnel.
+
+# What speaks SOCKS: anything reading ALL_PROXY, git with a socks5h:// proxy, Firefox's own SOCKS setting, proxychains.
+t9ebae2ee = Ciò che parla SOCKS: tutto ciò che legge ALL_PROXY, git con un proxy socks5h://, l'impostazione SOCKS propria di Firefox, proxychains.
+
+# Programs that read only HTTP_PROXY and HTTPS_PROXY, and anything with no SOCKS setting of its own.
+t576f0cf9 = I programmi che leggono solo HTTP_PROXY e HTTPS_PROXY, e tutto ciò che non ha un'impostazione SOCKS propria.
+
+# Everything a phone sends once it joins the tunnel, apps that ignore the phone's proxy setting included.
+t0d857250 = Tutto ciò che il telefono invia una volta entrato nel tunnel, comprese le app che ignorano la sua impostazione proxy.
+
+# Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
+tb457dd67 = Le app che si fidano solo dei propri certificati, e tutto ciò che è inviato prima che la CA di tracewing sia installata sul telefono.
+
+# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
+t018f7b7c = Tutto ciò che una app indicata invia via TCP, che legga o no un'impostazione proxy: Node di qualunque versione, Java, e anche il suo localhost.
+
+# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
+t3f6bf403 = UDP, e quindi HTTP/3; e i programmi senza un signing id proprio, come tutto ciò che produce go build.
+
+# Turn off
+tcd03e04b = Disattiva
+
+# Turn on
+t65a0c5a7 = Attiva
+
+# Open from Set up
+tf0ad42dc = Apri da Configura
+
+# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
+t5b4d06d6 = Per ora si indica dalla riga di comando: nomina le app da catturare, installa l'estensione la prima volta e chiede a macOS di consentirla.
+
+# macOS only: it is macOS that hands an app's connections over.
+t71872556 = Solo macOS: è macOS a consegnare le connessioni di una app.
+
+# Catches
+tf5f3fe08 = Cattura
+
+# Does not catch
+t8fd1679e = Non cattura
 
 # {name} (default)
 td3f56fa8 = { $name } (predefinito)
@@ -2166,12 +2244,6 @@ tdcc53241 = Instrada il traffico di questo computer tramite tracewing, per le ap
 
 # Turn on the system proxy
 t52b88441 = Attiva il proxy di sistema
-
-# Turn off
-tcd03e04b = Disattiva
-
-# Turn on
-t65a0c5a7 = Attiva
 
 # Check it in your browser
 tbed6e83a = Verifica nel browser
@@ -2611,9 +2683,6 @@ t838c1d44 = Nessun host lo contiene nel nome
 
 # Hidden
 t3c2dfe59 = Nascosti
-
-# Apps
-t53d91aad = App
 
 # Devices
 t27acf320 = Dispositivi

@@ -940,6 +940,9 @@ t7f8fa9c0 = シミュレーターが受け付けませんでした：{ $why }
 # General
 t5561fd0b = 一般
 
+# Capture
+t2fbb5e61 = キャプチャ
+
 # Network
 t6974ad65 = ネットワーク
 
@@ -957,6 +960,21 @@ t294d7ea4 = AI ツール
 
 # About
 t58e096de = 説明
+
+# System proxy
+tb5cdad84 = システムプロキシ
+
+# A browser
+t666f4ecc = ブラウザー
+
+# A terminal
+t7e7408e4 = ターミナル
+
+# Other devices
+t9e7d8362 = 他のデバイス
+
+# Apps
+t53d91aad = アプリ
 
 # Light
 t8ad2f8cf = ライト
@@ -1681,9 +1699,6 @@ t17bccaf2 = 新しいセッションを始める
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = エクスポートした HAR ファイルでは、ヘッダー・URL・ボディ内の Cookie、トークン、キー、パスワードを省きます
 
-# Other devices
-t9e7d8362 = 他のデバイス
-
 # Let other devices use the proxy
 t13e626b3 = 他のデバイスにプロキシの使用を許可
 
@@ -1842,6 +1857,69 @@ ta8606963 = { $key }: "{ $text }" は整数ではありません
 
 # {key}: must not be negative
 t9c4debaa = { $key }: 負の値は指定できません
+
+# Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking.
+t2c56e95c = このコンピューターのプロキシ設定を使うアプリ: ほとんどのブラウザーと、システムのネットワークを通るものすべて。
+
+# Java, which reads no proxy setting of the system's; programs with a setting of their own; and on macOS, anything sent to localhost.
+t51cd6bad = システムのプロキシ設定を読まない Java、独自の設定を持つプログラム、そして macOS では localhost 宛のものすべて。
+
+# Chrome, Edge, Brave, Opera, Chromium and Firefox, each in a profile of tracewing's — the system proxy left alone.
+tdacc78b6 = Chrome、Edge、Brave、Opera、Chromium、Firefox を、それぞれ tracewing 専用のプロファイルで — システムプロキシはそのままです。
+
+# Safari, which has no profile of its own: use the system proxy for it.
+t2bea398a = 専用プロファイルを持たない Safari: それにはシステムプロキシを使ってください。
+
+# What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code and Codex.
+t336769d4 = その中で起動したもの: curl、git、Python、Go、Deno、Bun、そして Claude Code や Codex などの AI エージェント。
+
+# Node.js before 22.21, and 23 to 24.4; Java, which reads neither the proxy nor the trust variables.
+t91fa7c81 = 22.21 より前の Node.js と 23 から 24.4 まで、そしてプロキシも信頼用の環境変数も読まない Java。
+
+# A phone or another computer on your network, once it is told {addr} as its proxy by hand.
+t8246bdeb = ネットワーク上のスマートフォンや別のコンピューター。手動で { $addr } をプロキシとして設定したあとに通ります。
+
+# Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those.
+t8cd55aad = その端末でプロキシ設定を無視するもの。スマートフォンではほとんどのアプリがそうで、それはトンネルが捕らえます。
+
+# What speaks SOCKS: anything reading ALL_PROXY, git with a socks5h:// proxy, Firefox's own SOCKS setting, proxychains.
+t9ebae2ee = SOCKS を話すもの: ALL_PROXY を読むもの、socks5h:// プロキシを使う git、Firefox 独自の SOCKS 設定、proxychains。
+
+# Programs that read only HTTP_PROXY and HTTPS_PROXY, and anything with no SOCKS setting of its own.
+t576f0cf9 = HTTP_PROXY と HTTPS_PROXY しか読まないプログラム、および独自の SOCKS 設定を持たないものすべて。
+
+# Everything a phone sends once it joins the tunnel, apps that ignore the phone's proxy setting included.
+t0d857250 = スマートフォンがトンネルに参加したあとに送るものすべて。端末のプロキシ設定を無視するアプリも含みます。
+
+# Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
+tb457dd67 = 自分の証明書しか信頼しないアプリ、および tracewing の CA をスマートフォンに入れる前に送られたものすべて。
+
+# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
+t018f7b7c = 指定したアプリが TCP で送るものすべて。プロキシ設定を読むかどうかに関係なく、どのバージョンの Node でも、Java でも、その localhost も。
+
+# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
+t3f6bf403 = UDP、つまり HTTP/3。そして go build が作るもののように、自分の署名 ID を持たないプログラム。
+
+# Turn off
+tcd03e04b = オフにする
+
+# Turn on
+t65a0c5a7 = オンにする
+
+# Open from Set up
+tf0ad42dc = セットアップから開く
+
+# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
+t5b4d06d6 = 今のところコマンドラインから指定します。取得するアプリを指定し、初回は機能拡張をインストールし、macOS に許可を求めます。
+
+# macOS only: it is macOS that hands an app's connections over.
+t71872556 = macOS のみ: アプリの接続を渡すのは macOS 自身です。
+
+# Catches
+tf5f3fe08 = 取れるもの
+
+# Does not catch
+t8fd1679e = 取れないもの
 
 # {name} (default)
 td3f56fa8 = { $name }(既定)
@@ -2037,12 +2115,6 @@ tdcc53241 = システムの設定を使うアプリについて、このコン�
 
 # Turn on the system proxy
 t52b88441 = システムプロキシをオンにする
-
-# Turn off
-tcd03e04b = オフにする
-
-# Turn on
-t65a0c5a7 = オンにする
 
 # Check it in your browser
 tbed6e83a = ブラウザで確認
@@ -2472,9 +2544,6 @@ t838c1d44 = 名前にこれを含むホストはありません
 
 # Hidden
 t3c2dfe59 = 非表示
-
-# Apps
-t53d91aad = アプリ
 
 # Devices
 t27acf320 = デバイス

@@ -997,6 +997,9 @@ t7f8fa9c0 = Симулятор не принял его: { $why }
 # General
 t5561fd0b = Общие
 
+# Capture
+t2fbb5e61 = Захват
+
 # Network
 t6974ad65 = Сеть
 
@@ -1014,6 +1017,21 @@ t294d7ea4 = ИИ-инструменты
 
 # About
 t58e096de = Описание
+
+# System proxy
+tb5cdad84 = Системный прокси
+
+# A browser
+t666f4ecc = Браузер
+
+# A terminal
+t7e7408e4 = Терминал
+
+# Other devices
+t9e7d8362 = Другие устройства
+
+# Apps
+t53d91aad = Приложения
 
 # Light
 t8ad2f8cf = Светлое
@@ -1873,9 +1891,6 @@ t17bccaf2 = Начать новую сессию
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = В экспортированных HAR нет cookie, токенов, ключей и паролей — ни в заголовках, ни в URL, ни в телах
 
-# Other devices
-t9e7d8362 = Другие устройства
-
 # Let other devices use the proxy
 t13e626b3 = Разрешить другим устройствам использовать прокси
 
@@ -2034,6 +2049,69 @@ ta8606963 = { $key }: "{ $text }" — не целое число
 
 # {key}: must not be negative
 t9c4debaa = { $key }: не может быть отрицательным
+
+# Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking.
+t2c56e95c = Приложения, которые используют прокси-настройку этого компьютера: большинство браузеров и всё, что идёт через сеть системы.
+
+# Java, which reads no proxy setting of the system's; programs with a setting of their own; and on macOS, anything sent to localhost.
+t51cd6bad = Java, которая не читает никаких системных прокси-настроек; программы со своей настройкой; и в macOS всё, что отправлено на localhost.
+
+# Chrome, Edge, Brave, Opera, Chromium and Firefox, each in a profile of tracewing's — the system proxy left alone.
+tdacc78b6 = Chrome, Edge, Brave, Opera, Chromium и Firefox, каждый в профиле tracewing — системный прокси остаётся как был.
+
+# Safari, which has no profile of its own: use the system proxy for it.
+t2bea398a = Safari, у которого нет своего профиля: для него используйте системный прокси.
+
+# What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code and Codex.
+t336769d4 = Всё, что в нём запущено: curl, git, Python, Go, Deno, Bun и ИИ-агенты вроде Claude Code и Codex.
+
+# Node.js before 22.21, and 23 to 24.4; Java, which reads neither the proxy nor the trust variables.
+t91fa7c81 = Node.js до 22.21 и с 23 по 24.4; Java, которая не читает ни прокси, ни переменные доверия.
+
+# A phone or another computer on your network, once it is told {addr} as its proxy by hand.
+t8246bdeb = Телефон или другой компьютер в вашей сети, после того как ему вручную указали { $addr } как прокси.
+
+# Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those.
+t8cd55aad = Всё на том устройстве, что игнорирует его прокси-настройку, а на телефоне это большинство приложений: их ловит туннель.
+
+# What speaks SOCKS: anything reading ALL_PROXY, git with a socks5h:// proxy, Firefox's own SOCKS setting, proxychains.
+t9ebae2ee = Всё, что говорит на SOCKS: читающее ALL_PROXY, git с прокси socks5h://, собственная настройка SOCKS в Firefox, proxychains.
+
+# Programs that read only HTTP_PROXY and HTTPS_PROXY, and anything with no SOCKS setting of its own.
+t576f0cf9 = Программы, читающие только HTTP_PROXY и HTTPS_PROXY, и всё, у чего нет своей настройки SOCKS.
+
+# Everything a phone sends once it joins the tunnel, apps that ignore the phone's proxy setting included.
+t0d857250 = Всё, что телефон отправляет, войдя в туннель, включая приложения, игнорирующие его прокси-настройку.
+
+# Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
+tb457dd67 = Приложения, доверяющие только своим сертификатам, и всё отправленное до того, как CA tracewing установлен на телефоне.
+
+# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
+t018f7b7c = Всё, что названное приложение отправляет по TCP, читает ли он прокси-настройку или нет: Node любой версии, Java и его localhost тоже.
+
+# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
+t3f6bf403 = UDP, а значит и HTTP/3; и программы без своего идентификатора подписи — например всё, что собирает go build.
+
+# Turn off
+tcd03e04b = Выключить
+
+# Turn on
+t65a0c5a7 = Включить
+
+# Open from Set up
+tf0ad42dc = Открыть в Настройке
+
+# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
+t5b4d06d6 = Пока задаётся из командной строки: она называет приложения для захвата, в первый раз устанавливает расширение и просит macOS его разрешить.
+
+# macOS only: it is macOS that hands an app's connections over.
+t71872556 = Только macOS: соединения приложения передаёт сам macOS.
+
+# Catches
+tf5f3fe08 = Ловит
+
+# Does not catch
+t8fd1679e = Не ловит
 
 # {name} (default)
 td3f56fa8 = { $name } (по умолчанию)
@@ -2235,12 +2313,6 @@ tdcc53241 = Направляет трафик этого компьютера ч
 
 # Turn on the system proxy
 t52b88441 = Включить системный прокси
-
-# Turn off
-tcd03e04b = Выключить
-
-# Turn on
-t65a0c5a7 = Включить
 
 # Check it in your browser
 tbed6e83a = Проверьте в браузере
@@ -2682,9 +2754,6 @@ t838c1d44 = Нет хостов с этим в имени
 
 # Hidden
 t3c2dfe59 = Скрытые
-
-# Apps
-t53d91aad = Приложения
 
 # Devices
 t27acf320 = Устройства

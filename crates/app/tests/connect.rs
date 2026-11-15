@@ -448,9 +448,21 @@ fn the_system_proxy_and_the_settings_from_the_window() {
             );
             assert!(reset.other_devices, "another part's is left as it was");
             view.undo_reset_settings(cx);
-            view.show_settings_section(tracewing::layout::SettingsSection::Network, cx);
+            // Each way in has a tab of its own under Capture, and a reset
+            // reaches the tab open and no further: HTTP/3 is not a way in and
+            // stays Network's.
+            view.show_settings_section(tracewing::layout::SettingsSection::Capture, cx);
+            view.show_way(tracewing::layout::Way::OtherDevices, cx);
             view.reset_settings(cx);
             assert!(!view.engine.other_devices.is_on());
+            assert!(
+                !view.engine.live.hide_http3(),
+                "another tab's setting is left as it was"
+            );
+            view.undo_reset_settings(cx);
+            view.show_settings_section(tracewing::layout::SettingsSection::Network, cx);
+            view.reset_settings(cx);
+            assert!(view.engine.live.hide_http3(), "and Network's own is reset");
             view.undo_reset_settings(cx);
             assert!(!view.engine.live.hide_http3(), "undone at once too");
             view.toggle_setting("hide_http3", cx);
