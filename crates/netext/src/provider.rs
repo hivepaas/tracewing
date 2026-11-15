@@ -2,11 +2,13 @@
 //! process, and the two directions of each flow it takes.
 //!
 //! macOS hands over every outbound TCP flow of the computer. The ones from the
-//! apps the configuration names go to tracewing's listener on 127.0.0.1, as a
-//! `CONNECT` to where the app was going, and tracewing treats them as any
-//! client of its proxy. Every other flow, and every flow while nothing listens
-//! on tracewing's port, is handed back and goes out as it would have: the
-//! extension never holds the network up.
+//! apps the configuration names go to the port tracewing keeps for them on
+//! 127.0.0.1, each told where it was going and which app made it, in
+//! [`tracewing_handoff`]'s signed lines; tracewing records them as that app's.
+//! Every other flow goes out as it would have, and so does every flow while
+//! nothing listens on that port, or what listens cannot prove it is
+//! tracewing: the extension never holds the network up, and never hands an
+//! app's traffic to a program that is not tracewing.
 
 use std::{
     ffi::CStr,
@@ -33,14 +35,14 @@ use objc2_network_extension::{
 };
 
 use crate::flow::{self, Config};
+use tracewing_handoff::{Hello, Key, Nonce};
 
-/// How long tracewing has to accept a connection before the flow goes out
-/// straight instead: it is on this computer, so it answers at once or not at all.
+/// How long tracewing has to accept a connection, and then to answer the
+/// hello, before the flow goes out straight instead. It is on this computer
+/// and answers as soon as it has checked one HMAC, so this is a hang's limit,
+/// and macOS waits on it for each flow taken.
 const CONNECT_WAIT: Duration = Duration::from_millis(300);
-/// How long tracewing has to answer the `CONNECT`.
-const ANSWER_WAIT: Duration = Duration::from_secs(10);
-/// The longest answer head read.
-const HEAD_MAX: usize = 8 * 1024;
+const ANSWER_WAIT: Duration = Duration::from_millis(1000);
 const BUFFER: usize = 64 * 1024;
 
 /// The configuration the proxy was started with; none when stopped.
@@ -113,19 +115,15 @@ fn configuration(provider: &TracewingProxy) -> Option<Config> {
     let protocol = unsafe { provider.protocolConfiguration() };
     let protocol = protocol.downcast_ref::<NETunnelProviderProtocol>()?;
     let saved = unsafe { protocol.providerConfiguration() }?;
-    let string = |key: &str| -> Option<String> {
+    Config::read(|key| {
         let value = saved.objectForKey(&NSString::from_str(key))?;
         Some(value.downcast_ref::<NSString>()?.to_string())
-    };
-    Config::parse(
-        &string(flow::PORT_KEY)?,
-        &string(flow::APPS_KEY).unwrap_or_default(),
-    )
+    })
 }
 
 fn start(provider: &TracewingProxy, done: &DynBlock<dyn Fn(*mut NSError)>) {
     let Some(config) = configuration(provider) else {
-        warn!("not started: the configuration names no port");
+        warn!("not started: the configuration has no port or no key");
         let error = NSError::new(1, &NSString::from_str(flow::EXTENSION_ID));
         done.call((Retained::as_ptr(&error) as *mut NSError,));
         return;
@@ -204,33 +202,49 @@ fn take(flow: &NEAppProxyFlow) -> bool {
         return false;
     }
 
-    let to = SocketAddr::from(([127, 0, 0, 1], config.port));
-    let socket = match TcpStream::connect_timeout(&to, CONNECT_WAIT) {
+    let pid = unsafe { meta.sourceAppAuditToken() }.and_then(|t| flow::pid_of(&t.to_vec()));
+    let name = unsafe { flow.remoteHostname() }.map(|n| n.to_string());
+    let hello = flow::hello(name.as_deref(), &ip, port, &app, pid);
+    // Handed over before macOS is answered, so that a flow tracewing does not
+    // take can still go out as it would have.
+    let socket = match hand_over(config.port, &hello, &config.key) {
         Ok(socket) => socket,
         Err(e) => {
-            debug!("{app} to {ip} port {port}: nothing on {to} ({e}), so straight out");
+            debug!("{app} to {}:{port}: {e}, so straight out", hello.host);
             return false;
         }
     };
-    let pid = unsafe { meta.sourceAppAuditToken() }.and_then(|t| flow::pid_of(&t.to_vec()));
-    let name = unsafe { flow.remoteHostname() }.map(|n| n.to_string());
-    let request = flow::connect_request(flow::host(name.as_deref(), &ip), port, &app, pid);
-    debug!(
-        "{app} ({pid:?}) to {} port {port}: to tracewing",
-        name.as_deref().unwrap_or(&ip)
-    );
+    debug!("{app} ({pid:?}) to {}:{port}: to tracewing", hello.host);
     let flow = Flow(tcp.retain());
-    thread::spawn(move || carry(flow, socket, request));
+    thread::spawn(move || carry(flow, socket));
     true
 }
 
-/// Opens the tunnel through tracewing, then the flow, then carries the bytes:
-/// the app's on a thread of their own, the server's on this one.
-fn carry(flow: Flow, mut socket: TcpStream, request: String) {
-    if let Err(e) = open_tunnel(&mut socket, &request) {
-        warn!("tracewing did not open the tunnel: {e}");
-        return flow.close();
+/// Connects to tracewing's port, says the hello, and reads the answer: a line,
+/// with the proof in it that what answers holds the key. Nothing of the app's
+/// is sent before it.
+fn hand_over(port: u16, hello: &Hello, key: &Key) -> std::io::Result<TcpStream> {
+    let to = SocketAddr::from(([127, 0, 0, 1], port));
+    let mut socket = TcpStream::connect_timeout(&to, CONNECT_WAIT)?;
+    let nonce = Nonce::new().map_err(std::io::Error::other)?;
+    socket.set_read_timeout(Some(ANSWER_WAIT))?;
+    socket.write_all(&hello.write(key, nonce))?;
+    let mut line = Vec::new();
+    let mut byte = [0u8; 1];
+    while !line.ends_with(b"\r\n") {
+        if socket.read(&mut byte)? == 0 || line.len() >= tracewing_handoff::ANSWER_MAX {
+            return Err(std::io::ErrorKind::UnexpectedEof.into());
+        }
+        line.push(byte[0]);
     }
+    socket.set_read_timeout(None)?;
+    tracewing_handoff::answered(&line, key, nonce).map_err(std::io::Error::other)?;
+    Ok(socket)
+}
+
+/// Opens the flow, handed over already, and carries the bytes: the app's on a
+/// thread of their own, the server's on this one.
+fn carry(flow: Flow, socket: TcpStream) {
     let (opened_tx, opened) = mpsc::sync_channel(1);
     let opened_block = on_error(move |error: *mut NSError| {
         let _ = opened_tx.send(error.is_null());
@@ -270,26 +284,6 @@ fn carry(flow: Flow, mut socket: TcpStream, request: String) {
     }
     unsafe { flow.0.closeWriteWithError(None) };
     let _ = socket.shutdown(Shutdown::Read);
-}
-
-fn open_tunnel(socket: &mut TcpStream, request: &str) -> std::io::Result<()> {
-    socket.set_read_timeout(Some(ANSWER_WAIT))?;
-    socket.write_all(request.as_bytes())?;
-    let mut head = Vec::new();
-    let mut byte = [0u8; 1];
-    while !head.ends_with(b"\r\n\r\n") {
-        if socket.read(&mut byte)? == 0 || head.len() >= HEAD_MAX {
-            return Err(std::io::ErrorKind::UnexpectedEof.into());
-        }
-        head.push(byte[0]);
-    }
-    socket.set_read_timeout(None)?;
-    if !flow::tunnel_opened(&head) {
-        let line = String::from_utf8_lossy(head.split(|&b| b == b'\r').next().unwrap_or_default())
-            .into_owned();
-        return Err(std::io::Error::other(line));
-    }
-    Ok(())
 }
 
 /// The app's bytes to tracewing, one read of the flow at a time.

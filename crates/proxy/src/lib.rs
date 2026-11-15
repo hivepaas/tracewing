@@ -8,6 +8,7 @@ pub mod capture;
 pub mod client_certs;
 pub mod company_ca;
 pub mod dns;
+pub mod extension;
 pub mod handover;
 pub mod key_log;
 pub mod lan;

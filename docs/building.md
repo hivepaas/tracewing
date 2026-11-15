@@ -37,14 +37,14 @@ proxy and still comes back to this computer.
 ## The network extension (macOS)
 
 `crates/netext` is a transparent proxy that macOS runs in a system extension
-of its own: it takes the flows of the apps it is told of and hands each to
-tracewing's listener as a `CONNECT`, so that those apps come through with no
-proxy setting. It also puts the app's signing id and process id in an
-`X-Tracewing-App` header, which **nothing reads yet** — the flows come
-through because the extension hands them over, not because of the header. See
-[design/capture-modes.md](design/capture-modes.md) for what that leaves
-open. Every other flow, and every flow while nothing listens on tracewing's
-port, goes out as it would have.
+of its own: it takes the flows of the apps it is told of and hands each to a
+port tracewing keeps for it (`crates/proxy/src/extension.rs`), saying where
+the flow was going and which app made it in lines signed with a key both ends
+hold (`crates/handoff`). tracewing records the flow as that app's. Every other
+flow goes out as it would have, and so does every flow while nothing that can
+prove it is tracewing listens on that port.
+[design/capture-modes.md](design/capture-modes.md) has why it is built this
+way.
 
 ```sh
 cargo build --release -p tracewing-netext
@@ -63,7 +63,16 @@ systemextensionsctl list                   # installed, and allowed
 ```
 
 (`/usr/bin/log`, as `log` is something else in zsh.) The app installs it and
-turns it on in a later change; until then it is packaged and does nothing.
+turns it on in a later change. Until then, the core without a window takes
+its flows by hand, with a key of your own that the extension's configuration
+is given too (`port`, `key`, `apps` and `own`, in
+[`flow.rs`](../crates/netext/src/flow.rs)):
+
+```sh
+KEY="$(openssl rand -hex 32)"     # the same one goes in the configuration
+cargo run --release -p tracewing-dev -- proxy --data-dir /tmp/tw \
+  --extension 127.0.0.1:20399 --extension-key "$KEY"
+```
 
 ## Packages
 

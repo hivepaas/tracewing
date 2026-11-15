@@ -171,7 +171,8 @@ fn look_for_apps(asks: Receiver<Ask>, ours: &[u16]) {
     }
 }
 
-fn describe(pid: u32) -> App {
+/// The program behind `pid`: its file, and what to call it.
+pub fn describe(pid: u32) -> App {
     let path = os::path_of(pid);
     App {
         pid,
