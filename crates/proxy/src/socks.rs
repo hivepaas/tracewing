@@ -62,6 +62,10 @@ const NO_ADDRESS: u8 = 8;
 /// at once by anything that means it.
 const HANDSHAKE_WITHIN: Duration = Duration::from_secs(10);
 
+/// How long a refused client is read away for before this end stops
+/// listening and closes. See [`read_away`].
+const DRAIN_WITHIN: Duration = Duration::from_millis(250);
+
 /// A SOCKS5 port of tracewing's own.
 pub struct Socks(Bound);
 
@@ -229,6 +233,10 @@ async fn greet(stream: &mut TcpStream) -> Result<Target> {
         .context("reading the ways in it offers")?;
     if !ways.contains(&NO_AUTH) {
         stream.write_all(&[VERSION, NO_METHOD]).await?;
+        // Not a `refuse`, but the same trap: a client that sent its request
+        // along with its greeting has bytes here still unread, and the RST
+        // would lose the answer just written exactly as it would there.
+        read_away(stream).await;
         bail!("it offers no way in that tracewing has: {ways:02x?}");
     }
     stream.write_all(&[VERSION, NO_AUTH]).await?;
@@ -298,7 +306,34 @@ async fn port(stream: &mut TcpStream) -> Result<u16> {
 
 async fn refuse(stream: &mut TcpStream, why: u8) -> Result<()> {
     stream.write_all(&reply(why)).await?;
+    read_away(stream).await;
     Ok(())
+}
+
+/// Reads away whatever the client had already sent, and throws it out.
+///
+/// This is not tidiness, it is the refusal working at all. A reply goes out
+/// before the whole request has been read — the command is the second byte,
+/// and the address and port come after it — so most of the paths above answer
+/// with bytes of the request still unread. **Closing a socket that still
+/// holds unread bytes makes Windows send an RST, and an RST discards the
+/// reply just written**: the client is left with a connection reset instead
+/// of the code that says why, which is the opposite of what the top of this
+/// module promises. Linux usually hands the buffered reply over before the
+/// FIN, which is why this took a run on Windows to see at all.
+///
+/// Reading it empties the receive buffer, and the close becomes a FIN.
+/// [`DRAIN_WITHIN`] bounds the wait: a client with nothing more to say must
+/// not hold the task, and one still talking is refused just the same.
+async fn read_away(stream: &mut TcpStream) {
+    let mut thrown = [0u8; 256];
+    // Ends at the client's own close, at its silence, or at the bound. A read
+    // that errors is the connection going, which is that same end by another
+    // name, so every way out of here is the right one.
+    let _ = tokio::time::timeout(DRAIN_WITHIN, async {
+        while stream.read(&mut thrown).await.unwrap_or(0) > 0 {}
+    })
+    .await;
 }
 
 /// A reply, with the address this end bound as zeros. RFC 1928 wants the
