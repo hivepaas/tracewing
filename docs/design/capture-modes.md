@@ -360,15 +360,80 @@ later.
 
 **An address on the adapter, a route into it, and the exclusion that keeps
 tracewing's own connections out of it.** Without that last one, every
-connection tracewing makes on a captured program's behalf is routed straight
-back into tracewing. That is this mode's one genuinely dangerous piece; it
-lives in the outbound path rather than in the device, and the answer is to
-bind our own sockets to the physical interface (`IP_UNICAST_IF`) rather than
-to hope routes sort it out.
+connection tracewing makes on a captured program's behalf is routed back into
+the adapter, where the stack answers it as the server it was going to, which
+makes another connection, which is routed back in: a loop with nothing
+bounding it. That is this mode's one genuinely dangerous piece, and it lives
+in the outbound path rather than in the device.
 
-The `wintun` crate's own address setters are not used for it: they shell out
-to `netsh`. Addressing and routing go through `windows-sys`, with the rest of
-this program's Windows calls.
+**The mechanism is `IP_UNICAST_IF`, and there is no way to reach it from
+where tracewing connects.** Checked in hyper-util 0.1.21's own source rather
+than assumed: `HttpConnector::set_interface` is compiled only for Android,
+Fuchsia, Linux and the Apple and Solaris families, and none of its other
+setters takes a socket, a handle or a closure. `set_local_address` is no
+substitute — a source address does not decide which route a destination
+takes, so with a default route into the adapter a socket bound to the
+physical address still leaves down the adapter, now with the wrong source.
+
+So the exclusion costs more than one call, and the next piece of work is a
+choice rather than an obvious step:
+
+- **Connect ourselves**, in
+  [`upstream.rs`](../../crates/proxy/src/upstream.rs)'s `connect_straight`,
+  building the socket and setting the option before connecting. The direct
+  answer, and the price is that it replaces hyper's connector on **every**
+  platform's outbound path — including the happy eyeballs the code there
+  relies on today, "falling back from IPv6 to IPv4 when the first is slow",
+  which is not fifty lines to write again correctly.
+- **Ask upstream for the Windows arm**, since `set_interface` exists already
+  and wants only a mapping onto `IP_UNICAST_IF`. The cheapest answer if it
+  lands, and not ours to schedule.
+
+**And pinning is not free, which is the part worth knowing before building
+it.** WireGuard for Windows solves exactly this problem — its own UDP must
+not go down its own tunnel — and
+[its notes on Windows networking](https://git.zx2c4.com/wireguard-windows/tree/docs/netquirk.md)
+say four things that apply to us directly. They are its words about its own
+service, not measurements of ours, and worth repeating rather than
+rediscovering:
+
+- **The option forces traffic, it does not merely permit it.** "The use of
+  `IP_UNICAST_IF` forces the packets to, in fact, go over the default route
+  interface" — including packets that would otherwise have left by a more
+  specific route. So while tracewing holds the adapter, *all* of its own
+  outbound connections are pushed out one interface, which can be wrong for
+  a machine with a second network or a VPN of its own. WireGuard calls this
+  problematic and says Microsoft offers no viable workaround. It is a cost
+  this mode has, not a detail of how to call it.
+- **The interface has to be watched, not read once.** Their service "watches
+  for a default-route interface other than WireGuard's own", because which
+  one that is changes as a machine moves between Wi-Fi, Ethernet and
+  tethering. Pinning at startup would be right until the user unplugged
+  something. And with no default-route interface at all, "those outgoing
+  packets are blackholed".
+- **Route the adapter with two halves, not `/0`.** They advise `0.0.0.0/1`
+  and `128.0.0.0/1` over `0.0.0.0/0`, and `::/1` and `8000::/1` over `::/0`.
+  Their stated reason is their own kill-switch firewall rules, which are
+  theirs and not something Windows does to any adapter — but a `/0` also
+  gives the interface a metric of `0` and turns off Windows' automatic metric
+  logic, and the two halves leave the real default route in place, which is
+  what we want anyway.
+- **A fixed adapter GUID was the right call for a documented reason.**
+  Windows ties firewall policy and the network category to the adapter's
+  GUID, so a new one each run means re-answering for a new network. That is
+  why [`wintun.rs`](../../crates/proxy/src/wintun.rs) pins one, and now there
+  is a source for it rather than a hunch.
+
+One thing this settles, and it is worth saying plainly: a TUN captures by
+**route**, which is to say by destination, and no route can express "this
+program". So this mode captures the whole machine, and choosing one program
+is a filter applied after the packets are already ours rather than an
+exemption the operating system makes on our behalf. Which is the other half
+of the `features.md` problem noted above.
+
+The `wintun` crate's own address setters are not used for any of it: they
+shell out to `netsh`. Addressing and routing go through `windows-sys`, with
+the rest of this program's Windows calls.
 
 **Signing the installer is no longer a prerequisite**, and that is what moves
 this up the list. The driver is signed by WireGuard LLC and widely installed
