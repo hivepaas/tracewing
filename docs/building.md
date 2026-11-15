@@ -38,9 +38,12 @@ proxy and still comes back to this computer.
 
 `crates/netext` is a transparent proxy that macOS runs in a system extension
 of its own: it takes the flows of the apps it is told of and hands each to
-tracewing's listener as a `CONNECT`, with the app's signing id and process id
-in an `X-Tracewing-App` header, so that those apps come through with no proxy
-setting. Every other flow, and every flow while nothing listens on tracewing's
+tracewing's listener as a `CONNECT`, so that those apps come through with no
+proxy setting. It also puts the app's signing id and process id in an
+`X-Tracewing-App` header, which **nothing reads yet** — the flows come
+through because the extension hands them over, not because of the header. See
+[design/capture-modes.md](design/capture-modes.md) for what that leaves
+open. Every other flow, and every flow while nothing listens on tracewing's
 port, goes out as it would have.
 
 ```sh

@@ -326,9 +326,10 @@ lose it.
 The userspace TCP/IP stack is the keystone: Windows, Linux and WireGuard all
 need it, macOS does not. `smoltcp` is the obvious foundation.
 
-So the order is not the order of value, it is the order of dependency. Three
-pieces are in already: the seam; plain HTTP on a taken connection, which
-turned out not to need the rewriter this page once predicted; and **SOCKS5**,
+So the order is not the order of value, it is the order of dependency. What
+is in is below, under *What is left*; the three that went first were the
+seam; plain HTTP on a taken connection, which turned out not to need the
+rewriter this page once predicted; and **SOCKS5**,
 in [`socks.rs`](../../crates/proxy/src/socks.rs) — not an operating system at
 all, just a listener and the RFC 1928 handshake, after which what is left on
 the socket is a stream to a destination the client named, which is a
@@ -356,8 +357,25 @@ program is now looked up like any client that asked.
 
 What is left:
 
-1. **Local mode on macOS.** Flow-level, so no TCP stack, and nothing to ask
-   Apple for: the least work of the three operating systems.
+1. **Local mode on macOS is in**, in
+   [`crates/netext`](../../crates/netext): a `NETransparentProxyProvider` in
+   a system extension, which takes the TCP flows of the apps its
+   configuration names and hands each to tracewing's listener as a
+   `CONNECT`. Flow-level, so it needed none of the TCP stack below.
+   `scripts/package_macos.sh` puts it in the app when the entitlement is
+   there; `docs/building.md` has how to build and run it.
+
+   **One end of it is open, and it is worth knowing before anybody relies
+   on it.** The extension sends the app's signing id and process id in an
+   `X-Tracewing-App` header, and nothing reads that header: a grep for it
+   finds `crates/netext` and this documentation and nothing else. So the
+   program behind such a flow is looked for the way it is for any client,
+   by the socket's owner — and the socket belongs to the **extension**,
+   not to the app it took the flow from. The likely result is that these
+   flows are named after the extension, which would make the one thing the
+   mode is for invisible. That last step is an inference: it needs a Mac to
+   see, and this machine is not one. Written here rather than left as a
+   surprise.
 2. The TCP/IP stack is **in**, in [`stack.rs`](../../crates/proxy/src/stack.rs):
    packets in, [`Took::Flow`](../../crates/proxy/src/source.rs) out, on
    `smoltcp`, answering each `SYN` as the server the client was going to. What
@@ -365,10 +383,19 @@ What is left:
    the WireGuard endpoint in
    [`wireguard.rs`](../../crates/proxy/src/wireguard.rs), which needs no
    privilege on this machine and is what reaches a phone whose apps ignore
-   the Wi-Fi proxy. Nothing turns it on yet — see the section above for what
-   that still needs. The stack itself is tested with packets written by
-   hand; the endpoint is tested with `boringtun` playing the phone, so
-   neither needs an operating system to prove.
+   the Wi-Fi proxy.
+
+   **And it is switched on.** A setting and a port, both keys kept where
+   the CA's key is kept, the configuration shown as a QR code the WireGuard
+   app scans, and the names the phone asks for answered — a phone sends its
+   DNS down the tunnel too, and dropping that looks to the phone like the
+   network has gone rather than like a name that will not resolve. What is
+   left of the tunnel itself is a second peer, which needs the receiver
+   index read out of each datagram to tell whose it is.
+
+   The stack itself is tested with packets written by hand; the endpoint is
+   tested with `boringtun` playing the phone, so neither needs an operating
+   system to prove.
 
    **The name is in**, in [`name.rs`](../../crates/proxy/src/name.rs). A
    packet carries no name, so the stack hands a flow over as an address; the
