@@ -389,6 +389,41 @@ choice rather than an obvious step:
   and wants only a mapping onto `IP_UNICAST_IF`. The cheapest answer if it
   lands, and not ours to schedule.
 
+**And pinning is not free, which is the part worth knowing before building
+it.** WireGuard for Windows solves exactly this problem — its own UDP must
+not go down its own tunnel — and
+[its notes on Windows networking](https://git.zx2c4.com/wireguard-windows/tree/docs/netquirk.md)
+say four things that apply to us directly. They are its words about its own
+service, not measurements of ours, and worth repeating rather than
+rediscovering:
+
+- **The option forces traffic, it does not merely permit it.** "The use of
+  `IP_UNICAST_IF` forces the packets to, in fact, go over the default route
+  interface" — including packets that would otherwise have left by a more
+  specific route. So while tracewing holds the adapter, *all* of its own
+  outbound connections are pushed out one interface, which can be wrong for
+  a machine with a second network or a VPN of its own. WireGuard calls this
+  problematic and says Microsoft offers no viable workaround. It is a cost
+  this mode has, not a detail of how to call it.
+- **The interface has to be watched, not read once.** Their service "watches
+  for a default-route interface other than WireGuard's own", because which
+  one that is changes as a machine moves between Wi-Fi, Ethernet and
+  tethering. Pinning at startup would be right until the user unplugged
+  something. And with no default-route interface at all, "those outgoing
+  packets are blackholed".
+- **Route the adapter with two halves, not `/0`.** They advise `0.0.0.0/1`
+  and `128.0.0.0/1` over `0.0.0.0/0`, and `::/1` and `8000::/1` over `::/0`.
+  Their stated reason is their own kill-switch firewall rules, which are
+  theirs and not something Windows does to any adapter — but a `/0` also
+  gives the interface a metric of `0` and turns off Windows' automatic metric
+  logic, and the two halves leave the real default route in place, which is
+  what we want anyway.
+- **A fixed adapter GUID was the right call for a documented reason.**
+  Windows ties firewall policy and the network category to the adapter's
+  GUID, so a new one each run means re-answering for a new network. That is
+  why [`wintun.rs`](../../crates/proxy/src/wintun.rs) pins one, and now there
+  is a source for it rather than a hunch.
+
 One thing this settles, and it is worth saying plainly: a TUN captures by
 **route**, which is to say by destination, and no route can express "this
 program". So this mode captures the whole machine, and choosing one program
