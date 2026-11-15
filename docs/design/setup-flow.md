@@ -132,8 +132,49 @@ groups, the restart notice, **Back to defaults** — goes through one function,
 which is what stops a reset on the SOCKS5 tab from reaching WireGuard's
 settings.
 
-What is not built yet: the wizard, Java's truststore, and the trust links out
-of each tab.
+What is not built yet: Java's truststore, and the trust links out of each tab.
+
+## What the wizard is, now that it is built
+
+Set up **is** the wizard. It asks one question — what do you want to capture —
+and then shows the steps and cards for the one way in that reaches that
+answer, which is what the pile of seven cards was failing to do.
+
+The routing lives in [`wizard.rs`](../../crates/app/src/wizard.rs) as plain
+functions with tests, not in the view, because "does a Java program need the
+system proxy" should be answerable without a window and because the answers
+are the part that will be argued about. Eight answers, and what they come out
+at:
+
+| Answer | Way in | Trust | Can tracewing do the trust? |
+|---|---|---|---|
+| A website in my browser | System proxy | This computer's store | Yes |
+| `curl`, `git`, a script | A terminal | The terminal sets it | Yes |
+| Node, Deno, Bun | A terminal | The terminal sets it | Yes |
+| Python | A terminal | The terminal sets it | Yes |
+| A Java program | System proxy | A store of Java's own | **No** — the flags are given, the store is not written |
+| My phone | Other devices | On the phone | No — the guides say how |
+| A Mac app that ignores the proxy | Apps (macOS) | This computer's store | Yes |
+| Something in Docker | A terminal | Whatever the image brings | No — tracewing cannot tell from here |
+
+Three things that fell out of writing it down:
+
+- **A terminal answers four of the eight.** Three of those four would
+  otherwise have somebody turning the system proxy on and finding that it
+  changed nothing, which is the single most likely way to conclude that
+  tracewing does not work.
+- **tracewing can do the trust for two of the five kinds.** The wizard says
+  which, rather than showing a step as done: a step claimed as done sends
+  somebody to look for a bug in their own program.
+- **Blocking UDP port 443 belongs to the browser answer and to no other.**
+  It is not a way in and not a setting — it is the companion of the system
+  proxy, and Set up is the only place in the window that offers it, so a
+  route that dropped it would have lost a feature quietly. A test now says
+  which answer shows it.
+
+An answer is kept in `layout.toml`, so the page opens where it was left, and
+choosing the open answer again puts the question back — a wizard that cannot
+be unanswered is a page somebody is stuck on.
 
 ## Surface 2: a wizard, by what somebody wants to capture
 

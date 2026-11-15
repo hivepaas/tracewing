@@ -18,6 +18,13 @@ programs, and none of them takes all.
 The two last leave the system proxy and every other app alone, which is what
 to use when only one program is being looked at.
 
+**Set up asks what you want to capture**, and then shows the steps for the one
+way in that reaches it and leaves the others off the page — so a path above
+that names Set up is where that thing is once the matching answer is chosen:
+*a website in my browser* for the system proxy and the browsers, *curl, git, a
+script* or a runtime for the terminal, *my phone* for the device guides. Every
+way in, with no question asked first, is in Settings › Capture.
+
 ## The system proxy is not one setting
 
 It is a different thing on each system, and what has to obey it differs with
@@ -276,10 +283,10 @@ OpenAI's, Gemini's and Ollama's APIs and those that copy OpenAI's.
   `anthropic` and `openai` packages, on `httpx`, and Go's take it as they are.
 
 tracewing's MCP server goes the other way: an agent reads what tracewing has
-recorded. Set up › AI tools says how to add it.
+recorded. Settings › AI tools says how to add it.
 
 ## Phones and other computers
 
 A phone, a tablet or another computer sets its Wi-Fi proxy to this computer;
-an Android app or a Flutter app needs a line or two of its own. Set up › Other
-devices has a guide for each.
+an Android app or a Flutter app needs a line or two of its own. Set up, with
+*my phone* as the answer, has a guide for each.

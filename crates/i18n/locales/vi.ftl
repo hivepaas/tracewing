@@ -2122,14 +2122,53 @@ tbed6e83a = Kiểm tra trong trình duyệt
 # Open the test page
 te4e36f65 = Mở trang kiểm tra
 
+# Open a terminal
+t4b629c72 = Mở terminal
+
 # Set up
 t43c06abc = Thiết lập
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = Ba bước để xem traffic HTTPS của máy này.
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = Hãy nói bạn muốn bắt cái gì, và phần này sẽ thiết lập đúng một đường vào tới được nó.
 
 # See traffic
 t980eee79 = Xem traffic
+
+# What do you want to capture?
+t800a169b = Bạn muốn bắt cái gì?
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = Câu trả lời sẽ chọn đúng một đường vào tới được nó, và để phần còn lại của trang này ra ngoài. Mọi đường vào đều nằm ở Cài đặt, Bắt traffic, nếu bạn muốn tự chọn.
+
+# Choose again to set up something else.
+t5eaaccdb = Chọn lại để thiết lập cho thứ khác.
+
+# Every way in
+tfa46c322 = Mọi đường vào
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = Câu trả lời được giữ lại, nên trang này mở đúng chỗ bạn rời đi.
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = Terminal tự đặt: những gì chạy trong đó đọc các CA gốc của tracewing từ một file, nên không có gì được cài lên máy này và không có gì khác bị đổi.
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = Java giữ một kho CA riêng và không đọc cả kho của hệ thống lẫn các biến môi trường. tracewing chưa ghi hộ bạn kho đó được: hãy truyền cho nó một kho, bằng các cờ bên dưới.
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = Điện thoại phải tự cài chứng chỉ của tracewing — các hướng dẫn bên dưới nói cách làm cho từng loại thiết bị.
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = Một image tin gì là việc của nó: có image đọc CA gốc của hệ thống, có image mang kho riêng, và từ đây tracewing không biết được là loại nào.
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = Chạy lệnh này trong terminal đó. Nếu báo lỗi chứng chỉ thì terminal đó không phải terminal do tracewing mở.
+
+# Check it in that terminal
+t17abebbc = Kiểm tra trong terminal đó
+
+# And Java's own store
+t4398b845 = Và kho riêng của Java
 
 # the browsers' own stores
 tddf6836c = kho riêng của các trình duyệt
@@ -2196,9 +2235,6 @@ t91c63f1c = Hoặc từng app một
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = Một terminal đi qua tracewing, còn system proxy và mọi app khác vẫn giữ nguyên: curl, git, Python, Go, và các AI agent như Claude Code, Codex hay Gemini CLI chạy trong đó. Muốn các công cụ AI của một editor cũng đi qua, hãy thoát editor rồi mở lại nó từ terminal đó, như code . với VS Code. Với trình duyệt, nút Mở riêng trong mục Trình duyệt làm điều tương tự với một profile riêng.
-
-# Open a terminal
-t4b629c72 = Mở terminal
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = Trong một terminal của riêng bạn, như terminal của editor, lệnh này làm điều tương tự:
@@ -2643,6 +2679,24 @@ t4ab0ecb4 = Phím tắt { $keys }
 
 # Columns
 tea156fdc = Cột
+
+# A website in my browser
+td5d24782 = Một website trong trình duyệt
+
+# curl, git, a script
+t7373dc63 = curl, git, một script
+
+# A Java program
+t9aea7fb0 = Một chương trình Java
+
+# My phone
+te1545f43 = Điện thoại của tôi
+
+# A Mac app that ignores the proxy
+t2c2204d9 = Một app Mac bỏ qua proxy
+
+# Something in Docker
+t51e75492 = Cái gì đó trong Docker
 
 # Field {number}, {wire}
 ta367cc19 = Field { $number }, { $wire }

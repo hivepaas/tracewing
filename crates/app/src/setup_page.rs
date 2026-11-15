@@ -8,10 +8,14 @@ use crate::text_size::ui;
 use crate::{
     colors::colors,
     devices::on_the_network,
+    layout::Way,
     qr::qr_code,
     system::{CaState, ProxySwitch, QuicSwitch},
     traffic::{Screen, Traffic},
     widgets::{Reachable, icon},
+    // `Trust` is `tracewing_system::android`'s here, so the wizard's own is
+    // said in full wherever it appears.
+    wizard::{self, Card, Target},
 };
 use gpui::{
     ClipboardItem, Context, Div, ElementId, FontWeight, SharedString, Stateful, div, prelude::*,
@@ -417,6 +421,73 @@ impl Traffic {
             ),
         );
 
+        // The wizard: one question, and then only the steps and cards its
+        // answer needs. Everything below is built from
+        // [`wizard::route`], so what the page shows and what the design says
+        // cannot drift apart without a test failing.
+        let route = self.layout.capture_target.map(wizard::route);
+        let mut steps: Vec<gpui::AnyElement> = Vec::new();
+        let mut cards: Vec<gpui::AnyElement> = Vec::new();
+        if let Some(route) = &route {
+            let (trust_says, _ours) = self.trust_text_for(route.trust);
+            match route.way {
+                // Trust first, because HTTPS fails without it whatever the
+                // proxy says; then the switch; then the page that proves
+                // both at once.
+                Way::SystemProxy => {
+                    steps.push(ca_step.into_any_element());
+                    steps.push(proxy_step.into_any_element());
+                    steps.push(check_step.into_any_element());
+                    if !trust_says.is_empty() {
+                        steps.push(self.render_java(trust_says, cx).into_any_element());
+                    }
+                }
+                // A terminal is the way in and the trust at once: two steps
+                // rather than three, and nothing installed on this computer.
+                Way::Terminal => {
+                    steps.push(
+                        step("1", false, tr!("Open a terminal"), trust_says)
+                            .child(
+                                button("setup-wizard-terminal", tr!("Open"), true)
+                                    .on_click(cx.listener(|this, _, _, cx| this.open_terminal(cx))),
+                            )
+                            .into_any_element(),
+                    );
+                    steps.push(self.render_terminal_check(cx).into_any_element());
+                }
+                // A phone's steps are inside the guide for its kind of
+                // device, and numbering them twice would have two step 1s on
+                // one page.
+                Way::OtherDevices | Way::WireGuard => {
+                    steps.push(marked(trust_says, Mark::Missing).into_any_element());
+                }
+                Way::Apps => {
+                    steps.push(ca_step.into_any_element());
+                    steps.push(self.render_mac_apps(cx).into_any_element());
+                }
+                Way::Browser | Way::Socks5 => {}
+            }
+            for card in &route.cards {
+                match card {
+                    Card::Browsers => cards.push(self.render_browsers(cx).into_any_element()),
+                    Card::Terminal => cards.push(self.render_one_app(cx).into_any_element()),
+                    Card::OtherDevices => {
+                        cards.push(self.render_other_devices(cx).into_any_element())
+                    }
+                    Card::Android => cards.push(self.render_android(cx).into_any_element()),
+                    Card::Simulators => cards.extend(
+                        self.render_simulators(cx)
+                            .map(gpui::IntoElement::into_any_element),
+                    ),
+                    Card::Http3 => cards.push(self.render_http3(cx).into_any_element()),
+                    // Nothing of Set up's draws this one: the window has no
+                    // surface for the extension yet, so what is shown is the
+                    // command line that does work.
+                    Card::MacApps => {}
+                }
+            }
+        }
+        let answered = route.is_some();
         div()
             .id("setup")
             .flex_1()
@@ -446,7 +517,7 @@ impl Traffic {
                                     .child(tr!("Set up")),
                             )
                             .child(div().text_color(rgb(c.muted)).child(tr!(
-                                "Three steps to see HTTPS traffic from this computer."
+                                "Say what you want to capture, and this sets up the one way in that reaches it."
                             ))),
                     )
                     .child(button("setup-done", tr!("See traffic"), checked).on_click(
@@ -455,17 +526,179 @@ impl Traffic {
                         }),
                     )),
             )
-            .child(ca_step)
-            .child(proxy_step)
-            .child(check_step)
-            .child(self.render_browsers(cx))
-            .child(self.render_one_app(cx))
-            .child(self.render_other_devices(cx))
-            .child(self.render_android(cx))
-            .children(self.render_simulators(cx))
-            .child(self.render_http3(cx))
-            .child(self.render_ai_tools())
-            .child(self.render_when_done(cx))
+            .child(self.render_question(cx))
+            .children(steps)
+            .children(cards)
+            .when(answered, |d| d.child(self.render_when_done(cx)))
+    }
+
+    /// What somebody said they want to capture, which is the whole of what
+    /// the wizard knows. Kept in `layout.toml`, so the page opens where they
+    /// left it rather than asking again every time.
+    ///
+    /// `None` puts the question back, which is what choosing the open answer
+    /// again does: a wizard that cannot be unanswered would be a page
+    /// somebody is stuck on.
+    pub fn choose_target(&mut self, target: Option<Target>, cx: &mut Context<Self>) {
+        self.layout.capture_target = if self.layout.capture_target == target {
+            None
+        } else {
+            target
+        };
+        self.save_layout();
+        cx.notify();
+    }
+
+    /// The wizard's one question, and its answer once given.
+    ///
+    /// It is the whole page until somebody answers, because the pile of
+    /// cards underneath was what made Set up hard to read: seven ways in at
+    /// once, of which at most one had anything to do with what the reader
+    /// was trying to see.
+    fn render_question(&self, cx: &mut Context<Self>) -> Div {
+        let c = colors();
+        let chosen = self.layout.capture_target;
+        let answers = Target::here().into_iter().map(|target| {
+            let on = chosen == Some(target);
+            button(("setup-target", target as usize), target.name(), on)
+                .on_click(cx.listener(move |this, _, _, cx| this.choose_target(Some(target), cx)))
+        });
+        aside(
+            tr!("What do you want to capture?"),
+            match chosen {
+                None => tr!(
+                    "The answer picks the one way in that reaches it, and leaves the rest of \
+                     this page out. Every way in is in Settings, Capture, for when you would \
+                     rather choose yourself."
+                ),
+                Some(_) => tr!("Choose again to set up something else."),
+            },
+        )
+        .child(
+            div()
+                .w_full()
+                .flex()
+                .flex_row()
+                .flex_wrap()
+                .gap(ui(8.))
+                .children(answers),
+        )
+        .when(chosen.is_some(), |d| {
+            d.child(
+                button("setup-every-way", tr!("Every way in"), false).on_click(cx.listener(
+                    |this, _, _, cx| {
+                        this.set_screen(Screen::Settings, cx);
+                        this.show_settings_section(crate::layout::SettingsSection::Capture, cx);
+                    },
+                )),
+            )
+        })
+        .child(div().text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
+            "The answer is kept, so this page opens where you left it."
+        )))
+    }
+
+    /// What the route's trust step says, and whether tracewing does that part
+    /// itself.
+    ///
+    /// The second half is the one to get right: a step shown as done when
+    /// tracewing has not done it sends somebody looking for a bug in their
+    /// own program.
+    fn trust_text_for(&self, trust: wizard::Trust) -> (String, bool) {
+        match trust {
+            wizard::Trust::SystemStore => (String::new(), true),
+            wizard::Trust::TheTerminal => (
+                tr!(
+                    "The terminal sets it: what starts in it reads tracewing's roots from a file, \
+                     so nothing is installed on this computer and nothing else is changed."
+                ),
+                true,
+            ),
+            wizard::Trust::JavaItself => (
+                tr!(
+                    "Java keeps an authority store of its own and reads neither the system's nor \
+                     the variables. tracewing cannot write that store for you yet: pass it one, \
+                     with the flags below."
+                ),
+                false,
+            ),
+            wizard::Trust::ThePhone => (
+                tr!(
+                    "The phone has to install tracewing's certificate itself — the guides below \
+                     say how for each kind of device."
+                ),
+                false,
+            ),
+            wizard::Trust::Unknown => (
+                tr!(
+                    "What an image trusts is its own: some read the system's roots, some carry \
+                     their own, and tracewing cannot tell which from here."
+                ),
+                false,
+            ),
+        }
+    }
+
+    /// The check for a terminal. The same recorded visit the browser check
+    /// reads, because a `curl` that reaches the page goes through tracewing
+    /// and is recorded like any other client — so the proof is the same
+    /// proof, not a second mechanism that could disagree with the first.
+    fn render_terminal_check(&self, cx: &mut Context<Self>) -> Div {
+        let (says, checked) = match self.check_visit.as_ref() {
+            None => (
+                tr!(
+                    "Run this in that terminal. A certificate error means the terminal is not one tracewing opened."
+                ),
+                false,
+            ),
+            Some(visit) => check_result(Some(visit)),
+        };
+        let _ = cx;
+        step("2", checked, tr!("Check it in that terminal"), says).child(div().w_full().child(
+            code_block(
+                "setup-wizard-curl",
+                format!("curl -I https://{CHECK_HOST}/"),
+            ),
+        ))
+    }
+
+    /// What a Java program needs, which is the one route tracewing cannot
+    /// finish for somebody: the proxy flags, which do work, and the
+    /// truststore, which it does not write yet.
+    fn render_java(&self, says: String, cx: &mut Context<Self>) -> Div {
+        let _ = cx;
+        let addr = self.engine.addr;
+        aside(tr!("And Java's own store"), says).child(
+            div()
+                .w_full()
+                .child(code_block(
+                    "setup-wizard-java",
+                    format!(
+                        "-Dhttps.proxyHost={host} -Dhttps.proxyPort={port} \\\n  -Dhttp.proxyHost={host} -Dhttp.proxyPort={port}",
+                        host = addr.ip(),
+                        port = addr.port()
+                    ),
+                )),
+        )
+    }
+
+    /// The macOS extension, which has no surface in the window yet: what is
+    /// shown is the command line that drives it, in the same words the
+    /// Capture tab uses.
+    fn render_mac_apps(&self, cx: &mut Context<Self>) -> Div {
+        let _ = cx;
+        aside(
+            tr!("Apps"),
+            tr!(
+                "Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it."
+            ),
+        )
+        .child(
+            div().w_full().child(code_block(
+                "setup-wizard-app",
+                "tracewing capture --app com.example.theapp".to_owned(),
+            )),
+        )
     }
 }
 

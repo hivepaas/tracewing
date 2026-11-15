@@ -2320,14 +2320,53 @@ tbed6e83a = Проверьте в браузере
 # Open the test page
 te4e36f65 = Открыть тестовую страницу
 
+# Open a terminal
+t4b629c72 = Открыть терминал
+
 # Set up
 t43c06abc = Настройка
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = Три шага, чтобы увидеть HTTPS-трафик этого компьютера.
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = Скажите, что хотите захватить, и это настроит единственный путь, который до него достаёт.
 
 # See traffic
 t980eee79 = Смотреть трафик
+
+# What do you want to capture?
+t800a169b = Что вы хотите захватить?
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = Ответ выбирает единственный путь, который до этого достаёт, и оставляет остальную часть страницы в стороне. Все пути есть в Настройках, Захват, если вы предпочитаете выбирать сами.
+
+# Choose again to set up something else.
+t5eaaccdb = Выберите снова, чтобы настроить что-то другое.
+
+# Every way in
+tfa46c322 = Все пути
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = Ответ сохраняется, поэтому страница открывается там, где вы её оставили.
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = Это делает терминал: то, что в нём запущено, читает корневые сертификаты tracewing из файла, так что на этот компьютер ничего не устанавливается и ничего больше не меняется.
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = Java держит своё хранилище сертификатов и не читает ни системное, ни переменные. tracewing пока не может записать это хранилище за вас: передайте ему своё, с флагами ниже.
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = Сертификат tracewing телефон должен установить сам — в руководствах ниже сказано, как это делается для каждого вида устройств.
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = Чему доверяет образ — его дело: одни читают системные корневые сертификаты, другие несут свои, и отсюда tracewing не может узнать, какие именно.
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = Запустите это в том терминале. Ошибка сертификата означает, что это не тот терминал, который открыл tracewing.
+
+# Check it in that terminal
+t17abebbc = Проверить в том терминале
+
+# And Java's own store
+t4398b845 = И собственное хранилище Java
 
 # the browsers' own stores
 tddf6836c = собственные хранилища браузеров
@@ -2400,9 +2439,6 @@ t91c63f1c = Или по одному приложению
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = Терминал, который идёт через tracewing, а системный прокси и остальные приложения остаются как есть: curl, git, Python, Go и ИИ-агенты вроде Claude Code, Codex или Gemini CLI, запущенные в нём. Чтобы через tracewing шли и ИИ-инструменты редактора, закройте редактор и запустите его снова из этого терминала, как делает code . для VS Code. Для браузера то же самое делает «Открыть отдельно» в разделе «Браузеры», с собственным профилем.
-
-# Open a terminal
-t4b629c72 = Открыть терминал
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = В своём терминале, например в терминале редактора, то же самое делает это:
@@ -2868,6 +2904,24 @@ t4ab0ecb4 = Сочетания клавиш { $keys }
 
 # Columns
 tea156fdc = Столбцы
+
+# A website in my browser
+td5d24782 = Сайт в моём браузере
+
+# curl, git, a script
+t7373dc63 = curl, git, скрипт
+
+# A Java program
+t9aea7fb0 = Программа на Java
+
+# My phone
+te1545f43 = Мой телефон
+
+# A Mac app that ignores the proxy
+t2c2204d9 = Приложение для Mac, которое игнорирует прокси
+
+# Something in Docker
+t51e75492 = Что-то в Docker
 
 # Field {number}, {wire}
 ta367cc19 = Поле { $number }, { $wire }

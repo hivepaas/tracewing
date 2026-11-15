@@ -2122,14 +2122,53 @@ tbed6e83a = 在瀏覽器中檢查
 # Open the test page
 te4e36f65 = 開啟測試頁面
 
+# Open a terminal
+t4b629c72 = 開啟終端機
+
 # Set up
 t43c06abc = 初始設定
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = 只要三個步驟，即可檢視這台電腦的 HTTPS 流量。
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = 說出你想擷取什麼，這裡就只設定能擷取到它的那一條路。
 
 # See traffic
 t980eee79 = 檢視流量
+
+# What do you want to capture?
+t800a169b = 你想擷取什麼？
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = 你的回答會挑出能擷取到它的那一條路，本頁其餘內容就不顯示了。想自己挑的話，所有的路都在設定的擷取裡。
+
+# Choose again to set up something else.
+t5eaaccdb = 想設定別的，再選一次。
+
+# Every way in
+tfa46c322 = 所有的路
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = 回答會留著，所以這頁會從你上次離開的地方開啟。
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = 這由終端機負責：在它裡面啟動的東西從一個檔案讀取 tracewing 的根憑證，所以這台電腦上不裝任何東西，別的也都不變。
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = Java 自帶一個憑證庫，既不讀系統的，也不讀環境變數。那個庫 tracewing 還不能替你寫：用下面的參數給它一個。
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = tracewing 的憑證得由手機自己裝 — 下面的指南按裝置類型說明怎麼做。
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = 一個映像信任什麼是它自己的事：有的讀系統根憑證，有的自帶，從這裡 tracewing 看不出是哪一種。
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = 在那個終端機裡執行這個。若回報憑證錯誤，表示它不是 tracewing 開啟的終端機。
+
+# Check it in that terminal
+t17abebbc = 在那個終端機裡檢查
+
+# And Java's own store
+t4398b845 = 以及 Java 自帶的憑證庫
 
 # the browsers' own stores
 tddf6836c = 各瀏覽器自己的憑證庫
@@ -2196,9 +2235,6 @@ t91c63f1c = 或逐一設定個別 App
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = 一個經過 tracewing 的終端機，系統代理和其他 App 都保持原樣：curl、git、Python、Go，以及在其中啟動的 Claude Code、Codex、Gemini CLI 等 AI 代理都會經過。要讓編輯器的 AI 工具也經過，請結束編輯器，再從該終端機重新啟動它，例如 VS Code 用 code .。瀏覽器可用「瀏覽器」中的「單獨開啟」，以獨立設定檔做到同樣的事。
-
-# Open a terminal
-t4b629c72 = 開啟終端機
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = 在你自己的終端機中（例如編輯器內的），這行指令能做到同樣的事：
@@ -2643,6 +2679,24 @@ t4ab0ecb4 = 快速鍵 { $keys }
 
 # Columns
 tea156fdc = 欄位
+
+# A website in my browser
+td5d24782 = 瀏覽器裡的一個網站
+
+# curl, git, a script
+t7373dc63 = curl、git、一個指令碼
+
+# A Java program
+t9aea7fb0 = 一個 Java 程式
+
+# My phone
+te1545f43 = 我的手機
+
+# A Mac app that ignores the proxy
+t2c2204d9 = 一個忽略代理的 Mac 應用程式
+
+# Something in Docker
+t51e75492 = Docker 裡的東西
 
 # Field {number}, {wire}
 ta367cc19 = 欄位 { $number }，{ $wire }

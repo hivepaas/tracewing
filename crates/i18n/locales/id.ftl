@@ -2122,14 +2122,53 @@ tbed6e83a = Periksa di browser
 # Open the test page
 te4e36f65 = Buka halaman uji
 
+# Open a terminal
+t4b629c72 = Buka terminal
+
 # Set up
 t43c06abc = Siapkan
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = Tiga langkah untuk melihat lalu lintas HTTPS dari komputer ini.
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = Sebutkan apa yang mau kamu tangkap, dan ini menyiapkan satu jalan masuk yang menjangkaunya.
 
 # See traffic
 t980eee79 = Lihat lalu lintas
+
+# What do you want to capture?
+t800a169b = Apa yang mau kamu tangkap?
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = Jawabannya memilih satu jalan masuk yang menjangkaunya, dan sisa halaman ini dibiarkan di luar. Semua jalan masuk ada di Setelan, Tangkap, kalau kamu lebih suka memilih sendiri.
+
+# Choose again to set up something else.
+t5eaaccdb = Pilih lagi untuk menyiapkan yang lain.
+
+# Every way in
+tfa46c322 = Semua jalan masuk
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = Jawabannya disimpan, jadi halaman ini terbuka di tempat kamu meninggalkannya.
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = Terminal yang mengaturnya: apa pun yang dijalankan di dalamnya membaca sertifikat akar tracewing dari sebuah file, jadi tidak ada yang dipasang di komputer ini dan tidak ada hal lain yang diubah.
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = Java punya penyimpanan sertifikat sendiri dan tidak membaca milik sistem maupun variabel lingkungan. tracewing belum bisa menuliskan penyimpanan itu untukmu: berikan satu padanya, dengan flag di bawah.
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = Ponsel harus memasang sertifikat tracewing sendiri — panduan di bawah menjelaskan caranya untuk tiap jenis perangkat.
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = Apa yang dipercaya sebuah image adalah urusannya: ada yang membaca akar sistem, ada yang membawa sendiri, dan dari sini tracewing tidak bisa tahu yang mana.
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = Jalankan ini di terminal itu. Error sertifikat berarti itu bukan terminal yang dibuka tracewing.
+
+# Check it in that terminal
+t17abebbc = Periksa di terminal itu
+
+# And Java's own store
+t4398b845 = Dan penyimpanan milik Java sendiri
 
 # the browsers' own stores
 tddf6836c = penyimpanan milik browser sendiri
@@ -2196,9 +2235,6 @@ t91c63f1c = Atau satu aplikasi saja
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = Terminal yang lewat tracewing, sementara proxy sistem dan semua app lain dibiarkan apa adanya: curl, git, Python, Go, dan agen AI seperti Claude Code, Codex, atau Gemini CLI yang dijalankan di dalamnya. Agar alat AI sebuah editor ikut lewat, tutup editor itu lalu jalankan lagi dari terminal tersebut, seperti code . untuk VS Code. Untuk browser, Buka terpisah di Browser melakukan hal yang sama dengan profil sendiri.
-
-# Open a terminal
-t4b629c72 = Buka terminal
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = Di terminal Anda sendiri, misalnya terminal editor, ini melakukan hal yang sama:
@@ -2643,6 +2679,24 @@ t4ab0ecb4 = Pintasan { $keys }
 
 # Columns
 tea156fdc = Kolom
+
+# A website in my browser
+td5d24782 = Sebuah situs di browser saya
+
+# curl, git, a script
+t7373dc63 = curl, git, sebuah skrip
+
+# A Java program
+t9aea7fb0 = Sebuah program Java
+
+# My phone
+te1545f43 = Ponsel saya
+
+# A Mac app that ignores the proxy
+t2c2204d9 = Sebuah app Mac yang mengabaikan proxy
+
+# Something in Docker
+t51e75492 = Sesuatu di Docker
 
 # Field {number}, {wire}
 ta367cc19 = Bidang { $number }, { $wire }

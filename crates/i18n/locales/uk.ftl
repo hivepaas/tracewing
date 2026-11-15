@@ -2320,14 +2320,53 @@ tbed6e83a = Перевірте в браузері
 # Open the test page
 te4e36f65 = Відкрити тестову сторінку
 
+# Open a terminal
+t4b629c72 = Відкрити термінал
+
 # Set up
 t43c06abc = Підготовка
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = Три кроки, щоб бачити HTTPS-трафік цього комп’ютера.
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = Скажіть, що хочете захопити, і це налаштує єдиний шлях, який до нього дістає.
 
 # See traffic
 t980eee79 = Переглянути трафік
+
+# What do you want to capture?
+t800a169b = Що ви хочете захопити?
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = Відповідь вибирає єдиний шлях, який до цього дістає, і лишає решту цієї сторінки поза увагою. Усі шляхи є в Налаштуваннях, Захоплення, якщо ви волієте вибирати самі.
+
+# Choose again to set up something else.
+t5eaaccdb = Виберіть знову, щоб налаштувати щось інше.
+
+# Every way in
+tfa46c322 = Усі шляхи
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = Відповідь зберігається, тому ця сторінка відкривається там, де ви її залишили.
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = Це робить термінал: те, що в ньому запущено, читає кореневі сертифікати tracewing із файлу, тож на цей комп'ютер нічого не встановлюється і нічого іншого не змінюється.
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = Java тримає власне сховище сертифікатів і не читає ні системного, ні змінних. tracewing поки не може записати те сховище за вас: передайте йому своє, з прапорцями нижче.
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = Сертифікат tracewing телефон має встановити сам — посібники нижче кажуть, як це робиться для кожного виду пристроїв.
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = Чому довіряє образ — його справа: одні читають системні кореневі сертифікати, інші несуть власні, і звідси tracewing не може дізнатися, які саме.
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = Запустіть це в тому терміналі. Помилка сертифіката означає, що це не той термінал, який відкрив tracewing.
+
+# Check it in that terminal
+t17abebbc = Перевірити в тому терміналі
+
+# And Java's own store
+t4398b845 = І власне сховище Java
 
 # the browsers' own stores
 tddf6836c = власні сховища браузерів
@@ -2400,9 +2439,6 @@ t91c63f1c = Або по одному застосунку
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = Термінал, що йде через tracewing, а системний проксі та інші застосунки лишаються як є: curl, git, Python, Go та ШІ-агенти на кшталт Claude Code, Codex чи Gemini CLI, запущені в ньому. Щоб через tracewing ішли й ШІ-інструменти редактора, закрийте редактор і запустіть його знову з цього термінала, як робить code . для VS Code. Для браузера те саме робить «Відкрити окремо» в розділі «Браузери», з власним профілем.
-
-# Open a terminal
-t4b629c72 = Відкрити термінал
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = У власному терміналі, наприклад у терміналі редактора, те саме робить це:
@@ -2868,6 +2904,24 @@ t4ab0ecb4 = Комбінації клавіш { $keys }
 
 # Columns
 tea156fdc = Стовпці
+
+# A website in my browser
+td5d24782 = Сайт у моєму браузері
+
+# curl, git, a script
+t7373dc63 = curl, git, скрипт
+
+# A Java program
+t9aea7fb0 = Програма на Java
+
+# My phone
+te1545f43 = Мій телефон
+
+# A Mac app that ignores the proxy
+t2c2204d9 = Застосунок для Mac, який нехтує проксі
+
+# Something in Docker
+t51e75492 = Щось у Docker
 
 # Field {number}, {wire}
 ta367cc19 = Поле { $number }, { $wire }

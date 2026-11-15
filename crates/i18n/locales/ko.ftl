@@ -2122,14 +2122,53 @@ tbed6e83a = 브라우저에서 확인
 # Open the test page
 te4e36f65 = 테스트 페이지 열기
 
+# Open a terminal
+t4b629c72 = 터미널 열기
+
 # Set up
 t43c06abc = 시작하기
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = 이 컴퓨터의 HTTPS 트래픽을 보기 위한 세 단계입니다.
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = 무엇을 캡처할지 말하면, 거기에 닿는 단 하나의 경로만 설정합니다.
 
 # See traffic
 t980eee79 = 트래픽 보기
+
+# What do you want to capture?
+t800a169b = 무엇을 캡처할까요?
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = 답을 고르면 거기에 닿는 경로 하나만 설정하고, 이 페이지의 나머지는 내보내지 않습니다. 직접 고르고 싶다면 모든 경로가 설정의 캡처에 있습니다.
+
+# Choose again to set up something else.
+t5eaaccdb = 다른 것을 설정하려면 다시 고르세요.
+
+# Every way in
+tfa46c322 = 모든 경로
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = 답은 보관되므로, 이 페이지는 떠난 자리에서 열립니다.
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = 그 일은 터미널이 합니다. 그 안에서 시작한 것은 tracewing의 루트 인증서를 파일에서 읽으므로, 이 컴퓨터에는 아무것도 설치되지 않고 다른 것도 바뀌지 않습니다.
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = Java는 자체 인증서 저장소를 두고 시스템의 것도 환경 변수도 읽지 않습니다. tracewing이 아직 그 저장소를 대신 써 주지 못하니, 아래 플래그로 직접 하나를 넘기세요.
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = tracewing의 인증서는 휴대폰이 직접 설치해야 합니다. 기기 종류별 방법은 아래 안내에 있습니다.
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = 이미지가 무엇을 신뢰하는지는 그 이미지의 몫입니다. 시스템 루트를 읽는 것도 있고 자체 인증서를 들고 오는 것도 있어, 여기서는 어느 쪽인지 알 수 없습니다.
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = 그 터미널에서 이것을 실행하세요. 인증서 오류가 나면 tracewing이 연 터미널이 아닙니다.
+
+# Check it in that terminal
+t17abebbc = 그 터미널에서 확인
+
+# And Java's own store
+t4398b845 = 그리고 Java 자체 저장소
 
 # the browsers' own stores
 tddf6836c = 브라우저 자체 저장소
@@ -2196,9 +2235,6 @@ t91c63f1c = 또는 앱 하나씩
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = tracewing을 거치는 터미널입니다. 시스템 프록시와 다른 앱은 그대로 둡니다. curl, git, Python, Go, 그리고 그 안에서 실행한 Claude Code, Codex, Gemini CLI 같은 AI 에이전트가 거칩니다. 편집기의 AI 도구도 거치게 하려면 편집기를 종료하고 그 터미널에서 다시 실행하세요. VS Code라면 code . 입니다. 브라우저라면 브라우저 항목의 따로 열기가 전용 프로필로 같은 일을 합니다.
-
-# Open a terminal
-t4b629c72 = 터미널 열기
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = 편집기 안의 터미널처럼 직접 쓰는 터미널에서는 이것이 같은 일을 합니다:
@@ -2643,6 +2679,24 @@ t4ab0ecb4 = 단축키 { $keys }
 
 # Columns
 tea156fdc = 열
+
+# A website in my browser
+td5d24782 = 브라우저로 보는 웹사이트
+
+# curl, git, a script
+t7373dc63 = curl, git, 스크립트
+
+# A Java program
+t9aea7fb0 = Java 프로그램
+
+# My phone
+te1545f43 = 내 휴대폰
+
+# A Mac app that ignores the proxy
+t2c2204d9 = 프록시를 무시하는 Mac 앱
+
+# Something in Docker
+t51e75492 = Docker 안의 무언가
 
 # Field {number}, {wire}
 ta367cc19 = 필드 { $number }, { $wire }

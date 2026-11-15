@@ -2122,14 +2122,53 @@ tbed6e83a = 在浏览器中检查
 # Open the test page
 te4e36f65 = 打开测试页面
 
+# Open a terminal
+t4b629c72 = 打开终端
+
 # Set up
 t43c06abc = 配置
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = 三步即可查看本机的 HTTPS 流量。
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = 说出你想抓什么，这里就只配置能抓到它的那一条路。
 
 # See traffic
 t980eee79 = 查看流量
+
+# What do you want to capture?
+t800a169b = 你想抓什么？
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = 你的回答会挑出能抓到它的那一条路，本页其余内容就不显示了。想自己挑的话，所有的路都在设置的抓取里。
+
+# Choose again to set up something else.
+t5eaaccdb = 想配置别的，再选一次。
+
+# Every way in
+tfa46c322 = 所有的路
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = 回答会留着，所以这页会从你上次离开的地方打开。
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = 这由终端负责：在它里面启动的东西从一个文件读取 tracewing 的根证书，所以这台电脑上不装任何东西，别的也都不变。
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = Java 自带一个证书库，既不读系统的，也不读环境变量。那个库 tracewing 还不能替你写：用下面的参数给它一个。
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = tracewing 的证书得由手机自己装 — 下面的指南按设备类型说明怎么做。
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = 一个镜像信任什么是它自己的事：有的读系统根证书，有的自带，从这里 tracewing 看不出是哪一种。
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = 在那个终端里运行这个。若报证书错误，说明它不是 tracewing 打开的终端。
+
+# Check it in that terminal
+t17abebbc = 在那个终端里检查
+
+# And Java's own store
+t4398b845 = 以及 Java 自带的证书库
 
 # the browsers' own stores
 tddf6836c = 各浏览器自己的证书库
@@ -2196,9 +2235,6 @@ t91c63f1c = 或者逐个应用设置
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = 一个经过 tracewing 的终端，系统代理和其他应用都保持原样：curl、git、Python、Go，以及在其中启动的 Claude Code、Codex、Gemini CLI 等 AI 智能体都会经过。要让编辑器的 AI 工具也经过，请退出编辑器，再从该终端重新启动它，例如 VS Code 用 code .。浏览器可用“浏览器”中的“单独打开”，以独立配置文件做到同样的事。
-
-# Open a terminal
-t4b629c72 = 打开终端
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = 在你自己的终端中（例如编辑器内的），这行命令能做到同样的事：
@@ -2643,6 +2679,24 @@ t4ab0ecb4 = 快捷键 { $keys }
 
 # Columns
 tea156fdc = 列
+
+# A website in my browser
+td5d24782 = 浏览器里的一个网站
+
+# curl, git, a script
+t7373dc63 = curl、git、一个脚本
+
+# A Java program
+t9aea7fb0 = 一个 Java 程序
+
+# My phone
+te1545f43 = 我的手机
+
+# A Mac app that ignores the proxy
+t2c2204d9 = 一个忽略代理的 Mac 应用
+
+# Something in Docker
+t51e75492 = Docker 里的东西
 
 # Field {number}, {wire}
 ta367cc19 = 字段 { $number }，{ $wire }

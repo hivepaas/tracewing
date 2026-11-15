@@ -2251,14 +2251,53 @@ tbed6e83a = Verifique no navegador
 # Open the test page
 te4e36f65 = Abrir a página de teste
 
+# Open a terminal
+t4b629c72 = Abrir um terminal
+
 # Set up
 t43c06abc = Configurar
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = Três passos para ver o tráfego HTTPS deste computador.
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = Diga o que quer capturar, e isto configura a única via de entrada que chega lá.
 
 # See traffic
 t980eee79 = Ver tráfego
+
+# What do you want to capture?
+t800a169b = O que quer capturar?
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = A resposta escolhe a única via de entrada que chega lá e deixa de fora o resto desta página. Todas as vias estão em Configurações, Captura, se preferir escolher você mesmo.
+
+# Choose again to set up something else.
+t5eaaccdb = Escolha de novo para configurar outra coisa.
+
+# Every way in
+tfa46c322 = Todas as vias de entrada
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = A resposta é guardada, por isso esta página abre onde você a deixou.
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = Quem faz isso é o terminal: o que for iniciado nele lê as raízes do tracewing de um arquivo, por isso nada é instalado neste computador e nada mais é alterado.
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = O Java mantém um repositório de autoridades próprio e não lê nem o do sistema nem as variáveis. O tracewing ainda não consegue escrever esse repositório para você: passe um a ele, com as opções abaixo.
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = O celular tem de instalar o certificado do tracewing por conta própria — os guias abaixo explicam como, para cada tipo de dispositivo.
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = Em que uma imagem confia é assunto dela: algumas leem as raízes do sistema, outras trazem as próprias, e daqui o tracewing não tem como saber qual delas.
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = Execute isto nesse terminal. Um erro de certificado quer dizer que não é o terminal que o tracewing abriu.
+
+# Check it in that terminal
+t17abebbc = Verificar nesse terminal
+
+# And Java's own store
+t4398b845 = E o repositório próprio do Java
 
 # the browsers' own stores
 tddf6836c = os repositórios próprios dos navegadores
@@ -2330,9 +2369,6 @@ t91c63f1c = Ou um app de cada vez
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = Um terminal que passa pelo tracewing, enquanto o proxy do sistema e os outros apps ficam como estão: curl, git, Python, Go e agentes de IA como Claude Code, Codex ou Gemini CLI iniciados nele. Para que as ferramentas de IA de um editor também passem, feche o editor e abra-o de novo a partir desse terminal, como faz code . para o VS Code. Para um navegador, Abrir à parte em Navegadores faz o mesmo com um perfil próprio.
-
-# Open a terminal
-t4b629c72 = Abrir um terminal
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = Num terminal seu, como o de um editor, isto faz o mesmo:
@@ -2787,6 +2823,24 @@ t4ab0ecb4 = Atalhos { $keys }
 
 # Columns
 tea156fdc = Colunas
+
+# A website in my browser
+td5d24782 = Um site no meu navegador
+
+# curl, git, a script
+t7373dc63 = curl, git, um script
+
+# A Java program
+t9aea7fb0 = Um programa Java
+
+# My phone
+te1545f43 = Meu celular
+
+# A Mac app that ignores the proxy
+t2c2204d9 = Um app de Mac que ignora o proxy
+
+# Something in Docker
+t51e75492 = Algo no Docker
 
 # Field {number}, {wire}
 ta367cc19 = Campo { $number }, { $wire }
