@@ -590,149 +590,158 @@ fn sweep(sockets: &mut SocketSet<'static>, conns: &mut HashMap<SocketHandle, Con
 }
 
 #[cfg(test)]
+use smoltcp::wire::{
+    IpProtocol, Ipv4Packet, Ipv4Repr, Ipv6Packet, Ipv6Repr, TcpControl, TcpPacket, TcpRepr,
+    TcpSeqNumber,
+};
+
+/// A TCP client written by hand, so that what goes into the stack is
+/// packets and nothing else. It keeps only as much state as a
+/// conversation needs: what it has sent, and what it has been told.
+///
+/// Reachable from other modules' tests because
+/// [`wireguard`](crate::wireguard) needs a TCP client **inside** its tunnel
+/// to prove a phone's packets become a flow, and a second hand-written one
+/// would be a second chance to get the sequence numbers wrong.
+#[cfg(test)]
+pub(crate) struct Client {
+    pub(crate) from: SocketAddr,
+    pub(crate) to: SocketAddr,
+    seq: TcpSeqNumber,
+    pub(crate) ack: Option<TcpSeqNumber>,
+}
+
+#[cfg(test)]
+impl Client {
+    pub(crate) fn new(from: &str, to: &str) -> Self {
+        Self {
+            from: from.parse().unwrap(),
+            to: to.parse().unwrap(),
+            seq: TcpSeqNumber(1000),
+            ack: None,
+        }
+    }
+
+    /// A packet of its own making. `smoltcp`'s own writer puts the headers
+    /// together, so that a mistake of mine in `peek` cannot be hidden by
+    /// the same mistake in the test's hand-rolled header.
+    pub(crate) fn packet(&self, control: TcpControl, payload: &[u8]) -> Vec<u8> {
+        let tcp = TcpRepr {
+            src_port: self.from.port(),
+            dst_port: self.to.port(),
+            control,
+            seq_number: self.seq,
+            ack_number: self.ack,
+            window_len: 64000,
+            window_scale: None,
+            max_seg_size: None,
+            sack_permitted: false,
+            sack_ranges: [None; 3],
+            timestamp: None,
+            payload,
+        };
+        let caps = Default::default();
+        // The TCP header is the same either way; only the IP header
+        // around it differs, and `smoltcp` writes both, so a mistake of
+        // mine in `peek` cannot be hidden by the same mistake here.
+        match (self.from.ip(), self.to.ip()) {
+            (IpAddr::V4(from), IpAddr::V4(to)) => {
+                let ip = Ipv4Repr {
+                    src_addr: from,
+                    dst_addr: to,
+                    next_header: IpProtocol::Tcp,
+                    payload_len: tcp.buffer_len(),
+                    hop_limit: 64,
+                };
+                let mut bytes = vec![0u8; ip.buffer_len() + tcp.buffer_len()];
+                ip.emit(&mut Ipv4Packet::new_unchecked(&mut bytes), &caps);
+                tcp.emit(
+                    &mut TcpPacket::new_unchecked(&mut bytes[ip.buffer_len()..]),
+                    &from.into(),
+                    &to.into(),
+                    &caps,
+                );
+                bytes
+            }
+            (IpAddr::V6(from), IpAddr::V6(to)) => {
+                let ip = Ipv6Repr {
+                    src_addr: from,
+                    dst_addr: to,
+                    next_header: IpProtocol::Tcp,
+                    payload_len: tcp.buffer_len(),
+                    hop_limit: 64,
+                };
+                let mut bytes = vec![0u8; ip.buffer_len() + tcp.buffer_len()];
+                // IPv6 has no header checksum, so `emit` takes none.
+                ip.emit(&mut Ipv6Packet::new_unchecked(&mut bytes));
+                tcp.emit(
+                    &mut TcpPacket::new_unchecked(&mut bytes[ip.buffer_len()..]),
+                    &from.into(),
+                    &to.into(),
+                    &caps,
+                );
+                bytes
+            }
+            _ => panic!("both ends of one connection are the same kind of address"),
+        }
+    }
+
+    /// A packet, with the sequence number moved on by what it occupies:
+    /// a byte each for the payload, and one for a `SYN` or a `FIN`. Kept
+    /// here rather than in each test, because a test that counts its own
+    /// sequence numbers gets them wrong -- both of the first two did, and
+    /// the stack was blamed for it.
+    pub(crate) fn send(&mut self, control: TcpControl, payload: &[u8]) -> Vec<u8> {
+        let packet = self.packet(control, payload);
+        let occupies = match control {
+            TcpControl::Syn | TcpControl::Fin => 1,
+            _ => 0,
+        };
+        self.seq += payload.len() + occupies;
+        packet
+    }
+
+    /// Takes in what the stack sent back, so the next packet answers it.
+    pub(crate) fn heard(&mut self, packet: &[u8]) -> (TcpControl, Vec<u8>) {
+        let (control, seq, payload) = match packet.first().map(|b| b >> 4) {
+            Some(4) => {
+                let ip = Ipv4Packet::new_checked(packet).expect("an IPv4 packet");
+                let tcp = TcpPacket::new_checked(ip.payload()).expect("a TCP packet");
+                let repr = TcpRepr::parse(
+                    &tcp,
+                    &ip.src_addr().into(),
+                    &ip.dst_addr().into(),
+                    &Default::default(),
+                )
+                .expect("a TCP header");
+                (repr.control, repr.seq_number, repr.payload.to_vec())
+            }
+            Some(6) => {
+                let ip = Ipv6Packet::new_checked(packet).expect("an IPv6 packet");
+                let tcp = TcpPacket::new_checked(ip.payload()).expect("a TCP packet");
+                let repr = TcpRepr::parse(
+                    &tcp,
+                    &ip.src_addr().into(),
+                    &ip.dst_addr().into(),
+                    &Default::default(),
+                )
+                .expect("a TCP header");
+                (repr.control, repr.seq_number, repr.payload.to_vec())
+            }
+            other => panic!("an IP packet, not one starting {other:?}"),
+        };
+        // What it sent, plus one for a SYN or a FIN, is what to acknowledge.
+        let counts = usize::from(control != TcpControl::None && control != TcpControl::Psh);
+        self.ack = Some(seq + payload.len() + counts);
+        (control, payload)
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::source::Took;
-    use smoltcp::wire::{
-        IpProtocol, Ipv4Packet, Ipv4Repr, Ipv6Packet, Ipv6Repr, TcpControl, TcpPacket, TcpRepr,
-        TcpSeqNumber,
-    };
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-
-    /// A TCP client written by hand, so that what goes into the stack is
-    /// packets and nothing else. It keeps only as much state as a
-    /// conversation needs: what it has sent, and what it has been told.
-    struct Client {
-        from: SocketAddr,
-        to: SocketAddr,
-        seq: TcpSeqNumber,
-        ack: Option<TcpSeqNumber>,
-    }
-
-    impl Client {
-        fn new(from: &str, to: &str) -> Self {
-            Self {
-                from: from.parse().unwrap(),
-                to: to.parse().unwrap(),
-                seq: TcpSeqNumber(1000),
-                ack: None,
-            }
-        }
-
-        /// A packet of its own making. `smoltcp`'s own writer puts the headers
-        /// together, so that a mistake of mine in `peek` cannot be hidden by
-        /// the same mistake in the test's hand-rolled header.
-        fn packet(&self, control: TcpControl, payload: &[u8]) -> Vec<u8> {
-            let tcp = TcpRepr {
-                src_port: self.from.port(),
-                dst_port: self.to.port(),
-                control,
-                seq_number: self.seq,
-                ack_number: self.ack,
-                window_len: 64000,
-                window_scale: None,
-                max_seg_size: None,
-                sack_permitted: false,
-                sack_ranges: [None; 3],
-                timestamp: None,
-                payload,
-            };
-            let caps = Default::default();
-            // The TCP header is the same either way; only the IP header
-            // around it differs, and `smoltcp` writes both, so a mistake of
-            // mine in `peek` cannot be hidden by the same mistake here.
-            match (self.from.ip(), self.to.ip()) {
-                (IpAddr::V4(from), IpAddr::V4(to)) => {
-                    let ip = Ipv4Repr {
-                        src_addr: from,
-                        dst_addr: to,
-                        next_header: IpProtocol::Tcp,
-                        payload_len: tcp.buffer_len(),
-                        hop_limit: 64,
-                    };
-                    let mut bytes = vec![0u8; ip.buffer_len() + tcp.buffer_len()];
-                    ip.emit(&mut Ipv4Packet::new_unchecked(&mut bytes), &caps);
-                    tcp.emit(
-                        &mut TcpPacket::new_unchecked(&mut bytes[ip.buffer_len()..]),
-                        &from.into(),
-                        &to.into(),
-                        &caps,
-                    );
-                    bytes
-                }
-                (IpAddr::V6(from), IpAddr::V6(to)) => {
-                    let ip = Ipv6Repr {
-                        src_addr: from,
-                        dst_addr: to,
-                        next_header: IpProtocol::Tcp,
-                        payload_len: tcp.buffer_len(),
-                        hop_limit: 64,
-                    };
-                    let mut bytes = vec![0u8; ip.buffer_len() + tcp.buffer_len()];
-                    // IPv6 has no header checksum, so `emit` takes none.
-                    ip.emit(&mut Ipv6Packet::new_unchecked(&mut bytes));
-                    tcp.emit(
-                        &mut TcpPacket::new_unchecked(&mut bytes[ip.buffer_len()..]),
-                        &from.into(),
-                        &to.into(),
-                        &caps,
-                    );
-                    bytes
-                }
-                _ => panic!("both ends of one connection are the same kind of address"),
-            }
-        }
-
-        /// A packet, with the sequence number moved on by what it occupies:
-        /// a byte each for the payload, and one for a `SYN` or a `FIN`. Kept
-        /// here rather than in each test, because a test that counts its own
-        /// sequence numbers gets them wrong -- both of the first two did, and
-        /// the stack was blamed for it.
-        fn send(&mut self, control: TcpControl, payload: &[u8]) -> Vec<u8> {
-            let packet = self.packet(control, payload);
-            let occupies = match control {
-                TcpControl::Syn | TcpControl::Fin => 1,
-                _ => 0,
-            };
-            self.seq += payload.len() + occupies;
-            packet
-        }
-
-        /// Takes in what the stack sent back, so the next packet answers it.
-        fn heard(&mut self, packet: &[u8]) -> (TcpControl, Vec<u8>) {
-            let (control, seq, payload) = match packet.first().map(|b| b >> 4) {
-                Some(4) => {
-                    let ip = Ipv4Packet::new_checked(packet).expect("an IPv4 packet");
-                    let tcp = TcpPacket::new_checked(ip.payload()).expect("a TCP packet");
-                    let repr = TcpRepr::parse(
-                        &tcp,
-                        &ip.src_addr().into(),
-                        &ip.dst_addr().into(),
-                        &Default::default(),
-                    )
-                    .expect("a TCP header");
-                    (repr.control, repr.seq_number, repr.payload.to_vec())
-                }
-                Some(6) => {
-                    let ip = Ipv6Packet::new_checked(packet).expect("an IPv6 packet");
-                    let tcp = TcpPacket::new_checked(ip.payload()).expect("a TCP packet");
-                    let repr = TcpRepr::parse(
-                        &tcp,
-                        &ip.src_addr().into(),
-                        &ip.dst_addr().into(),
-                        &Default::default(),
-                    )
-                    .expect("a TCP header");
-                    (repr.control, repr.seq_number, repr.payload.to_vec())
-                }
-                other => panic!("an IP packet, not one starting {other:?}"),
-            };
-            // What it sent, plus one for a SYN or a FIN, is what to acknowledge.
-            let counts = usize::from(control != TcpControl::None && control != TcpControl::Psh);
-            self.ack = Some(seq + payload.len() + counts);
-            (control, payload)
-        }
-    }
 
     /// The stack, the end packets go into, the end they come out of, and the
     /// flows it hands over.

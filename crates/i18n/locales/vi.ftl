@@ -1702,6 +1702,15 @@ tce1108b9 = Cổng nó lắng nghe
 # 1080 is the port a SOCKS client picks when it is told nothing else. This computer only: other devices use the proxy port, whatever this says.
 tae174540 = 1080 là cổng một client SOCKS chọn khi không được chỉ định gì khác. Chỉ máy này: thiết bị khác vẫn dùng cổng proxy, bất kể ở đây ghi gì.
 
+# Let a phone join a tunnel
+t8000aba6 = Cho một điện thoại vào tunnel
+
+# The phone installs the WireGuard app, scans or copies the configuration below, and everything it sends is captured — including apps that ignore the phone's proxy setting. Unlike the SOCKS port this one is open to your network, and only the phone whose key is in that configuration can use it. Takes effect when tracewing starts again.
+t2d429f81 = Điện thoại cài ứng dụng WireGuard, quét hoặc sao chép cấu hình bên dưới, và mọi thứ nó gửi đều được ghi lại — kể cả ứng dụng phớt lờ cài đặt proxy của điện thoại. Khác với cổng SOCKS, cổng này mở ra mạng của bạn, và chỉ điện thoại có khoá nằm trong cấu hình đó dùng được. Có hiệu lực khi tracewing khởi động lại.
+
+# 51820 is WireGuard's own port, which is the one a router is most likely to allow already.
+t34ff97fb = 51820 là cổng riêng của WireGuard, và là cổng router có nhiều khả năng đã cho phép sẵn.
+
 # Servers
 tcd0cf113 = Server
 

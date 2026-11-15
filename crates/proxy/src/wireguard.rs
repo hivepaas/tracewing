@@ -38,7 +38,10 @@
 //!
 //! See [capture-modes.md](../../../docs/design/capture-modes.md).
 
-use crate::source::{Stop, stopped};
+use crate::{
+    source::{Found, Source, Stop, stopped},
+    stack::{Stack, Wire},
+};
 use anyhow::{Context, Result};
 use boringtun::{
     noise::{Tunn, TunnResult, errors::WireGuardError, rate_limiter::RateLimiter},
@@ -110,6 +113,55 @@ pub fn key_from(text: &str) -> Result<[u8; 32]> {
         .try_into()
         .map_err(|_| anyhow::anyhow!("a WireGuard key is 32 bytes, this is not"))?;
     Ok(bytes)
+}
+
+/// A way in: the endpoint, and the stack that turns what it takes into
+/// flows. One type, because the two are no use apart — packets with nothing
+/// to read them, or a stack with nothing to feed it.
+///
+/// The socket is bound by the caller, before the proxy's runtime exists, so
+/// that a port already in use is said in the window rather than from inside
+/// a thread. That is how [`crate::socks`] is given its listener, for the
+/// same reason.
+pub struct Endpoint {
+    bound: std::net::UdpSocket,
+    peer: Peer,
+}
+
+impl Endpoint {
+    pub fn new(bound: std::net::UdpSocket, peer: Peer) -> Self {
+        Self { bound, peer }
+    }
+
+    /// Where it listens, as the socket was bound.
+    pub fn at(&self) -> Result<SocketAddr> {
+        Ok(self.bound.local_addr()?)
+    }
+}
+
+impl Source for Endpoint {
+    fn name(&self) -> String {
+        "wireguard".to_owned()
+    }
+
+    // `own_ports` stays empty: a phone never connects to a port of
+    // tracewing's, it talks to the server it was going to, so there is no
+    // socket of ours for `crate::apps` to find a program by. The stack says
+    // the same, for the same reason.
+
+    fn start(self: Box<Self>, proxy: SocketAddr, found: Found, stop: Stop) -> Result<()> {
+        let Self { bound, peer } = *self;
+        // Forgetting this blocks a worker on a read, which is a hang rather
+        // than an error — the same trap the SOCKS5 listener has.
+        bound.set_nonblocking(true)?;
+        let socket = UdpSocket::from_std(bound)?;
+        let (wire, into_stack, from_stack) = Wire::channels();
+        // The stack first: it is what `found` hears from, and a packet that
+        // arrived before it was listening would have nowhere to go.
+        Box::new(Stack::new(wire)).start(proxy, found, stop.clone())?;
+        tokio::spawn(run(socket, peer, into_stack, from_stack, stop));
+        Ok(())
+    }
 }
 
 /// Serves `peer` on `socket` until `stop`, handing the packets it takes to
@@ -601,5 +653,75 @@ mod tests {
             !config.contains(&public_of(&phone)),
             "the phone's own public key is not in its own file: it has the private one"
         );
+    }
+
+    /// The whole way in, end to end: a phone joins the tunnel, opens a TCP
+    /// connection inside it to a server it was going to, and the proxy is
+    /// handed a flow. Nothing here is a stand-in — a real handshake, a real
+    /// TCP handshake inside it, and `Found` is the proxy's own channel.
+    ///
+    /// The TCP client is [`crate::stack`]'s own test client, reached across
+    /// modules on purpose: a second hand-written one would be a second
+    /// chance to get the sequence numbers wrong, which is a mistake that
+    /// already cost an afternoon once.
+    #[tokio::test]
+    async fn a_phone_in_the_tunnel_becomes_a_flow_the_proxy_is_given() {
+        use crate::source::Took;
+        use crate::stack::Client;
+        use smoltcp::wire::TcpControl;
+
+        let ours = new_key().unwrap();
+        let phone_key = new_key().unwrap();
+        let bound = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+        let at = bound.local_addr().unwrap();
+        let (found, mut took) = crate::source::Found::channel();
+        let (_stop_tx, stop) = watch::channel(false);
+
+        let endpoint = Endpoint::new(
+            bound,
+            Peer {
+                ours: ours.clone(),
+                theirs: PublicKey::from(&phone_key),
+                preshared: None,
+                keepalive: None,
+            },
+        );
+        assert_eq!(endpoint.at().unwrap(), at, "it says where it listens");
+        Box::new(endpoint)
+            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+            .unwrap();
+
+        let mut phone = Phone::new(at, &phone_key, PublicKey::from(&ours)).await;
+        let mut tcp = Client::new("10.78.0.2:51000", "140.82.121.4:443");
+
+        // The phone's first datagram is a handshake, so the SYN goes in the
+        // queue behind it and is sent again once there is a session.
+        let syn = tcp.send(TcpControl::Syn, &[]);
+        phone.send(&syn).await;
+        phone.turn().await;
+        phone.send(&syn).await;
+
+        // The stack answers as the server the phone was going to, and that
+        // answer comes back through the tunnel.
+        let answer = phone.packet().await;
+        let (control, _) = tcp.heard(&answer);
+        assert_eq!(control, TcpControl::Syn, "a SYN-ACK, as GitHub would send");
+
+        // The phone finishes the handshake, which is when the flow is handed
+        // over: the stack waits until it can write before giving it away.
+        phone.send(&tcp.send(TcpControl::None, &[])).await;
+
+        let flow = match soon("a flow", took.recv()).await {
+            Some(Took::Flow(flow)) => flow,
+            Some(Took::Port(port)) => panic!("a flow, not the listener {}", port.name),
+            None => panic!("the endpoint handed nothing over and then went"),
+        };
+        assert_eq!(flow.client, tcp.from, "the phone, as the packet said");
+        assert_eq!(
+            flow.to,
+            crate::source::Target::Addr(tcp.to),
+            "where it was going, which is all a packet carries"
+        );
+        assert!(flow.who.is_none(), "a packet says nothing about a program");
     }
 }

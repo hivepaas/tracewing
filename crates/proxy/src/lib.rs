@@ -24,6 +24,7 @@ pub mod throttle;
 pub mod traffic_rules;
 pub mod upstream;
 pub mod wireguard;
+pub mod wireguard_key;
 
 /// Moved to the store, which needs it to read HAR files too.
 pub use tracewing_store::graphql;
