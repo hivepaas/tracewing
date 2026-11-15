@@ -151,7 +151,7 @@ for that answer. The knowledge is already written down in
 | A Java program | System proxy **and** JVM flags | A truststore of its own — see below |
 | My phone | WireGuard, or Other devices | The authority installed on the phone |
 | A Mac app that ignores the proxy | Apps (macOS) | The system store |
-| A Windows app that ignores the proxy | A terminal, if the program reads the variables; otherwise nothing yet — see below | The system store |
+| A Windows app that ignores the proxy | Local mode (Windows), once it captures — the machine, not one app (below); until then, a terminal or nothing | The system store |
 | Something in Docker | A terminal for the container; the daemon is its own problem | Varies |
 
 Each step ends in a **check**, following the one Setup already has for the
