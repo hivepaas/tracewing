@@ -1172,21 +1172,35 @@ impl Traffic {
                                     d.children(wireguard_problem.clone().map(|why| {
                                         div().text_size(ui(12.)).text_color(rgb(c.error)).child(why)
                                     }))
-                                    // What the phone is given. Shown as it
-                                    // goes in the WireGuard app's own
-                                    // "import from text", so that it works
-                                    // before there is a QR code to scan.
+                                    // What the phone is given: a code for
+                                    // the WireGuard app's "add tunnel", and
+                                    // the same text to paste where a camera
+                                    // is no use. 300 is not a round number
+                                    // — a real configuration is 65 squares
+                                    // across, which at that size is four
+                                    // pixels a square, and a phone's camera
+                                    // wants about that much.
                                     .children(
                                         wireguard_config.clone().map(|config| {
                                             div()
-                                                .mt(ui(6.))
-                                                .p(ui(8.))
-                                                .bg(rgb(c.code))
-                                                .rounded(ui(4.))
-                                                .font_family("monospace")
-                                                .text_size(ui(11.))
-                                                .text_color(rgb(c.text))
-                                                .child(config)
+                                                .mt(ui(8.))
+                                                .flex()
+                                                .flex_wrap()
+                                                .gap(ui(12.))
+                                                .items_start()
+                                                .children(crate::qr::qr_code(&config, 300.))
+                                                .child(
+                                                    div()
+                                                        .flex_1()
+                                                        .min_w(ui(240.))
+                                                        .p(ui(8.))
+                                                        .bg(rgb(c.code))
+                                                        .rounded(ui(4.))
+                                                        .font_family("monospace")
+                                                        .text_size(ui(11.))
+                                                        .text_color(rgb(c.text))
+                                                        .child(config),
+                                                )
                                         }),
                                     )
                                 })

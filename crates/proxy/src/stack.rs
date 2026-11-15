@@ -47,9 +47,9 @@ use anyhow::Result;
 use smoltcp::{
     iface::{Config, Interface, SocketHandle, SocketSet},
     phy::{Checksum, Device as PhyDevice, DeviceCapabilities, Medium, RxToken, TxToken},
-    socket::tcp,
+    socket::{tcp, udp},
     time::Instant as Moment,
-    wire::{HardwareAddress, IpAddress, IpCidr, Ipv4Address, Ipv6Address},
+    wire::{HardwareAddress, IpAddress, IpCidr, IpListenEndpoint, Ipv4Address, Ipv6Address},
 };
 use std::{
     collections::{HashMap, VecDeque},
@@ -78,6 +78,18 @@ const SYN_WITHIN: Duration = Duration::from_secs(10);
 /// The longest the loop sleeps when the stack has asked for nothing: it still
 /// wakes to sweep connections whose time is up.
 const SWEEP_EVERY: Duration = Duration::from_secs(1);
+
+/// The port names are asked for on. A phone sends its DNS through the tunnel
+/// like everything else, so this has to be answered or nothing it does works
+/// — see [`crate::dns`] for why they are answered here rather than forwarded.
+const DNS_PORT: u16 = 53;
+
+/// The most a query may be. A question is a couple of hundred bytes at most;
+/// this is the classic limit, and a datagram past it is not a question.
+const QUERY_MAX: usize = 512;
+
+/// How many queries may be waiting to be read, or answered, at once.
+const QUERIES_MAX: usize = 32;
 
 /// Where packets come from and go back to: a TUN device on Linux, a WinDivert
 /// handle on Windows, the plain side of a WireGuard tunnel. Each of those is a
@@ -379,11 +391,40 @@ async fn run(wire: Wire, most: usize, found: Found, stop: Stop) {
     let mut conns: HashMap<SocketHandle, Conn> = HashMap::new();
     let woken = Arc::new(Notify::new());
 
+    // Names. A phone sends its DNS down the tunnel with everything else, and
+    // a dropped query does not look like a DNS fault from the phone — it
+    // looks like the network is gone, because nothing can be reached by name.
+    // Bound to no address in particular, so that whatever the phone was told
+    // to use as its resolver is answered.
+    let mut names = udp::Socket::new(
+        udp::PacketBuffer::new(
+            vec![udp::PacketMetadata::EMPTY; QUERIES_MAX],
+            vec![0u8; QUERIES_MAX * QUERY_MAX],
+        ),
+        udp::PacketBuffer::new(
+            vec![udp::PacketMetadata::EMPTY; QUERIES_MAX],
+            vec![0u8; QUERIES_MAX * QUERY_MAX],
+        ),
+    );
+    if let Err(e) = names.bind(IpListenEndpoint {
+        addr: None,
+        port: DNS_PORT,
+    }) {
+        // Everything else still works, and a tunnel whose names do not
+        // resolve is better than no tunnel.
+        tracing::warn!("no DNS on the tunnel: {e}");
+    }
+    let names = sockets.add(names);
+    let (answered, mut answers) = mpsc::channel::<(Vec<u8>, udp::UdpMetadata)>(QUERIES_MAX);
+    let mut to_send: VecDeque<(Vec<u8>, udp::UdpMetadata)> = VecDeque::new();
+
     loop {
         iface.poll(moment(started), &mut device, &mut sockets);
         for flow in sweep(&mut sockets, &mut conns) {
             found.flow(flow).await;
         }
+        asked(&mut sockets, names, &answered, &woken);
+        say(&mut sockets, names, &mut to_send);
         let sleep = iface
             .poll_at(moment(started), &sockets)
             .map(|at| {
@@ -401,9 +442,85 @@ async fn run(wire: Wire, most: usize, found: Found, stop: Stop) {
                 }
                 None => break,
             },
+            answer = answers.recv() => {
+                if let Some(answer) = answer {
+                    to_send.push_back(answer);
+                }
+            }
             _ = woken.notified() => {}
             _ = tokio::time::sleep(sleep) => {}
             _ = stopped(stop.clone()) => break,
+        }
+    }
+}
+
+/// Takes the queries that have arrived and sets each one being looked up.
+/// The looking happens off this loop — it waits on the operating system, and
+/// the stack cannot — and the answer comes back through `answered`.
+///
+/// A datagram [`crate::dns::ask`] cannot read is dropped. It is not a
+/// question any client asks: an answer sent to a resolver, an opcode no
+/// phone uses, something cut short.
+fn asked(
+    sockets: &mut SocketSet<'static>,
+    names: SocketHandle,
+    answered: &mpsc::Sender<(Vec<u8>, udp::UdpMetadata)>,
+    woken: &Arc<Notify>,
+) {
+    let socket = sockets.get_mut::<udp::Socket>(names);
+    let mut buffer = [0u8; QUERY_MAX];
+    while socket.can_recv() {
+        let Ok((len, from)) = socket.recv_slice(&mut buffer) else {
+            break;
+        };
+        let query = buffer[..len].to_vec();
+        let Some(ask) = crate::dns::ask(&query) else {
+            continue;
+        };
+        let answered = answered.clone();
+        let woken = Arc::clone(woken);
+        tokio::spawn(async move {
+            let found = if ask.wants_an_address() {
+                crate::dns::look_up(&ask.name).await
+            } else {
+                // A kind of question this does not answer still gets an
+                // answer: silence is retried until it times out, and that
+                // looks like a broken network rather than an unknown record.
+                Vec::new()
+            };
+            let answer = crate::dns::answer(&query, &ask, &found);
+            if answered.send((answer, from)).await.is_ok() {
+                woken.notify_one();
+            }
+        });
+    }
+}
+
+/// Writes the answers that have come back. `from` is handed back exactly as
+/// it arrived, which is what makes the answer come **from the address the
+/// phone asked**: `smoltcp` keeps the datagram's destination in
+/// `local_address` and sends the reply from it. A reply from anywhere else is
+/// one the phone ignores.
+fn say(
+    sockets: &mut SocketSet<'static>,
+    names: SocketHandle,
+    waiting: &mut VecDeque<(Vec<u8>, udp::UdpMetadata)>,
+) {
+    let socket = sockets.get_mut::<udp::Socket>(names);
+    while let Some((answer, from)) = waiting.front() {
+        if !socket.can_send() {
+            return;
+        }
+        match socket.send_slice(answer, *from) {
+            Ok(()) => {
+                waiting.pop_front();
+            }
+            // The buffer is full or the answer is too big for it: it goes,
+            // and the phone asks again. Holding it would stop the rest.
+            Err(e) => {
+                tracing::debug!("an answer went nowhere: {e}");
+                waiting.pop_front();
+            }
         }
     }
 }
@@ -1152,5 +1269,107 @@ mod tests {
             .unwrap();
         assert_eq!(&got_four, b"four");
         assert_eq!(&got_six, b"six");
+    }
+
+    /// A DNS query as a phone writes one, in an IPv4 datagram to the
+    /// resolver its configuration named.
+    fn asking(about: &str, from: &str, to: &str) -> Vec<u8> {
+        use smoltcp::wire::{UdpPacket, UdpRepr};
+        let from: SocketAddr = from.parse().unwrap();
+        let to: SocketAddr = to.parse().unwrap();
+        let (IpAddr::V4(src), IpAddr::V4(dst)) = (from.ip(), to.ip()) else {
+            panic!("IPv4 in this test");
+        };
+
+        let mut query = Vec::new();
+        query.extend_from_slice(&0x4321u16.to_be_bytes());
+        query.extend_from_slice(&0x0100u16.to_be_bytes()); // a query, recursion desired
+        query.extend_from_slice(&1u16.to_be_bytes());
+        query.extend_from_slice(&[0, 0, 0, 0, 0, 0]);
+        for label in about.split('.') {
+            query.push(label.len() as u8);
+            query.extend_from_slice(label.as_bytes());
+        }
+        query.push(0);
+        query.extend_from_slice(&1u16.to_be_bytes()); // A
+        query.extend_from_slice(&1u16.to_be_bytes()); // IN
+
+        let udp = UdpRepr {
+            src_port: from.port(),
+            dst_port: to.port(),
+        };
+        let ip = Ipv4Repr {
+            src_addr: src,
+            dst_addr: dst,
+            next_header: IpProtocol::Udp,
+            payload_len: 8 + query.len(),
+            hop_limit: 64,
+        };
+        let caps = Default::default();
+        let mut bytes = vec![0u8; ip.buffer_len() + 8 + query.len()];
+        ip.emit(&mut Ipv4Packet::new_unchecked(&mut bytes), &caps);
+        udp.emit(
+            &mut UdpPacket::new_unchecked(&mut bytes[ip.buffer_len()..]),
+            &src.into(),
+            &dst.into(),
+            query.len(),
+            |into| into.copy_from_slice(&query),
+            &caps,
+        );
+        bytes
+    }
+
+    /// A phone cannot reach anything by name unless its DNS is answered, and
+    /// a dropped query looks to it like the whole network has gone rather
+    /// than like a name that does not resolve. `localhost` is the one name
+    /// every machine answers with no network at all, so this is a test of
+    /// the wiring and not of anybody's resolver.
+    #[tokio::test]
+    async fn a_name_asked_for_down_the_tunnel_is_answered() {
+        use smoltcp::wire::{UdpPacket, UdpRepr};
+        let mut running = start(8);
+        running
+            .into
+            .send(asking("localhost", "10.78.0.2:51000", "10.78.0.1:53"))
+            .await
+            .unwrap();
+
+        let back = running.next().await;
+        let ip = Ipv4Packet::new_checked(&back[..]).expect("an IPv4 packet");
+        assert_eq!(ip.next_header(), IpProtocol::Udp);
+        assert_eq!(
+            ip.src_addr().octets(),
+            [10, 78, 0, 1],
+            "from the address the phone asked, not from one of ours"
+        );
+        assert_eq!(ip.dst_addr().octets(), [10, 78, 0, 2]);
+
+        let udp = UdpPacket::new_checked(ip.payload()).expect("a UDP datagram");
+        let repr = UdpRepr::parse(
+            &udp,
+            &ip.src_addr().into(),
+            &ip.dst_addr().into(),
+            &Default::default(),
+        )
+        .expect("a UDP header");
+        assert_eq!(repr.src_port, 53, "from the resolver's port");
+        assert_eq!(repr.dst_port, 51000, "back to the port that asked");
+
+        let answer = udp.payload();
+        let asked = crate::dns::ask(&asking("localhost", "10.78.0.2:51000", "10.78.0.1:53")[28..])
+            .expect("the question this test wrote");
+        assert_eq!(
+            &answer[..2],
+            &0x4321u16.to_be_bytes(),
+            "the query's own id, or the phone ignores it"
+        );
+        assert_eq!(answer[2] & 0x80, 0x80, "an answer");
+        assert!(
+            u16::from_be_bytes([answer[6], answer[7]]) >= 1,
+            "with an address in it: {answer:?}"
+        );
+        // The address itself: a loopback one, since that is what localhost is.
+        let rr = &answer[asked.question_ends..];
+        assert_eq!(&rr[12..16], &[127, 0, 0, 1]);
     }
 }

@@ -134,9 +134,10 @@ other road — the phone joins a tunnel, and everything it sends arrives here
 whether or not any app agreed to it.
 
 Off by default. Switched on, tracewing serves a WireGuard tunnel on 51820
-unless another number is given, and Settings shows the configuration the
-phone needs: install WireGuard from either store, add a tunnel, and paste
-that text in. The keys are made on the first run and kept in the system's
+unless another number is given, and Settings shows a code to scan: install
+WireGuard from either store, **Add tunnel › Create from QR code**, and point
+the camera at it. The same configuration is beside the code as text, for a
+phone that would rather be pasted into than aimed. The keys are made on the first run and kept in the system's
 keychain — the same place the root CA's key goes — so the phone keeps working
 across restarts and the configuration shown today is the one it was set up
 with. It is read when tracewing starts, so the switch takes effect at the
@@ -159,6 +160,22 @@ Two things to know before relying on it:
 - **The tunnel carries everything**, including the phone's own background
   traffic. That is the point, and it also means a busy phone fills a session
   quickly.
+- **Only TCP is captured.** The tunnel carries whatever the phone sends, and
+  what tracewing can read is TCP: a QUIC or HTTP/3 connection, which is UDP,
+  is dropped rather than recorded, and an app that insists on it will look
+  broken rather than be read. Most fall back to TCP when QUIC fails, which is
+  what makes this usable at all — and `Hide HTTP/3` in Settings is about the
+  same gap seen from the other side.
+
+**Names are answered here.** A phone sends its DNS down the tunnel with
+everything else, and DNS is UDP: the queries would be dropped with the rest,
+which does not look like a DNS fault from the phone — it looks like the whole
+network has gone, because everything it does starts with a name. So tracewing
+answers them itself, and resolves each name **the way this computer resolves
+names**, through the operating system. Whatever this computer is set to use —
+a company's resolver, a Pi-hole, systemd-resolved — the phone gets the same
+answers, and tracewing holds no opinion about DNS and sends your names to
+nobody of its own choosing.
 
 Both ends' keys are tracewing's own doing, which is unusual for WireGuard and
 deliberate: the alternative is asking somebody to generate a key on the phone

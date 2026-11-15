@@ -94,6 +94,34 @@ mod tests {
         assert_eq!(squares.runs()[0], (0, 0, 7));
     }
 
+    /// A phone's camera wants about four pixels a square on a screen, and
+    /// the WireGuard configuration is the longest thing drawn as a code
+    /// here: 258 bytes comes to 65 squares across. The size it is drawn at
+    /// is fixed, so a configuration that grew would not break — it would get
+    /// quietly harder to scan, and nothing would say so. This is what says
+    /// so.
+    #[test]
+    fn a_wireguard_configuration_still_scans_at_the_size_it_is_drawn() {
+        let ours = tracewing_proxy::wireguard::new_key().unwrap();
+        let phone = tracewing_proxy::wireguard::new_key().unwrap();
+        let config = tracewing_proxy::wireguard::config_for(
+            &ours,
+            &phone,
+            "192.168.1.13:51820".parse().unwrap(),
+        );
+        let squares = Squares::of(&config).expect("a code for it");
+
+        // What `qr_code` would work out for the size Settings asks for.
+        let side = 300.0f32;
+        let across = squares.width + 2 * QUIET;
+        let cell = (side / across as f32).floor();
+        assert!(
+            cell >= 4.0,
+            "{} squares across is {cell} pixels a square at {side}: too small to scan",
+            squares.width
+        );
+    }
+
     #[test]
     fn runs_cover_exactly_the_dark_squares() {
         let squares = Squares {
