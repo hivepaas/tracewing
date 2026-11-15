@@ -1222,6 +1222,9 @@ mod tests {
 
         drop(recorder);
         writer.close().unwrap();
+        // Windows will not remove a file still open, as the test below this
+        // one has said in a comment since before this test was written.
+        drop(conn);
         fs::remove_dir_all(&sessions).unwrap();
     }
 
