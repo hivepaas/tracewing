@@ -462,7 +462,7 @@ and only the others pay for a second. The look itself is started by the
 client's address either way, which is why a taken flow whose source named no
 program is now looked up like any client that asked.
 
-What is left:
+What is left, and what no longer is:
 
 1. **Local mode on macOS is in**, in
    [`crates/netext`](../../crates/netext): a `NETransparentProxyProvider` in
