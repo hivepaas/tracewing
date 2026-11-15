@@ -543,8 +543,17 @@ async fn pinned(addr: SocketAddr, index: u32) -> io::Result<TcpStream> {
 /// here and why they are one function with the difference written down.
 /// Microsoft's documentation says the IPv4 option "must be an interface
 /// index in network byte order", and that reading it back gives host byte
-/// order — so a wrong order here does not fail, it quietly pins the wrong
-/// interface. The IPv6 option takes the index as it is.
+/// order; the IPv6 option takes the index as it is.
+///
+/// Getting the IPv4 order wrong is **usually loud**, which was worth finding
+/// out by trying it: the option reads those four bytes as an IPv4 address
+/// and treats them as an index only when the first octet is zero. So a
+/// network-order 1 arrives as `0.0.0.1` and means interface 1, while a
+/// host-order 1 arrives as the address `1.0.0.0` and Windows answers
+/// `WSAEADDRNOTAVAIL`. It is quiet only for an index that is a multiple of
+/// 256, where both orders still look like an index and the wrong one simply
+/// names a different interface — which is the case the round trip in
+/// `pinning` is there for.
 #[cfg(windows)]
 fn leave_socket_by(socket: &tokio::net::TcpSocket, v6: bool, index: u32) -> io::Result<()> {
     use std::os::windows::io::AsRawSocket;
