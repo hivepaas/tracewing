@@ -11,6 +11,7 @@ publish.workspace = true
 tracewing-store.workspace = true
 tracewing-proxy.workspace = true
 tracewing-system.workspace = true
+tracewing-handoff.workspace = true
 anyhow.workspace = true
 base64.workspace = true
 bytes.workspace = true

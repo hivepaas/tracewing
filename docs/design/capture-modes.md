@@ -360,22 +360,41 @@ What is left:
 1. **Local mode on macOS is in**, in
    [`crates/netext`](../../crates/netext): a `NETransparentProxyProvider` in
    a system extension, which takes the TCP flows of the apps its
-   configuration names and hands each to tracewing's listener as a
-   `CONNECT`. Flow-level, so it needed none of the TCP stack below.
+   configuration names. Flow-level, so it needed none of the TCP stack below.
    `scripts/package_macos.sh` puts it in the app when the entitlement is
    there; `docs/building.md` has how to build and run it.
 
-   **One end of it is open, and it is worth knowing before anybody relies
-   on it.** The extension sends the app's signing id and process id in an
-   `X-Tracewing-App` header, and nothing reads that header: a grep for it
-   finds `crates/netext` and this documentation and nothing else. So the
-   program behind such a flow is looked for the way it is for any client,
-   by the socket's owner — and the socket belongs to the **extension**,
-   not to the app it took the flow from. The likely result is that these
-   flows are named after the extension, which would make the one thing the
-   mode is for invisible. That last step is an inference: it needs a Mac to
-   see, and this machine is not one. Written here rather than left as a
-   surprise.
+   It reaches the seam as a source like the others:
+   [`extension.rs`](../../crates/proxy/src/extension.rs), a port of its own
+   on the loopback. For each flow the extension connects there and says, in
+   a few lines ([`crates/handoff`](../../crates/handoff)), where the flow
+   was going — the name the app asked for, which macOS gives even to a
+   program that connected by address — and the app's signing id and process.
+   What follows is the app's conversation, handed over as a `Took::Flow`, so
+   the TLS and plain-HTTP split, the name in the hello and `as_absolute` are
+   the same code every taken flow goes through: a plain `POST` is read, not
+   tunnelled blind.
+
+   **The program is named, not looked for.** It used to be the open end of
+   this: an earlier version sent a `CONNECT` with the app in an
+   `X-Tracewing-App` header that nothing read, so the program was looked up
+   by the socket's owner, which is the extension. Now the port reads the
+   app's process from the lines and the program from that process, as the
+   `who` of the flow; `curl` on a Mac is recorded as `curl`, with its pid.
+
+   **Both ends prove they hold a key**, which tracewing makes and saves in
+   the extension's configuration, and neither ever sends. The extension's
+   lines are signed with it, so no other program on the computer can hand a
+   flow over under another app's name; tracewing's answer is signed too, and
+   that one matters more. While tracewing is not running, anything may
+   listen on its port, and an extension that trusted whatever answered would
+   hand it the traffic of every app it was told to take. Instead a flow that
+   cannot be handed to something proving it is tracewing goes out as it
+   would have: the extension does the hand-off before it answers macOS, so
+   it can still say no.
+
+   What is left is the app's end: installing the extension, the key, and
+   saving and starting the configuration with the capture.
 2. The TCP/IP stack is **in**, in [`stack.rs`](../../crates/proxy/src/stack.rs):
    packets in, [`Took::Flow`](../../crates/proxy/src/source.rs) out, on
    `smoltcp`, answering each `SYN` as the server the client was going to. What

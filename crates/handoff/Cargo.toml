@@ -1,0 +1,15 @@
+[package]
+name = "tracewing-handoff"
+description = "How a flow taken outside tracewing, by macOS's network extension, is handed to it: the lines said before the bytes, and the key both ends prove they hold"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# Kept apart from tracewing-proxy so that the extension, which has a small
+# memory budget and builds on its own, takes this and nothing else of it.
+[dependencies]
+getrandom = { version = "0.3", features = ["std"] }
+hmac.workspace = true
+sha2.workspace = true
