@@ -4282,6 +4282,100 @@ async fn a_taken_tls_connection_is_decrypted() {
     clean_up(conn, dir);
 }
 
+/// The shape every source that deals in packets produces for HTTPS, which is
+/// most of what a phone sends: a flow handed over as a **bare address**,
+/// whose `ClientHello` carries the name. It must be recorded under the name.
+///
+/// This is the one link in that chain nothing covered. A taken flow named by
+/// address is tested with plain HTTP, a taken flow named by name is tested
+/// with TLS, and the name is read out of a hello in `handover`'s own tests —
+/// but nothing followed an address-named TLS flow all the way to a row, and
+/// that is the combination a WireGuard phone produces every time it opens an
+/// HTTPS connection.
+///
+/// What it proves is the **name**: with the hello unread, the row says
+/// `127.0.0.1:port` instead of `localhost:port`, which is what this asserts
+/// either way round.
+///
+/// What it does **not** prove is the failure that makes the name matter.
+/// `upstream` asks the server by whatever the flow is named, so an address
+/// there becomes a rustls `ServerName::IpAddress`: no SNI goes out and the
+/// certificate is checked against an address no public certificate carries.
+/// Against a real server that fails. Against this one it does not — the
+/// playground's own authority is trusted here and the request still answers
+/// `200` with the hello unread, which I know because I tried it. So the
+/// assertion is on the recorded name, not on a failure this harness cannot
+/// produce.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_taken_address_is_recorded_under_the_name_in_its_hello() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio_rustls::rustls::{ClientConfig, RootCertStore, pki_types::ServerName};
+    let h = Harness::start("taken-sni").await;
+    let port = h.playground_tls_port;
+    let (client, its_end) = tokio::io::duplex(64 * 1024);
+    h.taken
+        .send(Flow {
+            stream: Box::new(its_end),
+            client: "10.78.0.2:51000".parse().unwrap(),
+            // An address and nothing else, as a packet carries.
+            to: Target::Addr(format!("127.0.0.1:{port}").parse().unwrap()),
+            who: None,
+        })
+        .await
+        .unwrap();
+
+    let mut roots = RootCertStore::empty();
+    for cert in CertificateDer::pem_file_iter(h.dir.join("ca/ca.pem")).unwrap() {
+        roots.add(cert.unwrap()).unwrap();
+    }
+    let config = ClientConfig::builder_with_provider(Arc::new(tracewing_proxy::crypto_provider()))
+        .with_safe_default_protocol_versions()
+        .unwrap()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    // The client asks for `localhost`, so that is what its hello says. The
+    // flow was handed over as 127.0.0.1, so the two differ on purpose.
+    let mut tls = tokio_rustls::TlsConnector::from(Arc::new(config))
+        .connect(ServerName::try_from("localhost").unwrap(), client)
+        .await
+        .expect("the proxy's certificate, for a connection it was handed");
+    tls.write_all(b"GET /json HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        .await
+        .unwrap();
+    let mut said = Vec::new();
+    tls.read_to_end(&mut said).await.unwrap();
+    let said = String::from_utf8_lossy(&said);
+    assert!(
+        said.starts_with("HTTP/1.1 200"),
+        "the proxy reached the server by name: {said}"
+    );
+
+    let (summary, conn, dir) = h.finish(1).await;
+    assert_eq!(summary.written, 1);
+    let (scheme, host, path, client_addr): (String, String, String, String) = conn
+        .query_row("SELECT scheme, host, path, client FROM flows", [], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        })
+        .unwrap();
+    assert_eq!(scheme, "https", "decrypted, not tunnelled");
+    assert_eq!(
+        host,
+        format!("localhost:{port}"),
+        "named by its hello, not by the address it was handed over as"
+    );
+    assert_ne!(
+        host,
+        format!("127.0.0.1:{port}"),
+        "the address is what it would say if the hello were never read"
+    );
+    assert_eq!(path, "/json");
+    assert_eq!(
+        client_addr, "10.78.0.2:51000",
+        "the client the source saw, which is the phone inside the tunnel"
+    );
+    clean_up(conn, dir);
+}
+
 /// A client told to use tracewing's SOCKS5 port, speaking RFC 1928 by hand so
 /// that the test is a second implementation of the handshake rather than the
 /// same one twice. It asks for a name, and the flow is recorded under that
