@@ -60,6 +60,9 @@ pub enum Sides {
 pub enum SettingsSection {
     #[default]
     General,
+    /// How traffic reaches tracewing: a tab for each way in. What is done
+    /// with traffic once it arrives is [`Self::Network`]'s.
+    Capture,
     Network,
     Certificates,
     Decoding,
@@ -69,8 +72,9 @@ pub enum SettingsSection {
 }
 
 impl SettingsSection {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::General,
+        Self::Capture,
         Self::Network,
         Self::Certificates,
         Self::Decoding,
@@ -82,12 +86,71 @@ impl SettingsSection {
     pub fn name(self) -> String {
         match self {
             Self::General => tr!("General"),
+            Self::Capture => tr!("Capture"),
             Self::Network => tr!("Network"),
             Self::Certificates => tr!("Certificates"),
             Self::Decoding => tr!("Decoding"),
             Self::Storage => tr!("Storage"),
             Self::Ai => tr!("AI tools"),
             Self::About => tr!("About"),
+        }
+    }
+}
+
+/// A way traffic reaches tracewing: one tab of Settings › Capture each.
+///
+/// Every setting, address and switch belonging to a way in is shown under its
+/// own tab and nowhere else, so that nobody has to remember which page they
+/// turned a thing on from. What does *not* belong here is what tracewing does
+/// with traffic that has arrived — HTTP/3, decoding, storage — which is why
+/// this is not simply the old `Network` list renamed.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Way {
+    /// This computer's own proxy setting.
+    #[default]
+    SystemProxy,
+    /// A browser started in a profile of tracewing's.
+    Browser,
+    /// A shell with the proxy and the trust variables set.
+    Terminal,
+    /// A listener on this machine's LAN addresses, for a phone or another
+    /// computer told the proxy by hand.
+    OtherDevices,
+    /// A port speaking RFC 1928.
+    Socks5,
+    /// A tunnel a phone joins.
+    WireGuard,
+    /// macOS's network extension, which takes the flows of the apps it is
+    /// told of.
+    Apps,
+}
+
+impl Way {
+    /// In the order somebody meets them: the ones that need nothing of
+    /// anybody else first, the ones another device or app has to be set up
+    /// for last.
+    pub const ALL: [Self; 7] = [
+        Self::SystemProxy,
+        Self::Browser,
+        Self::Terminal,
+        Self::OtherDevices,
+        Self::Socks5,
+        Self::WireGuard,
+        Self::Apps,
+    ];
+
+    pub fn name(self) -> String {
+        match self {
+            Self::SystemProxy => tr!("System proxy"),
+            Self::Browser => tr!("A browser"),
+            Self::Terminal => tr!("A terminal"),
+            Self::OtherDevices => tr!("Other devices"),
+            // The protocols' own names, as in the settings below: not
+            // translated.
+            Self::Socks5 => "SOCKS5".to_owned(),
+            Self::WireGuard => "WireGuard".to_owned(),
+            Self::Apps => tr!("Apps"),
         }
     }
 }
@@ -154,6 +217,8 @@ pub struct Layout {
     pub named: Vec<Named>,
     /// The part of Settings last open.
     pub settings_section: SettingsSection,
+    /// The way in last looked at, under Capture.
+    pub capture_way: Way,
     /// The body text size chosen, in px; `None` for the default.
     pub text_size: Option<u8>,
     /// The interface's font: `None` for tracewing's own, [`SYSTEM_FONT`] for
@@ -218,6 +283,7 @@ impl Default for Layout {
             inspector_window: None,
             named: Vec::new(),
             settings_section: SettingsSection::default(),
+            capture_way: Way::default(),
             text_size: None,
             ui_font: None,
             code_font: None,

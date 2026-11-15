@@ -7,7 +7,8 @@ use crate::text_size::ui;
 use crate::{
     colors::colors,
     input::TextInput,
-    layout::{Appearance, SettingsSection},
+    layout::{Appearance, SettingsSection, Way},
+    system::ProxySwitch,
     traffic::Traffic,
     widgets::{Reachable, eyebrow},
 };
@@ -39,12 +40,46 @@ fn row(key: &'static str, label: String, help: String, unit: &'static str) -> Ro
     }
 }
 
+/// A group of settings: where it is shown, and what it is called there.
+struct Group {
+    at: SettingsSection,
+    /// The way in it belongs to, for the groups under [`SettingsSection::Capture`];
+    /// `None` for the rest, which are about what tracewing does with traffic
+    /// rather than about how traffic arrives.
+    way: Option<Way>,
+    title: String,
+    rows: Vec<Row>,
+}
+
+fn group(at: SettingsSection, way: Option<Way>, title: String, rows: Vec<Row>) -> Group {
+    Group {
+        at,
+        way,
+        title,
+        rows,
+    }
+}
+
+/// The groups a part of Settings shows — and, under
+/// [`SettingsSection::Capture`], only those of the way in whose tab is open.
+///
+/// Every place that asks "what is on this page" goes through here, which is
+/// what keeps "Back to defaults" and the restart notice from reaching across
+/// tabs into settings nobody can see.
+fn shown_in(at: SettingsSection, way: Way) -> Vec<Group> {
+    groups()
+        .into_iter()
+        .filter(|g| g.at == at && (at != SettingsSection::Capture || g.way == Some(way)))
+        .collect()
+}
+
 /// The settings by group, each in its part of Settings, said in the language
 /// in use.
-fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
+fn groups() -> Vec<Group> {
     vec![
-        (
-            SettingsSection::Network,
+        group(
+            SettingsSection::Capture,
+            Some(Way::OtherDevices),
             tr!("Other devices"),
             vec![row(
                 "other_devices",
@@ -56,8 +91,9 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
                 "",
             )],
         ),
-        (
-            SettingsSection::Network,
+        group(
+            SettingsSection::Capture,
+            Some(Way::Socks5),
             // The protocol's name, as in the relay settings: not translated.
             "SOCKS5".to_owned(),
             vec![
@@ -82,8 +118,9 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
                 ),
             ],
         ),
-        (
-            SettingsSection::Network,
+        group(
+            SettingsSection::Capture,
+            Some(Way::WireGuard),
             // The protocol's name, as above: not translated.
             "WireGuard".to_owned(),
             vec![
@@ -110,8 +147,9 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
                 ),
             ],
         ),
-        (
+        group(
             SettingsSection::Certificates,
+            None,
             tr!("Servers"),
             vec![row(
                 "os_roots",
@@ -124,8 +162,9 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
                 "",
             )],
         ),
-        (
+        group(
             SettingsSection::Decoding,
+            None,
             tr!("Reading values"),
             vec![row(
                 "mark_readings",
@@ -138,8 +177,9 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
                 "",
             )],
         ),
-        (
+        group(
             SettingsSection::Ai,
+            None,
             tr!("AI tools"),
             vec![
                 row(
@@ -163,8 +203,9 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
                 ),
             ],
         ),
-        (
+        group(
             SettingsSection::Network,
+            None,
             tr!("HTTP/3"),
             vec![row(
                 "hide_http3",
@@ -177,8 +218,9 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
                 "",
             )],
         ),
-        (
+        group(
             SettingsSection::Storage,
+            None,
             tr!("Sessions"),
             vec![
                 row(
@@ -203,8 +245,9 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
                 ),
             ],
         ),
-        (
+        group(
             SettingsSection::Storage,
+            None,
             tr!("Bodies"),
             vec![
                 row(
@@ -243,8 +286,9 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
                 ),
             ],
         ),
-        (
+        group(
             SettingsSection::Storage,
+            None,
             tr!("Search"),
             vec![
                 row(
@@ -267,8 +311,9 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
                 ),
             ],
         ),
-        (
+        group(
             SettingsSection::Storage,
+            None,
             tr!("Under heavy traffic"),
             vec![
                 row(
@@ -322,8 +367,8 @@ impl SettingsPage {
     pub fn new(settings: &StorageSettings, cx: &mut Context<Traffic>) -> Self {
         let table = toml::Value::try_from(settings).expect("settings are plain values");
         let mut fields = Vec::new();
-        for (_, _, rows) in groups() {
-            for row in rows {
+        for group in groups() {
+            for row in group.rows {
                 let value = &table[row.key];
                 let field = match value {
                     toml::Value::Boolean(on) => Field::Toggle(*on),
@@ -551,11 +596,9 @@ impl Traffic {
         let Some(now) = before.clone() else {
             return;
         };
-        let section = self.layout.settings_section;
-        let keys: Vec<&str> = groups()
+        let keys: Vec<&str> = shown_in(self.layout.settings_section, self.layout.capture_way)
             .into_iter()
-            .filter(|(at, _, _)| *at == section)
-            .flat_map(|(_, _, rows)| rows.into_iter().map(|row| row.key))
+            .flat_map(|group| group.rows.into_iter().map(|row| row.key))
             .collect();
         let defaults =
             toml::Value::try_from(StorageSettings::default()).expect("settings are plain values");
@@ -599,12 +642,16 @@ impl Traffic {
     /// Puts the cursor in a number field. For tests.
     #[doc(hidden)]
     pub fn focus_setting(&mut self, key: &str, window: &mut Window, cx: &mut Context<Self>) {
-        // Its part open, as a field is only reached where it is shown.
-        if let Some((section, _, _)) = groups()
+        // Its part open, and its tab, as a field is only reached where it is
+        // shown.
+        if let Some(group) = groups()
             .into_iter()
-            .find(|(_, _, rows)| rows.iter().any(|row| row.key == key))
+            .find(|group| group.rows.iter().any(|row| row.key == key))
         {
-            self.layout.settings_section = section;
+            self.layout.settings_section = group.at;
+            if let Some(way) = group.way {
+                self.layout.capture_way = way;
+            }
         }
         let Some(page) = &self.settings_page else {
             return;
@@ -647,6 +694,218 @@ impl Traffic {
         self.save_layout();
         self.went();
         cx.notify();
+    }
+
+    /// Opens a way in's tab under Capture.
+    ///
+    /// The same forgetting as leaving a part of Settings: what was said about
+    /// the tab left is not about the one arrived at.
+    pub fn show_way(&mut self, way: Way, cx: &mut Context<Self>) {
+        self.layout.capture_way = way;
+        if let Some(page) = &mut self.settings_page {
+            page.undo = None;
+            page.problem = None;
+            page.editing = None;
+        }
+        self.save_layout();
+        self.went();
+        cx.notify();
+    }
+
+    /// The tabs of Settings › Capture: one for each way traffic reaches
+    /// tracewing, so that no setting is left looking as if it belonged to
+    /// another way in, or to none.
+    fn render_capture_tabs(&self, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let open = self.layout.capture_way;
+        div()
+            .flex()
+            .flex_row()
+            .flex_wrap()
+            .gap(ui(6.))
+            .children(Way::ALL.into_iter().map(|way| {
+                let on = way == open;
+                div()
+                    .id(("capture-way", way as usize))
+                    .h(ui(32.))
+                    .px(ui(14.))
+                    .rounded(ui(16.))
+                    .flex()
+                    .items_center()
+                    .cursor_pointer()
+                    .reachable()
+                    .when(on, |d| {
+                        d.bg(rgb(c.accent))
+                            .text_color(rgb(c.on_accent))
+                            .font_weight(FontWeight::BOLD)
+                    })
+                    .when(!on, |d| {
+                        d.bg(rgb(c.chip))
+                            .text_color(rgb(c.on_chip))
+                            .hover(|d| d.bg(rgb(c.surface)))
+                    })
+                    .child(way.name())
+                    .on_click(cx.listener(move |this, _, _, cx| this.show_way(way, cx)))
+            }))
+    }
+
+    /// What the open tab's way in catches, what it does not, and whatever it
+    /// is turned on or off by that is not a setting in `settings.toml`.
+    ///
+    /// The second line is the one worth the room. Somebody whose Java program
+    /// shows nothing has a way in that cannot catch it, not a tracewing that
+    /// is broken, and the tab is where that can be said before the issue
+    /// tracker hears about it.
+    fn render_way(&mut self, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let way = self.layout.capture_way;
+        let addr = self.engine.addr.to_string();
+        let (catches, misses) = match way {
+            Way::SystemProxy => (
+                tr!(
+                    "Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking."
+                ),
+                tr!(
+                    "Java, which reads no proxy setting of the system's; programs with a setting of their own; and on macOS, anything sent to localhost."
+                ),
+            ),
+            Way::Browser => (
+                tr!(
+                    "Chrome, Edge, Brave, Opera, Chromium and Firefox, each in a profile of tracewing's — the system proxy left alone."
+                ),
+                tr!("Safari, which has no profile of its own: use the system proxy for it."),
+            ),
+            Way::Terminal => (
+                tr!(
+                    "What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code and Codex."
+                ),
+                tr!(
+                    "Node.js before 22.21, and 23 to 24.4; Java, which reads neither the proxy nor the trust variables."
+                ),
+            ),
+            Way::OtherDevices => (
+                tr!(
+                    "A phone or another computer on your network, once it is told {addr} as its proxy by hand.",
+                    addr = addr.clone()
+                ),
+                tr!(
+                    "Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those."
+                ),
+            ),
+            Way::Socks5 => (
+                tr!(
+                    "What speaks SOCKS: anything reading ALL_PROXY, git with a socks5h:// proxy, Firefox's own SOCKS setting, proxychains."
+                ),
+                tr!(
+                    "Programs that read only HTTP_PROXY and HTTPS_PROXY, and anything with no SOCKS setting of its own."
+                ),
+            ),
+            Way::WireGuard => (
+                tr!(
+                    "Everything a phone sends once it joins the tunnel, apps that ignore the phone's proxy setting included."
+                ),
+                tr!(
+                    "Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone."
+                ),
+            ),
+            Way::Apps => (
+                tr!(
+                    "Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too."
+                ),
+                tr!(
+                    "UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes."
+                ),
+            ),
+        };
+        // What turns this way in on, where that is not a row of settings.
+        let control: Option<gpui::AnyElement> = match way {
+            Way::SystemProxy => {
+                let on = matches!(self.system.proxy, ProxySwitch::On(_));
+                let working = matches!(self.system.proxy, ProxySwitch::Working);
+                // Some desktops have no setting tracewing can change, and a
+                // button that cannot work is worse than a sentence saying so.
+                let no_setting = self
+                    .system
+                    .environment
+                    .no_system_proxy
+                    .clone()
+                    .filter(|_| !on);
+                (!working && no_setting.is_none()).then(|| {
+                    crate::setup_page::button(
+                        "capture-proxy",
+                        if on { tr!("Turn off") } else { tr!("Turn on") },
+                        !on,
+                    )
+                    .on_click(cx.listener(|this, _, _, cx| this.toggle_system_proxy(cx)))
+                    .into_any_element()
+                })
+            }
+            // A browser and a terminal are opened, not switched on, and Set
+            // up is where that is done: one button rather than a second copy
+            // of the list of browsers.
+            Way::Browser | Way::Terminal => Some(
+                crate::setup_page::button("capture-setup", tr!("Open from Set up"), false)
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.set_screen(crate::traffic::Screen::Setup, cx)
+                    }))
+                    .into_any_element(),
+            ),
+            Way::OtherDevices | Way::Socks5 | Way::WireGuard | Way::Apps => None,
+        };
+        // A way in with no window of its own yet says so, and says what does
+        // work, rather than showing a switch that is not wired to anything.
+        let instead = match way {
+            Way::Apps if cfg!(target_os = "macos") => Some((
+                tr!(
+                    "Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it."
+                ),
+                Some("tracewing capture --app com.example.theapp".to_owned()),
+            )),
+            Way::Apps => Some((
+                tr!("macOS only: it is macOS that hands an app's connections over."),
+                None,
+            )),
+            _ => None,
+        };
+        div()
+            .flex()
+            .flex_col()
+            .gap(ui(8.))
+            .p(ui(14.))
+            .rounded(ui(22.))
+            .bg(rgb(c.surface))
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .items_center()
+                    .gap(ui(16.))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .gap(ui(4.))
+                            .child(eyebrow(tr!("Catches")))
+                            .child(catches)
+                            .child(eyebrow(tr!("Does not catch")))
+                            .child(div().text_color(rgb(c.muted)).child(misses)),
+                    )
+                    .children(control),
+            )
+            .children(instead.map(|(says, command)| {
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(ui(8.))
+                    .child(div().text_size(ui(12.)).child(says))
+                    .children(
+                        command
+                            .map(|command| crate::setup_page::code_block("capture-app", command)),
+                    )
+            }))
     }
 
     /// The body text size, `None` for the default. Everything grows with it.
@@ -989,6 +1248,13 @@ impl Traffic {
                 ],
                 Vec::new(),
             ),
+            SettingsSection::Capture => (
+                vec![
+                    self.render_capture_tabs(cx).into_any_element(),
+                    self.render_way(cx).into_any_element(),
+                ],
+                Vec::new(),
+            ),
             SettingsSection::Network => (
                 Vec::new(),
                 vec![
@@ -1038,10 +1304,9 @@ impl Traffic {
                 .map(|(_, field)| field)
                 .expect("every row has a field")
         };
-        let shown: Vec<(String, Vec<Row>)> = groups()
+        let shown: Vec<(String, Vec<Row>)> = shown_in(section, self.layout.capture_way)
             .into_iter()
-            .filter(|(at, _, _)| *at == section)
-            .map(|(_, title, rows)| (title, rows))
+            .map(|group| (group.title, group.rows))
             .collect();
         let has_rows = !shown.is_empty();
         // Those waiting for a restart that this part holds.
@@ -1684,6 +1949,62 @@ impl Traffic {
 mod tests {
     use super::*;
 
+    /// The whole point of the tabs: a setting belongs to one way in, and is
+    /// shown under that one and nowhere else. If this fails, somebody looking
+    /// at the SOCKS5 tab is being shown — and "Back to defaults" is reaching
+    /// — settings that belong to a different way in.
+    #[test]
+    fn a_tab_shows_its_own_way_in_and_no_other() {
+        for way in Way::ALL {
+            for group in shown_in(SettingsSection::Capture, way) {
+                assert_eq!(
+                    group.way,
+                    Some(way),
+                    "{} is shown under {}",
+                    group.title,
+                    way.name()
+                );
+            }
+        }
+        // Three ways in have settings of their own; the rest are a switch or
+        // an action, and their tabs are text and a button. Said here so that
+        // an empty tab is a decision rather than a group somebody forgot to
+        // give a `way`.
+        let with_rows: Vec<String> = Way::ALL
+            .into_iter()
+            .filter(|way| !shown_in(SettingsSection::Capture, *way).is_empty())
+            .map(Way::name)
+            .collect();
+        assert_eq!(
+            with_rows,
+            vec![
+                tr!("Other devices"),
+                "SOCKS5".to_owned(),
+                "WireGuard".to_owned()
+            ]
+        );
+    }
+
+    /// What is left of `Network` after the ways in moved out of it: the things
+    /// that are about traffic which has already arrived.
+    #[test]
+    fn network_keeps_only_what_is_not_a_way_in() {
+        let network: Vec<String> = groups()
+            .into_iter()
+            .filter(|group| group.at == SettingsSection::Network)
+            .map(|group| group.title)
+            .collect();
+        assert_eq!(network, vec![tr!("HTTP/3")]);
+        for group in groups() {
+            assert_eq!(
+                group.way.is_some(),
+                group.at == SettingsSection::Capture,
+                "{} has a way in exactly when it is under Capture",
+                group.title
+            );
+        }
+    }
+
     #[test]
     fn every_setting_has_a_row() {
         let table = toml::Value::try_from(StorageSettings::default()).unwrap();
@@ -1695,7 +2016,7 @@ mod tests {
             .collect();
         let mut rows: Vec<&str> = groups()
             .into_iter()
-            .flat_map(|(_, _, rows)| rows.into_iter().map(|row| row.key))
+            .flat_map(|group| group.rows.into_iter().map(|row| row.key))
             .collect();
         keys.sort_unstable();
         rows.sort_unstable();

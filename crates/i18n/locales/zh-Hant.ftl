@@ -940,6 +940,9 @@ t7f8fa9c0 = 模擬器未接受：{ $why }
 # General
 t5561fd0b = 一般
 
+# Capture
+t2fbb5e61 = 擷取
+
 # Network
 t6974ad65 = 網路
 
@@ -957,6 +960,21 @@ t294d7ea4 = AI 工具
 
 # About
 t58e096de = 說明
+
+# System proxy
+tb5cdad84 = 系統代理伺服器
+
+# A browser
+t666f4ecc = 瀏覽器
+
+# A terminal
+t7e7408e4 = 終端機
+
+# Other devices
+t9e7d8362 = 其他裝置
+
+# Apps
+t53d91aad = App
 
 # Light
 t8ad2f8cf = 淺色
@@ -1681,9 +1699,6 @@ t17bccaf2 = 開始新的工作階段
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = 匯出的 HAR 檔案會去掉標頭、URL 和本文中的 Cookie、權杖、金鑰和密碼
 
-# Other devices
-t9e7d8362 = 其他裝置
-
 # Let other devices use the proxy
 t13e626b3 = 允許其他裝置使用代理伺服器
 
@@ -1842,6 +1857,69 @@ ta8606963 = { $key }：「{ $text }」不是整數
 
 # {key}: must not be negative
 t9c4debaa = { $key }：不可為負數
+
+# Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking.
+t2c56e95c = 使用這台電腦代理設定的應用程式：大多數瀏覽器，以及走系統網路的一切。
+
+# Java, which reads no proxy setting of the system's; programs with a setting of their own; and on macOS, anything sent to localhost.
+t51cd6bad = 不讀系統任何代理設定的 Java；有自己設定的程式；以及在 macOS 上送往 localhost 的一切。
+
+# Chrome, Edge, Brave, Opera, Chromium and Firefox, each in a profile of tracewing's — the system proxy left alone.
+tdacc78b6 = Chrome、Edge、Brave、Opera、Chromium 和 Firefox，各自在 tracewing 的專用設定檔裡 — 系統代理伺服器保持原樣。
+
+# Safari, which has no profile of its own: use the system proxy for it.
+t2bea398a = 沒有專用設定檔的 Safari：請用系統代理伺服器擷取它。
+
+# What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code and Codex.
+t336769d4 = 在其中啟動的東西：curl、git、Python、Go、Deno、Bun，以及 Claude Code、Codex 這類 AI 代理程式。
+
+# Node.js before 22.21, and 23 to 24.4; Java, which reads neither the proxy nor the trust variables.
+t91fa7c81 = 22.21 之前的 Node.js，以及 23 到 24.4；還有既不讀代理也不讀信任變數的 Java。
+
+# A phone or another computer on your network, once it is told {addr} as its proxy by hand.
+t8246bdeb = 你網路裡的一台手機或另一台電腦，在手動把 { $addr } 設為它的代理之後。
+
+# Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those.
+t8cd55aad = 那台裝置上忽略自身代理設定的東西，在手機上幾乎是所有應用程式：那些要靠隧道擷取。
+
+# What speaks SOCKS: anything reading ALL_PROXY, git with a socks5h:// proxy, Firefox's own SOCKS setting, proxychains.
+t9ebae2ee = 會說 SOCKS 的東西：讀 ALL_PROXY 的一切、用 socks5h:// 代理的 git、Firefox 自己的 SOCKS 設定、proxychains。
+
+# Programs that read only HTTP_PROXY and HTTPS_PROXY, and anything with no SOCKS setting of its own.
+t576f0cf9 = 只讀 HTTP_PROXY 和 HTTPS_PROXY 的程式，以及沒有自己 SOCKS 設定的一切。
+
+# Everything a phone sends once it joins the tunnel, apps that ignore the phone's proxy setting included.
+t0d857250 = 手機加入隧道後送出的一切，包括忽略手機代理設定的應用程式。
+
+# Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
+tb457dd67 = 只信任自帶憑證的應用程式，以及在 tracewing 的 CA 裝到手機上之前送出的一切。
+
+# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
+t018f7b7c = 指定的應用程式透過 TCP 送出的一切，無論它是否讀取任何代理設定：任何版本的 Node、Java，連它的 localhost 也算。
+
+# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
+t3f6bf403 = UDP，所以也包括 HTTP/3；以及沒有自己簽章識別的程式，例如 go build 產生的一切。
+
+# Turn off
+tcd03e04b = 關閉
+
+# Turn on
+t65a0c5a7 = 開啟
+
+# Open from Set up
+tf0ad42dc = 從初始設定開啟
+
+# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
+t5b4d06d6 = 目前從命令列指定：它列出要擷取的應用程式，第一次會安裝擴充功能，並請 macOS 允許。
+
+# macOS only: it is macOS that hands an app's connections over.
+t71872556 = 僅 macOS：交出應用程式連線的是 macOS 自己。
+
+# Catches
+tf5f3fe08 = 擷取得到
+
+# Does not catch
+t8fd1679e = 擷取不到
 
 # {name} (default)
 td3f56fa8 = { $name }(預設)
@@ -2037,12 +2115,6 @@ tdcc53241 = 讓使用系統設定的 App 將這台電腦的流量經由 tracewin
 
 # Turn on the system proxy
 t52b88441 = 開啟系統代理伺服器
-
-# Turn off
-tcd03e04b = 關閉
-
-# Turn on
-t65a0c5a7 = 開啟
 
 # Check it in your browser
 tbed6e83a = 在瀏覽器中檢查
@@ -2472,9 +2544,6 @@ t838c1d44 = 沒有名稱包含此內容的主機
 
 # Hidden
 t3c2dfe59 = 已隱藏
-
-# Apps
-t53d91aad = App
 
 # Devices
 t27acf320 = 裝置

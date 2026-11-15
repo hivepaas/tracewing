@@ -940,6 +940,9 @@ t7f8fa9c0 = 시뮬레이터가 받아들이지 않았습니다: { $why }
 # General
 t5561fd0b = 일반
 
+# Capture
+t2fbb5e61 = 캡처
+
 # Network
 t6974ad65 = 네트워크
 
@@ -957,6 +960,21 @@ t294d7ea4 = AI 도구
 
 # About
 t58e096de = 설명
+
+# System proxy
+tb5cdad84 = 시스템 프록시
+
+# A browser
+t666f4ecc = 브라우저
+
+# A terminal
+t7e7408e4 = 터미널
+
+# Other devices
+t9e7d8362 = 다른 기기
+
+# Apps
+t53d91aad = 앱
 
 # Light
 t8ad2f8cf = 라이트
@@ -1681,9 +1699,6 @@ t17bccaf2 = 새 세션 시작
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = 내보낸 HAR 파일은 헤더, URL, 본문에서 쿠키, 토큰, 키, 비밀번호를 뺍니다
 
-# Other devices
-t9e7d8362 = 다른 기기
-
 # Let other devices use the proxy
 t13e626b3 = 다른 기기에서 프록시 사용 허용
 
@@ -1842,6 +1857,69 @@ ta8606963 = { $key }: "{ $text }"은(는) 정수가 아닙니다
 
 # {key}: must not be negative
 t9c4debaa = { $key }: 음수일 수 없습니다
+
+# Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking.
+t2c56e95c = 이 컴퓨터의 프록시 설정을 쓰는 앱: 대부분의 브라우저, 그리고 시스템 네트워크를 거치는 모든 것.
+
+# Java, which reads no proxy setting of the system's; programs with a setting of their own; and on macOS, anything sent to localhost.
+t51cd6bad = 시스템 프록시 설정을 읽지 않는 Java, 자체 설정이 있는 프로그램, 그리고 macOS에서 localhost로 보내는 모든 것.
+
+# Chrome, Edge, Brave, Opera, Chromium and Firefox, each in a profile of tracewing's — the system proxy left alone.
+tdacc78b6 = Chrome, Edge, Brave, Opera, Chromium, Firefox를 각각 tracewing 전용 프로필로 — 시스템 프록시는 그대로 둡니다.
+
+# Safari, which has no profile of its own: use the system proxy for it.
+t2bea398a = 자체 프로필이 없는 Safari: 이 브라우저에는 시스템 프록시를 쓰세요.
+
+# What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code and Codex.
+t336769d4 = 그 안에서 실행한 것: curl, git, Python, Go, Deno, Bun, 그리고 Claude Code와 Codex 같은 AI 에이전트.
+
+# Node.js before 22.21, and 23 to 24.4; Java, which reads neither the proxy nor the trust variables.
+t91fa7c81 = 22.21 이전의 Node.js와 23부터 24.4까지, 그리고 프록시도 신뢰 변수도 읽지 않는 Java.
+
+# A phone or another computer on your network, once it is told {addr} as its proxy by hand.
+t8246bdeb = 네트워크에 있는 휴대폰이나 다른 컴퓨터. { $addr }을(를) 프록시로 직접 지정한 뒤부터입니다.
+
+# Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those.
+t8cd55aad = 그 기기에서 프록시 설정을 무시하는 것. 휴대폰에서는 대부분의 앱이 그러하며, 그런 것은 터널이 잡습니다.
+
+# What speaks SOCKS: anything reading ALL_PROXY, git with a socks5h:// proxy, Firefox's own SOCKS setting, proxychains.
+t9ebae2ee = SOCKS를 말하는 것: ALL_PROXY를 읽는 것, socks5h:// 프록시를 쓰는 git, Firefox의 자체 SOCKS 설정, proxychains.
+
+# Programs that read only HTTP_PROXY and HTTPS_PROXY, and anything with no SOCKS setting of its own.
+t576f0cf9 = HTTP_PROXY와 HTTPS_PROXY만 읽는 프로그램, 그리고 자체 SOCKS 설정이 없는 모든 것.
+
+# Everything a phone sends once it joins the tunnel, apps that ignore the phone's proxy setting included.
+t0d857250 = 휴대폰이 터널에 들어온 뒤 보내는 모든 것. 휴대폰의 프록시 설정을 무시하는 앱도 포함합니다.
+
+# Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
+tb457dd67 = 자기 인증서만 신뢰하는 앱, 그리고 tracewing의 CA를 휴대폰에 설치하기 전에 보낸 모든 것.
+
+# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
+t018f7b7c = 지정한 앱이 TCP로 보내는 모든 것. 프록시 설정을 읽는지와 무관하며, 어떤 버전의 Node든, Java든, 그 localhost까지.
+
+# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
+t3f6bf403 = UDP, 그러므로 HTTP/3. 그리고 go build가 만드는 것처럼 자체 서명 ID가 없는 프로그램.
+
+# Turn off
+tcd03e04b = 끄기
+
+# Turn on
+t65a0c5a7 = 켜기
+
+# Open from Set up
+tf0ad42dc = 시작하기에서 열기
+
+# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
+t5b4d06d6 = 지금은 명령줄에서 지정합니다. 잡을 앱을 지정하고, 처음에는 확장을 설치하며, macOS에 허용을 요청합니다.
+
+# macOS only: it is macOS that hands an app's connections over.
+t71872556 = macOS 전용: 앱의 연결을 넘겨주는 것은 macOS 자체입니다.
+
+# Catches
+tf5f3fe08 = 잡는 것
+
+# Does not catch
+t8fd1679e = 잡지 못하는 것
 
 # {name} (default)
 td3f56fa8 = { $name } (기본값)
@@ -2037,12 +2115,6 @@ tdcc53241 = 시스템 설정을 사용하는 앱의 경우, 이 컴퓨터의 트
 
 # Turn on the system proxy
 t52b88441 = 시스템 프록시 켜기
-
-# Turn off
-tcd03e04b = 끄기
-
-# Turn on
-t65a0c5a7 = 켜기
 
 # Check it in your browser
 tbed6e83a = 브라우저에서 확인
@@ -2472,9 +2544,6 @@ t838c1d44 = 이름에 이것이 들어간 호스트가 없습니다
 
 # Hidden
 t3c2dfe59 = 숨김
-
-# Apps
-t53d91aad = 앱
 
 # Devices
 t27acf320 = 기기

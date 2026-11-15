@@ -14,7 +14,7 @@ use gpui::{
 use std::sync::Arc;
 use tracewing::{
     engine::{Engine, EngineOptions},
-    layout::SettingsSection,
+    layout::{SettingsSection, Way},
     navigation::Location,
     traffic::{Screen, Traffic},
 };
@@ -59,6 +59,7 @@ fn at(screen: Screen) -> Location {
     Location {
         screen,
         section: None,
+        way: None,
         session: None,
     }
 }
@@ -67,6 +68,18 @@ fn settings(section: SettingsSection) -> Location {
     Location {
         screen: Screen::Settings,
         section: Some(section),
+        way: None,
+        session: None,
+    }
+}
+
+/// Capture, with one of its tabs open: a place of its own, which is what the
+/// tab strip costs to be worth having.
+fn capture(way: Way) -> Location {
+    Location {
+        screen: Screen::Settings,
+        section: Some(SettingsSection::Capture),
+        way: Some(way),
         session: None,
     }
 }
@@ -156,6 +169,27 @@ fn back_and_forward_go_through_the_places_shown() {
     assert_eq!(here(&mut cx, main), at(Screen::Traffic));
     common::key(&mut cx, main, "alt-left");
     assert_eq!(here(&mut cx, main), at(Screen::Traffic));
+
+    // A tab under Capture is a place too. Somebody who read the WireGuard tab
+    // and then the terminal one expects Back to be the way to the first, not
+    // out of Capture altogether.
+    main.update(&mut cx, |view, _, cx| {
+        view.set_screen(Screen::Settings, cx);
+        view.show_settings_section(SettingsSection::Capture, cx);
+        view.show_way(Way::WireGuard, cx);
+        view.show_way(Way::Terminal, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    assert_eq!(here(&mut cx, main), capture(Way::Terminal));
+    mouse_button(&mut cx, main, true);
+    assert_eq!(here(&mut cx, main), capture(Way::WireGuard));
+    mouse_button(&mut cx, main, true);
+    assert_eq!(
+        here(&mut cx, main),
+        capture(Way::default()),
+        "the tab Capture opened on"
+    );
 
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);

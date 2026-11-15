@@ -90,6 +90,37 @@ Three rules fall out of that:
    see below — and a tab that guesses is worse than one that says it cannot
    tell.
 
+### What is built
+
+Settings › **Capture**, a tab for each way in
+([`Way`](../../crates/app/src/layout.rs)), holding what belongs to it:
+
+- `other_devices`, `socks`/`socks_port` and `wireguard`/`wireguard_port` moved
+  out of `Network` into the tabs that own them, and the WireGuard
+  configuration and its QR code moved with the switch that serves it. What is
+  left of `Network` is HTTP/3, which is not a way in — and a test says so, so
+  that the next setting about arriving traffic does not land back there.
+- the **system proxy's switch**, which was only ever on Set up, with the same
+  three states: on, being turned on, and a desktop with no setting tracewing
+  can change — where a sentence takes the button's place rather than a button
+  that cannot work.
+- what each way in **catches**, and under it what it **does not**. The second
+  line is the one worth the room: somebody whose Java program shows nothing
+  has a way in that cannot catch it, not a tracewing that is broken.
+- for *Apps*, what is true today rather than a switch wired to nothing: on
+  macOS the command line that drives the extension, and on Linux and Windows
+  a line saying it is macOS that hands an app's connections over.
+
+A tab is a place in the window's history, so Back goes from the terminal tab
+to the WireGuard tab rather than out of Capture altogether, and the tab open
+is kept in `layout.toml`. Everything that asks "what is on this page" —
+groups, the restart notice, **Back to defaults** — goes through one function,
+which is what stops a reset on the SOCKS5 tab from reaching WireGuard's
+settings.
+
+What is not built yet: the wizard, Java's truststore, and the trust links out
+of each tab.
+
 ## Surface 2: a wizard, by what somebody wants to capture
 
 The wizard does not ask which way in to use. It asks **what** is being

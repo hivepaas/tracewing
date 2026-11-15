@@ -971,6 +971,9 @@ t7f8fa9c0 = Simülatör onu kabul etmedi: { $why }
 # General
 t5561fd0b = Genel
 
+# Capture
+t2fbb5e61 = Yakalama
+
 # Network
 t6974ad65 = Ağ
 
@@ -988,6 +991,21 @@ t294d7ea4 = Yapay zekâ araçları
 
 # About
 t58e096de = Açıklama
+
+# System proxy
+tb5cdad84 = Sistem proxy'si
+
+# A browser
+t666f4ecc = Bir tarayıcı
+
+# A terminal
+t7e7408e4 = Bir terminal
+
+# Other devices
+t9e7d8362 = Diğer cihazlar
+
+# Apps
+t53d91aad = Uygulamalar
 
 # Light
 t8ad2f8cf = Açık
@@ -1755,9 +1773,6 @@ t17bccaf2 = Yeni bir oturum başlat
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = Dışa aktarılan HAR dosyaları başlıklarda, URL'lerde ve gövdelerde çerezleri, token'ları, anahtarları ve parolaları dışarıda bırakır
 
-# Other devices
-t9e7d8362 = Diğer cihazlar
-
 # Let other devices use the proxy
 t13e626b3 = Diğer cihazların proxy'yi kullanmasına izin ver
 
@@ -1916,6 +1931,69 @@ ta8606963 = { $key }: "{ $text }" bir tam sayı değil
 
 # {key}: must not be negative
 t9c4debaa = { $key }: negatif olamaz
+
+# Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking.
+t2c56e95c = Bu bilgisayarın proxy ayarını kullanan uygulamalar: tarayıcıların çoğu ve sistemin ağından geçen her şey.
+
+# Java, which reads no proxy setting of the system's; programs with a setting of their own; and on macOS, anything sent to localhost.
+t51cd6bad = Sistemin proxy ayarını hiç okumayan Java; kendi ayarı olan programlar; ve macOS'ta localhost'a gönderilen her şey.
+
+# Chrome, Edge, Brave, Opera, Chromium and Firefox, each in a profile of tracewing's — the system proxy left alone.
+tdacc78b6 = Chrome, Edge, Brave, Opera, Chromium ve Firefox, her biri tracewing'in bir profilinde — sistem proxy'si olduğu gibi kalır.
+
+# Safari, which has no profile of its own: use the system proxy for it.
+t2bea398a = Kendine ait profili olmayan Safari: onun için sistem proxy'sini kullanın.
+
+# What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code and Codex.
+t336769d4 = İçinde başlatılan her şey: curl, git, Python, Go, Deno, Bun ve Claude Code, Codex gibi yapay zekâ ajanları.
+
+# Node.js before 22.21, and 23 to 24.4; Java, which reads neither the proxy nor the trust variables.
+t91fa7c81 = 22.21'den önceki Node.js ile 23–24.4 arası; ve ne proxy'yi ne de güven değişkenlerini okuyan Java.
+
+# A phone or another computer on your network, once it is told {addr} as its proxy by hand.
+t8246bdeb = Ağınızdaki bir telefon ya da başka bir bilgisayar, { $addr } proxy olarak elle verildikten sonra.
+
+# Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those.
+t8cd55aad = O cihazda proxy ayarını yok sayan her şey — telefonda uygulamaların çoğu: onları bir tünel yakalar.
+
+# What speaks SOCKS: anything reading ALL_PROXY, git with a socks5h:// proxy, Firefox's own SOCKS setting, proxychains.
+t9ebae2ee = SOCKS konuşan her şey: ALL_PROXY okuyan her şey, socks5h:// proxy'li git, Firefox'un kendi SOCKS ayarı, proxychains.
+
+# Programs that read only HTTP_PROXY and HTTPS_PROXY, and anything with no SOCKS setting of its own.
+t576f0cf9 = Yalnızca HTTP_PROXY ve HTTPS_PROXY okuyan programlar ve kendi SOCKS ayarı olmayan her şey.
+
+# Everything a phone sends once it joins the tunnel, apps that ignore the phone's proxy setting included.
+t0d857250 = Telefon tünele katıldıktan sonra gönderdiği her şey — telefonun proxy ayarını yok sayan uygulamalar dahil.
+
+# Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
+tb457dd67 = Yalnızca kendi sertifikalarına güvenen uygulamalar ve tracewing'in CA'sı telefona kurulmadan önce gönderilen her şey.
+
+# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
+t018f7b7c = Adı verilen bir uygulamanın TCP üzerinden gönderdiği her şey, herhangi bir proxy ayarını okusa da okumasa da: her sürümden Node, Java ve kendi localhost'u da.
+
+# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
+t3f6bf403 = UDP, dolayısıyla HTTP/3; ve kendi imza kimliği olmayan programlar, örneğin go build'in ürettiği her şey.
+
+# Turn off
+tcd03e04b = Kapat
+
+# Turn on
+t65a0c5a7 = Aç
+
+# Open from Set up
+tf0ad42dc = Kurulum'dan aç
+
+# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
+t5b4d06d6 = Şimdilik komut satırından ayarlanır: yakalanacak uygulamaları adlandırır, ilk seferde uzantıyı kurar ve macOS'tan izin ister.
+
+# macOS only: it is macOS that hands an app's connections over.
+t71872556 = Yalnızca macOS: bir uygulamanın bağlantılarını devreden macOS'un kendisidir.
+
+# Catches
+tf5f3fe08 = Yakaladıkları
+
+# Does not catch
+t8fd1679e = Yakalamadıkları
 
 # {name} (default)
 td3f56fa8 = { $name } (varsayılan)
@@ -2115,12 +2193,6 @@ tdcc53241 = Bu bilgisayarın trafiğini, sistem ayarını kullanan uygulamalar i
 
 # Turn on the system proxy
 t52b88441 = Sistem proxy'sini aç
-
-# Turn off
-tcd03e04b = Kapat
-
-# Turn on
-t65a0c5a7 = Aç
 
 # Check it in your browser
 tbed6e83a = Tarayıcınızda denetleyin
@@ -2558,9 +2630,6 @@ t838c1d44 = Adında bu geçen bir host yok
 
 # Hidden
 t3c2dfe59 = Gizli
-
-# Apps
-t53d91aad = Uygulamalar
 
 # Devices
 t27acf320 = Cihazlar

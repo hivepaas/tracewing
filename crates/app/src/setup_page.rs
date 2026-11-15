@@ -106,7 +106,13 @@ fn check_result(visit: Option<&CheckVisit>) -> (String, bool) {
     }
 }
 
-fn button(id: impl Into<ElementId>, label: impl Into<SharedString>, loud: bool) -> Stateful<Div> {
+/// A button in the setup page's shape. Also the Capture tabs', so that the
+/// same way in looks the same whichever surface it is reached from.
+pub(crate) fn button(
+    id: impl Into<ElementId>,
+    label: impl Into<SharedString>,
+    loud: bool,
+) -> Stateful<Div> {
     let c = colors();
     div()
         .id(id)
@@ -968,8 +974,9 @@ pub fn guide(guide: Guide, proxy: SocketAddr, page: &str) -> Vec<Part> {
     }
 }
 
-/// Code in a box, with a button that copies it.
-fn code_block(id: impl Into<ElementId>, code: String) -> Div {
+/// Code in a box, with a button that copies it. Also the Capture tabs', for
+/// the command line that is a way in's only surface so far.
+pub(crate) fn code_block(id: impl Into<ElementId>, code: String) -> Div {
     let c = colors();
     let copied = code.clone();
     div()
