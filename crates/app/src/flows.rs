@@ -249,6 +249,83 @@ pub fn time_text(micros: i64) -> String {
 mod tests {
     use super::*;
 
+    /// A row the list has drawn is kept, so a row that **changes** after
+    /// that is shown as it was until something says otherwise. That is why
+    /// the store reports the rows it names late and `look` forgets them:
+    /// without it a program name written a moment after its flow lands is
+    /// written where nobody looks.
+    ///
+    /// This is the half of that path a test can hold: the cache keeping a
+    /// stale row, and `forget` being what fixes it. The drain in `look` is
+    /// the remaining few lines.
+    #[test]
+    fn a_row_that_changed_is_shown_again_only_once_it_is_forgotten() {
+        use rusqlite::params;
+        use std::sync::Arc;
+        use tracewing_store::{
+            app::AppAnswer,
+            session,
+            store::{FlowRecord, Recorder},
+        };
+
+        let dir = std::env::temp_dir().join(format!("tracewing-late-row-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        session::create(&dir).unwrap();
+        let (recorder, writer) = Recorder::spawn(
+            &dir,
+            &tracewing_store::settings::StorageSettings::default(),
+            Arc::new(session::Shared::default()),
+            None,
+            10_000,
+        )
+        .unwrap();
+        // A flow whose program was never found: what the list draws before a
+        // late answer arrives.
+        recorder.submit(FlowRecord {
+            started_us: 1_793_000_000_000_000,
+            client: "127.0.0.1".to_owned(),
+            kind: "http",
+            method: "GET".to_owned(),
+            scheme: "https".to_owned(),
+            host: "github.com".to_owned(),
+            path: "/".to_owned(),
+            client_version: "HTTP/2.0".to_owned(),
+            status: Some(200),
+            app: Some(Arc::new(AppAnswer::default())),
+            ..Default::default()
+        });
+        drop(recorder);
+        writer.close().unwrap();
+
+        let mut flows = Flows::open(&dir, true).unwrap();
+        let row = flows.rows(&[1])[0].clone().expect("the row is there");
+        assert_eq!(row.app, None, "no program was found while it lasted");
+
+        // The name arrives, as the store writes one in afterwards.
+        let write = Connection::open(session::flows_db(&dir)).unwrap();
+        write
+            .execute(
+                "UPDATE flows SET app = ?1, app_pid = ?2 WHERE id = 1",
+                params!["curl", 4242],
+            )
+            .unwrap();
+
+        assert_eq!(
+            flows.rows(&[1])[0].as_ref().unwrap().app,
+            None,
+            "still what it was: the row is kept, which is the whole problem"
+        );
+
+        flows.forget(1);
+        assert_eq!(
+            flows.rows(&[1])[0].as_ref().unwrap().app.as_deref(),
+            Some("curl"),
+            "and now it says what the row says"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn numbers_read_well() {
         assert_eq!(group_digits(7), "7");

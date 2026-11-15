@@ -553,6 +553,16 @@ pub struct Shared {
     pub first_live: AtomicI64,
     /// The size of the search index, which counts towards the session's.
     pub index_bytes: AtomicU64,
+    /// Rows written with no program name that have been given one since.
+    ///
+    /// A program that asks once and is gone — curl is the example — can be
+    /// looked up only while it is still there, and under load the look is
+    /// not finished when its flow is written. The row is written without a
+    /// name and corrected afterwards, which means whatever is **showing**
+    /// that row has to hear about it: the window keeps rows it has drawn,
+    /// and would otherwise show the gap until it had reason to read again.
+    /// Drained by the reader, so an id is here once.
+    pub named_late: std::sync::Mutex<Vec<i64>>,
     pub stats: Arc<Stats>,
 }
 
@@ -1119,6 +1129,100 @@ mod tests {
         }
         drop(recorder);
         writer.close().unwrap();
+    }
+
+    /// A program that is gone as soon as it is answered — curl is the one
+    /// everybody meets — can be looked up only while it is still there, and
+    /// under load the look is not finished when its flow is written. The row
+    /// goes in with no name and is corrected afterwards.
+    ///
+    /// Tested without a race: the answer is given **after** the row is
+    /// written, which is the case the fix is for, rather than hoping a
+    /// loaded machine produces it.
+    #[test]
+    fn a_name_that_arrives_after_the_row_is_written_still_lands() {
+        use super::Shared;
+        use crate::app::{App, AppAnswer};
+        use crate::store::{FlowRecord, Recorder};
+        use std::time::{Duration, Instant};
+
+        let sessions = temp("late-name");
+        let dir = sessions.join("1");
+        create(&dir).unwrap();
+        let shared = Arc::new(Shared::default());
+        let answer = Arc::new(AppAnswer::default());
+        let (recorder, writer) = Recorder::spawn(
+            &dir,
+            &crate::settings::StorageSettings::default(),
+            Arc::clone(&shared),
+            None,
+            10_000,
+        )
+        .unwrap();
+        recorder.submit(FlowRecord {
+            started_us: 1_793_000_000_000_000,
+            client: "127.0.0.1".to_owned(),
+            kind: "http",
+            method: "GET".to_owned(),
+            scheme: "https".to_owned(),
+            host: "github.com".to_owned(),
+            path: "/".to_owned(),
+            client_version: "HTTP/2.0".to_owned(),
+            status: Some(200),
+            app: Some(Arc::clone(&answer)),
+            ..Default::default()
+        });
+
+        // The row goes in with no name once the writer gives up waiting.
+        let conn = Connection::open(flows_db(&dir)).unwrap();
+        let name_now = || -> Option<String> {
+            conn.query_row("SELECT app FROM flows WHERE id = 1", [], |r| r.get(0))
+                .unwrap_or(None)
+        };
+        let until = Instant::now() + Duration::from_secs(20);
+        while conn
+            .query_row("SELECT count(*) FROM flows", [], |r| r.get::<_, i64>(0))
+            .unwrap_or(0)
+            == 0
+        {
+            assert!(Instant::now() < until, "the row was never written");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(name_now(), None, "written with no name, as it had none");
+
+        // And now the look answers, after the row it belongs to.
+        answer.give(Some(App {
+            pid: 4242,
+            name: "curl".to_owned(),
+            path: Some("/usr/bin/curl".to_owned()),
+        }));
+
+        let until = Instant::now() + Duration::from_secs(20);
+        loop {
+            if name_now().as_deref() == Some("curl") {
+                break;
+            }
+            assert!(Instant::now() < until, "the name never reached the row");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let (pid, path): (Option<u32>, Option<String>) = conn
+            .query_row(
+                "SELECT app_pid, app_path FROM flows WHERE id = 1",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(pid, Some(4242), "the whole answer, not only the name");
+        assert_eq!(path.as_deref(), Some("/usr/bin/curl"));
+
+        // And whatever is showing that row is told, or the name is written
+        // where nobody looks.
+        let told = shared.named_late.lock().unwrap().clone();
+        assert_eq!(told, vec![1], "the row's id, once");
+
+        drop(recorder);
+        writer.close().unwrap();
+        fs::remove_dir_all(&sessions).unwrap();
     }
 
     /// What a damaged session still holds is worth more than the file: it

@@ -44,6 +44,16 @@ const LOG_CHUNK: usize = 4 * 1024 * 1024;
 const TRIM_ROWS: i64 = 5_000;
 const LOOK_EVERY: Duration = Duration::from_millis(500);
 const WARN_EVERY: Duration = Duration::from_secs(5);
+/// How long a row written with no program name is kept waiting for one.
+/// Past this the look has either answered or never will: the program is
+/// gone, and `apps` stops holding anything for it.
+const NAME_WITHIN: Duration = Duration::from_secs(10);
+
+/// How many rows may be waiting for a name at once. A flood of flows from a
+/// program nothing can name must not grow this without end; the oldest go,
+/// which is the same answer the rest of the store gives to a flood.
+const NAMELESS_MAX: usize = 4_096;
+
 /// The longest a batch waits for the programs that sent its flows.
 const APP_WAIT: Duration = Duration::from_millis(500);
 
@@ -536,6 +546,13 @@ struct Segment {
     last_id: i64,
 }
 
+/// A row written before the program behind it was known.
+struct Nameless {
+    id: i64,
+    answer: Arc<AppAnswer>,
+    since: Instant,
+}
+
 struct Writer {
     conn: Connection,
     session: PathBuf,
@@ -547,6 +564,11 @@ struct Writer {
     log: BodyLog,
     compressor: Option<zstd::bulk::Compressor<'static>>,
     next_id: i64,
+    /// Rows waiting for a program name that had not arrived when they were
+    /// written. Swept every turn of the loop: see [`Writer::name_the_late`].
+    /// A deque because the oldest goes when it is full, and a flood is
+    /// exactly when that happens on every push.
+    nameless: VecDeque<Nameless>,
     /// A segment's share grows to this, then the next one starts. The session's
     /// limit is met by dropping whole ones, so it sets how much goes at a time.
     segment_target: u64,
@@ -597,6 +619,7 @@ impl Writer {
             log,
             compressor,
             next_id: 1,
+            nameless: VecDeque::new(),
             segments,
             trimming: VecDeque::new(),
             deleted_to: 0,
@@ -625,6 +648,7 @@ impl Writer {
                 }
             }
             self.write_all(&mut batch);
+            self.name_the_late();
             if self.last_look.elapsed() >= LOOK_EVERY {
                 self.look_around();
             }
@@ -752,13 +776,86 @@ impl Writer {
         }
     }
 
+    /// Remembers the rows of `batch` that went in with no program name, so
+    /// that an answer arriving later still reaches them.
+    ///
+    /// This is the half of it the row cannot do for itself: the answer is
+    /// behind an [`AppAnswer`] that is filled by another thread, and nothing
+    /// looks at it again once the row is written.
+    fn wait_for_a_name(&mut self, first_id: i64, batch: &[FlowRecord]) {
+        for (i, record) in batch.iter().enumerate() {
+            let Some(answer) = &record.app else {
+                // Nothing was ever looked for: a flow from another device, or
+                // a session that was not recording a program at all.
+                continue;
+            };
+            if answer.now().is_some() {
+                continue; // Answered before the row was written.
+            }
+            if self.nameless.len() >= NAMELESS_MAX {
+                self.nameless.pop_front();
+            }
+            self.nameless.push_back(Nameless {
+                id: first_id + i as i64,
+                answer: Arc::clone(answer),
+                since: Instant::now(),
+            });
+        }
+    }
+
+    /// Writes the names that have arrived since their rows were, and lets go
+    /// of the rows whose names never will.
+    ///
+    /// Cheap enough to run every turn: it looks at an `Option` behind a mutex
+    /// per waiting row and touches the database only for the ones that have
+    /// an answer now.
+    fn name_the_late(&mut self) {
+        if self.nameless.is_empty() {
+            return;
+        }
+        let mut named = Vec::new();
+        let mut still = VecDeque::with_capacity(self.nameless.len());
+        for waiting in std::mem::take(&mut self.nameless) {
+            match waiting.answer.now() {
+                // Looked, and found the program.
+                Some(Some(app)) => named.push((waiting.id, app)),
+                // Looked, and there was nothing to find: the row is right as
+                // it stands.
+                Some(None) => {}
+                // Still looking, unless it has been too long to be looking.
+                None if waiting.since.elapsed() < NAME_WITHIN => still.push_back(waiting),
+                None => {}
+            }
+        }
+        self.nameless = still;
+        if named.is_empty() {
+            return;
+        }
+        for (id, app) in &named {
+            if let Err(e) = self.conn.execute(
+                "UPDATE flows SET app = ?1, app_pid = ?2, app_path = ?3 WHERE id = ?4",
+                params![&app.name, app.pid, app.path.as_ref(), id],
+            ) {
+                self.warn(format_args!("a program name not written: {e:#}"));
+            }
+        }
+        // And told, so that what is showing those rows reads them again. A
+        // name written where nothing looks is a name nobody sees.
+        if let Ok(mut late) = self.shared.named_late.lock() {
+            late.extend(named.iter().map(|(id, _)| *id));
+        }
+    }
+
     fn finish_stream(&mut self, key: u64, record: &mut FlowRecord) {
         let queued = body_bytes(record);
         let id = self.streams.remove(&key).filter(|&id| id > self.deleted_to);
         if let Some(id) = id {
             self.keep_bodies(std::slice::from_mut(record), self.next_id - 1);
-            if let Err(e) = insert(&mut self.conn, id, std::slice::from_ref(record)) {
-                self.warn(format_args!("a stream's end not written: {e:#}"));
+            match insert(&mut self.conn, id, std::slice::from_ref(record)) {
+                // A stream has usually lasted long enough for its program to
+                // have been found, but one that ends at once has not.
+                Ok(()) => self.wait_for_a_name(id, std::slice::from_ref(record)),
+                Err(e) => self.warn(format_args!("a stream's end not written: {e:#}")),
             }
         }
         self.queued.fetch_sub(queued, Ordering::Relaxed);
@@ -780,6 +877,7 @@ impl Writer {
             self.stats
                 .written
                 .fetch_add(batch.len() as u64, Ordering::Relaxed);
+            self.wait_for_a_name(first_id, batch);
             // Only here: lost rows give their ids back, so that ids have no gaps and
             // the list can find a row from its place.
             self.next_id += batch.len() as i64;
@@ -1077,7 +1175,9 @@ fn insert(conn: &mut Connection, first_id: i64, batch: &[FlowRecord]) -> Result<
         )?;
         for (i, r) in batch.iter().enumerate() {
             let (req, resp) = (r.request.place, r.response.place);
-            // Waited for before the batch: what is not there now never came.
+            // Waited for before the batch. What is not there now may still
+            // come: `Writer::wait_for_a_name` keeps the row's id and writes
+            // the name in when it does.
             let app = r.app.as_ref().and_then(|answer| answer.now()).flatten();
             stmt.execute(params![
                 first_id + i as i64,

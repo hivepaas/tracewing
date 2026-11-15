@@ -991,6 +991,22 @@ impl Traffic {
             self.flows = Flows::open(self.session_dir(), self.viewing.is_none()).ok();
         }
         let mut changed = false;
+        // Rows that were written before the program behind them was known,
+        // and have been given a name since. Kept rows are read again so the
+        // name shows: a program that is gone as soon as it is answered —
+        // curl — is named a moment after its flow lands, and under load it
+        // is the common case rather than the strange one.
+        let named_late: Vec<i64> = self
+            .engine
+            .shared
+            .named_late
+            .lock()
+            .map(|mut late| std::mem::take(&mut *late))
+            .unwrap_or_default();
+        for id in named_late {
+            self.forget_row(id);
+            changed = true;
+        }
         if self.rules_looked.elapsed() >= Duration::from_millis(500) {
             self.rules_looked = Instant::now();
             changed |= self.read_rules_again();
