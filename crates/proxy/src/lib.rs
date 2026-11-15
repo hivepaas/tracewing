@@ -24,7 +24,10 @@ pub mod source;
 pub mod stack;
 pub mod throttle;
 pub mod traffic_rules;
+pub mod tun;
 pub mod upstream;
+#[cfg(windows)]
+pub mod wintun;
 pub mod wireguard;
 pub mod wireguard_key;
 
