@@ -1699,6 +1699,21 @@ t17bccaf2 = Mulai sesi baru
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = File HAR yang diekspor tidak menyertakan cookie, token, kunci, dan kata sandi, di header, URL, dan body
 
+# This computer's own store, which Certificates installs tracewing's authority into. A program with a store of its own — Java, or Firefox — needs it there too.
+td7b0a447 = Penyimpanan milik komputer ini sendiri, tempat Sertifikat memasang CA tracewing. Program yang punya penyimpanan sendiri — Java, atau Firefox — juga memerlukannya di sana.
+
+# Nothing of yours: the profile tracewing makes for the browser has the authority in it already.
+t46674768 = Tidak perlu apa pun darimu: profil yang dibuat tracewing untuk browser sudah memuat CA itu.
+
+# Nothing of yours: the terminal points what starts in it at tracewing's roots, in a file, and installs nothing.
+tb18ebb12 = Tidak perlu apa pun darimu: terminal mengarahkan apa pun yang dijalankan di dalamnya ke sertifikat akar tracewing, dalam sebuah file, dan tidak memasang apa pun.
+
+# The other device, which installs the authority itself. Set up has a guide for each kind of device under "my phone".
+t1d84ee29 = Perangkat yang lain, yang memasang CA itu sendiri. Siapkan punya panduan untuk tiap jenis perangkat di jawaban "Ponsel saya".
+
+# This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
+t1dd036b6 = Penyimpanan milik komputer ini sendiri, seperti untuk proxy sistem: macOS menyerahkan alirannya, dan app tetap memeriksa sertifikat yang diterimanya.
+
 # Let other devices use the proxy
 t13e626b3 = Izinkan perangkat lain memakai proxy
 
@@ -1920,6 +1935,9 @@ tf5f3fe08 = Tertangkap
 
 # Does not catch
 t8fd1679e = Tidak tertangkap
+
+# Needs to trust tracewing
+taea9e22b = Harus mempercayai tracewing
 
 # {name} (default)
 td3f56fa8 = { $name } (bawaan)

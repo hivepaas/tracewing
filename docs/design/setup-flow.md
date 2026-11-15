@@ -132,7 +132,15 @@ groups, the restart notice, **Back to defaults** — goes through one function,
 which is what stops a reset on the SOCKS5 tab from reaching WireGuard's
 settings.
 
-What is not built yet: Java's truststore, and the trust links out of each tab.
+**Each tab says what has to trust tracewing**, as the third of its three
+lines, and the three whose trust tracewing installs itself — the system
+proxy, SOCKS5 and the macOS apps — carry a button to Certificates. The other
+four say that nothing of the user's is needed and why: a browser of its own
+and a terminal bring their own trust, and another device installs it itself.
+A button to Certificates on those would be an invitation to install
+something nobody needs, so a test says which tabs have one.
+
+What is not built yet: Java's truststore.
 
 ## What the wizard is, now that it is built
 

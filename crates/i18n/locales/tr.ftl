@@ -1773,6 +1773,21 @@ t17bccaf2 = Yeni bir oturum başlat
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = Dışa aktarılan HAR dosyaları başlıklarda, URL'lerde ve gövdelerde çerezleri, token'ları, anahtarları ve parolaları dışarıda bırakır
 
+# This computer's own store, which Certificates installs tracewing's authority into. A program with a store of its own — Java, or Firefox — needs it there too.
+td7b0a447 = Bu bilgisayarın kendi deposu; Sertifikalar, tracewing'in sertifika yetkilisini oraya kurar. Kendi deposu olan bir program — Java ya da Firefox — onu orada da ister.
+
+# Nothing of yours: the profile tracewing makes for the browser has the authority in it already.
+t46674768 = Sizden bir şey gerekmez: tracewing'in tarayıcı için oluşturduğu profilde yetkili hazır durur.
+
+# Nothing of yours: the terminal points what starts in it at tracewing's roots, in a file, and installs nothing.
+tb18ebb12 = Sizden bir şey gerekmez: terminal, içinde başlayanları bir dosyadaki tracewing kök sertifikalarına yönlendirir ve hiçbir şey kurmaz.
+
+# The other device, which installs the authority itself. Set up has a guide for each kind of device under "my phone".
+t1d84ee29 = Öteki cihaz; yetkiliyi kendisi kurar. Kurulum'da "Telefonum" yanıtı altında her cihaz türü için bir kılavuz var.
+
+# This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
+t1dd036b6 = Bu bilgisayarın kendi deposu, sistem proxy'sinde olduğu gibi: macOS akışı devreder, uygulama ise aldığı sertifikayı yine de denetler.
+
 # Let other devices use the proxy
 t13e626b3 = Diğer cihazların proxy'yi kullanmasına izin ver
 
@@ -1994,6 +2009,9 @@ tf5f3fe08 = Yakaladıkları
 
 # Does not catch
 t8fd1679e = Yakalamadıkları
+
+# Needs to trust tracewing
+taea9e22b = tracewing'e güvenmesi gerekir
 
 # {name} (default)
 td3f56fa8 = { $name } (varsayılan)

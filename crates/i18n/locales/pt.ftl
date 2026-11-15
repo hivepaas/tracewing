@@ -1823,6 +1823,21 @@ t17bccaf2 = Começar uma sessão nova
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = Os arquivos HAR exportados deixam de fora cookies, tokens, chaves e senhas, em cabeçalhos, URLs e corpos
 
+# This computer's own store, which Certificates installs tracewing's authority into. A program with a store of its own — Java, or Firefox — needs it there too.
+td7b0a447 = O repositório próprio deste computador, onde Certificados instala a autoridade do tracewing. Um programa com repositório próprio — Java ou Firefox — também precisa dela lá.
+
+# Nothing of yours: the profile tracewing makes for the browser has the authority in it already.
+t46674768 = Nada seu: o perfil que o tracewing cria para o navegador já traz a autoridade dentro.
+
+# Nothing of yours: the terminal points what starts in it at tracewing's roots, in a file, and installs nothing.
+tb18ebb12 = Nada seu: o terminal aponta o que for iniciado nele para as raízes do tracewing, num arquivo, e não instala nada.
+
+# The other device, which installs the authority itself. Set up has a guide for each kind of device under "my phone".
+t1d84ee29 = O outro dispositivo, que instala a autoridade por conta própria. Configurar tem um guia para cada tipo de dispositivo em "Meu celular".
+
+# This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
+t1dd036b6 = O repositório próprio deste computador, como no proxy do sistema: o macOS entrega o fluxo, e o app ainda confere o certificado que recebe.
+
 # Let other devices use the proxy
 t13e626b3 = Permitir que outros dispositivos usem o proxy
 
@@ -2044,6 +2059,9 @@ tf5f3fe08 = Captura
 
 # Does not catch
 t8fd1679e = Não captura
+
+# Needs to trust tracewing
+taea9e22b = Precisa confiar no tracewing
 
 # {name} (default)
 td3f56fa8 = { $name } (padrão)
