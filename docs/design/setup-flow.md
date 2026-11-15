@@ -34,6 +34,20 @@ caught follows from routes and exclusions. So these are two tabs with two
 different middles, and the macOS tab's list of apps must not be built as if
 it were the shape of both.
 
+**And the Windows tab must never say "one app".** A route names a
+destination, and no destination can express "this program", so local mode on
+Windows catches **the whole machine**; choosing one program would be a filter
+applied to packets that are already tracewing's, with every other program's
+traffic going through tracewing in order to be decided about.
+[capture-modes.md](capture-modes.md) has why that trade was turned down. This
+matters here and not only there, because the Capture tabs are where somebody
+would read such a promise — and
+[features.md](../features.md) does make one: "capture one app without proxy
+settings", for Windows as well as macOS. Since #275 the macOS half is true.
+The Windows half is not, and not for want of finishing it. That line carries
+a plan tier, so it is left for whoever owns the tiers rather than reworded
+from here; what this design commits to is that no tab will repeat it.
+
 ## What is wrong now, with the evidence
 
 **One way in's configuration is in two places.** The system proxy's switch is
@@ -137,7 +151,7 @@ for that answer. The knowledge is already written down in
 | A Java program | System proxy **and** JVM flags | A truststore of its own — see below |
 | My phone | WireGuard, or Other devices | The authority installed on the phone |
 | A Mac app that ignores the proxy | Apps (macOS) | The system store |
-| A Windows app that ignores the proxy | Local mode (Windows), once it captures; until then, a terminal or nothing | The system store |
+| A Windows app that ignores the proxy | A terminal, if the program reads the variables; otherwise nothing yet — see below | The system store |
 | Something in Docker | A terminal for the container; the daemon is its own problem | Varies |
 
 Each step ends in a **check**, following the one Setup already has for the
