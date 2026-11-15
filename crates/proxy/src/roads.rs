@@ -1,7 +1,8 @@
 //! Which interface tracewing's own connections should leave by.
 //!
-//! [`crate::upstream::leave_by`] pins them to one; this is what decides
-//! which. The answer is the interface this machine would reach the internet
+//! [`crate::upstream::leave_by`] pins them, one interface per family; this
+//! is what decides which. The answer is the interface this machine would
+//! reach the internet
 //! by **if tracewing's own adapter were not there** — because that adapter
 //! is where everything else is being routed, and a connection of ours that
 //! followed it would arrive straight back at us.
