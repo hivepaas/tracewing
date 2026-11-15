@@ -219,6 +219,9 @@ pub struct Layout {
     pub settings_section: SettingsSection,
     /// The way in last looked at, under Capture.
     pub capture_way: Way,
+    /// What the wizard was last told somebody wants to capture; `None` until
+    /// they have said, which is when the question is all Set up shows.
+    pub capture_target: Option<crate::wizard::Target>,
     /// The body text size chosen, in px; `None` for the default.
     pub text_size: Option<u8>,
     /// The interface's font: `None` for tracewing's own, [`SYSTEM_FONT`] for
@@ -284,6 +287,7 @@ impl Default for Layout {
             named: Vec::new(),
             settings_section: SettingsSection::default(),
             capture_way: Way::default(),
+            capture_target: None,
             text_size: None,
             ui_font: None,
             code_font: None,

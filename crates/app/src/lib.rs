@@ -68,6 +68,7 @@ pub mod text_size;
 pub mod traffic;
 pub mod trusted;
 pub mod widgets;
+pub mod wizard;
 pub mod wrap;
 
 use gpui::{App, AssetSource, SharedString};

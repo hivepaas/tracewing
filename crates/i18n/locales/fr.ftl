@@ -2251,14 +2251,53 @@ tbed6e83a = Vérifier dans votre navigateur
 # Open the test page
 te4e36f65 = Ouvrir la page de test
 
+# Open a terminal
+t4b629c72 = Ouvrir un terminal
+
 # Set up
 t43c06abc = Configurer
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = Trois étapes pour voir le trafic HTTPS de cet ordinateur.
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = Dites ce que vous voulez capturer, et ceci met en place la seule voie d'entrée qui l'atteint.
 
 # See traffic
 t980eee79 = Voir le trafic
+
+# What do you want to capture?
+t800a169b = Que voulez-vous capturer ?
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = La réponse choisit la seule voie d'entrée qui l'atteint et laisse de côté le reste de cette page. Toutes les voies sont dans Paramètres, Capture, si vous préférez choisir vous-même.
+
+# Choose again to set up something else.
+t5eaaccdb = Choisissez à nouveau pour mettre en place autre chose.
+
+# Every way in
+tfa46c322 = Toutes les voies d'entrée
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = La réponse est conservée : cette page s'ouvre là où vous l'avez laissée.
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = C'est le terminal qui s'en charge : ce qui y est lancé lit les racines de tracewing dans un fichier, donc rien n'est installé sur cet ordinateur et rien d'autre n'est modifié.
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = Java garde son propre magasin d'autorités et ne lit ni celui du système ni les variables. tracewing ne peut pas encore écrire ce magasin pour vous : passez-lui-en un, avec les options ci-dessous.
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = C'est au téléphone d'installer le certificat de tracewing — les guides ci-dessous expliquent comment, selon le type d'appareil.
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = Ce qu'une image fait confiance ne dépend que d'elle : certaines lisent les racines du système, d'autres emportent les leurs, et d'ici tracewing ne peut pas savoir laquelle.
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = Lancez ceci dans ce terminal. Une erreur de certificat veut dire que ce n'est pas le terminal ouvert par tracewing.
+
+# Check it in that terminal
+t17abebbc = Vérifier dans ce terminal
+
+# And Java's own store
+t4398b845 = Et le magasin propre à Java
 
 # the browsers' own stores
 tddf6836c = les magasins propres aux navigateurs
@@ -2330,9 +2369,6 @@ t91c63f1c = Ou une app à la fois
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = Un terminal qui passe par tracewing, le proxy système et les autres apps restant tels quels : curl, git, Python, Go et les agents IA comme Claude Code, Codex ou Gemini CLI lancés dedans. Pour que les outils IA d'un éditeur suivent, quittez l'éditeur et relancez-le depuis ce terminal, comme le fait code . pour VS Code. Pour un navigateur, Ouvrir à part dans Navigateurs fait de même avec un profil à lui.
-
-# Open a terminal
-t4b629c72 = Ouvrir un terminal
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = Dans un terminal à vous, comme celui d'un éditeur, ceci fait de même :
@@ -2787,6 +2823,24 @@ t4ab0ecb4 = Raccourcis { $keys }
 
 # Columns
 tea156fdc = Colonnes
+
+# A website in my browser
+td5d24782 = Un site dans mon navigateur
+
+# curl, git, a script
+t7373dc63 = curl, git, un script
+
+# A Java program
+t9aea7fb0 = Un programme Java
+
+# My phone
+te1545f43 = Mon téléphone
+
+# A Mac app that ignores the proxy
+t2c2204d9 = Une app Mac qui ignore le proxy
+
+# Something in Docker
+t51e75492 = Quelque chose dans Docker
 
 # Field {number}, {wire}
 ta367cc19 = Champ { $number }, { $wire }

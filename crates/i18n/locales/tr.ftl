@@ -2200,14 +2200,53 @@ tbed6e83a = Tarayıcınızda denetleyin
 # Open the test page
 te4e36f65 = Test sayfasını aç
 
+# Open a terminal
+t4b629c72 = Terminal aç
+
 # Set up
 t43c06abc = Kurulum
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = Bu bilgisayarın HTTPS trafiğini görmek için üç adım.
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = Neyi yakalamak istediğinizi söyleyin; burası ona ulaşan tek yolu kurar.
 
 # See traffic
 t980eee79 = Trafiği gör
+
+# What do you want to capture?
+t800a169b = Neyi yakalamak istiyorsunuz?
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = Yanıt, ona ulaşan tek yolu seçer ve bu sayfanın geri kalanını dışarıda bırakır. Kendiniz seçmeyi yeğlerseniz bütün yollar Ayarlar, Yakalama'da.
+
+# Choose again to set up something else.
+t5eaaccdb = Başka bir şey kurmak için yeniden seçin.
+
+# Every way in
+tfa46c322 = Bütün yollar
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = Yanıt saklanır, böylece bu sayfa bıraktığınız yerden açılır.
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = Bunu terminal yapar: içinde başlayan her şey tracewing'in kök sertifikalarını bir dosyadan okur, yani bu bilgisayara hiçbir şey kurulmaz ve başka hiçbir şey değişmez.
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = Java kendi sertifika deposunu tutar ve ne sistemin deposunu ne de değişkenleri okur. tracewing o depoyu sizin için henüz yazamıyor: aşağıdaki bayraklarla ona bir depo verin.
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = tracewing'in sertifikasını telefonun kendisi kurmalı — aşağıdaki kılavuzlar her cihaz türü için nasıl olduğunu anlatır.
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = Bir imajın neye güvendiği kendi işidir: bazıları sistemin köklerini okur, bazıları kendi köklerini taşır ve tracewing buradan hangisi olduğunu anlayamaz.
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = Bunu o terminalde çalıştırın. Sertifika hatası, o terminalin tracewing'in açtığı terminal olmadığı anlamına gelir.
+
+# Check it in that terminal
+t17abebbc = O terminalde sına
+
+# And Java's own store
+t4398b845 = Ve Java'nın kendi deposu
 
 # the browsers' own stores
 tddf6836c = tarayıcıların kendi depoları
@@ -2278,9 +2317,6 @@ t91c63f1c = Ya da tek tek uygulamalar
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = Sistem proxy'si ve diğer tüm uygulamalar olduğu gibi kalırken tracewing üzerinden geçen bir terminal: curl, git, Python, Go ve içinde başlatılan Claude Code, Codex veya Gemini CLI gibi yapay zekâ ajanları. Bir düzenleyicinin yapay zekâ araçlarının da geçmesi için düzenleyiciyi kapatıp o terminalden yeniden başlatın; VS Code için code . bunu yapar. Bir tarayıcı için Tarayıcılar'daki Ayrı aç, aynısını kendi profiliyle yapar.
-
-# Open a terminal
-t4b629c72 = Terminal aç
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = Kendi terminalinizde, örneğin bir düzenleyicinin terminalinde, bu aynısını yapar:
@@ -2734,6 +2770,24 @@ t4ab0ecb4 = Kısayollar { $keys }
 
 # Columns
 tea156fdc = Sütunlar
+
+# A website in my browser
+td5d24782 = Tarayıcımdaki bir site
+
+# curl, git, a script
+t7373dc63 = curl, git, bir betik
+
+# A Java program
+t9aea7fb0 = Bir Java programı
+
+# My phone
+te1545f43 = Telefonum
+
+# A Mac app that ignores the proxy
+t2c2204d9 = Proxy'yi yok sayan bir Mac uygulaması
+
+# Something in Docker
+t51e75492 = Docker'daki bir şey
 
 # Field {number}, {wire}
 ta367cc19 = Alan { $number }, { $wire }

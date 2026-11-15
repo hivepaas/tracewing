@@ -2122,14 +2122,53 @@ tbed6e83a = ブラウザで確認
 # Open the test page
 te4e36f65 = テストページを開く
 
+# Open a terminal
+t4b629c72 = ターミナルを開く
+
 # Set up
 t43c06abc = セットアップ
 
-# Three steps to see HTTPS traffic from this computer.
-tf3a7f60b = このコンピュータの HTTPS トラフィックを見るための 3 ステップです。
+# Say what you want to capture, and this sets up the one way in that reaches it.
+t21ec04b3 = 何をキャプチャしたいか選ぶと、そこに届く唯一の経路だけを設定します。
 
 # See traffic
 t980eee79 = トラフィックを見る
+
+# What do you want to capture?
+t800a169b = 何をキャプチャしますか?
+
+# The answer picks the one way in that reaches it, and leaves the rest of this page out. Every way in is in Settings, Capture, for when you would rather choose yourself.
+t7759c942 = 選んだ答えに届く経路だけを設定し、このページの残りは出しません。自分で選びたいときは、すべての経路が設定のキャプチャにあります。
+
+# Choose again to set up something else.
+t5eaaccdb = 別のものを設定するには、もう一度選んでください。
+
+# Every way in
+tfa46c322 = すべての経路
+
+# The answer is kept, so this page opens where you left it.
+t95e7a36a = 答えは保存されるので、このページは前回のところから開きます。
+
+# The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
+tab552f0c = これはターミナルが行います。その中で起動したものは tracewing のルート証明書をファイルから読むので、このコンピューターには何もインストールされず、ほかは何も変わりません。
+
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
+t42c38a18 = Java は独自の証明書ストアを持ち、システムのものも環境変数も読みません。そのストアは tracewing がまだ代わりに書けないので、下のフラグで自分のものを渡してください。
+
+# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
+t38958f05 = tracewing の証明書はスマートフォン自身に入れてもらう必要があります。端末の種類ごとの手順は下のガイドにあります。
+
+# What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
+t4353a046 = イメージが何を信頼するかはそのイメージ次第です。システムのルート証明書を読むものもあれば、独自に持つものもあり、ここからはどちらか分かりません。
+
+# Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
+t3b39a3f5 = そのターミナルでこれを実行します。証明書エラーが出る場合、それは tracewing が開いたターミナルではありません。
+
+# Check it in that terminal
+t17abebbc = そのターミナルで確認する
+
+# And Java's own store
+t4398b845 = そして Java 独自のストア
 
 # the browsers' own stores
 tddf6836c = 各ブラウザー独自のストア
@@ -2196,9 +2235,6 @@ t91c63f1c = または、アプリごとに
 
 # A terminal that goes through tracewing while the system proxy and every other app are left as they are: curl, git, Python, Go, and AI agents such as Claude Code, Codex or Gemini CLI started in it. To bring an editor's AI tools along, quit the editor and start it again from that terminal, as code . does for VS Code. For a browser, Open on its own in Browsers does the same with a profile of its own.
 t7168eeaa = tracewing を通るターミナルです。システムプロキシや他のアプリはそのままです。curl、git、Python、Go、そこで起動した Claude Code、Codex、Gemini CLI などの AI エージェントが通ります。エディターの AI ツールも通すには、エディターを終了し、そのターミナルから起動し直します（VS Code なら code .）。ブラウザーなら、「ブラウザー」の「個別に開く」で専用プロファイルを使って同じことができます。
-
-# Open a terminal
-t4b629c72 = ターミナルを開く
 
 # In a terminal of your own, such as an editor's, this does the same:
 tb10fcc10 = エディター内など、自分のターミナルでは次のコマンドで同じことができます:
@@ -2643,6 +2679,24 @@ t4ab0ecb4 = ショートカット { $keys }
 
 # Columns
 tea156fdc = 列
+
+# A website in my browser
+td5d24782 = ブラウザーで見るウェブサイト
+
+# curl, git, a script
+t7373dc63 = curl、git、スクリプト
+
+# A Java program
+t9aea7fb0 = Java のプログラム
+
+# My phone
+te1545f43 = 自分のスマートフォン
+
+# A Mac app that ignores the proxy
+t2c2204d9 = プロキシを無視する Mac アプリ
+
+# Something in Docker
+t51e75492 = Docker の中のもの
 
 # Field {number}, {wire}
 ta367cc19 = フィールド { $number }、{ $wire }
