@@ -326,6 +326,8 @@ async fn main() -> Result<()> {
             ));
             let summary = run_proxy(
                 ProxyOptions {
+                    // Counted but not read: nothing here asks what arrived by which way in.
+                    arrivals: Default::default(),
                     listener: Some(listener),
                     std_listener: None,
                     data_dir,

@@ -115,6 +115,9 @@ pub struct Engine {
     /// A slow network on purpose, as `throttle.toml` keeps it.
     pub network: Arc<Network>,
     pub check: Arc<Check>,
+    /// What has arrived by each way in, for the Capture tabs to say that one
+    /// is on and nothing is coming through it.
+    pub arrivals: Arc<tracewing_proxy::source::Arrivals>,
     /// What a browser opened from here needs when it does not trust the CA.
     pub leaf_spki: Arc<OnceLock<String>>,
     /// What breakpoints hold.
@@ -293,6 +296,7 @@ impl Engine {
         let recording = Arc::new(AtomicBool::new(true));
         let failure = Arc::new(Mutex::new(None));
         let check = Arc::new(Check::default());
+        let arrivals: Arc<tracewing_proxy::source::Arrivals> = Arc::default();
         let leaf_spki = Arc::new(OnceLock::new());
         let pauses = Arc::new(Pauses::default());
         let rules = Arc::new(RwLock::new(opts.rules));
@@ -337,6 +341,7 @@ impl Engine {
             traffic_rules: Arc::clone(&traffic_rules),
             network: Arc::clone(&network),
             check: Arc::clone(&check),
+            arrivals: Arc::clone(&arrivals),
             leaf_spki: Arc::clone(&leaf_spki),
             pauses: Arc::clone(&pauses),
             leave_index: true,
@@ -409,6 +414,7 @@ impl Engine {
             traffic_rules,
             network,
             check,
+            arrivals,
             leaf_spki,
             pauses,
             failure,

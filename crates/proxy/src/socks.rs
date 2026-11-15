@@ -31,7 +31,7 @@
 //!   one, and the program is looked for by the client's address as it is for
 //!   any client that asked.
 
-use crate::source::{Flow, Found, Source, Stop, Target, stopped};
+use crate::source::{By, Flow, Found, Source, Stop, Target, stopped};
 use anyhow::{Context, Result, bail};
 use std::{
     net::{Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -118,6 +118,10 @@ impl Source for Socks {
             Ok(at) => format!("the SOCKS5 port at {at}"),
             Err(_) => "the SOCKS5 port".to_owned(),
         }
+    }
+
+    fn by(&self) -> By {
+        By::Socks5
     }
 
     fn own_ports(&self) -> Vec<u16> {
@@ -362,8 +366,12 @@ mod tests {
         let at = listener.local_addr().unwrap();
         let (found, took) = Found::channel();
         let (stop_tx, stop) = watch::channel(false);
-        Box::new(Socks::new(listener))
-            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+        found
+            .start(
+                Box::new(Socks::new(listener)),
+                "127.0.0.1:9090".parse().unwrap(),
+                stop,
+            )
             .unwrap();
         let client = TcpStream::connect(at).await.unwrap();
         (client, took, stop_tx)
@@ -386,7 +394,13 @@ mod tests {
 
     fn flow_of(took: Option<Took>) -> Flow {
         match took {
-            Some(Took::Flow(flow)) => flow,
+            Some(Took::Flow(flow, by)) => {
+                // Stamped by the channel the source was started with, which
+                // is how the window can say whether anything has come in by
+                // SOCKS5 rather than by some other way in.
+                assert_eq!(by, By::Socks5, "handed over as SOCKS5's own");
+                flow
+            }
             _ => panic!("a flow, and nothing else"),
         }
     }
@@ -424,8 +438,12 @@ mod tests {
         let at = listener.local_addr().unwrap();
         let (found, mut took) = Found::channel();
         let (_stop_tx, stop) = watch::channel(false);
-        Box::new(Socks::from_std(listener))
-            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+        found
+            .start(
+                Box::new(Socks::from_std(listener)),
+                "127.0.0.1:9090".parse().unwrap(),
+                stop,
+            )
             .unwrap();
         let talking = async {
             let mut client = TcpStream::connect(at).await.unwrap();

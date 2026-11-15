@@ -238,6 +238,14 @@ pub struct FlowHandler {
     /// way reaches the proxy over the loopback, and this says who it really
     /// is; see [`crate::handover`].
     handed: Arc<crate::handover::Handed>,
+    /// What has arrived by each way in, for the window to say that one is on
+    /// and nothing is coming through it.
+    arrivals: Arc<crate::source::Arrivals>,
+    /// The way in of the listener this clone serves. A handed-over flow
+    /// overrides it with what its source said, which `Handed` carries: such
+    /// a flow arrives on the proxy port like any other client, so the port
+    /// says nothing about where it came from.
+    by: crate::source::By,
     /// See `StorageSettings::hide_http3`.
     live: Arc<Live>,
     /// The network traffic goes through, slow on purpose or not.
@@ -279,6 +287,7 @@ pub struct Controls {
     pub pauses: Arc<Pauses>,
     pub apps: Option<Apps>,
     pub handed: Arc<crate::handover::Handed>,
+    pub arrivals: Arc<crate::source::Arrivals>,
     /// The settings that apply as they change.
     pub live: Arc<Live>,
     /// Changes apply to the next request.
@@ -313,6 +322,12 @@ impl FlowHandler {
             pauses: controls.pauses,
             apps: controls.apps,
             handed: controls.handed,
+            arrivals: controls.arrivals,
+            // The proxy port until a listener says otherwise, which
+            // `serve_port` does for each one it serves: this value is the
+            // handler the proxy was built with, and that one serves nothing
+            // by itself.
+            by: crate::source::By::ProxyPort,
             live: controls.live,
             network: controls.network,
             relay: controls.relay,
@@ -399,6 +414,28 @@ impl FlowHandler {
             }),
             Verdict::Drop => pause::dropped(),
         }
+    }
+
+    /// This handler, for a listener that is `by`.
+    ///
+    /// hudsucker takes one handler per proxy and clones it per request, so
+    /// the way in is set once here, when a listener is served, rather than
+    /// guessed per request from the client's address.
+    pub(crate) fn serving(&self, by: crate::source::By) -> Self {
+        let mut handler = self.clone();
+        handler.by = by;
+        handler
+    }
+
+    /// Which way in a connection from `from` came by, and a count of it.
+    ///
+    /// A handed-over flow says so itself — it reached the proxy port like
+    /// any other client, so the port it arrives on would name the wrong way
+    /// in — and everything else came in on this handler's own listener.
+    fn arrived(&self, from: SocketAddr) -> crate::source::By {
+        let by = self.handed.of(from).map_or(self.by, |known| known.by);
+        self.arrivals.came(by);
+        by
     }
 
     /// Who is at the other end: the address to put on the flow, and the
@@ -750,6 +787,11 @@ fn send_elsewhere(req: &mut Request<Body>, to: &http::Uri) {
 
 impl HttpHandler for FlowHandler {
     async fn handle_request(&mut self, ctx: &HttpContext, req: Request<Body>) -> RequestOrResponse {
+        // Counted whether or not anything is being recorded, and before
+        // anything can turn the request away: "is this way in doing
+        // anything" is a question about the way in, and somebody who paused
+        // recording has not stopped their programs.
+        self.arrived(ctx.client_addr);
         // The tunnel itself is not a flow; the requests inside it are.
         if req.method() == Method::CONNECT {
             // A new connection, and the first the proxy hears of it.

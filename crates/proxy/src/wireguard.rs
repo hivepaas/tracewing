@@ -39,7 +39,7 @@
 //! See [capture-modes.md](../../../docs/design/capture-modes.md).
 
 use crate::{
-    source::{Found, Source, Stop, stopped},
+    source::{By, Found, Source, Stop, stopped},
     stack::{Stack, Wire},
 };
 use anyhow::{Context, Result};
@@ -142,6 +142,10 @@ impl Endpoint {
 impl Source for Endpoint {
     fn name(&self) -> String {
         "wireguard".to_owned()
+    }
+
+    fn by(&self) -> By {
+        By::WireGuard
     }
 
     // `own_ports` stays empty: a phone never connects to a port of
@@ -687,8 +691,8 @@ mod tests {
             },
         );
         assert_eq!(endpoint.at().unwrap(), at, "it says where it listens");
-        Box::new(endpoint)
-            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+        found
+            .start(Box::new(endpoint), "127.0.0.1:9090".parse().unwrap(), stop)
             .unwrap();
 
         let mut phone = Phone::new(at, &phone_key, PublicKey::from(&ours)).await;
@@ -712,8 +716,11 @@ mod tests {
         phone.send(&tcp.send(TcpControl::None, &[])).await;
 
         let flow = match soon("a flow", took.recv()).await {
-            Some(Took::Flow(flow)) => flow,
-            Some(Took::Port(port)) => panic!("a flow, not the listener {}", port.name),
+            Some(Took::Flow(flow, by)) => {
+                assert_eq!(by, By::WireGuard, "the tunnel's own, for the count");
+                flow
+            }
+            Some(Took::Port(port, _)) => panic!("a flow, not the listener {}", port.name),
             None => panic!("the endpoint handed nothing over and then went"),
         };
         assert_eq!(flow.client, tcp.from, "the phone, as the packet said");

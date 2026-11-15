@@ -135,6 +135,46 @@ hudsucker owns the accept loop, and the type that serves one connection,
 connections without forking hudsucker: the honest interface says "here is a
 listener" for the sources that have one.
 
+### Which way in a flow came by, and what that can answer
+
+Every source says which way in it is — `Source::by`, with no default, so a new
+source cannot silently be counted as something else — and
+[`Found::start`](../../crates/proxy/src/source.rs) stamps that onto everything
+the source hands over. The stamp is on `Took`, not on `Port` or `Flow`,
+because a field each source filled in itself is a field the next source
+forgets, and the forgetting would be silent: that source would simply never
+be counted, and nobody would find out until somebody asked why a tab said
+nothing had arrived.
+
+`Arrivals` then counts what comes in by each, and the handler takes the way in
+from one of two places: a handed-over flow carries its own in `Known`, and
+everything else came in on the listener the handler is serving. Neither is a
+guess. The alternative — reading it off the client's address, loopback or not
+— would have called a program on *this* machine that used the LAN address
+another device.
+
+**What this can and cannot answer.** Three ways in share `By::ProxyPort`: this
+machine's proxy setting, a browser tracewing started with a profile of its
+own, and a terminal it set the variables in. All three are told the same port
+and the same listener accepts them, so nothing here tells them apart — and a
+window that claimed to would be wrong. Everything else has a listener or a
+bridge of its own and is exact, *other devices* included, since
+[`Lan`](../../crates/proxy/src/source.rs) binds listeners of its own per
+address rather than sharing the loopback's.
+
+Separating tracewing's own browser from the other two by its process id was
+looked at and is not available: `launch::spawn` drops the `Child`, so no pid
+is kept. That is a bigger change than the sentence it would buy.
+
+**Why a count is not enough.** The question worth answering is not "has
+anything ever arrived" but "has anything arrived since this was switched on".
+A count that was not zero last week is not zero now, so a bare count would
+tell somebody who has just turned a switch on that their way in works, on the
+strength of traffic from before they touched it. `Arrivals` keeps the time of
+the last arrival and answers `anything_since`, against a moment the window
+remembers. `Instant` and not a wall clock, because a clock that jumps —
+a machine waking from sleep — would answer that comparison wrongly.
+
 ### How a taken flow reaches the core
 
 [`handover.rs`](../../crates/proxy/src/handover.rs) makes a taken flow look

@@ -20,7 +20,7 @@
 //! port, because a `CONNECT` is a tunnel, and inside a tunnel the proxy core
 //! reads only TLS and a plain `GET`.
 
-use crate::source::{Flow, Found, Source, Stop, Target, stopped};
+use crate::source::{By, Flow, Found, Source, Stop, Target, stopped};
 use anyhow::{Context, Result, anyhow, bail};
 use std::{
     net::{IpAddr, SocketAddr},
@@ -57,6 +57,10 @@ impl Source for ExtensionPort {
             Ok(at) => format!("the network extension's port at {at}"),
             Err(_) => "the network extension's port".to_owned(),
         }
+    }
+
+    fn by(&self) -> By {
+        By::Extension
     }
 
     fn start(self: Box<Self>, proxy: SocketAddr, found: Found, stop: Stop) -> Result<()> {

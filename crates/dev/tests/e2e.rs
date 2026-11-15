@@ -45,6 +45,8 @@ struct Harness {
     pauses: Arc<Pauses>,
     network: Arc<Network>,
     other_devices: Arc<OtherDevices>,
+    /// What arrived by each way in, as the window reads it.
+    arrivals: Arc<tracewing_proxy::source::Arrivals>,
     /// Where a connection taken on its way is put in, as a source that took
     /// it from the OS would.
     taken: tokio::sync::mpsc::Sender<Flow>,
@@ -128,6 +130,7 @@ impl Harness {
         let pauses = Arc::new(Pauses::default());
         let network = Arc::new(Network::default());
         let other_devices = Arc::new(OtherDevices::new(false));
+        let arrivals: Arc<tracewing_proxy::source::Arrivals> = Arc::default();
         let live = Arc::new(Live::default());
         let relay = Arc::new(tracewing_proxy::relay::Relay::default());
         let tls_keys = Arc::new(tracewing_proxy::key_log::TlsKeys::default());
@@ -142,6 +145,7 @@ impl Harness {
         let extension_key = tracewing_handoff::Key::new().unwrap();
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
+                arrivals: Arc::clone(&arrivals),
                 listener: Some(listener),
                 std_listener: None,
                 data_dir: dir.join("ca"),
@@ -198,6 +202,7 @@ impl Harness {
             network,
             other_devices,
             taken,
+            arrivals,
             socks_port,
             extension_port,
             extension_key,
@@ -4550,6 +4555,84 @@ async fn a_socks5_client_is_recorded_by_the_name_it_asked_for() {
     );
     assert_eq!(path, "/json");
     assert_eq!(method, "GET");
+    clean_up(conn, dir);
+}
+
+/// What arrived by which way in, which is what lets a tab say that a way in
+/// is on and nothing is coming through it.
+///
+/// Three things, and the third is the one worth the test. First that traffic
+/// is counted at all; second that the ways in are counted **apart**, so a
+/// browser on the proxy port does not make the SOCKS5 tab look busy; third
+/// that the question is answered **since a moment**, because a count that was
+/// not zero last week is not zero now and somebody who has just turned a
+/// switch on would be told their way in works on the strength of it.
+#[tokio::test]
+async fn what_arrives_is_counted_under_the_way_in_it_came_by() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tracewing_proxy::source::By;
+    let h = Harness::start("arrivals").await;
+    let started = std::time::Instant::now();
+
+    // Nothing has come in by any of them yet.
+    for by in By::ALL {
+        assert_eq!(h.arrivals.of(by).count, 0, "{by:?} before anything ran");
+    }
+
+    // A client told the proxy's own port.
+    let res = h
+        .client(true)
+        .get(format!("{}/json?size=10", h.origin))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    res.bytes().await.unwrap();
+    assert!(h.arrivals.of(By::ProxyPort).count > 0, "the proxy port");
+    assert_eq!(
+        h.arrivals.of(By::Socks5).count,
+        0,
+        "and not counted as SOCKS5, which nothing has used"
+    );
+
+    // A client told the SOCKS5 port instead. It reaches the proxy over the
+    // loopback like any other, so this is the case that would be counted
+    // under the proxy port if the way in were guessed from the address
+    // rather than carried from the source.
+    let mut client = socks5_to(h.socks_port, "localhost", h.playground_port).await;
+    client
+        .write_all(b"GET /json HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        .await
+        .unwrap();
+    let mut said = Vec::new();
+    client.read_to_end(&mut said).await.unwrap();
+    assert!(
+        String::from_utf8_lossy(&said).starts_with("HTTP/1.1 200"),
+        "the SOCKS5 client was served"
+    );
+    assert!(h.arrivals.of(By::Socks5).count > 0, "counted as SOCKS5");
+
+    // Ways in nothing has used stay at nothing, rather than everything
+    // landing in one pile.
+    for by in [By::OtherDevices, By::WireGuard, By::Extension, By::Tun] {
+        assert_eq!(h.arrivals.of(by).count, 0, "{by:?} was not used");
+    }
+
+    // Since when. Everything above arrived after `started` and before now,
+    // so a tab asking "has anything come in since I was switched on" is
+    // answered yes for the first and no for a switch flipped a moment ago.
+    assert!(h.arrivals.anything_since(By::ProxyPort, started));
+    let since = std::time::Instant::now();
+    assert!(
+        !h.arrivals.anything_since(By::ProxyPort, since),
+        "a count from before the switch went on is not an answer about now"
+    );
+    assert!(
+        !h.arrivals.anything_since(By::WireGuard, started),
+        "and a way in that has had nothing is never yes"
+    );
+
+    let (_, conn, dir) = h.finish(2).await;
     clean_up(conn, dir);
 }
 

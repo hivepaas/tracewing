@@ -101,6 +101,10 @@ const FIRST_WORD_WITHIN: Duration = Duration::from_secs(2);
 /// What a source knew about a connection it handed over.
 #[derive(Clone)]
 pub struct Known {
+    /// Which way in took it. A handed-over flow reaches the proxy port like
+    /// any other client, so the port it arrives on says nothing about where
+    /// it came from; this is what says.
+    pub by: crate::source::By,
     /// The client as the source saw it, which is not the loopback address the
     /// handover arrives from.
     pub client: SocketAddr,
@@ -147,7 +151,12 @@ fn told(app: App) -> Arc<AppAnswer> {
 
 /// Hands `flow` to the proxy listening at `proxy`, and stays until the
 /// connection ends.
-pub async fn give(flow: Flow, proxy: SocketAddr, handed: &Handed) -> Result<()> {
+pub async fn give(
+    flow: Flow,
+    by: crate::source::By,
+    proxy: SocketAddr,
+    handed: &Handed,
+) -> Result<()> {
     let Flow {
         mut stream,
         client,
@@ -176,6 +185,7 @@ pub async fn give(flow: Flow, proxy: SocketAddr, handed: &Handed) -> Result<()> 
     handed.remember(
         from,
         Known {
+            by,
             client,
             to: to.clone(),
             app: who.map(told),
@@ -345,7 +355,7 @@ async fn answered(to_proxy: &mut TcpStream) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::source::Flow;
+    use crate::source::{By, Flow};
     use tokio::net::TcpListener;
 
     const OK: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
@@ -422,7 +432,7 @@ mod tests {
         let (mine, theirs) = tokio::io::duplex(1024);
         let handed = Handed::default();
         let (giving, ()) = tokio::join!(
-            give(flow(theirs, None), proxy, &handed),
+            give(flow(theirs, None), By::Given, proxy, &handed),
             talk(mine, PLAIN_POST)
         );
         giving.unwrap();
@@ -443,7 +453,7 @@ mod tests {
         let (mine, theirs) = tokio::io::duplex(1024);
         let handed = Handed::default();
         let (giving, ()) = tokio::join!(
-            give(flow(theirs, None), proxy, &handed),
+            give(flow(theirs, None), By::Given, proxy, &handed),
             talk(mine, TLS_HELLO)
         );
         giving.unwrap();
@@ -472,7 +482,9 @@ mod tests {
         };
         let giving = {
             let handed = Arc::clone(&handed);
-            tokio::spawn(async move { give(flow(theirs, Some(app)), proxy, &handed).await })
+            tokio::spawn(
+                async move { give(flow(theirs, Some(app)), By::Given, proxy, &handed).await },
+            )
         };
         // On record under the address the handover arrives from, which is the
         // address the proxy's handler sees as the client.
@@ -540,7 +552,7 @@ mod tests {
             assert_eq!(said, "220 hello", "the server's greeting reached it");
             drop(mine);
         };
-        let (giving, ()) = tokio::join!(give(flow(theirs, None), proxy, &handed), heard);
+        let (giving, ()) = tokio::join!(give(flow(theirs, None), By::Given, proxy, &handed), heard);
         giving.unwrap();
         let head = greeting.await.unwrap();
         assert!(
@@ -556,7 +568,7 @@ mod tests {
         // It fits the buffer, so this needs nobody at the other end yet.
         mine.write_all(TLS_HELLO).await.unwrap();
         let handed = Handed::default();
-        let problem = give(flow(theirs, None), proxy, &handed)
+        let problem = give(flow(theirs, None), By::Given, proxy, &handed)
             .await
             .expect_err("403 is not a tunnel");
         let said = format!("{problem:#}");
@@ -598,7 +610,7 @@ mod tests {
         let hello = name::hello(&[name::sni("github.com")]);
         let to = Target::Addr("140.82.121.4:443".parse().unwrap());
         let (giving, ()) = tokio::join!(
-            give(flow_to(theirs, to), proxy, &handed),
+            give(flow_to(theirs, to), By::Given, proxy, &handed),
             opens_with(mine, hello.clone())
         );
         giving.unwrap();
@@ -626,7 +638,7 @@ mod tests {
         let hello = name::hello(&[]);
         let to = Target::Addr("140.82.121.4:443".parse().unwrap());
         let (giving, ()) = tokio::join!(
-            give(flow_to(theirs, to), proxy, &handed),
+            give(flow_to(theirs, to), By::Given, proxy, &handed),
             opens_with(mine, hello.clone())
         );
         giving.unwrap();
@@ -650,7 +662,7 @@ mod tests {
         let handed = Handed::default();
         let hello = name::hello(&[name::sni("somewhere.else")]);
         let (giving, ()) = tokio::join!(
-            give(flow(theirs, None), proxy, &handed),
+            give(flow(theirs, None), By::Given, proxy, &handed),
             opens_with(mine, hello.clone())
         );
         giving.unwrap();
@@ -684,7 +696,8 @@ mod tests {
             let mut said = String::new();
             mine.read_to_string(&mut said).await.unwrap();
         };
-        let (giving, ()) = tokio::join!(give(flow_to(theirs, to), proxy, &handed), client);
+        let (giving, ()) =
+            tokio::join!(give(flow_to(theirs, to), By::Given, proxy, &handed), client);
         giving.unwrap();
 
         let got = served.await.unwrap();
