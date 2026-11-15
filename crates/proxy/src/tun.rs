@@ -90,6 +90,10 @@ impl<D: Device> Source for Tun<D> {
         self.0.name()
     }
 
+    fn by(&self) -> crate::source::By {
+        crate::source::By::Tun
+    }
+
     // `own_ports` stays empty: a program caught this way never connected to a
     // port of tracewing's, it was talking to the server it was going to, so
     // there is no socket of ours for `crate::apps` to find it by. The stack

@@ -42,7 +42,7 @@
 //!
 //! See [capture-modes.md](../../../docs/design/capture-modes.md).
 
-use crate::source::{Flow, Found, Source, Stop, Target, stopped};
+use crate::source::{By, Flow, Found, Source, Stop, Target, stopped};
 use anyhow::Result;
 use smoltcp::{
     iface::{Config, Interface, SocketHandle, SocketSet},
@@ -140,6 +140,10 @@ impl Stack {
 impl Source for Stack {
     fn name(&self) -> String {
         "packets".to_owned()
+    }
+
+    fn by(&self) -> By {
+        By::Tun
     }
 
     // `own_ports` stays empty on purpose: a client caught this way never
@@ -936,7 +940,7 @@ mod tests {
 
         async fn flow(&mut self) -> Flow {
             match tokio::time::timeout(Duration::from_secs(5), self.took.recv()).await {
-                Ok(Some(Took::Flow(flow))) => flow,
+                Ok(Some(Took::Flow(flow, _))) => flow,
                 other => panic!("a flow, not {:?}", other.map(|t| t.is_some())),
             }
         }

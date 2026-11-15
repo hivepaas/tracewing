@@ -48,7 +48,7 @@ use hudsucker::{
     },
 };
 use rules::HostRules;
-use source::{Found, Port, Source, Stop, Took};
+use source::{By, Found, Port, Source, Stop, Took};
 use std::{
     net::{Ipv4Addr, SocketAddr},
     path::PathBuf,
@@ -107,6 +107,9 @@ pub struct ProxyOptions {
     pub network: Arc<throttle::Network>,
     /// Who has reached the test page.
     pub check: Arc<Check>,
+    /// What has arrived by each way in, which the window reads to say that a
+    /// way in is on and nothing is coming through it.
+    pub arrivals: Arc<source::Arrivals>,
     /// What breakpoints hold, for the window to let go.
     pub pauses: Arc<pause::Pauses>,
     /// Set once the CA is loaded: see `LocalCa::leaf_spki_sha256`.
@@ -269,6 +272,7 @@ pub async fn run_proxy(
             sockets: Arc::clone(&opts.sockets),
             scripts: Arc::clone(&opts.scripts),
             handed: Arc::clone(&handed),
+            arrivals: Arc::clone(&opts.arrivals),
         },
     );
     let stop_limit = opts.stop_limit;
@@ -293,10 +297,9 @@ pub async fn run_proxy(
 
     let (found, took) = Found::channel();
     for source in sources {
-        let name = source.name();
-        source
-            .start(own_addr, found.clone(), stop.clone())
-            .with_context(|| format!("start {name}"))?;
+        // `Found::start` stamps what the source hands over with its way in:
+        // see `Took` for why no source fills that in itself.
+        found.start(source, own_addr, stop.clone())?;
     }
     // With ours gone, the channel closes once the last source has ended.
     drop(found);
@@ -393,14 +396,16 @@ async fn serve(mut took: mpsc::Receiver<Took>, serving: Serve, stop: Stop) -> Re
     while taking || !running.is_empty() {
         tokio::select! {
             found = took.recv(), if taking => match found {
-                Some(Took::Port(port)) => {
-                    running.spawn(serve_port(serving.clone(), port, stop.clone()));
+                Some(Took::Port(port, by)) => {
+                    running.spawn(serve_port(serving.clone(), port, by, stop.clone()));
                 }
-                Some(Took::Flow(flow)) => {
+                Some(Took::Flow(flow, by)) => {
                     let serving = serving.clone();
                     running.spawn(async move {
                         // One taken connection going wrong is not the proxy's end.
-                        if let Err(e) = handover::give(flow, serving.proxy, &serving.handed).await {
+                        if let Err(e) =
+                            handover::give(flow, by, serving.proxy, &serving.handed).await
+                        {
                             tracing::warn!("{e:#}");
                         }
                         Ok(())
@@ -420,7 +425,7 @@ async fn serve(mut took: mpsc::Receiver<Took>, serving: Serve, stop: Stop) -> Re
 
 /// Serves one listener of clients that say where they are going, until it is
 /// taken away on its own or everything stops.
-async fn serve_port(serving: Serve, port: Port, stop: Stop) -> Result<()> {
+async fn serve_port(serving: Serve, port: Port, by: By, stop: Stop) -> Result<()> {
     let Port {
         listener,
         name,
@@ -431,7 +436,11 @@ async fn serve_port(serving: Serve, port: Port, stop: Stop) -> Result<()> {
         .with_listener(listener)
         .with_ca(serving.ca)
         .with_http_connector(serving.connector)
-        .with_http_handler(serving.handler)
+        // Which way in this listener is, so that what arrives on it is
+        // counted as its own. The alternative was to guess from the client's
+        // address — loopback or not — which would have called a program on
+        // this machine that used the LAN address another device.
+        .with_http_handler(serving.handler.serving(by))
         .with_graceful_shutdown(async move {
             tokio::select! {
                 _ = taken_away(until) => {}

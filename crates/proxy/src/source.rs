@@ -27,8 +27,12 @@
 //! ([`crate::apps`]), and known in advance by a source the OS told.
 
 use crate::lan::OtherDevices;
-use anyhow::Result;
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use anyhow::{Context, Result};
+use std::{
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::TcpListener,
@@ -56,10 +60,110 @@ pub trait Duplex: AsyncRead + AsyncWrite + Send + Unpin {}
 
 impl<T: AsyncRead + AsyncWrite + Send + Unpin> Duplex for T {}
 
+/// Which way in a source is.
+///
+/// Not [`Source::name`], which is a line for a human and carries an address
+/// in two cases. This is a word that does not change, because the window
+/// looks a count up by it and a tab's sentence turns on the answer.
+///
+/// Three ways in share [`By::ProxyPort`] — this machine's proxy setting, a
+/// browser tracewing started with a profile of its own, and a terminal it
+/// set the variables in — because all three are told the same port and the
+/// same listener accepts them. Nothing here can tell those three apart, and
+/// a window that claims to is wrong; everything else has a listener or a
+/// bridge of its own and is exact.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum By {
+    /// The port on this machine's loopback that clients are told to use.
+    ProxyPort,
+    /// A listener on one of this machine's network addresses, for a phone or
+    /// another computer ([`Lan`]).
+    OtherDevices,
+    Socks5,
+    /// macOS's network extension, over the port it is given.
+    Extension,
+    WireGuard,
+    /// A TUN device this machine's traffic is routed into.
+    Tun,
+    /// Handed over from elsewhere in the program, which is what [`Given`] is
+    /// for, and what a test uses.
+    Given,
+}
+
+impl By {
+    pub const ALL: [Self; 7] = [
+        Self::ProxyPort,
+        Self::OtherDevices,
+        Self::Socks5,
+        Self::Extension,
+        Self::WireGuard,
+        Self::Tun,
+        Self::Given,
+    ];
+}
+
+/// What has arrived by each way in, and when the last of it did.
+///
+/// The question this is here to answer is "is this way in on and doing
+/// nothing", which is the state tracewing holds and has never said: a switch
+/// that is on, a program that ignores it, and no line anywhere saying so.
+///
+/// `Instant`, not a wall clock, because the only thing ever asked of these is
+/// whether something arrived **after** a moment the window remembers — the
+/// moment a switch went on — and a clock that can jump would answer that
+/// wrongly for anybody whose machine sleeps.
+#[derive(Default)]
+pub struct Arrivals(Mutex<[Arrival; By::ALL.len()]>);
+
+/// What has arrived by one way in.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Arrival {
+    /// Requests seen, which is what the proxy counts as it serves them. Zero
+    /// or not zero is the whole of what the window asks.
+    pub count: u64,
+    pub last: Option<Instant>,
+}
+
+impl Arrivals {
+    /// Something came in by `by`, now.
+    pub fn came(&self, by: By) {
+        if let Ok(mut slots) = self.0.lock() {
+            let slot = &mut slots[by as usize];
+            slot.count += 1;
+            slot.last = Some(Instant::now());
+        }
+    }
+
+    pub fn of(&self, by: By) -> Arrival {
+        self.0
+            .lock()
+            .map(|slots| slots[by as usize])
+            .unwrap_or_default()
+    }
+
+    /// Whether anything has arrived by `by` since `since`.
+    ///
+    /// This and not a bare count, because a count that was not zero
+    /// yesterday is not zero today: somebody who has just turned a switch on
+    /// would be told that their way in works, on the strength of traffic from
+    /// last week.
+    pub fn anything_since(&self, by: By, since: Instant) -> bool {
+        self.of(by).last.is_some_and(|last| last >= since)
+    }
+}
+
 /// Something that brings traffic to tracewing.
 pub trait Source: Send + 'static {
     /// What it is, for the logs.
     fn name(&self) -> String;
+
+    /// Which way in it is, for counting what arrives by it.
+    ///
+    /// No default: a source that did not say would be counted as something
+    /// else, and the window would then tell somebody that their way in is
+    /// quiet when it is not, or busy when it is not. A missing answer is
+    /// better as a compiler error than as a wrong sentence.
+    fn by(&self) -> By;
 
     /// Starts it, and returns once it is running rather than once it is done.
     /// What it finds goes to `found`; it stops when `stop` is set.
@@ -85,10 +189,18 @@ pub trait Source: Send + 'static {
 }
 
 /// What a source found: either a way for clients to reach the proxy, or one
-/// connection that is already on its way somewhere.
+/// connection that is already on its way somewhere — and which way in it
+/// came by.
+///
+/// The way in rides here rather than on [`Port`] or [`Flow`] so that no
+/// source sets it: [`Found`] stamps it on the way through. A field each
+/// implementor had to remember is a field the next implementor forgets, and
+/// the forgetting would be silent — a new source would simply never be
+/// counted, and nobody would notice until somebody asked why a tab said
+/// nothing had arrived.
 pub enum Took {
-    Port(Port),
-    Flow(Flow),
+    Port(Port, By),
+    Flow(Flow, By),
 }
 
 /// A listener whose clients say where they are going, with `CONNECT` or an
@@ -140,26 +252,48 @@ impl Target {
     }
 }
 
-/// Where a source hands over what it found.
+/// Where a source hands over what it found, and which way in it is.
+///
+/// Each source is given its own clone, stamped with its way in by
+/// [`Found::by`], so that what it sends is counted as its own without it
+/// having to say so again.
 #[derive(Clone)]
-pub struct Found(mpsc::Sender<Took>);
+pub struct Found(mpsc::Sender<Took>, By);
 
 impl Found {
+    /// Starts `source`, with its way in stamped on everything it hands over.
+    ///
+    /// The stamping lives here, with the channel, rather than at the one call
+    /// in the proxy: a test that starts a source goes through this too, so
+    /// what it sees is what the proxy sees. The alternative — stamping at the
+    /// caller — makes every test either repeat the wiring or test something
+    /// the proxy does not do.
+    pub fn start(&self, source: Box<dyn Source>, proxy: SocketAddr, stop: Stop) -> Result<()> {
+        let name = source.name();
+        let found = Self(self.0.clone(), source.by());
+        source
+            .start(proxy, found, stop)
+            .with_context(|| format!("start {name}"))
+    }
+
     /// The channel a source sends to, and the end the proxy serves from.
     pub fn channel() -> (Self, mpsc::Receiver<Took>) {
         let (tx, rx) = mpsc::channel(WAITING_MAX);
-        (Self(tx), rx)
+        // `Given` until a source is stamped with its own: the proxy does
+        // that per source, and what reaches here unstamped is what a test
+        // hands over itself.
+        (Self(tx, By::Given), rx)
     }
 
     /// Hands over a listener. Returns once it has been taken, or at once if
     /// the proxy has stopped, which is not a source's problem to report.
     pub async fn port(&self, port: Port) {
-        let _ = self.0.send(Took::Port(port)).await;
+        let _ = self.0.send(Took::Port(port, self.1)).await;
     }
 
     /// Hands over one connection.
     pub async fn flow(&self, flow: Flow) {
-        let _ = self.0.send(Took::Flow(flow)).await;
+        let _ = self.0.send(Took::Flow(flow, self.1)).await;
     }
 }
 
@@ -189,6 +323,10 @@ impl ProxyPort {
 impl Source for ProxyPort {
     fn name(&self) -> String {
         "the proxy port".to_owned()
+    }
+
+    fn by(&self) -> By {
+        By::ProxyPort
     }
 
     fn own_ports(&self) -> Vec<u16> {
@@ -230,6 +368,10 @@ impl Source for Given {
         "taken connections".to_owned()
     }
 
+    fn by(&self) -> By {
+        By::Given
+    }
+
     fn start(self: Box<Self>, _proxy: SocketAddr, found: Found, stop: Stop) -> Result<()> {
         let mut flows = self.0;
         tokio::spawn(async move {
@@ -268,6 +410,10 @@ impl Lan {
 impl Source for Lan {
     fn name(&self) -> String {
         "other devices".to_owned()
+    }
+
+    fn by(&self) -> By {
+        By::OtherDevices
     }
 
     fn start(self: Box<Self>, proxy: SocketAddr, found: Found, stop: Stop) -> Result<()> {
@@ -348,18 +494,59 @@ mod tests {
         );
     }
 
+    /// What the window actually asks: not "how many" but "anything since
+    /// then". A bare count cannot answer it — the strongest true sentence a
+    /// count supports is "nothing has ever arrived", which is wrong for
+    /// anybody who used that way in last week and useless to somebody who
+    /// has just flipped a switch.
+    #[test]
+    fn a_count_from_before_is_not_an_answer_about_since() {
+        let arrivals = Arrivals::default();
+        assert_eq!(arrivals.of(By::Socks5), Arrival::default());
+        assert!(!arrivals.anything_since(By::Socks5, Instant::now()));
+
+        arrivals.came(By::Socks5);
+        let after = Instant::now();
+        assert_eq!(arrivals.of(By::Socks5).count, 1);
+        assert!(arrivals.of(By::Socks5).last.is_some());
+
+        // The switch went on after that arrival: the honest answer is no.
+        assert!(!arrivals.anything_since(By::Socks5, after));
+        arrivals.came(By::Socks5);
+        assert!(arrivals.anything_since(By::Socks5, after), "now there is");
+        assert_eq!(arrivals.of(By::Socks5).count, 2);
+    }
+
+    /// Each way in keeps its own count, which is the point: a browser on the
+    /// proxy port must not make the WireGuard tab look busy.
+    #[test]
+    fn the_ways_in_are_counted_apart() {
+        let arrivals = Arrivals::default();
+        arrivals.came(By::ProxyPort);
+        arrivals.came(By::ProxyPort);
+        arrivals.came(By::WireGuard);
+        assert_eq!(arrivals.of(By::ProxyPort).count, 2);
+        assert_eq!(arrivals.of(By::WireGuard).count, 1);
+        for by in By::ALL {
+            if !matches!(by, By::ProxyPort | By::WireGuard) {
+                assert_eq!(arrivals.of(by).count, 0, "{by:?}");
+            }
+        }
+    }
+
     #[tokio::test]
     async fn the_proxy_port_hands_over_its_listener_once() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let (found, mut took) = Found::channel();
         let (_tx, stop) = watch::channel(false);
-        Box::new(ProxyPort::new(listener))
-            .start(addr, found, stop)
+        found
+            .start(Box::new(ProxyPort::new(listener)), addr, stop)
             .unwrap();
-        let Some(Took::Port(port)) = took.recv().await else {
+        let Some(Took::Port(port, by)) = took.recv().await else {
             panic!("no listener");
         };
+        assert_eq!(by, By::ProxyPort, "stamped by the channel, not by itself");
         assert_eq!(port.listener.local_addr().unwrap(), addr);
         assert!(port.essential, "the proxy is pointless without it");
         assert!(port.until.is_none(), "it lasts as long as the proxy");
@@ -371,8 +558,12 @@ mod tests {
         let devices = Arc::new(OtherDevices::new(false));
         let (found, mut took) = Found::channel();
         let (stop_tx, stop) = watch::channel(false);
-        Box::new(Lan::new(Arc::clone(&devices)))
-            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+        found
+            .start(
+                Box::new(Lan::new(Arc::clone(&devices))),
+                "127.0.0.1:9090".parse().unwrap(),
+                stop,
+            )
             .unwrap();
         tokio::time::sleep(Duration::from_millis(50)).await;
         assert!(devices.listening().is_empty());
