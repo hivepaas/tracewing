@@ -411,9 +411,16 @@ What is left:
    WireGuard brings IPv6 along whether or not we are ready for it, so this
    was worth doing before the device rather than after.
 
-   **UDP is dropped, with one exception that had to be made.** The stack
-   turns TCP into flows and nothing else, so a phone's QUIC goes nowhere —
-   which is a gap, not a bug, and most apps fall back to TCP. But a phone
+   **UDP is refused, with one exception that had to be made.** The stack
+   turns TCP into flows and nothing else, so a phone's QUIC gets an ICMP
+   port unreachable: `smoltcp` answers a datagram no socket accepts that
+   way, in `iface/interface/udp.rs`, and that module is compiled in because
+   of the `socket-udp` feature the names needed. It is worth more than a
+   drop — a datagram dropped in silence is retried until it times out, and
+   an app waiting on a timeout looks stuck, where a refusal sends it to TCP
+   at once. `quic_is_refused_rather_than_dropped` asserts it, because
+   nothing of ours does it and so nothing of ours would notice it stopping.
+   But a phone
    sends its **DNS** down the tunnel too, and a dropped query does not look
    like a DNS fault from the phone: it looks like the network has gone,
    because everything it does starts with a name. So the stack answers

@@ -46,7 +46,10 @@ use crate::source::{Flow, Found, Source, Stop, Target, stopped};
 use anyhow::Result;
 use smoltcp::{
     iface::{Config, Interface, SocketHandle, SocketSet},
-    phy::{Checksum, Device as PhyDevice, DeviceCapabilities, Medium, RxToken, TxToken},
+    phy::{
+        Checksum, ChecksumCapabilities, Device as PhyDevice, DeviceCapabilities, Medium, RxToken,
+        TxToken,
+    },
     socket::{tcp, udp},
     time::Instant as Moment,
     wire::{HardwareAddress, IpAddress, IpCidr, IpListenEndpoint, Ipv4Address, Ipv6Address},
@@ -227,6 +230,35 @@ fn ends(tcp: &[u8], from: IpAddr, to: IpAddr) -> Option<Peek> {
     })
 }
 
+/// Every checksum computed on the way out, and **none** verified on the way
+/// in.
+///
+/// Not checking is the point. A packet handed over by a kernel may carry an
+/// empty or half-finished checksum because the hardware was going to finish
+/// it; verifying would drop every one of those, and the symptom is that
+/// nothing comes through at all with nothing to say why.
+///
+/// It is one function because the rule was already written down, three lines
+/// above where it was applied to `ipv4` and `tcp` and not to `udp` — and
+/// `udp` is what carries the names, so a query with a half-finished checksum
+/// was dropped and names stopped resolving. The rule being visible was not
+/// enough; what was missing was somewhere for it to live once.
+///
+/// `smoltcp`'s default is [`Checksum::Both`], so a protocol nobody names
+/// here verifies on the way in. The struct is `#[non_exhaustive]`, so a
+/// literal cannot be written and the compiler cannot demand every field —
+/// which is why [`tests::no_checksum_is_verified_on_the_way_in`] reads the
+/// result rather than trusting this list to be complete.
+fn checksums() -> ChecksumCapabilities {
+    let mut sums = ChecksumCapabilities::default();
+    sums.ipv4 = Checksum::Tx;
+    sums.tcp = Checksum::Tx;
+    sums.udp = Checksum::Tx;
+    sums.icmpv4 = Checksum::Tx;
+    sums.icmpv6 = Checksum::Tx;
+    sums
+}
+
 /// The packets waiting to be read, and where to put the ones written.
 struct Device {
     waiting: VecDeque<Vec<u8>>,
@@ -271,12 +303,7 @@ impl PhyDevice for Device {
         let mut caps = DeviceCapabilities::default();
         caps.medium = Medium::Ip;
         caps.max_transmission_unit = MTU;
-        // Computed on the way out, and **not** checked on the way in: a
-        // packet handed over by a kernel may have an empty or wrong checksum
-        // because the hardware was going to do it. Checking would drop every
-        // one of them, and the symptom is that nothing comes through at all.
-        caps.checksum.ipv4 = Checksum::Tx;
-        caps.checksum.tcp = Checksum::Tx;
+        caps.checksum = checksums();
         caps
     }
 }
@@ -1274,6 +1301,12 @@ mod tests {
     /// A DNS query as a phone writes one, in an IPv4 datagram to the
     /// resolver its configuration named.
     fn asking(about: &str, from: &str, to: &str) -> Vec<u8> {
+        // The port comes from `to`, so the checksum smoltcp writes is the
+        // checksum for the datagram as it is sent. Mutating the port
+        // afterwards leaves a stale checksum and the packet is dropped on
+        // the way in — which is a test bug that reads exactly like a stack
+        // that ignores the packet, and cost me a wrong conclusion once.
+
         use smoltcp::wire::{UdpPacket, UdpRepr};
         let from: SocketAddr = from.parse().unwrap();
         let to: SocketAddr = to.parse().unwrap();
@@ -1317,6 +1350,130 @@ mod tests {
             &caps,
         );
         bytes
+    }
+
+    /// The rule for every protocol, read out of the answer rather than
+    /// checked against a list of my own: a list is what went wrong.
+    ///
+    /// This catches the field nobody named, **including one that does not
+    /// exist yet** — a protocol `smoltcp` adds later defaults to
+    /// `Checksum::Both` and shows up here as `Both`, which is what no list
+    /// and no compiler would have caught, since the struct is
+    /// `#[non_exhaustive]` and cannot be written as a literal.
+    ///
+    /// `Debug` is the only thing that names all the fields, so it is what
+    /// this reads. The first half of the test is there because a `Debug`
+    /// that stopped naming them would otherwise make the second half pass
+    /// for nothing.
+    #[test]
+    fn no_checksum_is_verified_on_the_way_in() {
+        let said = format!("{:?}", checksums());
+        for protocol in ["ipv4", "udp", "tcp", "icmpv4", "icmpv6"] {
+            assert!(
+                said.contains(protocol),
+                "`Debug` no longer names {protocol}, so this test proves nothing: {said}"
+            );
+        }
+        assert!(
+            !said.contains("Both") && !said.contains("Rx"),
+            "something is verified on the way in: {said}"
+        );
+    }
+
+    /// What a phone's QUIC gets, which is the thing that decides whether an
+    /// app looks broken or falls back. The stack reads TCP and answers DNS;
+    /// a datagram to anything else is **refused**, with ICMP destination
+    /// unreachable, port unreachable — not dropped. That matters: a dropped
+    /// datagram is retried until it times out, and a QUIC attempt that times
+    /// out is seconds of an app looking stuck, where a refusal is immediate
+    /// and the app opens a TCP connection instead, which tracewing can read.
+    ///
+    /// `smoltcp` does this itself: see `iface/interface/udp.rs`, where a
+    /// datagram no socket accepts becomes an ICMP error. That module is
+    /// compiled in because of the `socket-udp` feature the names needed, so
+    /// the refusal arrived with them rather than being asked for. It is
+    /// asserted here because nothing in tracewing says it, and so nothing in
+    /// tracewing would notice it going away — which is the whole reason this
+    /// test exists rather than a comment.
+    #[tokio::test]
+    async fn quic_is_refused_rather_than_dropped() {
+        let mut running = start(8);
+        // A datagram to 443, as a phone opening a QUIC connection sends.
+        running
+            .into
+            .send(asking("example.com", "10.78.0.2:51000", "10.78.0.1:443"))
+            .await
+            .unwrap();
+
+        let back = running.next().await;
+        let ip = Ipv4Packet::new_checked(&back[..]).expect("an IPv4 packet");
+        assert_eq!(ip.next_header(), IpProtocol::Icmp, "an ICMP error");
+        assert_eq!(
+            ip.src_addr().octets(),
+            [10, 78, 0, 1],
+            "from the address the phone was talking to"
+        );
+        assert_eq!(ip.dst_addr().octets(), [10, 78, 0, 2], "back to the phone");
+
+        let icmp = ip.payload();
+        assert_eq!(icmp[0], 3, "destination unreachable");
+        assert_eq!(
+            icmp[1], 3,
+            "port unreachable, which is the one that says try something else"
+        );
+
+        // The refusal quotes the datagram that caused it, and the port in
+        // that quote is what tells the phone which attempt failed.
+        let quoted = &icmp[8..];
+        let head = usize::from(quoted[0] & 0x0f) * 4;
+        let port = u16::from_be_bytes([quoted[head + 2], quoted[head + 3]]);
+        assert_eq!(port, 443, "the port it was refused on");
+    }
+
+    /// The same promise the IPv4 and TCP checksums get, for UDP: computed
+    /// on the way out, not checked on the way in. A packet handed over by a
+    /// kernel may carry an empty or half-finished checksum because the
+    /// hardware was going to finish it, and dropping those means names stop
+    /// resolving with nothing to say why — the symptom [`crate::dns`] exists
+    /// to prevent.
+    #[tokio::test]
+    async fn a_query_whose_checksum_is_wrong_is_still_answered() {
+        let mut running = start(8);
+        let mut query = asking("localhost", "10.78.0.2:51000", "10.78.0.1:53");
+        // The UDP checksum, made wrong. Not zeroed: a zero checksum is a
+        // legal "not computed" for IPv4 and would prove nothing.
+        let head = usize::from(query[0] & 0x0f) * 4;
+        query[head + 6] ^= 0xff;
+        running.into.send(query).await.unwrap();
+
+        let back = running.next().await;
+        let ip = Ipv4Packet::new_checked(&back[..]).expect("an IPv4 packet");
+        assert_eq!(
+            ip.next_header(),
+            IpProtocol::Udp,
+            "an answer: a stack that checked the checksum would have dropped it"
+        );
+    }
+
+    /// And the other half of the same rule: port 53 is **not** refused,
+    /// because something is listening there. Without this the test above
+    /// would pass just as well on a stack that refused everything,
+    /// including the names it is supposed to answer.
+    #[tokio::test]
+    async fn the_name_port_is_not_refused() {
+        let mut running = start(8);
+        running
+            .into
+            .send(asking("localhost", "10.78.0.2:51000", "10.78.0.1:53"))
+            .await
+            .unwrap();
+        let back = running.next().await;
+        let ip = Ipv4Packet::new_checked(&back[..]).expect("an IPv4 packet");
+        assert_eq!(
+            ip.next_header(),
+            IpProtocol::Udp,
+            "an answer, not a refusal"
+        );
     }
 
     /// A phone cannot reach anything by name unless its DNS is answered, and

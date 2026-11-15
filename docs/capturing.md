@@ -160,12 +160,15 @@ Two things to know before relying on it:
 - **The tunnel carries everything**, including the phone's own background
   traffic. That is the point, and it also means a busy phone fills a session
   quickly.
-- **Only TCP is captured.** The tunnel carries whatever the phone sends, and
-  what tracewing can read is TCP: a QUIC or HTTP/3 connection, which is UDP,
-  is dropped rather than recorded, and an app that insists on it will look
-  broken rather than be read. Most fall back to TCP when QUIC fails, which is
-  what makes this usable at all — and `Hide HTTP/3` in Settings is about the
-  same gap seen from the other side.
+- **Only TCP is captured, and QUIC is refused rather than ignored.** What
+  tracewing can read is TCP, so a QUIC or HTTP/3 connection — which is UDP —
+  is answered with "port unreachable" instead. That is deliberate and it is
+  the difference between an app that works and an app that hangs: a datagram
+  dropped in silence is retried until it times out, where a refusal arrives
+  at once and the app opens a TCP connection instead, which tracewing reads.
+  An app that insists on QUIC and will not fall back is one this does not
+  capture, and `Hide HTTP/3` in Settings is the same gap seen from the
+  desktop.
 
 **Names are answered here.** A phone sends its DNS down the tunnel with
 everything else, and DNS is UDP: the queries would be dropped with the rest,
