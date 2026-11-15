@@ -41,12 +41,12 @@ work the source is:
 
 | | macOS | Windows | Linux |
 |---|---|---|---|
-| Mechanism | NetworkExtension, App Proxy Provider | WinDivert (Windows Filtering Platform, kernel driver) | eBPF on `cgroup/sock`, into a TUN device |
+| Mechanism | NetworkExtension, App Proxy Provider | Wintun (WireGuard's layer-3 TUN driver) | eBPF on `cgroup/sock`, into a TUN device |
 | Hands over | **flows** | packets | packets |
 | Needs our own TCP stack | no | **yes** | **yes** |
 | Privilege | the user approves a system extension | Administrator | root, for `bpf()` |
-| Shipping | Developer ID, notarized, packaged as a system extension | WinDivert's own signed `.sys` beside our executable; nothing of ours to sign | kernel 6.8 or newer |
-| Knows the app by | audit token, so bundle id | PID | name, first 16 characters only (`task->comm`) |
+| Shipping | Developer ID, notarized, packaged as a system extension | Wintun's own signed `.dll` and driver beside our executable; nothing of ours to sign | kernel 6.8 or newer |
+| Knows the app by | audit token, so bundle id | the TCP table, by address | name, first 16 characters only (`task->comm`) |
 
 mitmproxy has all three and is worth reading before starting any of them; the
 design here is deliberately close to theirs, and `mitmproxy_rs` is MIT, so its
@@ -235,41 +235,95 @@ The rest, in the order it will bite:
 
 ### Local mode, Windows
 
-A redirector process running as Administrator, using WinDivert to take packets
-by PID and re-inject ours. Packets, so it needs the TCP stack.
+**A Wintun adapter**, which the operating system routes traffic into, feeding
+the TCP stack that is already here. Packets, so it needs that stack; no
+process of its own, and no driver of ours.
 
-Nothing here has to be signed by us. WinDivert asks only for Administrator —
-`WinDivertOpen()` fails with error 5 without it — and says nothing about the
-program that calls it. The driver does have to be signed, and the official
-`WinDivert64.sys` already is, so it is shipped as it comes; only a driver we
-built ourselves would need signing, and an unsigned one fails with error 577.
-There is no installer to write either: `WinDivert.dll` and the `.sys` beside
-our executable, and the driver installs itself silently on the first
-`WinDivertOpen()`. Uninstalling is deleting the files, with `sc delete` or
-`windivertctl uninstall` to take the loaded one away before a reboot does.
+This page planned WinDivert, and the switch is not about WinDivert's code. It
+is a working driver with a maintainer who answers. What it has no owner for
+is its future:
 
-**Take the LGPLv3 branch.** WinDivert is "LGPLv3 or GPLv2, at your choice",
-and only the first of those fits GPL-3.0-or-later: GPL-2.0-only would not.
+- **There is no signed ARM64 driver, and nobody has agreed to make one.** The
+  ARM build compiles and runs; somebody offered money for a signed one in
+  November 2025 and asked again at the end of that year. On a Windows-on-ARM
+  machine this capture mode would simply not exist.
+- **Its signing has nobody behind it.** v2.2.2 (September 2022) was declared
+  the long-term version in September 2025, to change only for security. The
+  attempt to have the driver signed again was abandoned in August 2026, after
+  the volunteer's EV certificate expired part-way through the process. An
+  earlier draft of this page called the project dormant, which was wrong in a
+  way worth keeping: the code is frozen **on purpose** and will not rot from
+  neglect. It is the signature that has no owner.
+- **The antivirus risk this page predicted has happened.** BitDefender
+  quarantined `WinDivert64.sys` from the last release in December 2025, with
+  a clean VirusTotal.
 
-Two things to weigh before committing to it, neither of them about signing:
+Wintun answers each of those, and for a reason that is not a favour to us:
+**WireGuard for Windows ships it.** Its signed x86-64 and ARM64 binaries are
+kept alive by somebody whose own product depends on them, and the driver is
+already installed on every machine that runs WireGuard. The prebuilt signed
+DLLs carry a licence of their own, more permissive than the GPLv2 of the
+source, and shipping those official builds is the only supported way to
+distribute it — so none of the licence arithmetic WinDivert's "LGPLv3 or
+GPLv2" needed applies.
 
-- **Security software blocks the driver**, which WinDivert's own
-  documentation gives an error number for (1275). Our Windows installer is
-  not signed today, and an unsigned executable that elevates to
-  Administrator and drops a kernel driver next to itself is the shape
-  antivirus heuristics like most. Signing the installer is not something
-  WinDivert requires; it is something this source would make necessary.
-- **WinDivert looks dormant.** 2.2.2 is from September 2022 and the
-  repository was last pushed to in March 2023; the driver's signing
-  certificate has expired and holds only because the signature is
-  timestamped. A kernel driver with nobody behind it to re-sign is a real
-  dependency risk if Microsoft tightens policy or blocklists it.
+**What is given up is real.** WinDivert takes packets **by process**, leaves
+the rest of the machine alone, and hands the owning PID over with them. An
+adapter takes whatever is routed into it. So:
 
-The alternative, a WFP callout driver of our own, is where signing does
-become ours: an EV certificate and attestation signing through Microsoft's
-Partner Center, every time the driver changes. Much more expensive than
-WinDivert, and a reason this stays at sixth rather than a reason to start it
-sooner.
+- choosing one program becomes a decision made inside tracewing, after the
+  packet is already ours. Possible, but every program's traffic then goes
+  through tracewing in order to be decided about: a wider blast radius, and a
+  cost paid on traffic nobody asked us to look at.
+- the program behind a flow is looked up by its address, as it is for every
+  other way in, instead of arriving with the packet. One change is needed
+  there and it is an easy one to miss:
+  [`apps/windows.rs`](../../crates/proxy/src/apps/windows.rs) keeps only the
+  rows of the TCP table whose **far end is a port of tracewing's**, and a
+  flow taken from an adapter has the real server at its far end. It needs a
+  look by local address and port alone.
+- [`features.md`](../features.md) promises "capture one app without proxy
+  settings". That sentence has to be made to match what an adapter can do
+  before this ships.
+
+#### What is in
+
+[`tun.rs`](../../crates/proxy/src/tun.rs) and
+[`wintun.rs`](../../crates/proxy/src/wintun.rs): the adapter, its session,
+and the pump between a blocking device and the stack's channels.
+
+The split between them is not generality for its own sake. None of the
+platform half can be built or run by the CI that sees every change, which is
+Linux — so the pump, which is where the bugs with teeth are, is a trait with
+a fake device behind it and five tests that run everywhere. The three things
+they guard: a **stop that hangs**, because only the device can end a blocked
+read and nothing else will notice until somebody tries to quit; **one refused
+packet ending the whole capture**, when a full ring is ordinary under load
+and the packet is the operating system's to send again; and a **read and a
+write starving each other**, which is why each gets a thread and why the
+device is `&self` throughout.
+
+#### What is not in, and nothing captures until it is
+
+**An address on the adapter, a route into it, and the exclusion that keeps
+tracewing's own connections out of it.** Without that last one, every
+connection tracewing makes on a captured program's behalf is routed straight
+back into tracewing. That is this mode's one genuinely dangerous piece; it
+lives in the outbound path rather than in the device, and the answer is to
+bind our own sockets to the physical interface (`IP_UNICAST_IF`) rather than
+to hope routes sort it out.
+
+The `wintun` crate's own address setters are not used for it: they shell out
+to `netsh`. Addressing and routing go through `windows-sys`, with the rest of
+this program's Windows calls.
+
+**Signing the installer is no longer a prerequisite**, and that is what moves
+this up the list. The driver is signed by WireGuard LLC and widely installed
+already, so what happens is no longer an elevated unsigned installer dropping
+an unknown kernel driver beside itself — the shape antivirus heuristics like
+most. Signing the installer is still worth doing; it is no longer what blocks
+the mode.
+
 
 ### Local mode, Linux
 
@@ -466,8 +520,9 @@ What is left:
    on a path that needs either is a client this does not catch — worth
    knowing rather than discovering, and cheaper to fix when something real
    needs it than to guess at now.
-3. Local mode on Windows, which needs that stack, a kernel driver, and our
-   installer signed first.
+3. Local mode on Windows. The device is **in** — see its section — and
+   what is left is an address, a route, and keeping tracewing's own
+   connections out of the adapter. It no longer waits on a signed installer.
 4. Local mode on Linux, last for the reasons in its section.
 
 ## What none of this changes
