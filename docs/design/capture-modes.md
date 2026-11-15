@@ -411,6 +411,20 @@ What is left:
    WireGuard brings IPv6 along whether or not we are ready for it, so this
    was worth doing before the device rather than after.
 
+   **UDP is dropped, with one exception that had to be made.** The stack
+   turns TCP into flows and nothing else, so a phone's QUIC goes nowhere —
+   which is a gap, not a bug, and most apps fall back to TCP. But a phone
+   sends its **DNS** down the tunnel too, and a dropped query does not look
+   like a DNS fault from the phone: it looks like the network has gone,
+   because everything it does starts with a name. So the stack answers
+   `A` and `AAAA` itself, on a `smoltcp` UDP socket bound to port 53 at any
+   address, and [`dns.rs`](../../crates/proxy/src/dns.rs) resolves each name
+   through the operating system rather than forwarding to a resolver chosen
+   on the user's behalf. The answer is sent back with the metadata the query
+   arrived with, which is what makes it come **from the address the phone
+   asked**: `smoltcp` keeps the destination in `local_address` and sends the
+   reply from it, and a reply from anywhere else is one a phone ignores.
+
    Two packets are deliberately left alone, and they are the same case
    twice: an IPv4 fragment that is not the first, and an IPv6 packet
    carrying an extension header. In both the TCP header is not where `peek`

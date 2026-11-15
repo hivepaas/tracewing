@@ -1702,6 +1702,15 @@ tce1108b9 = 수신 대기할 포트
 # 1080 is the port a SOCKS client picks when it is told nothing else. This computer only: other devices use the proxy port, whatever this says.
 tae174540 = 따로 지정하지 않으면 SOCKS 클라이언트는 1080을 고릅니다. 이 컴퓨터만 해당합니다. 다른 기기는 여기에 무엇이 적혀 있든 프록시 포트를 씁니다.
 
+# Let a phone join a tunnel
+t8000aba6 = 휴대폰이 터널에 들어오게 하기
+
+# The phone installs the WireGuard app, scans or copies the configuration below, and everything it sends is captured — including apps that ignore the phone's proxy setting. Unlike the SOCKS port this one is open to your network, and only the phone whose key is in that configuration can use it. Takes effect when tracewing starts again.
+t2d429f81 = 휴대폰에 WireGuard 앱을 설치하고 아래 설정을 스캔하거나 복사하면, 그 휴대폰이 보내는 모든 것이 기록됩니다 — 휴대폰의 프록시 설정을 무시하는 앱까지. SOCKS 포트와 달리 이 포트는 네트워크에 열려 있고, 그 설정에 키가 들어 있는 휴대폰만 쓸 수 있습니다. tracewing을 다시 시작하면 적용됩니다.
+
+# 51820 is WireGuard's own port, which is the one a router is most likely to allow already.
+t34ff97fb = 51820은 WireGuard 자체 포트이며, 라우터가 이미 허용하고 있을 가능성이 가장 큰 포트입니다.
+
 # Servers
 tcd0cf113 = 서버
 

@@ -83,6 +83,34 @@ fn groups() -> Vec<(SettingsSection, String, Vec<Row>)> {
             ],
         ),
         (
+            SettingsSection::Network,
+            // The protocol's name, as above: not translated.
+            "WireGuard".to_owned(),
+            vec![
+                row(
+                    "wireguard",
+                    tr!("Let a phone join a tunnel"),
+                    tr!(
+                        "The phone installs the WireGuard app, scans or copies the configuration \
+                         below, and everything it sends is captured — including apps that ignore \
+                         the phone's proxy setting. Unlike the SOCKS port this one is open to your \
+                         network, and only the phone whose key is in that configuration can use \
+                         it. Takes effect when tracewing starts again."
+                    ),
+                    "",
+                ),
+                row(
+                    "wireguard_port",
+                    tr!("The port it listens on"),
+                    tr!(
+                        "51820 is WireGuard's own port, which is the one a router is most likely \
+                         to allow already."
+                    ),
+                    "",
+                ),
+            ],
+        ),
+        (
             SettingsSection::Certificates,
             tr!("Servers"),
             vec![row(
@@ -995,6 +1023,12 @@ impl Traffic {
         // the switch that asked for it, and said as it came: the address and
         // the reason the system gave, which no wrapper of ours improves.
         let socks_problem = self.engine.socks_problem.clone();
+        let wireguard_problem = self.engine.wireguard_problem.clone();
+        // Asked for now rather than kept: the addresses a phone could reach
+        // are found after the proxy starts, so this is empty if it is read
+        // too early. Settings is drawn long after, which is why it is read
+        // here and not in `Engine::start`.
+        let wireguard_config = self.engine.wireguard_config();
         // A problem shows under the setting being changed, or else at the top.
         let problem_under = page.problem.as_ref().and(page.editing);
         let field_of = |key: &str| {
@@ -1133,6 +1167,42 @@ impl Traffic {
                                     d.children(socks_problem.clone().map(|why| {
                                         div().text_size(ui(12.)).text_color(rgb(c.error)).child(why)
                                     }))
+                                })
+                                .when(key == "wireguard", |d| {
+                                    d.children(wireguard_problem.clone().map(|why| {
+                                        div().text_size(ui(12.)).text_color(rgb(c.error)).child(why)
+                                    }))
+                                    // What the phone is given: a code for
+                                    // the WireGuard app's "add tunnel", and
+                                    // the same text to paste where a camera
+                                    // is no use. 300 is not a round number
+                                    // — a real configuration is 65 squares
+                                    // across, which at that size is four
+                                    // pixels a square, and a phone's camera
+                                    // wants about that much.
+                                    .children(
+                                        wireguard_config.clone().map(|config| {
+                                            div()
+                                                .mt(ui(8.))
+                                                .flex()
+                                                .flex_wrap()
+                                                .gap(ui(12.))
+                                                .items_start()
+                                                .children(crate::qr::qr_code(&config, 300.))
+                                                .child(
+                                                    div()
+                                                        .flex_1()
+                                                        .min_w(ui(240.))
+                                                        .p(ui(8.))
+                                                        .bg(rgb(c.code))
+                                                        .rounded(ui(4.))
+                                                        .font_family("monospace")
+                                                        .text_size(ui(11.))
+                                                        .text_color(rgb(c.text))
+                                                        .child(config),
+                                                )
+                                        }),
+                                    )
                                 })
                                 .when(problem_under == Some(key), |d| {
                                     d.children(page.problem.clone().map(|problem| {

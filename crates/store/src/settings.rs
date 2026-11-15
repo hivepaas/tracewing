@@ -74,6 +74,21 @@ pub struct StorageSettings {
     /// Which port that is. 1080 is the one every SOCKS client suggests, and
     /// the one a program told only "SOCKS" will try.
     pub socks_port: u64,
+    /// Serve a WireGuard tunnel, so that a phone can be captured by joining
+    /// it: no proxy to set by hand, and apps that ignore the Wi-Fi proxy are
+    /// caught too.
+    ///
+    /// **Unlike `socks`, this port is open to the network, and it has to
+    /// be** — a phone reaches this machine across the Wi-Fi, so loopback
+    /// would serve nobody. What makes that sound is the protocol rather than
+    /// the setting: an unauthenticated datagram is answered with silence, and
+    /// only the one peer whose public key tracewing holds can open a session.
+    /// Read when tracewing starts.
+    pub wireguard: bool,
+    /// Which port the tunnel listens on. 51820 is WireGuard's own, which is
+    /// what a phone's configuration suggests and what a router is most
+    /// likely to already allow.
+    pub wireguard_port: u64,
 }
 
 impl Default for StorageSettings {
@@ -100,6 +115,8 @@ impl Default for StorageSettings {
             mark_readings: true,
             socks: false,
             socks_port: 1080,
+            wireguard: false,
+            wireguard_port: 51820,
         }
     }
 }
@@ -178,6 +195,12 @@ impl StorageSettings {
         }
         // Checked whether or not it is on: a number that cannot work is
         // worth saying so about before the switch is turned on.
+        if !(1..=65535).contains(&self.wireguard_port) {
+            bail!(
+                "wireguard_port must be 1 to 65535, not {}: a phone has to be told which port to reach",
+                self.wireguard_port
+            );
+        }
         if !(1..=65535).contains(&self.socks_port) {
             bail!(
                 "socks_port must be 1 to 65535, not {}: a client has to be told which port to use",
@@ -230,6 +253,13 @@ impl StorageSettings {
     pub fn socks_at(&self) -> std::net::SocketAddr {
         (std::net::Ipv4Addr::LOCALHOST, self.socks_port as u16).into()
     }
+
+    /// Where the WireGuard tunnel listens. Every address this machine has,
+    /// because the phone is on another one: see [`Self::wireguard`] for why
+    /// that is the protocol's business and not the setting's.
+    pub fn wireguard_at(&self) -> std::net::SocketAddr {
+        (std::net::Ipv4Addr::UNSPECIFIED, self.wireguard_port as u16).into()
+    }
 }
 
 #[cfg(test)]
@@ -277,6 +307,20 @@ mod tests {
         assert!(parse("socks_port = 70000").is_err());
         let settings = parse("socks = true\nsocks_port = 1080").unwrap();
         assert_eq!(settings.socks_at(), "127.0.0.1:1080".parse().unwrap());
+
+        assert!(parse("wireguard_port = 0").is_err());
+        assert!(parse("wireguard_port = 70000").is_err());
+        let settings = parse("wireguard = true\nwireguard_port = 51820").unwrap();
+        assert_eq!(
+            settings.wireguard_at(),
+            "0.0.0.0:51820".parse().unwrap(),
+            "every address, because the phone is on another one"
+        );
+        assert_ne!(
+            settings.wireguard_at().ip(),
+            settings.socks_at().ip(),
+            "the two differ on purpose: one is this machine's alone, the other is not"
+        );
     }
 
     #[test]

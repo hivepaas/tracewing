@@ -12,6 +12,7 @@ programs, and none of them takes all.
 | **A browser on its own** — Set up › Browsers › Open on its own | Chrome, Edge, Brave, Opera, Chromium and Firefox, in a profile of tracewing's, servers on this computer included | Safari, which has no such profile |
 | **A terminal** — Set up › Open a terminal, or `tracewing env` | What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code, Codex and Gemini CLI | Node.js before 22.21, and 23 to 24.4; Java |
 | **A SOCKS5 port** — Settings › SOCKS5 | What speaks SOCKS: anything reading `ALL_PROXY`, `git` with a `socks5h://` proxy, Firefox's own SOCKS setting, proxychains | Programs that read only `HTTP_PROXY` and `HTTPS_PROXY`, and anything with no SOCKS setting of its own |
+| **A phone over WireGuard** — Settings › WireGuard | Everything the phone sends once it joins the tunnel, apps that ignore its proxy setting included | Apps that pin their own certificates; anything on the phone before tracewing's authority is installed there |
 
 The two last leave the system proxy and every other app alone, which is what
 to use when only one program is being looked at.
@@ -123,6 +124,64 @@ its configuration file.
 This is another place to tell a program about a proxy, not a way around a
 program that cannot be told at all. Those are in
 [design/capture-modes.md](design/capture-modes.md).
+
+## A phone, over WireGuard
+
+Every way in above tells a program where the proxy is. A phone is the case
+where that stops working: there is one proxy setting for the whole device, an
+app is free to ignore it, and plenty do. **Settings › WireGuard** takes the
+other road — the phone joins a tunnel, and everything it sends arrives here
+whether or not any app agreed to it.
+
+Off by default. Switched on, tracewing serves a WireGuard tunnel on 51820
+unless another number is given, and Settings shows a code to scan: install
+WireGuard from either store, **Add tunnel › Create from QR code**, and point
+the camera at it. The same configuration is beside the code as text, for a
+phone that would rather be pasted into than aimed. The keys are made on the first run and kept in the system's
+keychain — the same place the root CA's key goes — so the phone keeps working
+across restarts and the configuration shown today is the one it was set up
+with. It is read when tracewing starts, so the switch takes effect at the
+next start.
+
+**This port is open to your network, and it has to be:** the phone reaches
+this computer across the Wi-Fi, so loopback would serve nobody. What makes
+that safe is the protocol rather than the setting. An unauthenticated
+datagram is answered with silence — a scan of the port gets nothing at all,
+not even a refusal — and only the one phone whose key is in that
+configuration can open a session. That is a stronger door than the SOCKS5
+port has, which is why that one is loopback-only and this one is not.
+
+Two things to know before relying on it:
+
+- **The certificate still has to be trusted on the phone.** The tunnel
+  decides what reaches tracewing, not what an app is willing to believe.
+  Install tracewing's authority on the phone as well, and expect apps that
+  pin their own certificates to fail rather than be read.
+- **The tunnel carries everything**, including the phone's own background
+  traffic. That is the point, and it also means a busy phone fills a session
+  quickly.
+- **Only TCP is captured.** The tunnel carries whatever the phone sends, and
+  what tracewing can read is TCP: a QUIC or HTTP/3 connection, which is UDP,
+  is dropped rather than recorded, and an app that insists on it will look
+  broken rather than be read. Most fall back to TCP when QUIC fails, which is
+  what makes this usable at all — and `Hide HTTP/3` in Settings is about the
+  same gap seen from the other side.
+
+**Names are answered here.** A phone sends its DNS down the tunnel with
+everything else, and DNS is UDP: the queries would be dropped with the rest,
+which does not look like a DNS fault from the phone — it looks like the whole
+network has gone, because everything it does starts with a name. So tracewing
+answers them itself, and resolves each name **the way this computer resolves
+names**, through the operating system. Whatever this computer is set to use —
+a company's resolver, a Pi-hole, systemd-resolved — the phone gets the same
+answers, and tracewing holds no opinion about DNS and sends your names to
+nobody of its own choosing.
+
+Both ends' keys are tracewing's own doing, which is unusual for WireGuard and
+deliberate: the alternative is asking somebody to generate a key on the phone
+and type its public half in by hand. The phone's private key is in the
+configuration it is given, and is kept so the configuration can be shown
+again rather than once.
 
 ## Where a program looks for authorities
 

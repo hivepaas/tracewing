@@ -130,6 +130,16 @@ pub struct Engine {
     /// Why there is no SOCKS5 port although the settings asked for one, for
     /// Settings to say. The usual reason is that something else has 1080.
     pub socks_problem: Option<String>,
+    /// Where the WireGuard tunnel listens, when the settings asked for one
+    /// and the port could be opened.
+    pub wireguard: Option<SocketAddr>,
+    /// Why there is no tunnel although the settings asked for one.
+    pub wireguard_problem: Option<String>,
+    /// The keys the tunnel was started with, so that the configuration a
+    /// phone needs can be written again whenever it is asked for. Not public:
+    /// one of them is a private key, and what Settings wants is
+    /// [`Self::wireguard_config`].
+    wireguard_keys: Option<tracewing_proxy::wireguard_key::Pair>,
     /// The other settings that apply as they change.
     pub live: Arc<Live>,
     /// The ports it was given to listen on, kept so that starting again
@@ -154,6 +164,35 @@ pub struct Engine {
 }
 
 impl Engine {
+    /// What a phone has to be told, as a WireGuard configuration file.
+    ///
+    /// Written **when it is asked for** and not when the proxy starts, which
+    /// is not a detail: the addresses other devices reach this machine at are
+    /// bound by a task inside the proxy's thread, so at the moment
+    /// [`Self::start`] returns there are none yet. A configuration built then
+    /// would have no address in it, every time. The same race made
+    /// `other_devices_are_counted_found_and_named` fail on CI and pass here.
+    ///
+    /// `None` means there is nothing useful to show: no tunnel, or no
+    /// address of ours that a phone could reach. Settings says which.
+    pub fn wireguard_config(&self) -> Option<String> {
+        let keys = self.wireguard_keys.as_ref()?;
+        let port = self.wireguard?.port();
+        // IPv4 because that is what a phone's `Endpoint` line is written
+        // with in practice, and what a QR code will carry.
+        let host = self
+            .other_devices
+            .listening()
+            .into_iter()
+            .map(|at| at.ip())
+            .find(|ip| ip.is_ipv4())?;
+        Some(tracewing_proxy::wireguard::config_for(
+            &keys.ours,
+            &keys.phone,
+            SocketAddr::new(host, port),
+        ))
+    }
+
     pub fn start(opts: EngineOptions) -> Result<Self> {
         let sessions = opts.data_dir.join("sessions");
         session::forget_old(&sessions, opts.settings.sessions_kept);
@@ -174,6 +213,34 @@ impl Engine {
             (None, None)
         };
         let socks_at = socks.as_ref().and_then(|l| l.local_addr().ok());
+        // The tunnel's port, bound here for the same reason, and not fatal
+        // either: without it the proxy still works for everything that can
+        // be told to use it. Unlike SOCKS this is bound on every address,
+        // because the phone is on another one.
+        let (wireguard, wireguard_problem) = if opts.settings.wireguard {
+            let at = opts.settings.wireguard_at();
+            match std::net::UdpSocket::bind(at) {
+                Ok(socket) => (Some(socket), None),
+                Err(e) => (None, Some(format!("{at}: {e}"))),
+            }
+        } else {
+            (None, None)
+        };
+        let wireguard_at = wireguard.as_ref().and_then(|s| s.local_addr().ok());
+        // The keys, made on the first run and kept in the keychain. A
+        // failure here is the tunnel's alone: it is said and the port is not
+        // served, rather than stopping a proxy that would otherwise work.
+        let (wireguard_keys, wireguard_problem) = match (&wireguard, wireguard_problem) {
+            (Some(_), None) => match tracewing_proxy::wireguard_key::load_or_make(
+                &opts.data_dir.join("wireguard.key"),
+                opts.key_store,
+                &tracewing_proxy::ca_key::OsKeychain,
+            ) {
+                Ok((pair, _)) => (Some(pair), None),
+                Err(e) => (None, Some(format!("{e:#}"))),
+            },
+            (_, problem) => (None, problem),
+        };
         let other_devices = Arc::new(OtherDevices::new(opts.settings.other_devices));
         let live = Arc::new(Live::new(&opts.settings));
 
@@ -238,6 +305,19 @@ impl Engine {
                 if let Some(listener) = socks {
                     sources.push(Box::new(tracewing_proxy::socks::Socks::from_std(listener)));
                 }
+                if let (Some(socket), Some(keys)) = (wireguard, &wireguard_keys) {
+                    sources.push(Box::new(tracewing_proxy::wireguard::Endpoint::new(
+                        socket,
+                        tracewing_proxy::wireguard::Peer {
+                            ours: keys.ours.clone(),
+                            theirs: keys.phone_public(),
+                            preshared: None,
+                            // The phone's own configuration asks it to keep
+                            // its NAT open; this end only answers.
+                            keepalive: None,
+                        },
+                    )));
+                }
                 sources
             },
             relay: Arc::clone(&relay),
@@ -285,6 +365,9 @@ impl Engine {
             other_devices,
             socks: socks_at,
             socks_problem,
+            wireguard: wireguard_at,
+            wireguard_keys,
+            wireguard_problem,
             live,
             extra_roots: opts.extra_roots,
             relay,

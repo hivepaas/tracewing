@@ -7,6 +7,7 @@ pub mod ca_key;
 pub mod capture;
 pub mod client_certs;
 pub mod company_ca;
+pub mod dns;
 pub mod handover;
 pub mod key_log;
 pub mod lan;
@@ -24,6 +25,7 @@ pub mod throttle;
 pub mod traffic_rules;
 pub mod upstream;
 pub mod wireguard;
+pub mod wireguard_key;
 
 /// Moved to the store, which needs it to read HAR files too.
 pub use tracewing_store::graphql;

@@ -1894,6 +1894,15 @@ tce1108b9 = Порт, на якому він слухає
 # 1080 is the port a SOCKS client picks when it is told nothing else. This computer only: other devices use the proxy port, whatever this says.
 tae174540 = 1080 — порт, який вибирає клієнт SOCKS, якщо йому не сказано інше. Лише цей комп'ютер: інші пристрої використовують порт проксі, що б тут не стояло.
 
+# Let a phone join a tunnel
+t8000aba6 = Пустити телефон у тунель
+
+# The phone installs the WireGuard app, scans or copies the configuration below, and everything it sends is captured — including apps that ignore the phone's proxy setting. Unlike the SOCKS port this one is open to your network, and only the phone whose key is in that configuration can use it. Takes effect when tracewing starts again.
+t2d429f81 = На телефон встановлюється застосунок WireGuard, він сканує або копіює налаштування нижче, і все, що він надсилає, потрапляє в запис — разом із застосунками, які не зважають на налаштування проксі в телефоні. На відміну від порту SOCKS цей відкритий у вашу мережу, і скористатися ним може лише телефон, чий ключ є в цьому налаштуванні. Набуває чинності після перезапуску tracewing.
+
+# 51820 is WireGuard's own port, which is the one a router is most likely to allow already.
+t34ff97fb = 51820 — власний порт WireGuard, і той, який маршрутизатор найімовірніше вже дозволяє.
+
 # Servers
 tcd0cf113 = Сервери
 
