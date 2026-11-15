@@ -8,6 +8,7 @@ pub mod capture;
 pub mod client_certs;
 pub mod company_ca;
 pub mod dns;
+pub mod extension;
 pub mod handover;
 pub mod key_log;
 pub mod lan;
@@ -23,7 +24,10 @@ pub mod source;
 pub mod stack;
 pub mod throttle;
 pub mod traffic_rules;
+pub mod tun;
 pub mod upstream;
+#[cfg(windows)]
+pub mod wintun;
 pub mod wireguard;
 pub mod wireguard_key;
 

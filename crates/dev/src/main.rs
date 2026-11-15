@@ -53,6 +53,13 @@ enum Command {
         /// not HTTP proxying: ALL_PROXY, Firefox's SOCKS setting, proxychains.
         #[arg(long)]
         socks: Option<SocketAddr>,
+        /// Also take the flows macOS's network extension hands over here
+        /// (crates/netext), signed with --extension-key.
+        #[arg(long, requires = "extension_key")]
+        extension: Option<SocketAddr>,
+        /// The key the extension was given, as 64 hex digits.
+        #[arg(long)]
+        extension_key: Option<String>,
         /// Stop cleanly after this many seconds.
         #[arg(long)]
         exit_after: Option<u64>,
@@ -266,6 +273,8 @@ async fn main() -> Result<()> {
             no_watchdog,
             no_apps,
             socks,
+            extension,
+            extension_key,
             exit_after,
             relay,
             relay_bypass,
@@ -338,13 +347,28 @@ async fn main() -> Result<()> {
                     find_apps: !no_apps,
                     stop_limit: Duration::from_secs(5),
                     live: Default::default(),
-                    sources: match socks {
-                        Some(at) => {
+                    sources: {
+                        let mut sources: Vec<Box<dyn tracewing_proxy::source::Source>> = Vec::new();
+                        if let Some(at) = socks {
                             let listener = TcpListener::bind(at).await?;
                             eprintln!("SOCKS5 on {}", listener.local_addr()?);
-                            vec![Box::new(tracewing_proxy::socks::Socks::new(listener))]
+                            sources.push(Box::new(tracewing_proxy::socks::Socks::new(listener)));
                         }
-                        None => Vec::new(),
+                        if let Some(at) = extension {
+                            let key = extension_key
+                                .as_deref()
+                                .and_then(tracewing_handoff::Key::from_hex)
+                                .context("--extension-key is not 64 hex digits")?;
+                            let listener = std::net::TcpListener::bind(at)?;
+                            eprintln!(
+                                "the network extension's flows on {}",
+                                listener.local_addr()?
+                            );
+                            sources.push(Box::new(tracewing_proxy::extension::ExtensionPort::new(
+                                listener, key,
+                            )));
+                        }
+                        sources
                     },
                     relay,
                     // As browsers and curl, it writes them where SSLKEYLOGFILE says.

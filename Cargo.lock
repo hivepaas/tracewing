@@ -1466,6 +1466,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "c2rust-bitfields"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b43c3f07ab0ef604fa6f595aa46ec2f8a22172c975e186f6f5bf9829a3b72c41"
+dependencies = [
+ "c2rust-bitfields-derive",
+]
+
+[[package]]
+name = "c2rust-bitfields-derive"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3cbc102e2597c9744c8bd8c15915d554300601c91a079430d309816b0912545"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "calloop"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8624,11 +8644,21 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tracewing-convert",
+ "tracewing-handoff",
  "tracewing-proxy",
  "tracewing-store",
  "tracewing-system",
  "tracing-subscriber",
  "zstd",
+]
+
+[[package]]
+name = "tracewing-handoff"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "hmac 0.12.1",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -8650,6 +8680,7 @@ dependencies = [
  "objc2-foundation 0.3.2",
  "objc2-network-extension",
  "oslog",
+ "tracewing-handoff",
 ]
 
 [[package]]
@@ -8684,10 +8715,12 @@ dependencies = [
  "tokio-rustls",
  "toml 0.9.12+spec-1.1.0",
  "tower-service",
+ "tracewing-handoff",
  "tracewing-store",
  "tracing",
  "webpki-roots 1.0.11",
  "windows-sys 0.61.2",
+ "wintun",
  "x509-parser",
  "zstd",
 ]
@@ -10071,6 +10104,19 @@ checksum = "7d6f32a0ff4a9f6f01231eb2059cc85479330739333e0e58cadf03b6af2cca10"
 dependencies = [
  "cfg-if",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "wintun"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da99be64b5aa3de869c16977994314d0759a698d9a73ab0a5b1d52e2282033ae"
+dependencies = [
+ "c2rust-bitfields",
+ "libloading",
+ "log",
+ "thiserror 1.0.69",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

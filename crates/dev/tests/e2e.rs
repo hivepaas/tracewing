@@ -50,6 +50,10 @@ struct Harness {
     taken: tokio::sync::mpsc::Sender<Flow>,
     /// tracewing's SOCKS5 port, for a client that was told to use it.
     socks_port: u16,
+    /// The port the network extension hands its flows to, and the key it
+    /// signs them with.
+    extension_port: u16,
+    extension_key: tracewing_handoff::Key,
     live: Arc<Live>,
     relay: Arc<tracewing_proxy::relay::Relay>,
     tls_keys: Arc<tracewing_proxy::key_log::TlsKeys>,
@@ -133,6 +137,9 @@ impl Harness {
         let (given, taken) = Given::channel();
         let socks = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let socks_port = socks.local_addr().unwrap().port();
+        let extension = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let extension_port = extension.local_addr().unwrap().port();
+        let extension_key = tracewing_handoff::Key::new().unwrap();
         let proxy = tokio::spawn(run_proxy(
             ProxyOptions {
                 listener: Some(listener),
@@ -160,6 +167,10 @@ impl Harness {
                     Box::new(Lan::new(Arc::clone(&other_devices))),
                     Box::new(given),
                     Box::new(Socks::new(socks)),
+                    Box::new(tracewing_proxy::extension::ExtensionPort::new(
+                        extension,
+                        extension_key.clone(),
+                    )),
                 ],
                 relay: Arc::clone(&relay),
                 tls_keys: Arc::clone(&tls_keys),
@@ -188,6 +199,8 @@ impl Harness {
             other_devices,
             taken,
             socks_port,
+            extension_port,
+            extension_key,
             live,
             dir,
             proxy_url,
@@ -4219,6 +4232,131 @@ async fn a_taken_plain_post_is_recorded_body_and_all() {
         Some(body.as_bytes()),
         "and kept"
     );
+    clean_up(conn, dir);
+}
+
+/// What macOS's network extension hands over: a flow from an app that was
+/// never told a proxy exists, described in the extension's signed lines. It is
+/// recorded as the program whose process the lines name, read from that
+/// process rather than looked for by the socket, which is the extension's;
+/// and a plain `POST` in it is read, body and all, not tunnelled blind.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_flow_the_extension_hands_over_is_recorded_as_its_app() {
+    use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+    let h = Harness::start("extension").await;
+    let port = h.playground_port;
+    let stream = tokio::net::TcpStream::connect(("127.0.0.1", h.extension_port))
+        .await
+        .unwrap();
+    let mut stream = BufReader::new(stream);
+    let nonce = tracewing_handoff::Nonce::new().unwrap();
+    let hello = tracewing_handoff::Hello {
+        host: "localhost".to_owned(),
+        port,
+        app: "com.example.tool".to_owned(),
+        pid: Some(std::process::id()),
+    };
+    stream
+        .write_all(&hello.write(&h.extension_key, nonce))
+        .await
+        .unwrap();
+    let mut answer = Vec::new();
+    stream.read_until(b'\n', &mut answer).await.unwrap();
+    assert_eq!(
+        tracewing_handoff::answered(&answer, &h.extension_key, nonce),
+        Ok(()),
+        "tracewing proves it holds the key: {}",
+        String::from_utf8_lossy(&answer)
+    );
+
+    let body = r#"{"from":"the extension"}"#;
+    stream
+        .write_all(
+            format!(
+                "POST /echo HTTP/1.1\r\nHost: localhost:{port}\r\nContent-Type: application/json\r\n\
+                 Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            )
+            .as_bytes(),
+        )
+        .await
+        .unwrap();
+    let mut said = Vec::new();
+    stream.read_to_end(&mut said).await.unwrap();
+    let said = String::from_utf8_lossy(&said);
+    assert!(said.starts_with("HTTP/1.1 200"), "{said}");
+    assert!(said.contains(r#"\"from\":\"the extension\""#), "{said}");
+
+    let (summary, conn, dir) = h.finish(1).await;
+    assert_eq!(summary.written, 1);
+    let (method, host, app, pid, req_bytes): (String, String, Option<String>, Option<i64>, i64) =
+        conn.query_row(
+            "SELECT method, host, app, app_pid, req_bytes FROM flows",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+        )
+        .unwrap();
+    let me = std::env::current_exe().unwrap();
+    assert_eq!(method, "POST");
+    assert_eq!(
+        host,
+        format!("localhost:{port}"),
+        "named as the extension said"
+    );
+    assert_eq!(
+        app,
+        tracewing_store::app::name_of(&me.to_string_lossy()),
+        "the program of the process the extension named, this test"
+    );
+    assert_eq!(pid, Some(i64::from(std::process::id())));
+    assert_eq!(req_bytes, body.len() as i64);
+    clean_up(conn, dir);
+}
+
+/// Lines not signed with tracewing's key are turned down, and nothing of what
+/// follows them is read: a program that is not the extension cannot hand a
+/// flow over under another app's name. Nor can the extension hand tracewing a
+/// flow that was going to tracewing.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_hand_off_without_the_key_is_turned_down() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let h = Harness::start("extension-refused").await;
+    let proxy_port: u16 = h.proxy_url.rsplit(':').next().unwrap().parse().unwrap();
+    let turned_down = |key: tracewing_handoff::Key, host: &str, port: u16| {
+        let hello = tracewing_handoff::Hello {
+            host: host.to_owned(),
+            port,
+            app: "com.apple.Safari".to_owned(),
+            pid: None,
+        };
+        let at = h.extension_port;
+        async move {
+            let mut stream = tokio::net::TcpStream::connect(("127.0.0.1", at))
+                .await
+                .unwrap();
+            let said = hello.write(&key, tracewing_handoff::Nonce::new().unwrap());
+            stream.write_all(&said).await.unwrap();
+            let mut answer = String::new();
+            stream.read_to_string(&mut answer).await.unwrap();
+            // Closed after it: a request now goes nowhere, if it goes at all.
+            let _ = stream
+                .write_all(b"GET /json HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                .await;
+            answer
+        }
+    };
+    let answer = turned_down(
+        tracewing_handoff::Key::new().unwrap(),
+        "localhost",
+        h.playground_port,
+    )
+    .await;
+    assert_eq!(answer, "NO the proof is not tracewing's key\r\n");
+    let answer = turned_down(h.extension_key.clone(), "127.0.0.1", proxy_port).await;
+    assert!(answer.starts_with("NO "), "{answer}");
+
+    let (summary, conn, dir) = h.finish(0).await;
+    assert_eq!(summary.written, 0, "nothing after the lines was read");
     clean_up(conn, dir);
 }
 

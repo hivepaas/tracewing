@@ -41,12 +41,12 @@ work the source is:
 
 | | macOS | Windows | Linux |
 |---|---|---|---|
-| Mechanism | NetworkExtension, App Proxy Provider | WinDivert (Windows Filtering Platform, kernel driver) | eBPF on `cgroup/sock`, into a TUN device |
+| Mechanism | NetworkExtension, App Proxy Provider | Wintun (WireGuard's layer-3 TUN driver) | eBPF on `cgroup/sock`, into a TUN device |
 | Hands over | **flows** | packets | packets |
 | Needs our own TCP stack | no | **yes** | **yes** |
 | Privilege | the user approves a system extension | Administrator | root, for `bpf()` |
-| Shipping | Developer ID, notarized, packaged as a system extension | WinDivert's own signed `.sys` beside our executable; nothing of ours to sign | kernel 6.8 or newer |
-| Knows the app by | audit token, so bundle id | PID | name, first 16 characters only (`task->comm`) |
+| Shipping | Developer ID, notarized, packaged as a system extension | Wintun's signed `wintun.dll` beside our executable, driver inside it; nothing of ours to sign, but its licence is not ours either | kernel 6.8 or newer |
+| Knows the app by | audit token, so bundle id | the TCP table, by address | name, first 16 characters only (`task->comm`) |
 
 mitmproxy has all three and is worth reading before starting any of them; the
 design here is deliberately close to theirs, and `mitmproxy_rs` is MIT, so its
@@ -235,41 +235,148 @@ The rest, in the order it will bite:
 
 ### Local mode, Windows
 
-A redirector process running as Administrator, using WinDivert to take packets
-by PID and re-inject ours. Packets, so it needs the TCP stack.
+**A Wintun adapter**, which the operating system routes traffic into, feeding
+the TCP stack that is already here. Packets, so it needs that stack; no
+process of its own, and no driver of ours.
 
-Nothing here has to be signed by us. WinDivert asks only for Administrator —
-`WinDivertOpen()` fails with error 5 without it — and says nothing about the
-program that calls it. The driver does have to be signed, and the official
-`WinDivert64.sys` already is, so it is shipped as it comes; only a driver we
-built ourselves would need signing, and an unsigned one fails with error 577.
-There is no installer to write either: `WinDivert.dll` and the `.sys` beside
-our executable, and the driver installs itself silently on the first
-`WinDivertOpen()`. Uninstalling is deleting the files, with `sc delete` or
-`windivertctl uninstall` to take the loaded one away before a reboot does.
+This page planned WinDivert, and the switch is not about WinDivert's code. It
+is a working driver with a maintainer who answers. What it has no owner for
+is its future:
 
-**Take the LGPLv3 branch.** WinDivert is "LGPLv3 or GPLv2, at your choice",
-and only the first of those fits GPL-3.0-or-later: GPL-2.0-only would not.
+- **There is no signed ARM64 driver, and nobody has agreed to make one.** The
+  ARM build compiles and runs; somebody offered money for a signed one in
+  November 2025 and asked again at the end of that year. On a Windows-on-ARM
+  machine this capture mode would simply not exist.
+- **Its signing has nobody behind it.** v2.2.2 (September 2022) was declared
+  the long-term version in September 2025, to change only for security. The
+  attempt to have the driver signed again was abandoned in August 2026, after
+  the volunteer's EV certificate expired part-way through the process. An
+  earlier draft of this page called the project dormant, which was wrong in a
+  way worth keeping: the code is frozen **on purpose** and will not rot from
+  neglect. It is the signature that has no owner.
+- **The antivirus risk this page predicted has happened.** BitDefender
+  quarantined `WinDivert64.sys` from the last release in December 2025, with
+  a clean VirusTotal.
 
-Two things to weigh before committing to it, neither of them about signing:
+Wintun answers each of those, and for a reason that is not a favour to us:
+**WireGuard for Windows ships it**, so its binaries are kept alive by
+somebody whose own product depends on them. That was checked on a Windows
+machine rather than taken from a web page: the official 0.14.1 archive
+matches its published SHA-256, and all four DLLs in it — amd64, arm64, arm,
+x86 — carry a valid Authenticode signature from `CN=WireGuard LLC` with EV
+attributes. The driver is not a file of its own; it lives inside
+`wintun.dll`, which is the only thing to ship.
 
-- **Security software blocks the driver**, which WinDivert's own
-  documentation gives an error number for (1275). Our Windows installer is
-  not signed today, and an unsigned executable that elevates to
-  Administrator and drops a kernel driver next to itself is the shape
-  antivirus heuristics like most. Signing the installer is not something
-  WinDivert requires; it is something this source would make necessary.
-- **WinDivert looks dormant.** 2.2.2 is from September 2022 and the
-  repository was last pushed to in March 2023; the driver's signing
-  certificate has expired and holds only because the signature is
-  timestamped. A kernel driver with nobody behind it to re-sign is a real
-  dependency risk if Microsoft tightens policy or blocklists it.
+**The licence is not what the first draft of this section said**, and the
+difference matters. It is *not* "more permissive than the GPLv2 of the
+source". The prebuilt `wintun.dll` is proprietary, under a *Prebuilt
+Binaries License* that licenses rather than sells it, forbids modifying,
+decompiling or extracting from it, and reserves the right to change its own
+terms at any time. What it does grant is exactly what tracewing needs, in
+clause 3(d): redistribution **alongside other software that uses it only
+through the published `wintun.h` API**, which is all tracewing does. So
+shipping it is permitted — but there is licence arithmetic here. It is a
+different sum, not an absent one:
 
-The alternative, a WFP callout driver of our own, is where signing does
-become ours: an EV certificate and attestation signing through Microsoft's
-Partner Center, every time the driver changes. Much more expensive than
-WinDivert, and a reason this stays at sixth rather than a reason to start it
-sooner.
+- it is a proprietary binary beside a GPL-3 program, loaded dynamically and
+  used only through its documented interface. That is the separate-work case
+  rather than a combined one, and the same shape as any GPL program that
+  `dlopen`s a vendor's driver library. Worth being deliberate about now
+  rather than at a release.
+- **`cargo about` will not see it.** It reads crates, and `wintun.dll` is
+  not one, so its licence has to go into the Windows package's third-party
+  notices by hand. Clause 3(c) forbids removing proprietary notices, so
+  shipping it with none is the one mistake here that is plainly a breach.
+- WinDivert's risk was that nobody would re-sign the driver. This one's is
+  that the owner may change the terms (clause 8), and that the grant ends on
+  non-compliance (clause 6). Smaller, and of a different kind — but not the
+  absence of risk.
+
+**What is given up is real.** WinDivert takes packets **by process**, leaves
+the rest of the machine alone, and hands the owning PID over with them. An
+adapter takes whatever is routed into it. So:
+
+- choosing one program becomes a decision made inside tracewing, after the
+  packet is already ours. Possible, but every program's traffic then goes
+  through tracewing in order to be decided about: a wider blast radius, and a
+  cost paid on traffic nobody asked us to look at.
+- the program behind a flow is looked up by its address, as it is for every
+  other way in, instead of arriving with the packet. One change is needed
+  there and it is an easy one to miss:
+  [`apps/windows.rs`](../../crates/proxy/src/apps/windows.rs) keeps only the
+  rows of the TCP table whose **far end is a port of tracewing's**, and a
+  flow taken from an adapter has the real server at its far end. It needs a
+  look by local address and port alone.
+- [`features.md`](../features.md) promises "capture one app without proxy
+  settings". That sentence has to be made to match what an adapter can do
+  before this ships.
+
+#### What is in
+
+[`tun.rs`](../../crates/proxy/src/tun.rs) and
+[`wintun.rs`](../../crates/proxy/src/wintun.rs): the adapter, its session,
+and the pump between a blocking device and the stack's channels.
+
+The split between them is not generality for its own sake. None of the
+platform half can be built or run by the CI that sees every change, which is
+Linux — so the pump, which is where the bugs with teeth are, is a trait with
+a fake device behind it and five tests that run everywhere. The three things
+they guard: a **stop that hangs**, because only the device can end a blocked
+read and nothing else will notice until somebody tries to quit; **one refused
+packet ending the whole capture**, when a full ring is ordinary under load
+and the packet is the operating system's to send again; and a **read and a
+write starving each other**, which is why each gets a thread and why the
+device is `&self` throughout.
+
+#### What a Windows machine said, and CI cannot
+
+[`tests/wintun_live.rs`](../../crates/proxy/tests/wintun_live.rs) is
+`#[ignore]`d and wants Administrator and a real DLL:
+`$env:WINTUN_DLL = "...\\wintun\\bin\\amd64\\wintun.dll"`, then
+`cargo test -p tracewing-proxy --test wintun_live -- --ignored`. CI compiles
+it and never runs it, which is enough to keep it from rotting. Run in a
+Windows VM it settled three things no amount of compiling could:
+
+- the adapter opens at all — the DLL loads from a path, `Adapter::create`
+  takes our fixed GUID, and `start_session` accepts the 4 MiB ring;
+- a packet goes out through `allocate_send_packet` and `send_packet`;
+- **a shutdown ends the reading loop**, saying `Session shutting down`. That
+  is the one contract the whole stop in `tun.rs` rests on, and it was until
+  then an assumption.
+
+It also found what the next piece of work would have tripped over, and found
+it by **failing**. A first version of that third test asserted that nothing
+arrives on an adapter with no address and no route. **A fresh adapter is not
+quiet:** three IPv6 packets — 64, 48 and 76 bytes, which is router and
+neighbour solicitation and a multicast listener report — arrive within half a
+second of the adapter existing. So the stack is handed Windows's own IPv6
+housekeeping from the moment the device opens, before anything has been
+routed into it on purpose. Nothing is wrong with that; the stack drops what
+opens no connection. But anything that counts packets, logs them, or expects
+a quiet start will be surprised, and it is cheaper to know now than to debug
+later.
+
+#### What is not in, and nothing captures until it is
+
+**An address on the adapter, a route into it, and the exclusion that keeps
+tracewing's own connections out of it.** Without that last one, every
+connection tracewing makes on a captured program's behalf is routed straight
+back into tracewing. That is this mode's one genuinely dangerous piece; it
+lives in the outbound path rather than in the device, and the answer is to
+bind our own sockets to the physical interface (`IP_UNICAST_IF`) rather than
+to hope routes sort it out.
+
+The `wintun` crate's own address setters are not used for it: they shell out
+to `netsh`. Addressing and routing go through `windows-sys`, with the rest of
+this program's Windows calls.
+
+**Signing the installer is no longer a prerequisite**, and that is what moves
+this up the list. The driver is signed by WireGuard LLC and widely installed
+already, so what happens is no longer an elevated unsigned installer dropping
+an unknown kernel driver beside itself — the shape antivirus heuristics like
+most. Signing the installer is still worth doing; it is no longer what blocks
+the mode.
+
 
 ### Local mode, Linux
 
@@ -355,27 +462,46 @@ and only the others pay for a second. The look itself is started by the
 client's address either way, which is why a taken flow whose source named no
 program is now looked up like any client that asked.
 
-What is left:
+What is left, and what no longer is:
 
 1. **Local mode on macOS is in**, in
    [`crates/netext`](../../crates/netext): a `NETransparentProxyProvider` in
    a system extension, which takes the TCP flows of the apps its
-   configuration names and hands each to tracewing's listener as a
-   `CONNECT`. Flow-level, so it needed none of the TCP stack below.
+   configuration names. Flow-level, so it needed none of the TCP stack below.
    `scripts/package_macos.sh` puts it in the app when the entitlement is
    there; `docs/building.md` has how to build and run it.
 
-   **One end of it is open, and it is worth knowing before anybody relies
-   on it.** The extension sends the app's signing id and process id in an
-   `X-Tracewing-App` header, and nothing reads that header: a grep for it
-   finds `crates/netext` and this documentation and nothing else. So the
-   program behind such a flow is looked for the way it is for any client,
-   by the socket's owner — and the socket belongs to the **extension**,
-   not to the app it took the flow from. The likely result is that these
-   flows are named after the extension, which would make the one thing the
-   mode is for invisible. That last step is an inference: it needs a Mac to
-   see, and this machine is not one. Written here rather than left as a
-   surprise.
+   It reaches the seam as a source like the others:
+   [`extension.rs`](../../crates/proxy/src/extension.rs), a port of its own
+   on the loopback. For each flow the extension connects there and says, in
+   a few lines ([`crates/handoff`](../../crates/handoff)), where the flow
+   was going — the name the app asked for, which macOS gives even to a
+   program that connected by address — and the app's signing id and process.
+   What follows is the app's conversation, handed over as a `Took::Flow`, so
+   the TLS and plain-HTTP split, the name in the hello and `as_absolute` are
+   the same code every taken flow goes through: a plain `POST` is read, not
+   tunnelled blind.
+
+   **The program is named, not looked for.** It used to be the open end of
+   this: an earlier version sent a `CONNECT` with the app in an
+   `X-Tracewing-App` header that nothing read, so the program was looked up
+   by the socket's owner, which is the extension. Now the port reads the
+   app's process from the lines and the program from that process, as the
+   `who` of the flow; `curl` on a Mac is recorded as `curl`, with its pid.
+
+   **Both ends prove they hold a key**, which tracewing makes and saves in
+   the extension's configuration, and neither ever sends. The extension's
+   lines are signed with it, so no other program on the computer can hand a
+   flow over under another app's name; tracewing's answer is signed too, and
+   that one matters more. While tracewing is not running, anything may
+   listen on its port, and an extension that trusted whatever answered would
+   hand it the traffic of every app it was told to take. Instead a flow that
+   cannot be handed to something proving it is tracewing goes out as it
+   would have: the extension does the hand-off before it answers macOS, so
+   it can still say no.
+
+   What is left is the app's end: installing the extension, the key, and
+   saving and starting the configuration with the capture.
 2. The TCP/IP stack is **in**, in [`stack.rs`](../../crates/proxy/src/stack.rs):
    packets in, [`Took::Flow`](../../crates/proxy/src/source.rs) out, on
    `smoltcp`, answering each `SYN` as the server the client was going to. What
@@ -466,8 +592,9 @@ What is left:
    on a path that needs either is a client this does not catch — worth
    knowing rather than discovering, and cheaper to fix when something real
    needs it than to guess at now.
-3. Local mode on Windows, which needs that stack, a kernel driver, and our
-   installer signed first.
+3. Local mode on Windows. The device is **in** — see its section — and
+   what is left is an address, a route, and keeping tracewing's own
+   connections out of the adapter. It no longer waits on a signed installer.
 4. Local mode on Linux, last for the reasons in its section.
 
 ## What none of this changes
