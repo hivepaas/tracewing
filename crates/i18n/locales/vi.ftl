@@ -1915,6 +1915,12 @@ t018f7b7c = Mọi thứ một app được nêu tên gửi qua TCP, dù nó có 
 # UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
 t3f6bf403 = UDP, nên cả HTTP/3; và các chương trình không có signing id riêng, như mọi thứ go build tạo ra.
 
+# Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
+t4294729b = Chưa có gì tới cổng proxy kể từ lúc bật — không từ system proxy, không từ trình duyệt riêng của tracewing, cũng không từ terminal, vì cả ba đều vào ở đó. Một chương trình được chỉ dùng proxy nhưng bỏ qua nó thì trông đúng như thế này.
+
+# Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
+t7cb4303b = Chưa có gì tới bằng đường này kể từ lúc bật. Một chương trình được chỉ dùng nó nhưng bỏ qua nó thì trông đúng như thế này.
+
 # Turn off
 tcd03e04b = Tắt
 

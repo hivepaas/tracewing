@@ -140,6 +140,32 @@ and a terminal bring their own trust, and another device installs it itself.
 A button to Certificates on those would be an invitation to install
 something nobody needs, so a test says which tabs have one.
 
+**And a tab says when its way in is on and nothing is coming through it** —
+the sentence tracewing could always have said and never did. The facts come
+from the proxy (`Arrivals`, see
+[capture-modes.md](capture-modes.md)); what the tab adds is the moment to ask
+from: when the window turned that switch on, or when the engine started for a
+way in that needs a restart, since a switch flipped after that carries
+nothing until the next start anyway.
+
+Three things about that line, each of which could have made it worse than
+silence:
+
+- **It is asked from a moment, never as a total.** A way in that carried
+  traffic last week has a count that is not zero, and a tab reading the count
+  would tell somebody their way in works on the strength of traffic from
+  before they touched it.
+- **The three that share the proxy port say so.** The system proxy, a browser
+  of tracewing's own and a terminal all come in on one listener, so the line
+  on that tab names all three rather than implying tracewing knows which one
+  is failing.
+- **A switch just flipped is left alone for five seconds.** Appearing the
+  instant somebody turns something on is both useless — nothing has had time
+  to arrive — and alarming.
+
+A browser and a terminal carry no such line: they are opened, not left on, so
+there is no moment to ask from.
+
 What is not built yet: Java's truststore.
 
 ## What the wizard is, now that it is built

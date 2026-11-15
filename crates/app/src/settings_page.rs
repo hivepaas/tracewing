@@ -16,8 +16,10 @@ use gpui::{
     Context, Entity, Focusable, FontWeight, KeyDownEvent, Subscription, Window, div, prelude::*,
     rgb,
 };
+use std::time::{Duration, Instant};
 use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::rules::HostRules;
+use tracewing_proxy::source::By;
 use tracewing_store::settings::StorageSettings;
 
 /// Where TLS secrets are written for Wireshark, in the data folder.
@@ -58,6 +60,54 @@ fn group(at: SettingsSection, way: Option<Way>, title: String, rows: Vec<Row>) -
         title,
         rows,
     }
+}
+
+/// Which way in's count a tab reads, where tracewing counts one.
+///
+/// Three ways in share the proxy port — this machine's proxy setting, a
+/// browser tracewing started with a profile of its own, and a terminal it set
+/// the variables in — so all three read the same count, and the sentence they
+/// show has to say that it covers all three. A browser and a terminal are not
+/// switches anybody leaves on, so neither carries the sentence at all; it is
+/// for a way in somebody turned on and then waited at.
+fn counted_as(way: Way) -> Option<By> {
+    match way {
+        Way::SystemProxy => Some(By::ProxyPort),
+        Way::OtherDevices => Some(By::OtherDevices),
+        Way::Socks5 => Some(By::Socks5),
+        Way::WireGuard => Some(By::WireGuard),
+        Way::Apps => Some(By::Extension),
+        Way::Browser | Way::Terminal => None,
+    }
+}
+
+/// How long a way in is left alone after it is switched on before the tab
+/// says nothing has come through it.
+///
+/// Without this the line appears the instant somebody flips a switch, which
+/// is both useless — nothing has had time to arrive — and alarming, which is
+/// the opposite of what it is for.
+const QUIET_AFTER: Duration = Duration::from_secs(5);
+
+/// Whether a way in has been on this long with nothing arriving by it.
+///
+/// `since` is when it became able to deliver, and the heart of the thing: a
+/// count that was not zero last week says nothing about a switch flipped a
+/// minute ago, so the question is always asked from a moment rather than
+/// about a total.
+fn gone_quiet(
+    way: Way,
+    since: Option<Instant>,
+    arrivals: &tracewing_proxy::source::Arrivals,
+    now: Instant,
+) -> bool {
+    let Some(by) = counted_as(way) else {
+        return false;
+    };
+    let Some(since) = since else {
+        return false;
+    };
+    now.duration_since(since) >= QUIET_AFTER && !arrivals.anything_since(by, since)
 }
 
 /// What has to trust tracewing for a way in, and where that is done.
@@ -631,6 +681,21 @@ impl Traffic {
                 page.editing = Some(*name);
             }
         }
+        // Switched on now, so the question "has anything arrived since" is
+        // asked from now. Only *other devices* of the ways in here applies at
+        // once; SOCKS5 and the tunnel wait for a restart, and until then
+        // nothing can arrive by them at all, so their moment is the engine's.
+        if key == "other_devices" {
+            match self.engine.other_devices.is_on() {
+                true => {
+                    self.on_since
+                        .insert(Way::OtherDevices, std::time::Instant::now());
+                }
+                false => {
+                    self.on_since.remove(&Way::OtherDevices);
+                }
+            }
+        }
         self.save_settings(cx);
     }
 
@@ -863,6 +928,32 @@ impl Traffic {
             ),
         };
         let (trusts, goes_to) = trust_for(way);
+        // When this way in became able to deliver anything. A switch the
+        // window owns is remembered when it is flipped; one that needs a
+        // restart could only have started delivering when the engine did,
+        // and only if it was actually served — a port something else holds
+        // is not a way in that has gone quiet, it is a way in that is not
+        // there, and the tab already says so above.
+        let since = match way {
+            Way::SystemProxy | Way::OtherDevices => self.on_since.get(&way).copied(),
+            Way::Socks5 => self.engine.socks.map(|_| self.engine.started),
+            Way::WireGuard => self.engine.wireguard.map(|_| self.engine.started),
+            Way::Browser | Way::Terminal | Way::Apps => None,
+        };
+        let quiet = gone_quiet(way, since, &self.engine.arrivals, Instant::now()).then(|| {
+            match way {
+                // The three that share the proxy port are named, because this
+                // count cannot tell them apart and a line that implied it
+                // could would be a lie about which one is failing.
+                Way::SystemProxy => tr!(
+                    "Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this."
+                ),
+                _ => tr!(
+                    "Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this."
+                ),
+            }
+        });
+
         let trust_link = goes_to.map(|section| {
             crate::setup_page::button("capture-trust", section.name(), false)
                 .on_click(
@@ -947,7 +1038,12 @@ impl Traffic {
                             .child(eyebrow(tr!("Does not catch")))
                             .child(div().text_color(rgb(c.muted)).child(misses))
                             .child(eyebrow(tr!("Needs to trust tracewing")))
-                            .child(div().text_color(rgb(c.muted)).child(trusts)),
+                            .child(div().text_color(rgb(c.muted)).child(trusts))
+                            .children(
+                                quiet.map(|says| {
+                                    div().mt(ui(4.)).text_color(rgb(c.warn)).child(says)
+                                }),
+                            ),
                     )
                     .children(control),
             )
@@ -2005,6 +2101,87 @@ impl Traffic {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The sentence tracewing could always have said and never did: this way
+    /// in is on, and nothing has come through it since you turned it on.
+    ///
+    /// The `since` is the whole of it. A way in that carried traffic before
+    /// the switch was flipped has a count that is not zero, and a tab that
+    /// read the count would tell somebody their way in works on the strength
+    /// of traffic from before they touched it.
+    #[test]
+    fn a_way_in_is_quiet_only_when_nothing_came_after_it_was_switched_on() {
+        let arrivals = tracewing_proxy::source::Arrivals::default();
+
+        // It carried something, once, before the switch was flipped.
+        arrivals.came(By::Socks5);
+        let switched_on = Instant::now();
+        let later = switched_on + QUIET_AFTER;
+        assert!(
+            gone_quiet(Way::Socks5, Some(switched_on), &arrivals, later),
+            "the old arrival is not an answer about this switch"
+        );
+
+        // And now it carries something.
+        arrivals.came(By::Socks5);
+        assert!(!gone_quiet(
+            Way::Socks5,
+            Some(switched_on),
+            &arrivals,
+            later
+        ));
+    }
+
+    /// Nothing is said in the first few seconds, and nothing is said about a
+    /// way in that was never switched on.
+    #[test]
+    fn a_switch_just_flipped_is_left_alone() {
+        let arrivals = tracewing_proxy::source::Arrivals::default();
+        let on = Instant::now();
+        assert!(
+            !gone_quiet(Way::Socks5, Some(on), &arrivals, on),
+            "nothing has had time to arrive yet"
+        );
+        assert!(gone_quiet(
+            Way::Socks5,
+            Some(on),
+            &arrivals,
+            on + QUIET_AFTER
+        ));
+        assert!(
+            !gone_quiet(Way::Socks5, None, &arrivals, on + QUIET_AFTER),
+            "never switched on is not the same as switched on and quiet"
+        );
+    }
+
+    /// A browser and a terminal are opened, not left on, so neither carries
+    /// the sentence; everything else reads a count of its own, and the three
+    /// that share the proxy port read the same one.
+    #[test]
+    fn only_a_way_in_somebody_waits_at_reads_a_count() {
+        let counted: Vec<Option<By>> = Way::ALL.into_iter().map(counted_as).collect();
+        assert_eq!(
+            counted,
+            vec![
+                Some(By::ProxyPort),
+                None,
+                None,
+                Some(By::OtherDevices),
+                Some(By::Socks5),
+                Some(By::WireGuard),
+                Some(By::Extension),
+            ]
+        );
+        let arrivals = tracewing_proxy::source::Arrivals::default();
+        let on = Instant::now();
+        for way in [Way::Browser, Way::Terminal] {
+            assert!(
+                !gone_quiet(way, Some(on), &arrivals, on + QUIET_AFTER),
+                "{} is not a switch",
+                way.name()
+            );
+        }
+    }
 
     /// Every tab says what has to trust tracewing, and the two that cannot
     /// do it themselves say where it is done. A blank line here is a tab

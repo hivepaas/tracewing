@@ -118,6 +118,10 @@ pub struct Engine {
     /// What has arrived by each way in, for the Capture tabs to say that one
     /// is on and nothing is coming through it.
     pub arrivals: Arc<tracewing_proxy::source::Arrivals>,
+    /// When this engine started serving. The moment a way in that needs a
+    /// restart — SOCKS5, the tunnel — became able to deliver anything, since
+    /// a switch flipped after it has no effect until the next start.
+    pub started: std::time::Instant,
     /// What a browser opened from here needs when it does not trust the CA.
     pub leaf_spki: Arc<OnceLock<String>>,
     /// What breakpoints hold.
@@ -415,6 +419,7 @@ impl Engine {
             network,
             check,
             arrivals,
+            started: std::time::Instant::now(),
             leaf_spki,
             pauses,
             failure,

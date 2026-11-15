@@ -1915,6 +1915,12 @@ t018f7b7c = Apa pun yang dikirim app yang disebut lewat TCP, baik membaca setela
 # UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
 t3f6bf403 = UDP, jadi HTTP/3; dan program tanpa signing id sendiri, seperti semua yang dibuat go build.
 
+# Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
+t4294729b = Sejak dinyalakan belum ada apa pun yang masuk ke port proxy — tidak dari proxy sistem, tidak dari browser milik tracewing, tidak juga dari terminal, yang semuanya masuk di situ. Program yang sudah diberi tahu soal proxy tetapi mengabaikannya tampak persis seperti ini.
+
+# Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
+t7cb4303b = Sejak dinyalakan belum ada apa pun yang masuk lewat jalan ini. Program yang sudah diberi tahu soal jalan ini tetapi mengabaikannya tampak persis seperti ini.
+
 # Turn off
 tcd03e04b = Matikan
 
