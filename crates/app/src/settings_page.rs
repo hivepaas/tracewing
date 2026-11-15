@@ -60,6 +60,51 @@ fn group(at: SettingsSection, way: Option<Way>, title: String, rows: Vec<Row>) -
     }
 }
 
+/// What has to trust tracewing for a way in, and where that is done.
+///
+/// HTTPS is unreadable until something trusts tracewing, and which something
+/// differs by way in. A tab that lists what it catches and leaves this out
+/// has somebody turning a switch on, seeing certificate errors, and having
+/// no way to tell which of the two halves is missing.
+///
+/// Out here rather than in the view because a way in with no answer here is
+/// a tab with a blank line on it, and that is worth a test rather than a
+/// reading of the window.
+fn trust_for(way: Way) -> (String, Option<SettingsSection>) {
+    match way {
+        Way::SystemProxy | Way::Socks5 => (
+            tr!(
+                "This computer's own store, which Certificates installs tracewing's authority into. A program with a store of its own — Java, or Firefox — needs it there too."
+            ),
+            Some(SettingsSection::Certificates),
+        ),
+        Way::Browser => (
+            tr!(
+                "Nothing of yours: the profile tracewing makes for the browser has the authority in it already."
+            ),
+            None,
+        ),
+        Way::Terminal => (
+            tr!(
+                "Nothing of yours: the terminal points what starts in it at tracewing's roots, in a file, and installs nothing."
+            ),
+            None,
+        ),
+        Way::OtherDevices | Way::WireGuard => (
+            tr!(
+                "The other device, which installs the authority itself. Set up has a guide for each kind of device under \"my phone\"."
+            ),
+            None,
+        ),
+        Way::Apps => (
+            tr!(
+                "This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given."
+            ),
+            Some(SettingsSection::Certificates),
+        ),
+    }
+}
+
 /// The groups a part of Settings shows — and, under
 /// [`SettingsSection::Capture`], only those of the way in whose tab is open.
 ///
@@ -817,6 +862,15 @@ impl Traffic {
                 ),
             ),
         };
+        let (trusts, goes_to) = trust_for(way);
+        let trust_link = goes_to.map(|section| {
+            crate::setup_page::button("capture-trust", section.name(), false)
+                .on_click(
+                    cx.listener(move |this, _, _, cx| this.show_settings_section(section, cx)),
+                )
+                .into_any_element()
+        });
+
         // What turns this way in on, where that is not a row of settings.
         let control: Option<gpui::AnyElement> = match way {
             Way::SystemProxy => {
@@ -891,10 +945,13 @@ impl Traffic {
                             .child(eyebrow(tr!("Catches")))
                             .child(catches)
                             .child(eyebrow(tr!("Does not catch")))
-                            .child(div().text_color(rgb(c.muted)).child(misses)),
+                            .child(div().text_color(rgb(c.muted)).child(misses))
+                            .child(eyebrow(tr!("Needs to trust tracewing")))
+                            .child(div().text_color(rgb(c.muted)).child(trusts)),
                     )
                     .children(control),
             )
+            .children(trust_link)
             .children(instead.map(|(says, command)| {
                 div()
                     .flex()
@@ -1948,6 +2005,29 @@ impl Traffic {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every tab says what has to trust tracewing, and the two that cannot
+    /// do it themselves say where it is done. A blank line here is a tab
+    /// that lists what it catches and leaves somebody with certificate
+    /// errors and no idea which half is missing.
+    #[test]
+    fn every_way_in_says_what_has_to_trust_tracewing() {
+        for way in Way::ALL {
+            let (says, goes_to) = trust_for(way);
+            assert!(!says.is_empty(), "{} says nothing", way.name());
+            // Where tracewing installs the authority itself there is
+            // somewhere to send people; where the way in brings its own
+            // trust there is nothing to open, and a button to Certificates
+            // would be an invitation to install something nobody needs.
+            let installs_here = matches!(way, Way::SystemProxy | Way::Socks5 | Way::Apps);
+            assert_eq!(
+                goes_to,
+                installs_here.then_some(SettingsSection::Certificates),
+                "{} points the wrong way",
+                way.name()
+            );
+        }
+    }
 
     /// The whole point of the tabs: a setting belongs to one way in, and is
     /// shown under that one and nowhere else. If this fails, somebody looking

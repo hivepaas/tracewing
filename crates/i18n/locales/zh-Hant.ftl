@@ -1699,6 +1699,21 @@ t17bccaf2 = 開始新的工作階段
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = 匯出的 HAR 檔案會去掉標頭、URL 和本文中的 Cookie、權杖、金鑰和密碼
 
+# This computer's own store, which Certificates installs tracewing's authority into. A program with a store of its own — Java, or Firefox — needs it there too.
+td7b0a447 = 這台電腦自己的憑證庫，「憑證」會把 tracewing 的 CA 裝進去。自帶憑證庫的程式 — Java 或 Firefox — 那邊也要裝。
+
+# Nothing of yours: the profile tracewing makes for the browser has the authority in it already.
+t46674768 = 不用你做什麼：tracewing 為瀏覽器建的設定檔裡本來就有這個 CA。
+
+# Nothing of yours: the terminal points what starts in it at tracewing's roots, in a file, and installs nothing.
+tb18ebb12 = 不用你做什麼：終端機只是把在它裡面啟動的東西指向檔案裡的 tracewing 根憑證，什麼都不安裝。
+
+# The other device, which installs the authority itself. Set up has a guide for each kind of device under "my phone".
+t1d84ee29 = 對面那台裝置，CA 由它自己裝。初始設定的「我的手機」下面有按裝置類型分的指南。
+
+# This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
+t1dd036b6 = 和系統代理一樣，是這台電腦自己的憑證庫：macOS 把流交過來，應用程式仍然會檢查它收到的憑證。
+
 # Let other devices use the proxy
 t13e626b3 = 允許其他裝置使用代理伺服器
 
@@ -1920,6 +1935,9 @@ tf5f3fe08 = 擷取得到
 
 # Does not catch
 t8fd1679e = 擷取不到
+
+# Needs to trust tracewing
+taea9e22b = 需要信任 tracewing 的一方
 
 # {name} (default)
 td3f56fa8 = { $name }(預設)

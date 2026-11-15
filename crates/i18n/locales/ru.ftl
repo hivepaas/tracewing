@@ -1891,6 +1891,21 @@ t17bccaf2 = Начать новую сессию
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = В экспортированных HAR нет cookie, токенов, ключей и паролей — ни в заголовках, ни в URL, ни в телах
 
+# This computer's own store, which Certificates installs tracewing's authority into. A program with a store of its own — Java, or Firefox — needs it there too.
+td7b0a447 = Собственное хранилище этого компьютера, куда «Сертификаты» устанавливают удостоверяющий центр tracewing. Программе со своим хранилищем — Java или Firefox — он нужен и там.
+
+# Nothing of yours: the profile tracewing makes for the browser has the authority in it already.
+t46674768 = Ничего с вашей стороны: в профиле, который tracewing создаёт для браузера, центр уже есть.
+
+# Nothing of yours: the terminal points what starts in it at tracewing's roots, in a file, and installs nothing.
+tb18ebb12 = Ничего с вашей стороны: терминал направляет запущенное в нём на корневые сертификаты tracewing в файле и ничего не устанавливает.
+
+# The other device, which installs the authority itself. Set up has a guide for each kind of device under "my phone".
+t1d84ee29 = Другое устройство — оно устанавливает центр само. В «Настройке», в ответе «Мой телефон», есть руководство для каждого вида устройств.
+
+# This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
+t1dd036b6 = Собственное хранилище этого компьютера, как и для системного прокси: macOS передаёт поток, а приложение всё равно проверяет полученный сертификат.
+
 # Let other devices use the proxy
 t13e626b3 = Разрешить другим устройствам использовать прокси
 
@@ -2112,6 +2127,9 @@ tf5f3fe08 = Ловит
 
 # Does not catch
 t8fd1679e = Не ловит
+
+# Needs to trust tracewing
+taea9e22b = Должно доверять tracewing
 
 # {name} (default)
 td3f56fa8 = { $name } (по умолчанию)

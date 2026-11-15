@@ -1699,6 +1699,21 @@ t17bccaf2 = 新しいセッションを始める
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = エクスポートした HAR ファイルでは、ヘッダー・URL・ボディ内の Cookie、トークン、キー、パスワードを省きます
 
+# This computer's own store, which Certificates installs tracewing's authority into. A program with a store of its own — Java, or Firefox — needs it there too.
+td7b0a447 = このコンピューター自身のストアで、「証明書」が tracewing の認証局をそこに入れます。自分のストアを持つプログラム — Java や Firefox — には、そちらにも必要です。
+
+# Nothing of yours: the profile tracewing makes for the browser has the authority in it already.
+t46674768 = こちらで用意するものはありません。tracewing がブラウザー用に作るプロファイルには、認証局が最初から入っています。
+
+# Nothing of yours: the terminal points what starts in it at tracewing's roots, in a file, and installs nothing.
+tb18ebb12 = こちらで用意するものはありません。ターミナルは、その中で起動したものをファイル内の tracewing のルート証明書に向けるだけで、何もインストールしません。
+
+# The other device, which installs the authority itself. Set up has a guide for each kind of device under "my phone".
+t1d84ee29 = 相手の端末で、認証局はその端末自身が入れます。セットアップの「自分のスマートフォン」に、端末の種類ごとの手順があります。
+
+# This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
+t1dd036b6 = システムプロキシと同じく、このコンピューター自身のストアです。macOS がフローを渡しても、アプリは受け取った証明書を確かめます。
+
 # Let other devices use the proxy
 t13e626b3 = 他のデバイスにプロキシの使用を許可
 
@@ -1920,6 +1935,9 @@ tf5f3fe08 = 取れるもの
 
 # Does not catch
 t8fd1679e = 取れないもの
+
+# Needs to trust tracewing
+taea9e22b = tracewing を信頼する必要があるもの
 
 # {name} (default)
 td3f56fa8 = { $name }(既定)

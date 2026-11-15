@@ -1699,6 +1699,21 @@ t17bccaf2 = Bắt đầu phiên mới
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = File HAR export ra bỏ đi cookie, token, key và mật khẩu, trong header, URL và body
 
+# This computer's own store, which Certificates installs tracewing's authority into. A program with a store of its own — Java, or Firefox — needs it there too.
+td7b0a447 = Kho của chính máy này, nơi mục Chứng chỉ cài CA của tracewing vào. Chương trình có kho riêng — Java, hoặc Firefox — thì cần cài vào đó nữa.
+
+# Nothing of yours: the profile tracewing makes for the browser has the authority in it already.
+t46674768 = Không cần gì của bạn: profile mà tracewing tạo cho trình duyệt đã có CA sẵn trong đó.
+
+# Nothing of yours: the terminal points what starts in it at tracewing's roots, in a file, and installs nothing.
+tb18ebb12 = Không cần gì của bạn: terminal trỏ những gì chạy trong đó tới các CA gốc của tracewing, trong một file, và không cài gì cả.
+
+# The other device, which installs the authority itself. Set up has a guide for each kind of device under "my phone".
+t1d84ee29 = Thiết bị kia, nó tự cài CA. Thiết lập có hướng dẫn cho từng loại thiết bị ở câu trả lời "Điện thoại của tôi".
+
+# This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
+t1dd036b6 = Kho của chính máy này, như với system proxy: macOS chuyển flow sang, còn app vẫn kiểm chứng chỉ mà nó nhận được.
+
 # Let other devices use the proxy
 t13e626b3 = Cho thiết bị khác dùng proxy
 
@@ -1920,6 +1935,9 @@ tf5f3fe08 = Bắt được
 
 # Does not catch
 t8fd1679e = Không bắt được
+
+# Needs to trust tracewing
+taea9e22b = Cần tin cậy tracewing
 
 # {name} (default)
 td3f56fa8 = { $name } (mặc định)

@@ -1699,6 +1699,21 @@ t17bccaf2 = 새 세션 시작
 # Exported HAR files leave out cookies, tokens, keys and passwords, in headers, URLs and bodies
 t3435c213 = 내보낸 HAR 파일은 헤더, URL, 본문에서 쿠키, 토큰, 키, 비밀번호를 뺍니다
 
+# This computer's own store, which Certificates installs tracewing's authority into. A program with a store of its own — Java, or Firefox — needs it there too.
+td7b0a447 = 이 컴퓨터 자체의 저장소로, '인증서'가 tracewing의 인증 기관을 그곳에 설치합니다. 자체 저장소를 쓰는 프로그램 — Java나 Firefox — 에는 그쪽에도 필요합니다.
+
+# Nothing of yours: the profile tracewing makes for the browser has the authority in it already.
+t46674768 = 따로 하실 일은 없습니다. tracewing이 브라우저용으로 만드는 프로필에는 인증 기관이 이미 들어 있습니다.
+
+# Nothing of yours: the terminal points what starts in it at tracewing's roots, in a file, and installs nothing.
+tb18ebb12 = 따로 하실 일은 없습니다. 터미널은 그 안에서 시작한 것을 파일에 있는 tracewing의 루트 인증서로 향하게 할 뿐, 아무것도 설치하지 않습니다.
+
+# The other device, which installs the authority itself. Set up has a guide for each kind of device under "my phone".
+t1d84ee29 = 상대 기기이며, 인증 기관은 그 기기가 직접 설치합니다. 시작하기의 '내 휴대폰' 답에 기기 종류별 안내가 있습니다.
+
+# This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
+t1dd036b6 = 시스템 프록시와 마찬가지로 이 컴퓨터 자체의 저장소입니다. macOS가 흐름을 넘겨주더라도 앱은 받은 인증서를 그대로 확인합니다.
+
 # Let other devices use the proxy
 t13e626b3 = 다른 기기에서 프록시 사용 허용
 
@@ -1920,6 +1935,9 @@ tf5f3fe08 = 잡는 것
 
 # Does not catch
 t8fd1679e = 잡지 못하는 것
+
+# Needs to trust tracewing
+taea9e22b = tracewing을 신뢰해야 하는 곳
 
 # {name} (default)
 td3f56fa8 = { $name } (기본값)
