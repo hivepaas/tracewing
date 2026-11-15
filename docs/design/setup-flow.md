@@ -49,15 +49,16 @@ is also where **HTTP/3** lives (`settings_page.rs:167`). HTTP/3 is not a way
 in — it is about what is done with traffic that arrives. Having it in the
 same list is part of why the list does not read as a list of ways in.
 
-**One way in has no configuration surface at all, and that is now what
-blocks it.** The macOS extension reached the capture seam in #267: it hands
-each flow to a port of tracewing's, signed with a key both ends hold, and the
-flow is recorded as the app's. What is left of that mode is **the app's end**
-— installing the extension, making the key, and saving and starting the
-configuration that says which apps to take. A grep of `crates/app/src` for
-`netext`, `EXTENSION_ID`, `APP_HEADER` or `handoff` finds **nothing**. So the
-macOS tab is not a tidier home for settings that exist; it is the piece the
-mode is waiting on.
+**One way in can only be reached from the command line.** The macOS
+extension reached the capture seam in #267 and got its driver in #275:
+`tracewing capture --app <signing id>` installs the extension, asks macOS to
+allow it, starts a proxy configuration naming those apps, and stops it when
+the capture ends; `tracewing extension status` and `extension uninstall` say
+how it is and remove it. All of it is `tracewing_system::extension`, which the
+window could call today. A grep of `crates/app/src` for `netext`, `handoff` or
+`EXTENSION_ID` finds **two doc comments in `cli.rs`** and no code. So this tab
+is not a design question any more — it is a window over a mechanism whose
+semantics the command line has already settled.
 
 **And the count is the real evidence.** Asked how many ways in tracewing has,
 the person who built it said two. If the answer is not obvious from inside
@@ -151,16 +152,51 @@ and it works the same on all three operating systems.
 - **Whether an app is using the proxy right now.** A flow arriving is the
   only proof, which is why every path ends in a check that produces one.
 
-## Decisions this needs
+## Decisions taken
 
-1. **Where the configuration page lives.** A new top-level screen beside
-   Setup and Settings, or Setup rebuilt as it with the wizard in front? The
-   second is less to learn and more to break.
-2. **Whether the wizard runs once or stays.** Shown on a first run only, or
-   always reachable for the next unfamiliar target?
-3. **Java's truststore**: written on demand from the wizard, or kept in step
-   with the authority whenever that changes?
-4. **The two local-mode tabs follow other people's work**, and should not
-   lead it: the macOS one what #267 left to do at the app's end, the Windows
-   one the Wintun capture being built now. Both are listed here so the tab
-   strip has a place for them, not so their middles get designed here.
+1. **The configuration page is a section of Settings, not a screen of its
+   own.** Settings is already a page with a menu of sections
+   ([`SettingsSection`](../../crates/app/src/layout.rs)), and
+   [`navigation.rs`](../../crates/app/src/navigation.rs) already keeps which
+   section is open in the window's history — so a new section gets back,
+   forward and a place in the history for nothing. The tab strip lives inside
+   it. The two surfaces this document is about then land as: **Settings ›
+   Capture** holds the tabs, **Set up** becomes the wizard, and the three
+   ways in now under `Network`, together with the system proxy's switch, move
+   into the tabs that own them.
+
+   The alternative of a section per way in was turned down for the reason the
+   grouping is wrong today: a menu that lists *SOCKS5* beside *Decoding* and
+   *Storage* mixes how traffic arrives with what is done with it, which is the
+   problem, not the fix. The cost of this choice is two levels of chrome — a
+   menu on the left, tabs above — and that is the thing to watch when it is
+   built.
+
+2. **The wizard stays.** Shown on a first run, and reachable afterwards from
+   the rail and from a "walk me through this" in each tab, because the second
+   unfamiliar target — a Java program, a phone — is exactly when somebody
+   needs leading again, and a wizard that has been used up leaves them back
+   in the maze this is meant to clear. What it costs is that the wizard has to
+   **read the current state and be safe to run twice**: it says the proxy is
+   already on rather than turning it on again, and it never undoes a setting
+   somebody chose on purpose.
+
+3. **Java's truststore is written lazily, and checked.** Not once and never
+   again, because a new authority leaves the old PKCS12 silently wrong and it
+   fails as a TLS error inside somebody's JVM, which is the worst place to
+   debug it. Not rewritten on every change to the authority either, because
+   that writes a file for everybody who never touches Java. Instead the step
+   builds it when it is opened, compares the authority's fingerprint with the
+   one in the file, and writes again only when they differ.
+
+## Still open
+
+4. **The Windows local-mode tab follows the Wintun capture being built**,
+   and should not lead it: until an adapter has an address, a route and the
+   exclusion, there is nothing for a switch to switch. The tab strip has a
+   place for it; its middle gets designed where the capture is.
+
+   The macOS tab is no longer in this list. `tracewing capture --app` settled
+   its shape — a list of signing ids, the install and the allow, and a
+   status — and the window should wear that rather than invent a second
+   model of the same thing.
