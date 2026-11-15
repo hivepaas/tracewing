@@ -123,7 +123,8 @@ its configuration file.
 
 This is another place to tell a program about a proxy, not a way around a
 program that cannot be told at all. Those are in
-[design/capture-modes.md](design/capture-modes.md).
+[design/capture-modes.md](design/capture-modes.md), and how all of these are
+meant to be presented is in [design/setup-flow.md](design/setup-flow.md).
 
 ## A phone, over WireGuard
 
