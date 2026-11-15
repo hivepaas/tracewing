@@ -1915,6 +1915,12 @@ t018f7b7c = 指定したアプリが TCP で送るものすべて。プロキシ
 # UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
 t3f6bf403 = UDP、つまり HTTP/3。そして go build が作るもののように、自分の署名 ID を持たないプログラム。
 
+# Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
+t4294729b = オンにしてから、プロキシのポートには何も届いていません。システムプロキシ、tracewing 専用のブラウザー、ターミナルはどれもそこへ入ってきますが、そのいずれからも届いていません。プロキシを使うよう指定したのに無視するプログラムは、まさにこう見えます。
+
+# Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
+t7cb4303b = オンにしてから、この経路では何も届いていません。この経路を使うよう指定したのに無視するプログラムは、まさにこう見えます。
+
 # Turn off
 tcd03e04b = オフにする
 

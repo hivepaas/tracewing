@@ -104,7 +104,7 @@ impl SettingsSection {
 /// turned a thing on from. What does *not* belong here is what tracewing does
 /// with traffic that has arrived — HTTP/3, decoding, storage — which is why
 /// this is not simply the old `Network` list renamed.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Way {
     /// This computer's own proxy setting.

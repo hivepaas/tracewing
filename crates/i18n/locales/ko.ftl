@@ -1915,6 +1915,12 @@ t018f7b7c = 지정한 앱이 TCP로 보내는 모든 것. 프록시 설정을 �
 # UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
 t3f6bf403 = UDP, 그러므로 HTTP/3. 그리고 go build가 만드는 것처럼 자체 서명 ID가 없는 프로그램.
 
+# Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
+t4294729b = 켠 뒤로 프록시 포트에 아무것도 들어오지 않았습니다. 시스템 프록시, tracewing 전용 브라우저, 터미널이 모두 그곳으로 들어오는데, 그 어느 쪽에서도 없었습니다. 프록시를 쓰라고 지정했는데 무시하는 프로그램이 바로 이렇게 보입니다.
+
+# Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
+t7cb4303b = 켠 뒤로 이 경로로는 아무것도 들어오지 않았습니다. 이 경로를 쓰라고 지정했는데 무시하는 프로그램이 바로 이렇게 보입니다.
+
 # Turn off
 tcd03e04b = 끄기
 

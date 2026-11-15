@@ -1915,6 +1915,12 @@ t018f7b7c = 指定的应用通过 TCP 发出的一切，无论它是否读取任
 # UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
 t3f6bf403 = UDP，所以也包括 HTTP/3；以及没有自己签名标识的程序，比如 go build 生成的一切。
 
+# Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
+t4294729b = 自从打开以来，代理端口上什么都没到过 — 系统代理、tracewing 自己的浏览器、终端都从那里进来，这三样都没有。一个被指定走代理却忽略它的程序，看起来正是这样。
+
+# Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
+t7cb4303b = 自从打开以来，这条路上什么都没到过。一个被指定走这条路却忽略它的程序，看起来正是这样。
+
 # Turn off
 tcd03e04b = 关闭
 

@@ -2039,6 +2039,12 @@ t018f7b7c = Tudo o que um app indicado envia por TCP, leia ou não alguma config
 # UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
 t3f6bf403 = UDP, portanto HTTP/3; e os programas sem identificador de assinatura próprio, como tudo o que o go build gera.
 
+# Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
+t4294729b = Nada chegou à porta do proxy desde que isto foi ligado — nem pelo proxy do sistema, nem por um navegador do próprio tracewing, nem por um terminal, que entram todos ali. Um programa a quem o proxy foi indicado e que o ignora tem exatamente este aspecto.
+
+# Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
+t7cb4303b = Nada chegou por aqui desde que isto foi ligado. Um programa a quem esta via foi indicada e que a ignora tem exatamente este aspecto.
+
 # Turn off
 tcd03e04b = Desativar
 

@@ -1989,6 +1989,12 @@ t018f7b7c = Adı verilen bir uygulamanın TCP üzerinden gönderdiği her şey, 
 # UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
 t3f6bf403 = UDP, dolayısıyla HTTP/3; ve kendi imza kimliği olmayan programlar, örneğin go build'in ürettiği her şey.
 
+# Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
+t4294729b = Açıldığından beri proxy portuna hiçbir şey gelmedi — ne sistem proxy'sinden, ne tracewing'in kendi tarayıcısından, ne de bir terminalden; hepsi oradan girer. Proxy'yi kullanması söylenip onu yok sayan bir program tam olarak böyle görünür.
+
+# Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
+t7cb4303b = Açıldığından beri bu yoldan hiçbir şey gelmedi. Bu yolu kullanması söylenip onu yok sayan bir program tam olarak böyle görünür.
+
 # Turn off
 tcd03e04b = Kapat
 

@@ -353,7 +353,14 @@ impl Traffic {
                 .await;
             let _ = this.update(cx, |this, cx| {
                 match result {
-                    Ok(taken) => this.system.proxy = ProxySwitch::On(taken),
+                    Ok(taken) => {
+                        this.system.proxy = ProxySwitch::On(taken);
+                        // From here, not from when the button was pressed:
+                        // what the Capture tab asks is whether anything has
+                        // arrived since the proxy could carry anything.
+                        this.on_since
+                            .insert(crate::layout::Way::SystemProxy, std::time::Instant::now());
+                    }
                     Err(e) => {
                         this.system.proxy = ProxySwitch::Off;
                         this.system.problem =

@@ -397,6 +397,11 @@ pub struct Traffic {
     pub socket_message: Entity<TextInput>,
     /// The list of keyboard shortcuts is open over the window.
     pub(crate) shortcuts_open: bool,
+    /// When a way in was switched on in this run, for the Capture tab that
+    /// says nothing has arrived by it since. Only the ways in with a switch
+    /// the window owns are in here; one that needs a restart is on since the
+    /// engine started, which is where `on_since` falls back to.
+    pub(crate) on_since: std::collections::HashMap<crate::layout::Way, std::time::Instant>,
     /// Where the window has been, for back and forward.
     pub(crate) history: crate::history::History<crate::navigation::Location>,
     /// True while back or forward moves the window, which is not a place gone to.
@@ -563,6 +568,7 @@ impl Traffic {
             layout_name,
             socket_message,
             shortcuts_open: false,
+            on_since: std::collections::HashMap::new(),
             history: crate::history::History::new(crate::navigation::Location {
                 screen: Screen::Traffic,
                 section: None,
