@@ -328,6 +328,34 @@ and the packet is the operating system's to send again; and a **read and a
 write starving each other**, which is why each gets a thread and why the
 device is `&self` throughout.
 
+#### What a Windows machine said, and CI cannot
+
+[`tests/wintun_live.rs`](../../crates/proxy/tests/wintun_live.rs) is
+`#[ignore]`d and wants Administrator and a real DLL:
+`$env:WINTUN_DLL = "...\\wintun\\bin\\amd64\\wintun.dll"`, then
+`cargo test -p tracewing-proxy --test wintun_live -- --ignored`. CI compiles
+it and never runs it, which is enough to keep it from rotting. Run in a
+Windows VM it settled three things no amount of compiling could:
+
+- the adapter opens at all — the DLL loads from a path, `Adapter::create`
+  takes our fixed GUID, and `start_session` accepts the 4 MiB ring;
+- a packet goes out through `allocate_send_packet` and `send_packet`;
+- **a shutdown ends the reading loop**, saying `Session shutting down`. That
+  is the one contract the whole stop in `tun.rs` rests on, and it was until
+  then an assumption.
+
+It also found what the next piece of work would have tripped over, and found
+it by **failing**. A first version of that third test asserted that nothing
+arrives on an adapter with no address and no route. **A fresh adapter is not
+quiet:** three IPv6 packets — 64, 48 and 76 bytes, which is router and
+neighbour solicitation and a multicast listener report — arrive within half a
+second of the adapter existing. So the stack is handed Windows's own IPv6
+housekeeping from the moment the device opens, before anything has been
+routed into it on purpose. Nothing is wrong with that; the stack drops what
+opens no connection. But anything that counts packets, logs them, or expects
+a quiet start will be surprised, and it is cheaper to know now than to debug
+later.
+
 #### What is not in, and nothing captures until it is
 
 **An address on the adapter, a route into it, and the exclusion that keeps
