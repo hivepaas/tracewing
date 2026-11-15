@@ -443,8 +443,23 @@ impl ResolvesClientCert for Unanswered {
     }
 }
 
-/// The interface this machine's own outbound connections must leave by, as
-/// Windows numbers them; zero for "whatever the routing table says".
+/// Which interface tracewing's own connections leave by while it holds a TUN
+/// adapter — one answer for each family, because Windows numbers an adapter
+/// separately for IPv4 and for IPv6.
+///
+/// They are usually the same number and they are not the same thing, so one
+/// standing for both would pin IPv6 traffic to whatever happened to share
+/// the IPv4 index.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OutBy {
+    /// `None` means this family has **no** way out that is not our own
+    /// adapter, which is not the same as having no preference.
+    pub v4: Option<u32>,
+    pub v6: Option<u32>,
+}
+
+/// Whether tracewing holds an adapter at all, and the interface for each
+/// family while it does; zero for none.
 ///
 /// Process-wide rather than per-connection, because it is not a property of
 /// a connection. It is a property of this machine's routing while tracewing
@@ -453,23 +468,84 @@ impl ResolvesClientCert for Unanswered {
 /// into the adapter, answered by our own stack as the server it was going
 /// to, and made again — a loop with nothing bounding it.
 ///
-/// Nothing sets it yet, and nothing but Windows reads it.
-static OUR_INTERFACE: AtomicU32 = AtomicU32::new(0);
+/// Nothing sets them yet, and nothing but Windows reads them.
+static HOLDING: AtomicBool = AtomicBool::new(false);
+static OUT_BY_V4: AtomicU32 = AtomicU32::new(0);
+static OUT_BY_V6: AtomicU32 = AtomicU32::new(0);
 
-/// Says that tracewing's own connections must leave by the interface Windows
-/// numbers `index`. Zero lets the routing table decide again.
+/// Says which interface tracewing's own connections must leave by while it
+/// holds an adapter, or `None` once it holds none and the routing table
+/// decides again as it always did.
 ///
-/// **Whoever sets this owns keeping it right.** Which interface holds the
+/// **Both families in one call on purpose.** Setting one and forgetting the
+/// other is the mistake this shape makes impossible to write, and it is the
+/// expensive one: a forgotten IPv6 does not fail, it loops.
+///
+/// **Whoever calls this owns keeping it right.** Which interface holds the
 /// default route changes as a machine moves between Wi-Fi, Ethernet and
-/// tethering, so it is set again when that changes rather than once at the
-/// start — with none, outgoing packets are blackholed.
+/// tethering, so it is called again when that changes rather than once at
+/// the start.
 ///
 /// And it is not free: the option *forces* traffic out that interface,
 /// including traffic that would have left by a more specific route, so while
 /// it is set every connection tracewing makes goes one way. See
 /// [capture-modes.md](../../../docs/design/capture-modes.md).
-pub fn leave_by(index: u32) {
-    OUR_INTERFACE.store(index, Ordering::Relaxed);
+pub fn leave_by(out: Option<OutBy>) {
+    match out {
+        // The indices go in **before** the flag that makes them read, so a
+        // connection that sees an adapter held never reads an index nobody
+        // wrote. The other order would let one connection be routed into the
+        // adapter we are holding, which is the loop this exists to stop.
+        Some(out) => {
+            OUT_BY_V4.store(out.v4.unwrap_or(0), Ordering::Relaxed);
+            OUT_BY_V6.store(out.v6.unwrap_or(0), Ordering::Relaxed);
+            HOLDING.store(true, Ordering::Release);
+        }
+        // And the flag goes out first on the way down, so the worst a
+        // connection can see is a family with no way out — which fails,
+        // rather than loops.
+        None => {
+            HOLDING.store(false, Ordering::Release);
+            OUT_BY_V4.store(0, Ordering::Relaxed);
+            OUT_BY_V6.store(0, Ordering::Relaxed);
+        }
+    }
+}
+
+/// What a connection of one family has to do about all that.
+#[cfg(any(windows, test))]
+#[derive(Debug, PartialEq, Eq)]
+enum Out {
+    /// No adapter is held, so the routing table decides as it always has.
+    AsAlways,
+    /// Out by this interface.
+    By(u32),
+    /// An adapter **is** held and this family has no way out that is not it,
+    /// so connecting would be routed straight back into tracewing. It must
+    /// not be tried.
+    Nowhere,
+}
+
+/// The decision, taken apart from where the answer is kept so that it can be
+/// tested without a global: tests run beside each other, and shared state
+/// read by several of them is how a suite starts failing one time in ten.
+#[cfg(any(windows, test))]
+fn out_from(holding: bool, index: u32) -> Out {
+    match (holding, index) {
+        (false, _) => Out::AsAlways,
+        (true, 0) => Out::Nowhere,
+        (true, index) => Out::By(index),
+    }
+}
+
+#[cfg(windows)]
+fn out_for(v6: bool) -> Out {
+    let holding = HOLDING.load(Ordering::Acquire);
+    let index = match v6 {
+        true => OUT_BY_V6.load(Ordering::Relaxed),
+        false => OUT_BY_V4.load(Ordering::Relaxed),
+    };
+    out_from(holding, index)
 }
 
 /// A connection to the server itself: the name looked up, then TCP.
@@ -501,14 +577,11 @@ async fn connect_straight(
     // connects for itself. Every other platform, and Windows with nothing
     // pinned, goes through hyper exactly as before.
     #[cfg(windows)]
-    {
-        let index = OUR_INTERFACE.load(Ordering::Relaxed);
-        if index != 0 {
-            let tcp = picking::first_to_answer(addresses.clone(), move |addr| pinned(addr, index))
-                .await
-                .map_err(|e| format!("connect to {host}:{port} by interface {index}: {e}"))?;
-            return Ok((tcp, dns_us, micros(connecting)));
-        }
+    if HOLDING.load(Ordering::Acquire) {
+        let tcp = picking::first_to_answer(addresses.clone(), pinned)
+            .await
+            .map_err(|e| format!("connect to {host}:{port}: {e}"))?;
+        return Ok((tcp, dns_us, micros(connecting)));
     }
     let mut http = HttpConnector::new_with_resolver(Resolved(addresses));
     http.enforce_http(false);
@@ -524,7 +597,25 @@ async fn connect_straight(
 /// Connects to `addr` on a socket pinned to the interface Windows numbers
 /// `index`.
 #[cfg(windows)]
-async fn pinned(addr: SocketAddr, index: u32) -> io::Result<TcpStream> {
+async fn pinned(addr: SocketAddr) -> io::Result<TcpStream> {
+    let index = match out_for(addr.is_ipv6()) {
+        Out::By(index) => index,
+        // `connect_straight` only comes here while an adapter is held, so
+        // this is unreachable — said rather than assumed, because the thing
+        // it would otherwise do silently is connect unpinned, and that is
+        // the loop.
+        Out::AsAlways => return Err(io::Error::other("nothing is pinned")),
+        Out::Nowhere => {
+            let family = match addr.is_ipv6() {
+                true => "IPv6",
+                false => "IPv4",
+            };
+            return Err(io::Error::other(format!(
+                "tracewing holds a TUN adapter and {family} has no way out that is not it, so \
+                 reaching {addr} would route back into tracewing"
+            )));
+        }
+    };
     let socket = match addr {
         SocketAddr::V4(_) => tokio::net::TcpSocket::new_v4()?,
         SocketAddr::V6(_) => tokio::net::TcpSocket::new_v6()?,
@@ -973,5 +1064,33 @@ impl Write for Stream {
             Inner::Plain(s) => Pin::new(s).poll_write_vectored(cx, bufs),
             Inner::Tls(s) => Pin::new(s).poll_write_vectored(cx, bufs),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn with_no_adapter_held_the_routing_table_decides() {
+        assert_eq!(out_from(false, 0), Out::AsAlways);
+        assert_eq!(
+            out_from(false, 7),
+            Out::AsAlways,
+            "even with an index left over from before"
+        );
+    }
+
+    #[test]
+    fn an_adapter_held_and_a_way_out_is_that_way() {
+        assert_eq!(out_from(true, 7), Out::By(7));
+    }
+
+    /// The case that has to fail rather than fall back. Falling back means
+    /// the routing table decides, and while an adapter is held the routing
+    /// table decides on the adapter — which is the loop.
+    #[test]
+    fn an_adapter_held_with_no_way_out_is_nowhere_and_not_as_always() {
+        assert_eq!(out_from(true, 0), Out::Nowhere);
     }
 }
