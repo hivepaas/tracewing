@@ -289,6 +289,38 @@ needs the same TCP stack. This is the best answer to the gap that actually
 costs tracewing users today — a phone has to be told the proxy by hand, and an
 app that ignores the Wi-Fi proxy cannot be caught at all.
 
+**The endpoint is in**, in
+[`wireguard.rs`](../../crates/proxy/src/wireguard.rs): a UDP port, one peer,
+and the packets it takes go to [`stack.rs`](../../crates/proxy/src/stack.rs)
+through the channels `Wire::channels` hands out. What a phone needs is an
+address and a key, and what comes out the other end is flows.
+
+**The protocol is `boringtun`'s**, pinned at the published 0.7.1 and built
+with no default features, so none of its own device or FFI layers come with
+it. The reason to take it rather than write it is not the handshake, which is
+a documented Noise pattern — it is the cookie replies that answer a flood,
+the rekeying timers, the replay window and the session bookkeeping, every one
+of which fails **silently**. A handshake that is wrong in a way tests cannot
+see still completes, and there is no ablation that catches it. BSD-3-Clause,
+which `about.toml` already accepts.
+
+What the library deliberately leaves out is what tracewing wanted anyway: it
+implements the protocol "without the network or tunnel stacks", so the socket,
+the peer's address and the bridge are ours, and what `decapsulate` hands back
+is an IP packet — which is exactly what `Wire` takes.
+
+Two things are not done. **One peer**: a second needs the receiver index read
+out of each datagram to tell whose it is, which `Tunn::parse_incoming_packet`
+is there for, and is no use before peers can be configured. And **nothing
+turns it on yet**: the key, the port and the QR code the phone scans are
+Settings and window work, and `engine.rs` does not build one. The endpoint
+and its tests stand on their own until then.
+
+The peer's address is learnt from whatever datagram last authenticated, which
+is how WireGuard roams: a phone moving from Wi-Fi to mobile keeps its session
+and arrives from somewhere else, and answering to where it used to be would
+lose it.
+
 ## Build once, use four times
 
 The userspace TCP/IP stack is the keystone: Windows, Linux and WireGuard all
@@ -329,11 +361,14 @@ What is left:
 2. The TCP/IP stack is **in**, in [`stack.rs`](../../crates/proxy/src/stack.rs):
    packets in, [`Took::Flow`](../../crates/proxy/src/source.rs) out, on
    `smoltcp`, answering each `SYN` as the server the client was going to. What
-   is left of it is a device to feed it — nothing reads a real packet yet —
-   and **WireGuard** is the first one to build: no privilege needed on this
-   machine, and it is what finally reaches a phone whose apps ignore the
-   Wi-Fi proxy. The stack itself is tested with packets written by hand, so a
-   device is the only part that needs an operating system.
+   is left of it is a device to feed it, and the first of those is **in**:
+   the WireGuard endpoint in
+   [`wireguard.rs`](../../crates/proxy/src/wireguard.rs), which needs no
+   privilege on this machine and is what reaches a phone whose apps ignore
+   the Wi-Fi proxy. Nothing turns it on yet — see the section above for what
+   that still needs. The stack itself is tested with packets written by
+   hand; the endpoint is tested with `boringtun` playing the phone, so
+   neither needs an operating system to prove.
 
    **The name is in**, in [`name.rs`](../../crates/proxy/src/name.rs). A
    packet carries no name, so the stack hands a flow over as an address; the
