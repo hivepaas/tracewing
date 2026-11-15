@@ -53,8 +53,9 @@ use anyhow::{Result, anyhow};
 use std::{path::Path, sync::Arc};
 
 /// How much of the ring Wintun keeps for packets on their way in. It takes a
-/// power of two, and this is large enough to hold a burst while the stack is
-/// busy without taking memory that a capture holds for its whole life.
+/// power of two, and this is the `0x400000` Wintun's own README passes to
+/// `WintunStartSession` in its example: large enough to hold a burst while
+/// the stack is busy, without taking memory for the whole life of a capture.
 const RING_BYTES: u32 = 4 * 1024 * 1024;
 
 /// What Windows calls the adapter, and the kind it says it is. Both are shown
@@ -136,6 +137,10 @@ impl Device for WintunAdapter {
         Ok(packet.bytes().to_vec())
     }
 
+    /// A full ring is reported, not hidden, and [`crate::tun`] drops the
+    /// packet. That is Wintun's own documented contract rather than a choice
+    /// made here: its README's example ignores `ERROR_BUFFER_OVERFLOW` with
+    /// the comment "silently drop packets if the ring is full".
     fn write(&self, packet: &[u8]) -> Result<()> {
         let size = u16::try_from(packet.len()).map_err(|_| {
             anyhow!(

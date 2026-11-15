@@ -45,7 +45,7 @@ work the source is:
 | Hands over | **flows** | packets | packets |
 | Needs our own TCP stack | no | **yes** | **yes** |
 | Privilege | the user approves a system extension | Administrator | root, for `bpf()` |
-| Shipping | Developer ID, notarized, packaged as a system extension | Wintun's own signed `.dll` and driver beside our executable; nothing of ours to sign | kernel 6.8 or newer |
+| Shipping | Developer ID, notarized, packaged as a system extension | Wintun's signed `wintun.dll` beside our executable, driver inside it; nothing of ours to sign, but its licence is not ours either | kernel 6.8 or newer |
 | Knows the app by | audit token, so bundle id | the TCP table, by address | name, first 16 characters only (`task->comm`) |
 
 mitmproxy has all three and is worth reading before starting any of them; the
@@ -259,13 +259,38 @@ is its future:
   a clean VirusTotal.
 
 Wintun answers each of those, and for a reason that is not a favour to us:
-**WireGuard for Windows ships it.** Its signed x86-64 and ARM64 binaries are
-kept alive by somebody whose own product depends on them, and the driver is
-already installed on every machine that runs WireGuard. The prebuilt signed
-DLLs carry a licence of their own, more permissive than the GPLv2 of the
-source, and shipping those official builds is the only supported way to
-distribute it — so none of the licence arithmetic WinDivert's "LGPLv3 or
-GPLv2" needed applies.
+**WireGuard for Windows ships it**, so its binaries are kept alive by
+somebody whose own product depends on them. That was checked on a Windows
+machine rather than taken from a web page: the official 0.14.1 archive
+matches its published SHA-256, and all four DLLs in it — amd64, arm64, arm,
+x86 — carry a valid Authenticode signature from `CN=WireGuard LLC` with EV
+attributes. The driver is not a file of its own; it lives inside
+`wintun.dll`, which is the only thing to ship.
+
+**The licence is not what the first draft of this section said**, and the
+difference matters. It is *not* "more permissive than the GPLv2 of the
+source". The prebuilt `wintun.dll` is proprietary, under a *Prebuilt
+Binaries License* that licenses rather than sells it, forbids modifying,
+decompiling or extracting from it, and reserves the right to change its own
+terms at any time. What it does grant is exactly what tracewing needs, in
+clause 3(d): redistribution **alongside other software that uses it only
+through the published `wintun.h` API**, which is all tracewing does. So
+shipping it is permitted — but there is licence arithmetic here. It is a
+different sum, not an absent one:
+
+- it is a proprietary binary beside a GPL-3 program, loaded dynamically and
+  used only through its documented interface. That is the separate-work case
+  rather than a combined one, and the same shape as any GPL program that
+  `dlopen`s a vendor's driver library. Worth being deliberate about now
+  rather than at a release.
+- **`cargo about` will not see it.** It reads crates, and `wintun.dll` is
+  not one, so its licence has to go into the Windows package's third-party
+  notices by hand. Clause 3(c) forbids removing proprietary notices, so
+  shipping it with none is the one mistake here that is plainly a breach.
+- WinDivert's risk was that nobody would re-sign the driver. This one's is
+  that the owner may change the terms (clause 8), and that the grant ends on
+  non-compliance (clause 6). Smaller, and of a different kind — but not the
+  absence of risk.
 
 **What is given up is real.** WinDivert takes packets **by process**, leaves
 the rest of the machine alone, and hands the owning PID over with them. An
