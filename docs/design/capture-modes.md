@@ -360,15 +360,45 @@ later.
 
 **An address on the adapter, a route into it, and the exclusion that keeps
 tracewing's own connections out of it.** Without that last one, every
-connection tracewing makes on a captured program's behalf is routed straight
-back into tracewing. That is this mode's one genuinely dangerous piece; it
-lives in the outbound path rather than in the device, and the answer is to
-bind our own sockets to the physical interface (`IP_UNICAST_IF`) rather than
-to hope routes sort it out.
+connection tracewing makes on a captured program's behalf is routed back into
+the adapter, where the stack answers it as the server it was going to, which
+makes another connection, which is routed back in: a loop with nothing
+bounding it. That is this mode's one genuinely dangerous piece, and it lives
+in the outbound path rather than in the device.
 
-The `wintun` crate's own address setters are not used for it: they shell out
-to `netsh`. Addressing and routing go through `windows-sys`, with the rest of
-this program's Windows calls.
+**The mechanism is `IP_UNICAST_IF`, and there is no way to reach it from
+where tracewing connects.** Checked in hyper-util 0.1.21's own source rather
+than assumed: `HttpConnector::set_interface` is compiled only for Android,
+Fuchsia, Linux and the Apple and Solaris families, and none of its other
+setters takes a socket, a handle or a closure. `set_local_address` is no
+substitute — a source address does not decide which route a destination
+takes, so with a default route into the adapter a socket bound to the
+physical address still leaves down the adapter, now with the wrong source.
+
+So the exclusion costs more than one call, and the next piece of work is a
+choice rather than an obvious step:
+
+- **Connect ourselves**, in
+  [`upstream.rs`](../../crates/proxy/src/upstream.rs)'s `connect_straight`,
+  building the socket and setting the option before connecting. The direct
+  answer, and the price is that it replaces hyper's connector on **every**
+  platform's outbound path — including the happy eyeballs the code there
+  relies on today, "falling back from IPv6 to IPv4 when the first is slow",
+  which is not fifty lines to write again correctly.
+- **Ask upstream for the Windows arm**, since `set_interface` exists already
+  and wants only a mapping onto `IP_UNICAST_IF`. The cheapest answer if it
+  lands, and not ours to schedule.
+
+One thing this settles, and it is worth saying plainly: a TUN captures by
+**route**, which is to say by destination, and no route can express "this
+program". So this mode captures the whole machine, and choosing one program
+is a filter applied after the packets are already ours rather than an
+exemption the operating system makes on our behalf. Which is the other half
+of the `features.md` problem noted above.
+
+The `wintun` crate's own address setters are not used for any of it: they
+shell out to `netsh`. Addressing and routing go through `windows-sys`, with
+the rest of this program's Windows calls.
 
 **Signing the installer is no longer a prerequisite**, and that is what moves
 this up the list. The driver is signed by WireGuard LLC and widely installed
