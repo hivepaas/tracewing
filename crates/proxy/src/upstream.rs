@@ -29,7 +29,7 @@ use std::{
     pin::Pin,
     sync::{
         Arc, Mutex, RwLock,
-        atomic::{AtomicBool, AtomicI64, Ordering},
+        atomic::{AtomicBool, AtomicI64, AtomicU32, Ordering},
     },
     task::{Context, Poll},
     time::Instant,
@@ -443,6 +443,35 @@ impl ResolvesClientCert for Unanswered {
     }
 }
 
+/// The interface this machine's own outbound connections must leave by, as
+/// Windows numbers them; zero for "whatever the routing table says".
+///
+/// Process-wide rather than per-connection, because it is not a property of
+/// a connection. It is a property of this machine's routing while tracewing
+/// holds a TUN adapter: with the adapter carrying a default route, a
+/// connection tracewing makes on a captured program's behalf is routed back
+/// into the adapter, answered by our own stack as the server it was going
+/// to, and made again — a loop with nothing bounding it.
+///
+/// Nothing sets it yet, and nothing but Windows reads it.
+static OUR_INTERFACE: AtomicU32 = AtomicU32::new(0);
+
+/// Says that tracewing's own connections must leave by the interface Windows
+/// numbers `index`. Zero lets the routing table decide again.
+///
+/// **Whoever sets this owns keeping it right.** Which interface holds the
+/// default route changes as a machine moves between Wi-Fi, Ethernet and
+/// tethering, so it is set again when that changes rather than once at the
+/// start — with none, outgoing packets are blackholed.
+///
+/// And it is not free: the option *forces* traffic out that interface,
+/// including traffic that would have left by a more specific route, so while
+/// it is set every connection tracewing makes goes one way. See
+/// [capture-modes.md](../../../docs/design/capture-modes.md).
+pub fn leave_by(index: u32) {
+    OUR_INTERFACE.store(index, Ordering::Relaxed);
+}
+
 /// A connection to the server itself: the name looked up, then TCP.
 async fn connect_straight(
     uri: &Uri,
@@ -467,6 +496,20 @@ async fn connect_straight(
     };
 
     let connecting = Instant::now();
+    // Windows, and only once something has pinned an interface: hyper's
+    // connector cannot be told which one to leave by there, so that one case
+    // connects for itself. Every other platform, and Windows with nothing
+    // pinned, goes through hyper exactly as before.
+    #[cfg(windows)]
+    {
+        let index = OUR_INTERFACE.load(Ordering::Relaxed);
+        if index != 0 {
+            let tcp = picking::first_to_answer(addresses.clone(), move |addr| pinned(addr, index))
+                .await
+                .map_err(|e| format!("connect to {host}:{port} by interface {index}: {e}"))?;
+            return Ok((tcp, dns_us, micros(connecting)));
+        }
+    }
     let mut http = HttpConnector::new_with_resolver(Resolved(addresses));
     http.enforce_http(false);
     http.set_nodelay(true);
@@ -476,6 +519,317 @@ async fn connect_straight(
         .map_err(|e| format!("connect to {host}:{port}: {}", error_text(&e)))?
         .into_inner();
     Ok((tcp, dns_us, micros(connecting)))
+}
+
+/// Connects to `addr` on a socket pinned to the interface Windows numbers
+/// `index`.
+#[cfg(windows)]
+async fn pinned(addr: SocketAddr, index: u32) -> io::Result<TcpStream> {
+    let socket = match addr {
+        SocketAddr::V4(_) => tokio::net::TcpSocket::new_v4()?,
+        SocketAddr::V6(_) => tokio::net::TcpSocket::new_v6()?,
+    };
+    leave_socket_by(&socket, addr.is_ipv6(), index)?;
+    let stream = socket.connect(addr).await?;
+    // Set on the stream rather than the socket, for the same reason the
+    // connector above sets it: small writes otherwise wait for delayed ACKs.
+    stream.set_nodelay(true)?;
+    Ok(stream)
+}
+
+/// Sets `IP_UNICAST_IF`, or `IPV6_UNICAST_IF` for an IPv6 socket.
+///
+/// **The two take the index in different byte orders**, which is the trap
+/// here and why they are one function with the difference written down.
+/// Microsoft's documentation says the IPv4 option "must be an interface
+/// index in network byte order", and that reading it back gives host byte
+/// order — so a wrong order here does not fail, it quietly pins the wrong
+/// interface. The IPv6 option takes the index as it is.
+#[cfg(windows)]
+fn leave_socket_by(socket: &tokio::net::TcpSocket, v6: bool, index: u32) -> io::Result<()> {
+    use std::os::windows::io::AsRawSocket;
+    use windows_sys::Win32::Networking::WinSock::{
+        IP_UNICAST_IF, IPPROTO_IP, IPPROTO_IPV6, IPV6_UNICAST_IF, setsockopt,
+    };
+    let (level, name, index) = match v6 {
+        true => (IPPROTO_IPV6, IPV6_UNICAST_IF, index),
+        false => (IPPROTO_IP, IP_UNICAST_IF, index.to_be()),
+    };
+    // Bound, so that the pointer below outlives the call.
+    let value = index.to_ne_bytes();
+    // SAFETY: a socket this call only reads, and four bytes of ours whose
+    // length is given as four.
+    let set = unsafe {
+        setsockopt(
+            socket.as_raw_socket() as usize,
+            level,
+            name,
+            value.as_ptr(),
+            value.len() as i32,
+        )
+    };
+    match set {
+        0 => Ok(()),
+        _ => Err(io::Error::last_os_error()),
+    }
+}
+
+/// The byte order in [`leave_socket_by`] is the whole risk there: getting it
+/// wrong does not fail, it pins the wrong interface. Windows hands the index
+/// back in **host** byte order however it was set, so a round trip is what
+/// says which way we set it. Neither of these wants a privilege, so the
+/// Windows job runs them.
+#[cfg(all(windows, test))]
+mod pinning {
+    use super::leave_socket_by;
+
+    /// Loopback, which every Windows machine numbers and has.
+    const SOME_INTERFACE: u32 = 1;
+
+    fn read_back(socket: &tokio::net::TcpSocket, v6: bool) -> u32 {
+        use std::os::windows::io::AsRawSocket;
+        use windows_sys::Win32::Networking::WinSock::{
+            IP_UNICAST_IF, IPPROTO_IP, IPPROTO_IPV6, IPV6_UNICAST_IF, getsockopt,
+        };
+        let (level, name) = match v6 {
+            true => (IPPROTO_IPV6, IPV6_UNICAST_IF),
+            false => (IPPROTO_IP, IP_UNICAST_IF),
+        };
+        let mut value = [0u8; 4];
+        let mut len = value.len() as i32;
+        // SAFETY: four bytes of ours, with four given as their length.
+        let got = unsafe {
+            getsockopt(
+                socket.as_raw_socket() as usize,
+                level,
+                name,
+                value.as_mut_ptr(),
+                &mut len,
+            )
+        };
+        assert_eq!(
+            got,
+            0,
+            "reading the option back: {}",
+            std::io::Error::last_os_error()
+        );
+        u32::from_ne_bytes(value)
+    }
+
+    #[tokio::test]
+    async fn an_ipv4_index_comes_back_as_it_went_in() {
+        let socket = tokio::net::TcpSocket::new_v4().expect("an IPv4 socket");
+        leave_socket_by(&socket, false, SOME_INTERFACE).expect("the option was set");
+        assert_eq!(
+            read_back(&socket, false),
+            SOME_INTERFACE,
+            "the IPv4 option is set in network byte order and read in host"
+        );
+    }
+
+    #[tokio::test]
+    async fn an_ipv6_index_comes_back_as_it_went_in() {
+        let socket = tokio::net::TcpSocket::new_v6().expect("an IPv6 socket");
+        leave_socket_by(&socket, true, SOME_INTERFACE).expect("the option was set");
+        assert_eq!(
+            read_back(&socket, true),
+            SOME_INTERFACE,
+            "the IPv6 option is set and read in host byte order"
+        );
+    }
+}
+
+/// Trying the addresses in turn, which is hyper's job everywhere but on the
+/// pinned path above.
+///
+/// Gated on `test` as well as `windows` so that the trying is tested on
+/// every platform rather than only on the one that runs it: none of it is
+/// about Windows, and Linux is what sees every change.
+#[cfg(any(windows, test))]
+mod picking {
+    use std::{future::Future, io, net::SocketAddr, time::Duration};
+
+    /// How long each address gets before the next is started as well. The
+    /// number is hyper's own default for the same thing, so that the one
+    /// platform which cannot use hyper's connector behaves like the rest.
+    const EACH_WITHIN: Duration = Duration::from_millis(300);
+
+    /// What one wait came to.
+    enum Waited<T> {
+        Made(T),
+        Failed(io::Error),
+        /// This address's turn is over, or there was nothing left to wait on.
+        Over,
+    }
+
+    /// Connects to the first of `addresses` that answers, starting them a
+    /// turn apart so that one slow address does not hold up the rest. That
+    /// is what hyper calls happy eyeballs, and it is what falls back from
+    /// IPv6 to IPv4.
+    ///
+    /// Written over a closure rather than straight over `TcpStream` so that
+    /// the trying can be tested where it can be run.
+    pub async fn first_to_answer<T, F, Fut>(addresses: Vec<SocketAddr>, connect: F) -> io::Result<T>
+    where
+        T: Send + 'static,
+        F: Fn(SocketAddr) -> Fut,
+        Fut: Future<Output = io::Result<T>> + Send + 'static,
+    {
+        let mut trying: tokio::task::JoinSet<io::Result<T>> = tokio::task::JoinSet::new();
+        let mut waiting = addresses.into_iter().peekable();
+        let mut last: Option<io::Error> = None;
+        while waiting.peek().is_some() || !trying.is_empty() {
+            if let Some(addr) = waiting.next() {
+                trying.spawn(connect(addr));
+            }
+            // With none left to start, whatever is running has as long as it
+            // needs: there is nothing else to give a turn to.
+            let turn = waiting.peek().map(|_| EACH_WITHIN);
+            match waited(&mut trying, turn).await {
+                Waited::Made(made) => return Ok(made),
+                Waited::Failed(e) => last = Some(e),
+                Waited::Over => {}
+            }
+        }
+        Err(last.unwrap_or_else(|| io::Error::other("no address to connect to")))
+    }
+
+    async fn waited<T: Send + 'static>(
+        trying: &mut tokio::task::JoinSet<io::Result<T>>,
+        within: Option<Duration>,
+    ) -> Waited<T> {
+        let next = async {
+            match trying.join_next().await {
+                Some(Ok(Ok(made))) => Waited::Made(made),
+                Some(Ok(Err(e))) => Waited::Failed(e),
+                // A connect that panicked is not a connection; it counts as
+                // one more address that did not answer.
+                Some(Err(e)) => Waited::Failed(io::Error::other(e)),
+                None => Waited::Over,
+            }
+        };
+        match within {
+            Some(within) => tokio::time::timeout(within, next)
+                .await
+                .unwrap_or(Waited::Over),
+            None => next.await,
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::sync::{Arc, Mutex};
+
+        fn addr(last: u8) -> SocketAddr {
+            format!("10.0.0.{last}:443").parse().unwrap()
+        }
+
+        /// What was tried, in the order it was tried, so that a test can say
+        /// not only what came back but what it cost to get there.
+        #[derive(Clone, Default)]
+        struct Tried(Arc<Mutex<Vec<SocketAddr>>>);
+
+        impl Tried {
+            fn so_far(&self) -> Vec<SocketAddr> {
+                self.0.lock().unwrap().clone()
+            }
+
+            fn note(&self, addr: SocketAddr) {
+                self.0.lock().unwrap().push(addr);
+            }
+        }
+
+        #[tokio::test]
+        async fn the_first_to_answer_is_the_one_taken() {
+            let tried = Tried::default();
+            let noting = tried.clone();
+            let got = first_to_answer(vec![addr(1), addr(2)], move |a| {
+                let noting = noting.clone();
+                async move {
+                    noting.note(a);
+                    Ok(a)
+                }
+            })
+            .await
+            .expect("the first answered");
+            assert_eq!(got, addr(1));
+            assert_eq!(
+                tried.so_far(),
+                vec![addr(1)],
+                "the second was never started, having not been needed"
+            );
+        }
+
+        #[tokio::test]
+        async fn an_address_that_will_not_answer_hands_on_to_the_next() {
+            let tried = Tried::default();
+            let noting = tried.clone();
+            let got = first_to_answer(vec![addr(1), addr(2)], move |a| {
+                let noting = noting.clone();
+                async move {
+                    noting.note(a);
+                    match a == addr(1) {
+                        true => Err(io::Error::other("no route")),
+                        false => Ok(a),
+                    }
+                }
+            })
+            .await
+            .expect("the second answered");
+            assert_eq!(got, addr(2));
+            assert_eq!(tried.so_far(), vec![addr(1), addr(2)]);
+        }
+
+        /// The whole reason this is not a loop of one connect after another.
+        #[tokio::test]
+        async fn a_slow_address_does_not_hold_up_the_one_behind_it() {
+            let began = std::time::Instant::now();
+            // Bounded, so that going back to one connect after another is a
+            // failure here rather than a suite that never finishes.
+            let got = tokio::time::timeout(
+                Duration::from_secs(5),
+                first_to_answer(vec![addr(1), addr(2)], move |a| async move {
+                    if a == addr(1) {
+                        // Never answers, as a filtered address does.
+                        std::future::pending::<()>().await;
+                    }
+                    Ok(a)
+                }),
+            )
+            .await
+            .expect("the first did not hold the second up for ever")
+            .expect("the second answered while the first still hung");
+            assert_eq!(got, addr(2));
+            assert!(
+                began.elapsed() >= EACH_WITHIN,
+                "the second waited its turn rather than starting at once"
+            );
+        }
+
+        #[tokio::test]
+        async fn the_last_thing_that_went_wrong_is_what_comes_back() {
+            let failed = first_to_answer(vec![addr(1), addr(2)], move |a| async move {
+                Err::<SocketAddr, _>(io::Error::other(match a == addr(1) {
+                    true => "the first went wrong",
+                    false => "the second went wrong",
+                }))
+            })
+            .await
+            .expect_err("neither answered");
+            assert!(failed.to_string().contains("the second"), "said: {failed}");
+        }
+
+        #[tokio::test]
+        async fn no_address_at_all_is_an_error_rather_than_a_wait() {
+            let failed = first_to_answer(Vec::new(), move |a| async move {
+                Ok::<SocketAddr, io::Error>(a)
+            })
+            .await
+            .expect_err("there was nothing to try");
+            assert!(failed.to_string().contains("no address"), "said: {failed}");
+        }
+    }
 }
 
 /// Addresses already looked up, handed to hyper's connector.
