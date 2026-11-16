@@ -655,6 +655,11 @@ mod tests {
     /// gives back what it wrote.
     #[cfg(windows)]
     fn token_of(want: Level) -> String {
+        // This file writes `std::time::` in full everywhere else, so the
+        // names are not in scope from `use super::*` -- and nothing caught it
+        // until a Windows machine compiled the tests for the first time.
+        use std::time::{Duration, Instant};
+
         let out = std::env::temp_dir().join(format!(
             "tracewing-level-{:?}-{}.txt",
             want,
