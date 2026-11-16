@@ -5,6 +5,7 @@
 //! connections come and go, and a busy machine's can leave some out. So it is
 //! only where the kernel is not asked directly.
 
+use crate::apps::{Look, canonical};
 use std::{
     collections::HashMap,
     fs,
@@ -13,24 +14,24 @@ use std::{
     os::fd::{AsRawFd, FromRawFd, OwnedFd},
 };
 
-pub fn owners(clients: &[SocketAddr], ours: &[u16], recent: &[u32]) -> Vec<Option<u32>> {
-    let mut found = vec![None; clients.len()];
+pub fn owners(looks: &[Look], ours: &[u16], recent: &[u32]) -> Vec<Option<u32>> {
+    let mut found = vec![None; looks.len()];
     // Another user's files cannot be read, so their sockets are not looked for.
     // SAFETY: geteuid cannot fail.
     let me = unsafe { libc::geteuid() };
     let mine = |uid: u32| uid == me || me == 0;
     let mut inodes: HashMap<u64, usize> = HashMap::new();
-    let mut missing: HashMap<SocketAddr, usize> = HashMap::new();
+    let mut missing: HashMap<Look, usize> = HashMap::new();
     let diag = Diag::open();
-    for (i, client) in clients.iter().enumerate() {
-        let client = canonical(*client);
-        match diag.as_ref().and_then(|diag| diag.find(client, ours)) {
+    for (i, look) in looks.iter().enumerate() {
+        let look = look.plain();
+        match diag.as_ref().and_then(|diag| diag.find(look, ours)) {
             Some((uid, inode)) if mine(uid) => {
                 inodes.insert(inode, i);
             }
             Some(_) => {}
             None => {
-                missing.insert(client, i);
+                missing.insert(look, i);
             }
         }
     }
@@ -39,17 +40,7 @@ pub fn owners(clients: &[SocketAddr], ours: &[u16], recent: &[u32]) -> Vec<Optio
             let Ok(text) = fs::read_to_string(table) else {
                 continue;
             };
-            for line in text.lines().skip(1) {
-                let Some(socket) = Socket::parse(line) else {
-                    continue;
-                };
-                if !ours.contains(&socket.remote_port) || !mine(socket.uid) {
-                    continue;
-                }
-                if let Some(&i) = missing.get(&canonical(socket.local)) {
-                    inodes.insert(socket.inode, i);
-                }
-            }
+            inodes.extend(in_table(&text, ours, &missing, &mine));
         }
     }
     if inodes.is_empty() {
@@ -195,43 +186,72 @@ impl Diag {
     /// came in on. One ask names one port, so a client that came in on the
     /// first costs one and the rest cost one more each: the proxy port is
     /// first because that is where most of them come from.
-    fn find(&self, client: SocketAddr, ours: &[u16]) -> Option<(u32, u64)> {
-        ours.iter().find_map(|&port| self.find_on(client, port))
-    }
-
-    /// The same, on one port. It connected to an address of this machine, and
-    /// the kernel gives such a connection that address as its own, so both
-    /// ends have the client's.
-    fn find_on(&self, client: SocketAddr, proxy_port: u16) -> Option<(u32, u64)> {
-        match client.ip() {
-            IpAddr::V4(ip) => self
-                .ask(libc::AF_INET as u8, &ip.octets(), client.port(), proxy_port)
-                .or_else(|| {
-                    // A socket for both, which holds it as IPv6.
-                    let mapped = ip.to_ipv6_mapped().octets();
-                    self.ask(libc::AF_INET6 as u8, &mapped, client.port(), proxy_port)
-                }),
-            IpAddr::V6(ip) => self.ask(
-                libc::AF_INET6 as u8,
-                &ip.octets(),
-                client.port(),
-                proxy_port,
-            ),
+    fn find(&self, look: Look, ours: &[u16]) -> Option<(u32, u64)> {
+        match look.to {
+            // Taken on its way: the four addresses are known, so one ask does.
+            Some(to) => self.find_at(look.client, to),
+            // A client of tracewing's connected to an address of this machine,
+            // and the kernel gives such a connection that address as its own,
+            // so both ends have the client's -- which port of ours it chose is
+            // what is not known, and is asked for one at a time.
+            None => ours.iter().find_map(|&port| {
+                self.find_at(look.client, SocketAddr::new(look.client.ip(), port))
+            }),
         }
     }
 
-    fn ask(&self, family: u8, ip: &[u8], port: u16, proxy_port: u16) -> Option<(u32, u64)> {
+    /// The same, for one pair of ends.
+    fn find_at(&self, client: SocketAddr, to: SocketAddr) -> Option<(u32, u64)> {
+        match (client.ip(), to.ip()) {
+            (IpAddr::V4(from), IpAddr::V4(at)) => self
+                .ask(
+                    libc::AF_INET as u8,
+                    &from.octets(),
+                    &at.octets(),
+                    client.port(),
+                    to.port(),
+                )
+                .or_else(|| {
+                    // A socket for both, which holds them as IPv6.
+                    self.ask(
+                        libc::AF_INET6 as u8,
+                        &from.to_ipv6_mapped().octets(),
+                        &at.to_ipv6_mapped().octets(),
+                        client.port(),
+                        to.port(),
+                    )
+                }),
+            (IpAddr::V6(from), IpAddr::V6(at)) => self.ask(
+                libc::AF_INET6 as u8,
+                &from.octets(),
+                &at.octets(),
+                client.port(),
+                to.port(),
+            ),
+            // One end of each family is no connection the kernel holds.
+            _ => None,
+        }
+    }
+
+    fn ask(
+        &self,
+        family: u8,
+        from: &[u8],
+        at: &[u8],
+        port: u16,
+        far_port: u16,
+    ) -> Option<(u32, u64)> {
         let seq = self.seq.get().wrapping_add(1);
         self.seq.set(seq);
         let mut id = InetDiagSockId {
             sport: port.to_be(),
-            dport: proxy_port.to_be(),
+            dport: far_port.to_be(),
             // No cookie: find it by its addresses.
             cookie: [u32::MAX; 2],
             ..InetDiagSockId::default()
         };
-        id.src[..ip.len()].copy_from_slice(ip);
-        id.dst[..ip.len()].copy_from_slice(ip);
+        id.src[..from.len()].copy_from_slice(from);
+        id.dst[..at.len()].copy_from_slice(at);
         let request = Request {
             header: NlMsgHdr {
                 len: size_of::<Request>() as u32,
@@ -296,14 +316,10 @@ pub fn path_of(pid: u32) -> Option<String> {
     Some(path.strip_suffix(" (deleted)").unwrap_or(&path).to_owned())
 }
 
-fn canonical(addr: SocketAddr) -> SocketAddr {
-    SocketAddr::new(addr.ip().to_canonical(), addr.port())
-}
-
 #[derive(Debug, PartialEq, Eq)]
 struct Socket {
     local: SocketAddr,
-    remote_port: u16,
+    remote: SocketAddr,
     uid: u32,
     inode: u64,
 }
@@ -313,10 +329,9 @@ impl Socket {
     fn parse(line: &str) -> Option<Self> {
         let fields: Vec<&str> = line.split_whitespace().collect();
         let (local, remote) = (fields.get(1)?, fields.get(2)?);
-        let (_, remote_port) = remote.split_once(':')?;
         Some(Self {
             local: address(local)?,
-            remote_port: u16::from_str_radix(remote_port, 16).ok()?,
+            remote: address(remote)?,
             uid: fields.get(7)?.parse().ok()?,
             inode: fields.get(9)?.parse().ok()?,
         })
@@ -341,9 +356,57 @@ fn address(text: &str) -> Option<SocketAddr> {
     Some(SocketAddr::new(ip, port))
 }
 
+/// Which ask each line of `/proc/net/tcp` answers, as `(inode, ask)`.
+///
+/// Apart from the reading on purpose. This is the path taken only where
+/// `sock_diag` is missing or answered nothing, so on a machine that has it --
+/// every machine the tests run on -- nothing would otherwise go through here
+/// at all, and a mistake in it would sit unseen until it was the only path
+/// left. Disabling the first of the two rules below passed all ten tests
+/// before this existed.
+fn in_table(
+    text: &str,
+    ours: &[u16],
+    missing: &HashMap<Look, usize>,
+    mine: &impl Fn(u32) -> bool,
+) -> Vec<(u64, usize)> {
+    let mut found = Vec::new();
+    for line in text.lines().skip(1) {
+        let Some(socket) = Socket::parse(line) else {
+            continue;
+        };
+        if !mine(socket.uid) {
+            continue;
+        }
+        let client = canonical(socket.local);
+        // Taken on its way: all four addresses say which it is.
+        if let Some(&i) = missing.get(&Look {
+            client,
+            to: Some(canonical(socket.remote)),
+        }) {
+            found.push((socket.inode, i));
+            continue;
+        }
+        // A client of tracewing's: its own end, among the sockets whose far
+        // end is one of our ports.
+        if ours.contains(&socket.remote.port())
+            && let Some(&i) = missing.get(&Look { client, to: None })
+        {
+            found.push((socket.inode, i));
+        }
+    }
+    found
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A client of tracewing's, asked for by its own end: which port of ours
+    /// it chose is what is not known.
+    fn asking(client: SocketAddr) -> Look {
+        Look { client, to: None }
+    }
 
     #[test]
     fn the_kernel_finds_a_socket_by_its_addresses() {
@@ -351,7 +414,9 @@ mod tests {
         let port = listener.local_addr().unwrap().port();
         let client = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap();
         let diag = Diag::open().expect("sock_diag");
-        let (uid, inode) = diag.find(client.local_addr().unwrap(), &[port]).unwrap();
+        let (uid, inode) = diag
+            .find(asking(client.local_addr().unwrap()), &[port])
+            .unwrap();
         // SAFETY: geteuid cannot fail.
         assert_eq!(uid, unsafe { libc::geteuid() });
         let fd = format!("/proc/self/fd/{}", client.as_raw_fd());
@@ -359,15 +424,96 @@ mod tests {
             fs::read_link(fd).unwrap().to_str().unwrap(),
             format!("socket:[{inode}]")
         );
-        assert_eq!(diag.find("127.0.0.1:9".parse().unwrap(), &[port]), None);
+        assert_eq!(
+            diag.find(asking("127.0.0.1:9".parse().unwrap()), &[port]),
+            None
+        );
         // A second ask on the same socket works as the first.
-        assert!(diag.find(client.local_addr().unwrap(), &[port]).is_some());
+        assert!(
+            diag.find(asking(client.local_addr().unwrap()), &[port])
+                .is_some()
+        );
         // One of several ports: the ones before it are asked and found nothing.
         let elsewhere = port.wrapping_add(1).max(1);
         assert!(
-            diag.find(client.local_addr().unwrap(), &[elsewhere, port])
+            diag.find(asking(client.local_addr().unwrap()), &[elsewhere, port])
                 .is_some()
         );
+    }
+
+    /// A connection taken on its way: the far end is the real server, so the
+    /// ask carries it and no list of tracewing's ports is consulted at all.
+    #[test]
+    fn the_kernel_finds_a_taken_socket_by_all_four_addresses() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let to = listener.local_addr().unwrap();
+        let client = std::net::TcpStream::connect(to).unwrap();
+        let from = client.local_addr().unwrap();
+        let diag = Diag::open().expect("sock_diag");
+        let taken = Look {
+            client: from,
+            to: Some(to),
+        };
+        // No port of ours is given, and it is still found.
+        assert!(diag.find(taken, &[]).is_some());
+        // The far end is part of the question: another one is another socket.
+        let elsewhere = SocketAddr::new(to.ip(), to.port().wrapping_add(1).max(1));
+        assert_eq!(
+            diag.find(
+                Look {
+                    client: from,
+                    to: Some(elsewhere)
+                },
+                &[]
+            ),
+            None
+        );
+        // That the rule for a client of ours cannot find it is not assertable
+        // here and the attempt passed for the wrong reason: a loopback client
+        // has the server's address as its own, so `asking(from)` with the
+        // server's port builds exactly this connection's four addresses and
+        // finds it. The distinction needs a destination that is not this
+        // machine, which no unit test can connect to -- so it is asserted one
+        // layer up in `apps`, where what stands in for it is real: tracewing's
+        // ports are a list, and a server's port is not on it.
+    }
+
+    /// The two rules over one table, where `sock_diag` is not there to ask.
+    #[test]
+    #[cfg(target_endian = "little")]
+    fn the_table_answers_both_kinds_of_ask() {
+        // 0100007F is 127.0.0.1 and 097100CB is 203.0.113.9, each word in this
+        // machine's own byte order, as the kernel writes them.
+        let rest = "01 00000000:00000000 00:00000000 00000000";
+        let text = format!(
+            "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode\n\
+             0: 0100007F:D431 097100CB:01BB {rest}  1000 0 4242 1\n\
+             1: 0100007F:D432 0100007F:1F90 {rest}  1000 0 4243 1\n\
+             2: 0100007F:D433 097100CB:0050 {rest}  1000 0 4244 1\n\
+             3: 0100007F:D434 097100CB:01BB {rest}   999 0 4245 1\n\
+             4: 0100007F:D432 097100CB:01BB {rest}  1000 0 4246 1\n"
+        );
+        let taken = |port: u16| Look {
+            client: SocketAddr::new("127.0.0.1".parse().unwrap(), port),
+            to: Some("203.0.113.9:443".parse().unwrap()),
+        };
+        let missing = HashMap::from([
+            // Taken on its way, and this user's.
+            (taken(54321), 0),
+            // A client of tracewing's, which came in on 8080.
+            (asking("127.0.0.1:54322".parse().unwrap()), 1),
+            // Taken on its way, and another user's: not ours to look in.
+            (taken(54324), 2),
+        ]);
+        let mine = |uid: u32| uid == 1000;
+        assert_eq!(
+            in_table(&text, &[8080], &missing, &mine),
+            vec![(4242, 0), (4243, 1)]
+        );
+        // Line 2 is a socket nobody asked about; line 3 is another user's;
+        // and line 4 has the client of ask 1 at its near end with a server at
+        // its far end, so the rule for a client of ours must not take it --
+        // which is what `ours` narrowing is for.
     }
 
     #[test]
@@ -378,7 +524,7 @@ mod tests {
             Socket::parse(line),
             Some(Socket {
                 local: "127.0.0.1:54321".parse().unwrap(),
-                remote_port: 8080,
+                remote: "127.0.0.1:8080".parse().unwrap(),
                 uid: 1000,
                 inode: 4242,
             })

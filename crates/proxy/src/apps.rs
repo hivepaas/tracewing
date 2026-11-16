@@ -1,5 +1,15 @@
 //! Which program on this machine is behind each connection to the proxy.
 //!
+//! There are two questions here, not one. A client that **asked** for the
+//! proxy holds a socket whose far end is a port of tracewing's, and that is
+//! what picks it out of the thousands a machine has open. A connection
+//! **taken on its way** -- off a TUN adapter, where the operating system
+//! routed it to us and the client believes it is talking to the server --
+//! has the real server at its far end, so that rule finds nothing at all;
+//! what names it is all four addresses, which a source of packets has in
+//! hand. [`Look`] is the question, [`Apps::of`] asks the first and
+//! [`Apps::took`] the second.
+//!
 //! The OS knows which process holds each socket, but asking takes a look through
 //! every process's open files on Linux and macOS: far too slow for the handler.
 //! So one thread does it. A connection is looked for once, as it opens, and its
@@ -18,8 +28,8 @@ mod os;
 mod os;
 #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 mod os {
-    pub fn owners(clients: &[std::net::SocketAddr], _: &[u16], _: &[u32]) -> Vec<Option<u32>> {
-        vec![None; clients.len()]
+    pub fn owners(looks: &[super::Look], _: &[u16], _: &[u32]) -> Vec<Option<u32>> {
+        vec![None; looks.len()]
     }
 
     pub fn path_of(_: u32) -> Option<String> {
@@ -60,8 +70,42 @@ struct Inner {
     local: Mutex<HashMap<IpAddr, bool>>,
 }
 
+/// One connection to find the program behind.
+///
+/// A client that asked for the proxy is at one end of a socket whose other
+/// end is a port of tracewing's, and that is what picks its socket out of a
+/// machine's thousands. A connection **taken on its way** has the real server
+/// at its far end, so that rule finds nothing: what identifies it is all four
+/// addresses, which a source that deals in packets has in hand.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct Look {
+    /// The end on this machine.
+    pub client: SocketAddr,
+    /// Where it was going, for one taken on its way. `None` says the far end
+    /// is tracewing's own, and `ours` is what to look for.
+    pub to: Option<SocketAddr>,
+}
+
+impl Look {
+    /// Both ends as a packet carries them, so that one connection is one key
+    /// whichever family the socket holding it was opened for.
+    pub(crate) fn plain(self) -> Self {
+        Self {
+            client: canonical(self.client),
+            to: self.to.map(canonical),
+        }
+    }
+}
+
+/// An address as a packet carries it. A socket open for both families reports
+/// an IPv4 peer mapped into IPv6, and nothing else does, so the two spellings
+/// have to meet somewhere.
+pub(crate) fn canonical(addr: SocketAddr) -> SocketAddr {
+    SocketAddr::new(addr.ip().to_canonical(), addr.port())
+}
+
 struct Ask {
-    client: SocketAddr,
+    look: Look,
     answer: Arc<AppAnswer>,
 }
 
@@ -89,6 +133,27 @@ impl Apps {
     /// machine. `opened` says the connection is new, so what was known of the
     /// address and port is someone else's.
     pub fn of(&self, client: SocketAddr, opened: bool) -> Option<Arc<AppAnswer>> {
+        self.looking(Look { client, to: None }, opened)
+    }
+
+    /// The program behind a connection **taken on its way**, going to `to`
+    /// rather than to tracewing. Always a new connection: a source of packets
+    /// asks as the `SYN` arrives, and that port was somebody else's before.
+    ///
+    /// Why this is not [`Self::of`] with the destination thrown away: it would
+    /// find nothing. See [`Look`].
+    pub fn took(&self, client: SocketAddr, to: SocketAddr) -> Option<Arc<AppAnswer>> {
+        self.looking(
+            Look {
+                client,
+                to: Some(to),
+            },
+            true,
+        )
+    }
+
+    fn looking(&self, look: Look, opened: bool) -> Option<Arc<AppAnswer>> {
+        let client = look.client;
         if !self.is_local(client.ip()) {
             return None;
         }
@@ -110,7 +175,7 @@ impl Apps {
         by_client.insert(client, (now, Arc::clone(&answer)));
         drop(by_client);
         let ask = Ask {
-            client,
+            look,
             answer: Arc::clone(&answer),
         };
         if lock(&self.inner.asks).send(ask).is_err() {
@@ -145,18 +210,18 @@ fn look_for_apps(asks: Receiver<Ask>, ours: &[u16]) {
     while let Ok(first) = asks.recv() {
         let mut batch = vec![first];
         batch.extend(asks.try_iter());
-        let mut clients: Vec<SocketAddr> = batch.iter().map(|ask| ask.client).collect();
-        clients.sort_unstable();
-        clients.dedup();
-        let owners: HashMap<SocketAddr, u32> = clients
+        let mut looks: Vec<Look> = batch.iter().map(|ask| ask.look).collect();
+        looks.sort_unstable();
+        looks.dedup();
+        let owners: HashMap<Look, u32> = looks
             .iter()
-            .zip(os::owners(&clients, ours, &recent))
-            .filter_map(|(client, owner)| Some((*client, owner?)))
+            .zip(os::owners(&looks, ours, &recent))
+            .filter_map(|(look, owner)| Some((*look, owner?)))
             .collect();
         let now = Instant::now();
         processes.retain(|_, (seen, _)| now.duration_since(*seen) < PROCESS_FRESH_FOR);
         for ask in &batch {
-            let app = owners.get(&ask.client).map(|&pid| {
+            let app = owners.get(&ask.look).map(|&pid| {
                 recent.retain(|p| *p != pid);
                 recent.insert(0, pid);
                 recent.truncate(RECENT_MAX);
@@ -227,6 +292,36 @@ mod tests {
         let app = answer
             .wait_until(Instant::now() + Duration::from_secs(10))
             .expect("found");
+        assert_eq!(app.pid, std::process::id());
+    }
+
+    /// A connection taken on its way is found by all four addresses. The rule
+    /// for a client of tracewing's cannot find it, which is the whole reason
+    /// [`Apps::took`] exists, so that is asserted first and in the same test:
+    /// apart they would both pass against a look-up that answered nothing.
+    #[test]
+    fn a_connection_taken_on_its_way_is_found_by_where_it_was_going() {
+        let elsewhere = TcpListener::bind("127.0.0.1:0").unwrap();
+        let to = elsewhere.local_addr().unwrap();
+        let ours = TcpListener::bind("127.0.0.1:0").unwrap();
+        let apps = Apps::spawn(vec![ours.local_addr().unwrap().port()]).unwrap();
+        let client = TcpStream::connect(to).unwrap();
+        let _server = elsewhere.accept().unwrap();
+        let from = client.local_addr().unwrap();
+        let soon = || Instant::now() + Duration::from_secs(10);
+
+        let by_client = apps.of(from, true).unwrap();
+        assert_eq!(
+            by_client.wait_until(soon()),
+            None,
+            "its far end is not ours"
+        );
+        // Without this the line above would pass on a look-up that answers
+        // nothing at all, timeout and emptiness being the same `None`.
+        assert_eq!(by_client.now(), Some(None), "answered, not timed out");
+
+        let taken = apps.took(from, to).unwrap();
+        let app = taken.wait_until(soon()).expect("found");
         assert_eq!(app.pid, std::process::id());
     }
 
