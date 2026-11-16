@@ -988,6 +988,9 @@ t7e7408e4 = Terminal
 # Other devices
 t9e7d8362 = Thiết bị khác
 
+# Programs
+tde9c06c8 = Chương trình
+
 # Apps
 t53d91aad = App
 

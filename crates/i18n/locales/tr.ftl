@@ -1019,6 +1019,9 @@ t7e7408e4 = Bir terminal
 # Other devices
 t9e7d8362 = Diğer cihazlar
 
+# Programs
+tde9c06c8 = Programlar
+
 # Apps
 t53d91aad = Uygulamalar
 

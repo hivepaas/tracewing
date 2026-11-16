@@ -988,6 +988,9 @@ t7e7408e4 = Sebuah terminal
 # Other devices
 t9e7d8362 = Perangkat lain
 
+# Programs
+tde9c06c8 = Program
+
 # Apps
 t53d91aad = Aplikasi
 
