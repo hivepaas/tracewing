@@ -1,5 +1,14 @@
 //! Windows: the TCP table says which process holds each connection.
+//!
+//! It is read whole and asked twice over, because there are two questions.
+//! A client that asked for the proxy is found by **the end on this machine**,
+//! among the rows whose far end is a port of tracewing's. A connection taken
+//! off an adapter has the real server at its far end, so that narrowing finds
+//! nothing and it is found by **all four addresses** instead -- which is what
+//! identifies a TCP connection anyway, and what a source of packets has in
+//! hand. See [`Look`].
 
+use crate::apps::{Look, canonical};
 use std::{
     collections::HashMap,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -16,28 +25,50 @@ use windows_sys::Win32::{
     },
 };
 
-pub fn owners(clients: &[SocketAddr], ours: &[u16], _recent: &[u32]) -> Vec<Option<u32>> {
-    let mut by_local: HashMap<SocketAddr, u32> = HashMap::new();
-    for row in table::<MIB_TCPROW_OWNER_PID>(AF_INET) {
-        if ours.contains(&port(row.dwRemotePort)) {
-            let ip = Ipv4Addr::from(row.dwLocalAddr.to_ne_bytes());
-            by_local.insert(
-                SocketAddr::new(IpAddr::V4(ip), port(row.dwLocalPort)),
-                row.dwOwningPid,
-            );
+pub fn owners(looks: &[Look], ours: &[u16], _recent: &[u32]) -> Vec<Option<u32>> {
+    // A connection to tracewing, by the end on this machine: its far end is a
+    // port of ours, which is what tells it from everything else the machine
+    // has open.
+    let mut to_ours: HashMap<SocketAddr, u32> = HashMap::new();
+    // A connection taken on its way, by all four addresses. Only built when
+    // something asks for one, because this one is as long as the table.
+    let mut whole: HashMap<(SocketAddr, SocketAddr), u32> = HashMap::new();
+    let any_taken = looks.iter().any(|look| look.to.is_some());
+    let mut keep = |local: SocketAddr, remote: SocketAddr, pid: u32| {
+        if ours.contains(&remote.port()) {
+            to_ours.insert(local, pid);
         }
+        if any_taken {
+            whole.insert((local, remote), pid);
+        }
+    };
+    for row in table::<MIB_TCPROW_OWNER_PID>(AF_INET) {
+        let at = |addr: u32, p: u32| {
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::from(addr.to_ne_bytes())), port(p))
+        };
+        keep(
+            at(row.dwLocalAddr, row.dwLocalPort),
+            at(row.dwRemoteAddr, row.dwRemotePort),
+            row.dwOwningPid,
+        );
     }
     for row in table::<MIB_TCP6ROW_OWNER_PID>(AF_INET6) {
-        if ours.contains(&port(row.dwRemotePort)) {
-            let ip = Ipv6Addr::from(row.ucLocalAddr).to_canonical();
-            by_local.insert(SocketAddr::new(ip, port(row.dwLocalPort)), row.dwOwningPid);
-        }
+        let at =
+            |addr: [u8; 16], p: u32| SocketAddr::new(Ipv6Addr::from(addr).to_canonical(), port(p));
+        keep(
+            at(row.ucLocalAddr, row.dwLocalPort),
+            at(row.ucRemoteAddr, row.dwRemotePort),
+            row.dwOwningPid,
+        );
     }
-    clients
+    looks
         .iter()
-        .map(|client| {
-            let client = SocketAddr::new(client.ip().to_canonical(), client.port());
-            by_local.get(&client).copied()
+        .map(|look| {
+            let client = canonical(look.client);
+            match look.to {
+                Some(to) => whole.get(&(client, canonical(to))).copied(),
+                None => to_ours.get(&client).copied(),
+            }
         })
         .collect()
 }

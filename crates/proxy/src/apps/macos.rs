@@ -1,5 +1,6 @@
 //! macOS: each process's sockets through libproc, as `lsof` finds them.
 
+use crate::apps::{Look, canonical};
 use std::{
     collections::HashMap,
     ffi::c_void,
@@ -107,12 +108,12 @@ struct SocketFdInfo {
 /// Room for the whole of `socket_fdinfo`, which is about 800 bytes.
 type Buffer = [u64; 256];
 
-pub fn owners(clients: &[SocketAddr], ours: &[u16], recent: &[u32]) -> Vec<Option<u32>> {
-    let mut found = vec![None; clients.len()];
-    let mut wanted: HashMap<SocketAddr, usize> = clients
+pub fn owners(looks: &[Look], ours: &[u16], recent: &[u32]) -> Vec<Option<u32>> {
+    let mut found = vec![None; looks.len()];
+    let mut wanted: HashMap<Look, usize> = looks
         .iter()
         .enumerate()
-        .map(|(i, client)| (canonical(*client), i))
+        .map(|(i, look)| (look.plain(), i))
         .collect();
     let all = all_pids();
     let pids = recent
@@ -122,10 +123,23 @@ pub fn owners(clients: &[SocketAddr], ours: &[u16], recent: &[u32]) -> Vec<Optio
     let mut buffer: Box<Buffer> = Box::new([0; 256]);
     for pid in pids {
         for fd in socket_fds(pid) {
-            let Some(local) = tcp_local(pid, fd, ours, &mut buffer) else {
+            let Some((client, remote)) = tcp_ends(pid, fd, &mut buffer) else {
                 continue;
             };
-            if let Some(i) = wanted.remove(&local) {
+            // Taken on its way: all four addresses say which it is. A client
+            // of tracewing's: its own end, among the sockets whose far end is
+            // one of our ports.
+            let hit = wanted
+                .remove(&Look {
+                    client,
+                    to: Some(remote),
+                })
+                .or_else(|| {
+                    ours.contains(&remote.port())
+                        .then(|| wanted.remove(&Look { client, to: None }))
+                        .flatten()
+                });
+            if let Some(i) = hit {
                 found[i] = Some(pid);
                 if wanted.is_empty() {
                     return found;
@@ -145,10 +159,6 @@ pub fn path_of(pid: u32) -> Option<String> {
     }
     path.truncate(n as usize);
     String::from_utf8(path).ok()
-}
-
-fn canonical(addr: SocketAddr) -> SocketAddr {
-    SocketAddr::new(addr.ip().to_canonical(), addr.port())
 }
 
 fn all_pids() -> Vec<u32> {
@@ -202,8 +212,8 @@ fn socket_fds(pid: u32) -> Vec<i32> {
         .collect()
 }
 
-/// The local address of a TCP socket connected to one of tracewing's ports.
-fn tcp_local(pid: u32, fd: i32, ours: &[u16], buffer: &mut Buffer) -> Option<SocketAddr> {
+/// Both ends of a TCP socket, as a packet would carry them.
+fn tcp_ends(pid: u32, fd: i32, buffer: &mut Buffer) -> Option<(SocketAddr, SocketAddr)> {
     let size = size_of::<Buffer>() as i32;
     // SAFETY: the buffer is as long as it says.
     let bytes = unsafe {
@@ -224,22 +234,40 @@ fn tcp_local(pid: u32, fd: i32, ours: &[u16], buffer: &mut Buffer) -> Option<Soc
         return None;
     }
     let tcp = &info.tcp;
-    // Ports are in network order in the low half.
-    if !ours.contains(&u16::from_be(tcp.insi_fport as u16)) {
-        return None;
-    }
-    let ip = if tcp.insi_vflag & INI_IPV4 != 0 {
-        let v4: [u8; 4] = tcp.insi_laddr[12..16].try_into().ok()?;
-        IpAddr::V4(Ipv4Addr::from(v4))
-    } else if tcp.insi_vflag & INI_IPV6 != 0 {
-        IpAddr::V6(Ipv6Addr::from(tcp.insi_laddr))
-    } else {
-        return None;
+    // Which arm of the sixteen-byte union is live, for both ends: an address
+    // is one family or the other, never both, and `insi_vflag` says which. A
+    // connection over an IPv6 socket that is really IPv4 -- one reached
+    // through a v4-mapped address -- is `INI_IPV4` here, not `INI_IPV6`, and
+    // the union's IPv4 arm sits after three words of padding, which is why
+    // the four bytes are taken from the end.
+    //
+    // Unverified, and now load-bearing in one more place than it was: this
+    // reads the **far** end as well, so an IPv6 server address goes through
+    // it too. If the two flags were ever set together, `INI_IPV4` winning
+    // would read four bytes out of the middle of a v6 address and hand back
+    // an address that looks perfectly ordinary. Nobody here has a Mac to
+    // check what the kernel sets, so it is written down rather than asserted.
+    let at = |addr: &[u8; 16]| -> Option<IpAddr> {
+        if tcp.insi_vflag & INI_IPV4 != 0 {
+            let v4: [u8; 4] = addr[12..16].try_into().ok()?;
+            Some(IpAddr::V4(Ipv4Addr::from(v4)))
+        } else if tcp.insi_vflag & INI_IPV6 != 0 {
+            Some(IpAddr::V6(Ipv6Addr::from(*addr)))
+        } else {
+            None
+        }
     };
-    Some(canonical(SocketAddr::new(
-        ip,
-        u16::from_be(tcp.insi_lport as u16),
-    )))
+    // Ports are in network order in the low half.
+    Some((
+        canonical(SocketAddr::new(
+            at(&tcp.insi_laddr)?,
+            u16::from_be(tcp.insi_lport as u16),
+        )),
+        canonical(SocketAddr::new(
+            at(&tcp.insi_faddr)?,
+            u16::from_be(tcp.insi_fport as u16),
+        )),
+    ))
 }
 
 #[cfg(test)]
