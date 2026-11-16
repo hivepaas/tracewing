@@ -43,7 +43,29 @@
 //!   secrecy, and it is the JDK's own conventional one.
 //!
 //! `-Djavax.net.ssl.trustStoreType=pkcs12` is not needed by a JDK of 9 or
-//! later, which reads PKCS#12 by default, and is included because 8 does not.
+//! later, which reads PKCS#12 by default (JEP 229), and is included because
+//! 8 does not.
+//!
+//! ## Which JVMs this has actually been run against, and what is promised
+//!
+//! One: JDK 21 on Linux. Everything in the table above is that JVM, so the
+//! rest is what is **specified** rather than what was seen, which is the
+//! honest distinction when a second agreeing JVM would prove nothing anyway:
+//!
+//! - A trusted certificate in a PKCS#12 keystore is documented as supported
+//!   from **JDK 8** (JDK-8044445), with backports as far as 7u171, and the
+//!   entry is recognised by the same Oracle attribute this writes. Older
+//!   JDKs refuse trusted entries in PKCS#12 outright — *TrustedCertEntry not
+//!   supported* — so a JVM older than that is the known boundary, not an
+//!   assumption.
+//! - The JSSE reference guide of that era says storing trusted certificates
+//!   in PKCS#12 is unsupported, which the implementation and its release
+//!   notes contradict. Where the documentation disagrees with itself, the
+//!   boundary above is the careful reading and not a guarantee.
+//!
+//! What would settle it for an older JVM is running one, not reasoning about
+//! it: `cargo run -p tracewing-system --release --example java_truststore`
+//! prints the store and the flags for exactly that.
 //!
 //! ## And the flag that made all of it useless
 //!
