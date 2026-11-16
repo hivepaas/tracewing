@@ -21,8 +21,19 @@ APP := -p tracewing $(if $(FEATURES),--features $(FEATURES))
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-18s %s\n", $$1, $$2}'
 
-debug: ## Build and run the debug version: quicker to build, slower to run
-	$(CARGO) run $(APP)
+# gdb, which `make debug` runs the window under where it is (Linux), so that a
+# crash says where it happened: a stack overflow on its own names nothing.
+# `make debug GDB=` runs it without.
+GDB ?= gdb
+TARGET_DIR := $(or $(CARGO_TARGET_DIR),target)
+
+debug: ## Build and run the debug version: quicker to build, slower to run; under gdb on Linux, a crash goes to target/crashes
+	$(CARGO) build $(APP)
+	@if [ -n "$(GDB)" ] && [ "$$(uname -s)" = Linux ] && command -v "$(GDB)" >/dev/null 2>&1; then \
+		TRACEWING_CRASHES="$(TARGET_DIR)/crashes" GDB="$(GDB)" scripts/under_gdb.sh "$(TARGET_DIR)/debug/tracewing"; \
+	else \
+		$(CARGO) run $(APP); \
+	fi
 
 release: ## Build and run the release version
 	$(CARGO) run --release $(APP)
