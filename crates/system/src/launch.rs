@@ -862,6 +862,86 @@ echo"#,
         }
     }
 
+    /// What the shape is **for**, on a real Windows machine: that the script
+    /// runs at all.
+    ///
+    /// The two shapes are started the way `child::plainly` starts them, with
+    /// the three handles on `NUL`, and each script writes a file and nothing
+    /// else. A console that reads its commands from `NUL` never runs its
+    /// script, so the file is the whole test and no window has to be seen --
+    /// which is what makes it runnable over SSH, where there is no desktop to
+    /// look at.
+    ///
+    /// Ignored because it opens a console and leaves it open; run it with
+    /// `cargo test -p tracewing-system --release -- --ignored a_console_that`.
+    #[cfg(windows)]
+    #[test]
+    #[ignore]
+    fn a_console_that_reads_from_nul_never_runs_its_script() {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+        let dir = std::env::temp_dir().join(format!("tracewing-console-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let ran = |which: &str| dir.join(format!("{which}-ran.txt"));
+        let script = |which: &str| {
+            let path = dir.join(format!("{which}.cmd"));
+            let text = format!("@echo off\r\necho ran> \"{}\"\r\n", ran(which).display());
+            fs::write(&path, text).unwrap();
+            path
+        };
+        let started = |mut command: Command| {
+            command
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap()
+        };
+
+        // The control: what #326 shipped. `cmd` is handed the script as its
+        // first command and then reads the next one from `NUL`.
+        let bare = script("bare");
+        let mut command = Command::new("cmd");
+        command.arg("/k").arg(&bare);
+        let mut child = started(command);
+
+        // And the shape `console_args` picks, whose inner `cmd` has a console
+        // of its own with real handles.
+        let wrapped = script("wrapped");
+        let (args, suppress) = console_args(Start::AsWeAre, &wrapped);
+        assert!(suppress);
+        let mut command = Command::new("cmd");
+        command.args(args).creation_flags(CREATE_NO_WINDOW);
+        let _ = started(command);
+
+        // Both have the same work to do, so one wait covers both.
+        std::thread::sleep(std::time::Duration::from_secs(3));
+
+        let bare_ran = ran("bare").exists();
+        let wrapped_ran = ran("wrapped").exists();
+        // Said before asserting, so that a run that fails says what both
+        // halves did rather than only the first difference.
+        println!("bare ran: {bare_ran}, wrapped ran: {wrapped_ran}");
+        let _ = child.kill();
+        let _ = Command::new("taskkill")
+            .args(["/f", "/fi", "WINDOWTITLE eq tracewing*"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+
+        assert!(
+            wrapped_ran,
+            "the console `start` makes has real handles, so it runs the script"
+        );
+        assert!(
+            !bare_ran,
+            "a console whose stdin is NUL ends before the script: if this one ran, \
+             the reason for the wrapper is not what this says it is"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
     #[test]
     fn the_bundle_holds_the_ca_first_and_the_system_roots() {
         let dir = std::env::temp_dir().join(format!("tracewing-bundle-{}", std::process::id()));
