@@ -2800,6 +2800,30 @@ t2c2204d9 = 프록시를 무시하는 Mac 앱
 # Something in Docker
 t51e75492 = Docker 안의 무언가
 
+# A phone trusts tracewing once its CA is installed there. On Android, most apps trust only the system's authorities, not one a user adds.
+t203b5971 = 휴대폰은 tracewing의 CA가 설치되면 tracewing을 신뢰합니다. Android에서는 대부분의 앱이 시스템의 인증 기관만 신뢰하고, 사용자가 추가한 것은 신뢰하지 않습니다.
+
+# Firefox keeps its own authorities in each profile, apart from this computer's. Set up installs tracewing's CA into them.
+t05fd4ed6 = Firefox는 프로필마다 이 컴퓨터와 별개인 자체 인증 기관을 둡니다. Set up이 그곳에 tracewing의 CA를 설치합니다.
+
+# This browser trusts the authorities installed on this computer. Set up installs tracewing's CA there.
+tf21ed51d = 이 브라우저는 이 컴퓨터에 설치된 인증 기관을 신뢰합니다. Set up이 그곳에 tracewing의 CA를 설치합니다.
+
+# Node, Deno and Bun carry their own authorities. Started from tracewing's terminal, they are told to trust its CA as well.
+tc83cfcaa = Node, Deno, Bun은 자체 인증 기관을 가지고 있습니다. tracewing의 터미널에서 시작하면 그 CA도 신뢰하도록 지정됩니다.
+
+# Python trusts the file of authorities it is pointed to, which tracewing's terminal points at one with tracewing's CA. Apple's own Python ignores it.
+t8c0f942f = Python은 지정된 인증 기관 파일을 신뢰하며, tracewing의 터미널은 tracewing의 CA가 든 파일을 지정합니다. Apple의 기본 Python은 이를 무시합니다.
+
+# Java trusts only a store of its own. Set up writes one with tracewing's CA, and gives the flags that point Java at it.
+t937bde92 = Java는 자체 저장소만 신뢰합니다. Set up이 tracewing의 CA가 든 저장소를 만들고, Java가 그것을 쓰도록 하는 플래그를 알려 줍니다.
+
+# What runs in a container trusts what its image brings, so tracewing's CA has to be added to the image.
+t3370d74c = 컨테이너에서 실행되는 것은 이미지에 들어 있는 것을 신뢰하므로, tracewing의 CA를 이미지에 추가해야 합니다.
+
+# Started from tracewing's terminal, a command-line program is told to trust tracewing's CA.
+t1547f501 = tracewing의 터미널에서 시작하면 명령줄 프로그램은 tracewing의 CA를 신뢰하도록 지정됩니다.
+
 # Field {number}, {wire}
 ta367cc19 = 필드 { $number }, { $wire }
 

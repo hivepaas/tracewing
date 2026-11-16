@@ -2800,6 +2800,30 @@ t2c2204d9 = Sebuah app Mac yang mengabaikan proxy
 # Something in Docker
 t51e75492 = Sesuatu di Docker
 
+# A phone trusts tracewing once its CA is installed there. On Android, most apps trust only the system's authorities, not one a user adds.
+t203b5971 = Ponsel memercayai tracewing setelah CA-nya dipasang di sana. Di Android, sebagian besar aplikasi hanya memercayai otoritas sistem, bukan yang ditambahkan pengguna.
+
+# Firefox keeps its own authorities in each profile, apart from this computer's. Set up installs tracewing's CA into them.
+t05fd4ed6 = Firefox menyimpan otoritasnya sendiri di setiap profil, terpisah dari milik komputer ini. Set up memasang CA tracewing ke sana.
+
+# This browser trusts the authorities installed on this computer. Set up installs tracewing's CA there.
+tf21ed51d = Browser ini memercayai otoritas yang dipasang di komputer ini. Set up memasang CA tracewing di sana.
+
+# Node, Deno and Bun carry their own authorities. Started from tracewing's terminal, they are told to trust its CA as well.
+tc83cfcaa = Node, Deno, dan Bun membawa otoritasnya sendiri. Jika dijalankan dari terminal tracewing, mereka diberi tahu untuk juga memercayai CA-nya.
+
+# Python trusts the file of authorities it is pointed to, which tracewing's terminal points at one with tracewing's CA. Apple's own Python ignores it.
+t8c0f942f = Python memercayai berkas otoritas yang ditunjukkan kepadanya, dan terminal tracewing menunjuk ke berkas yang berisi CA tracewing. Python bawaan Apple mengabaikannya.
+
+# Java trusts only a store of its own. Set up writes one with tracewing's CA, and gives the flags that point Java at it.
+t937bde92 = Java hanya memercayai penyimpanannya sendiri. Set up menulis satu dengan CA tracewing, dan memberikan flag yang mengarahkan Java ke sana.
+
+# What runs in a container trusts what its image brings, so tracewing's CA has to be added to the image.
+t3370d74c = Yang berjalan di dalam kontainer memercayai apa yang dibawa image-nya, jadi CA tracewing harus ditambahkan ke image.
+
+# Started from tracewing's terminal, a command-line program is told to trust tracewing's CA.
+t1547f501 = Jika dijalankan dari terminal tracewing, program baris perintah diberi tahu untuk memercayai CA tracewing.
+
 # Field {number}, {wire}
 ta367cc19 = Bidang { $number }, { $wire }
 

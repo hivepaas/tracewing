@@ -2892,6 +2892,30 @@ t2c2204d9 = Proxy'yi yok sayan bir Mac uygulaması
 # Something in Docker
 t51e75492 = Docker'daki bir şey
 
+# A phone trusts tracewing once its CA is installed there. On Android, most apps trust only the system's authorities, not one a user adds.
+t203b5971 = Bir telefon, tracewing'in CA'sı orada kurulduğunda tracewing'e güvenir. Android'de çoğu uygulama yalnızca sistemin sertifika yetkililerine güvenir, kullanıcının eklediğine güvenmez.
+
+# Firefox keeps its own authorities in each profile, apart from this computer's. Set up installs tracewing's CA into them.
+t05fd4ed6 = Firefox her profilde bu bilgisayardan ayrı kendi sertifika yetkililerini tutar. Set up, tracewing'in CA'sını oraya kurar.
+
+# This browser trusts the authorities installed on this computer. Set up installs tracewing's CA there.
+tf21ed51d = Bu tarayıcı bu bilgisayarda kurulu sertifika yetkililerine güvenir. Set up, tracewing'in CA'sını oraya kurar.
+
+# Node, Deno and Bun carry their own authorities. Started from tracewing's terminal, they are told to trust its CA as well.
+tc83cfcaa = Node, Deno ve Bun kendi sertifika yetkililerini taşır. tracewing'in terminalinden başlatıldıklarında onun CA'sına da güvenmeleri söylenir.
+
+# Python trusts the file of authorities it is pointed to, which tracewing's terminal points at one with tracewing's CA. Apple's own Python ignores it.
+t8c0f942f = Python kendisine gösterilen sertifika yetkilisi dosyasına güvenir ve tracewing'in terminali tracewing'in CA'sını içeren bir dosyayı gösterir. Apple'ın kendi Python'u bunu yok sayar.
+
+# Java trusts only a store of its own. Set up writes one with tracewing's CA, and gives the flags that point Java at it.
+t937bde92 = Java yalnızca kendi deposuna güvenir. Set up, tracewing'in CA'sını içeren bir depo yazar ve Java'yı ona yönlendiren bayrakları verir.
+
+# What runs in a container trusts what its image brings, so tracewing's CA has to be added to the image.
+t3370d74c = Bir kapsayıcıda çalışan şey, imajının getirdiğine güvenir; bu yüzden tracewing'in CA'sı imaja eklenmelidir.
+
+# Started from tracewing's terminal, a command-line program is told to trust tracewing's CA.
+t1547f501 = tracewing'in terminalinden başlatılan bir komut satırı programına tracewing'in CA'sına güvenmesi söylenir.
+
 # Field {number}, {wire}
 ta367cc19 = Alan { $number }, { $wire }
 

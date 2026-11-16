@@ -2800,6 +2800,30 @@ t2c2204d9 = プロキシを無視する Mac アプリ
 # Something in Docker
 t51e75492 = Docker の中のもの
 
+# A phone trusts tracewing once its CA is installed there. On Android, most apps trust only the system's authorities, not one a user adds.
+t203b5971 = スマートフォンは tracewing の CA がインストールされると tracewing を信頼します。Android では、ほとんどのアプリはシステムの認証局だけを信頼し、ユーザーが追加したものは信頼しません。
+
+# Firefox keeps its own authorities in each profile, apart from this computer's. Set up installs tracewing's CA into them.
+t05fd4ed6 = Firefox はプロファイルごとに、このコンピュータとは別の認証局を持っています。Set up はそこに tracewing の CA をインストールします。
+
+# This browser trusts the authorities installed on this computer. Set up installs tracewing's CA there.
+tf21ed51d = このブラウザはこのコンピュータにインストールされた認証局を信頼します。Set up はそこに tracewing の CA をインストールします。
+
+# Node, Deno and Bun carry their own authorities. Started from tracewing's terminal, they are told to trust its CA as well.
+tc83cfcaa = Node、Deno、Bun は独自の認証局を持っています。tracewing のターミナルから起動すると、その CA も信頼するよう指示されます。
+
+# Python trusts the file of authorities it is pointed to, which tracewing's terminal points at one with tracewing's CA. Apple's own Python ignores it.
+t8c0f942f = Python は指定された認証局ファイルを信頼します。tracewing のターミナルは tracewing の CA を含むファイルを指定します。Apple 標準の Python はこれを無視します。
+
+# Java trusts only a store of its own. Set up writes one with tracewing's CA, and gives the flags that point Java at it.
+t937bde92 = Java は独自のストアだけを信頼します。Set up は tracewing の CA を含むストアを書き出し、Java をそこに向けるフラグを示します。
+
+# What runs in a container trusts what its image brings, so tracewing's CA has to be added to the image.
+t3370d74c = コンテナ内で動くものはイメージに含まれるものを信頼するため、tracewing の CA をイメージに追加する必要があります。
+
+# Started from tracewing's terminal, a command-line program is told to trust tracewing's CA.
+t1547f501 = tracewing のターミナルから起動すると、コマンドラインプログラムは tracewing の CA を信頼するよう指示されます。
+
 # Field {number}, {wire}
 ta367cc19 = フィールド { $number }、{ $wire }
 

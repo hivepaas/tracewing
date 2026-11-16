@@ -3028,6 +3028,30 @@ t2c2204d9 = Застосунок для Mac, який нехтує проксі
 # Something in Docker
 t51e75492 = Щось у Docker
 
+# A phone trusts tracewing once its CA is installed there. On Android, most apps trust only the system's authorities, not one a user adds.
+t203b5971 = Телефон довіряє tracewing, коли на ньому встановлено його CA. На Android більшість застосунків довіряє лише центрам сертифікації системи, а не доданим користувачем.
+
+# Firefox keeps its own authorities in each profile, apart from this computer's. Set up installs tracewing's CA into them.
+t05fd4ed6 = Firefox тримає власні центри сертифікації в кожному профілі, окремо від цього комп’ютера. Set up встановлює туди CA tracewing.
+
+# This browser trusts the authorities installed on this computer. Set up installs tracewing's CA there.
+tf21ed51d = Цей браузер довіряє центрам сертифікації, встановленим на цьому комп’ютері. Set up встановлює туди CA tracewing.
+
+# Node, Deno and Bun carry their own authorities. Started from tracewing's terminal, they are told to trust its CA as well.
+tc83cfcaa = Node, Deno і Bun мають власні центри сертифікації. Під час запуску з термінала tracewing їм вказують довіряти також його CA.
+
+# Python trusts the file of authorities it is pointed to, which tracewing's terminal points at one with tracewing's CA. Apple's own Python ignores it.
+t8c0f942f = Python довіряє файлу центрів сертифікації, на який йому вказали, а термінал tracewing вказує на файл із CA tracewing. Python від Apple його ігнорує.
+
+# Java trusts only a store of its own. Set up writes one with tracewing's CA, and gives the flags that point Java at it.
+t937bde92 = Java довіряє лише власному сховищу. Set up записує сховище з CA tracewing і дає прапорці, що спрямовують Java на нього.
+
+# What runs in a container trusts what its image brings, so tracewing's CA has to be added to the image.
+t3370d74c = Те, що працює в контейнері, довіряє тому, що приносить його образ, тож CA tracewing треба додати в образ.
+
+# Started from tracewing's terminal, a command-line program is told to trust tracewing's CA.
+t1547f501 = Під час запуску з термінала tracewing програмі командного рядка вказують довіряти CA tracewing.
+
 # Field {number}, {wire}
 ta367cc19 = Поле { $number }, { $wire }
 

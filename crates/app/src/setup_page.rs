@@ -562,6 +562,19 @@ impl Traffic {
         cx.notify();
     }
 
+    /// Set up, open at `target`'s answer when there is one: where a flow
+    /// whose program turned the certificate down sends somebody. Unlike
+    /// [`Self::choose_target`], the same answer again keeps it.
+    pub fn open_setup_for(&mut self, target: Option<Target>, cx: &mut Context<Self>) {
+        if let Some(target) = target
+            && self.layout.capture_target != Some(target)
+        {
+            self.layout.capture_target = Some(target);
+            self.save_layout();
+        }
+        self.set_screen(Screen::Setup, cx);
+    }
+
     /// The wizard's one question, and its answer once given.
     ///
     /// It is the whole page until somebody answers, because the pile of

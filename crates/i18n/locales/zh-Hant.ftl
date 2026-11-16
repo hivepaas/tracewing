@@ -2800,6 +2800,30 @@ t2c2204d9 = 一個忽略代理的 Mac 應用程式
 # Something in Docker
 t51e75492 = Docker 裡的東西
 
+# A phone trusts tracewing once its CA is installed there. On Android, most apps trust only the system's authorities, not one a user adds.
+t203b5971 = 手機在安裝 tracewing 的 CA 後才會信任 tracewing。在 Android 上，大多數 App 只信任系統的憑證授權單位，而不信任使用者新增的。
+
+# Firefox keeps its own authorities in each profile, apart from this computer's. Set up installs tracewing's CA into them.
+t05fd4ed6 = Firefox 在每個設定檔中保存自己的憑證授權單位，與這台電腦的分開。Set up 會把 tracewing 的 CA 安裝到其中。
+
+# This browser trusts the authorities installed on this computer. Set up installs tracewing's CA there.
+tf21ed51d = 此瀏覽器信任這台電腦上安裝的憑證授權單位。Set up 會把 tracewing 的 CA 安裝到那裡。
+
+# Node, Deno and Bun carry their own authorities. Started from tracewing's terminal, they are told to trust its CA as well.
+tc83cfcaa = Node、Deno 和 Bun 自帶憑證授權單位。從 tracewing 的終端機啟動時，它們會被告知同時信任其 CA。
+
+# Python trusts the file of authorities it is pointed to, which tracewing's terminal points at one with tracewing's CA. Apple's own Python ignores it.
+t8c0f942f = Python 信任它被指向的憑證授權單位檔案，而 tracewing 的終端機會指向一個包含 tracewing CA 的檔案。Apple 內建的 Python 會忽略它。
+
+# Java trusts only a store of its own. Set up writes one with tracewing's CA, and gives the flags that point Java at it.
+t937bde92 = Java 只信任自己的儲存區。Set up 會寫出一個包含 tracewing CA 的儲存區，並提供讓 Java 使用它的參數。
+
+# What runs in a container trusts what its image brings, so tracewing's CA has to be added to the image.
+t3370d74c = 容器中執行的程式信任其映像檔自帶的內容，因此需要把 tracewing 的 CA 加入映像檔。
+
+# Started from tracewing's terminal, a command-line program is told to trust tracewing's CA.
+t1547f501 = 從 tracewing 的終端機啟動時，命令列程式會被告知信任 tracewing 的 CA。
+
 # Field {number}, {wire}
 ta367cc19 = 欄位 { $number }，{ $wire }
 

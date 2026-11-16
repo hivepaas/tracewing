@@ -2800,6 +2800,30 @@ t2c2204d9 = Một app Mac bỏ qua proxy
 # Something in Docker
 t51e75492 = Cái gì đó trong Docker
 
+# A phone trusts tracewing once its CA is installed there. On Android, most apps trust only the system's authorities, not one a user adds.
+t203b5971 = Điện thoại tin tracewing khi CA của tracewing được cài trên đó. Trên Android, hầu hết app chỉ tin các authority của hệ thống, không tin authority do người dùng thêm.
+
+# Firefox keeps its own authorities in each profile, apart from this computer's. Set up installs tracewing's CA into them.
+t05fd4ed6 = Firefox giữ danh sách authority riêng trong từng profile, tách khỏi máy tính này. Set up cài CA của tracewing vào các profile đó.
+
+# This browser trusts the authorities installed on this computer. Set up installs tracewing's CA there.
+tf21ed51d = Trình duyệt này tin các authority được cài trên máy tính này. Set up cài CA của tracewing vào đó.
+
+# Node, Deno and Bun carry their own authorities. Started from tracewing's terminal, they are told to trust its CA as well.
+tc83cfcaa = Node, Deno và Bun mang theo danh sách authority riêng. Khi chạy từ terminal của tracewing, chúng được bảo tin thêm CA của tracewing.
+
+# Python trusts the file of authorities it is pointed to, which tracewing's terminal points at one with tracewing's CA. Apple's own Python ignores it.
+t8c0f942f = Python tin file authority mà nó được trỏ tới, và terminal của tracewing trỏ nó tới một file có CA của tracewing. Python của Apple bỏ qua file này.
+
+# Java trusts only a store of its own. Set up writes one with tracewing's CA, and gives the flags that point Java at it.
+t937bde92 = Java chỉ tin kho chứng chỉ riêng của nó. Set up ghi ra một kho có CA của tracewing, và đưa các cờ để trỏ Java tới đó.
+
+# What runs in a container trusts what its image brings, so tracewing's CA has to be added to the image.
+t3370d74c = Chương trình chạy trong container tin những gì image của nó mang theo, nên phải thêm CA của tracewing vào image.
+
+# Started from tracewing's terminal, a command-line program is told to trust tracewing's CA.
+t1547f501 = Khi chạy từ terminal của tracewing, chương trình dòng lệnh được bảo tin CA của tracewing.
+
 # Field {number}, {wire}
 ta367cc19 = Field { $number }, { $wire }
 

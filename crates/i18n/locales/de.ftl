@@ -2928,6 +2928,30 @@ t2c2204d9 = Eine Mac-App, die den Proxy ignoriert
 # Something in Docker
 t51e75492 = Etwas in Docker
 
+# A phone trusts tracewing once its CA is installed there. On Android, most apps trust only the system's authorities, not one a user adds.
+t203b5971 = Ein Telefon vertraut tracewing, sobald dessen CA dort installiert ist. Unter Android vertrauen die meisten Apps nur den Zertifizierungsstellen des Systems, nicht einer vom Benutzer hinzugefügten.
+
+# Firefox keeps its own authorities in each profile, apart from this computer's. Set up installs tracewing's CA into them.
+t05fd4ed6 = Firefox hat in jedem Profil eigene Zertifizierungsstellen, getrennt von denen dieses Computers. Set up installiert die CA von tracewing dort.
+
+# This browser trusts the authorities installed on this computer. Set up installs tracewing's CA there.
+tf21ed51d = Dieser Browser vertraut den auf diesem Computer installierten Zertifizierungsstellen. Set up installiert die CA von tracewing dort.
+
+# Node, Deno and Bun carry their own authorities. Started from tracewing's terminal, they are told to trust its CA as well.
+tc83cfcaa = Node, Deno und Bun bringen eigene Zertifizierungsstellen mit. Aus dem Terminal von tracewing gestartet, wird ihnen gesagt, auch dessen CA zu vertrauen.
+
+# Python trusts the file of authorities it is pointed to, which tracewing's terminal points at one with tracewing's CA. Apple's own Python ignores it.
+t8c0f942f = Python vertraut der Datei mit Zertifizierungsstellen, auf die es verwiesen wird, und das Terminal von tracewing verweist auf eine mit der CA von tracewing. Apples eigenes Python ignoriert sie.
+
+# Java trusts only a store of its own. Set up writes one with tracewing's CA, and gives the flags that point Java at it.
+t937bde92 = Java vertraut nur einem eigenen Speicher. Set up schreibt einen mit der CA von tracewing und gibt die Flags, die Java darauf verweisen.
+
+# What runs in a container trusts what its image brings, so tracewing's CA has to be added to the image.
+t3370d74c = Was in einem Container läuft, vertraut dem, was sein Image mitbringt, daher muss die CA von tracewing zum Image hinzugefügt werden.
+
+# Started from tracewing's terminal, a command-line program is told to trust tracewing's CA.
+t1547f501 = Aus dem Terminal von tracewing gestartet, wird einem Kommandozeilenprogramm gesagt, der CA von tracewing zu vertrauen.
+
 # Field {number}, {wire}
 ta367cc19 = Feld { $number }, { $wire }
 
