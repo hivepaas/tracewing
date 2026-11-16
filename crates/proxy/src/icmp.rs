@@ -288,6 +288,204 @@ pub fn answer_for(ping: &Ping, answer: &Answer) -> Option<Vec<u8>> {
     }
 }
 
+/// Where to send an echo from, asked per echo rather than once.
+///
+/// Per echo because the interface the machine leaves by changes as a machine
+/// moves between networks, and the watcher that tracks it
+/// ([`crate::roads::watch`]) is already the thing that knows. `None` means
+/// there is no address to send from, and then nothing is sent: an echo from
+/// the wrong interface would be routed into tracewing's own adapter.
+#[cfg(windows)]
+pub type From = std::sync::Arc<dyn Fn(bool) -> Option<IpAddr> + Send + Sync>;
+
+/// Echoes through IP Helper, which is what `ping` itself uses.
+///
+/// `IcmpSendEcho2Ex` and `Icmp6SendEcho2` take a **source address**, which is
+/// the whole reason they are used rather than a raw socket: a raw ICMP socket
+/// would need an administrator, and an echo that followed the ordinary routes
+/// would be routed into tracewing's own adapter and arrive back here. These
+/// need no privilege at all.
+///
+/// They are synchronous when given no event and no completion routine, so
+/// each echo runs on a blocking thread rather than on the runtime.
+#[cfg(windows)]
+pub fn by_ip_helper(from: From, within: std::time::Duration) -> Echo {
+    let within = within.as_millis().min(u128::from(u32::MAX)) as u32;
+    std::sync::Arc::new(move |ping: Ping| {
+        let from = std::sync::Arc::clone(&from);
+        Box::pin(async move {
+            let Some(source) = from(ping.to.is_ipv6()) else {
+                tracing::debug!("no address to echo {} from", ping.to);
+                return Answer::Silent;
+            };
+            tokio::task::spawn_blocking(move || echo_now(source, &ping, within))
+                .await
+                .unwrap_or(Answer::Silent)
+        })
+    })
+}
+
+/// One echo, synchronously. Only called on a blocking thread.
+#[cfg(windows)]
+fn echo_now(source: IpAddr, ping: &Ping, within: u32) -> Answer {
+    use windows_sys::Win32::NetworkManagement::IpHelper::{
+        ICMP_ECHO_REPLY, ICMPV6_ECHO_REPLY_LH, IP_OPTION_INFORMATION, Icmp6CreateFile,
+        Icmp6SendEcho2, IcmpCloseHandle, IcmpCreateFile, IcmpSendEcho2Ex,
+    };
+    /// What the reply buffer must hold, as the API asks: the reply structure,
+    /// the data echoed back, and eight bytes for an error's quote.
+    fn room(reply: usize, data: usize) -> usize {
+        reply + data + 8
+    }
+    let payload = ping.payload();
+    // The hop limit the client chose, which is the whole of `tracert`. Zero
+    // would mean "the system default", so a client that sent zero gets one.
+    let options = IP_OPTION_INFORMATION {
+        Ttl: ping.ttl.max(1),
+        ..Default::default()
+    };
+    match (source, ping.to) {
+        (IpAddr::V4(src), IpAddr::V4(dst)) => {
+            // SAFETY: a handle closed below on every path.
+            let handle = unsafe { IcmpCreateFile() };
+            if handle.is_null() || handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
+                return Answer::Silent;
+            }
+            let mut reply = vec![0u8; room(size_of::<ICMP_ECHO_REPLY>(), payload.len())];
+            // SAFETY: the buffer is as long as it is said to be, the payload
+            // outlives the call, and the handle is ours.
+            let answers = unsafe {
+                IcmpSendEcho2Ex(
+                    handle,
+                    std::ptr::null_mut(),
+                    None,
+                    std::ptr::null(),
+                    u32::from_ne_bytes(src.octets()),
+                    u32::from_ne_bytes(dst.octets()),
+                    payload.as_ptr().cast(),
+                    payload.len() as u16,
+                    &options,
+                    reply.as_mut_ptr().cast(),
+                    reply.len() as u32,
+                    within,
+                )
+            };
+            let answer = if answers == 0 {
+                // Nothing answered, or it could not be asked. Either way the
+                // client gets the silence it would get from the network.
+                Answer::Silent
+            } else {
+                // SAFETY: the call filled the buffer it was given, and it is
+                // at least one reply long.
+                let reply = unsafe { reply.as_ptr().cast::<ICMP_ECHO_REPLY>().read_unaligned() };
+                answered(
+                    reply.Status,
+                    Ipv4Addr::from(reply.Address.to_ne_bytes()).into(),
+                    // SAFETY: `Data` points into the buffer above, which is
+                    // still alive, and `DataSize` is what the call wrote
+                    // there. Copied out before the buffer goes.
+                    unsafe {
+                        std::slice::from_raw_parts(
+                            reply.Data.cast::<u8>(),
+                            usize::from(reply.DataSize),
+                        )
+                    }
+                    .to_vec(),
+                )
+            };
+            // SAFETY: the handle that call gave us, closed exactly once.
+            unsafe { IcmpCloseHandle(handle) };
+            answer
+        }
+        (IpAddr::V6(src), IpAddr::V6(dst)) => {
+            // SAFETY: a handle closed below on every path.
+            let handle = unsafe { Icmp6CreateFile() };
+            if handle.is_null() || handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
+                return Answer::Silent;
+            }
+            let mut reply = vec![0u8; room(size_of::<ICMPV6_ECHO_REPLY_LH>(), payload.len())];
+            let (src, dst) = (sockaddr6(src), sockaddr6(dst));
+            // SAFETY: as above, with both ends as the call wants them.
+            let answers = unsafe {
+                Icmp6SendEcho2(
+                    handle,
+                    std::ptr::null_mut(),
+                    None,
+                    std::ptr::null(),
+                    &src,
+                    &dst,
+                    payload.as_ptr().cast(),
+                    payload.len() as u16,
+                    &options,
+                    reply.as_mut_ptr().cast(),
+                    reply.len() as u32,
+                    within,
+                )
+            };
+            let answer = if answers == 0 {
+                Answer::Silent
+            } else {
+                // SAFETY: as above.
+                let reply = unsafe {
+                    reply
+                        .as_ptr()
+                        .cast::<ICMPV6_ECHO_REPLY_LH>()
+                        .read_unaligned()
+                };
+                answered(
+                    reply.Status,
+                    // `sin6_addr` is eight `u16`s holding the address in
+                    // **network** order, while `Ipv6Addr::from([u16; 8])`
+                    // takes segments in host order -- so each one is
+                    // swapped. The same trap as `IP_UNICAST_IF`'s, and this
+                    // one was caught by the loopback test rather than by
+                    // reading: without the swap, `::1` came back as
+                    // something else entirely.
+                    Ipv6Addr::from(reply.Address.sin6_addr.map(u16::from_be)).into(),
+                    // **The IPv6 reply has no data of its own.** The
+                    // structure carries an address, a status and a round
+                    // trip, and nothing else -- so the payload cannot be
+                    // read back here, and `answer_for` repeats the
+                    // request's, which is what a host echoes anyway. The
+                    // one thing this hides is a host that echoed something
+                    // *different*, which `ping` would otherwise report.
+                    Vec::new(),
+                )
+            };
+            // SAFETY: the handle that call gave us, closed exactly once.
+            unsafe { IcmpCloseHandle(handle) };
+            answer
+        }
+        // One family per echo: the source comes from the destination's.
+        _ => Answer::Silent,
+    }
+}
+
+/// What a reply's status means, which is the same in both families.
+#[cfg(windows)]
+fn answered(status: u32, from: IpAddr, data: Vec<u8>) -> Answer {
+    use windows_sys::Win32::NetworkManagement::IpHelper::{IP_SUCCESS, IP_TTL_EXPIRED_TRANSIT};
+    match status {
+        IP_SUCCESS => Answer::Answered { from, data },
+        // A router would not carry it any further and said so, and `Address`
+        // is that router's. This is what `tracert` is reading, and it is why
+        // the hop limit above is passed on rather than normalised.
+        IP_TTL_EXPIRED_TRANSIT => Answer::Expired { from },
+        // Unreachable, filtered, timed out: the client gets the silence it
+        // would get from a network that did not answer.
+        _ => Answer::Silent,
+    }
+}
+
+#[cfg(windows)]
+fn sockaddr6(addr: Ipv6Addr) -> windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6 {
+    use windows_sys::Win32::Networking::WinSock::{AF_INET6, SOCKADDR_IN6};
+    let mut out: SOCKADDR_IN6 = unsafe { std::mem::zeroed() };
+    out.sin6_family = AF_INET6;
+    out.sin6_addr.u.Byte = addr.octets();
+    out
+}
+
 /// Starts answering echo requests, and returns where to put them.
 ///
 /// Each one is sent in a task of its own: a `tracert` has several probes out
@@ -555,6 +753,52 @@ mod tests {
             ),
             None
         );
+    }
+
+    /// IP Helper really echoing, against loopback -- which answers its own
+    /// echo on any machine, wants no administrator and needs no network, so
+    /// it is a test rather than something only a person can try.
+    ///
+    /// What this does **not** cover is the `Expired` arm: that wants a
+    /// router some hops away to complain, which no test can arrange. Its
+    /// mapping from `IP_TTL_EXPIRED_TRANSIT` is read from the API's contract
+    /// and the packet it becomes is covered above, on Linux.
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn ip_helper_really_echoes_loopback() {
+        for (v6, address) in [(false, "127.0.0.1"), (true, "::1")] {
+            let here: IpAddr = address.parse().unwrap();
+            let echo = by_ip_helper(
+                std::sync::Arc::new(move |wants_v6| (wants_v6 == v6).then_some(here)),
+                std::time::Duration::from_secs(5),
+            );
+            let ping = echo_request(&request(address, address, 64, 1)).expect("a ping");
+            match echo(ping).await {
+                Answer::Answered { from, data } => {
+                    assert_eq!(from, here, "loopback answers as itself");
+                    if !v6 {
+                        assert_eq!(
+                            data, b"abcdefgh",
+                            "and echoes the payload, which IPv4 reports and IPv6 does not"
+                        );
+                    }
+                }
+                other => panic!("loopback should answer its own echo, not {other:?}"),
+            }
+        }
+    }
+
+    /// No address to send from is silence rather than an echo out of the
+    /// wrong interface -- which would be routed into tracewing's own adapter.
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn no_source_address_is_silence() {
+        let echo = by_ip_helper(
+            std::sync::Arc::new(|_| None),
+            std::time::Duration::from_secs(1),
+        );
+        let ping = echo_request(&request("127.0.0.1", "127.0.0.1", 64, 1)).unwrap();
+        assert_eq!(echo(ping).await, Answer::Silent);
     }
 
     /// The whole of it: a request goes in, the echoer is asked, and the
