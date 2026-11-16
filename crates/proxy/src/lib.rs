@@ -30,6 +30,8 @@ pub mod stack;
 pub mod throttle;
 pub mod traffic_rules;
 pub mod tun;
+#[cfg(target_os = "linux")]
+pub mod tun_linux;
 pub mod upstream;
 #[cfg(windows)]
 pub mod wintun;
