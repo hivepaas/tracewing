@@ -143,3 +143,72 @@ fn the_adapter_has_a_luid_and_is_never_the_way_out() {
         roads::out_by(&roads, ours, true)
     );
 }
+
+/// How many routes the table holds for `luid` at exactly `bits`, in the
+/// family asked for.
+fn rows(luid: u64, bits: u8, v6: bool) -> usize {
+    roads::roads_now()
+        .expect("this machine's routes")
+        .iter()
+        .filter(|road| road.luid == luid && road.bits == bits && road.v6 == v6)
+        .count()
+}
+
+/// Waits for that count to become `want`. Windows does not promise to have
+/// finished with an address by the time the call returns.
+fn rows_become(luid: u64, bits: u8, v6: bool, want: usize) -> usize {
+    let until = std::time::Instant::now() + Duration::from_secs(5);
+    loop {
+        let now = rows(luid, bits, v6);
+        if now == want || std::time::Instant::now() > until {
+            return now;
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+
+/// 5. **An address, and Windows acting on it.**
+///
+///    The address going on is only half of it, and the weaker half: a call
+///    that returns `NO_ERROR` says Windows accepted the row, not that
+///    anything came of it. So this asserts the consequence instead —
+///    Windows makes an **on-link route** for a prefix an interface has been
+///    given, and a route is what routing acts on.
+///
+///    It also asserts the route goes away again, which is what makes
+///    [`Address`]'s `Drop` worth having rather than assumed: an address left
+///    behind on a disposable test VM is invisible, and on a real machine it
+///    is a route somebody's traffic can fall into.
+#[test]
+#[ignore = "needs Administrator and wintun.dll"]
+fn an_address_brings_an_on_link_route_and_takes_it_away_again() {
+    let adapter = WintunAdapter::open(&dll()).expect("open the adapter");
+    let ours = adapter.luid().expect("the adapter's LUID");
+    // A private prefix of its own, so that a machine running this does not
+    // lose a route it was using.
+    let addr: std::net::IpAddr = "10.6.6.1".parse().expect("an address");
+    const BITS: u8 = 24;
+
+    assert_eq!(
+        rows(ours, BITS, false),
+        0,
+        "nothing of ours at /{BITS} before the address"
+    );
+    {
+        let _address = adapter
+            .address(addr, BITS)
+            .expect("give the adapter its address");
+        assert_eq!(
+            rows_become(ours, BITS, false, 1),
+            1,
+            "an on-link route for the prefix appeared"
+        );
+        println!("with the address, rows of ours at /{BITS}: 1");
+    }
+    assert_eq!(
+        rows_become(ours, BITS, false, 0),
+        0,
+        "and went again when the address was dropped"
+    );
+    println!("after dropping it: 0");
+}
