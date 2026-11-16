@@ -7,6 +7,12 @@ make release    # the window; its proxy listens on 127.0.0.1:9090
 make debug      # the same, built for debugging
 ```
 
+On Linux, `make debug` runs the window under `gdb` when it is installed, and
+otherwise as it is; nothing else changes, and Ctrl+C still closes it as usual.
+If it crashes, where it was goes to `target/crashes/<when>.log` and the path is
+printed: a stack overflow says only which thread overflowed, and this says
+which function kept calling itself. `make debug GDB=` runs it without gdb.
+
 Try it from a terminal, with the certificate authority tracewing made for this computer:
 
 ```sh
