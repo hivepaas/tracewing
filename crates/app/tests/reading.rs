@@ -28,19 +28,52 @@ fn wait_for(
 ) {
     let deadline = Instant::now() + Duration::from_secs(20);
     loop {
-        let ok = window
+        let (ok, seen) = window
             .update(cx, |view, _, cx| {
                 view.look(cx);
-                done(view, cx)
+                (done(view, cx), state_of(view, cx))
             })
             .unwrap();
         cx.run_until_parked();
         if ok {
             return;
         }
-        assert!(Instant::now() < deadline, "waiting for {what}");
+        // The state goes in the message, and that is not decoration. Four of
+        // these waits say "the body laid out", and each of them is the last
+        // of four things that have to happen first: a request has to go
+        // through a real engine, a flow has to arrive, something has to be
+        // selected, and a body has to be laid out with enough lines. So a
+        // failure anywhere in that chain used to report as a layout fault.
+        //
+        // On 2026-11-16 one CI run timed out here and the message sent an
+        // hour of looking at rendering, which was the one link that was
+        // fine. `0 flows` or `the body is a note` would each have said so in
+        // the first line of the log.
+        assert!(
+            Instant::now() < deadline,
+            "waiting for {what}; what was there: {seen}"
+        );
         std::thread::sleep(Duration::from_millis(20));
     }
+}
+
+/// Where the chain had got to, in the words of the thing that stopped.
+fn state_of(view: &Traffic, cx: &gpui::App) -> String {
+    let flows = match view.count() {
+        1 => "1 flow".to_owned(),
+        many => format!("{many} flows"),
+    };
+    let body = match &view.inspector.body {
+        BodyState::Loading => "the body is still loading".to_owned(),
+        BodyState::Shown(body) => {
+            format!("the body is shown, {} lines", body.read(cx).body().lines())
+        }
+        BodyState::Image(path, size) => {
+            format!("the body is a picture, {size} bytes, {}", path.display())
+        }
+        BodyState::Note(why) => format!("the body is a note: {why}"),
+    };
+    format!("{flows}, {body}")
 }
 
 fn shot(cx: &mut HeadlessAppContext, window: gpui::AnyWindowHandle, name: &str) {
