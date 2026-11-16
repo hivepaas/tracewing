@@ -766,7 +766,12 @@ fn terminal_command(
     args
 }
 
-pub fn open_terminal(env: &[(&str, String)], banner: &str, _data_dir: &Path) -> Result<()> {
+pub fn open_terminal(
+    env: &[(&str, String)],
+    banner: &str,
+    _data_dir: &Path,
+    level: crate::child::Level,
+) -> Result<()> {
     let (program, flags) = find_terminal().context("no terminal found: set $TERMINAL to one")?;
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_owned());
     let mut command = Command::new(&program);
@@ -774,7 +779,7 @@ pub fn open_terminal(env: &[(&str, String)], banner: &str, _data_dir: &Path) -> 
     if let Ok(home) = home() {
         command.current_dir(home);
     }
-    launch::spawn(command).with_context(|| format!("open {}", program.display()))
+    launch::spawn(command, level).with_context(|| format!("open {}", program.display()))
 }
 
 /// Browsers on the `PATH`, by program, and what they are.

@@ -309,11 +309,14 @@ impl Traffic {
     pub fn open_terminal(&mut self, cx: &mut Context<Self>) {
         let (addr, data_dir) = (self.engine.addr, self.data_dir.clone());
         let store = self.engine.key_store;
+        // What level it starts at. The person's own until the tab offers the
+        // choice; see `tracewing_system::child`.
+        let level = system::child::Level::default();
         self.run_launch(
             tr!("The terminal"),
             move || {
                 let ca = load_ca(&data_dir, store)?;
-                system::launch::open_terminal(addr, ca.cert_path(), &data_dir)
+                system::launch::open_terminal(addr, ca.cert_path(), &data_dir, level)
             },
             cx,
         );
@@ -326,9 +329,10 @@ impl Traffic {
             return;
         };
         let browser = browser.clone();
+        let level = system::child::Level::default();
         self.run_launch(
             browser.name.to_owned(),
-            move || system::launch::open_url(&browser, &format!("https://{CHECK_HOST}/")),
+            move || system::launch::open_url(&browser, &format!("https://{CHECK_HOST}/"), level),
             cx,
         );
     }
@@ -341,6 +345,7 @@ impl Traffic {
             return;
         };
         let browser = browser.clone();
+        let level = system::child::Level::default();
         // Trusted, the CA is in the browser's store, and the flag would only
         // add a warning bar.
         let trusted = match *trust {
@@ -360,7 +365,14 @@ impl Traffic {
             move || {
                 let ca = load_ca(&data_dir, store)?;
                 let url = format!("https://{CHECK_HOST}/");
-                system::launch::open_browser(&browser, addr, spki.as_deref(), ca.cert_path(), &url)
+                system::launch::open_browser(
+                    &browser,
+                    addr,
+                    spki.as_deref(),
+                    ca.cert_path(),
+                    &url,
+                    level,
+                )
             },
             cx,
         );

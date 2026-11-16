@@ -11,7 +11,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::os;
+use crate::{child::Level, os};
 
 /// The roots a terminal opened from here trusts, kept in the data directory.
 const TERMINAL_BUNDLE: &str = "terminal-roots.pem";
@@ -44,9 +44,14 @@ pub struct Browser {
 }
 
 /// Opens a terminal whose programs go through the proxy and trust its CA.
-pub fn open_terminal(addr: SocketAddr, ca_pem: &Path, data_dir: &Path) -> Result<()> {
+pub fn open_terminal(addr: SocketAddr, ca_pem: &Path, data_dir: &Path, level: Level) -> Result<()> {
     let banner = format!("This terminal goes through tracewing at {addr}.");
-    os::open_terminal(&terminal_vars(addr, ca_pem, data_dir)?, &banner, data_dir)
+    os::open_terminal(
+        &terminal_vars(addr, ca_pem, data_dir)?,
+        &banner,
+        data_dir,
+        level,
+    )
 }
 
 /// What a terminal's programs read to go through the proxy, its bundle of
@@ -106,6 +111,39 @@ impl Shell {
     }
 }
 
+/// The script a Windows terminal runs so that it comes up with the variables
+/// already set, and a line saying so.
+///
+/// Here rather than in `windows.rs` because the awkward part is a string, and
+/// a string can be tested on any machine. The lines themselves are
+/// [`Shell::Cmd`]'s, so there is one spelling of "set this variable in cmd"
+/// rather than two.
+///
+/// **Two things differ from the same lines typed at a prompt**, which is what
+/// `tracewing env` prints:
+///
+/// - `%` is doubled. In a script `%NAME%` expands and a stray `%` can eat
+///   what follows it; at a prompt the doubling would itself be wrong, since
+///   `%%` there means a literal `%`. The values are proxy addresses and a
+///   path under the data directory, so it takes a `%` in the account name to
+///   reach this — rare, and silent if it ever happened, which is why it is
+///   handled rather than argued about.
+/// - the line endings are CRLF. `cmd` reads LF-only scripts for simple
+///   commands and is known to be odd about them, and nothing is gained by
+///   finding out where the line is.
+// Only Windows calls it; it lives here so that it can be tested anywhere,
+// which is the whole reason it is not in `windows.rs`. Same idiom as
+// `on_path` below.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn cmd_script(vars: &[(&str, String)], banner: &str) -> String {
+    let mut text = String::from("@echo off\n");
+    text.push_str(&Shell::Cmd.set(vars));
+    text.push_str(&format!("echo {banner}\n"));
+    text.push_str("echo.\n");
+    // Only a name or a value can carry one: `set "` and `"` have none.
+    text.replace('%', "%%").replace('\n', "\r\n")
+}
+
 /// Whether Node.js of this version (`v22.17.1`, `22.17.1`) sends its requests
 /// through `HTTP_PROXY` and `HTTPS_PROXY` when `NODE_USE_ENV_PROXY` asks it
 /// to: from 22.21 and 24.5 on. 24.0 to 24.4 do it for `fetch` alone, which
@@ -131,7 +169,30 @@ pub fn node_past_the_proxy() -> Option<String> {
     #[cfg(unix)]
     let version = {
         let shell = std::env::var_os("SHELL").unwrap_or_else(|| "/bin/sh".into());
-        node_version_in(Path::new(&shell), std::time::Duration::from_secs(5))
+        let shell = Path::new(&shell);
+        let mut asked = node_version_in(shell, SOON);
+        if worth_asking_again(&asked) {
+            tracing::debug!(
+                "asking {} about Node did not work; asking once more",
+                shell.display()
+            );
+            asked = node_version_in(shell, AT_LENGTH);
+        }
+        match asked {
+            Asked::Version(version) => Some(version),
+            Asked::NoNode => None,
+            Asked::CouldNotAsk(why) => {
+                // Said in the log rather than to the person, which is the
+                // half of this that is a fix. Telling them "we could not
+                // ask" needs a new sentence in fourteen languages, and that
+                // is a decision rather than a fix.
+                tracing::info!(
+                    "cannot tell whether the Node in {} goes past tracewing: {why}",
+                    shell.display()
+                );
+                None
+            }
+        }
     };
     #[cfg(windows)]
     let version = node_version_here();
@@ -153,21 +214,69 @@ pub fn node_version_here() -> Option<String> {
     version_in(&String::from_utf8_lossy(&out.stdout))
 }
 
+/// How long the first ask waits. Generous for `sh`, which is what most
+/// machines answer with.
+#[cfg(unix)]
+const SOON: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// And the second, which is only reached when the first could not be asked at
+/// all. It is longer on purpose: the shell that fails the first ask is a
+/// login-interactive `zsh` with a plugin manager, and five seconds is not
+/// obviously generous for one of those. The first ask pays for the cheap
+/// case; this one pays for the slow shell.
+#[cfg(unix)]
+const AT_LENGTH: std::time::Duration = std::time::Duration::from_secs(20);
+
+/// Whether an answer is worth asking a second time for.
+///
+/// **Only the one that could not be asked.** `NoNode` means the shell ran and
+/// answered; it just has no Node on its path, which is the common case on a
+/// machine without it, and a second ask cannot come back with anything else.
+/// It is not retried because it would be pointless, not because it would be
+/// slow: a shell that answers is never charged [`AT_LENGTH`], so the cost of
+/// retrying it is one more start-up -- 0.1s for a bash with a short profile,
+/// a second or two for a zsh with a plugin manager. The reason to write this
+/// down is that the pointless version is one line and looks just as sensible.
+#[cfg(unix)]
+fn worth_asking_again(asked: &Asked) -> bool {
+    matches!(asked, Asked::CouldNotAsk(_))
+}
+
+/// What asking a shell about Node came to.
+///
+/// Three answers rather than `Option`, because two of them used to be the
+/// same `None` and they want opposite treatment: a shell with no Node has
+/// answered and is not asked again, while a shell that could not be asked is
+/// the one worth a second, longer ask. The third thing the split buys is a
+/// log line that says which of the five ways it failed.
+#[cfg(unix)]
+enum Asked {
+    /// The shell answered, with this version.
+    Version(String),
+    /// It answered, and said no version -- which is what a shell with no
+    /// Node on its path prints.
+    NoNode,
+    /// It could not be asked at all, and this says which way.
+    CouldNotAsk(&'static str),
+}
+
 /// `node --version` as `shell` answers it, logged in and interactive as a
 /// terminal's is, so that its start-up files run. Given up after `wait`,
 /// with whatever it started, as such files can wait on a terminal it has not.
 #[cfg(unix)]
-fn node_version_in(shell: &Path, wait: std::time::Duration) -> Option<String> {
+fn node_version_in(shell: &Path, wait: std::time::Duration) -> Asked {
     use std::io::Read;
     let mut command = Command::new(shell);
     command.args(["-l", "-i", "-c", "node --version"]);
     std::os::unix::process::CommandExt::process_group(&mut command, 0);
-    let mut child = command
+    let Ok(mut child) = command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
-        .ok()?;
+    else {
+        return Asked::CouldNotAsk("the shell did not start");
+    };
     let deadline = std::time::Instant::now() + wait;
     loop {
         match child.try_wait() {
@@ -175,19 +284,30 @@ fn node_version_in(shell: &Path, wait: std::time::Duration) -> Option<String> {
             Ok(None) if std::time::Instant::now() < deadline => {
                 std::thread::sleep(std::time::Duration::from_millis(20))
             }
-            _ => {
+            other => {
                 // The group: the shell and anything its files started.
                 let pid = child.id() as libc::pid_t;
                 // SAFETY: a signal to a process group of our own child's.
                 unsafe { libc::kill(-pid, libc::SIGKILL) };
                 let _ = child.wait();
-                return None;
+                return Asked::CouldNotAsk(match other {
+                    Ok(None) => "the shell did not answer in time",
+                    _ => "the shell could not be waited for",
+                });
             }
         }
     }
+    let Some(mut stdout) = child.stdout.take() else {
+        return Asked::CouldNotAsk("the shell's output was not there to read");
+    };
     let mut out = String::new();
-    child.stdout.take()?.read_to_string(&mut out).ok()?;
-    version_in(&out)
+    if stdout.read_to_string(&mut out).is_err() {
+        return Asked::CouldNotAsk("the shell's output could not be read");
+    }
+    match version_in(&out) {
+        Some(version) => Asked::Version(version),
+        None => Asked::NoNode,
+    }
 }
 
 /// The last line that is a version, after whatever start-up files print.
@@ -263,7 +383,7 @@ pub fn find_browsers(data_dir: &Path) -> Vec<Browser> {
 }
 
 /// Opens `url` in `browser`, in the user's own profile, as if they had.
-pub fn open_url(browser: &Browser, url: &str) -> Result<()> {
+pub fn open_url(browser: &Browser, url: &str, level: Level) -> Result<()> {
     // A Mac app already running takes the URL from `open`, not from a second
     // copy of its program.
     #[cfg(target_os = "macos")]
@@ -274,11 +394,11 @@ pub fn open_url(browser: &Browser, url: &str) -> Result<()> {
     {
         let mut command = Command::new("/usr/bin/open");
         command.arg("-a").arg(app).arg(url);
-        return spawn(command).with_context(|| format!("open {}", app.display()));
+        return spawn(command, level).with_context(|| format!("open {}", app.display()));
     }
     let mut command = Command::new(&browser.program);
     command.arg(url);
-    spawn(command).with_context(|| format!("open {}", browser.program.display()))
+    spawn(command, level).with_context(|| format!("open {}", browser.program.display()))
 }
 
 /// Opens `browser` at `url` in its profile for tracewing, going through the
@@ -291,6 +411,7 @@ pub fn open_browser(
     spki: Option<&str>,
     ca_pem: &Path,
     url: &str,
+    level: Level,
 ) -> Result<()> {
     let profile = &browser.profile;
     fs::create_dir_all(profile).with_context(|| format!("create {}", profile.display()))?;
@@ -308,7 +429,7 @@ pub fn open_browser(
         }
         Engine::Safari => bail!("Safari has no profile of its own to open"),
     }
-    spawn(command).with_context(|| format!("open {}", browser.program.display()))
+    spawn(command, level).with_context(|| format!("open {}", browser.program.display()))
 }
 
 /// What a Firefox profile for tracewing holds: the proxy, the system's roots
@@ -426,16 +547,15 @@ pub fn browser_args(
 /// Starts a program that outlives the call, and reaps it when it ends. On Unix
 /// it gets a process group of its own, so a Ctrl-C meant for tracewing in the
 /// terminal it was started from does not close it as well.
-pub(crate) fn spawn(mut command: Command) -> Result<()> {
-    #[cfg(unix)]
-    std::os::unix::process::CommandExt::process_group(&mut command, 0);
-    let mut child = command
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
-    std::thread::spawn(move || child.wait());
-    Ok(())
+/// Starts something **for the person using tracewing**, at the level they
+/// asked for.
+///
+/// Everything here goes through [`crate::child::start`] rather than spawning,
+/// because on Windows a child inherits tracewing's elevation and the two
+/// things this module starts -- a browser and a terminal -- are the two it
+/// must not hand it to without being asked. See [`crate::child`].
+pub(crate) fn spawn(command: Command, level: Level) -> Result<()> {
+    crate::child::start(command, level)
 }
 
 /// A program on the `PATH`, as a full path.
@@ -501,6 +621,60 @@ mod tests {
         ]
     }
 
+    /// The script a Windows terminal comes up with, and the two ways it
+    /// differs from the same lines typed at a prompt.
+    #[test]
+    fn the_windows_terminal_script() {
+        let vars = vec![
+            ("HTTPS_PROXY", "http://127.0.0.1:8080".to_owned()),
+            (
+                "SSL_CERT_FILE",
+                r"C:\Users\me\AppData\Local\tracewing\roots.pem".to_owned(),
+            ),
+        ];
+        let script = cmd_script(
+            &vars,
+            "This terminal goes through tracewing at 127.0.0.1:8080.",
+        );
+
+        assert!(script.starts_with("@echo off\r\n"), "{script}");
+        assert!(
+            script.contains("set \"HTTPS_PROXY=http://127.0.0.1:8080\"\r\n"),
+            "the lines are `Shell::Cmd`'s, not a second spelling of them: {script}"
+        );
+        assert!(
+            script.contains("echo This terminal goes through tracewing at 127.0.0.1:8080.\r\n"),
+            "{script}"
+        );
+        assert!(
+            !script.contains('\n')
+                || script.matches('\n').count() == script.matches("\r\n").count(),
+            "every line ends CRLF, because `cmd` is odd about LF-only scripts: {script:?}"
+        );
+    }
+
+    /// A `%` in a value is doubled, because in a script it would otherwise
+    /// expand -- and a path under the data directory carries whatever is in
+    /// the account name.
+    #[test]
+    fn a_percent_in_a_value_is_doubled_for_a_script() {
+        let vars = vec![("SSL_CERT_FILE", r"C:\Users\od%d\roots.pem".to_owned())];
+        let script = cmd_script(&vars, "x");
+        assert!(
+            script.contains(r"C:\Users\od%%d\roots.pem"),
+            "doubled in the script: {script}"
+        );
+        // And the prompt form, which `tracewing env` prints, must **not** be
+        // doubled: there `%%` means a literal `%`. The two are different
+        // answers to the same question, which is why the script has its own
+        // function.
+        let typed = Shell::Cmd.set(&vars);
+        assert!(
+            typed.contains(r"C:\Users\od%d\roots.pem"),
+            "left alone for a prompt: {typed}"
+        );
+    }
+
     #[test]
     fn each_shell_gets_lines_of_its_own() {
         assert_eq!(
@@ -557,17 +731,57 @@ echo 'Welcome back!'
 echo v22.17.1
 echo"#,
         );
-        assert_eq!(node_version_in(&chatty, wait).as_deref(), Some("22.17.1"));
+        assert!(
+            matches!(node_version_in(&chatty, wait), Asked::Version(v) if v == "22.17.1"),
+            "the version, after whatever the start-up files printed"
+        );
+
+        // **The two that used to be one `None`.** A shell with no Node is the
+        // common answer and must not be asked twice; a shell that could not be
+        // asked is the one that must. Asserted apart, because telling them
+        // apart is the whole of this.
         let none = shell("none", "echo 'zsh: command not found: node'; exit 127");
-        assert_eq!(node_version_in(&none, wait), None);
+        assert!(
+            matches!(node_version_in(&none, wait), Asked::NoNode),
+            "a shell that answered and has no Node"
+        );
+
         let stuck = shell("stuck", "sleep 60 & sleep 60; echo v22.17.1");
         let started = std::time::Instant::now();
-        assert_eq!(
-            node_version_in(&stuck, std::time::Duration::from_millis(300)),
-            None
+        assert!(
+            matches!(
+                node_version_in(&stuck, std::time::Duration::from_millis(300)),
+                Asked::CouldNotAsk(why) if why.contains("in time")
+            ),
+            "a shell that did not answer, and which way it failed"
         );
         assert!(started.elapsed() < std::time::Duration::from_secs(5));
+
+        // And one that cannot start at all, which is the third way.
+        let gone = dir.join("not-a-shell");
+        assert!(
+            matches!(node_version_in(&gone, wait), Asked::CouldNotAsk(why) if why.contains("start")),
+            "a shell that is not there"
+        );
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// Which answers are asked for a second time, and which are not. Asking
+    /// again on `NoNode` is the mistake this pins: that is the common answer
+    /// on a machine without Node, the shell did answer, and a second ask buys
+    /// a second start-up for a result that cannot have changed.
+    #[cfg(unix)]
+    #[test]
+    fn only_an_answer_that_could_not_be_asked_is_asked_again() {
+        assert!(worth_asking_again(&Asked::CouldNotAsk("whatever")));
+        assert!(
+            !worth_asking_again(&Asked::NoNode),
+            "a shell with no Node is not asked twice"
+        );
+        assert!(
+            !worth_asking_again(&Asked::Version("22.17.1".to_owned())),
+            "and neither is one that answered"
+        );
     }
 
     #[test]
