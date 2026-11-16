@@ -258,13 +258,17 @@ mod tests {
         std::fs::create_dir_all(dir.join("bin")).unwrap();
         std::fs::write(dir.join("bin/server"), b"").unwrap();
         let real = std::fs::canonicalize(&dir).unwrap();
+        // Joined with `Path`, and only the trailing slash the rule itself
+        // adds written by hand. `format!("{real}/bin/")` is the same string
+        // as this on Linux and a different one on Windows, where the rule
+        // says `…\bin/` while a hand-joined expectation says `…/bin/`.
         assert_eq!(
             program_rule(&dir.join("bin")).unwrap(),
-            format!("{}/bin/", real.display())
+            format!("{}/", real.join("bin").display())
         );
         assert_eq!(
             program_rule(&dir.join("bin/../bin/server")).unwrap(),
-            format!("{}/bin/server", real.display())
+            real.join("bin").join("server").display().to_string()
         );
         assert!(program_rule(&dir.join("gone")).is_err());
         let _ = std::fs::remove_dir_all(&dir);
