@@ -131,6 +131,127 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
     Ok(roads)
 }
 
+/// One address an interface holds, as the table has it.
+///
+/// Only the parts that decide whether it may be a **source**: which
+/// interface, which family, and the three things that disqualify one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Mine {
+    /// The interface it belongs to, identified rather than numbered, as
+    /// [`Road::luid`] is and for the same reason.
+    pub luid: u64,
+    pub addr: std::net::IpAddr,
+    /// Whether duplicate address detection has settled on it. An address
+    /// that is still tentative, or found to be a duplicate, is one the
+    /// machine must not send from -- Windows would refuse it, and the echo
+    /// would come back as an error that looks like the network.
+    pub settled: bool,
+    /// Windows' own "do not choose this as a source". It marks addresses
+    /// that exist to be reached rather than to send from -- a cluster
+    /// address, some tunnel endpoints -- so honouring it is not politeness,
+    /// it is the difference between an echo that leaves and one that does
+    /// not.
+    pub skip_as_source: bool,
+}
+
+/// The address to send an echo from, out of what the machine holds.
+///
+/// `luid` is the interface the machine's own traffic leaves by, which the
+/// watcher already knows; `v6` picks the family, because an echo to an IPv6
+/// address has to leave from an IPv6 address.
+///
+/// Why this is not simply "the first one": an interface commonly holds
+/// several, and most of them cannot carry an echo to the internet. A
+/// **link-local** address (`169.254.0.0/16`, `fe80::/10`) is reachable only
+/// on the wire it is on, so an echo sent from one goes nowhere; an address
+/// still in duplicate address detection is one Windows will not send from;
+/// and one marked `SkipAsSource` is one it is told not to choose.
+///
+/// Among what is left the lowest is taken, and **deterministically** on
+/// purpose: a choice that moved between one echo and the next would change
+/// the source address mid-`tracert`, and a trace whose probes come from
+/// different addresses is a trace nobody can read.
+pub fn source_on(mine: &[Mine], luid: u64, v6: bool) -> Option<std::net::IpAddr> {
+    mine.iter()
+        .filter(|one| {
+            one.luid == luid
+                && one.addr.is_ipv6() == v6
+                && one.settled
+                && !one.skip_as_source
+                && !is_link_local(one.addr)
+        })
+        .map(|one| one.addr)
+        .min()
+}
+
+/// Reachable only on the wire it is on, so no use as a source for anything
+/// further away. `Ipv4Addr::is_link_local` exists; IPv6's is unstable, so
+/// `fe80::/10` is written out.
+fn is_link_local(addr: std::net::IpAddr) -> bool {
+    match addr {
+        std::net::IpAddr::V4(addr) => addr.is_link_local(),
+        std::net::IpAddr::V6(addr) => (addr.segments()[0] & 0xffc0) == 0xfe80,
+    }
+}
+
+/// Every unicast address this machine holds, in both families.
+#[cfg(windows)]
+pub fn addresses_now() -> anyhow::Result<Vec<Mine>> {
+    use windows_sys::Win32::{
+        Foundation::NO_ERROR,
+        NetworkManagement::IpHelper::{
+            FreeMibTable, GetUnicastIpAddressTable, MIB_UNICASTIPADDRESS_TABLE,
+        },
+        Networking::WinSock::{AF_UNSPEC, IpDadStatePreferred},
+    };
+    let mut table: *mut MIB_UNICASTIPADDRESS_TABLE = std::ptr::null_mut();
+    // SAFETY: a pointer the call fills in, read only if it says it worked.
+    let got = unsafe { GetUnicastIpAddressTable(AF_UNSPEC, &mut table) };
+    if got != NO_ERROR {
+        anyhow::bail!("read this machine's addresses: error {got}");
+    }
+    // SAFETY: the first row is followed by `NumEntries` of them, which is how
+    // this structure is always read, and nothing taken here borrows from it
+    // past the free below.
+    let mine: Vec<Mine> = unsafe {
+        std::slice::from_raw_parts((*table).Table.as_ptr(), (*table).NumEntries as usize)
+            .iter()
+            .filter_map(|row| {
+                Some(Mine {
+                    // SAFETY: a union over a `u64` and a bitfield of the same
+                    // eight bytes; the whole value identifies the interface.
+                    luid: row.InterfaceLuid.Value,
+                    addr: from_sockaddr(&row.Address)?,
+                    settled: row.DadState == IpDadStatePreferred,
+                    skip_as_source: row.SkipAsSource,
+                })
+            })
+            .collect()
+    };
+    // SAFETY: the pointer that call gave us, given back exactly once.
+    unsafe { FreeMibTable(table as *const core::ffi::c_void) };
+    Ok(mine)
+}
+
+/// The address in a `SOCKADDR_INET`, whichever arm is live.
+#[cfg(windows)]
+fn from_sockaddr(
+    addr: &windows_sys::Win32::Networking::WinSock::SOCKADDR_INET,
+) -> Option<std::net::IpAddr> {
+    use windows_sys::Win32::Networking::WinSock::{AF_INET, AF_INET6};
+    // SAFETY: `si_family` is what says which arm of the union is the live
+    // one, and each arm is read only under its own family.
+    unsafe {
+        match addr.si_family {
+            AF_INET => {
+                Some(std::net::Ipv4Addr::from(addr.Ipv4.sin_addr.S_un.S_addr.to_ne_bytes()).into())
+            }
+            AF_INET6 => Some(std::net::Ipv6Addr::from(addr.Ipv6.sin6_addr.u.Byte).into()),
+            _ => None,
+        }
+    }
+}
+
 /// Pins the way out now, and keeps it pinned, until `stop`.
 ///
 /// **The first look happens before this returns, and that is the point of
@@ -414,6 +535,92 @@ mod reading {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn mine(luid: u64, addr: &str) -> Mine {
+        Mine {
+            luid,
+            addr: addr.parse().unwrap(),
+            settled: true,
+            skip_as_source: false,
+        }
+    }
+
+    /// The address an echo leaves from: this interface, this family, and
+    /// none of the three kinds that cannot carry one.
+    #[test]
+    fn the_address_to_echo_from() {
+        let ours = 0x0035_0080_0000_0000;
+        let other = 0x0099_0080_0000_0000;
+        let held = vec![
+            // Another interface's, which is not ours to send from.
+            mine(other, "192.0.2.9"),
+            // Link-local: reachable only on the wire it is on, so an echo
+            // sent from it goes nowhere.
+            mine(ours, "169.254.1.1"),
+            // Two of ours, and the lower is taken so the choice cannot move
+            // between one probe of a trace and the next.
+            mine(ours, "198.51.100.20"),
+            mine(ours, "198.51.100.7"),
+            // The other family's.
+            mine(ours, "2001:db8::7"),
+        ];
+        assert_eq!(
+            source_on(&held, ours, false),
+            Some("198.51.100.7".parse().unwrap())
+        );
+        assert_eq!(
+            source_on(&held, ours, true),
+            Some("2001:db8::7".parse().unwrap()),
+            "an echo to an IPv6 address has to leave from one"
+        );
+        assert_eq!(
+            source_on(&held, other, true),
+            None,
+            "that interface holds no IPv6 address"
+        );
+    }
+
+    /// The three disqualifications, each on its own, so that none of them is
+    /// passing because another happened to apply.
+    #[test]
+    fn what_cannot_be_a_source() {
+        let ours = 0x0035_0080_0000_0000;
+        for (what, one) in [
+            (
+                "still in duplicate address detection",
+                Mine {
+                    settled: false,
+                    ..mine(ours, "198.51.100.7")
+                },
+            ),
+            (
+                "marked by Windows as not to be chosen",
+                Mine {
+                    skip_as_source: true,
+                    ..mine(ours, "198.51.100.7")
+                },
+            ),
+            ("link-local in IPv4", mine(ours, "169.254.1.1")),
+            ("link-local in IPv6", mine(ours, "fe80::1")),
+            // And the edge of `fe80::/10`, which is a ten-bit prefix and not
+            // the sixteen a reader assumes: `febf::` is inside it.
+            ("the far edge of fe80::/10", mine(ours, "febf::1")),
+        ] {
+            let v6 = one.addr.is_ipv6();
+            assert_eq!(source_on(&[one], ours, v6), None, "{what}");
+        }
+        // And just outside that prefix, which must *not* be excluded.
+        assert_eq!(
+            source_on(&[mine(ours, "fec0::1")], ours, true),
+            Some("fec0::1".parse().unwrap()),
+            "fec0:: is outside fe80::/10 and is a usable source"
+        );
+    }
+
+    #[test]
+    fn nothing_held_is_no_source() {
+        assert_eq!(source_on(&[], 0x0035_0080_0000_0000, false), None);
+    }
 
     /// A road whose interface and LUID are the same number, which is only a
     /// convenience: nothing but `the_same_adapter_numbered_differently…`
