@@ -434,7 +434,14 @@ fn echo_now(source: IpAddr, ping: &Ping, within: u32) -> Answer {
                 };
                 answered(
                     reply.Status,
-                    Ipv6Addr::from(reply.Address.sin6_addr).into(),
+                    // `sin6_addr` is eight `u16`s holding the address in
+                    // **network** order, while `Ipv6Addr::from([u16; 8])`
+                    // takes segments in host order -- so each one is
+                    // swapped. The same trap as `IP_UNICAST_IF`'s, and this
+                    // one was caught by the loopback test rather than by
+                    // reading: without the swap, `::1` came back as
+                    // something else entirely.
+                    Ipv6Addr::from(reply.Address.sin6_addr.map(u16::from_be)).into(),
                     // **The IPv6 reply has no data of its own.** The
                     // structure carries an address, a status and a round
                     // trip, and nothing else -- so the payload cannot be
