@@ -354,6 +354,19 @@ and it works the same on all three operating systems.
    exclusion, there is nothing for a switch to switch. The tab strip has a
    place for it; its middle gets designed where the capture is.
 
+   **And what it follows is now itself open.** Opening an existing Wintun
+   adapter needs an administrator, not only creating one — measured, with
+   an unelevated process of an administrator getting `ERROR_ACCESS_DENIED`
+   because such a process holds Administrators *deny-only*. A Wintun
+   session's rings live in the address space of whoever started it, so the
+   pump has to be elevated, and that is a question about where this
+   program's stack lives rather than about wiring a switch. Until it is
+   answered there is no honest sentence to write for this tab: whether it
+   says "Windows will ask when you switch this on", as blocking HTTP/3 does,
+   or something about a helper that holds the capture, is decided by that
+   answer and not by this document. [capture-modes.md](capture-modes.md) has
+   the measurements.
+
    The macOS tab is no longer in this list: it has its apps and its switch,
    in the shape `tracewing capture --app` settled — a list of signing ids,
    the install and the allow, and a status.
