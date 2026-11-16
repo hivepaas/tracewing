@@ -476,7 +476,23 @@ fn ai_tools_add_rules_and_send_requests_when_allowed() {
             .as_array()
             .is_some_and(|f| f.len() == 2)
     });
+    // `first` is a word, so this asks the **search index**, and a thread of
+    // its own writes that after the row: `IDLE` in `search.rs` is 50ms
+    // between passes, and the same file says the index can be minutes behind
+    // on a slow disk. So two rows in `flows` is not two rows in the index,
+    // and the wait that matters is this one -- as it already is for the
+    // body's words further up. Without it the id below is `null`, and what
+    // fails is `send_request` asking for an id, three lines from the cause.
+    until("the url in the index", || {
+        call(&server, "list_flows", json!({ "filter": "first" }))["flows"]
+            .as_array()
+            .is_some_and(|f| f.len() == 1)
+    });
     let first = call(&server, "list_flows", json!({ "filter": "first" }))["flows"][0]["id"].clone();
+    assert!(
+        first.is_i64(),
+        "the filter found a flow with no id: {first}"
+    );
     let sent = call(
         &server,
         "send_request",
