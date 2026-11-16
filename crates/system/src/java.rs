@@ -388,6 +388,59 @@ ZIltBuTHIZK52FMrC7EvLjvwCR7e8872ilECEV6p5g==
         let _ = fs::remove_dir_all(&dir);
     }
 
+    /// A store that is there but cannot be read is replaced, not reported.
+    ///
+    /// This branch only runs where something else has already gone wrong — a
+    /// half-written file, a disk that lied, a store from a tracewing that
+    /// used another password — so nothing exercises it in the ordinary
+    /// course, and an ablation confirmed that: making an unreadable store
+    /// panic left all the other tests passing. A path that only runs when
+    /// something else is broken is exactly the one to test on purpose.
+    #[test]
+    fn a_store_that_cannot_be_read_is_written_again() {
+        let dir = dir("unreadable");
+        let ca = authority(&dir, "first");
+        let path = dir.join(TRUSTSTORE);
+
+        // Not a PKCS#12 at all.
+        fs::write(&path, b"this is not a keystore").unwrap();
+        let written = truststore(&ca, &dir).unwrap();
+        assert_eq!(written, path);
+        let store = KeyStore::from_pkcs12(
+            &fs::read(&path).unwrap(),
+            PASSWORD,
+            Pkcs12ImportPolicy::Strict,
+        )
+        .expect("the rubbish was replaced by a store that reads");
+        assert!(
+            store.entries().any(|(alias, _)| alias == "tracewing"),
+            "and holds the authority"
+        );
+
+        // A real store, under a password this does not use: the same branch,
+        // and the one somebody would actually meet if the password here ever
+        // changed.
+        let mut other = KeyStore::new();
+        let der = CertificateDer::pem_slice_iter(&fs::read(&ca).unwrap())
+            .next()
+            .unwrap()
+            .unwrap()
+            .to_vec();
+        other.add_entry(
+            "tracewing",
+            KeyStoreEntry::Certificate(Certificate::from_der(&der).unwrap()),
+        );
+        fs::write(&path, other.writer("not-the-password").write().unwrap()).unwrap();
+        truststore(&ca, &dir).unwrap();
+        KeyStore::from_pkcs12(
+            &fs::read(&path).unwrap(),
+            PASSWORD,
+            Pkcs12ImportPolicy::Strict,
+        )
+        .expect("written again, under the password the flags give");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     /// The flags name both schemes and carry the password: a line missing any
     /// of the three leaves somebody with a JVM that cannot connect and
     /// nothing saying why.
