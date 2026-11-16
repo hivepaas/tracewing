@@ -603,6 +603,12 @@ t8090a1ba = Nicht entschlüsselt
 # open
 td35ec4c9 = offen
 
+# Certificate not trusted
+t766a9726 = Zertifikat nicht vertraut
+
+# Hung up before a request
+t546190df = Vor einer Anfrage aufgelegt
+
 # Reading the request…
 t51c96267 = Anfrage wird gelesen…
 
@@ -678,6 +684,12 @@ tc7be91e8 = Wählen Sie einen Flow, um ihn hier zu sehen
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = Nicht entschlüsselt. Neue Verbindungen zu diesem Host werden ungelesen durchgeleitet.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = Die App hat das Zertifikat von tracewing abgelehnt. Vertraue der CA von tracewing dort, wo diese App nach Zertifizierungsstellen sucht, oder entschlüssele diesen Host nicht, wenn die App Certificate Pinning nutzt.
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = Die App hat direkt nach dem Zertifikat von tracewing aufgelegt, ohne etwas anzufragen. So lehnen Apps oft ein Zertifikat ab oder halten sich an ein gepinntes. Vertraue der CA von tracewing dort, wo diese App nach Zertifizierungsstellen sucht, oder entschlüssele diesen Host nicht.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Wenn eine App mit diesem Host fehlschlägt, nutzt sie möglicherweise Certificate Pinning.
 
@@ -689,6 +701,9 @@ tb7367e2c = Diesen Host entschlüsseln
 
 # Do not decrypt this host
 t5fa113f6 = Diesen Host nicht entschlüsseln
+
+# Set up
+t43c06abc = Einrichten
 
 # Request and response
 t04e060e6 = Anfrage und Antwort
@@ -2323,9 +2338,6 @@ t4b629c72 = Terminal öffnen
 
 # What the device does
 t8f16360f = Was das Gerät selbst tut
-
-# Set up
-t43c06abc = Einrichten
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = Sagen Sie, was Sie erfassen wollen, und dies richtet den einen Weg hinein ein, der dorthin reicht.

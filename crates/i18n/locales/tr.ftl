@@ -603,6 +603,12 @@ t8090a1ba = Şifresi çözülmedi
 # open
 td35ec4c9 = açık
 
+# Certificate not trusted
+t766a9726 = Sertifikaya güvenilmiyor
+
+# Hung up before a request
+t546190df = İstekten önce kapattı
+
 # Reading the request…
 t51c96267 = İstek okunuyor…
 
@@ -678,6 +684,12 @@ tc7be91e8 = Burada görmek için bir akış seçin
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = Şifresi çözülmedi. Bu host'a yeni bağlantılar okunmadan geçer.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = Uygulama tracewing'in sertifikasını reddetti. Bu uygulamanın sertifika yetkililerini aradığı yerde tracewing'in CA'sına güvenin veya uygulama sertifika sabitleme (pinning) yapıyorsa bu host'un şifresini çözmeyin.
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = Uygulama, tracewing'in sertifikasından hemen sonra hiçbir şey istemeden bağlantıyı kapattı; bu çoğu zaman bir uygulamanın sertifikayı reddetme veya sabitlenmiş (pinning) bir sertifikaya bağlı kalma şeklidir. Bu uygulamanın sertifika yetkililerini aradığı yerde tracewing'in CA'sına güvenin veya bu host'un şifresini çözmeyin.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Bir uygulama bu host'la başarısız oluyorsa, sertifika sabitleme (pinning) yapıyor olabilir.
 
@@ -689,6 +701,9 @@ tb7367e2c = Bu host'un şifresini çöz
 
 # Do not decrypt this host
 t5fa113f6 = Bu host'un şifresini çözme
+
+# Set up
+t43c06abc = Kurulum
 
 # Request and response
 t04e060e6 = İstek ve yanıt
@@ -2287,9 +2302,6 @@ t4b629c72 = Terminal aç
 
 # What the device does
 t8f16360f = Cihazın kendi yaptığı
-
-# Set up
-t43c06abc = Kurulum
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = Neyi yakalamak istediğinizi söyleyin; burası ona ulaşan tek yolu kurar.

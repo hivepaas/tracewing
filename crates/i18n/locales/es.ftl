@@ -609,6 +609,12 @@ t8090a1ba = No descifrado
 # open
 td35ec4c9 = abierto
 
+# Certificate not trusted
+t766a9726 = Certificado no confiable
+
+# Hung up before a request
+t546190df = Colgó antes de una petición
+
 # Reading the request…
 t51c96267 = Leyendo la solicitud…
 
@@ -684,6 +690,12 @@ tc7be91e8 = Elige un flow para verlo aquí
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = No descifrado. Las conexiones nuevas a este host pasan sin leerse.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = La app rechazó el certificado de tracewing. Confía en la CA de tracewing donde esta app busca autoridades, o no descifres este host si la app usa pinning de certificados.
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = La app colgó justo después del certificado de tracewing, sin pedir nada, que suele ser la forma en que una app rechaza un certificado o se atiene a uno fijado (pinning). Confía en la CA de tracewing donde esta app busca autoridades, o no descifres este host.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Si una app falla con este host, puede que use pinning de certificados.
 
@@ -695,6 +707,9 @@ tb7367e2c = Descifrar este host
 
 # Do not decrypt this host
 t5fa113f6 = No descifrar este host
+
+# Set up
+t43c06abc = Configurar
 
 # Request and response
 t04e060e6 = Solicitud y respuesta
@@ -2338,9 +2353,6 @@ t4b629c72 = Abrir un terminal
 
 # What the device does
 t8f16360f = Lo que hace el dispositivo
-
-# Set up
-t43c06abc = Configurar
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = Di qué quieres capturar y esto configura la única vía de entrada que lo alcanza.

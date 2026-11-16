@@ -15,6 +15,7 @@ pub mod lan;
 pub mod name;
 pub mod ntlm;
 pub mod pause;
+pub mod refused;
 pub mod relay;
 pub mod roads;
 pub mod rules;
@@ -199,6 +200,8 @@ pub async fn run_proxy(
     };
     opts.settings.check()?;
     opts.live.apply(&opts.settings);
+    // A client that turns the certificate down is seen through `tracing`.
+    refused::watch();
     session::create(&opts.session)?;
     let shared = opts.shared;
     let (spool, spool_thread) = Spool::spawn(

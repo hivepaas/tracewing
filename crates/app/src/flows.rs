@@ -152,7 +152,7 @@ impl Flows {
                         .map(|operation| short_operation(&operation).into()),
                     rpc_failed,
                     note: error
-                        .map(SharedString::from)
+                        .map(|error| handshake_note(&error).unwrap_or(error).into())
                         .or_else(|| {
                             grpc_failed.map(|code| {
                                 format!("gRPC {}", crate::grpc::code_name(code).unwrap_or("error"))
@@ -242,6 +242,18 @@ pub fn time_text(micros: i64) -> String {
         format!("{} ms", micros / 1_000)
     } else {
         format!("{micros} µs")
+    }
+}
+
+/// What the list says of a flow whose client would not take tracewing's
+/// certificate, in place of the error it was kept with: the error is
+/// tracewing's own, in English, and the inspector shows it whole.
+pub fn handshake_note(error: &str) -> Option<String> {
+    use tracewing_proxy::refused::{Said, said};
+    match said(error)? {
+        Said::TurnedDown => Some(tr!("Certificate not trusted")),
+        Said::HungUp => Some(tr!("Hung up before a request")),
+        Said::Failed => None,
     }
 }
 

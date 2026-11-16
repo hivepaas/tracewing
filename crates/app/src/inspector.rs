@@ -21,7 +21,7 @@ use crate::{
     scrollbar::{self, Scrolled},
     select::{self, Copied, Selection},
     snippets::{self, Language},
-    traffic::Traffic,
+    traffic::{Screen, Traffic},
     widgets::{Reachable, chip, eyebrow, icon, status_colors, tip},
 };
 use gpui::{
@@ -38,6 +38,7 @@ use std::{
 };
 use tracewing_convert::{Kind, Reading, Shown};
 use tracewing_i18n::{tr, tr_n};
+use tracewing_proxy::refused::Said;
 use tracewing_store::session::BodyReader;
 
 /// As much of a request's body as can go on a command line, and one byte more to
@@ -997,10 +998,30 @@ impl Traffic {
             .leaves_alone(&detail.host);
         let host = detail.host.clone();
         let url = detail.url.clone();
-        let text = if left_alone {
-            tr!("Not decrypted. New connections to this host go through unread.")
+        // A client that would not take the certificate: what to do about it
+        // is the point of the row, so it says so, and the way out stands out.
+        let turned_down = detail
+            .error
+            .as_deref()
+            .and_then(tracewing_proxy::refused::said)
+            .filter(|said| *said != Said::Failed)
+            .filter(|_| !left_alone);
+        let text = match turned_down {
+            _ if left_alone => {
+                tr!("Not decrypted. New connections to this host go through unread.")
+            }
+            Some(Said::TurnedDown) => tr!(
+                "The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own."
+            ),
+            Some(_) => tr!(
+                "The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host."
+            ),
+            None => tr!("If an app fails with this host, it may pin its certificates."),
+        };
+        let (ground, ink) = if turned_down.is_some() {
+            (c.accent, c.on_accent)
         } else {
-            tr!("If an app fails with this host, it may pin its certificates.")
+            (c.chip, c.on_chip)
         };
         let narrow = self.inspector_narrower(NARROW_DECRYPT);
         div()
@@ -1019,8 +1040,15 @@ impl Traffic {
                     div()
                         .flex_1()
                         .min_w(ui(180.))
+                        // Long, and the point of the row: a line of its
+                        // own, with the buttons under it.
+                        .when(turned_down.is_some(), |d| d.flex_basis(relative(1.)))
                         .text_size(ui(12.))
-                        .text_color(rgb(c.muted))
+                        .text_color(rgb(if turned_down.is_some() {
+                            c.error
+                        } else {
+                            c.muted
+                        }))
                         .child(text.clone()),
                 )
             })
@@ -1056,8 +1084,8 @@ impl Traffic {
                     .items_center()
                     .cursor_pointer()
                     .reachable()
-                    .bg(rgb(c.chip))
-                    .text_color(rgb(c.on_chip))
+                    .bg(rgb(ground))
+                    .text_color(rgb(ink))
                     .text_size(ui(12.))
                     .font_weight(FontWeight::BOLD)
                     .child(if left_alone {
@@ -1079,6 +1107,29 @@ impl Traffic {
                         );
                     })),
             )
+            // Where trusting the CA is set up, for each kind of program.
+            .when(turned_down.is_some(), |d| {
+                d.child(
+                    div()
+                        .id("trust-setup")
+                        .flex_shrink_0()
+                        .h(ui(28.))
+                        .px(ui(10.))
+                        .rounded(ui(14.))
+                        .flex()
+                        .items_center()
+                        .cursor_pointer()
+                        .reachable()
+                        .bg(rgb(c.chip))
+                        .text_color(rgb(c.on_chip))
+                        .text_size(ui(12.))
+                        .font_weight(FontWeight::BOLD)
+                        .child(tr!("Set up"))
+                        .on_click(cx.listener(|view, _, _, cx| {
+                            view.set_screen(Screen::Setup, cx);
+                        })),
+                )
+            })
     }
 
     fn render_sides(&self, cx: &mut Context<Self>) -> impl IntoElement {

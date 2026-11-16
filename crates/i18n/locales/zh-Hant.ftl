@@ -574,6 +574,12 @@ t8090a1ba = 未解密
 # open
 td35ec4c9 = 進行中
 
+# Certificate not trusted
+t766a9726 = 憑證未被信任
+
+# Hung up before a request
+t546190df = 請求前斷線
+
 # Reading the request…
 t51c96267 = 正在讀取請求…
 
@@ -649,6 +655,12 @@ tc7be91e8 = 選取一筆流量紀錄即可在此檢視
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = 未解密。連往此主機的新連線將直接通過，不會被讀取。
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = App 拒絕了 tracewing 的憑證。請在此 App 尋找憑證授權單位的地方信任 tracewing 的 CA；如果 App 使用了憑證綁定，請不要解密此主機。
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = App 在收到 tracewing 的憑證後立刻中斷連線，沒有發出任何請求，這通常是 App 拒絕憑證或堅持使用綁定憑證的方式。請在此 App 尋找憑證授權單位的地方信任 tracewing 的 CA，或不要解密此主機。
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = 如果某個 App 連線此主機失敗，它可能使用了憑證綁定。
 
@@ -660,6 +672,9 @@ tb7367e2c = 解密此主機
 
 # Do not decrypt this host
 t5fa113f6 = 不要解密此主機
+
+# Set up
+t43c06abc = 初始設定
 
 # Request and response
 t04e060e6 = 請求和回應
@@ -2208,9 +2223,6 @@ t4b629c72 = 開啟終端機
 
 # What the device does
 t8f16360f = 裝置那邊要做的事
-
-# Set up
-t43c06abc = 初始設定
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = 說出你想擷取什麼，這裡就只設定能擷取到它的那一條路。

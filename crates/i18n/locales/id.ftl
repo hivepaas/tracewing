@@ -574,6 +574,12 @@ t8090a1ba = Tidak didekripsi
 # open
 td35ec4c9 = terbuka
 
+# Certificate not trusted
+t766a9726 = Sertifikat tidak dipercaya
+
+# Hung up before a request
+t546190df = Terputus sebelum ada permintaan
+
 # Reading the request…
 t51c96267 = Membaca permintaan…
 
@@ -649,6 +655,12 @@ tc7be91e8 = Pilih flow untuk melihatnya di sini
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = Tidak didekripsi. Koneksi baru ke host ini lewat tanpa dibaca.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = Aplikasi menolak sertifikat tracewing. Percayai CA tracewing di tempat aplikasi ini mencari otoritas, atau jangan dekripsi host ini jika aplikasi melakukan pinning sertifikat.
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = Aplikasi memutus koneksi tepat setelah sertifikat tracewing, tanpa meminta apa pun, yang sering kali cara aplikasi menolak sertifikat atau berpegang pada sertifikat yang di-pinning. Percayai CA tracewing di tempat aplikasi ini mencari otoritas, atau jangan dekripsi host ini.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Jika aplikasi gagal dengan host ini, mungkin aplikasi itu melakukan pinning sertifikat.
 
@@ -660,6 +672,9 @@ tb7367e2c = Dekripsi host ini
 
 # Do not decrypt this host
 t5fa113f6 = Jangan dekripsi host ini
+
+# Set up
+t43c06abc = Siapkan
 
 # Request and response
 t04e060e6 = Permintaan dan respons
@@ -2208,9 +2223,6 @@ t4b629c72 = Buka terminal
 
 # What the device does
 t8f16360f = Yang dilakukan perangkat
-
-# Set up
-t43c06abc = Siapkan
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = Sebutkan apa yang mau kamu tangkap, dan ini menyiapkan satu jalan masuk yang menjangkaunya.

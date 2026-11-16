@@ -1471,7 +1471,25 @@ async fn a_host_left_alone_is_not_decrypted() {
         .unwrap();
     assert_eq!(body.len(), 20);
 
-    let (_, conn, dir) = h.finish(2).await;
+    // The refusal, the tunnel and the last request.
+    let (_, conn, dir) = h.finish(3).await;
+    let turned_down: Vec<(String, String, Option<i64>, String)> = conn
+        .prepare("SELECT method, host, status, error FROM flows WHERE error IS NOT NULL")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(turned_down.len(), 1, "{turned_down:?}");
+    let (method, host, status, error) = &turned_down[0];
+    assert_eq!(method, "CONNECT");
+    assert!(host.starts_with("localhost"), "{host}");
+    assert_eq!(*status, None);
+    assert_eq!(
+        tracewing_proxy::refused::said(error),
+        Some(tracewing_proxy::refused::Said::TurnedDown),
+        "{error}"
+    );
     let tunnels: Vec<(String, String, String)> = conn
         .prepare("SELECT method, host, path FROM flows WHERE kind = 'tunnel'")
         .unwrap()
@@ -1484,11 +1502,63 @@ async fn a_host_left_alone_is_not_decrypted() {
     assert!(tunnels[0].1.starts_with("localhost"), "{tunnels:?}");
     assert_eq!(tunnels[0].2, "", "where it went is all that is known");
     let decrypted: i64 = conn
-        .query_row("SELECT count(*) FROM flows WHERE kind = 'http'", [], |r| {
-            r.get(0)
-        })
+        .query_row(
+            "SELECT count(*) FROM flows WHERE kind = 'http' AND error IS NULL",
+            [],
+            |r| r.get(0),
+        )
         .unwrap();
     assert_eq!(decrypted, 1, "only the last request was read");
+    clean_up(conn, dir);
+}
+
+/// A client that says hello and goes, as some do with a certificate they do
+/// not like, leaves a row that says so rather than nothing.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_client_that_hangs_up_in_the_handshake_is_kept() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio_rustls::rustls;
+    let h = Harness::start("hung-up").await;
+    let proxy = h.proxy_url.trim_start_matches("http://");
+    let mut tcp = tokio::net::TcpStream::connect(proxy).await.unwrap();
+    tcp.write_all(b"CONNECT gone.test:443 HTTP/1.1\r\nHost: gone.test:443\r\n\r\n")
+        .await
+        .unwrap();
+    let mut answer = [0; 512];
+    let n = tcp.read(&mut answer).await.unwrap();
+    assert!(
+        answer[..n].starts_with(b"HTTP/1.1 200"),
+        "{:?}",
+        &answer[..n]
+    );
+    // The hello, and then nothing.
+    let config =
+        rustls::ClientConfig::builder_with_provider(Arc::new(tracewing_proxy::crypto_provider()))
+            .with_safe_default_protocol_versions()
+            .unwrap()
+            .with_root_certificates(rustls::RootCertStore::empty())
+            .with_no_client_auth();
+    let mut client =
+        rustls::ClientConnection::new(Arc::new(config), "gone.test".try_into().unwrap()).unwrap();
+    let mut hello = Vec::new();
+    client.write_tls(&mut hello).unwrap();
+    tcp.write_all(&hello).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    drop(tcp);
+
+    let (_, conn, dir) = h.finish(1).await;
+    let (method, host, error): (String, String, String) = conn
+        .query_row("SELECT method, host, error FROM flows", [], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        })
+        .unwrap();
+    assert_eq!(method, "CONNECT");
+    assert_eq!(host, "gone.test");
+    assert_eq!(
+        tracewing_proxy::refused::said(&error),
+        Some(tracewing_proxy::refused::Said::HungUp),
+        "{error}"
+    );
     clean_up(conn, dir);
 }
 

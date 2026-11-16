@@ -574,6 +574,12 @@ t8090a1ba = 복호화 안 됨
 # open
 td35ec4c9 = 열림
 
+# Certificate not trusted
+t766a9726 = 인증서를 신뢰하지 않음
+
+# Hung up before a request
+t546190df = 요청 전에 연결 끊김
+
 # Reading the request…
 t51c96267 = 요청을 읽는 중…
 
@@ -649,6 +655,12 @@ tc7be91e8 = 플로우를 선택하면 여기에 표시됩니다
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = 복호화 안 됨. 이 호스트로의 새 연결은 내용을 읽지 않고 통과합니다.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = 앱이 tracewing의 인증서를 거부했습니다. 이 앱이 인증 기관을 찾는 곳에서 tracewing의 CA를 신뢰하게 하거나, 앱이 인증서를 고정(피닝)한다면 이 호스트를 복호화하지 마세요.
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = 앱이 tracewing의 인증서를 받은 직후 아무것도 요청하지 않고 연결을 끊었습니다. 앱이 인증서를 거부하거나 고정(피닝)된 인증서를 고수할 때 흔히 이렇게 합니다. 이 앱이 인증 기관을 찾는 곳에서 tracewing의 CA를 신뢰하게 하거나, 이 호스트를 복호화하지 마세요.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = 이 호스트에서 앱이 실패한다면 앱이 인증서를 고정(피닝)하고 있을 수 있습니다.
 
@@ -660,6 +672,9 @@ tb7367e2c = 이 호스트 복호화
 
 # Do not decrypt this host
 t5fa113f6 = 이 호스트 복호화 안 함
+
+# Set up
+t43c06abc = 시작하기
 
 # Request and response
 t04e060e6 = 요청과 응답
@@ -2208,9 +2223,6 @@ t4b629c72 = 터미널 열기
 
 # What the device does
 t8f16360f = 기기 쪽에서 할 일
-
-# Set up
-t43c06abc = 시작하기
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = 무엇을 캡처할지 말하면, 거기에 닿는 단 하나의 경로만 설정합니다.

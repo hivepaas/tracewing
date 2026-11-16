@@ -36,6 +36,7 @@ toml.workspace = true
 tower-service = "0.3"
 rustls-native-certs.workspace = true
 tracing.workspace = true
+tracing-subscriber.workspace = true
 webpki-roots.workspace = true
 smoltcp = { version = "0.14.0", default-features = false, features = ["std", "medium-ip", "proto-ipv4", "proto-ipv6", "socket-tcp", "socket-udp"] }
 boringtun = { version = "0.7.1", default-features = false }

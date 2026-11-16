@@ -625,6 +625,12 @@ t8090a1ba = Не розшифровано
 # open
 td35ec4c9 = відкрито
 
+# Certificate not trusted
+t766a9726 = Сертифікату не довіряють
+
+# Hung up before a request
+t546190df = Від’єднався до запиту
+
 # Reading the request…
 t51c96267 = Читання запиту…
 
@@ -700,6 +706,12 @@ tc7be91e8 = Виберіть потік, щоб переглянути його 
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = Не розшифровано. Нові з’єднання з цим хостом проходять непрочитаними.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = Застосунок відхилив сертифікат tracewing. Зробіть CA tracewing довіреним там, де цей застосунок шукає центри сертифікації, або не розшифровуйте цей хост, якщо застосунок закріплює свої сертифікати (pinning).
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = Застосунок від’єднався одразу після сертифіката tracewing, нічого не запитавши, — так застосунки часто відхиляють сертифікат або тримаються закріпленого (pinning). Зробіть CA tracewing довіреним там, де цей застосунок шукає центри сертифікації, або не розшифровуйте цей хост.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Якщо застосунок не працює з цим хостом, можливо, він закріплює свої сертифікати (pinning).
 
@@ -711,6 +723,9 @@ tb7367e2c = Розшифровувати цей хост
 
 # Do not decrypt this host
 t5fa113f6 = Не розшифровувати цей хост
+
+# Set up
+t43c06abc = Підготовка
 
 # Request and response
 t04e060e6 = Запит і відповідь
@@ -2409,9 +2424,6 @@ t4b629c72 = Відкрити термінал
 
 # What the device does
 t8f16360f = Що робить сам пристрій
-
-# Set up
-t43c06abc = Підготовка
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = Скажіть, що хочете захопити, і це налаштує єдиний шлях, який до нього дістає.
