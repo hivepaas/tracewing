@@ -7,6 +7,7 @@ pub mod ca_key;
 pub mod capture;
 pub mod client_certs;
 pub mod company_ca;
+pub mod datagrams;
 pub mod dns;
 pub mod extension;
 pub mod handover;

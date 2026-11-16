@@ -43,6 +43,7 @@
 //! See [capture-modes.md](../../../docs/design/capture-modes.md).
 
 use crate::{
+    datagrams::{self, Bind},
     sieve::{Sieve, sift},
     source::{By, Flow, Found, Source, Stop, Target, stopped},
 };
@@ -129,6 +130,10 @@ pub struct Stack {
     /// here on purpose. A mode that captures by route needs one, or it
     /// captures the machine -- see [`crate::sieve`].
     sieve: Option<Arc<Sieve>>,
+    /// How a socket to the far side is made, for datagrams that are passed on
+    /// rather than refused. `None` refuses them, as a tunnel a phone joined
+    /// should: see [`crate::datagrams`] for why the two answers differ.
+    passing: Option<Bind>,
 }
 
 impl Stack {
@@ -137,6 +142,7 @@ impl Stack {
             wire,
             most: FLOWS_MAX,
             sieve: None,
+            passing: None,
         }
     }
 
@@ -149,12 +155,25 @@ impl Stack {
         }
     }
 
+    /// The same, passing datagrams on through a socket `bind` makes instead
+    /// of refusing them. What this is for is in [`crate::datagrams`]: on this
+    /// machine's own adapter a refusal is the user's VPN, clock, voice call
+    /// and game all failing, and none of that is traffic anybody asked us to
+    /// read.
+    pub fn passing(self, bind: Bind) -> Self {
+        Self {
+            passing: Some(bind),
+            ..self
+        }
+    }
+
     #[cfg(test)]
     fn holding_at_most(wire: Wire, most: usize) -> Self {
         Self {
             wire,
             most,
             sieve: None,
+            passing: None,
         }
     }
 }
@@ -173,7 +192,14 @@ impl Source for Stack {
     // there is no socket of ours for `crate::apps` to find it by.
 
     fn start(self: Box<Self>, _proxy: SocketAddr, found: Found, stop: Stop) -> Result<()> {
-        tokio::spawn(run(self.wire, self.most, self.sieve, found, stop));
+        tokio::spawn(run(
+            self.wire,
+            self.most,
+            self.sieve,
+            self.passing,
+            found,
+            stop,
+        ));
         Ok(())
     }
 }
@@ -197,6 +223,16 @@ const TCP: u8 = 6;
 
 /// The least a TCP header is, which is all of it this reads.
 const TCP_HEAD: usize = 20;
+
+/// The datagram in this packet, where it is one to pass on rather than to
+/// refuse: UDP, and to a port that is not answered or refused here. See
+/// [`crate::datagrams::ours_to_pass`] for which two those are.
+///
+/// Apart from the loop so that what it decides is testable without a stack.
+fn taken_on(packet: &[u8]) -> Option<crate::datagrams::Datagram> {
+    let datagram = crate::datagrams::datagram(packet)?;
+    crate::datagrams::ours_to_pass(datagram.to.port()).then_some(datagram)
+}
 
 /// IPv4, IPv6 and TCP only. A packet this does not understand is handed to
 /// the stack anyway, which drops what it does not want: this is only here to
@@ -399,12 +435,23 @@ fn moment(started: Instant) -> Moment {
     Moment::from_micros(started.elapsed().as_micros() as i64)
 }
 
-async fn run(wire: Wire, most: usize, sieve: Option<Arc<Sieve>>, found: Found, stop: Stop) {
+async fn run(
+    wire: Wire,
+    most: usize,
+    sieve: Option<Arc<Sieve>>,
+    passing: Option<Bind>,
+    found: Found,
+    stop: Stop,
+) {
     let started = Instant::now();
     let Wire {
         mut incoming,
         outgoing,
     } = wire;
+    // Answers to passed-on datagrams go straight out, with no socket of
+    // `smoltcp`'s in the way: UDP has no sequence numbers and no window, so
+    // there is nothing for a TCP/IP stack to keep.
+    let passing = passing.map(|bind| datagrams::passing(outgoing.clone(), bind, stop.clone()));
     let mut device = Device {
         waiting: VecDeque::new(),
         out: outgoing,
@@ -500,10 +547,26 @@ async fn run(wire: Wire, most: usize, sieve: Option<Arc<Sieve>>, found: Found, s
             .min(SWEEP_EVERY);
         tokio::select! {
             packet = incoming.recv() => match packet {
-                Some(packet) => {
-                    open_for(&packet, most, &mut sockets, &mut conns, &woken);
-                    device.waiting.push_back(packet);
-                }
+                Some(packet) => match passing
+                    .as_ref()
+                    .and_then(|to| taken_on(&packet).map(|datagram| (to, datagram)))
+                {
+                    // Passed on, and deliberately not handed to the stack as
+                    // well: a stack with no socket for a datagram answers it
+                    // with an ICMP port unreachable, which is the refusal
+                    // this is here to avoid.
+                    Some((to, datagram)) => {
+                        if to.try_send(datagram).is_err() {
+                            // A full queue drops, which is what a congested
+                            // network does.
+                            tracing::debug!("a datagram was dropped on its way out");
+                        }
+                    }
+                    None => {
+                        open_for(&packet, most, &mut sockets, &mut conns, &woken);
+                        device.waiting.push_back(packet);
+                    }
+                },
                 None => break,
             },
             answer = answers.recv() => {
@@ -1002,6 +1065,26 @@ mod tests {
         }
     }
 
+    /// The stack passing datagrams on, through ordinary sockets rather than
+    /// pinned ones: what pinning is for is Windows routing, and what is being
+    /// tested here is everything else.
+    fn start_passing() -> Running {
+        let (wire, into, out) = Wire::channels();
+        let (found, took) = Found::channel();
+        let (stop_tx, stop) = tokio::sync::watch::channel(false);
+        let bind: crate::datagrams::Bind =
+            Arc::new(|_v6| Box::pin(tokio::net::UdpSocket::bind("127.0.0.1:0")));
+        Box::new(Stack::new(wire).passing(bind))
+            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+            .unwrap();
+        Running {
+            into,
+            out,
+            took,
+            _stop: stop_tx,
+        }
+    }
+
     impl Running {
         /// The handshake alone, for a test where no flow is handed over: the
         /// client is through and the stack has decided nothing yet.
@@ -1145,6 +1228,82 @@ mod tests {
             .running
             .nothing_taken(Duration::from_millis(500))
             .await;
+    }
+
+    /// A datagram on a port nobody answers here reaches where it was going,
+    /// and its answer comes back as a packet from the address it was sent to.
+    /// On this machine's own adapter the refusal this replaces is the user's
+    /// VPN, clock, voice call and game all failing at once.
+    #[tokio::test]
+    async fn a_datagram_on_an_ordinary_port_is_passed_on_rather_than_refused() {
+        let far = tokio::net::UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let to = far.local_addr().unwrap();
+        let mut running = start_passing();
+        let client = "10.78.0.2:51000";
+        running
+            .into
+            .send(asking("example.com", client, &to.to_string()))
+            .await
+            .unwrap();
+
+        let mut buffer = [0u8; 512];
+        let (len, ours) = tokio::time::timeout(Duration::from_secs(5), far.recv_from(&mut buffer))
+            .await
+            .expect("the datagram reaches the far end instead of being refused")
+            .unwrap();
+        assert!(len > 0, "and carries what was sent");
+
+        far.send_to(b"an answer", ours).await.unwrap();
+        let back = running.next().await;
+        let answer = crate::datagrams::datagram(&back).expect("a datagram, not an ICMP error");
+        assert_eq!(
+            answer.from, to,
+            "from the address the client sent to, which is the only one it will take"
+        );
+        assert_eq!(answer.to, client.parse().unwrap());
+        assert_eq!(answer.body, b"an answer");
+    }
+
+    /// And the two ports that do not come through there are unchanged by it.
+    /// QUIC stays refused, because the refusal is what sends a client to TCP.
+    #[tokio::test]
+    async fn quic_is_still_refused_when_datagrams_are_passed_on() {
+        let mut running = start_passing();
+        running
+            .into
+            .send(asking("example.com", "10.78.0.2:51000", "10.78.0.1:443"))
+            .await
+            .unwrap();
+        let back = running.next().await;
+        let ip = Ipv4Packet::new_checked(&back[..]).expect("an IPv4 packet");
+        assert_eq!(
+            ip.next_header(),
+            IpProtocol::Icmp,
+            "an ICMP error, not a datagram passed on"
+        );
+        let icmp = ip.payload();
+        assert_eq!((icmp[0], icmp[1]), (3, 3), "port unreachable");
+    }
+
+    /// A name is still answered here. Passing it on would send the query to
+    /// whatever resolver the client was pointed at, and answering it is the
+    /// whole of [`crate::dns`].
+    #[tokio::test]
+    async fn a_name_is_still_answered_here_when_datagrams_are_passed_on() {
+        let mut running = start_passing();
+        running
+            .into
+            .send(asking("localhost", "10.78.0.2:51001", "10.78.0.1:53"))
+            .await
+            .unwrap();
+        let back = running.next().await;
+        let answer = crate::datagrams::datagram(&back).expect("an answer, not an ICMP error");
+        assert_eq!(
+            answer.from.port(),
+            53,
+            "answered by us, from the port asked"
+        );
+        assert_eq!(answer.to, "10.78.0.2:51001".parse().unwrap());
     }
 
     /// The whole of it, in the order a connection happens: a `SYN` is
