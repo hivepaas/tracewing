@@ -494,27 +494,70 @@ make it honest instead:
 #### What an elevated tracewing must not hand to anybody
 
 A child process inherits elevation, and tracewing starts two kinds of child.
-The ones it runs **for itself** — `schtasks`, `keytool`, the watchdog — can
-inherit it. The ones it starts **for the user to use** must not:
+The ones it runs **for itself** — `schtasks`, `keytool`, the watchdog, and
+the `node --version` probe in
+[`launch.rs`](../../crates/system/src/launch.rs) — can inherit it. The ones
+it starts **for the user to use** are the question:
 
-- a **browser**, [`launch.rs`](../../crates/system/src/launch.rs), for the
-  browser way in;
-- a **terminal**, in the same file, for `tracewing env` — and this one
-  matters more than the browser, because somebody types commands into it.
+- a **browser**, `launch.rs`, for the browser way in;
+- a **terminal**, [`windows::open_terminal`](../../crates/system/src/windows.rs),
+  reached from Set up, which starts `cmd /c start tracewing cmd /k …` with
+  the proxy variables already set. This one matters more than the browser,
+  because somebody types commands into it.
 
-So they are launched at the user's own level: the shell's token, borrowed
-with `GetShellWindow` → `GetWindowThreadProcessId` → `OpenProcess` →
-`OpenProcessToken` → `DuplicateTokenEx` → `CreateProcessWithTokenW`, which
-needs `SE_IMPERSONATE_NAME` and an elevated administrator has it. That gives
-the **real** interactive token, medium integrity and filtered, which is what
-a browser started by double-clicking has — not the restricted token
-`runas /trustlevel` makes, which a browser may not survive.
+So they are launched at the user's own level **by default**: the shell's
+token, borrowed with `GetShellWindow` → `GetWindowThreadProcessId` →
+`OpenProcess` → `OpenProcessToken` → `DuplicateTokenEx` →
+`CreateProcessWithTokenW`, which needs `SE_IMPERSONATE_NAME` and an elevated
+administrator has it. That gives the **real** interactive token, medium
+integrity and filtered, which is what a browser started by double-clicking
+has — not the restricted token `runas /trustlevel` makes, which a browser
+may not survive.
 
 One failure to get right: `GetShellWindow` answers `NULL` where no shell is
 running — a kiosk, a server session, an explorer that died. There is then no
 token to borrow, and the fallback **must not** be to launch elevated anyway,
 because that is the exact thing being avoided and it would be invisible. It
 has to be said instead.
+
+##### But "as administrator" has to be offered, because the case is real
+
+**Decided by the user.** Defaulting to the user's own level is not the same
+as forbidding the other, and for a terminal the other is a first-class use
+rather than an edge: `open_terminal` exists to put the proxy variables in
+front of a program, and **a program that needs an administrator will not
+start in a terminal that is not one** — a service, an installer, anything
+writing `HKLM`, anything binding a port below 1024. Refusing would mean the
+environment-variable way in cannot reach exactly the programs it is best at
+reaching. There is a workaround today (open an elevated terminal by hand and
+run `tracewing env` in it), so this is about convenience rather than
+capability — but it is the convenience of the way in's main case.
+
+For a **browser** the case is much weaker, and the warning should say so:
+Chromium-based browsers refuse or complain when run as an administrator, so
+the option exists for symmetry and for the rare extension or kiosk being
+debugged under elevation.
+
+So each of those two ways in gets a choice of its own in Settings, **at your
+own level** by default, remembered rather than asked each time — the same
+reasoning as the administrator indicator above: a visible setting beats a
+repeated prompt, and the tab shows which one is in force.
+
+**The choice is about what the child gets, not about what tracewing has**,
+which is what makes it worth building on its own rather than as part of this
+mode's wiring — it is useful in the ordinary, unelevated case, which is most
+of the time. All four combinations are reachable:
+
+| tracewing | the child wanted | how |
+|---|---|---|
+| not elevated | own level | an ordinary spawn, as today |
+| not elevated | administrator | `ShellExecuteExW` with `runas` — **a UAC prompt per launch**, which the option's text has to say |
+| elevated | own level | the borrowed shell token above |
+| elevated | administrator | an ordinary spawn, inheriting |
+
+The warning on "as administrator" wants to be concrete rather than stern:
+what is started has full control of this computer and tracewing cannot limit
+it, and — for the terminal — that this is why the option is there at all.
 
 One method note, because it nearly cost a wrong answer. The first run of the
 probe reported `CREATE OK` and then failed to open the adapter **from the
