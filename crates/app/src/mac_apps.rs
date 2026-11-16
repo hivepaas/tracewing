@@ -627,7 +627,10 @@ mod tests {
         ];
         assert_eq!(ids_of(&apps), ["com.apple.curl"]);
         let (rules, gone) = programs_of(&apps);
-        assert_eq!(rules, [format!("{}/bin/", real.display())]);
+        // The folder's real path, with the trailing slash the rule adds —
+        // joined by `Path`, not by a `/` written here, which on Windows put
+        // the separator in a place no path has it.
+        assert_eq!(rules, [format!("{}/", real.join("bin").display())]);
         assert_eq!(gone, [dir.join("gone").display().to_string()]);
         assert!(apps[1].is_folder());
         // Kept, and read back as chosen; an app by id keeps the file as it was.

@@ -2101,8 +2101,18 @@ mod tests {
         let arrivals = tracewing_proxy::source::Arrivals::default();
 
         // It carried something, once, before the switch was flipped.
+        //
+        // Waited past rather than assumed: `anything_since` is `last >=
+        // since`, which is the semantics wanted — an arrival at the instant
+        // of the switch is since it — so a clock coarse enough to return the
+        // same `Instant` twice in adjacent statements makes the old arrival
+        // look like a new one. That is a property of the platform's timer,
+        // and a virtualized one on a CI runner is where it shows up.
         arrivals.came(By::Socks5);
-        let switched_on = Instant::now();
+        // A moment strictly after that arrival, built from the arrival
+        // rather than read from the clock: waiting for the clock to move
+        // needs a bound, and a bound needs a number nobody can justify.
+        let switched_on = arrivals.of(By::Socks5).last.expect("it came") + Duration::from_nanos(1);
         let later = switched_on + QUIET_AFTER;
         assert!(
             gone_quiet(Way::Socks5, Some(switched_on), &arrivals, later),

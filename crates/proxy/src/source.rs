@@ -506,7 +506,13 @@ mod tests {
         assert!(!arrivals.anything_since(By::Socks5, Instant::now()));
 
         arrivals.came(By::Socks5);
-        let after = Instant::now();
+        // A moment strictly after that arrival, built from the arrival
+        // rather than read from the clock. `Instant::now()` in the next
+        // statement can come back equal on a coarse timer — a virtualized
+        // one on a Windows runner does — and `anything_since` is `last >=
+        // since`, which is the semantics wanted, so an equal pair makes the
+        // old arrival look like a new one. This depends on no clock at all.
+        let after = arrivals.of(By::Socks5).last.expect("it came") + Duration::from_nanos(1);
         assert_eq!(arrivals.of(By::Socks5).count, 1);
         assert!(arrivals.of(By::Socks5).last.is_some());
 
