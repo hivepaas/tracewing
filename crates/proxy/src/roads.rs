@@ -93,6 +93,163 @@ pub fn out_by(roads: &[Road], ours: u64, v6: bool) -> Option<u32> {
         .map(|road| road.interface)
 }
 
+/// One row of a Linux routing table, before its interface has a number.
+///
+/// Linux names an interface in its tables and numbers it elsewhere, so the
+/// reading and the numbering are two steps. Keeping them apart is also what
+/// lets the reading be tested anywhere: [`rows_v4`] and [`rows_v6`] are text
+/// in, rows out, and run on every platform's CI rather than only where
+/// `/proc` exists.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Row {
+    pub iface: String,
+    pub bits: u8,
+    pub metric: u32,
+    pub v6: bool,
+}
+
+/// `RTF_UP`: the route is in use. A row without it is in the table and not
+/// being forwarded by — an unreachable default sits there on an ordinary
+/// machine, and taking it for a way out would pin tracewing's own
+/// connections to nowhere.
+const RTF_UP: u32 = 0x0001;
+
+/// The rows of `/proc/net/route`, which is the IPv4 main table.
+///
+/// Columns are `Iface Destination Gateway Flags RefCnt Use Metric Mask …`,
+/// with the addresses as little-endian hex. A row that cannot be read is
+/// skipped rather than failing the lot: the file is a kernel interface that
+/// has grown columns before, and one strange line is not a reason to have no
+/// routes at all.
+pub fn rows_v4(text: &str) -> Vec<Row> {
+    text.lines()
+        .skip(1)
+        .filter_map(|line| {
+            let mut fields = line.split_whitespace();
+            let iface = fields.next()?;
+            let _destination = fields.next()?;
+            let _gateway = fields.next()?;
+            let flags = u32::from_str_radix(fields.next()?, 16).ok()?;
+            let (_refcnt, _use) = (fields.next()?, fields.next()?);
+            let metric = fields.next()?.parse::<u32>().ok()?;
+            let mask = u32::from_str_radix(fields.next()?, 16).ok()?;
+            (flags & RTF_UP != 0).then(|| Row {
+                iface: iface.to_owned(),
+                // The mask is little-endian, and how many bits it covers is
+                // all that is wanted: a contiguous mask has the same count
+                // whichever end it is read from.
+                bits: mask.count_ones() as u8,
+                metric,
+                v6: false,
+            })
+        })
+        .collect()
+}
+
+/// The rows of `/proc/net/ipv6_route`.
+///
+/// Columns are the destination, **its prefix length in hex**, the source and
+/// its length, the next hop, the metric, two counts, the flags, and the
+/// interface last. No header line, unlike the IPv4 file.
+pub fn rows_v6(text: &str) -> Vec<Row> {
+    text.lines()
+        .filter_map(|line| {
+            let fields: Vec<&str> = line.split_whitespace().collect();
+            let [
+                _destination,
+                bits,
+                _source,
+                _source_bits,
+                _hop,
+                metric,
+                _refcnt,
+                _use,
+                flags,
+                iface,
+            ] = fields.as_slice()
+            else {
+                return None;
+            };
+            let flags = u32::from_str_radix(flags, 16).ok()?;
+            if flags & RTF_UP == 0 {
+                return None;
+            }
+            Some(Row {
+                iface: (*iface).to_owned(),
+                bits: u8::from_str_radix(bits, 16).ok()?,
+                metric: u32::from_str_radix(metric, 16).ok()?,
+                v6: true,
+            })
+        })
+        .collect()
+}
+
+/// This machine's routes as they are now, both families.
+///
+/// `luid` and `interface` hold the same number here, which looks like
+/// laziness and is not: **Linux numbers an interface once**, for both
+/// families, where Windows numbers it per family and identifies it by a LUID
+/// that spans them. The distinction `Road` makes exists because Windows
+/// needs it; on Linux the one number is both answers.
+///
+/// What this cannot see: `/proc/net/route` is the **main** table, so a
+/// machine routing by `ip rule` has routes that are not here — the same
+/// class of gap as an interface's own metric being absent from a Windows
+/// row.
+#[cfg(target_os = "linux")]
+pub fn roads_now() -> anyhow::Result<Vec<Road>> {
+    let v4 = std::fs::read_to_string("/proc/net/route").unwrap_or_default();
+    let v6 = std::fs::read_to_string("/proc/net/ipv6_route").unwrap_or_default();
+    let rows: Vec<Row> = rows_v4(&v4).into_iter().chain(rows_v6(&v6)).collect();
+    anyhow::ensure!(
+        !rows.is_empty(),
+        "no routes in /proc/net/route or /proc/net/ipv6_route"
+    );
+    Ok(rows
+        .into_iter()
+        .filter_map(|row| {
+            let index = index_of(&row.iface)?;
+            Some(Road {
+                interface: index,
+                luid: u64::from(index),
+                bits: row.bits,
+                metric: row.metric,
+                loopback: is_loopback(&row.iface),
+                v6: row.v6,
+            })
+        })
+        .collect())
+}
+
+/// What the kernel numbers an interface, from its name.
+#[cfg(target_os = "linux")]
+fn index_of(name: &str) -> Option<u32> {
+    let name = std::ffi::CString::new(name).ok()?;
+    // SAFETY: a null-terminated name, borrowed for the call.
+    let index = unsafe { libc::if_nametoindex(name.as_ptr()) };
+    (index != 0).then_some(index)
+}
+
+/// Whether an interface is the loopback, from the flags the kernel shows.
+///
+/// By its flags rather than by its name: `lo` is what every machine calls
+/// it, which is not the same as a promise, and the answer decides whether a
+/// route is a candidate for carrying tracewing's own traffic.
+#[cfg(target_os = "linux")]
+fn is_loopback(name: &str) -> bool {
+    const IFF_LOOPBACK: u64 = 0x8;
+    let flags = std::fs::read_to_string(format!("/sys/class/net/{name}/flags")).ok();
+    match flags
+        .as_deref()
+        .map(str::trim)
+        .and_then(|text| u64::from_str_radix(text.trim_start_matches("0x"), 16).ok())
+    {
+        Some(flags) => flags & IFF_LOOPBACK != 0,
+        // Nothing to read is not nothing to say: the name is what is left.
+        None => name == "lo",
+    }
+}
+
 /// This machine's routes as they are now, both families.
 #[cfg(windows)]
 pub fn roads_now() -> anyhow::Result<Vec<Road>> {
@@ -529,6 +686,182 @@ mod reading {
         );
         println!("the way out for IPv4: {:?}", out_by(&roads, 0, false));
         println!("the way out for IPv6: {:?}", out_by(&roads, 0, true));
+    }
+}
+
+#[cfg(test)]
+mod linux_tables {
+    use super::*;
+
+    /// `/proc/net/route` as this machine wrote it, header and all.
+    const V4: &str = "\
+Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT
+wlp8s0\t00000000\t0101A8C0\t0003\t0\t0\t600\t00000000\t0\t0\t0
+docker0\t000011AC\t00000000\t0001\t0\t0\t0\t0000FFFF\t0\t0\t0
+wlp8s0\t0001A8C0\t00000000\t0001\t0\t0\t600\t00FFFFFF\t0\t0\t0
+";
+
+    /// `/proc/net/ipv6_route`, with the two rows that matter: the default
+    /// this machine forwards by, and an **unreachable** default over `lo`
+    /// that is in the table with `RTF_UP` clear.
+    const V6: &str = "\
+00000000000000000000000000000000 00 00000000000000000000000000000000 00 fe800000000000000000000000000001 00000258 00000034 00000000 18000003   wlp8s0
+20010ee040c17deb0000000000000000 40 00000000000000000000000000000000 00 00000000000000000000000000000000 00000258 00000001 00000000 00000001   wlp8s0
+00000000000000000000000000000000 00 00000000000000000000000000000000 00 00000000000000000000000000000000 ffffffff 00000001 00000000 00200200       lo
+";
+
+    /// The mask is little-endian hex and what is wanted is how far the route
+    /// reaches. A `/0` read as anything else would make the way out look
+    /// narrower than the adapter's own half-default and lose to it.
+    #[test]
+    fn an_ipv4_table_reads_as_the_routes_it_is() {
+        let rows = rows_v4(V4);
+        assert_eq!(
+            rows,
+            vec![
+                Row {
+                    iface: "wlp8s0".into(),
+                    bits: 0,
+                    metric: 600,
+                    v6: false
+                },
+                Row {
+                    iface: "docker0".into(),
+                    bits: 16,
+                    metric: 0,
+                    v6: false
+                },
+                Row {
+                    iface: "wlp8s0".into(),
+                    bits: 24,
+                    metric: 600,
+                    v6: false
+                },
+            ],
+            "the header is skipped and every mask counts its own bits"
+        );
+    }
+
+    /// The row this test exists for: an unreachable `::/0` sits in the table
+    /// of an ordinary machine with `RTF_UP` clear. Taken as a way out it
+    /// would be a default route — the widest there is — and tracewing's own
+    /// connections would be pinned to the loopback.
+    #[test]
+    fn a_route_that_is_not_up_is_not_a_way_out() {
+        let rows = rows_v6(V6);
+        assert_eq!(
+            rows,
+            vec![
+                Row {
+                    iface: "wlp8s0".into(),
+                    bits: 0,
+                    metric: 0x258,
+                    v6: true
+                },
+                Row {
+                    iface: "wlp8s0".into(),
+                    bits: 0x40,
+                    metric: 0x258,
+                    v6: true
+                },
+            ],
+            "the unreachable default over lo is dropped"
+        );
+        assert!(
+            !rows.iter().any(|row| row.iface == "lo"),
+            "and nothing of the loopback's is left to choose from"
+        );
+    }
+
+    /// A line the kernel grows a column for, or a line of nonsense, costs
+    /// that line and not the table: a machine with no routes at all is how
+    /// `out_by` is told there is no way out, which is a different thing.
+    #[test]
+    fn a_line_that_cannot_be_read_costs_only_itself() {
+        let bent = format!("{V4}wlp8s0\tnonsense\n\n");
+        assert_eq!(
+            rows_v4(&bent).len(),
+            3,
+            "the three good rows are still there"
+        );
+        assert!(rows_v6("").is_empty());
+        assert!(rows_v4("Iface\tDestination\n").is_empty());
+    }
+
+    /// End to end over the chooser, with the numbers this machine has:
+    /// given both tables and an adapter of ours, the way out is the one the
+    /// machine really uses — and it is chosen per family from that family's
+    /// rows.
+    #[test]
+    fn the_way_out_is_chosen_from_what_the_tables_say() {
+        let roads: Vec<Road> = rows_v4(V4)
+            .into_iter()
+            .chain(rows_v6(V6))
+            .enumerate()
+            .map(|(i, row)| Road {
+                // Numbered as Linux does: one number per interface, both
+                // families, so the two wlp8s0 rows share theirs.
+                interface: if row.iface == "wlp8s0" {
+                    3
+                } else {
+                    4 + i as u32
+                },
+                luid: if row.iface == "wlp8s0" {
+                    3
+                } else {
+                    4 + i as u64
+                },
+                bits: row.bits,
+                metric: row.metric,
+                loopback: row.iface == "lo",
+                v6: row.v6,
+            })
+            .collect();
+        assert_eq!(out_by(&roads, 99, false), Some(3), "IPv4 leaves by wlp8s0");
+        assert_eq!(out_by(&roads, 99, true), Some(3), "and so does IPv6");
+        assert_eq!(
+            out_by(&roads, 3, false),
+            None,
+            "and if wlp8s0 were ours there would be no way out that is not"
+        );
+    }
+
+    /// The real tables of the machine this runs on, which is the one thing
+    /// the parsing tests cannot say: that the columns are where this kernel
+    /// puts them, and that the names in them resolve to numbers.
+    ///
+    /// `#[ignore]`d because it asserts about the machine rather than about
+    /// the code — a build box with no network has no way out and would fail
+    /// it honestly. Run it beside `ip -4 route show default` and the index
+    /// it prints should be that interface's:
+    ///
+    /// ```sh
+    /// cargo test -p tracewing-proxy --release --lib \
+    ///   roads::linux_tables::the_real_tables -- --ignored --nocapture
+    /// ```
+    #[cfg(target_os = "linux")]
+    #[test]
+    #[ignore = "asks this machine about its own routes"]
+    fn the_real_tables_name_a_way_out() {
+        let roads = roads_now().expect("the tables read");
+        let v4 = out_by(&roads, u64::MAX, false);
+        let v6 = out_by(&roads, u64::MAX, true);
+        println!("roads: {}", roads.len());
+        for road in &roads {
+            println!(
+                "  if {} bits {} metric {} loopback {} v6 {}",
+                road.interface, road.bits, road.metric, road.loopback, road.v6
+            );
+        }
+        println!("way out v4: {v4:?}, v6: {v6:?}");
+        assert!(
+            v4.is_some(),
+            "a machine on a network has an IPv4 way out that is not ours"
+        );
+        assert!(
+            roads.iter().any(|road| road.loopback),
+            "and the loopback is in the table, so the flag was read rather than guessed"
+        );
     }
 }
 

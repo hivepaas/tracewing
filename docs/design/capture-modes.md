@@ -858,15 +858,50 @@ device that already exists, and a tracewing that crashed leaves nothing to
 clean up, since the kernel closes the descriptor while the device, being
 persistent, waits for the next run.
 
+#### Which way out is not ours
+
+The choosing is [`roads::out_by`](../../crates/proxy/src/roads.rs), shared
+with Windows: Linux supplies rows and reuses the judgement rather than
+writing a second one. `rows_v4` and `rows_v6` read `/proc/net/route` and
+`/proc/net/ipv6_route` as **text**, so their tests run on every platform
+rather than only where `/proc` is.
+
+Two things the real tables of an ordinary machine taught the parser:
+
+- **A route in the table is not a route in use.** An unreachable `::/0` over
+  `lo` sits there with `RTF_UP` clear. Taken as a way out it is a default
+  route — the widest there is — and tracewing's own connections would be
+  pinned to the loopback. The rows are filtered on that flag, and the test
+  carries the real line.
+- **`luid` and `interface` hold the same number here.** Linux numbers an
+  interface once for both families, where Windows numbers it per family and
+  identifies it by a LUID spanning them. The distinction exists because
+  Windows needs it.
+
+What this cannot see: both files are the **main** table, so a machine routing
+by `ip rule` has routes that are not here — the same class of gap as an
+interface's own metric being absent from a Windows row.
+
 #### What is not in, and nothing captures until it is
 
-The address, the route, and the exclusion that keeps tracewing's own
-connections out of the adapter — the same three Windows is missing, and the
-third is the dangerous one for the same reason: without it every connection
-tracewing makes on a captured program's behalf is routed back into the
-adapter. Linux's answer to it is `SO_BINDTODEVICE` or a `fwmark` rule rather
-than `IP_UNICAST_IF`, and nothing in the tree does either yet
-(`upstream::leave_by` is `#[cfg(windows)]` throughout).
+The address, the route, and **applying** the exclusion the choosing above
+answers. Without that last one every connection tracewing makes on a captured
+program's behalf is routed back into the adapter, which is the dangerous one
+on both platforms.
+
+The mechanism is `SO_BINDTODEVICE`, and the measurement that settles it ran
+with `CapEff: 0000000000000000`: setting it on an ordinary socket **worked**,
+`SO_MARK` in the same transcript answered `EPERM`, and `SO_REUSEADDR` worked
+as a control. `man 7 socket` on that machine names a capability for `SO_MARK`
+— "CAP_NET_ADMIN or CAP_NET_RAW (since Linux 5.17)" — and names none for
+`SO_BINDTODEVICE`. Measured on 7.0.0; older kernels did require `CAP_NET_RAW`
+for it, and which kernel stopped is a changelog nobody here has read, so it
+is written as what was measured and what the page says rather than as a
+guarantee.
+
+That matters beyond the one option: had it needed a capability, the pump
+could not have stayed unprivileged, and Linux would have been pushed into
+the elevated shape Windows is in.
 
 Addressing and routing go through netlink, which is a dependency this
 workspace does not have; shelling out to `ip` is the same trade `wintun.rs`
