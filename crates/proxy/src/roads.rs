@@ -11,13 +11,12 @@
 //! Windows beneath it. That split is for the usual reason: the choosing is
 //! where the judgement is, and Linux is what sees every change.
 //!
-//! **Nothing watches yet, and that is somebody's job rather than nobody's.**
-//! WireGuard for Windows solves the same problem and *watches* for the
-//! default-route interface rather than reading it once, because which one
-//! that is changes as a machine moves between Wi-Fi, Ethernet and
-//! tethering — and with none at all, its outgoing packets are blackholed.
-//! Whoever starts the adapter owns keeping the answer current. This answers
-//! the question; it does not keep answering it.
+//! [`out_by`] answers the question once. [`watch`] keeps answering it,
+//! which is not a convenience: WireGuard for Windows solves the same
+//! problem and watches for the default-route interface rather than reading
+//! it once, because which one that is changes as a machine moves between
+//! Wi-Fi, Ethernet and tethering — and with none at all, its outgoing
+//! packets are blackholed.
 //!
 //! See [capture-modes.md](../../../docs/design/capture-modes.md).
 
@@ -130,6 +129,244 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
     // SAFETY: the pointer that call gave us, given back exactly once.
     unsafe { FreeMibTable(table as *const core::ffi::c_void) };
     Ok(roads)
+}
+
+/// Pins the way out now, and keeps it pinned, until `stop`.
+///
+/// **The first look happens before this returns, and that is the point of
+/// the shape.** A caller must be able to know the exclusion is in place
+/// *before* it routes anything into the adapter: between a route going in
+/// and the pin being set, every connection tracewing makes is routed back
+/// into itself. So a first look that fails is an error here rather than a
+/// warning in a loop, and a caller that gets one must not add its routes.
+///
+/// After that it looks every `every` and pins again only when the answer has
+/// changed. A read that fails later is a warning and not the end — the table
+/// is read from a live system and a momentary failure is not a reason to
+/// stop excluding our own adapter.
+///
+/// **Polling rather than `NotifyRouteChange2`**, which is a callback into
+/// our code from a Windows worker thread. The cost of polling is bounded and
+/// worth naming: for up to `every` after the network changes, the pin names
+/// an interface that is no longer the way out, so tracewing's own
+/// connections can fail until the next look. What it cannot do in that
+/// window is loop, because a stale answer still is not our own adapter.
+///
+/// `look` and `pin` are taken rather than called directly so that all of the
+/// above is tested where it can be run, which is everywhere;
+/// [`roads_now`] and [`crate::upstream::leave_by`] are what a caller passes.
+pub fn watch(
+    ours: u64,
+    every: std::time::Duration,
+    look: impl Fn() -> anyhow::Result<Vec<Road>> + Send + 'static,
+    pin: impl Fn(Option<crate::upstream::OutBy>) + Send + 'static,
+    stop: crate::source::Stop,
+) -> anyhow::Result<()> {
+    let first = asked(&look, ours)?;
+    pin(Some(first));
+    tokio::spawn(async move {
+        let mut last = first;
+        loop {
+            tokio::select! {
+                _ = crate::source::stopped(stop.clone()) => break,
+                _ = tokio::time::sleep(every) => {}
+            }
+            match asked(&look, ours) {
+                Ok(now) if now != last => {
+                    tracing::debug!("the way out changed: {last:?} to {now:?}");
+                    pin(Some(now));
+                    last = now;
+                }
+                Ok(_) => {}
+                Err(e) => tracing::warn!("looking for the way out: {e:#}"),
+            }
+        }
+        // Holding nothing is not the same as having no preference, which is
+        // why this is said rather than left: see `leave_by`.
+        pin(None);
+    });
+    Ok(())
+}
+
+/// One look, as both halves of an answer.
+fn asked(
+    look: &impl Fn() -> anyhow::Result<Vec<Road>>,
+    ours: u64,
+) -> anyhow::Result<crate::upstream::OutBy> {
+    let roads = look()?;
+    Ok(crate::upstream::OutBy {
+        v4: out_by(&roads, ours, false),
+        v6: out_by(&roads, ours, true),
+    })
+}
+
+#[cfg(test)]
+mod watching {
+    use super::*;
+    use crate::upstream::OutBy;
+    use std::{
+        collections::VecDeque,
+        sync::{Arc, Mutex},
+        time::Duration,
+    };
+
+    /// Short enough that a test does not wait on it, long enough that it is
+    /// a real interval rather than a busy loop.
+    const EVERY: Duration = Duration::from_millis(20);
+    const SOON: Duration = Duration::from_secs(5);
+
+    fn road(interface: u32, luid: u64) -> Road {
+        Road {
+            interface,
+            luid,
+            bits: 0,
+            metric: 10,
+            loopback: false,
+            v6: false,
+        }
+    }
+
+    /// A table to look at and a record of what was pinned. When the queue
+    /// runs out it keeps answering with the last table it gave, which is
+    /// what a machine whose network is not changing looks like.
+    #[derive(Default)]
+    struct Fake {
+        /// `None` is a look that fails.
+        queue: Mutex<VecDeque<Option<Vec<Road>>>>,
+        last: Mutex<Vec<Road>>,
+        pinned: Mutex<Vec<Option<OutBy>>>,
+    }
+
+    impl Fake {
+        fn with(looks: Vec<Option<Vec<Road>>>) -> Arc<Self> {
+            Arc::new(Self {
+                queue: Mutex::new(looks.into()),
+                ..Self::default()
+            })
+        }
+
+        fn look(&self) -> anyhow::Result<Vec<Road>> {
+            match self.queue.lock().unwrap().pop_front() {
+                Some(Some(roads)) => {
+                    *self.last.lock().unwrap() = roads.clone();
+                    Ok(roads)
+                }
+                Some(None) => anyhow::bail!("the table could not be read"),
+                None => Ok(self.last.lock().unwrap().clone()),
+            }
+        }
+
+        fn pinned(&self) -> Vec<Option<OutBy>> {
+            self.pinned.lock().unwrap().clone()
+        }
+    }
+
+    /// Starts a watch over `fake`, and hands back the stop so a test can
+    /// keep it alive — dropping it would look like a stop.
+    fn watching(
+        fake: &Arc<Fake>,
+        ours: u64,
+    ) -> (anyhow::Result<()>, tokio::sync::watch::Sender<bool>) {
+        let (stop_tx, stop) = tokio::sync::watch::channel(false);
+        let looking = Arc::clone(fake);
+        let pinning = Arc::clone(fake);
+        let started = watch(
+            ours,
+            EVERY,
+            move || looking.look(),
+            move |out| pinning.pinned.lock().unwrap().push(out),
+            stop,
+        );
+        (started, stop_tx)
+    }
+
+    async fn until(what: &str, f: impl Fn() -> bool) {
+        let end = tokio::time::Instant::now() + SOON;
+        while !f() {
+            assert!(tokio::time::Instant::now() < end, "waiting for {what}");
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    }
+
+    /// The ordering the whole shape is for: a caller must know the exclusion
+    /// is in place before it routes anything in.
+    #[tokio::test]
+    async fn the_first_look_is_pinned_before_watch_returns() {
+        let fake = Fake::with(vec![Some(vec![road(7, 70)])]);
+        let (started, _stop) = watching(&fake, 4242);
+        started.expect("the first look worked");
+        assert_eq!(
+            fake.pinned(),
+            vec![Some(OutBy {
+                v4: Some(7),
+                v6: None
+            })],
+            "pinned already, with nothing awaited in between"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_first_look_that_fails_is_an_error_and_pins_nothing() {
+        let fake = Fake::with(vec![None]);
+        let (started, _stop) = watching(&fake, 4242);
+        started.expect_err("the caller must not go on to add routes");
+        assert!(
+            fake.pinned().is_empty(),
+            "nothing was pinned, so nothing claims an exclusion that is not there"
+        );
+    }
+
+    #[tokio::test]
+    async fn an_answer_that_has_not_changed_is_not_pinned_again() {
+        let fake = Fake::with(vec![Some(vec![road(7, 70)])]);
+        let (started, _stop) = watching(&fake, 4242);
+        started.expect("the first look worked");
+        // Several intervals of the same table.
+        tokio::time::sleep(EVERY * 5).await;
+        assert_eq!(fake.pinned().len(), 1, "pinned once, not once per look");
+    }
+
+    #[tokio::test]
+    async fn a_way_out_that_changes_is_pinned_again() {
+        let fake = Fake::with(vec![Some(vec![road(7, 70)]), Some(vec![road(9, 90)])]);
+        let (started, _stop) = watching(&fake, 4242);
+        started.expect("the first look worked");
+        until("the new way out", || fake.pinned().len() == 2).await;
+        assert_eq!(
+            fake.pinned()[1],
+            Some(OutBy {
+                v4: Some(9),
+                v6: None
+            })
+        );
+    }
+
+    /// The table is read from a live system; a momentary failure is not a
+    /// reason to stop excluding our own adapter.
+    #[tokio::test]
+    async fn a_look_that_fails_later_does_not_end_the_watch() {
+        let fake = Fake::with(vec![Some(vec![road(7, 70)]), None, Some(vec![road(9, 90)])]);
+        let (started, _stop) = watching(&fake, 4242);
+        started.expect("the first look worked");
+        until("the change after the failure", || fake.pinned().len() == 2).await;
+        assert_eq!(
+            fake.pinned()[1],
+            Some(OutBy {
+                v4: Some(9),
+                v6: None
+            }),
+            "the failure was skipped rather than fatal"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_stop_pins_nothing_rather_than_leaving_the_last_answer() {
+        let fake = Fake::with(vec![Some(vec![road(7, 70)])]);
+        let (started, stop) = watching(&fake, 4242);
+        started.expect("the first look worked");
+        let _ = stop.send(true);
+        until("the unpin", || fake.pinned().last() == Some(&None)).await;
+    }
 }
 
 /// Reading this machine's real table, which wants no privilege, so the
