@@ -455,6 +455,69 @@ fn follow(
 }
 
 /// The flows a search finds, newest first. `table` is `urls` or `bodies`.
+/// What a word filter's answer rests on, for a surface that wants to say
+/// whether an empty answer means "nothing matches".
+#[derive(Debug, PartialEq, Eq)]
+pub enum Reach {
+    /// The index covers every flow the session has: an empty answer is an
+    /// answer, and there is nothing to say.
+    Whole,
+    /// The index has reached this flow and the session has newer ones. A
+    /// word in those is not found **yet**; asking again later finds it.
+    Behind(i64),
+    /// There is no body index to search: none was made, or `index_bodies`
+    /// is off. Text that appears only in a body is not found **at all**, and
+    /// waiting will not change that.
+    ///
+    /// This is the state that reads most like success and is least like it.
+    /// `Filter`'s text search takes the bodies half from the index with
+    /// `unwrap_or_default`, so no index means no error and no rows; only the
+    /// URLs half falls back, to a `LIKE` over `host || path`. So a word in a
+    /// URL is still found here and a word in a body never is.
+    NoBodies,
+}
+
+/// Which of the three [`Reach`] states this session's index is in, measured
+/// against flow `newest`.
+///
+/// The rule lives here so that the MCP server, the CLI and the window cannot
+/// disagree about what the answer rests on; what each of them says about it
+/// is their own.
+pub fn reach(session: &Path, newest: i64) -> Result<Reach> {
+    let dir = session::search_dir(session);
+    if !dir.is_dir() {
+        return Ok(Reach::NoBodies);
+    }
+    let paths = piece_paths(&dir)?;
+    if paths.is_empty() {
+        return Ok(Reach::NoBodies);
+    }
+    let mut through = 0;
+    let mut bodies = false;
+    for path in paths {
+        let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .with_context(|| format!("open {}", path.display()))?;
+        bodies = bodies || has_table(&conn, "bodies")?;
+        through = through.max(piece_progress(&conn)?);
+    }
+    Ok(match (bodies, through < newest) {
+        (false, _) => Reach::NoBodies,
+        (true, true) => Reach::Behind(through),
+        (true, false) => Reach::Whole,
+    })
+}
+
+fn has_table(conn: &Connection, name: &str) -> Result<bool> {
+    Ok(conn
+        .query_row(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1",
+            [name],
+            |r| r.get::<_, i64>(0),
+        )
+        .optional()?
+        .is_some())
+}
+
 pub fn find(session: &Path, table: &str, text: &str, first_live: i64) -> Result<Vec<i64>> {
     let paths = piece_paths(&session::search_dir(session))?;
     let query = format!("\"{}\"", normalize(text).replace('"', "\"\""));
@@ -491,6 +554,55 @@ mod tests {
                 params![id, normalize(text)],
             )
             .unwrap();
+    }
+
+    /// The three states a word filter's answer can rest on, and the one
+    /// that reads most like success: no body index at all.
+    #[test]
+    fn what_a_word_filters_answer_rests_on() {
+        let dir = temp("reach");
+        let search = session::search_dir(&dir);
+        let piece = |name: &str, last: Option<i64>, bodies: bool| {
+            let settings = StorageSettings {
+                index_bodies: bodies,
+                ..StorageSettings::default()
+            };
+            let conn = open_piece(&search.join(name), &settings).unwrap();
+            if let Some(last) = last {
+                conn.execute(
+                    "INSERT OR REPLACE INTO progress (only, last_id) VALUES (1, ?1)",
+                    params![last],
+                )
+                .unwrap();
+            }
+        };
+        // Never indexed: a word in a body is not found at all, and no
+        // amount of waiting changes it.
+        std::fs::remove_dir_all(&search).unwrap();
+        assert_eq!(reach(&dir, 10).unwrap(), Reach::NoBodies);
+        // Indexing on, bodies off: the same answer, by settings rather than
+        // by timing.
+        std::fs::create_dir_all(&search).unwrap();
+        piece("00000001.db", Some(5), false);
+        assert_eq!(reach(&dir, 10).unwrap(), Reach::NoBodies);
+        std::fs::remove_dir_all(&search).unwrap();
+        std::fs::create_dir_all(&search).unwrap();
+        // Bodies indexed, and behind: this one waiting does fix.
+        piece("00000001.db", Some(5), true);
+        assert_eq!(reach(&dir, 10).unwrap(), Reach::Behind(5));
+        // A piece `tidy` has just rotated to has **no** progress row until
+        // its first batch commits. A reader that looked only at the newest
+        // would say the index was back at the beginning and warn about every
+        // flow in the session, so the furthest of them is the answer.
+        piece("00000002.db", None, true);
+        assert_eq!(reach(&dir, 10).unwrap(), Reach::Behind(5));
+        // Then that piece commits, and it is the furthest.
+        piece("00000002.db", Some(9), true);
+        assert_eq!(reach(&dir, 10).unwrap(), Reach::Behind(9));
+        // Caught up, and past: neither is behind.
+        assert_eq!(reach(&dir, 9).unwrap(), Reach::Whole);
+        assert_eq!(reach(&dir, 3).unwrap(), Reach::Whole);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

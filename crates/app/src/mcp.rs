@@ -26,6 +26,7 @@ use std::{
 use tracewing_store::{
     binjson,
     prost_reflect::MessageDescriptor,
+    search,
     session::{self, BodyReader},
     settings::StorageSettings,
 };
@@ -246,7 +247,8 @@ impl Server {
             .unwrap_or(LIMIT_DEFAULT)
             .clamp(1, LIMIT_MAX) as usize;
         let before = args.get("before").and_then(Value::as_i64);
-        let mut ids = Filter::parse_with(filter, &devices).find(&conn, &dir)?;
+        let asked = Filter::parse_with(filter, &devices);
+        let mut ids = asked.find(&conn, &dir)?;
         ids.sort_unstable();
         // The newest first, as someone asking about traffic wants it.
         let ids: Vec<i64> = ids
@@ -258,12 +260,48 @@ impl Server {
         let more = ids.len() > limit;
         let shown = &ids[..ids.len().min(limit)];
         let flows = rows(&conn, shown, &devices)?;
-        Ok(json!({
+        let mut answer = json!({
             "session": session_id(&dir),
             "flows": flows,
             "more": more,
             "next_before": more.then(|| shown.last().copied()).flatten(),
-        }))
+        });
+        // A word in the filter is answered by the search index, which a
+        // thread of its own writes after the flow it covers -- and whose
+        // bodies half has no fallback at all. From here an index that has
+        // not caught up, an index that will never answer, and a word that
+        // matches nothing all look alike, so say which it was rather than
+        // let an empty answer pass for a complete one. Only for a word:
+        // `method:POST`, `host:` and the rest read the flows themselves.
+        if asked.text.is_some() {
+            let note = match search::reach(&dir, Self::newest_flow(&conn)?)? {
+                search::Reach::Whole => None,
+                search::Reach::Behind(through) => Some(json!({
+                    "through": through,
+                    "note": format!(
+                        "the search index has reached flow {through}; a filter with a word in \
+                         it cannot see newer flows yet, so ask again for those."
+                    ),
+                })),
+                search::Reach::NoBodies => Some(json!({
+                    "bodies": false,
+                    "note": "this session has no body index: a word that appears only in a \
+                             request or response body is not found at all, and asking again \
+                             will not change that. A word in a URL is still found. \
+                             `index_bodies` in settings is what turns it on.",
+                })),
+            };
+            if let Some(note) = note {
+                answer["indexing"] = note;
+            }
+        }
+        Ok(answer)
+    }
+
+    /// The newest flow this session recorded, which the index is measured
+    /// against. 0 where it recorded none.
+    fn newest_flow(conn: &Connection) -> Result<i64> {
+        Ok(conn.query_row("SELECT coalesce(max(id), 0) FROM flows", [], |r| r.get(0))?)
     }
 
     fn get_flow(&self, args: &Value) -> Result<Value> {

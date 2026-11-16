@@ -196,6 +196,55 @@ fn it_records_with_no_window_and_writes_a_har() {
         .unwrap();
     assert!(exported.status.success(), "{exported:?}");
     assert!(String::from_utf8_lossy(&exported.stdout).starts_with("2 flows written"));
+    // A word filter is answered by the search index, and an export is the
+    // worst place for that to go unsaid: the file looks whole and is missing
+    // the newest requests. Wind the index's own progress back -- the state a
+    // loaded machine is in for the first 50ms after each request -- and the
+    // export must say so, while still writing what it could find.
+    for piece in std::fs::read_dir(dir.join("sessions"))
+        .unwrap()
+        .flat_map(|session| {
+            std::fs::read_dir(session.unwrap().path().join("search"))
+                .into_iter()
+                .flatten()
+        })
+    {
+        let piece = piece.unwrap().path();
+        if piece.extension().is_some_and(|e| e == "db") {
+            rusqlite::Connection::open(&piece)
+                .unwrap()
+                .execute("UPDATE progress SET last_id = 0", [])
+                .unwrap();
+        }
+    }
+    let early = dir.join("early.har");
+    let early_out = tracewing()
+        .args(["export", "--session", id, "--filter", "json", "--har"])
+        .arg(&early)
+        .arg("--data-dir")
+        .arg(&dir)
+        .output()
+        .unwrap();
+    let said = String::from_utf8_lossy(&early_out.stderr);
+    assert!(early_out.status.success(), "{said}");
+    assert!(
+        said.contains("the search index has reached flow 0 of 2"),
+        "an export that may be early must say so: {said}"
+    );
+    // Without a word there is no index in the way, so nothing is said.
+    let column = tracewing()
+        .args(["export", "--session", id, "--filter", "method:GET", "--har"])
+        .arg(&early)
+        .arg("--data-dir")
+        .arg(&dir)
+        .output()
+        .unwrap();
+    assert!(
+        !String::from_utf8_lossy(&column.stderr).contains("search index"),
+        "{:?}",
+        column
+    );
+
     let missing = tracewing()
         .args(["export", "--session", "nope", "--har"])
         .arg(&all)
