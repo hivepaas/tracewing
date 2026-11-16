@@ -594,38 +594,99 @@ async fn connect_straight(
     Ok((tcp, dns_us, micros(connecting)))
 }
 
-/// Connects to `addr` on a socket pinned to the interface Windows numbers
-/// `index`.
+/// Which interface to leave by, or why there is none to leave by.
+///
+/// Shared by everything that must not go back into the adapter: a connection
+/// the proxy makes, a connection spliced past it, and a datagram passed on.
+/// `about` is what is being reached, for the message.
 #[cfg(windows)]
-async fn pinned(addr: SocketAddr) -> io::Result<TcpStream> {
-    let index = match out_for(addr.is_ipv6()) {
-        Out::By(index) => index,
-        // `connect_straight` only comes here while an adapter is held, so
+fn out_by(v6: bool, about: &dyn std::fmt::Display) -> io::Result<u32> {
+    match out_for(v6) {
+        Out::By(index) => Ok(index),
+        // Nothing asks for a pinned socket unless an adapter is held, so
         // this is unreachable — said rather than assumed, because the thing
-        // it would otherwise do silently is connect unpinned, and that is
-        // the loop.
-        Out::AsAlways => return Err(io::Error::other("nothing is pinned")),
+        // it would otherwise do silently is go out unpinned, and that is the
+        // loop.
+        Out::AsAlways => Err(io::Error::other("nothing is pinned")),
         Out::Nowhere => {
-            let family = match addr.is_ipv6() {
+            let family = match v6 {
                 true => "IPv6",
                 false => "IPv4",
             };
-            return Err(io::Error::other(format!(
+            Err(io::Error::other(format!(
                 "tracewing holds a TUN adapter and {family} has no way out that is not it, so \
-                 reaching {addr} would route back into tracewing"
-            )));
+                 reaching {about} would route back into tracewing"
+            )))
         }
-    };
+    }
+}
+
+/// Connects to `addr` on a socket pinned to the interface the machine's own
+/// traffic leaves by.
+#[cfg(windows)]
+async fn pinned(addr: SocketAddr) -> io::Result<TcpStream> {
+    let index = out_by(addr.is_ipv6(), &addr)?;
     let socket = match addr {
         SocketAddr::V4(_) => tokio::net::TcpSocket::new_v4()?,
         SocketAddr::V6(_) => tokio::net::TcpSocket::new_v6()?,
     };
-    leave_socket_by(&socket, addr.is_ipv6(), index)?;
+    leave_socket_by(handle(&socket), addr.is_ipv6(), index)?;
     let stream = socket.connect(addr).await?;
     // Set on the stream rather than the socket, for the same reason the
     // connector above sets it: small writes otherwise wait for delayed ACKs.
     stream.set_nodelay(true)?;
     Ok(stream)
+}
+
+/// A socket as [`leave_socket_by`] wants it. Written once so that neither
+/// caller spells the cast, and so that the two kinds of socket -- one of
+/// `tokio`'s, one of `std`'s -- reach it the same way.
+#[cfg(windows)]
+fn handle(socket: &impl std::os::windows::io::AsRawSocket) -> usize {
+    socket.as_raw_socket() as usize
+}
+
+/// A datagram socket pinned the same way, for what [`crate::datagrams`]
+/// passes on.
+///
+/// Bound to the family's unspecified address and a port of the operating
+/// system's choosing: it is only ever `connect`ed afterwards, and a NAT's
+/// source port is nobody's business.
+#[cfg(windows)]
+async fn pinned_datagrams(v6: bool) -> io::Result<tokio::net::UdpSocket> {
+    let family = match v6 {
+        true => "IPv6",
+        false => "IPv4",
+    };
+    let index = out_by(v6, &family)?;
+    let any: SocketAddr = match v6 {
+        true => "[::]:0".parse().expect("a literal"),
+        false => "0.0.0.0:0".parse().expect("a literal"),
+    };
+    // Through `std`, because the option has to be set before anything is
+    // sent and `tokio` has no socket of its own to set it on before binding.
+    let socket = std::net::UdpSocket::bind(any)?;
+    leave_socket_by(handle(&socket), v6, index)?;
+    socket.set_nonblocking(true)?;
+    tokio::net::UdpSocket::from_std(socket)
+}
+
+/// The way out for a connection nobody chose, for [`crate::sieve`].
+#[cfg(windows)]
+pub fn straight_to() -> crate::sieve::StraightTo {
+    Box::new(|to| {
+        Box::pin(async move {
+            pinned(to)
+                .await
+                .map(|stream| Box::new(stream) as Box<dyn crate::source::Duplex>)
+        })
+    })
+}
+
+/// The way out for a datagram nobody answers here, for [`crate::datagrams`].
+#[cfg(windows)]
+pub fn bound_datagrams() -> crate::datagrams::Bind {
+    std::sync::Arc::new(|v6| Box::pin(pinned_datagrams(v6)))
 }
 
 /// Sets `IP_UNICAST_IF`, or `IPV6_UNICAST_IF` for an IPv6 socket.
@@ -646,8 +707,7 @@ async fn pinned(addr: SocketAddr) -> io::Result<TcpStream> {
 /// names a different interface — which is the case the round trip in
 /// `pinning` is there for.
 #[cfg(windows)]
-fn leave_socket_by(socket: &tokio::net::TcpSocket, v6: bool, index: u32) -> io::Result<()> {
-    use std::os::windows::io::AsRawSocket;
+fn leave_socket_by(socket: usize, v6: bool, index: u32) -> io::Result<()> {
     use windows_sys::Win32::Networking::WinSock::{
         IP_UNICAST_IF, IPPROTO_IP, IPPROTO_IPV6, IPV6_UNICAST_IF, setsockopt,
     };
@@ -659,15 +719,7 @@ fn leave_socket_by(socket: &tokio::net::TcpSocket, v6: bool, index: u32) -> io::
     let value = index.to_ne_bytes();
     // SAFETY: a socket this call only reads, and four bytes of ours whose
     // length is given as four.
-    let set = unsafe {
-        setsockopt(
-            socket.as_raw_socket() as usize,
-            level,
-            name,
-            value.as_ptr(),
-            value.len() as i32,
-        )
-    };
+    let set = unsafe { setsockopt(socket, level, name, value.as_ptr(), value.len() as i32) };
     match set {
         0 => Ok(()),
         _ => Err(io::Error::last_os_error()),
@@ -679,15 +731,19 @@ fn leave_socket_by(socket: &tokio::net::TcpSocket, v6: bool, index: u32) -> io::
 /// back in **host** byte order however it was set, so a round trip is what
 /// says which way we set it. Neither of these wants a privilege, so the
 /// Windows job runs them.
+///
+/// A datagram socket is in here for a reason of its own. The option is the
+/// same option, but it is set on a socket that is bound before it is set
+/// rather than after, and on a `std` socket rather than one of `tokio`'s --
+/// so "the same call works" is a thing to measure rather than to assume.
 #[cfg(all(windows, test))]
 mod pinning {
-    use super::leave_socket_by;
+    use super::{handle, leave_socket_by};
 
     /// Loopback, which every Windows machine numbers and has.
     const SOME_INTERFACE: u32 = 1;
 
-    fn read_back(socket: &tokio::net::TcpSocket, v6: bool) -> u32 {
-        use std::os::windows::io::AsRawSocket;
+    fn read_back(socket: &impl std::os::windows::io::AsRawSocket, v6: bool) -> u32 {
         use windows_sys::Win32::Networking::WinSock::{
             IP_UNICAST_IF, IPPROTO_IP, IPPROTO_IPV6, IPV6_UNICAST_IF, getsockopt,
         };
@@ -698,15 +754,7 @@ mod pinning {
         let mut value = [0u8; 4];
         let mut len = value.len() as i32;
         // SAFETY: four bytes of ours, with four given as their length.
-        let got = unsafe {
-            getsockopt(
-                socket.as_raw_socket() as usize,
-                level,
-                name,
-                value.as_mut_ptr(),
-                &mut len,
-            )
-        };
+        let got = unsafe { getsockopt(handle(socket), level, name, value.as_mut_ptr(), &mut len) };
         assert_eq!(
             got,
             0,
@@ -719,7 +767,7 @@ mod pinning {
     #[tokio::test]
     async fn an_ipv4_index_comes_back_as_it_went_in() {
         let socket = tokio::net::TcpSocket::new_v4().expect("an IPv4 socket");
-        leave_socket_by(&socket, false, SOME_INTERFACE).expect("the option was set");
+        leave_socket_by(handle(&socket), false, SOME_INTERFACE).expect("the option was set");
         assert_eq!(
             read_back(&socket, false),
             SOME_INTERFACE,
@@ -730,12 +778,31 @@ mod pinning {
     #[tokio::test]
     async fn an_ipv6_index_comes_back_as_it_went_in() {
         let socket = tokio::net::TcpSocket::new_v6().expect("an IPv6 socket");
-        leave_socket_by(&socket, true, SOME_INTERFACE).expect("the option was set");
+        leave_socket_by(handle(&socket), true, SOME_INTERFACE).expect("the option was set");
         assert_eq!(
             read_back(&socket, true),
             SOME_INTERFACE,
             "the IPv6 option is set and read in host byte order"
         );
+    }
+
+    /// A datagram socket takes the option the same way, in both families --
+    /// bound first, and a `std` socket rather than one of `tokio`'s.
+    #[tokio::test]
+    async fn a_datagram_socket_takes_the_option_too() {
+        for (v6, any) in [(false, "0.0.0.0:0"), (true, "[::]:0")] {
+            let socket = std::net::UdpSocket::bind(any).expect("a datagram socket");
+            leave_socket_by(handle(&socket), v6, SOME_INTERFACE).expect("the option was set");
+            assert_eq!(
+                read_back(&socket, v6),
+                SOME_INTERFACE,
+                "a datagram socket pinned, {}",
+                match v6 {
+                    true => "IPv6",
+                    false => "IPv4",
+                }
+            );
+        }
     }
 }
 
