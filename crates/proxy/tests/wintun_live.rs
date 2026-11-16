@@ -93,12 +93,21 @@ fn a_shutdown_ends_the_reading_loop() {
 ///    it is not zero, since a zero would exclude nothing and the exclusion
 ///    is the whole point.
 ///
-///    The second half is **nearly free today and will not stay that way**.
-///    The adapter has no address and no route yet, so it is not in the
-///    routing table, so there is nothing for `out_by` to leave out and the
-///    loop below passes without doing much. It is written now so that it
-///    starts failing on its own the moment routes are added, which is
-///    exactly when being wrong would cost a loop.
+///    The second half is **nearly free today and will not stay that way**,
+///    and the reason is not the one a first draft of this comment gave. It
+///    said the adapter is not in the routing table. It is: a fresh Wintun
+///    adapter with no address of ours already has five routes, which a probe
+///    on the VM printed as IPv4 `/4` and a loopback `/32`, and IPv6 `/64`,
+///    `/8` and a loopback `/128`. What makes the exclusion idle today is
+///    that none of those reaches further than `WIDE_ENOUGH`, so they are
+///    filtered out as ways out before the question of whose they are arises.
+///
+///    Which is exactly why this will bite later rather than never. The
+///    moment the adapter is given the two halves of a default route, it
+///    gains rows at `/1` — candidates, and ones that **reach further than
+///    another interface's `/0`**, so they would win. On that day the only
+///    thing standing between tracewing and a loop is that these rows are
+///    recognised as ours, and this test is what says they are.
 #[test]
 #[ignore = "needs Administrator and wintun.dll"]
 fn the_adapter_has_a_luid_and_is_never_the_way_out() {
