@@ -209,7 +209,7 @@ impl Engine {
     }
 
     pub fn start(opts: EngineOptions) -> Result<Self> {
-        Self::start_with_apps(opts, Vec::new())
+        Self::start_with_extension(opts, None)
     }
 
     /// Starts it as [`Self::start`] does, and with a port for macOS's network
@@ -217,6 +217,21 @@ impl Engine {
     /// are any. The extension itself is started by the caller, with
     /// [`Self::extension`].
     pub fn start_with_apps(opts: EngineOptions, apps: Vec<String>) -> Result<Self> {
+        let apps = (!apps.is_empty()).then_some(apps);
+        Self::start_with_extension(opts, apps)
+    }
+
+    /// What the window starts: on macOS, a port for the extension whether or
+    /// not any app is chosen yet, so that choosing one, or switching the way
+    /// in on, needs no restart — [`Self::extension`] is then saved again with
+    /// other apps. Elsewhere there is no extension to have a port for.
+    pub fn start_for_window(opts: EngineOptions) -> Result<Self> {
+        Self::start_with_extension(opts, cfg!(target_os = "macos").then(Vec::new))
+    }
+
+    /// Starts it with a port for the extension when `apps` is some, even
+    /// none of them.
+    pub fn start_with_extension(opts: EngineOptions, apps: Option<Vec<String>>) -> Result<Self> {
         let sessions = opts.data_dir.join("sessions");
         session::forget_old(&sessions, opts.settings.sessions_kept);
         let session = sessions.join(next_session_name(&sessions));
@@ -252,7 +267,7 @@ impl Engine {
         let wireguard_at = wireguard.as_ref().and_then(|s| s.local_addr().ok());
         // The extension's port, on the loopback and wherever there is room,
         // as the extension is told it each run; and a key for this run alone.
-        let (extension, extension_problem) = if apps.is_empty() {
+        let (extension, extension_problem) = if apps.is_none() {
             (None, None)
         } else {
             match std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))
@@ -270,7 +285,7 @@ impl Engine {
             Some(tracewing_system::extension::Config {
                 port: listener.local_addr().ok()?.port(),
                 key: key.clone(),
-                apps: apps.clone(),
+                apps: apps.clone().unwrap_or_default(),
                 // A flow already going to tracewing goes on as it is.
                 own: [Some(addr), socks_at]
                     .into_iter()

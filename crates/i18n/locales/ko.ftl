@@ -1027,6 +1027,63 @@ t4e3af9c3 = 질문
 # Tools offered: {tools}
 tb871bcf4 = 제공된 도구: { $tools }
 
+# tracewing has no port open for the extension.
+tb0bf6486 = tracewing이 확장 프로그램용 포트를 열지 않았습니다.
+
+# Add an app first: it is the apps you add that are taken.
+t755769ba = 먼저 앱을 추가하세요: 추가한 앱이 캡처됩니다.
+
+# macOS is waiting for you to allow tracewing's network extension, in {place}.
+t7021684e = macOS가 tracewing 네트워크 확장 프로그램을 허용하기를 기다리고 있습니다: { $place }.
+
+# Starting. The first time, macOS asks you to allow tracewing to add a proxy configuration.
+tc03f3fa0 = 시작하는 중. 처음에는 macOS가 tracewing이 프록시 구성을 추가하도록 허용할지 묻습니다.
+
+# Stopping.
+t850deda5 = 중지하는 중.
+
+# On: the connections of the apps below come to tracewing, whatever their proxy settings say.
+t34cb0902 = 켜짐: 아래 앱의 연결은 프록시 설정과 상관없이 tracewing으로 옵니다.
+
+# Off. Switching it on installs tracewing's network extension the first time, and macOS asks you to allow it, once.
+te5443642 = 꺼짐. 처음 켜면 tracewing 네트워크 확장 프로그램이 설치되고, macOS가 한 번 허용을 요청합니다.
+
+# Off. The extension is installed and waits to be allowed, in {place}.
+t66ca8601 = 꺼짐. 확장 프로그램이 설치되어 허용을 기다리고 있습니다: { $place }.
+
+# Off.
+t33ce2bcc = 꺼짐.
+
+# Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
+td99daed8 = 꺼짐. 이 tracewing은 tracewing.app에서 실행되지 않았고, macOS는 앱 자신만 확장 프로그램을 설치하게 합니다: 응용 프로그램의 tracewing에서 켜세요.
+
+# Turn on
+t65a0c5a7 = 켜기
+
+# Turn off
+tcd03e04b = 끄기
+
+# Open System Settings
+td22799a3 = 시스템 설정 열기
+
+# Apps it takes
+t804bea32 = 캡처하는 앱
+
+# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
+t4a4185a4 = 아직 없습니다. 응용 프로그램에서 앱을, 또는 /usr/bin/curl 같은 프로그램을 추가하세요. 앱 안에 든 것 — 브라우저나 Electron 앱이 연결할 때 쓰는 헬퍼 — 도 함께 추가됩니다.
+
+# Add an app…
+t98ea20ec = 앱 추가…
+
+# Reading its signing ids…
+tb6411280 = 서명 ID를 읽는 중…
+
+# {own} and {n} inside it | {own} and {n} inside it
+tdf02a0a5 =
+    { $n ->
+       *[other] { $own } 및 내부 { $n }개
+    }
+
 # Not kept
 tba30b5fa = 보관 안 됨
 
@@ -1909,11 +1966,11 @@ t0d857250 = 휴대폰이 터널에 들어온 뒤 보내는 모든 것. 휴대폰
 # Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
 tb457dd67 = 자기 인증서만 신뢰하는 앱, 그리고 tracewing의 CA를 휴대폰에 설치하기 전에 보낸 모든 것.
 
-# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
-t018f7b7c = 지정한 앱이 TCP로 보내는 모든 것. 프록시 설정을 읽는지와 무관하며, 어떤 버전의 Node든, Java든, 그 localhost까지.
+# Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
+t30f507c6 = 선택한 앱이 TCP로 보내는 모든 것, 프록시 설정을 읽든 말든: 브라우저, Electron 앱, 모든 버전의 Node, Java.
 
-# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
-t3f6bf403 = UDP, 그러므로 HTTP/3. 그리고 go build가 만드는 것처럼 자체 서명 ID가 없는 프로그램.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
+t1a42de49 = UDP, 즉 HTTP/3; macOS가 넘겨주지 않는 이 컴퓨터 자신으로의 연결; 그리고 go build로 만든 모든 것처럼 자체 서명 ID가 없는 프로그램.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = 켠 뒤로 프록시 포트에 아무것도 들어오지 않았습니다. 시스템 프록시, tracewing 전용 브라우저, 터미널이 모두 그곳으로 들어오는데, 그 어느 쪽에서도 없었습니다. 프록시를 쓰라고 지정했는데 무시하는 프로그램이 바로 이렇게 보입니다.
@@ -1921,17 +1978,8 @@ t4294729b = 켠 뒤로 프록시 포트에 아무것도 들어오지 않았습�
 # Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
 t7cb4303b = 켠 뒤로 이 경로로는 아무것도 들어오지 않았습니다. 이 경로를 쓰라고 지정했는데 무시하는 프로그램이 바로 이렇게 보입니다.
 
-# Turn off
-tcd03e04b = 끄기
-
-# Turn on
-t65a0c5a7 = 켜기
-
 # Open from Set up
 tf0ad42dc = 시작하기에서 열기
-
-# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
-t5b4d06d6 = 지금은 명령줄에서 지정합니다. 잡을 앱을 지정하고, 처음에는 확장을 설치하며, macOS에 허용을 요청합니다.
 
 # macOS only: it is macOS that hands an app's connections over.
 t71872556 = macOS 전용: 앱의 연결을 넘겨주는 것은 macOS 자체입니다.
@@ -2196,6 +2244,9 @@ t4398b845 = 그리고 Java 자체 저장소
 
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = 그런 다음 이 플래그를 붙여 프로그램을 실행하세요. 보낸 것이 트래픽에 나타납니다.
+
+# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
+tbdc6cba5 = 앱을 추가한 뒤 이것을 켜세요: 프록시 설정과 상관없이 그 연결이 여기로 옵니다. 설정 › 캡처 › 앱과 같습니다.
 
 # the browsers' own stores
 tddf6836c = 브라우저 자체 저장소

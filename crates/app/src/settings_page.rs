@@ -920,10 +920,10 @@ impl Traffic {
             ),
             Way::Apps => (
                 tr!(
-                    "Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too."
+                    "Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java."
                 ),
                 tr!(
-                    "UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes."
+                    "UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes."
                 ),
             ),
         };
@@ -935,10 +935,10 @@ impl Traffic {
         // is not a way in that has gone quiet, it is a way in that is not
         // there, and the tab already says so above.
         let since = match way {
-            Way::SystemProxy | Way::OtherDevices => self.on_since.get(&way).copied(),
+            Way::SystemProxy | Way::OtherDevices | Way::Apps => self.on_since.get(&way).copied(),
             Way::Socks5 => self.engine.socks.map(|_| self.engine.started),
             Way::WireGuard => self.engine.wireguard.map(|_| self.engine.started),
-            Way::Browser | Way::Terminal | Way::Apps => None,
+            Way::Browser | Way::Terminal => None,
         };
         let quiet = gone_quiet(way, since, &self.engine.arrivals, Instant::now()).then(|| {
             match way {
@@ -997,19 +997,13 @@ impl Traffic {
             ),
             Way::OtherDevices | Way::Socks5 | Way::WireGuard | Way::Apps => None,
         };
-        // A way in with no window of its own yet says so, and says what does
-        // work, rather than showing a switch that is not wired to anything.
-        let instead = match way {
-            Way::Apps if cfg!(target_os = "macos") => Some((
-                tr!(
-                    "Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it."
-                ),
-                Some("tracewing capture --app com.example.theapp".to_owned()),
-            )),
-            Way::Apps => Some((
-                tr!("macOS only: it is macOS that hands an app's connections over."),
-                None,
-            )),
+        // The apps and their switch, on the Mac; elsewhere a line saying
+        // why there is none, rather than a switch that could not work.
+        let apps = match way {
+            Way::Apps if cfg!(target_os = "macos") => Some(self.render_mac_apps(cx)),
+            Way::Apps => Some(div().text_size(ui(12.)).child(tr!(
+                "macOS only: it is macOS that hands an app's connections over."
+            ))),
             _ => None,
         };
         div()
@@ -1051,17 +1045,7 @@ impl Traffic {
             // button the width of the card reads as a banner rather than as
             // something to press.
             .children(trust_link.map(|button| div().flex().flex_row().child(button)))
-            .children(instead.map(|(says, command)| {
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(ui(8.))
-                    .child(div().text_size(ui(12.)).child(says))
-                    .children(
-                        command
-                            .map(|command| crate::setup_page::code_block("capture-app", command)),
-                    )
-            }))
+            .children(apps)
     }
 
     /// The body text size, `None` for the default. Everything grows with it.

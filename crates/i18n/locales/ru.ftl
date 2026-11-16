@@ -1090,6 +1090,66 @@ t4e3af9c3 = Вопрос
 # Tools offered: {tools}
 tb871bcf4 = Предложенные инструменты: { $tools }
 
+# tracewing has no port open for the extension.
+tb0bf6486 = tracewing не открыл порт для расширения.
+
+# Add an app first: it is the apps you add that are taken.
+t755769ba = Сначала добавьте приложение: перехватываются именно добавленные приложения.
+
+# macOS is waiting for you to allow tracewing's network extension, in {place}.
+t7021684e = macOS ждёт, пока вы разрешите сетевое расширение tracewing, в { $place }.
+
+# Starting. The first time, macOS asks you to allow tracewing to add a proxy configuration.
+tc03f3fa0 = Запуск. В первый раз macOS попросит разрешить tracewing добавить конфигурацию прокси.
+
+# Stopping.
+t850deda5 = Остановка.
+
+# On: the connections of the apps below come to tracewing, whatever their proxy settings say.
+t34cb0902 = Включено: соединения приложений ниже идут в tracewing, что бы ни говорили их настройки прокси.
+
+# Off. Switching it on installs tracewing's network extension the first time, and macOS asks you to allow it, once.
+te5443642 = Выключено. При первом включении устанавливается сетевое расширение tracewing, и macOS один раз просит его разрешить.
+
+# Off. The extension is installed and waits to be allowed, in {place}.
+t66ca8601 = Выключено. Расширение установлено и ждёт разрешения, в { $place }.
+
+# Off.
+t33ce2bcc = Выключено.
+
+# Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
+td99daed8 = Выключено. Этот tracewing запущен не из tracewing.app, а macOS позволяет устанавливать расширение только самому приложению: включите его из tracewing в Программах.
+
+# Turn on
+t65a0c5a7 = Включить
+
+# Turn off
+tcd03e04b = Выключить
+
+# Open System Settings
+td22799a3 = Открыть Системные настройки
+
+# Apps it takes
+t804bea32 = Перехватываемые приложения
+
+# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
+t4a4185a4 = Пока нет. Добавьте приложение из Программ или программу вроде /usr/bin/curl; то, что внутри приложения, — помощники, через которые подключается браузер или Electron-приложение, — добавляется вместе с ним.
+
+# Add an app…
+t98ea20ec = Добавить приложение…
+
+# Reading its signing ids…
+tb6411280 = Чтение идентификаторов подписи…
+
+# {own} and {n} inside it | {own} and {n} inside it
+tdf02a0a5 =
+    { $n ->
+        [one] { $own } и { $n } внутри
+        [few] { $own } и { $n } внутри
+        [many] { $own } и { $n } внутри
+       *[other] { $own } и { $n } внутри
+    }
+
 # Not kept
 tba30b5fa = Не сохранено
 
@@ -2101,11 +2161,11 @@ t0d857250 = Всё, что телефон отправляет, войдя в т
 # Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
 tb457dd67 = Приложения, доверяющие только своим сертификатам, и всё отправленное до того, как CA tracewing установлен на телефоне.
 
-# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
-t018f7b7c = Всё, что названное приложение отправляет по TCP, читает ли он прокси-настройку или нет: Node любой версии, Java и его localhost тоже.
+# Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
+t30f507c6 = Всё, что выбранное приложение отправляет по TCP, читает оно настройки прокси или нет: браузер, Electron-приложение, Node любой версии, Java.
 
-# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
-t3f6bf403 = UDP, а значит и HTTP/3; и программы без своего идентификатора подписи — например всё, что собирает go build.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
+t1a42de49 = UDP, то есть HTTP/3; соединения с этим же компьютером, которые macOS не передаёт; и программы без собственного идентификатора подписи, как всё, что собирает go build.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = С момента включения на порт прокси ничего не пришло — ни через системный прокси, ни через браузер самого tracewing, ни через терминал: все они входят там. Программа, которой указали прокси и которая его игнорирует, выглядит именно так.
@@ -2113,17 +2173,8 @@ t4294729b = С момента включения на порт прокси ни
 # Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
 t7cb4303b = С момента включения этим путём ничего не пришло. Программа, которой указали этот путь и которая его игнорирует, выглядит именно так.
 
-# Turn off
-tcd03e04b = Выключить
-
-# Turn on
-t65a0c5a7 = Включить
-
 # Open from Set up
 tf0ad42dc = Открыть в Настройке
-
-# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
-t5b4d06d6 = Пока задаётся из командной строки: она называет приложения для захвата, в первый раз устанавливает расширение и просит macOS его разрешить.
 
 # macOS only: it is macOS that hands an app's connections over.
 t71872556 = Только macOS: соединения приложения передаёт сам macOS.
@@ -2394,6 +2445,9 @@ t4398b845 = И собственное хранилище Java
 
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Затем запустите свою программу с этими флагами: то, что она отправит, появится в «Трафике».
+
+# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
+tbdc6cba5 = Добавьте приложение и включите это: его соединения идут сюда, что бы ни говорили его настройки прокси. То же, что Настройки › Перехват › Приложения.
 
 # the browsers' own stores
 tddf6836c = собственные хранилища браузеров

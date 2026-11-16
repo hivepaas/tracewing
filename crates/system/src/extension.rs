@@ -24,6 +24,10 @@
 #[cfg(target_os = "macos")]
 #[path = "extension/macos.rs"]
 mod os;
+#[path = "extension/program.rs"]
+mod program;
+
+pub use program::{Program, code_within, identifier_in, program_at};
 
 use anyhow::Result;
 pub use tracewing_handoff::Key;
@@ -81,6 +85,14 @@ pub fn stop() -> Result<()> {
     imp::stop()
 }
 
+/// Stops the proxy this program started, as it exits, from any thread, the
+/// main one included: the word to stop is sent and not waited for, since an
+/// exiting window cannot serve the main queue where the answer would come.
+/// Should the word be lost, the proxy left running is harmless (above).
+pub fn stop_on_exit() {
+    imp::stop_on_exit()
+}
+
 pub fn status() -> Result<Status> {
     imp::status()
 }
@@ -128,6 +140,7 @@ mod imp {
     pub fn stop() -> Result<()> {
         Ok(())
     }
+    pub fn stop_on_exit() {}
     pub fn status() -> Result<Status> {
         Ok(Status {
             installed: Installed::No,

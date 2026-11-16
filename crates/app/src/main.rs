@@ -56,7 +56,7 @@ fn main() -> Result<()> {
         eprintln!("tracewing: cannot put the system proxy back: {e:#}");
     }
     let (options, settings_problem) = EngineOptions::from_data_dir(&data_dir, PORTS);
-    let engine = Engine::start(options)?;
+    let engine = Engine::start_for_window(options)?;
 
     gpui_platform::application()
         .with_assets(Assets)

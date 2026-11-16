@@ -1066,6 +1066,64 @@ t4e3af9c3 = Question
 # Tools offered: {tools}
 tb871bcf4 = Outils proposés : { $tools }
 
+# tracewing has no port open for the extension.
+tb0bf6486 = tracewing n'a ouvert aucun port pour l'extension.
+
+# Add an app first: it is the apps you add that are taken.
+t755769ba = Ajoutez d'abord une app : ce sont les apps ajoutées qui sont capturées.
+
+# macOS is waiting for you to allow tracewing's network extension, in {place}.
+t7021684e = macOS attend que vous autorisiez l'extension réseau de tracewing, dans { $place }.
+
+# Starting. The first time, macOS asks you to allow tracewing to add a proxy configuration.
+tc03f3fa0 = Démarrage. La première fois, macOS vous demande d'autoriser tracewing à ajouter une configuration de proxy.
+
+# Stopping.
+t850deda5 = Arrêt.
+
+# On: the connections of the apps below come to tracewing, whatever their proxy settings say.
+t34cb0902 = Activé : les connexions des apps ci-dessous arrivent à tracewing, quels que soient leurs réglages de proxy.
+
+# Off. Switching it on installs tracewing's network extension the first time, and macOS asks you to allow it, once.
+te5443642 = Désactivé. L'activer installe l'extension réseau de tracewing la première fois, et macOS vous demande de l'autoriser, une fois.
+
+# Off. The extension is installed and waits to be allowed, in {place}.
+t66ca8601 = Désactivé. L'extension est installée et attend d'être autorisée, dans { $place }.
+
+# Off.
+t33ce2bcc = Désactivé.
+
+# Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
+td99daed8 = Désactivé. Ce tracewing ne tourne pas depuis tracewing.app, et macOS ne laisse que l'app installer son extension : activez-le depuis tracewing dans Applications.
+
+# Turn on
+t65a0c5a7 = Activer
+
+# Turn off
+tcd03e04b = Désactiver
+
+# Open System Settings
+td22799a3 = Ouvrir Réglages Système
+
+# Apps it takes
+t804bea32 = Apps capturées
+
+# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
+t4a4185a4 = Aucune pour l'instant. Ajoutez une app depuis Applications, ou un programme comme /usr/bin/curl ; ce qui est dans une app — les assistants depuis lesquels un navigateur ou une app Electron se connecte — vient avec.
+
+# Add an app…
+t98ea20ec = Ajouter une app…
+
+# Reading its signing ids…
+tb6411280 = Lecture de ses identifiants de signature…
+
+# {own} and {n} inside it | {own} and {n} inside it
+tdf02a0a5 =
+    { $n ->
+        [one] { $own } et { $n } à l'intérieur
+       *[other] { $own } et { $n } à l'intérieur
+    }
+
 # Not kept
 tba30b5fa = Non conservé
 
@@ -2033,11 +2091,11 @@ t0d857250 = Tout ce que le téléphone envoie une fois le tunnel rejoint, y comp
 # Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
 tb457dd67 = Les applications qui ne font confiance qu'à leurs propres certificats, et tout ce qui est envoyé avant l'installation de la CA de tracewing sur le téléphone.
 
-# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
-t018f7b7c = Tout ce qu'une application nommée envoie en TCP, qu'elle lise un réglage proxy ou non : Node de n'importe quelle version, Java, et son localhost aussi.
+# Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
+t30f507c6 = Tout ce qu'une app choisie envoie en TCP, qu'elle lise ou non un réglage de proxy : un navigateur, une app Electron, Node de toute version, Java.
 
-# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
-t3f6bf403 = UDP, donc HTTP/3 ; et les programmes sans identifiant de signature propre, comme tout ce que produit go build.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
+t1a42de49 = L'UDP, donc HTTP/3 ; les connexions vers cet ordinateur lui-même, que macOS ne transmet pas ; et les programmes sans identifiant de signature propre, comme tout ce que produit go build.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Rien n'est arrivé sur le port du proxy depuis son activation — ni par le proxy système, ni par un navigateur propre à tracewing, ni par un terminal, qui passent tous par là. Un programme à qui le proxy a été indiqué et qui l'ignore ressemble exactement à ceci.
@@ -2045,17 +2103,8 @@ t4294729b = Rien n'est arrivé sur le port du proxy depuis son activation — ni
 # Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
 t7cb4303b = Rien n'est arrivé par là depuis son activation. Un programme à qui cette voie a été indiquée et qui l'ignore ressemble exactement à ceci.
 
-# Turn off
-tcd03e04b = Désactiver
-
-# Turn on
-t65a0c5a7 = Activer
-
 # Open from Set up
 tf0ad42dc = Ouvrir depuis Configurer
-
-# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
-t5b4d06d6 = Pour l'instant depuis la ligne de commande : elle nomme les applications à capturer, installe l'extension la première fois et demande à macOS de l'autoriser.
 
 # macOS only: it is macOS that hands an app's connections over.
 t71872556 = macOS uniquement : c'est macOS qui transmet les connexions d'une application.
@@ -2325,6 +2374,9 @@ t4398b845 = Et le magasin propre à Java
 
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Lancez ensuite votre programme avec ces options : ce qu'il envoie apparaît dans Trafic.
+
+# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
+tbdc6cba5 = Ajoutez l'app, puis activez ceci : ses connexions arrivent ici quels que soient ses réglages de proxy. Comme Réglages › Capture › Apps.
 
 # the browsers' own stores
 tddf6836c = les magasins propres aux navigateurs

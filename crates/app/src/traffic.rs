@@ -358,6 +358,8 @@ pub struct Traffic {
     pub client_cert_form: Option<crate::client_certs_view::ClientCertForm>,
     /// What the last step with the company's certificate did, and whether it failed.
     pub company_ca_note: Option<(String, bool)>,
+    /// The apps macOS's network extension is to take, and its switch.
+    pub mac_apps: crate::mac_apps::MacApps,
     pub protos_fetching: bool,
     /// What came of the last time a server was asked: what it has, or why
     /// not.
@@ -495,6 +497,7 @@ impl Traffic {
                 let _ = indexer.leave();
             }
             this.release_system_proxy();
+            this.release_mac_apps();
             this.engine.stop();
             async {}
         })
@@ -506,6 +509,7 @@ impl Traffic {
         let now = Instant::now();
         cx.defer_in(window, |this, _, cx| {
             this.start_ca_check(cx);
+            this.check_extension(cx);
             this.recover_android(cx);
         });
         // The desktop may move the window's buttons to the other end.
@@ -604,6 +608,7 @@ impl Traffic {
             protos_server: None,
             client_cert_form: None,
             company_ca_note: None,
+            mac_apps: crate::mac_apps::MacApps::load(data_dir),
             protos_fetching: false,
             protos_fetched: None,
             device_name,
@@ -805,12 +810,13 @@ impl Traffic {
         let (mut options, problem) =
             EngineOptions::from_data_dir(&self.data_dir, self.engine.ports.clone());
         options.key_store = self.engine.key_store;
-        match Engine::start(options) {
+        match Engine::start_for_window(options) {
             Ok(engine) => {
                 self.engine = engine;
                 self.settings_problem = problem;
                 self.viewing = None;
                 self.show_session(cx);
+                self.engine_restarted_for_mac_apps(cx);
                 // The system sends its traffic to an address, and this one
                 // may not be the address it was told. Said, not silently
                 // put right: telling the system again asks for a password.

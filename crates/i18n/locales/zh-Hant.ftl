@@ -1027,6 +1027,63 @@ t4e3af9c3 = 提問
 # Tools offered: {tools}
 tb871bcf4 = 提供的工具：{ $tools }
 
+# tracewing has no port open for the extension.
+tb0bf6486 = tracewing 沒有為延伸功能開啟連接埠。
+
+# Add an app first: it is the apps you add that are taken.
+t755769ba = 請先加入一個 App：擷取的是你加入的 App。
+
+# macOS is waiting for you to allow tracewing's network extension, in {place}.
+t7021684e = macOS 正在等你允許 tracewing 的網路延伸功能，位置：{ $place }。
+
+# Starting. The first time, macOS asks you to allow tracewing to add a proxy configuration.
+tc03f3fa0 = 正在啟動。第一次時，macOS 會請你允許 tracewing 加入代理伺服器設定。
+
+# Stopping.
+t850deda5 = 正在停止。
+
+# On: the connections of the apps below come to tracewing, whatever their proxy settings say.
+t34cb0902 = 已開啟：下面這些 App 的連線都會來到 tracewing，不論它們的代理伺服器設定為何。
+
+# Off. Switching it on installs tracewing's network extension the first time, and macOS asks you to allow it, once.
+te5443642 = 已關閉。第一次開啟時會安裝 tracewing 的網路延伸功能，macOS 會請你允許一次。
+
+# Off. The extension is installed and waits to be allowed, in {place}.
+t66ca8601 = 已關閉。延伸功能已安裝，正在等待允許，位置：{ $place }。
+
+# Off.
+t33ce2bcc = 已關閉。
+
+# Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
+td99daed8 = 已關閉。這個 tracewing 不是從 tracewing.app 執行的，而 macOS 只讓 App 本身安裝它的延伸功能：請從「應用程式」中的 tracewing 開啟。
+
+# Turn on
+t65a0c5a7 = 開啟
+
+# Turn off
+tcd03e04b = 關閉
+
+# Open System Settings
+td22799a3 = 打開系統設定
+
+# Apps it takes
+t804bea32 = 擷取的 App
+
+# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
+t4a4185a4 = 還沒有。從「應用程式」加入一個 App，或加入 /usr/bin/curl 這樣的程式；App 裡面的內容——瀏覽器或 Electron App 用來連線的輔助程式——會一併加入。
+
+# Add an app…
+t98ea20ec = 加入 App…
+
+# Reading its signing ids…
+tb6411280 = 正在讀取簽署 ID…
+
+# {own} and {n} inside it | {own} and {n} inside it
+tdf02a0a5 =
+    { $n ->
+       *[other] { $own } 及其內部 { $n } 個
+    }
+
 # Not kept
 tba30b5fa = 未保留
 
@@ -1909,11 +1966,11 @@ t0d857250 = 手機加入隧道後送出的一切，包括忽略手機代理設�
 # Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
 tb457dd67 = 只信任自帶憑證的應用程式，以及在 tracewing 的 CA 裝到手機上之前送出的一切。
 
-# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
-t018f7b7c = 指定的應用程式透過 TCP 送出的一切，無論它是否讀取任何代理設定：任何版本的 Node、Java，連它的 localhost 也算。
+# Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
+t30f507c6 = 所選 App 透過 TCP 送出的一切，不論它是否讀取代理伺服器設定：瀏覽器、Electron App、任何版本的 Node、Java。
 
-# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
-t3f6bf403 = UDP，所以也包括 HTTP/3；以及沒有自己簽章識別的程式，例如 go build 產生的一切。
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
+t1a42de49 = UDP，也就是 HTTP/3；連向這部電腦本身的連線，macOS 不會轉交；以及沒有自己簽署 ID 的程式，例如 go build 產生的所有程式。
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = 自從開啟以來，代理連接埠上什麼都沒到過 — 系統代理、tracewing 自己的瀏覽器、終端機都從那裡進來，這三樣都沒有。一個被指定走代理卻忽略它的程式，看起來正是這樣。
@@ -1921,17 +1978,8 @@ t4294729b = 自從開啟以來，代理連接埠上什麼都沒到過 — 系統
 # Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
 t7cb4303b = 自從開啟以來，這條路上什麼都沒到過。一個被指定走這條路卻忽略它的程式，看起來正是這樣。
 
-# Turn off
-tcd03e04b = 關閉
-
-# Turn on
-t65a0c5a7 = 開啟
-
 # Open from Set up
 tf0ad42dc = 從初始設定開啟
-
-# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
-t5b4d06d6 = 目前從命令列指定：它列出要擷取的應用程式，第一次會安裝擴充功能，並請 macOS 允許。
 
 # macOS only: it is macOS that hands an app's connections over.
 t71872556 = 僅 macOS：交出應用程式連線的是 macOS 自己。
@@ -2196,6 +2244,9 @@ t4398b845 = 以及 Java 自帶的憑證庫
 
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = 然後用這些參數啟動你的程式：它送出的東西會出現在流量裡。
+
+# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
+tbdc6cba5 = 加入 App，然後開啟：不論它的代理伺服器設定為何，它的連線都會來到這裡。與 設定 › 擷取 › App 相同。
 
 # the browsers' own stores
 tddf6836c = 各瀏覽器自己的憑證庫

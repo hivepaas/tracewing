@@ -1027,6 +1027,63 @@ t4e3af9c3 = 質問
 # Tools offered: {tools}
 tb871bcf4 = 提供されたツール: { $tools }
 
+# tracewing has no port open for the extension.
+tb0bf6486 = tracewing は拡張機能用のポートを開いていません。
+
+# Add an app first: it is the apps you add that are taken.
+t755769ba = 先にアプリを追加してください: 取り込まれるのは追加したアプリです。
+
+# macOS is waiting for you to allow tracewing's network extension, in {place}.
+t7021684e = macOS は tracewing のネットワーク拡張機能の許可を待っています: { $place }。
+
+# Starting. The first time, macOS asks you to allow tracewing to add a proxy configuration.
+tc03f3fa0 = 開始中。初回は、tracewing がプロキシ構成を追加することの許可を macOS が求めます。
+
+# Stopping.
+t850deda5 = 停止中。
+
+# On: the connections of the apps below come to tracewing, whatever their proxy settings say.
+t34cb0902 = オン: 下のアプリの接続は、プロキシ設定にかかわらず tracewing に届きます。
+
+# Off. Switching it on installs tracewing's network extension the first time, and macOS asks you to allow it, once.
+te5443642 = オフ。初めてオンにすると tracewing のネットワーク拡張機能がインストールされ、macOS が一度だけ許可を求めます。
+
+# Off. The extension is installed and waits to be allowed, in {place}.
+t66ca8601 = オフ。拡張機能はインストール済みで、許可を待っています: { $place }。
+
+# Off.
+t33ce2bcc = オフ。
+
+# Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
+td99daed8 = オフ。この tracewing は tracewing.app から動いておらず、macOS は拡張機能のインストールをアプリ自身にしか許しません: アプリケーションの tracewing からオンにしてください。
+
+# Turn on
+t65a0c5a7 = オンにする
+
+# Turn off
+tcd03e04b = オフにする
+
+# Open System Settings
+td22799a3 = システム設定を開く
+
+# Apps it takes
+t804bea32 = 取り込むアプリ
+
+# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
+t4a4185a4 = まだありません。アプリケーションからアプリを、または /usr/bin/curl のようなプログラムを追加してください。アプリの中身 — ブラウザや Electron アプリが接続に使うヘルパー — も一緒に追加されます。
+
+# Add an app…
+t98ea20ec = アプリを追加…
+
+# Reading its signing ids…
+tb6411280 = 署名 ID を読み取り中…
+
+# {own} and {n} inside it | {own} and {n} inside it
+tdf02a0a5 =
+    { $n ->
+       *[other] { $own } と内部の { $n } 個
+    }
+
 # Not kept
 tba30b5fa = 未保持
 
@@ -1909,11 +1966,11 @@ t0d857250 = スマートフォンがトンネルに参加したあとに送る�
 # Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
 tb457dd67 = 自分の証明書しか信頼しないアプリ、および tracewing の CA をスマートフォンに入れる前に送られたものすべて。
 
-# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
-t018f7b7c = 指定したアプリが TCP で送るものすべて。プロキシ設定を読むかどうかに関係なく、どのバージョンの Node でも、Java でも、その localhost も。
+# Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
+t30f507c6 = 選んだアプリが TCP で送るものすべて。プロキシ設定を読むかどうかは問いません: ブラウザ、Electron アプリ、どのバージョンの Node も、Java も。
 
-# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
-t3f6bf403 = UDP、つまり HTTP/3。そして go build が作るもののように、自分の署名 ID を持たないプログラム。
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
+t1a42de49 = UDP、つまり HTTP/3。このコンピュータ自身への接続 (macOS が渡さないため)。独自の署名 ID を持たないプログラム (go build で作ったものすべてなど)。
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = オンにしてから、プロキシのポートには何も届いていません。システムプロキシ、tracewing 専用のブラウザー、ターミナルはどれもそこへ入ってきますが、そのいずれからも届いていません。プロキシを使うよう指定したのに無視するプログラムは、まさにこう見えます。
@@ -1921,17 +1978,8 @@ t4294729b = オンにしてから、プロキシのポートには何も届い�
 # Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
 t7cb4303b = オンにしてから、この経路では何も届いていません。この経路を使うよう指定したのに無視するプログラムは、まさにこう見えます。
 
-# Turn off
-tcd03e04b = オフにする
-
-# Turn on
-t65a0c5a7 = オンにする
-
 # Open from Set up
 tf0ad42dc = セットアップから開く
-
-# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
-t5b4d06d6 = 今のところコマンドラインから指定します。取得するアプリを指定し、初回は機能拡張をインストールし、macOS に許可を求めます。
 
 # macOS only: it is macOS that hands an app's connections over.
 t71872556 = macOS のみ: アプリの接続を渡すのは macOS 自身です。
@@ -2196,6 +2244,9 @@ t4398b845 = そして Java 独自のストア
 
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = そのうえで、このフラグを付けてプログラムを起動してください。送ったものが「トラフィック」に現れます。
+
+# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
+tbdc6cba5 = アプリを追加してからこれをオンにすると、プロキシ設定にかかわらずその接続がここに届きます。設定 › 取り込み › アプリ と同じです。
 
 # the browsers' own stores
 tddf6836c = 各ブラウザー独自のストア

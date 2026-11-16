@@ -1027,6 +1027,63 @@ t4e3af9c3 = Đã hỏi
 # Tools offered: {tools}
 tb871bcf4 = Tool được cung cấp: { $tools }
 
+# tracewing has no port open for the extension.
+tb0bf6486 = tracewing chưa mở cổng nào cho extension.
+
+# Add an app first: it is the apps you add that are taken.
+t755769ba = Hãy thêm một app trước: chỉ những app bạn thêm mới được bắt.
+
+# macOS is waiting for you to allow tracewing's network extension, in {place}.
+t7021684e = macOS đang chờ bạn cho phép network extension của tracewing, trong { $place }.
+
+# Starting. The first time, macOS asks you to allow tracewing to add a proxy configuration.
+tc03f3fa0 = Đang bật. Lần đầu, macOS hỏi bạn có cho tracewing thêm một cấu hình proxy không.
+
+# Stopping.
+t850deda5 = Đang tắt.
+
+# On: the connections of the apps below come to tracewing, whatever their proxy settings say.
+t34cb0902 = Đang bật: kết nối của các app dưới đây đi qua tracewing, dù cài đặt proxy của chúng nói gì.
+
+# Off. Switching it on installs tracewing's network extension the first time, and macOS asks you to allow it, once.
+te5443642 = Đang tắt. Bật lên sẽ cài network extension của tracewing lần đầu, và macOS hỏi bạn cho phép, một lần.
+
+# Off. The extension is installed and waits to be allowed, in {place}.
+t66ca8601 = Đang tắt. Extension đã cài và đang chờ được cho phép, trong { $place }.
+
+# Off.
+t33ce2bcc = Đang tắt.
+
+# Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
+td99daed8 = Đang tắt. tracewing này không chạy từ tracewing.app, mà macOS chỉ cho chính app đó cài extension: hãy bật từ tracewing trong Applications.
+
+# Turn on
+t65a0c5a7 = Bật
+
+# Turn off
+tcd03e04b = Tắt
+
+# Open System Settings
+td22799a3 = Mở System Settings
+
+# Apps it takes
+t804bea32 = Các app được bắt
+
+# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
+t4a4185a4 = Chưa có app nào. Thêm một app từ Applications, hoặc một chương trình như /usr/bin/curl; những gì nằm trong app — các helper mà trình duyệt hay app Electron dùng để kết nối — được thêm theo.
+
+# Add an app…
+t98ea20ec = Thêm app…
+
+# Reading its signing ids…
+tb6411280 = Đang đọc signing id…
+
+# {own} and {n} inside it | {own} and {n} inside it
+tdf02a0a5 =
+    { $n ->
+       *[other] { $own } và { $n } bên trong
+    }
+
 # Not kept
 tba30b5fa = Không được giữ
 
@@ -1909,11 +1966,11 @@ t0d857250 = Mọi thứ điện thoại gửi sau khi nó vào tunnel, kể cả
 # Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
 tb457dd67 = Các app chỉ tin chứng chỉ riêng của chúng, và mọi thứ gửi trước khi CA của tracewing được cài lên điện thoại.
 
-# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
-t018f7b7c = Mọi thứ một app được nêu tên gửi qua TCP, dù nó có đọc thiết lập proxy hay không: Node bản nào cũng được, Java, và cả localhost của nó.
+# Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
+t30f507c6 = Mọi thứ một app được chọn gửi qua TCP, dù nó có đọc cài đặt proxy hay không: trình duyệt, app Electron, Node mọi phiên bản, Java.
 
-# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
-t3f6bf403 = UDP, nên cả HTTP/3; và các chương trình không có signing id riêng, như mọi thứ go build tạo ra.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
+t1a42de49 = UDP, tức HTTP/3; kết nối tới chính máy này, vì macOS không chuyển chúng; và chương trình không có signing id riêng, như mọi thứ go build tạo ra.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Chưa có gì tới cổng proxy kể từ lúc bật — không từ system proxy, không từ trình duyệt riêng của tracewing, cũng không từ terminal, vì cả ba đều vào ở đó. Một chương trình được chỉ dùng proxy nhưng bỏ qua nó thì trông đúng như thế này.
@@ -1921,17 +1978,8 @@ t4294729b = Chưa có gì tới cổng proxy kể từ lúc bật — không t�
 # Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
 t7cb4303b = Chưa có gì tới bằng đường này kể từ lúc bật. Một chương trình được chỉ dùng nó nhưng bỏ qua nó thì trông đúng như thế này.
 
-# Turn off
-tcd03e04b = Tắt
-
-# Turn on
-t65a0c5a7 = Bật
-
 # Open from Set up
 tf0ad42dc = Mở từ Thiết lập
-
-# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
-t5b4d06d6 = Hiện đặt từ dòng lệnh: lệnh này nêu các app cần bắt, cài extension lần đầu, và xin macOS cho phép.
 
 # macOS only: it is macOS that hands an app's connections over.
 t71872556 = Chỉ macOS: chính macOS là bên chuyển các kết nối của app sang.
@@ -2196,6 +2244,9 @@ t4398b845 = Và kho riêng của Java
 
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Rồi chạy chương trình của bạn với các cờ này: những gì nó gửi sẽ hiện ở Traffic.
+
+# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
+tbdc6cba5 = Thêm app, rồi bật lên: kết nối của nó về đây dù cài đặt proxy của nó nói gì. Giống Settings › Capture › Apps.
 
 # the browsers' own stores
 tddf6836c = kho riêng của các trình duyệt

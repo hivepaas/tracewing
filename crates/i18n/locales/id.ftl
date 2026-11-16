@@ -1027,6 +1027,63 @@ t4e3af9c3 = Ditanyakan
 # Tools offered: {tools}
 tb871bcf4 = Alat yang ditawarkan: { $tools }
 
+# tracewing has no port open for the extension.
+tb0bf6486 = tracewing belum membuka port untuk ekstensi.
+
+# Add an app first: it is the apps you add that are taken.
+t755769ba = Tambahkan aplikasi dulu: aplikasi yang Anda tambahkan itulah yang ditangkap.
+
+# macOS is waiting for you to allow tracewing's network extension, in {place}.
+t7021684e = macOS menunggu Anda mengizinkan ekstensi jaringan tracewing, di { $place }.
+
+# Starting. The first time, macOS asks you to allow tracewing to add a proxy configuration.
+tc03f3fa0 = Memulai. Pertama kali, macOS meminta Anda mengizinkan tracewing menambahkan konfigurasi proxy.
+
+# Stopping.
+t850deda5 = Menghentikan.
+
+# On: the connections of the apps below come to tracewing, whatever their proxy settings say.
+t34cb0902 = Aktif: koneksi aplikasi di bawah ini masuk ke tracewing, apa pun pengaturan proxy-nya.
+
+# Off. Switching it on installs tracewing's network extension the first time, and macOS asks you to allow it, once.
+te5443642 = Mati. Menyalakannya memasang ekstensi jaringan tracewing pertama kali, dan macOS meminta Anda mengizinkannya, sekali.
+
+# Off. The extension is installed and waits to be allowed, in {place}.
+t66ca8601 = Mati. Ekstensi sudah terpasang dan menunggu diizinkan, di { $place }.
+
+# Off.
+t33ce2bcc = Mati.
+
+# Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
+td99daed8 = Mati. tracewing ini tidak berjalan dari tracewing.app, dan macOS hanya membiarkan aplikasi itu memasang ekstensinya: nyalakan dari tracewing di Applications.
+
+# Turn on
+t65a0c5a7 = Aktifkan
+
+# Turn off
+tcd03e04b = Matikan
+
+# Open System Settings
+td22799a3 = Buka Pengaturan Sistem
+
+# Apps it takes
+t804bea32 = Aplikasi yang ditangkap
+
+# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
+t4a4185a4 = Belum ada. Tambahkan aplikasi dari Applications, atau program seperti /usr/bin/curl; isi sebuah aplikasi — helper tempat browser atau aplikasi Electron terhubung — ikut ditambahkan.
+
+# Add an app…
+t98ea20ec = Tambah aplikasi…
+
+# Reading its signing ids…
+tb6411280 = Membaca ID tanda tangannya…
+
+# {own} and {n} inside it | {own} and {n} inside it
+tdf02a0a5 =
+    { $n ->
+       *[other] { $own } dan { $n } di dalamnya
+    }
+
 # Not kept
 tba30b5fa = Tidak disimpan
 
@@ -1909,11 +1966,11 @@ t0d857250 = Semua yang dikirim ponsel setelah masuk ke tunnel, termasuk app yang
 # Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
 tb457dd67 = App yang hanya mempercayai sertifikatnya sendiri, dan apa pun yang dikirim sebelum CA tracewing dipasang di ponsel.
 
-# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
-t018f7b7c = Apa pun yang dikirim app yang disebut lewat TCP, baik membaca setelan proxy atau tidak: Node versi apa saja, Java, dan localhost-nya juga.
+# Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
+t30f507c6 = Apa pun yang dikirim aplikasi terpilih lewat TCP, membaca pengaturan proxy atau tidak: browser, aplikasi Electron, Node versi apa pun, Java.
 
-# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
-t3f6bf403 = UDP, jadi HTTP/3; dan program tanpa signing id sendiri, seperti semua yang dibuat go build.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
+t1a42de49 = UDP, jadi HTTP/3; koneksi ke komputer ini sendiri, yang tidak diserahkan macOS; dan program tanpa ID tanda tangan sendiri, seperti semua hasil go build.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Sejak dinyalakan belum ada apa pun yang masuk ke port proxy — tidak dari proxy sistem, tidak dari browser milik tracewing, tidak juga dari terminal, yang semuanya masuk di situ. Program yang sudah diberi tahu soal proxy tetapi mengabaikannya tampak persis seperti ini.
@@ -1921,17 +1978,8 @@ t4294729b = Sejak dinyalakan belum ada apa pun yang masuk ke port proxy — tida
 # Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
 t7cb4303b = Sejak dinyalakan belum ada apa pun yang masuk lewat jalan ini. Program yang sudah diberi tahu soal jalan ini tetapi mengabaikannya tampak persis seperti ini.
 
-# Turn off
-tcd03e04b = Matikan
-
-# Turn on
-t65a0c5a7 = Aktifkan
-
 # Open from Set up
 tf0ad42dc = Buka dari Siapkan
-
-# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
-t5b4d06d6 = Untuk sekarang diatur dari baris perintah: ini menyebut app yang akan ditangkap, memasang extension pada kali pertama, dan meminta izin macOS.
 
 # macOS only: it is macOS that hands an app's connections over.
 t71872556 = Hanya macOS: macOS sendirilah yang menyerahkan koneksi sebuah app.
@@ -2196,6 +2244,9 @@ t4398b845 = Dan penyimpanan milik Java sendiri
 
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Lalu jalankan programmu dengan flag ini: apa pun yang dikirimnya muncul di Traffic.
+
+# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
+tbdc6cba5 = Tambahkan aplikasinya, lalu nyalakan ini: koneksinya masuk ke sini apa pun pengaturan proxy-nya. Sama dengan Pengaturan › Tangkap › Aplikasi.
 
 # the browsers' own stores
 tddf6836c = penyimpanan milik browser sendiri
