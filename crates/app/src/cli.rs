@@ -19,7 +19,7 @@ use std::{
 use tracewing_proxy::default_data_dir;
 use tracewing_store::{
     har::{self, ExportOptions},
-    session,
+    search, session,
 };
 use tracewing_system::{Recovered, launch::Shell};
 
@@ -387,8 +387,31 @@ impl HarOut {
                 )
                 .with_context(|| format!("open {}", path.display()))?;
                 let devices = Devices::load(&data_dir.join("devices.toml"));
-                let mut ids = Filter::parse_with(filter, &devices).find(&conn, session)?;
+                let asked = Filter::parse_with(filter, &devices);
+                let mut ids = asked.find(&conn, session)?;
                 ids.sort_unstable();
+                // A word in the filter is answered by the search index, and
+                // a thread of its own writes that after the flow it covers.
+                // An export is the worst place for that to pass unsaid: the
+                // file looks complete and is missing the newest requests.
+                if asked.text.is_some() {
+                    let newest: i64 =
+                        conn.query_row("SELECT coalesce(max(id), 0) FROM flows", [], |r| r.get(0))?;
+                    match search::reach(session, newest)? {
+                        search::Reach::Whole => {}
+                        search::Reach::Behind(through) => eprintln!(
+                            "tracewing: the search index has reached flow {through} of {newest}, \
+                             so this export may be missing the newest requests a word matches. \
+                             Run it again in a moment to include them."
+                        ),
+                        search::Reach::NoBodies => eprintln!(
+                            "tracewing: this session has no body index, so a word is matched \
+                             against URLs only and this export leaves out flows that have it in \
+                             a body. Running it again will not change that; `index_bodies` in \
+                             settings is what turns it on."
+                        ),
+                    }
+                }
                 Some(ids)
             }
             None => None,

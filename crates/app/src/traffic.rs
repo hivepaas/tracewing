@@ -156,7 +156,14 @@ fn work(session_dir: PathBuf, jobs: Receiver<Job>, done: Sender<Done>) {
         };
         if let Some((generation, filter)) = filter_job {
             let started = Instant::now();
-            let ids = filter.find(conn, &session_dir).unwrap_or_default();
+            // An error is not a slow index: no amount of waiting fixes it,
+            // and an empty list here is indistinguishable from "nothing
+            // matched". Saying it costs nothing and is not a message anybody
+            // has to translate.
+            let ids = filter.find(conn, &session_dir).unwrap_or_else(|why| {
+                eprintln!("tracewing: cannot search this session's flows: {why:#}");
+                Vec::new()
+            });
             let took = started.elapsed();
             let _ = done.send(Done::Filter {
                 generation,

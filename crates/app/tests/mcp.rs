@@ -205,6 +205,71 @@ fn ai_tools_read_the_traffic() {
     drop(stdin);
     assert!(child.wait().unwrap().success());
 
+    // An answer to a word that may be early says so. Nothing says it while
+    // the index has caught up:
+    assert!(
+        call(&server, "list_flows", json!({ "filter": "find-me-please" }))["indexing"].is_null()
+    );
+    // ...so wind the index's own `progress` back, which is the state a
+    // loaded machine is in for the first 50ms after each request, and the
+    // one that made the old wait in `ai_tools_add_rules...` flaky.
+    for piece in std::fs::read_dir(dir.join("sessions"))
+        .unwrap()
+        .flat_map(|session| {
+            std::fs::read_dir(session.unwrap().path().join("search"))
+                .into_iter()
+                .flatten()
+        })
+    {
+        let piece = piece.unwrap().path();
+        if piece.extension().is_some_and(|e| e == "db") {
+            rusqlite::Connection::open(&piece)
+                .unwrap()
+                .execute("UPDATE progress SET last_id = 0", [])
+                .unwrap();
+        }
+    }
+    let early = call(&server, "list_flows", json!({ "filter": "find-me-please" }));
+    assert_eq!(early["indexing"]["through"], 0, "{early}");
+    assert!(
+        early["indexing"]["note"]
+            .as_str()
+            .is_some_and(|note| note.contains("ask again")),
+        "{early}"
+    );
+    // A filter without a word reads the flows themselves and cannot be
+    // behind, so it says nothing even now.
+    assert!(call(&server, "list_flows", json!({ "filter": "method:GET" }))["indexing"].is_null());
+    // And the state that reads most like success: no body index at all, as
+    // `index_bodies = false` leaves it. `Filter` takes the bodies half with
+    // `unwrap_or_default`, so a word in a body is answered with nothing, no
+    // error, for as long as the session lasts -- which is what this has to
+    // say, rather than "ask again".
+    for piece in std::fs::read_dir(dir.join("sessions"))
+        .unwrap()
+        .flat_map(|session| {
+            std::fs::read_dir(session.unwrap().path().join("search"))
+                .into_iter()
+                .flatten()
+        })
+    {
+        let piece = piece.unwrap().path();
+        if piece.extension().is_some_and(|e| e == "db") {
+            rusqlite::Connection::open(&piece)
+                .unwrap()
+                .execute_batch("DROP TABLE bodies;")
+                .unwrap();
+        }
+    }
+    let without = call(&server, "list_flows", json!({ "filter": "find-me-please" }));
+    assert_eq!(without["indexing"]["bodies"], false, "{without}");
+    let note = without["indexing"]["note"].as_str().unwrap_or_default();
+    assert!(note.contains("not found at all"), "{note}");
+    assert!(
+        !note.contains("ask again"),
+        "waiting does not fix this one: {note}"
+    );
+
     drop(engine);
     std::fs::remove_dir_all(&dir).ok();
 }
