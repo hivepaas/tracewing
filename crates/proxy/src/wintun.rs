@@ -45,12 +45,13 @@
 //! work.
 //!
 //! The address setters the `wintun` crate offers are deliberately unused:
-//! they shell out to `netsh`. Addressing and routing will be done through
-//! `windows-sys` with the rest of this program's Windows calls.
+//! they shell out to `netsh`. [`WintunAdapter::address`] does it through
+//! `windows-sys` instead, with the rest of this program's Windows calls.
+//! Routing is still to come.
 
 use crate::tun::Device;
 use anyhow::{Result, anyhow};
-use std::{path::Path, sync::Arc};
+use std::{marker::PhantomData, net::IpAddr, path::Path, sync::Arc};
 
 /// How much of the ring Wintun keeps for packets on their way in. It takes a
 /// power of two, and this is the `0x400000` Wintun's own README passes to
@@ -156,6 +157,112 @@ impl WintunAdapter {
         // SAFETY: a union over a `u64` and a bitfield of those same bytes;
         // the whole value is what identifies the interface.
         Ok(unsafe { luid.Value })
+    }
+
+    /// Gives the adapter `addr`, with `bits` of it on-link, until the
+    /// returned [`Address`] is dropped.
+    ///
+    /// Which address is the caller's to choose: nothing here has an opinion,
+    /// because the stack behind the adapter answers for every destination
+    /// and this address is only what makes the adapter a place Windows will
+    /// route to at all.
+    pub fn address(&self, addr: IpAddr, bits: u8) -> Result<Address<'_>> {
+        use windows_sys::Win32::{
+            Foundation::NO_ERROR,
+            NetworkManagement::IpHelper::{
+                CreateUnicastIpAddressEntry, InitializeUnicastIpAddressEntry,
+                MIB_UNICASTIPADDRESS_ROW,
+            },
+            NetworkManagement::Ndis::NET_LUID_LH,
+        };
+        let mut row = MIB_UNICASTIPADDRESS_ROW::default();
+        // Defaults first, and not for tidiness: this is what sets the
+        // lifetimes to infinite and the duplicate-address state to
+        // preferred. A zeroed row means a lifetime of zero, which is an
+        // address that expires as soon as it is made.
+        // SAFETY: a row of ours for the call to fill in.
+        unsafe { InitializeUnicastIpAddressEntry(&mut row) };
+        // By LUID rather than by index, for the reason `luid` gives: an
+        // index belongs to one family and this address has its own.
+        row.InterfaceLuid = NET_LUID_LH {
+            Value: self.luid()?,
+        };
+        row.Address = sockaddr(addr);
+        row.OnLinkPrefixLength = bits;
+        // SAFETY: a row this call reads and does not keep.
+        let got = unsafe { CreateUnicastIpAddressEntry(&row) };
+        match got {
+            NO_ERROR => Ok(Address {
+                row,
+                held: PhantomData,
+            }),
+            _ => Err(anyhow!("give the adapter {addr}/{bits}: error {got}")),
+        }
+    }
+}
+
+/// An address on the adapter, taken away again when this is dropped.
+///
+/// The lifetime is not decoration. Deleting an address after its adapter has
+/// gone is meaningless — the adapter going takes its addresses with it —
+/// and borrowing the adapter makes that order a compile error rather than a
+/// call that quietly fails.
+#[must_use = "dropping this takes the address off the adapter again"]
+pub struct Address<'a> {
+    row: ::windows_sys::Win32::NetworkManagement::IpHelper::MIB_UNICASTIPADDRESS_ROW,
+    held: PhantomData<&'a WintunAdapter>,
+}
+
+impl Drop for Address<'_> {
+    fn drop(&mut self) {
+        use windows_sys::Win32::{
+            Foundation::NO_ERROR, NetworkManagement::IpHelper::DeleteUnicastIpAddressEntry,
+        };
+        // SAFETY: the row this address was made from, untouched since.
+        let got = unsafe { DeleteUnicastIpAddressEntry(&self.row) };
+        if got != NO_ERROR {
+            tracing::warn!("take the adapter's address away again: error {got}");
+        }
+    }
+}
+
+/// An address as Windows wants one: the family in the structure rather than
+/// beside it.
+#[cfg(windows)]
+fn sockaddr(addr: IpAddr) -> ::windows_sys::Win32::Networking::WinSock::SOCKADDR_INET {
+    use windows_sys::Win32::Networking::WinSock::{
+        AF_INET, AF_INET6, IN_ADDR, IN_ADDR_0, IN6_ADDR, IN6_ADDR_0, SOCKADDR_IN, SOCKADDR_IN6,
+        SOCKADDR_IN6_0, SOCKADDR_INET,
+    };
+    match addr {
+        IpAddr::V4(v4) => SOCKADDR_INET {
+            Ipv4: SOCKADDR_IN {
+                sin_family: AF_INET,
+                sin_port: 0,
+                sin_addr: IN_ADDR {
+                    // `S_addr` holds the address in network byte order, and
+                    // `octets` already is that order, so the four bytes go in
+                    // as the bytes they are. `to_be` here would reverse an
+                    // address that was already the right way round — the
+                    // same trap as `IP_UNICAST_IF`, in the other direction.
+                    S_un: IN_ADDR_0 {
+                        S_addr: u32::from_ne_bytes(v4.octets()),
+                    },
+                },
+                sin_zero: [0; 8],
+            },
+        },
+        IpAddr::V6(v6) => SOCKADDR_INET {
+            Ipv6: SOCKADDR_IN6 {
+                sin6_family: AF_INET6,
+                sin6_port: 0,
+                sin6_flowinfo: 0,
+                sin6_addr: IN6_ADDR {
+                    u: IN6_ADDR_0 { Byte: v6.octets() },
+                },
+                Anonymous: SOCKADDR_IN6_0 { sin6_scope_id: 0 },
+            },
+        },
     }
 }
 
