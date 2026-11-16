@@ -347,9 +347,11 @@ adapter takes whatever is routed into it. So:
   rows of the TCP table whose **far end is a port of tracewing's**, and a
   flow taken from an adapter has the real server at its far end. It needs a
   look by local address and port alone.
-- [`features.md`](../features.md) promises "capture one app without proxy
-  settings". That sentence has to be made to match what an adapter can do
-  before this ships.
+- [`features.md`](../features.md) promised "capture one app without proxy
+  settings" for all three platforms. **Decided:** that row is now two — one
+  app on macOS, where the extension really is handed one app's flows, and
+  *this machine* on Windows and Linux, where the route decides and the
+  choosing is ours. What that costs is [below](#what-capturing-the-whole-machine-costs).
 
 #### What is in
 
@@ -468,8 +470,94 @@ One thing this settles, and it is worth saying plainly: a TUN captures by
 **route**, which is to say by destination, and no route can express "this
 program". So this mode captures the whole machine, and choosing one program
 is a filter applied after the packets are already ours rather than an
-exemption the operating system makes on our behalf. Which is the other half
-of the `features.md` problem noted above.
+exemption the operating system makes on our behalf. `features.md` now says so
+in two rows rather than one, and what the filter costs is next.
+
+#### What capturing the whole machine costs
+
+What follows is what changes when this stack is fed a machine's traffic
+instead of one app's. Almost none of it is new: WireGuard mode already feeds
+the same stack a whole phone. What is new is that the machine is the user's
+own, so each item breaks the computer they are working on rather than a test
+device.
+
+- **TLS breaks for every program that pins, not only the ones already thought
+  of.** [`rules.rs`](../../crates/proxy/src/rules.rs)'s `DEFAULT_NO_DECRYPT`
+  holds five patterns, Apple's and Windows Update's. Defender, the Store,
+  OneDrive, Teams, Dropbox, Steam and Chrome's own updater are not among them
+  and all pin. This is the loudest day-one problem and the cheapest to soften:
+  the Windows defaults want to be as long as the macOS ones before the mode
+  can be switched on.
+- **UDP is refused, and that is wider than QUIC.** The stack turns TCP into
+  flows and answers DNS itself; every other datagram gets an ICMP port
+  unreachable (see the WireGuard section). For QUIC that is deliberate — it
+  sends an app back to HTTP/2. For a user's own VPN, NTP, a game or a voice
+  call it is the connection not working while tracewing is on. ICMP goes the
+  same way, so `ping` and `tracert` stop answering.
+- **Every connection whose server greets first pays two seconds.**
+  `FIRST_WORD_WITHIN` in [`handover.rs`](../../crates/proxy/src/handover.rs):
+  SSH, RDP, SMTP, MySQL, Postgres, IMAP. One app's connections are a handful;
+  a machine's are all of them. The fix is already written down there — go
+  straight to a tunnel when the destination port is not HTTP's.
+- **The stack's caps were sized for one tunnel, not for a machine.**
+  `FLOWS_MAX` is 512 and `WINDOW` is 64 KiB, in
+  [`stack.rs`](../../crates/proxy/src/stack.rs). A browser, the Store,
+  OneDrive and Defender together can hold more than 512 connections at once;
+  past the cap a `SYN` gets nothing and the program waits. And a download that
+  would saturate the link now goes through a single-threaded userspace TCP
+  stack, with a loopback hop per connection on top.
+- **The session grows at the machine's rate.** Every flow is a row, and a body
+  past the limit is a file. Telemetry, update checks and file sync produce
+  thousands of rows nobody asked for.
+- **Credentials of programs nobody meant to inspect are decrypted and written
+  to disk.** Not a bug, a consequence — and the reason a filter that only
+  hides rows is not a filter.
+- **What the local network is spared.** An on-link prefix is longer than the
+  two `/1`s, so file shares, printers and anything else beside this machine
+  keep using the real interface and are never captured. The blast radius is
+  what leaves the machine, not what is next to it.
+- **Not yet known: what a hard kill leaves behind.** The address and the route
+  are deleted on `Drop`, and that is tested
+  ([`wintun_live.rs`](../../crates/proxy/tests/wintun_live.rs)) — but `Drop`
+  does not run for a killed process. The adapter should close with the process
+  and take its routes with it, leaving the machine's networking as it was;
+  that has not been tried in the VM. It is the one failure here that would
+  cost a user their network rather than a session, so it is worth trying
+  before the mode is switchable.
+
+##### Keeping one program, three ways
+
+1. **Hide the rest in the window.** Cheapest, and worth almost nothing: the
+   traffic is still captured, still decrypted, still stored. It solves a
+   crowded list and not one other item above.
+2. **Decide at the `SYN`, and splice the rest through.** At the `SYN` the stack
+   holds the client's address and port, which is what
+   [`apps`](../../crates/proxy/src/apps.rs) needs to name the program. A
+   program nobody chose has its bytes relayed straight to the destination over
+   a socket pinned with `IP_UNICAST_IF` — no CA in the middle, no certificate
+   error, nothing stored. This is the filter worth having, and it needs three
+   things: the `apps/windows.rs` look-up change above, a wait for the answer
+   that look-up thread gives asynchronously, and the splice itself, which is
+   platform-independent and so testable on Linux. One thing to check on
+   Windows rather than assume: that the TCP table already holds the row when
+   the `SYN` arrives — the socket is created before the `SYN` is sent, so it
+   should be there in `SYN_SENT`. What it does **not** do is lower any cap
+   above: the packets are ours either way.
+3. **Narrow the routes.** The only filter the operating system enforces on our
+   behalf. Instead of `0.0.0.0/1` and `128.0.0.0/1`, add routes for the hosts
+   being debugged alone, and the rest of the machine never enters the adapter:
+   no broken pinning, no refused datagrams, no cost. It cannot say "this
+   program", only "these addresses" — and for "I am debugging one API" that is
+   the better answer anyway.
+
+The window already has a list of apps, from the macOS extension
+([`mac_apps.rs`](../../crates/app/src/mac_apps.rs), `Way::Apps` in
+`settings_page.rs`). Reusing it here is right, and the trap is that the same
+list would mean two different things: on macOS the operating system hands over
+only those apps, while on Windows everything is captured and only those are
+kept. Whatever the tab says has to make that difference impossible to miss, or
+somebody will read "only Chrome" and believe the rest of the machine was never
+touched.
 
 The `wintun` crate's own address setters are not used for any of it: they
 shell out to `netsh`. Addressing and routing go through `windows-sys`, with
