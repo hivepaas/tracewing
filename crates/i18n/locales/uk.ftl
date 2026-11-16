@@ -1045,6 +1045,9 @@ t7e7408e4 = Термінал
 # Other devices
 t9e7d8362 = Інші пристрої
 
+# Programs
+tde9c06c8 = Програми
+
 # Apps
 t53d91aad = Застосунки
 

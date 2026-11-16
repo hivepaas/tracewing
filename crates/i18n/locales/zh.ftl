@@ -988,6 +988,9 @@ t7e7408e4 = 终端
 # Other devices
 t9e7d8362 = 其他设备
 
+# Programs
+tde9c06c8 = 程序
+
 # Apps
 t53d91aad = 应用
 

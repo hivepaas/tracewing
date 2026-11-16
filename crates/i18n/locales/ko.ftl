@@ -988,6 +988,9 @@ t7e7408e4 = 터미널
 # Other devices
 t9e7d8362 = 다른 기기
 
+# Programs
+tde9c06c8 = 프로그램
+
 # Apps
 t53d91aad = 앱
 

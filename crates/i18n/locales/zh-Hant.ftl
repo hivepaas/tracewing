@@ -988,6 +988,9 @@ t7e7408e4 = 終端機
 # Other devices
 t9e7d8362 = 其他裝置
 
+# Programs
+tde9c06c8 = 程式
+
 # Apps
 t53d91aad = App
 

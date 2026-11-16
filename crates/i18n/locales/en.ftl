@@ -375,6 +375,7 @@ tb5cdad84 = System proxy
 t666f4ecc = A browser
 t7e7408e4 = A terminal
 t9e7d8362 = Other devices
+tde9c06c8 = Programs
 t53d91aad = Apps
 t8ad2f8cf = Light
 t45570065 = Dark

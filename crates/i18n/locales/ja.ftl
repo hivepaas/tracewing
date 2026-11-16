@@ -988,6 +988,9 @@ t7e7408e4 = ターミナル
 # Other devices
 t9e7d8362 = 他のデバイス
 
+# Programs
+tde9c06c8 = プログラム
+
 # Apps
 t53d91aad = アプリ
 

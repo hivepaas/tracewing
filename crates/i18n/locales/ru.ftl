@@ -1045,6 +1045,9 @@ t7e7408e4 = Терминал
 # Other devices
 t9e7d8362 = Другие устройства
 
+# Programs
+tde9c06c8 = Программы
+
 # Apps
 t53d91aad = Приложения
 

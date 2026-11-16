@@ -1025,6 +1025,9 @@ t7e7408e4 = Un terminal
 # Other devices
 t9e7d8362 = Otros dispositivos
 
+# Programs
+tde9c06c8 = Programas
+
 # Apps
 t53d91aad = Apps
 

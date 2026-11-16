@@ -154,7 +154,11 @@ transparent proxy that takes the flows of the apps it is given and leaves
 every other flow alone.
 
 **Settings › Capture › Apps** — or Set up, answering *a Mac app that ignores
-the proxy* — has the list: **Add an app…** picks one from Applications, or a
+the proxy* — has the list. The tab is named for the word the system uses, so
+it reads **Programs** on Windows and **Apps** on macOS; it is one way in
+either way, as one *System proxy* tab covers three operating systems'
+different machinery. On Windows it is not built yet, and that tab says so.
+**Add an app…** picks one from Applications, or a
 program such as `/usr/bin/curl`, and **Turn on** has macOS hand their
 connections over until it is turned off or tracewing closes. The list is
 kept; the switch starts off each time, as the system proxy's does.

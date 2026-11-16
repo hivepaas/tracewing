@@ -150,6 +150,20 @@ impl Way {
             // translated.
             Self::Socks5 => "SOCKS5".to_owned(),
             Self::WireGuard => "WireGuard".to_owned(),
+            // The word the reader's own system uses. A tab strip is
+            // scanned rather than read, so the name is the only part of the
+            // page that has to work before anybody has read a line of it —
+            // and somebody on Windows looking for where to capture a
+            // service or an installer does not stop at "Apps", whatever the
+            // copy underneath says.
+            //
+            // One way in, not two: macOS hands these over through its
+            // network extension and Windows through an adapter, as one
+            // "System proxy" tab covers three operating systems' quite
+            // different machinery. Windows is named here rather than macOS
+            // because everywhere else this tab says what only macOS can do;
+            // when Linux gains a local mode, it joins the Windows arm.
+            Self::Apps if cfg!(target_os = "windows") => tr!("Programs"),
             Self::Apps => tr!("Apps"),
         }
     }
