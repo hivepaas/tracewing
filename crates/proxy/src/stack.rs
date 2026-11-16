@@ -42,7 +42,10 @@
 //!
 //! See [capture-modes.md](../../../docs/design/capture-modes.md).
 
-use crate::source::{By, Flow, Found, Source, Stop, Target, stopped};
+use crate::{
+    sieve::{Sieve, sift},
+    source::{By, Flow, Found, Source, Stop, Target, stopped},
+};
 use anyhow::Result;
 use smoltcp::{
     iface::{Config, Interface, SocketHandle, SocketSet},
@@ -121,6 +124,11 @@ pub struct Stack {
     /// How many connections at once. A field rather than the constant alone,
     /// so that the cap is tested with two instead of with five hundred.
     most: usize,
+    /// Which connections the proxy is to see. `None` means all of them, which
+    /// is what a tunnel a phone joined is for: everything down it was sent
+    /// here on purpose. A mode that captures by route needs one, or it
+    /// captures the machine -- see [`crate::sieve`].
+    sieve: Option<Arc<Sieve>>,
 }
 
 impl Stack {
@@ -128,12 +136,26 @@ impl Stack {
         Self {
             wire,
             most: FLOWS_MAX,
+            sieve: None,
+        }
+    }
+
+    /// The same, keeping only what `sieve` keeps and passing the rest
+    /// through to where it was going.
+    pub fn sifting(self, sieve: Sieve) -> Self {
+        Self {
+            sieve: Some(Arc::new(sieve)),
+            ..self
         }
     }
 
     #[cfg(test)]
     fn holding_at_most(wire: Wire, most: usize) -> Self {
-        Self { wire, most }
+        Self {
+            wire,
+            most,
+            sieve: None,
+        }
     }
 }
 
@@ -151,7 +173,7 @@ impl Source for Stack {
     // there is no socket of ours for `crate::apps` to find it by.
 
     fn start(self: Box<Self>, _proxy: SocketAddr, found: Found, stop: Stop) -> Result<()> {
-        tokio::spawn(run(self.wire, self.most, found, stop));
+        tokio::spawn(run(self.wire, self.most, self.sieve, found, stop));
         Ok(())
     }
 }
@@ -377,7 +399,7 @@ fn moment(started: Instant) -> Moment {
     Moment::from_micros(started.elapsed().as_micros() as i64)
 }
 
-async fn run(wire: Wire, most: usize, found: Found, stop: Stop) {
+async fn run(wire: Wire, most: usize, sieve: Option<Arc<Sieve>>, found: Found, stop: Stop) {
     let started = Instant::now();
     let Wire {
         mut incoming,
@@ -452,7 +474,18 @@ async fn run(wire: Wire, most: usize, found: Found, stop: Stop) {
     loop {
         iface.poll(moment(started), &mut device, &mut sockets);
         for flow in sweep(&mut sockets, &mut conns) {
-            found.flow(flow).await;
+            match &sieve {
+                None => found.flow(flow).await,
+                // A task of its own, because deciding waits for an answer
+                // another thread is looking for, and this loop is what moves
+                // every other connection's packets. The wait is paid once per
+                // connection, before a byte of it reaches the proxy.
+                Some(sieve) => {
+                    let sieve = Arc::clone(sieve);
+                    let found = found.clone();
+                    tokio::spawn(async move { sift(&sieve, flow, found).await });
+                }
+            }
         }
         asked(&mut sockets, names, &answered, &woken);
         say(&mut sockets, names, &mut to_send);
@@ -915,7 +948,83 @@ mod tests {
         }
     }
 
+    /// The stack with a sieve, plus what the sieve was asked and the far end
+    /// of every connection it passed through.
+    struct Sifting {
+        running: Running,
+        asked: mpsc::Receiver<(SocketAddr, SocketAddr)>,
+        out: mpsc::Receiver<tokio::io::DuplexStream>,
+    }
+
+    /// `keeps` is the answer the sieve gives; `reachable` says whether a way
+    /// out can be had, so that the arm where it cannot is testable too.
+    fn start_sifting(keeps: bool, reachable: bool) -> Sifting {
+        let (wire, into, out_packets) = Wire::channels();
+        let (found, took) = Found::channel();
+        let (stop_tx, stop) = tokio::sync::watch::channel(false);
+        let (asked_tx, asked) = mpsc::channel(8);
+        let (far_tx, far) = mpsc::channel(8);
+        let sieve = Sieve::new(
+            Box::new(move |client, to| {
+                let asked = asked_tx.clone();
+                Box::pin(async move {
+                    asked
+                        .send((client, to))
+                        .await
+                        .expect("the test is listening");
+                    keeps
+                })
+            }),
+            Box::new(move |_to| {
+                let far = far_tx.clone();
+                Box::pin(async move {
+                    if !reachable {
+                        return Err(std::io::Error::other("no way out in this test"));
+                    }
+                    let (ours, theirs) = tokio::io::duplex(WINDOW);
+                    far.send(theirs).await.expect("the test is listening");
+                    Ok(Box::new(ours) as Box<dyn crate::source::Duplex>)
+                })
+            }),
+        );
+        Box::new(Stack::new(wire).sifting(sieve))
+            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+            .unwrap();
+        Sifting {
+            running: Running {
+                into,
+                out: out_packets,
+                took,
+                _stop: stop_tx,
+            },
+            asked,
+            out: far,
+        }
+    }
+
     impl Running {
+        /// The handshake alone, for a test where no flow is handed over: the
+        /// client is through and the stack has decided nothing yet.
+        async fn handshake(&mut self, client: &mut Client) {
+            let syn = client.send(TcpControl::Syn, &[]);
+            self.into.send(syn).await.unwrap();
+            let (control, _) = client.heard(&self.next().await);
+            assert_eq!(control, TcpControl::Syn, "a SYN-ACK answers the SYN");
+            let ack = client.send(TcpControl::None, &[]);
+            self.into.send(ack).await.unwrap();
+        }
+
+        /// That no flow is handed over within `within`. Weak on its own --
+        /// a stack that handed over nothing at all would pass it -- so every
+        /// use of it sits beside a test where a flow does arrive.
+        async fn nothing_taken(&mut self, within: Duration) {
+            match tokio::time::timeout(within, self.took.recv()).await {
+                Err(_) => {}
+                Ok(Some(_)) => panic!("a flow was handed over and should not have been"),
+                Ok(None) => panic!("the stack let go of its end of the flows"),
+            }
+        }
+
         /// The three packets of a connection, and the flow that comes of it.
         /// The flow is handed over only once the client is through, so every
         /// test has to finish the handshake, as a client does.
@@ -944,6 +1053,98 @@ mod tests {
                 other => panic!("a flow, not {:?}", other.map(|t| t.is_some())),
             }
         }
+    }
+
+    /// A connection nobody chose: the proxy never sees it, and its bytes
+    /// reach where the client was going. Nothing of it is decrypted and
+    /// nothing of it is written down, because nothing of it is read.
+    #[tokio::test]
+    async fn a_connection_nobody_chose_goes_straight_to_where_it_was_going() {
+        let mut sifting = start_sifting(false, true);
+        let mut client = Client::new("10.0.0.7:51100", "140.82.121.4:443");
+        sifting.running.handshake(&mut client).await;
+
+        let (from, to) = tokio::time::timeout(Duration::from_secs(5), sifting.asked.recv())
+            .await
+            .expect("the sieve is asked")
+            .expect("one ask");
+        assert_eq!(
+            from, client.from,
+            "asked about the client the packet came from"
+        );
+        assert_eq!(to, client.to, "and about where it was going, not about us");
+
+        // What the client sends goes out the way the sieve gave, unread.
+        let get = client.send(TcpControl::Psh, b"GET / HTTP/1.1\r\n\r\n");
+        sifting.running.into.send(get).await.unwrap();
+        let mut far = tokio::time::timeout(Duration::from_secs(5), sifting.out.recv())
+            .await
+            .expect("a way out was asked for")
+            .expect("one way out");
+        let mut said = [0u8; 18];
+        tokio::time::timeout(Duration::from_secs(5), far.read_exact(&mut said))
+            .await
+            .expect("the client's bytes reach the far end")
+            .unwrap();
+        assert_eq!(&said, b"GET / HTTP/1.1\r\n\r\n");
+
+        // And the answer comes back to the client as packets, so the splice
+        // carries both ways and not only out.
+        far.write_all(b"HTTP/1.1 204 No Content\r\n\r\n")
+            .await
+            .unwrap();
+        let mut back = Vec::new();
+        for _ in 0..8 {
+            let packet = sifting.running.next().await;
+            let (_, payload) = client.heard(&packet);
+            back.extend_from_slice(&payload);
+            if back.ends_with(b"\r\n\r\n") {
+                break;
+            }
+        }
+        assert_eq!(back, b"HTTP/1.1 204 No Content\r\n\r\n");
+
+        // And the proxy was never given it. Weak alone; the test below is
+        // the same harness answering the other way, which is what makes this
+        // line mean the sieve refused rather than the stack being broken.
+        sifting
+            .running
+            .nothing_taken(Duration::from_millis(500))
+            .await;
+    }
+
+    /// The same harness, the sieve keeping instead of refusing: the flow is
+    /// handed over as it is without one, and no way out is ever asked for.
+    #[tokio::test]
+    async fn a_connection_somebody_chose_reaches_the_proxy_and_asks_for_no_way_out() {
+        let mut sifting = start_sifting(true, true);
+        let mut client = Client::new("10.0.0.7:51101", "140.82.121.4:443");
+        sifting.running.handshake(&mut client).await;
+        let flow = sifting.running.flow().await;
+        assert_eq!(flow.client, client.from);
+        assert_eq!(flow.to, Target::Addr(client.to));
+        // The sieve was asked, and answered without being asked for a way out.
+        assert!(sifting.asked.recv().await.is_some(), "the sieve is asked");
+        assert!(
+            sifting.out.try_recv().is_err(),
+            "a kept connection needs no way out"
+        );
+    }
+
+    /// A connection nobody chose and no way out to give it: it dies, and it
+    /// is **not** captured instead. Being captured would break a program that
+    /// pins its certificates and write down the bytes of a program nobody
+    /// asked us to look at, which is worse than a connection that failed.
+    #[tokio::test]
+    async fn a_connection_with_no_way_out_dies_rather_than_being_captured() {
+        let mut sifting = start_sifting(false, false);
+        let mut client = Client::new("10.0.0.7:51102", "140.82.121.4:443");
+        sifting.running.handshake(&mut client).await;
+        assert!(sifting.asked.recv().await.is_some(), "the sieve is asked");
+        sifting
+            .running
+            .nothing_taken(Duration::from_millis(500))
+            .await;
     }
 
     /// The whole of it, in the order a connection happens: a `SYN` is
