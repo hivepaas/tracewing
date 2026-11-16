@@ -23,6 +23,9 @@
 //! `pkexec`, `schtasks`, `keytool`, the watchdog, a `node --version` probe —
 //! are its own business and want no setting.
 
+#[cfg(windows)]
+use anyhow::Context as _;
+
 /// What level a child should start at.
 ///
 /// Named for the level rather than for stripping privilege, deliberately: the
@@ -134,11 +137,64 @@ pub fn elevated() -> bool {
 /// trailing run of them is doubled.
 pub fn command_line<'a>(program: &str, args: impl IntoIterator<Item = &'a str>) -> String {
     let mut line = quoted(program);
-    for arg in args {
+    let rest = arguments(args);
+    if !rest.is_empty() {
         line.push(' ');
+        line.push_str(&rest);
+    }
+    line
+}
+
+/// The arguments alone, quoted the same way.
+///
+/// `ShellExecuteExW` wants the program and the rest as **two** strings, where
+/// `CreateProcessWithTokenW` wants one, so both shapes are needed and the
+/// quoting is shared.
+pub fn arguments<'a>(args: impl IntoIterator<Item = &'a str>) -> String {
+    let mut line = String::new();
+    for arg in args {
+        if !line.is_empty() {
+            line.push(' ');
+        }
         line.push_str(&quoted(arg));
     }
     line
+}
+
+/// The environment a child is to have, as Windows wants it: `NAME=VALUE`
+/// pairs in UTF-16, each ended by a zero, the lot ended by another.
+///
+/// Needed because `CreateProcessWithTokenW` takes a block rather than a list
+/// of changes — so "the environment as it is, with these few set" has to be
+/// worked out here. `std::process::Command` does that for us on the ordinary
+/// path and cannot on this one.
+///
+/// A name is matched **ignoring case**, because Windows does: setting `Path`
+/// where `PATH` exists has to replace it rather than add a second one, and a
+/// child with two of them reads whichever it finds first.
+pub fn environment<'a>(
+    current: impl IntoIterator<Item = (String, String)>,
+    set: impl IntoIterator<Item = (&'a str, &'a str)>,
+) -> Vec<u16> {
+    let mut pairs: Vec<(String, String)> = current.into_iter().collect();
+    for (name, value) in set {
+        match pairs
+            .iter_mut()
+            .find(|(have, _)| have.eq_ignore_ascii_case(name))
+        {
+            Some(pair) => pair.1 = value.to_owned(),
+            None => pairs.push((name.to_owned(), value.to_owned())),
+        }
+    }
+    let mut block: Vec<u16> = Vec::new();
+    for (name, value) in pairs {
+        block.extend(format!("{name}={value}").encode_utf16());
+        block.push(0);
+    }
+    // A block with nothing in it is still two zeroes, not none: one ends the
+    // last entry that is not there, and one ends the block.
+    block.push(0);
+    block
 }
 
 fn quoted(arg: &str) -> String {
@@ -175,6 +231,242 @@ fn quoted(arg: &str) -> String {
     }
     out.push('"');
     out
+}
+
+/// Starts `command` so that it runs at `want`.
+///
+/// Everything tracewing launches **for the person using it** goes through
+/// here, so that the decision is made in one place rather than at six call
+/// sites. The ordinary case is still an ordinary spawn.
+pub fn start(command: std::process::Command, want: Level) -> anyhow::Result<()> {
+    match start_at(elevated(), want) {
+        Start::AsWeAre => plainly(command),
+        #[cfg(windows)]
+        Start::AsTheShell => as_the_shell(command),
+        #[cfg(windows)]
+        Start::Elevated => asking_windows(command),
+        // Neither exists off Windows, and nothing asks for them there: the
+        // choice is only offered on Windows. Said rather than ignored,
+        // because a level quietly dropped is a child running at the wrong
+        // one -- which is the whole fault this module exists to prevent.
+        #[cfg(not(windows))]
+        other => anyhow::bail!("this system cannot start a child {other:?}"),
+    }
+}
+
+fn plainly(mut command: std::process::Command) -> anyhow::Result<()> {
+    #[cfg(unix)]
+    std::os::unix::process::CommandExt::process_group(&mut command, 0);
+    let mut child = command
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()?;
+    std::thread::spawn(move || child.wait());
+    Ok(())
+}
+
+/// The program, its arguments and its directory as the two Windows calls
+/// want them, out of a `Command` that was built for the ordinary path.
+#[cfg(windows)]
+fn parts(command: &std::process::Command) -> (String, Vec<String>, Option<String>) {
+    (
+        command.get_program().to_string_lossy().into_owned(),
+        command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect(),
+        command
+            .get_current_dir()
+            .map(|dir| dir.to_string_lossy().into_owned()),
+    )
+}
+
+#[cfg(windows)]
+fn wide(text: &str) -> Vec<u16> {
+    text.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+/// Starts it with the token of the shell the person is logged in with, so a
+/// child of an elevated tracewing runs at **their** level rather than at
+/// tracewing's.
+///
+/// The token is the real interactive one -- medium integrity, with
+/// Administrators present for deny only -- which is what a program started by
+/// double-clicking gets. A restricted token made with
+/// `SaferComputeTokenFromLevel` is **not** the same thing and a browser may
+/// not survive it.
+#[cfg(windows)]
+fn as_the_shell(command: std::process::Command) -> anyhow::Result<()> {
+    use windows_sys::Win32::{
+        Foundation::{CloseHandle, HANDLE},
+        Security::{
+            DuplicateTokenEx, SECURITY_IMPERSONATION_LEVEL, SecurityImpersonation, TOKEN_DUPLICATE,
+            TOKEN_QUERY, TokenPrimary,
+        },
+        System::Threading::{
+            CREATE_UNICODE_ENVIRONMENT, OpenProcess, OpenProcessToken, PROCESS_INFORMATION,
+            PROCESS_QUERY_LIMITED_INFORMATION, STARTUPINFOW,
+        },
+        UI::WindowsAndMessaging::{GetShellWindow, GetWindowThreadProcessId},
+    };
+    // `CreateProcessWithTokenW` lives in advapi32 and is not in the
+    // `windows-sys` features this crate takes, so it is declared here.
+    #[link(name = "advapi32")]
+    unsafe extern "system" {
+        fn CreateProcessWithTokenW(
+            token: HANDLE,
+            flags: u32,
+            application: *const u16,
+            command_line: *mut u16,
+            creation_flags: u32,
+            environment: *const core::ffi::c_void,
+            directory: *const u16,
+            startup: *const STARTUPINFOW,
+            process: *mut PROCESS_INFORMATION,
+        ) -> i32;
+    }
+
+    // SAFETY: a window handle that is only compared, and the ids it fills in.
+    let shell = unsafe { GetShellWindow() };
+    if shell.is_null() {
+        // No shell is running -- a kiosk, a server session, an explorer that
+        // died. There is no token to borrow, and the one thing this must not
+        // do is start the child elevated anyway: that is the fault being
+        // avoided, and it would be invisible.
+        anyhow::bail!(
+            "no desktop shell is running, so there is no ordinary level to start this at"
+        );
+    }
+    let mut pid = 0u32;
+    // SAFETY: a pointer to a `u32` of ours.
+    unsafe { GetWindowThreadProcessId(shell, &mut pid) };
+    if pid == 0 {
+        anyhow::bail!("the desktop shell has no process to borrow a level from");
+    }
+    // SAFETY: a handle closed below on every path that opens one.
+    let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+    if process.is_null() {
+        return Err(std::io::Error::last_os_error()).context("open the desktop shell");
+    }
+    let mut theirs: HANDLE = std::ptr::null_mut();
+    // SAFETY: the handle above, and a pointer to a handle of ours.
+    let opened =
+        unsafe { OpenProcessToken(process, TOKEN_DUPLICATE | TOKEN_QUERY, &mut theirs) != 0 };
+    // SAFETY: the handle that call gave us, closed exactly once.
+    unsafe { CloseHandle(process) };
+    if !opened {
+        return Err(std::io::Error::last_os_error()).context("read the shell's level");
+    }
+    let mut ours: HANDLE = std::ptr::null_mut();
+    // SAFETY: a token of ours, duplicated as a primary one so that it can
+    // start a process rather than only impersonate.
+    let copied = unsafe {
+        DuplicateTokenEx(
+            theirs,
+            0,
+            std::ptr::null(),
+            SecurityImpersonation as SECURITY_IMPERSONATION_LEVEL,
+            TokenPrimary,
+            &mut ours,
+        ) != 0
+    };
+    // SAFETY: as above.
+    unsafe { CloseHandle(theirs) };
+    if !copied {
+        return Err(std::io::Error::last_os_error()).context("copy the shell's level");
+    }
+
+    let (program, args, dir) = parts(&command);
+    let mut line = wide(&command_line(&program, args.iter().map(String::as_str)));
+    let block = environment(
+        std::env::vars(),
+        command
+            .get_envs()
+            .filter_map(|(name, value)| Some((name.to_str()?, value?.to_str()?))),
+    );
+    let dir = dir.map(|dir| wide(&dir));
+    let mut startup = STARTUPINFOW {
+        cb: size_of::<STARTUPINFOW>() as u32,
+        ..unsafe { std::mem::zeroed() }
+    };
+    let mut made: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
+    // SAFETY: a token of ours, a command line this call may write into, an
+    // environment block ended twice over, and two structures of the sizes it
+    // expects.
+    let started = unsafe {
+        CreateProcessWithTokenW(
+            ours,
+            0,
+            std::ptr::null(),
+            line.as_mut_ptr(),
+            CREATE_UNICODE_ENVIRONMENT,
+            block.as_ptr().cast(),
+            dir.as_ref().map_or(std::ptr::null(), |dir| dir.as_ptr()),
+            &startup,
+            &mut made,
+        ) != 0
+    };
+    let why = std::io::Error::last_os_error();
+    // SAFETY: handles this call gave us or we made, each closed once.
+    unsafe {
+        CloseHandle(ours);
+        if started {
+            CloseHandle(made.hProcess);
+            CloseHandle(made.hThread);
+        }
+    }
+    let _ = &mut startup;
+    if started {
+        Ok(())
+    } else {
+        Err(why).with_context(|| format!("start {program} at the shell's level"))
+    }
+}
+
+/// Starts it by asking Windows to raise it, which shows the person a UAC
+/// dialog. For a tracewing that is not elevated and a child that should be.
+///
+/// **This cannot carry an environment.** `ShellExecuteExW` takes no
+/// environment block, so a caller that has variables to set has to put them
+/// in the command line instead -- which is what `tracewing env` prints
+/// anyway. Refused rather than dropped: a terminal that came up without the
+/// proxy variables would look like the proxy not working.
+#[cfg(windows)]
+fn asking_windows(command: std::process::Command) -> anyhow::Result<()> {
+    use windows_sys::Win32::UI::{
+        Shell::{SEE_MASK_NOASYNC, SHELLEXECUTEINFOW, ShellExecuteExW},
+        WindowsAndMessaging::SW_SHOWNORMAL,
+    };
+    if command.get_envs().next().is_some() {
+        anyhow::bail!(
+            "a child started as an administrator cannot be given variables through its \
+             environment, because Windows' own way of raising one carries none; they have to \
+             go in its command line"
+        );
+    }
+    let (program, args, dir) = parts(&command);
+    let verb = wide("runas");
+    let file = wide(&program);
+    let rest = wide(&arguments(args.iter().map(String::as_str)));
+    let dir = dir.map(|dir| wide(&dir));
+    let mut what = SHELLEXECUTEINFOW {
+        cbSize: size_of::<SHELLEXECUTEINFOW>() as u32,
+        fMask: SEE_MASK_NOASYNC,
+        lpVerb: verb.as_ptr(),
+        lpFile: file.as_ptr(),
+        lpParameters: rest.as_ptr(),
+        lpDirectory: dir.as_ref().map_or(std::ptr::null(), |dir| dir.as_ptr()),
+        nShow: SW_SHOWNORMAL.0,
+        ..unsafe { std::mem::zeroed() }
+    };
+    // SAFETY: a structure of the size it is told, whose strings outlive the
+    // call.
+    if unsafe { ShellExecuteExW(&mut what) } != 0 {
+        return Ok(());
+    }
+    Err(std::io::Error::last_os_error())
+        .with_context(|| format!("ask Windows to start {program} as an administrator"))
 }
 
 #[cfg(test)]
@@ -252,6 +544,53 @@ mod tests {
             let read = read_back(&line);
             assert_eq!(read, vec!["p".to_owned(), arg.to_owned()], "from {line}");
         }
+    }
+
+    fn read_block(block: &[u16]) -> Vec<String> {
+        String::from_utf16_lossy(block)
+            .split('\0')
+            .filter(|entry| !entry.is_empty())
+            .map(str::to_owned)
+            .collect()
+    }
+
+    #[test]
+    fn the_environment_is_what_was_there_with_the_changes_in_it() {
+        let current = [
+            ("PATH".to_owned(), r"C:\Windows".to_owned()),
+            ("HOME".to_owned(), r"C:\Users\me".to_owned()),
+        ];
+        let block = environment(current, [("HTTPS_PROXY", "http://127.0.0.1:8080")]);
+        assert_eq!(
+            read_block(&block),
+            vec![
+                r"PATH=C:\Windows".to_owned(),
+                r"HOME=C:\Users\me".to_owned(),
+                "HTTPS_PROXY=http://127.0.0.1:8080".to_owned(),
+            ],
+            "what was there, in order, with the new one after it"
+        );
+    }
+
+    /// Windows matches a variable's name without case, so setting `Path`
+    /// where `PATH` exists has to **replace** it. A child with two of them
+    /// reads whichever it happens to find first, which is the kind of fault
+    /// that only shows on somebody else's machine.
+    #[test]
+    fn a_name_that_differs_only_in_case_replaces_rather_than_doubles() {
+        let current = [("PATH".to_owned(), r"C:\Windows".to_owned())];
+        let block = environment(current, [("Path", r"C:\Other")]);
+        assert_eq!(read_block(&block), vec![r"PATH=C:\Other".to_owned()]);
+    }
+
+    /// The shape of the block itself, which is the part a reader gets wrong:
+    /// every entry ends in a zero and the block ends in one more, so an empty
+    /// environment is **two** zeroes rather than none.
+    #[test]
+    fn the_block_is_ended_twice_over() {
+        assert_eq!(environment([], []), vec![0u16]);
+        let one = environment([("A".to_owned(), "b".to_owned())], []);
+        assert_eq!(one, vec!['A' as u16, '=' as u16, 'b' as u16, 0, 0]);
     }
 
     /// `CommandLineToArgvW`'s rules, applied here so that the quoting above
