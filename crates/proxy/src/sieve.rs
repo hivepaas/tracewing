@@ -345,6 +345,27 @@ mod tests {
             "a canonical path carries the prefix, which is what the strip is for: {folder}"
         );
 
+        // And the other half of the same claim: the path the look-up answers
+        // with does **not** carry the prefix. With both halves asserted, the
+        // two strings are known to differ in exactly the way the strip
+        // exists for, so the match below can only pass because something
+        // normalises them.
+        //
+        // This is not the same as watching the strip fail, and it should not
+        // be written up as if it were: an ablation shows the test *detects*
+        // the strip being removed, while this shows the test *depends* on it
+        // being there. The difference tells the day somebody normalises in a
+        // second place and the first one quietly stops being reached.
+        let answer = apps.took(from, to).expect("an address of this machine's");
+        let named = answer
+            .wait_until(Instant::now() + Duration::from_secs(10))
+            .expect("this program");
+        let path = named.path.expect("its file");
+        assert!(
+            !path.starts_with(r"\\?\"),
+            "a running program's path comes without the prefix: {path}"
+        );
+
         let kept = by_programs(apps.clone(), Chosen::of(vec![folder.clone()]), nowhere());
         assert!(
             (kept.keeps)(from, to).await,
