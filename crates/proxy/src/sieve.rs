@@ -307,6 +307,21 @@ mod tests {
         // and both resolve the link. A test that leaned on them merely
         // looking alike would be a fact about one checkout's paths.
         let exe = std::env::current_exe().unwrap();
+        // A folder rule in the convention `program_rule` writes: every
+        // separator inside it comes from `display()`, and the one at the end
+        // is the only thing written by hand.
+        //
+        // On Windows that hand-written `/` is **not** the separator a path
+        // there uses, and this is still right -- but only because `plain`
+        // turns `/` into `\` before anything is compared, so the trailing
+        // one is normalised along with the rest. It works because the
+        // comparison normalises, not because the string is right.
+        //
+        // That is a claim with a guard rather than a hope:
+        // `either_separator_is_the_same_separator_on_windows` asserts the
+        // normalisation directly, so it goes red before this test does if
+        // the normalisation is ever dropped. Without it this test would
+        // simply stop keeping anything on Windows and say nothing about why.
         let folder = format!("{}/", exe.parent().unwrap().display());
 
         let kept = by_programs(apps.clone(), Chosen::of(vec![folder.clone()]), nowhere());
@@ -386,6 +401,9 @@ mod tests {
         assert!(!(sieve.keeps)(from, to).await, "nothing chosen yet");
 
         let exe = std::env::current_exe().unwrap();
+        // A folder rule, written as the test above writes one and right for
+        // the same reason: `plain` normalises the trailing slash with the
+        // rest before comparing.
         chosen.these(vec![format!("{}/", exe.parent().unwrap().display())]);
         assert!(
             (sieve.keeps)(from, to).await,
