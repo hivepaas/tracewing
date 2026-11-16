@@ -489,7 +489,12 @@ fn fingerprint(der: &[u8]) -> String {
 
 /// Writes a script that sets the variables and starts the user's shell, and has
 /// Terminal run it: Terminal opens `.command` files in a window of their own.
-pub fn open_terminal(env: &[(&str, String)], banner: &str, data_dir: &Path) -> Result<()> {
+pub fn open_terminal(
+    env: &[(&str, String)],
+    banner: &str,
+    data_dir: &Path,
+    level: crate::child::Level,
+) -> Result<()> {
     let script = data_dir.join("terminal.command");
     let quote = |text: &str| format!("'{}'", text.replace('\'', r"'\''"));
     let mut text = String::from("#!/bin/sh\n");
@@ -502,7 +507,7 @@ pub fn open_terminal(env: &[(&str, String)], banner: &str, data_dir: &Path) -> R
     fs::set_permissions(&script, std::os::unix::fs::PermissionsExt::from_mode(0o700))?;
     let mut command = Command::new("/usr/bin/open");
     command.args(["-a", "Terminal"]).arg(&script);
-    launch::spawn(command).context("open Terminal")
+    launch::spawn(command, level).context("open Terminal")
 }
 
 /// Apps, by bundle and program, and what they are.

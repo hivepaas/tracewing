@@ -534,18 +534,31 @@ pub fn ca_uninstall(_cert_pem: &Path, der: &[u8], scope: Scope) -> Result<()> {
 
 /// A console with the variables set, under a line saying so. The `cmd` that
 /// starts it shows no window of its own.
-pub fn open_terminal(env: &[(&str, String)], banner: &str, _data_dir: &Path) -> Result<()> {
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+/// A console with the variables set, under a line saying so.
+///
+/// **The variables go in a script rather than in the environment**, which is
+/// how the Mac has always done it (`terminal.command`, with `export` lines)
+/// and is now the only way this can work at both levels: a terminal asked for
+/// as an administrator is started through `ShellExecuteExW`, and that call
+/// carries **no environment block** at all. One shape for both levels beats a
+/// branch, and a terminal that came up without the proxy variables would look
+/// like the proxy not working.
+pub fn open_terminal(
+    env: &[(&str, String)],
+    banner: &str,
+    data_dir: &Path,
+    level: crate::child::Level,
+) -> Result<()> {
+    let script = data_dir.join("terminal.cmd");
+    std::fs::write(&script, launch::cmd_script(env, banner))
+        .with_context(|| format!("write {}", script.display()))?;
+
     let mut command = std::process::Command::new("cmd");
-    command
-        .args(["/c", "start", "tracewing", "cmd", "/k"])
-        .arg(format!("echo {banner}"))
-        .envs(env.iter().map(|(name, value)| (*name, value.as_str())));
-    std::os::windows::process::CommandExt::creation_flags(&mut command, CREATE_NO_WINDOW);
+    command.arg("/k").arg(&script);
     if let Some(home) = std::env::var_os("USERPROFILE") {
         command.current_dir(home);
     }
-    launch::spawn(command).context("open a console")
+    launch::spawn(command, level).context("open a console")
 }
 
 /// Programs, under Program Files or the user's local app data, and what they
