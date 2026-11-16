@@ -418,13 +418,103 @@ Two things that are good news inside the bad:
   as it is on" is true of the adapter itself, whatever happens to the routes.
 
 So this mode is the larger shape, and the cost is named rather than
-discovered later: **the packet pump has to be elevated**, which means either
-the stack moves into the elevated helper or packets cross a pipe between the
-two. A third possibility exists and is not yet examined — an elevated creator
-loosening the DACL on the adapter's device object so an unelevated proxy can
-open it — which trades a smaller change for a wider grant, and wants its own
-thinking before anybody writes it. WireGuard for Windows never had to choose:
-its tunnel service runs as `SYSTEM`.
+discovered later: **the packet pump has to be elevated.** WireGuard for
+Windows never had to choose — its tunnel service runs as `SYSTEM`.
+
+**The DACL is not the lever, and that was measured rather than assumed.**
+The obvious third possibility was an elevated creator loosening the DACL on
+the adapter's device object so an unelevated proxy could open it. Both of the
+adapter's device interfaces — `GUID_NDIS_LAN_CLASS` and
+`GUID_DEVINTERFACE_NET` — carry the same one:
+
+```
+O:BA G:SY D:(A;;0x1201bf;;;WD)(A;;FA;;;SY)(A;;FA;;;BA)(A;;0x1200a9;;;RC)
+```
+
+`WD` is **Everyone**, and `0x1201bf` includes `FILE_READ_DATA` and
+`FILE_WRITE_DATA`. So there is nothing to loosen: the device object already
+grants everyone read and write, and an unelevated `WintunOpenAdapter` is
+still `ERROR_ACCESS_DENIED`. Whatever refuses it is somewhere else — the
+`SetupAPI` enumeration the DLL uses to find the device, a registry key, the
+access on the `SWD\Wintun` device node, or a ring device of Wintun's own that
+is not registered under `DeviceClasses`. Answering that means reading
+Wintun's source, which is its own piece of work, so **this option is not
+actionable** rather than cheap-but-risky, which is how it was first written
+up here.
+
+Two notes on how that was read, because both nearly produced the opposite
+answer. `GetNamedSecurityInfo` with `SE_FILE_OBJECT` answers
+`ERROR_NOT_SUPPORTED` on a device interface path; what works is `CreateFileW`
+for `READ_CONTROL` and then `GetSecurityInfo` with `SE_KERNEL_OBJECT`. And a
+first search of `HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses`
+returned **nothing at all** while `Get-PnpDevice` showed the device plainly —
+the search was broken, not the object absent, and an empty result with
+nothing beside it would have read as "no such object, therefore not
+feasible". The search now prints what it walked (70 classes, 184 instance
+keys) so that empty and broken stop looking alike.
+
+#### How it is elevated: a relaunch, and only while the mode is on
+
+**Decided by the user.** tracewing **relaunches itself elevated** when the
+switch goes on, through the UAC dialog — `ShellExecuteExW` with `runas`, the
+call [`quic_windows.rs`](../../crates/system/src/quic_windows.rs) already
+makes — and **starts a new session**. Nothing is handed across: the session
+that was open is kept on disk and can be reopened from the list
+(`store::session::list`), so the only thing lost is what was in front of
+somebody, and the window can say so truthfully before it happens.
+
+The alternatives were a small elevated helper carrying packets over a pipe,
+or the whole stack moving into one. Both are more work than this: a helper
+binary, a pipe protocol with batching, the route guards living on the far
+side of it, and — for the version that moves the stack —
+[`handover::Handed`](../../crates/proxy/src/handover.rs), which is an
+in-process map that `capture.rs` reads, crossing a process boundary. None of
+what a relaunch builds would have to be undone to do that later: the sieve,
+the datagrams, the echoes, the pinning and the roads are shared by every
+version of this.
+
+What it costs, plainly: while the mode is on, **everything** runs elevated,
+including the parsers that read bytes a server sent — `crates/convert`, TLS,
+HTTP/2, brotli. That is the exposure a helper would have bought away, and it
+is the reason to keep a helper on the list rather than close the question.
+
+**Turning the mode off does not relaunch.** A process cannot drop to a
+filtered token — that is the hard direction on Windows — so going back would
+mean a second restart, and the decision is that this is not worth the
+inconvenience when the user has already agreed to be elevated. Two things
+make it honest instead:
+
+- the window **says** tracewing is running as an administrator, for as long
+  as it is. The thing worth avoiding was never elevation, which was agreed
+  to; it was elevation **nobody can see**. A visible state is one somebody
+  ends by restarting when it suits them.
+- nothing else about the mode lingers: the address and the route go with
+  `Drop`, and the adapter goes with the handle, which is measured above.
+
+#### What an elevated tracewing must not hand to anybody
+
+A child process inherits elevation, and tracewing starts two kinds of child.
+The ones it runs **for itself** — `schtasks`, `keytool`, the watchdog — can
+inherit it. The ones it starts **for the user to use** must not:
+
+- a **browser**, [`launch.rs`](../../crates/system/src/launch.rs), for the
+  browser way in;
+- a **terminal**, in the same file, for `tracewing env` — and this one
+  matters more than the browser, because somebody types commands into it.
+
+So they are launched at the user's own level: the shell's token, borrowed
+with `GetShellWindow` → `GetWindowThreadProcessId` → `OpenProcess` →
+`OpenProcessToken` → `DuplicateTokenEx` → `CreateProcessWithTokenW`, which
+needs `SE_IMPERSONATE_NAME` and an elevated administrator has it. That gives
+the **real** interactive token, medium integrity and filtered, which is what
+a browser started by double-clicking has — not the restricted token
+`runas /trustlevel` makes, which a browser may not survive.
+
+One failure to get right: `GetShellWindow` answers `NULL` where no shell is
+running — a kiosk, a server session, an explorer that died. There is then no
+token to borrow, and the fallback **must not** be to launch elevated anyway,
+because that is the exact thing being avoided and it would be invisible. It
+has to be said instead.
 
 One method note, because it nearly cost a wrong answer. The first run of the
 probe reported `CREATE OK` and then failed to open the adapter **from the
