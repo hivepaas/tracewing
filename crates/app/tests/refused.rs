@@ -20,12 +20,17 @@ use tracewing::{
     engine::{Engine, EngineOptions},
     flows::handshake_note,
     layout::Layout,
+    system::{BrowserFix, CaState},
     traffic::{Screen, Traffic},
     wizard::{Target, fix_for},
 };
 use tracewing_dev::benchkit;
 use tracewing_proxy::refused::{Said, said};
 use tracewing_store::settings::StorageSettings;
+use tracewing_system::{
+    BrowserTrust,
+    launch::{self, Browser},
+};
 
 fn wait_for(
     cx: &mut HeadlessAppContext,
@@ -169,6 +174,50 @@ fn a_certificate_turned_down_is_a_row_and_the_host_can_be_left_alone() {
     assert_eq!(fix.target, Target::CommandLine, "{app}");
     cx.run_until_parked();
     shot(&mut cx, window.into(), "130-certificate-turned-down");
+
+    // Had it been Firefox, with a profile that does not hold the CA, the
+    // flow offers Set up's Install itself; once every profile holds it, it
+    // says what is left. Nothing is installed here: the browsers are made
+    // up, and Install is not pressed, so no store of this computer's is
+    // touched.
+    wait_for(&mut cx, window, "the certificate looked for", |view| {
+        view.system.ca != CaState::Checking
+    });
+    let firefox = |holding, of| {
+        (
+            Browser {
+                name: "Firefox",
+                engine: launch::Engine::Firefox,
+                program: PathBuf::new(),
+                profile: PathBuf::new(),
+                nss: Vec::new(),
+            },
+            BrowserTrust::Own { holding, of },
+        )
+    };
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.inspector.detail.as_mut().unwrap().app = Some("firefox".to_owned());
+            view.system.browsers = vec![firefox(0, 1)];
+            view.system.environment.no_certutil = None;
+            assert_eq!(view.browser_fix(true), BrowserFix::Install);
+            cx.notify();
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "133-certificate-firefox-install");
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.system.browsers = vec![firefox(1, 1)];
+            assert_eq!(view.browser_fix(true), BrowserFix::Trusted);
+            cx.notify();
+        })
+        .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, window.into(), "134-certificate-firefox-trusted");
+    window
+        .update(&mut cx, |view, _, cx| view.select_place(0, cx))
+        .unwrap();
 
     // Set up, open at the answer for it.
     window

@@ -193,6 +193,15 @@ pub fn tracewing_can_trust(trust: Trust) -> bool {
     }
 }
 
+/// Firefox, or one of the browsers built from it, which keep an authority
+/// store of their own in each profile.
+pub fn is_firefox(program: &str) -> bool {
+    let program = program.to_lowercase();
+    ["firefox", "librewolf", "waterfox"]
+        .iter()
+        .any(|name| program.contains(name))
+}
+
 /// What to do about a program that turned tracewing's certificate down: the
 /// target whose route sets its trust up, and a line on where that program
 /// looks for authorities.
@@ -238,7 +247,7 @@ pub fn fix_for(program: Option<&str>, from_device: bool) -> Option<Fix> {
             })
         })
     };
-    if any(&["firefox", "librewolf", "waterfox"]) {
+    if is_firefox(&program) {
         fix(
             Target::Website,
             tr!(
@@ -438,6 +447,8 @@ mod tests {
             assert_eq!(target(program), expected, "{program}");
         }
         assert_eq!(fix_for(None, false), None, "nothing known, nothing to say");
+        assert!(is_firefox("org.mozilla.firefox") && is_firefox("LibreWolf"));
+        assert!(!is_firefox("chrome"));
         assert_eq!(
             fix_for(Some("curl"), true).map(|fix| fix.target),
             Some(Target::Phone),

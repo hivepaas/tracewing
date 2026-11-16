@@ -664,6 +664,21 @@ t9b63eb05 = App đã ngắt kết nối ngay sau khi nhận chứng chỉ của 
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Nếu một app lỗi với host này, có thể app đó ghim chứng chỉ.
 
+# This browser trusts tracewing's CA now. If it still turns the certificate down, restart it and try again. If it goes on, the host pins its own certificate, and is better not decrypted.
+tb9d9703b = Trình duyệt này giờ đã tin CA của tracewing. Nếu nó vẫn từ chối chứng chỉ, hãy khởi động lại trình duyệt rồi thử lại. Nếu vẫn bị, host này ghim chứng chỉ riêng, và tốt hơn là không giải mã nó.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Trên Linux, phải có certutil thì mới bảo được trình duyệt tin chứng chỉ. Hãy cài nó, rồi bấm Cài ở đây:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Trên Linux, phải có certutil thì mới bảo được trình duyệt tin chứng chỉ. Hãy cài gói NSS tools của bản phân phối, rồi bấm Cài ở đây.
+
+# Installing. The system may ask you to confirm.
+ta41c38ec = Đang cài. Hệ thống có thể hỏi bạn xác nhận.
+
+# Install
+tb50cbd40 = Cài
+
 # Make a rule
 t0ac0e062 = Tạo quy tắc
 
@@ -2164,9 +2179,6 @@ tc8ccf306 = Trên thiết bị, đặt proxy Wi-Fi là { $addr }. Rồi mở htt
 # Looking for it…
 t50ee7452 = Đang tìm…
 
-# Installing. The system may ask you to confirm.
-ta41c38ec = Đang cài. Hệ thống có thể hỏi bạn xác nhận.
-
 # Removing. The system may ask you to confirm.
 t62b22726 = Đang gỡ. Hệ thống có thể hỏi bạn xác nhận.
 
@@ -2185,20 +2197,11 @@ tafd8dae2 = tracewing đọc HTTPS bằng một chứng chỉ tạo riêng cho m
 # Trust the certificate
 t26618699 = Tin chứng chỉ
 
-# Install
-tb50cbd40 = Cài
-
 # Also for command-line tools
 t0db8faea = Cả cho công cụ dòng lệnh
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Gỡ chứng chỉ khỏi mọi kho trên máy này? Sau đó HTTPS qua tracewing sẽ lỗi cho tới khi cài lại. tracewing vẫn giữ chứng chỉ để cài lại sau.
-
-# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
-t76cf4bfa = Trên Linux, phải có certutil thì mới bảo được trình duyệt tin chứng chỉ. Hãy cài nó, rồi bấm Cài ở đây:
-
-# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
-td2606dbb = Trên Linux, phải có certutil thì mới bảo được trình duyệt tin chứng chỉ. Hãy cài gói NSS tools của bản phân phối, rồi bấm Cài ở đây.
 
 # This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
 tb13a87e6 = Desktop này không có thiết lập system proxy nào mà tracewing đổi được. Hãy mở riêng một trình duyệt trong mục Trình duyệt, hoặc mở terminal, ở bên dưới.

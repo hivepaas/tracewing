@@ -664,6 +664,21 @@ t9b63eb05 = Aplikasi memutus koneksi tepat setelah sertifikat tracewing, tanpa m
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Jika aplikasi gagal dengan host ini, mungkin aplikasi itu melakukan pinning sertifikat.
 
+# This browser trusts tracewing's CA now. If it still turns the certificate down, restart it and try again. If it goes on, the host pins its own certificate, and is better not decrypted.
+tb9d9703b = Browser ini sekarang memercayai CA tracewing. Jika masih menolak sertifikat, mulai ulang browser lalu coba lagi. Jika terus terjadi, host ini melakukan pinning sertifikatnya sendiri, dan lebih baik tidak didekripsi.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Di Linux, browser butuh certutil agar bisa diminta memercayainya. Pasang certutil, lalu Pasang di sini:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Di Linux, browser butuh certutil agar bisa diminta memercayainya. Pasang NSS tools dari distribusi Anda, lalu Pasang di sini.
+
+# Installing. The system may ask you to confirm.
+ta41c38ec = Memasang. Sistem mungkin meminta konfirmasi.
+
+# Install
+tb50cbd40 = Pasang
+
 # Make a rule
 t0ac0e062 = Buat aturan
 
@@ -2164,9 +2179,6 @@ tc8ccf306 = Di perangkat, atur proxy Wi-Fi ke { $addr }. Lalu buka http://{ $hos
 # Looking for it…
 t50ee7452 = Mencari…
 
-# Installing. The system may ask you to confirm.
-ta41c38ec = Memasang. Sistem mungkin meminta konfirmasi.
-
 # Removing. The system may ask you to confirm.
 t62b22726 = Menghapus. Sistem mungkin meminta konfirmasi.
 
@@ -2185,20 +2197,11 @@ tafd8dae2 = tracewing membaca HTTPS dengan sertifikat yang dibuat khusus untuk k
 # Trust the certificate
 t26618699 = Percayai sertifikat
 
-# Install
-tb50cbd40 = Pasang
-
 # Also for command-line tools
 t0db8faea = Juga untuk alat baris perintah
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Hapus sertifikat dari semua penyimpanan di komputer ini? HTTPS melalui tracewing akan gagal sampai dipasang lagi. tracewing tetap menyimpannya untuk dipasang lagi nanti.
-
-# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
-t76cf4bfa = Di Linux, browser butuh certutil agar bisa diminta memercayainya. Pasang certutil, lalu Pasang di sini:
-
-# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
-td2606dbb = Di Linux, browser butuh certutil agar bisa diminta memercayainya. Pasang NSS tools dari distribusi Anda, lalu Pasang di sini.
 
 # This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
 tb13a87e6 = Desktop ini tidak punya pengaturan proxy sistem yang bisa diubah tracewing. Buka browser terpisah dari Browser, atau terminal, di bawah.

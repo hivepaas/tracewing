@@ -693,6 +693,21 @@ t9b63eb05 = Die App hat direkt nach dem Zertifikat von tracewing aufgelegt, ohne
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Wenn eine App mit diesem Host fehlschlägt, nutzt sie möglicherweise Certificate Pinning.
 
+# This browser trusts tracewing's CA now. If it still turns the certificate down, restart it and try again. If it goes on, the host pins its own certificate, and is better not decrypted.
+tb9d9703b = Dieser Browser vertraut der CA von tracewing jetzt. Lehnt er das Zertifikat weiter ab, starte ihn neu und versuche es erneut. Geht es so weiter, nutzt der Host Certificate Pinning und wird besser nicht entschlüsselt.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Browser unter Linux brauchen certutil, damit man ihnen sagen kann, ihm zu vertrauen. Installieren Sie es, dann hier Installieren:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Browser unter Linux brauchen certutil, damit man ihnen sagen kann, ihm zu vertrauen. Installieren Sie die NSS-Tools Ihrer Distribution, dann hier Installieren.
+
+# Installing. The system may ask you to confirm.
+ta41c38ec = Wird installiert. Das System fragt möglicherweise nach einer Bestätigung.
+
+# Install
+tb50cbd40 = Installieren
+
 # Make a rule
 t0ac0e062 = Regel erstellen
 
@@ -2279,9 +2294,6 @@ tc8ccf306 = Stellen Sie auf dem Gerät den Wi-Fi-Proxy auf { $addr } ein. Öffne
 # Looking for it…
 t50ee7452 = Wird gesucht…
 
-# Installing. The system may ask you to confirm.
-ta41c38ec = Wird installiert. Das System fragt möglicherweise nach einer Bestätigung.
-
 # Removing. The system may ask you to confirm.
 t62b22726 = Wird entfernt. Das System fragt eventuell nach einer Bestätigung.
 
@@ -2300,20 +2312,11 @@ tafd8dae2 = tracewing liest HTTPS mit einem Zertifikat, das nur für diesen Comp
 # Trust the certificate
 t26618699 = Dem Zertifikat vertrauen
 
-# Install
-tb50cbd40 = Installieren
-
 # Also for command-line tools
 t0db8faea = Auch für Kommandozeilen-Tools
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Das Zertifikat aus allen Speichern dieses Computers entfernen? HTTPS über tracewing schlägt dann fehl, bis es wieder installiert ist. tracewing behält es, um es später wieder zu installieren.
-
-# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
-t76cf4bfa = Browser unter Linux brauchen certutil, damit man ihnen sagen kann, ihm zu vertrauen. Installieren Sie es, dann hier Installieren:
-
-# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
-td2606dbb = Browser unter Linux brauchen certutil, damit man ihnen sagen kann, ihm zu vertrauen. Installieren Sie die NSS-Tools Ihrer Distribution, dann hier Installieren.
 
 # This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
 tb13a87e6 = Dieser Desktop hat keine Systemproxy-Einstellung, die tracewing ändern kann. Öffnen Sie unten einen Browser separat unter Browser, oder ein Terminal.

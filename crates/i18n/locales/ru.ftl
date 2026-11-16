@@ -715,6 +715,21 @@ t9b63eb05 = Приложение отключилось сразу после с
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Если приложение не работает с этим хостом, возможно, оно использует пиннинг сертификатов.
 
+# This browser trusts tracewing's CA now. If it still turns the certificate down, restart it and try again. If it goes on, the host pins its own certificate, and is better not decrypted.
+tb9d9703b = Теперь этот браузер доверяет CA tracewing. Если он всё ещё отвергает сертификат, перезапустите его и попробуйте снова. Если это продолжается, хост использует пиннинг собственного сертификата, и его лучше не расшифровывать.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = В Linux браузерам нужен certutil, чтобы им можно было сказать доверять сертификату. Установите его, затем нажмите здесь «Установить»:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = В Linux браузерам нужен certutil, чтобы им можно было сказать доверять сертификату. Установите NSS-инструменты своего дистрибутива, затем нажмите здесь «Установить».
+
+# Installing. The system may ask you to confirm.
+ta41c38ec = Установка. Система может запросить подтверждение.
+
+# Install
+tb50cbd40 = Установить
+
 # Make a rule
 t0ac0e062 = Создать правило
 
@@ -2365,9 +2380,6 @@ tc8ccf306 = На устройстве укажите прокси для Wi-Fi: 
 # Looking for it…
 t50ee7452 = Поиск…
 
-# Installing. The system may ask you to confirm.
-ta41c38ec = Установка. Система может запросить подтверждение.
-
 # Removing. The system may ask you to confirm.
 t62b22726 = Удаление. Система может попросить подтверждение.
 
@@ -2386,20 +2398,11 @@ tafd8dae2 = tracewing читает HTTPS с помощью сертификат�
 # Trust the certificate
 t26618699 = Доверять сертификату
 
-# Install
-tb50cbd40 = Установить
-
 # Also for command-line tools
 t0db8faea = Также для инструментов командной строки
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Удалить сертификат из всех хранилищ этого компьютера? HTTPS через tracewing перестанет работать, пока его не установят снова. tracewing сохранит его, чтобы установить позже.
-
-# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
-t76cf4bfa = В Linux браузерам нужен certutil, чтобы им можно было сказать доверять сертификату. Установите его, затем нажмите здесь «Установить»:
-
-# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
-td2606dbb = В Linux браузерам нужен certutil, чтобы им можно было сказать доверять сертификату. Установите NSS-инструменты своего дистрибутива, затем нажмите здесь «Установить».
 
 # This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
 tb13a87e6 = В этом окружении рабочего стола нет системного прокси, который tracewing может изменить. Откройте ниже браузер отдельно в разделе «Браузеры» или терминал.

@@ -17,7 +17,8 @@ use tracewing_proxy::{
     crypto_provider,
 };
 use tracewing_system::{
-    self as system, BrowserTrust, Environment, Place, QuicBlock, Scope, TakenOver, launch::Browser,
+    self as system, BrowserTrust, Environment, Place, QuicBlock, Scope, TakenOver,
+    launch::{Browser, Engine},
 };
 
 #[derive(Default)]
@@ -75,6 +76,57 @@ pub struct SystemState {
     pub guide: crate::setup_page::Guide,
     pub android: crate::android::AndroidState,
     pub ios: crate::ios_sim_view::IosState,
+}
+
+/// What the inspector offers a browser that turned tracewing's certificate
+/// down, so that it can be put right from the flow rather than from Set up.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BrowserFix {
+    /// It does not trust the CA yet, and Install would make it.
+    Install,
+    /// The same, but on Linux without `certutil`, which Install needs to
+    /// reach a browser's own stores: the command that installs it, where
+    /// known.
+    NeedsCertutil(Option<&'static str>),
+    /// Being installed now.
+    Installing,
+    /// It trusts the CA. A refusal from it now is one from before, or from a
+    /// browser that has not read its store again since, or a host that pins
+    /// its own certificate.
+    Trusted,
+}
+
+/// [`Traffic::browser_trusts`], from the browsers found and whether the
+/// system trusts the CA.
+fn browsers_trust(browsers: &[(Browser, BrowserTrust)], firefox: bool, system: bool) -> bool {
+    let mut found = browsers
+        .iter()
+        .filter(|(browser, _)| (browser.engine == Engine::Firefox) == firefox)
+        .peekable();
+    if found.peek().is_none() {
+        return system;
+    }
+    found.any(|(_, trust)| match trust {
+        BrowserTrust::System => system,
+        BrowserTrust::Own { holding, of } => *of > 0 && holding == of,
+    })
+}
+
+/// Which of those, from what the last look found.
+pub fn browser_fix(
+    trusts: bool,
+    installing: bool,
+    no_certutil: Option<Option<&'static str>>,
+) -> BrowserFix {
+    if installing {
+        BrowserFix::Installing
+    } else if trusts {
+        BrowserFix::Trusted
+    } else if let Some(command) = no_certutil {
+        BrowserFix::NeedsCertutil(command)
+    } else {
+        BrowserFix::Install
+    }
 }
 
 /// The proxy makes the CA as it starts; making one here too would give two.
@@ -150,6 +202,28 @@ fn remove_ca(data_dir: &Path, store: KeyStore) -> anyhow::Result<CaFound> {
 }
 
 impl Traffic {
+    /// Whether Firefox, or the other browsers when `firefox` is false, trust
+    /// the CA, as the last look found. A browser that reads the system's
+    /// store trusts it when the system does; one with stores of its own,
+    /// when every one of them holds it. With no such browser found, the
+    /// system's answer is all there is.
+    pub fn browser_trusts(&self, firefox: bool) -> bool {
+        browsers_trust(
+            &self.system.browsers,
+            firefox,
+            self.system.ca == CaState::Trusted,
+        )
+    }
+
+    /// What the inspector offers that browser.
+    pub fn browser_fix(&self, firefox: bool) -> BrowserFix {
+        browser_fix(
+            self.browser_trusts(firefox),
+            self.system.ca == CaState::Installing,
+            self.system.environment.no_certutil,
+        )
+    }
+
     /// Looks again for the certificate in every store, and for the browsers.
     pub fn start_ca_check(&mut self, cx: &mut Context<Self>) {
         if matches!(self.system.ca, CaState::Installing | CaState::Removing) {
@@ -470,5 +544,60 @@ mod tests {
             !cfg!(target_os = "linux"),
             "browsers on Linux do not read the system's store"
         );
+    }
+
+    #[test]
+    fn a_browser_that_turned_the_certificate_down_is_offered_what_it_lacks() {
+        assert_eq!(browser_fix(false, false, None), BrowserFix::Install);
+        assert_eq!(
+            browser_fix(false, false, Some(Some("sudo apt install libnss3-tools"))),
+            BrowserFix::NeedsCertutil(Some("sudo apt install libnss3-tools"))
+        );
+        assert_eq!(
+            browser_fix(true, false, Some(None)),
+            BrowserFix::Trusted,
+            "trusting already, certutil is beside the point"
+        );
+        assert_eq!(
+            browser_fix(false, true, None),
+            BrowserFix::Installing,
+            "not offered twice while it goes in"
+        );
+    }
+
+    #[test]
+    fn a_browser_trusts_the_ca_when_every_store_of_its_own_holds_it() {
+        let browser = |engine, name| Browser {
+            name,
+            engine,
+            program: PathBuf::new(),
+            profile: PathBuf::new(),
+            nss: Vec::new(),
+        };
+        let firefox = |holding, of| {
+            (
+                browser(Engine::Firefox, "Firefox"),
+                BrowserTrust::Own { holding, of },
+            )
+        };
+        let chrome = (browser(Engine::Chromium, "Chrome"), BrowserTrust::System);
+        // Two profiles, one holding it: not yet.
+        assert!(!browsers_trust(
+            &[firefox(1, 2), chrome.clone()],
+            true,
+            true
+        ));
+        assert!(browsers_trust(&[firefox(2, 2)], true, false));
+        // A Firefox that has made no profile trusts nothing yet.
+        assert!(!browsers_trust(&[firefox(0, 0)], true, true));
+        // Chrome reads the system's store here, and Firefox's are no business of it.
+        assert!(browsers_trust(
+            &[firefox(0, 2), chrome.clone()],
+            false,
+            true
+        ));
+        assert!(!browsers_trust(&[chrome], false, false));
+        // No such browser found: the system's answer.
+        assert!(browsers_trust(&[], true, true));
     }
 }
