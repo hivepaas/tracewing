@@ -810,11 +810,15 @@ glibc 2.35 floor the `.deb` aims at, outbound connections only, process names
 matching on 16 characters, containers needing `--network host`, WSL unable to
 do it at all. None of them is an objection to a TUN device.
 
-**What is in:** [`tun_linux.rs`](../../crates/proxy/src/tun_linux.rs) — the
-device, its four methods, and an `eventfd` beside the descriptor so that
-`shutdown` ends a read that is waiting on a quiet machine. Three tests that
-need no privilege and one that needs a device, which is `#[ignore]`d and
-documented like the Wintun one.
+**What is in:** three of the pieces, each with its own section below.
+[`tun_linux.rs`](../../crates/proxy/src/tun_linux.rs) — the device, its four
+methods, and an `eventfd` beside the descriptor so that `shutdown` ends a read
+that is waiting on a quiet machine; three tests that need no privilege and one
+that needs a device, which is `#[ignore]`d and documented like the Wintun one.
+Then the two halves of staying out of our own adapter: the rows of
+[`roads.rs`](../../crates/proxy/src/roads.rs), which choose the way out, and
+the socket option in [`upstream.rs`](../../crates/proxy/src/upstream.rs),
+which applies that choice.
 
 #### What a Linux machine said, and the Windows answer it is not
 
@@ -882,26 +886,56 @@ What this cannot see: both files are the **main** table, so a machine routing
 by `ip rule` has routes that are not here — the same class of gap as an
 interface's own metric being absent from a Windows row.
 
+#### Keeping our own connections out
+
+Applying the exclusion the choosing above answers, in
+[`upstream.rs`](../../crates/proxy/src/upstream.rs). Without it every
+connection tracewing makes on a captured program's behalf is routed back into
+the adapter it is reading, which is the dangerous one on both platforms.
+
+Almost all of it is the Windows code widened rather than a second
+implementation: the flag, the two indices, the decision `out_from` takes on
+them, and the connector branch that builds its own socket once an adapter is
+held. Only the one call differs, and on Linux it is `SO_BINDTOIFINDEX` — one
+option at the socket level, the same for both families, **no byte order to get
+wrong**, where Windows wants the index in network order for `IP_UNICAST_IF`
+and as it is for `IPV6_UNICAST_IF`.
+
+Three things measured rather than assumed, each on an ordinary socket with
+`CapEff: 0000000000000000`:
+
+- **It needs no privilege.** Setting it **worked**, `SO_MARK` in the same
+  transcript answered `EPERM`, and `SO_REUSEADDR` worked as a control. `man 7
+  socket` on that machine names a capability for `SO_MARK` — "CAP_NET_ADMIN or
+  CAP_NET_RAW (since Linux 5.17)" — and names none for binding a socket to an
+  interface. Measured on 7.0.0; older kernels did require `CAP_NET_RAW` for
+  `SO_BINDTODEVICE`, and which kernel stopped is a changelog nobody here has
+  read, so this is written as what was measured and what the page says rather
+  than as a guarantee. It matters beyond the one option: had it needed a
+  capability, the pump could not have stayed unprivileged, and Linux would
+  have been pushed into the elevated shape Windows is in.
+- **The option does not check the index.** Setting 9999 succeeds and reads
+  back 9999; `ENODEV` arrives later, at `connect`. So `Ok` here means the
+  option was set, not that the interface exists — which is why the index comes
+  from the tables above rather than from a guess.
+- **The failure that matters is quiet.** An index that exists but is the wrong
+  one does not fail at all: pinned to this machine's Wi-Fi interface a
+  connection to its gateway took 0.84s, pinned to `lo` it timed out after 3s
+  with nothing said. The loop this seam exists to prevent arrives as a hang,
+  not as an error — worth knowing before somebody debugs one.
+
+The tests are the round trip the Windows side uses, on both families and on
+both kinds of socket, one of them bound before the option rather than after;
+they need no privilege, so CI runs them. The ablation is the Windows trap
+transplanted: byte-swapping the index makes the read-back say 16777216 where 1
+was set, and both tests fail.
+
 #### What is not in, and nothing captures until it is
 
-The address, the route, and **applying** the exclusion the choosing above
-answers. Without that last one every connection tracewing makes on a captured
-program's behalf is routed back into the adapter, which is the dangerous one
-on both platforms.
-
-The mechanism is `SO_BINDTODEVICE`, and the measurement that settles it ran
-with `CapEff: 0000000000000000`: setting it on an ordinary socket **worked**,
-`SO_MARK` in the same transcript answered `EPERM`, and `SO_REUSEADDR` worked
-as a control. `man 7 socket` on that machine names a capability for `SO_MARK`
-— "CAP_NET_ADMIN or CAP_NET_RAW (since Linux 5.17)" — and names none for
-`SO_BINDTODEVICE`. Measured on 7.0.0; older kernels did require `CAP_NET_RAW`
-for it, and which kernel stopped is a changelog nobody here has read, so it
-is written as what was measured and what the page says rather than as a
-guarantee.
-
-That matters beyond the one option: had it needed a capability, the pump
-could not have stayed unprivileged, and Linux would have been pushed into
-the elevated shape Windows is in.
+The address and the route on the adapter, and the `Tun` source that hands the
+engine flows. Until that wiring exists nothing calls `straight_to`,
+`bound_datagrams` or `leave_by` on either platform — the machinery above is
+complete and idle.
 
 Addressing and routing go through netlink, which is a dependency this
 workspace does not have; shelling out to `ip` is the same trade `wintun.rs`
