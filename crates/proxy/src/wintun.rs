@@ -79,9 +79,10 @@ pub struct WintunAdapter {
     /// not outlive the adapter it came from, and neither may outlive the
     /// library whose code they are still inside. The `wintun` crate may well
     /// hold its own references for both — that could not be verified from its
-    /// documentation, so these are held rather than assumed.
+    /// documentation, so these are held rather than assumed. The adapter is
+    /// also read, by [`WintunAdapter::luid`].
     session: Arc<::wintun::Session>,
-    _adapter: Arc<::wintun::Adapter>,
+    adapter: Arc<::wintun::Adapter>,
     _library: ::wintun::Wintun,
 }
 
@@ -116,9 +117,45 @@ impl WintunAdapter {
         );
         Ok(Self {
             session,
-            _adapter: adapter,
+            adapter,
             _library: library,
         })
+    }
+}
+
+impl WintunAdapter {
+    /// What Windows **identifies** this adapter by, whatever the family.
+    ///
+    /// [`crate::roads::out_by`] leaves our own adapter out of the ways out
+    /// by this and not by an interface index, because an index belongs to
+    /// one family: `Ipv6IfIndex` is documented as zero where an interface
+    /// has no IPv6, and neither index is promised to survive an adapter
+    /// being disabled and enabled. On the machine this was tried on the two
+    /// agreed, which is the common case and not a guarantee — and the cost
+    /// of being wrong is that one family is not excluded, and that family's
+    /// connections loop.
+    ///
+    /// Taken from the index the driver reports and converted, which is sound
+    /// in the direction it is used: an index names one interface, whichever
+    /// family numbered it, so the LUID that comes back is this adapter's.
+    pub fn luid(&self) -> Result<u64> {
+        use windows_sys::Win32::{
+            Foundation::NO_ERROR, NetworkManagement::IpHelper::ConvertInterfaceIndexToLuid,
+            NetworkManagement::Ndis::NET_LUID_LH,
+        };
+        let index = self
+            .adapter
+            .get_adapter_index()
+            .map_err(|e| anyhow!("ask Wintun for the adapter's interface index: {e}"))?;
+        let mut luid = NET_LUID_LH::default();
+        // SAFETY: an index in, and eight bytes of ours to fill in.
+        let got = unsafe { ConvertInterfaceIndexToLuid(index, &mut luid) };
+        if got != NO_ERROR {
+            anyhow::bail!("turn interface {index} into a LUID: error {got}");
+        }
+        // SAFETY: a union over a `u64` and a bitfield of those same bytes;
+        // the whole value is what identifies the interface.
+        Ok(unsafe { luid.Value })
     }
 }
 
