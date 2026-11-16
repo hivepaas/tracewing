@@ -11,6 +11,7 @@ pub mod datagrams;
 pub mod dns;
 pub mod extension;
 pub mod handover;
+pub mod icmp;
 pub mod key_log;
 pub mod lan;
 pub mod name;
