@@ -11,7 +11,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::os;
+use crate::{child::Level, os};
 
 /// The roots a terminal opened from here trusts, kept in the data directory.
 const TERMINAL_BUNDLE: &str = "terminal-roots.pem";
@@ -44,9 +44,14 @@ pub struct Browser {
 }
 
 /// Opens a terminal whose programs go through the proxy and trust its CA.
-pub fn open_terminal(addr: SocketAddr, ca_pem: &Path, data_dir: &Path) -> Result<()> {
+pub fn open_terminal(addr: SocketAddr, ca_pem: &Path, data_dir: &Path, level: Level) -> Result<()> {
     let banner = format!("This terminal goes through tracewing at {addr}.");
-    os::open_terminal(&terminal_vars(addr, ca_pem, data_dir)?, &banner, data_dir)
+    os::open_terminal(
+        &terminal_vars(addr, ca_pem, data_dir)?,
+        &banner,
+        data_dir,
+        level,
+    )
 }
 
 /// What a terminal's programs read to go through the proxy, its bundle of
@@ -104,6 +109,39 @@ impl Shell {
         }
         out
     }
+}
+
+/// The script a Windows terminal runs so that it comes up with the variables
+/// already set, and a line saying so.
+///
+/// Here rather than in `windows.rs` because the awkward part is a string, and
+/// a string can be tested on any machine. The lines themselves are
+/// [`Shell::Cmd`]'s, so there is one spelling of "set this variable in cmd"
+/// rather than two.
+///
+/// **Two things differ from the same lines typed at a prompt**, which is what
+/// `tracewing env` prints:
+///
+/// - `%` is doubled. In a script `%NAME%` expands and a stray `%` can eat
+///   what follows it; at a prompt the doubling would itself be wrong, since
+///   `%%` there means a literal `%`. The values are proxy addresses and a
+///   path under the data directory, so it takes a `%` in the account name to
+///   reach this — rare, and silent if it ever happened, which is why it is
+///   handled rather than argued about.
+/// - the line endings are CRLF. `cmd` reads LF-only scripts for simple
+///   commands and is known to be odd about them, and nothing is gained by
+///   finding out where the line is.
+// Only Windows calls it; it lives here so that it can be tested anywhere,
+// which is the whole reason it is not in `windows.rs`. Same idiom as
+// `on_path` below.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn cmd_script(vars: &[(&str, String)], banner: &str) -> String {
+    let mut text = String::from("@echo off\n");
+    text.push_str(&Shell::Cmd.set(vars));
+    text.push_str(&format!("echo {banner}\n"));
+    text.push_str("echo.\n");
+    // Only a name or a value can carry one: `set "` and `"` have none.
+    text.replace('%', "%%").replace('\n', "\r\n")
 }
 
 /// Whether Node.js of this version (`v22.17.1`, `22.17.1`) sends its requests
@@ -263,7 +301,7 @@ pub fn find_browsers(data_dir: &Path) -> Vec<Browser> {
 }
 
 /// Opens `url` in `browser`, in the user's own profile, as if they had.
-pub fn open_url(browser: &Browser, url: &str) -> Result<()> {
+pub fn open_url(browser: &Browser, url: &str, level: Level) -> Result<()> {
     // A Mac app already running takes the URL from `open`, not from a second
     // copy of its program.
     #[cfg(target_os = "macos")]
@@ -274,11 +312,11 @@ pub fn open_url(browser: &Browser, url: &str) -> Result<()> {
     {
         let mut command = Command::new("/usr/bin/open");
         command.arg("-a").arg(app).arg(url);
-        return spawn(command).with_context(|| format!("open {}", app.display()));
+        return spawn(command, level).with_context(|| format!("open {}", app.display()));
     }
     let mut command = Command::new(&browser.program);
     command.arg(url);
-    spawn(command).with_context(|| format!("open {}", browser.program.display()))
+    spawn(command, level).with_context(|| format!("open {}", browser.program.display()))
 }
 
 /// Opens `browser` at `url` in its profile for tracewing, going through the
@@ -291,6 +329,7 @@ pub fn open_browser(
     spki: Option<&str>,
     ca_pem: &Path,
     url: &str,
+    level: Level,
 ) -> Result<()> {
     let profile = &browser.profile;
     fs::create_dir_all(profile).with_context(|| format!("create {}", profile.display()))?;
@@ -308,7 +347,7 @@ pub fn open_browser(
         }
         Engine::Safari => bail!("Safari has no profile of its own to open"),
     }
-    spawn(command).with_context(|| format!("open {}", browser.program.display()))
+    spawn(command, level).with_context(|| format!("open {}", browser.program.display()))
 }
 
 /// What a Firefox profile for tracewing holds: the proxy, the system's roots
@@ -426,16 +465,15 @@ pub fn browser_args(
 /// Starts a program that outlives the call, and reaps it when it ends. On Unix
 /// it gets a process group of its own, so a Ctrl-C meant for tracewing in the
 /// terminal it was started from does not close it as well.
-pub(crate) fn spawn(mut command: Command) -> Result<()> {
-    #[cfg(unix)]
-    std::os::unix::process::CommandExt::process_group(&mut command, 0);
-    let mut child = command
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
-    std::thread::spawn(move || child.wait());
-    Ok(())
+/// Starts something **for the person using tracewing**, at the level they
+/// asked for.
+///
+/// Everything here goes through [`crate::child::start`] rather than spawning,
+/// because on Windows a child inherits tracewing's elevation and the two
+/// things this module starts -- a browser and a terminal -- are the two it
+/// must not hand it to without being asked. See [`crate::child`].
+pub(crate) fn spawn(command: Command, level: Level) -> Result<()> {
+    crate::child::start(command, level)
 }
 
 /// A program on the `PATH`, as a full path.
@@ -499,6 +537,60 @@ mod tests {
             ),
             ("NO_PROXY", String::new()),
         ]
+    }
+
+    /// The script a Windows terminal comes up with, and the two ways it
+    /// differs from the same lines typed at a prompt.
+    #[test]
+    fn the_windows_terminal_script() {
+        let vars = vec![
+            ("HTTPS_PROXY", "http://127.0.0.1:8080".to_owned()),
+            (
+                "SSL_CERT_FILE",
+                r"C:\Users\me\AppData\Local\tracewing\roots.pem".to_owned(),
+            ),
+        ];
+        let script = cmd_script(
+            &vars,
+            "This terminal goes through tracewing at 127.0.0.1:8080.",
+        );
+
+        assert!(script.starts_with("@echo off\r\n"), "{script}");
+        assert!(
+            script.contains("set \"HTTPS_PROXY=http://127.0.0.1:8080\"\r\n"),
+            "the lines are `Shell::Cmd`'s, not a second spelling of them: {script}"
+        );
+        assert!(
+            script.contains("echo This terminal goes through tracewing at 127.0.0.1:8080.\r\n"),
+            "{script}"
+        );
+        assert!(
+            !script.contains('\n')
+                || script.matches('\n').count() == script.matches("\r\n").count(),
+            "every line ends CRLF, because `cmd` is odd about LF-only scripts: {script:?}"
+        );
+    }
+
+    /// A `%` in a value is doubled, because in a script it would otherwise
+    /// expand -- and a path under the data directory carries whatever is in
+    /// the account name.
+    #[test]
+    fn a_percent_in_a_value_is_doubled_for_a_script() {
+        let vars = vec![("SSL_CERT_FILE", r"C:\Users\od%d\roots.pem".to_owned())];
+        let script = cmd_script(&vars, "x");
+        assert!(
+            script.contains(r"C:\Users\od%%d\roots.pem"),
+            "doubled in the script: {script}"
+        );
+        // And the prompt form, which `tracewing env` prints, must **not** be
+        // doubled: there `%%` means a literal `%`. The two are different
+        // answers to the same question, which is why the script has its own
+        // function.
+        let typed = Shell::Cmd.set(&vars);
+        assert!(
+            typed.contains(r"C:\Users\od%d\roots.pem"),
+            "left alone for a prompt: {typed}"
+        );
     }
 
     #[test]
