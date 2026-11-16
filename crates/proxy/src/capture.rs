@@ -438,6 +438,43 @@ impl FlowHandler {
         by
     }
 
+    /// Keeps a flow for the connection being handled if its client turns
+    /// down the certificate tracewing gives it, or the handshake fails some
+    /// other way: there is no request then, and without a row the program
+    /// seems never to have come. See [`crate::refused`].
+    fn expect_handshake(&self, from: SocketAddr, host: &str, version: http::Version) {
+        let handler = self.clone();
+        let host = without_default_port(host, "https").to_owned();
+        let started_us = unix_micros();
+        crate::refused::expect(from, move |failure, took| {
+            if !handler.recording.load(Ordering::Relaxed) {
+                return;
+            }
+            let (client, app) = handler.client_of(from);
+            handler.recorder.submit(FlowRecord {
+                started_us,
+                client: client.to_string(),
+                kind: "http",
+                method: "CONNECT".to_owned(),
+                scheme: "https".to_owned(),
+                host,
+                client_version: format!("{version:?}"),
+                app,
+                duration_us: Some(took.as_micros() as i64),
+                request: BodyRecord {
+                    complete: true,
+                    ..BodyRecord::default()
+                },
+                response: BodyRecord {
+                    complete: true,
+                    ..BodyRecord::default()
+                },
+                error: Some(failure.to_string()),
+                ..FlowRecord::default()
+            });
+        });
+    }
+
     /// Who is at the other end: the address to put on the flow, and the
     /// program behind it. A connection a source took on its way arrives over
     /// the loopback with what the source was told kept aside, so there is
@@ -803,6 +840,8 @@ impl HttpHandler for FlowHandler {
             }
             return req.into();
         }
+        // A request: its connection took the certificate, if it was given one.
+        crate::refused::served(ctx.client_addr);
         let req = with_http_scheme(req);
         let req = self.as_absolute(ctx.client_addr, req);
         // Revocation checks ask for this while the handshake waits, directly or
@@ -1026,7 +1065,22 @@ impl HttpHandler for FlowHandler {
                 ..FlowRecord::default()
             });
         }
+        if !leave {
+            self.expect_handshake(ctx.client_addr, host, req.version());
+        }
         !leave
+    }
+
+    /// Decrypted, always, once the host is not left alone; what is noted is
+    /// that the client started TLS, which a connection that goes without a
+    /// request soon after is then kept for. See [`crate::refused`].
+    async fn should_intercept_tls(
+        &mut self,
+        _ctx: &HttpContext,
+        _hello: hudsucker::rustls::server::ClientHello<'_>,
+    ) -> bool {
+        crate::refused::hello();
+        true
     }
 
     async fn handle_response(&mut self, _ctx: &HttpContext, res: Response<Body>) -> Response<Body> {

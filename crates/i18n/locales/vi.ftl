@@ -574,6 +574,12 @@ t8090a1ba = Không giải mã
 # open
 td35ec4c9 = đang mở
 
+# Certificate not trusted
+t766a9726 = Không tin chứng chỉ
+
+# Hung up before a request
+t546190df = Ngắt kết nối trước khi gửi request
+
 # Reading the request…
 t51c96267 = Đang đọc request…
 
@@ -649,6 +655,12 @@ tc7be91e8 = Chọn một flow để xem ở đây
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = Không giải mã. Các kết nối mới tới host này đi qua mà không bị đọc.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = App đã từ chối chứng chỉ của tracewing. Hãy cho app tin CA của tracewing ở nơi app tìm các authority, hoặc không giải mã host này nếu app ghim chứng chỉ riêng.
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = App đã ngắt kết nối ngay sau khi nhận chứng chỉ của tracewing mà không hỏi gì, thường là cách một app từ chối chứng chỉ hoặc giữ chứng chỉ đã ghim. Hãy cho app tin CA của tracewing ở nơi app tìm các authority, hoặc không giải mã host này.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Nếu một app lỗi với host này, có thể app đó ghim chứng chỉ.
 
@@ -660,6 +672,9 @@ tb7367e2c = Giải mã host này
 
 # Do not decrypt this host
 t5fa113f6 = Không giải mã host này
+
+# Set up
+t43c06abc = Thiết lập
 
 # Request and response
 t04e060e6 = Request và response
@@ -2208,9 +2223,6 @@ t4b629c72 = Mở terminal
 
 # What the device does
 t8f16360f = Thiết bị phải tự làm gì
-
-# Set up
-t43c06abc = Thiết lập
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = Hãy nói bạn muốn bắt cái gì, và phần này sẽ thiết lập đúng một đường vào tới được nó.

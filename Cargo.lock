@@ -8958,6 +8958,7 @@ dependencies = [
  "tracewing-handoff",
  "tracewing-store",
  "tracing",
+ "tracing-subscriber",
  "webpki-roots 1.0.11",
  "windows-sys 0.61.2",
  "wintun",

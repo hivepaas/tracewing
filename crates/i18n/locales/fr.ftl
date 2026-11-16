@@ -609,6 +609,12 @@ t8090a1ba = Non déchiffré
 # open
 td35ec4c9 = ouvert
 
+# Certificate not trusted
+t766a9726 = Certificat non approuvé
+
+# Hung up before a request
+t546190df = A raccroché avant une requête
+
 # Reading the request…
 t51c96267 = Lecture de la requête…
 
@@ -684,6 +690,12 @@ tc7be91e8 = Choisissez un flow pour le voir ici
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = Non déchiffré. Les nouvelles connexions vers cet hôte passent sans être lues.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = L'app a refusé le certificat de tracewing. Faites approuver la CA de tracewing là où cette app cherche ses autorités, ou ne déchiffrez pas cet hôte si l'app épingle ses propres certificats.
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = L'app a raccroché juste après le certificat de tracewing, sans rien demander, ce qui est souvent la façon dont une app refuse un certificat ou s'en tient à un certificat épinglé. Faites approuver la CA de tracewing là où cette app cherche ses autorités, ou ne déchiffrez pas cet hôte.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Si une app échoue avec cet hôte, elle épingle peut-être ses certificats.
 
@@ -695,6 +707,9 @@ tb7367e2c = Déchiffrer cet hôte
 
 # Do not decrypt this host
 t5fa113f6 = Ne pas déchiffrer cet hôte
+
+# Set up
+t43c06abc = Configurer
 
 # Request and response
 t04e060e6 = Requête et réponse
@@ -2338,9 +2353,6 @@ t4b629c72 = Ouvrir un terminal
 
 # What the device does
 t8f16360f = Ce que fait l'appareil
-
-# Set up
-t43c06abc = Configurer
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = Dites ce que vous voulez capturer, et ceci met en place la seule voie d'entrée qui l'atteint.

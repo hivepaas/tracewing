@@ -609,6 +609,12 @@ t8090a1ba = Não descriptografado
 # open
 td35ec4c9 = aberto
 
+# Certificate not trusted
+t766a9726 = Certificado não confiável
+
+# Hung up before a request
+t546190df = Desligou antes de um pedido
+
 # Reading the request…
 t51c96267 = Lendo a requisição…
 
@@ -684,6 +690,12 @@ tc7be91e8 = Escolha um fluxo para vê-lo aqui
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = Não descriptografado. Novas conexões com este host passam sem ser lidas.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = O app recusou o certificado do tracewing. Faça a CA do tracewing ser confiável onde este app procura autoridades, ou não descriptografe este host se o app fixar os próprios certificados (pinning).
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = O app desligou logo após o certificado do tracewing, sem pedir nada, que costuma ser como um app recusa um certificado ou se mantém em um fixado (pinning). Faça a CA do tracewing ser confiável onde este app procura autoridades, ou não descriptografe este host.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Se um app falhar com este host, talvez ele fixe os próprios certificados (pinning).
 
@@ -695,6 +707,9 @@ tb7367e2c = Descriptografar este host
 
 # Do not decrypt this host
 t5fa113f6 = Não descriptografar este host
+
+# Set up
+t43c06abc = Configurar
 
 # Request and response
 t04e060e6 = Requisição e resposta
@@ -2338,9 +2353,6 @@ t4b629c72 = Abrir um terminal
 
 # What the device does
 t8f16360f = O que o dispositivo faz
-
-# Set up
-t43c06abc = Configurar
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = Diga o que quer capturar, e isto configura a única via de entrada que chega lá.

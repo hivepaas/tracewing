@@ -574,6 +574,12 @@ t8090a1ba = 未復号
 # open
 td35ec4c9 = オープン
 
+# Certificate not trusted
+t766a9726 = 証明書が信頼されていません
+
+# Hung up before a request
+t546190df = リクエスト前に切断
+
 # Reading the request…
 t51c96267 = リクエストを読んでいます…
 
@@ -649,6 +655,12 @@ tc7be91e8 = フローを選択するとここに表示されます
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = 未復号。このホストへの新しい接続は、中身を読まずに通過します。
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = アプリが tracewing の証明書を拒否しました。このアプリが認証局を探す場所で tracewing の CA を信頼させるか、アプリが証明書をピン留めしている場合はこのホストを復号しないでください。
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = アプリが tracewing の証明書を受け取った直後に、何も要求せずに切断しました。これはアプリが証明書を拒否するとき、またはピン留めした証明書に従うときによくある動きです。このアプリが認証局を探す場所で tracewing の CA を信頼させるか、このホストを復号しないでください。
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = このホストでアプリが失敗する場合、アプリが証明書をピン留めしている可能性があります。
 
@@ -660,6 +672,9 @@ tb7367e2c = このホストを復号する
 
 # Do not decrypt this host
 t5fa113f6 = このホストを復号しない
+
+# Set up
+t43c06abc = セットアップ
 
 # Request and response
 t04e060e6 = リクエストとレスポンス
@@ -2208,9 +2223,6 @@ t4b629c72 = ターミナルを開く
 
 # What the device does
 t8f16360f = 端末の側ですること
-
-# Set up
-t43c06abc = セットアップ
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = 何をキャプチャしたいか選ぶと、そこに届く唯一の経路だけを設定します。

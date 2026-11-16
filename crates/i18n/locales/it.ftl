@@ -609,6 +609,12 @@ t8090a1ba = Non decifrato
 # open
 td35ec4c9 = aperto
 
+# Certificate not trusted
+t766a9726 = Certificato non attendibile
+
+# Hung up before a request
+t546190df = Chiusa prima di una richiesta
+
 # Reading the request…
 t51c96267 = Lettura della richiesta…
 
@@ -684,6 +690,12 @@ tc7be91e8 = Scegli un flow per vederlo qui
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = Non decifrato. Le nuove connessioni a questo host passano senza essere lette.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = L'app ha rifiutato il certificato di tracewing. Rendi attendibile la CA di tracewing dove questa app cerca le autorità, oppure non decifrare questo host se l'app usa il pinning dei certificati.
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = L'app ha chiuso la connessione subito dopo il certificato di tracewing, senza chiedere nulla, spesso il modo in cui un'app rifiuta un certificato o resta fedele a uno fissato con il pinning. Rendi attendibile la CA di tracewing dove questa app cerca le autorità, oppure non decifrare questo host.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Se un'app non funziona con questo host, potrebbe usare il pinning dei certificati.
 
@@ -695,6 +707,9 @@ tb7367e2c = Decifra questo host
 
 # Do not decrypt this host
 t5fa113f6 = Non decifrare questo host
+
+# Set up
+t43c06abc = Configura
 
 # Request and response
 t04e060e6 = Richiesta e risposta
@@ -2338,9 +2353,6 @@ t4b629c72 = Apri un terminale
 
 # What the device does
 t8f16360f = Che cosa fa il dispositivo
-
-# Set up
-t43c06abc = Configura
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = Dì che cosa vuoi catturare e questo imposta l'unica via d'ingresso che ci arriva.

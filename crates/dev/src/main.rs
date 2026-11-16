@@ -253,12 +253,23 @@ enum SysproxyAction {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into()),
-        )
-        .with_writer(std::io::stderr)
-        .init();
+    // The filter is the log's alone: a filter for the whole subscriber would
+    // also hide from `refused::layer` the span it needs.
+    {
+        use tracing_subscriber::{
+            Layer as _, layer::SubscriberExt as _, util::SubscriberInitExt as _,
+        };
+        let filter =
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into());
+        tracing_subscriber::registry()
+            .with(tracewing_proxy::refused::layer())
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(std::io::stderr)
+                    .with_filter(filter),
+            )
+            .init();
+    }
     let _ = crypto_provider().install_default();
 
     match Cli::parse().command {

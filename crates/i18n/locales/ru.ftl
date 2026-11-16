@@ -625,6 +625,12 @@ t8090a1ba = Не расшифровано
 # open
 td35ec4c9 = открыто
 
+# Certificate not trusted
+t766a9726 = Сертификату не доверяют
+
+# Hung up before a request
+t546190df = Отключился до запроса
+
 # Reading the request…
 t51c96267 = Чтение запроса…
 
@@ -700,6 +706,12 @@ tc7be91e8 = Выберите поток, чтобы увидеть его зде
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = Не расшифровано. Новые подключения к этому хосту проходят без чтения.
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = Приложение отвергло сертификат tracewing. Сделайте CA tracewing доверенным там, где это приложение ищет центры сертификации, или не расшифровывайте этот хост, если приложение использует пиннинг сертификатов.
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = Приложение отключилось сразу после сертификата tracewing, ничего не запросив, — так приложения часто отвергают сертификат или держатся закреплённого (пиннинг). Сделайте CA tracewing доверенным там, где это приложение ищет центры сертификации, или не расшифровывайте этот хост.
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Если приложение не работает с этим хостом, возможно, оно использует пиннинг сертификатов.
 
@@ -711,6 +723,9 @@ tb7367e2c = Расшифровывать этот хост
 
 # Do not decrypt this host
 t5fa113f6 = Не расшифровывать этот хост
+
+# Set up
+t43c06abc = Настройка
 
 # Request and response
 t04e060e6 = Запрос и ответ
@@ -2409,9 +2424,6 @@ t4b629c72 = Открыть терминал
 
 # What the device does
 t8f16360f = Что делает само устройство
-
-# Set up
-t43c06abc = Настройка
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = Скажите, что хотите захватить, и это настроит единственный путь, который до него достаёт.

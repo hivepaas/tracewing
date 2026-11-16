@@ -574,6 +574,12 @@ t8090a1ba = 未解密
 # open
 td35ec4c9 = 进行中
 
+# Certificate not trusted
+t766a9726 = 证书未被信任
+
+# Hung up before a request
+t546190df = 请求前断开
+
 # Reading the request…
 t51c96267 = 正在读取请求…
 
@@ -649,6 +655,12 @@ tc7be91e8 = 选择一条流量记录以在此查看
 # Not decrypted. New connections to this host go through unread.
 ta05ec37a = 未解密。到此主机的新连接将直接通过，不被读取。
 
+# The app turned down tracewing's certificate. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host if the app pins its own.
+te03a2651 = 应用拒绝了 tracewing 的证书。请在该应用查找证书颁发机构的地方信任 tracewing 的 CA；如果应用使用了证书锁定，请不解密此主机。
+
+# The app hung up right after tracewing's certificate, without asking for anything, which is often how an app turns a certificate down or keeps to a pinned one. Trust tracewing's CA where this app looks for authorities, or stop decrypting this host.
+t9b63eb05 = 应用在收到 tracewing 的证书后立即断开，没有发出任何请求，这往往是应用拒绝证书或坚持使用锁定证书的方式。请在该应用查找证书颁发机构的地方信任 tracewing 的 CA，或不解密此主机。
+
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = 如果某个应用连接此主机失败，它可能使用了证书锁定。
 
@@ -660,6 +672,9 @@ tb7367e2c = 解密此主机
 
 # Do not decrypt this host
 t5fa113f6 = 不解密此主机
+
+# Set up
+t43c06abc = 配置
 
 # Request and response
 t04e060e6 = 请求和响应
@@ -2208,9 +2223,6 @@ t4b629c72 = 打开终端
 
 # What the device does
 t8f16360f = 设备那边要做的事
-
-# Set up
-t43c06abc = 配置
 
 # Say what you want to capture, and this sets up the one way in that reaches it.
 t21ec04b3 = 说出你想抓什么，这里就只配置能抓到它的那一条路。
