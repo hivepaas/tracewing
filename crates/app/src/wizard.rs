@@ -193,6 +193,107 @@ pub fn tracewing_can_trust(trust: Trust) -> bool {
     }
 }
 
+/// What to do about a program that turned tracewing's certificate down: the
+/// target whose route sets its trust up, and a line on where that program
+/// looks for authorities.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Fix {
+    pub target: Target,
+    pub says: String,
+}
+
+/// The fix for a program, told by its name or its file, or by its being on
+/// another device. `None` when nothing is known of it, or it is nothing in
+/// particular: then all there is to say is the general advice, and that a
+/// program that pins its certificates will not be read by anyone.
+///
+/// The names are matched loosely, because they come as the system gives
+/// them: a file (`curl`, `python3.12`, `node.exe`), a path, or a macOS
+/// bundle (`org.mozilla.firefox`).
+pub fn fix_for(program: Option<&str>, from_device: bool) -> Option<Fix> {
+    let fix = |target, says| Some(Fix { target, says });
+    if from_device {
+        return fix(
+            Target::Phone,
+            tr!(
+                "A phone trusts tracewing once its CA is installed there. On Android, most apps trust only the system's authorities, not one a user adds."
+            ),
+        );
+    }
+    let program = program?.to_lowercase();
+    let file = program
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(&program)
+        .trim_end_matches(".exe");
+    let any = |names: &[&str]| names.iter().any(|name| program.contains(name));
+    let starts = |names: &[&str]| names.iter().any(|name| file.starts_with(name));
+    // Exactly, or with a version after it: `node`, `node22`, `python3.12`,
+    // but not `bundle` or `gitkraken`.
+    let named = |names: &[&str]| {
+        names.iter().any(|name| {
+            file.strip_prefix(name).is_some_and(|rest| {
+                rest.is_empty()
+                    || rest.starts_with(|c: char| c.is_ascii_digit() || c == '.' || c == '-')
+            })
+        })
+    };
+    if any(&["firefox", "librewolf", "waterfox"]) {
+        fix(
+            Target::Website,
+            tr!(
+                "Firefox keeps its own authorities in each profile, apart from this computer's. Set up installs tracewing's CA into them."
+            ),
+        )
+    } else if any(&[
+        "chrome", "chromium", "msedge", "edge", "brave", "opera", "vivaldi", "safari",
+    ]) {
+        fix(
+            Target::Website,
+            tr!(
+                "This browser trusts the authorities installed on this computer. Set up installs tracewing's CA there."
+            ),
+        )
+    } else if named(&["node", "deno", "bun"]) {
+        fix(
+            Target::Node,
+            tr!(
+                "Node, Deno and Bun carry their own authorities. Started from tracewing's terminal, they are told to trust its CA as well."
+            ),
+        )
+    } else if named(&["python", "pip", "uv"]) {
+        fix(
+            Target::Python,
+            tr!(
+                "Python trusts the file of authorities it is pointed to, which tracewing's terminal points at one with tracewing's CA. Apple's own Python ignores it."
+            ),
+        )
+    } else if named(&["java", "javaw"]) {
+        fix(
+            Target::Java,
+            tr!(
+                "Java trusts only a store of its own. Set up writes one with tracewing's CA, and gives the flags that point Java at it."
+            ),
+        )
+    } else if starts(&["docker", "podman", "containerd", "com.docker"]) {
+        fix(
+            Target::Container,
+            tr!(
+                "What runs in a container trusts what its image brings, so tracewing's CA has to be added to the image."
+            ),
+        )
+    } else if named(&["curl", "wget", "git", "http", "https", "aws"]) {
+        fix(
+            Target::CommandLine,
+            tr!(
+                "Started from tracewing's terminal, a command-line program is told to trust tracewing's CA."
+            ),
+        )
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -311,5 +412,36 @@ mod tests {
             "an answer with nothing behind it is worse than one fewer answer"
         );
         assert!(here.contains(&Target::Website));
+    }
+
+    #[test]
+    fn a_program_that_turned_the_certificate_down_is_sent_where_its_trust_is_set_up() {
+        let target = |program: &str| fix_for(Some(program), false).map(|fix| fix.target);
+        for (program, expected) in [
+            ("firefox", Some(Target::Website)),
+            ("org.mozilla.firefox", Some(Target::Website)),
+            ("/Applications/Google Chrome.app", Some(Target::Website)),
+            ("msedge.exe", Some(Target::Website)),
+            ("node", Some(Target::Node)),
+            ("C:\\Program Files\\nodejs\\node.exe", Some(Target::Node)),
+            ("/usr/bin/python3.12", Some(Target::Python)),
+            ("java", Some(Target::Java)),
+            ("/usr/bin/curl", Some(Target::CommandLine)),
+            ("git-remote-https", Some(Target::CommandLine)),
+            ("com.docker.backend", Some(Target::Container)),
+            ("spotify", None),
+            ("gitkraken", None),
+            ("bundle", None),
+            // A program called javac is not the JVM.
+            ("javac", None),
+        ] {
+            assert_eq!(target(program), expected, "{program}");
+        }
+        assert_eq!(fix_for(None, false), None, "nothing known, nothing to say");
+        assert_eq!(
+            fix_for(Some("curl"), true).map(|fix| fix.target),
+            Some(Target::Phone),
+            "what comes from another device is that device's to trust"
+        );
     }
 }

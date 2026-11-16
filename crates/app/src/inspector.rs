@@ -21,7 +21,7 @@ use crate::{
     scrollbar::{self, Scrolled},
     select::{self, Copied, Selection},
     snippets::{self, Language},
-    traffic::{Screen, Traffic},
+    traffic::Traffic,
     widgets::{Reachable, chip, eyebrow, icon, status_colors, tip},
 };
 use gpui::{
@@ -1018,12 +1018,27 @@ impl Traffic {
             ),
             None => tr!("If an app fails with this host, it may pin its certificates."),
         };
+        // Where this program looks for authorities, when it is known which
+        // program it is, and the answer of Set up's wizard that deals with it.
+        let fix = turned_down.and_then(|_| {
+            crate::wizard::fix_for(
+                detail.app.as_deref().or(detail.app_path.as_deref()),
+                device_of(&detail.client).is_some(),
+            )
+        });
+        let says = fix.as_ref().map(|fix| fix.says.clone());
+        let target = fix.map(|fix| fix.target);
         let (ground, ink) = if turned_down.is_some() {
             (c.accent, c.on_accent)
         } else {
             (c.chip, c.on_chip)
         };
         let narrow = self.inspector_narrower(NARROW_DECRYPT);
+        // Narrow, all of it goes to the tooltip.
+        let tip_text = match &says {
+            Some(says) => format!("{text}\n\n{says}"),
+            None => text.clone(),
+        };
         div()
             .flex()
             .flex_row()
@@ -1044,12 +1059,18 @@ impl Traffic {
                         // own, with the buttons under it.
                         .when(turned_down.is_some(), |d| d.flex_basis(relative(1.)))
                         .text_size(ui(12.))
+                        .flex()
+                        .flex_col()
+                        .gap(ui(4.))
                         .text_color(rgb(if turned_down.is_some() {
                             c.error
                         } else {
                             c.muted
                         }))
-                        .child(text.clone()),
+                        .child(text.clone())
+                        .children(says.map(|says| {
+                            div().id("trust-hint").text_color(rgb(c.text)).child(says)
+                        })),
                 )
             })
             .child(
@@ -1075,7 +1096,7 @@ impl Traffic {
             .child(
                 div()
                     .id("decrypt-choice")
-                    .when(narrow, |d| d.tooltip(tip(text.clone())))
+                    .when(narrow, |d| d.tooltip(tip(tip_text.clone())))
                     .flex_shrink_0()
                     .h(ui(28.))
                     .px(ui(10.))
@@ -1125,8 +1146,8 @@ impl Traffic {
                         .text_size(ui(12.))
                         .font_weight(FontWeight::BOLD)
                         .child(tr!("Set up"))
-                        .on_click(cx.listener(|view, _, _, cx| {
-                            view.set_screen(Screen::Setup, cx);
+                        .on_click(cx.listener(move |view, _, _, cx| {
+                            view.open_setup_for(target, cx);
                         })),
                 )
             })

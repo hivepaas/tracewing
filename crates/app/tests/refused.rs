@@ -1,5 +1,6 @@
 //! A program that turns tracewing's certificate down: its connection is a
-//! row that says so, rather than nothing, and leaving the host alone from
+//! row that says so, rather than nothing; the program is named, and Set up
+//! opens at the answer that deals with it; and leaving the host alone from
 //! there lets the program through.
 //!
 //! This file claims `ports: 20_540..20_550` for the proxy it starts.
@@ -18,7 +19,9 @@ use std::{
 use tracewing::{
     engine::{Engine, EngineOptions},
     flows::handshake_note,
+    layout::Layout,
     traffic::{Screen, Traffic},
+    wizard::{Target, fix_for},
 };
 use tracewing_dev::benchkit;
 use tracewing_proxy::refused::{Said, said};
@@ -102,7 +105,8 @@ fn a_certificate_turned_down_is_a_row_and_the_host_can_be_left_alone() {
         ports: 20_540..20_550,
         extra_roots: vec![origin_ca.clone()],
         key_store: Default::default(),
-        find_apps: false,
+        // Looked for, so the row knows it is curl.
+        find_apps: true,
     })
     .unwrap();
 
@@ -147,8 +151,41 @@ fn a_certificate_turned_down_is_a_row_and_the_host_can_be_left_alone() {
         })
         .unwrap();
     assert!(host.starts_with("localhost"), "{host}");
+    // The program, once it is found: curl, which trusts what tracewing's
+    // terminal tells it to.
+    wait_for(&mut cx, window, "the program", |view| {
+        view.inspector
+            .detail
+            .as_ref()
+            .is_some_and(|detail| detail.app.is_some())
+    });
+    let app = window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(0, cx);
+            view.inspector.detail.as_ref().unwrap().app.clone().unwrap()
+        })
+        .unwrap();
+    let fix = fix_for(Some(&app), false).unwrap_or_else(|| panic!("nothing for {app}"));
+    assert_eq!(fix.target, Target::CommandLine, "{app}");
     cx.run_until_parked();
     shot(&mut cx, window.into(), "130-certificate-turned-down");
+
+    // Set up, open at the answer for it.
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.open_setup_for(Some(fix.target), cx);
+            assert_eq!(view.screen, Screen::Setup);
+        })
+        .unwrap();
+    cx.run_until_parked();
+    assert_eq!(
+        Layout::load(&dir.join("layout.toml")).capture_target,
+        Some(Target::CommandLine)
+    );
+    shot(&mut cx, window.into(), "132-certificate-set-up");
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
 
     // What "Do not decrypt this host" does: the next connection is passed
     // on as it is, and curl, trusting the origin, gets through.
