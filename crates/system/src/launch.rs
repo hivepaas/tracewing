@@ -169,7 +169,30 @@ pub fn node_past_the_proxy() -> Option<String> {
     #[cfg(unix)]
     let version = {
         let shell = std::env::var_os("SHELL").unwrap_or_else(|| "/bin/sh".into());
-        node_version_in(Path::new(&shell), std::time::Duration::from_secs(5))
+        let shell = Path::new(&shell);
+        let mut asked = node_version_in(shell, SOON);
+        if worth_asking_again(&asked) {
+            tracing::debug!(
+                "asking {} about Node did not work; asking once more",
+                shell.display()
+            );
+            asked = node_version_in(shell, AT_LENGTH);
+        }
+        match asked {
+            Asked::Version(version) => Some(version),
+            Asked::NoNode => None,
+            Asked::CouldNotAsk(why) => {
+                // Said in the log rather than to the person, which is the
+                // half of this that is a fix. Telling them "we could not
+                // ask" needs a new sentence in fourteen languages, and that
+                // is a decision rather than a fix.
+                tracing::info!(
+                    "cannot tell whether the Node in {} goes past tracewing: {why}",
+                    shell.display()
+                );
+                None
+            }
+        }
     };
     #[cfg(windows)]
     let version = node_version_here();
@@ -191,21 +214,69 @@ pub fn node_version_here() -> Option<String> {
     version_in(&String::from_utf8_lossy(&out.stdout))
 }
 
+/// How long the first ask waits. Generous for `sh`, which is what most
+/// machines answer with.
+#[cfg(unix)]
+const SOON: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// And the second, which is only reached when the first could not be asked at
+/// all. It is longer on purpose: the shell that fails the first ask is a
+/// login-interactive `zsh` with a plugin manager, and five seconds is not
+/// obviously generous for one of those. The first ask pays for the cheap
+/// case; this one pays for the slow shell.
+#[cfg(unix)]
+const AT_LENGTH: std::time::Duration = std::time::Duration::from_secs(20);
+
+/// Whether an answer is worth asking a second time for.
+///
+/// **Only the one that could not be asked.** `NoNode` means the shell ran and
+/// answered; it just has no Node on its path, which is the common case on a
+/// machine without it, and a second ask cannot come back with anything else.
+/// It is not retried because it would be pointless, not because it would be
+/// slow: a shell that answers is never charged [`AT_LENGTH`], so the cost of
+/// retrying it is one more start-up -- 0.1s for a bash with a short profile,
+/// a second or two for a zsh with a plugin manager. The reason to write this
+/// down is that the pointless version is one line and looks just as sensible.
+#[cfg(unix)]
+fn worth_asking_again(asked: &Asked) -> bool {
+    matches!(asked, Asked::CouldNotAsk(_))
+}
+
+/// What asking a shell about Node came to.
+///
+/// Three answers rather than `Option`, because two of them used to be the
+/// same `None` and they want opposite treatment: a shell with no Node has
+/// answered and is not asked again, while a shell that could not be asked is
+/// the one worth a second, longer ask. The third thing the split buys is a
+/// log line that says which of the five ways it failed.
+#[cfg(unix)]
+enum Asked {
+    /// The shell answered, with this version.
+    Version(String),
+    /// It answered, and said no version -- which is what a shell with no
+    /// Node on its path prints.
+    NoNode,
+    /// It could not be asked at all, and this says which way.
+    CouldNotAsk(&'static str),
+}
+
 /// `node --version` as `shell` answers it, logged in and interactive as a
 /// terminal's is, so that its start-up files run. Given up after `wait`,
 /// with whatever it started, as such files can wait on a terminal it has not.
 #[cfg(unix)]
-fn node_version_in(shell: &Path, wait: std::time::Duration) -> Option<String> {
+fn node_version_in(shell: &Path, wait: std::time::Duration) -> Asked {
     use std::io::Read;
     let mut command = Command::new(shell);
     command.args(["-l", "-i", "-c", "node --version"]);
     std::os::unix::process::CommandExt::process_group(&mut command, 0);
-    let mut child = command
+    let Ok(mut child) = command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
-        .ok()?;
+    else {
+        return Asked::CouldNotAsk("the shell did not start");
+    };
     let deadline = std::time::Instant::now() + wait;
     loop {
         match child.try_wait() {
@@ -213,19 +284,30 @@ fn node_version_in(shell: &Path, wait: std::time::Duration) -> Option<String> {
             Ok(None) if std::time::Instant::now() < deadline => {
                 std::thread::sleep(std::time::Duration::from_millis(20))
             }
-            _ => {
+            other => {
                 // The group: the shell and anything its files started.
                 let pid = child.id() as libc::pid_t;
                 // SAFETY: a signal to a process group of our own child's.
                 unsafe { libc::kill(-pid, libc::SIGKILL) };
                 let _ = child.wait();
-                return None;
+                return Asked::CouldNotAsk(match other {
+                    Ok(None) => "the shell did not answer in time",
+                    _ => "the shell could not be waited for",
+                });
             }
         }
     }
+    let Some(mut stdout) = child.stdout.take() else {
+        return Asked::CouldNotAsk("the shell's output was not there to read");
+    };
     let mut out = String::new();
-    child.stdout.take()?.read_to_string(&mut out).ok()?;
-    version_in(&out)
+    if stdout.read_to_string(&mut out).is_err() {
+        return Asked::CouldNotAsk("the shell's output could not be read");
+    }
+    match version_in(&out) {
+        Some(version) => Asked::Version(version),
+        None => Asked::NoNode,
+    }
 }
 
 /// The last line that is a version, after whatever start-up files print.
@@ -649,17 +731,57 @@ echo 'Welcome back!'
 echo v22.17.1
 echo"#,
         );
-        assert_eq!(node_version_in(&chatty, wait).as_deref(), Some("22.17.1"));
+        assert!(
+            matches!(node_version_in(&chatty, wait), Asked::Version(v) if v == "22.17.1"),
+            "the version, after whatever the start-up files printed"
+        );
+
+        // **The two that used to be one `None`.** A shell with no Node is the
+        // common answer and must not be asked twice; a shell that could not be
+        // asked is the one that must. Asserted apart, because telling them
+        // apart is the whole of this.
         let none = shell("none", "echo 'zsh: command not found: node'; exit 127");
-        assert_eq!(node_version_in(&none, wait), None);
+        assert!(
+            matches!(node_version_in(&none, wait), Asked::NoNode),
+            "a shell that answered and has no Node"
+        );
+
         let stuck = shell("stuck", "sleep 60 & sleep 60; echo v22.17.1");
         let started = std::time::Instant::now();
-        assert_eq!(
-            node_version_in(&stuck, std::time::Duration::from_millis(300)),
-            None
+        assert!(
+            matches!(
+                node_version_in(&stuck, std::time::Duration::from_millis(300)),
+                Asked::CouldNotAsk(why) if why.contains("in time")
+            ),
+            "a shell that did not answer, and which way it failed"
         );
         assert!(started.elapsed() < std::time::Duration::from_secs(5));
+
+        // And one that cannot start at all, which is the third way.
+        let gone = dir.join("not-a-shell");
+        assert!(
+            matches!(node_version_in(&gone, wait), Asked::CouldNotAsk(why) if why.contains("start")),
+            "a shell that is not there"
+        );
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// Which answers are asked for a second time, and which are not. Asking
+    /// again on `NoNode` is the mistake this pins: that is the common answer
+    /// on a machine without Node, the shell did answer, and a second ask buys
+    /// a second start-up for a result that cannot have changed.
+    #[cfg(unix)]
+    #[test]
+    fn only_an_answer_that_could_not_be_asked_is_asked_again() {
+        assert!(worth_asking_again(&Asked::CouldNotAsk("whatever")));
+        assert!(
+            !worth_asking_again(&Asked::NoNode),
+            "a shell with no Node is not asked twice"
+        );
+        assert!(
+            !worth_asking_again(&Asked::Version("22.17.1".to_owned())),
+            "and neither is one that answered"
+        );
     }
 
     #[test]
