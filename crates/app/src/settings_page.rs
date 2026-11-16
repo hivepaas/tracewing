@@ -2109,19 +2109,10 @@ mod tests {
         // look like a new one. That is a property of the platform's timer,
         // and a virtualized one on a CI runner is where it shows up.
         arrivals.came(By::Socks5);
-        let arrived = arrivals.of(By::Socks5).last.expect("it came");
-        // Bounded, because a loop waiting on a clock that never moves is a
-        // test that hangs, and a test that hangs is worse than one that
-        // fails: it says nothing and it stops everything behind it.
-        let switched_on = (0..5_000)
-            .find_map(|_| {
-                let now = Instant::now();
-                (now > arrived).then_some(now).or_else(|| {
-                    std::thread::sleep(Duration::from_millis(1));
-                    None
-                })
-            })
-            .expect("the clock never advanced past the arrival");
+        // A moment strictly after that arrival, built from the arrival
+        // rather than read from the clock: waiting for the clock to move
+        // needs a bound, and a bound needs a number nobody can justify.
+        let switched_on = arrivals.of(By::Socks5).last.expect("it came") + Duration::from_nanos(1);
         let later = switched_on + QUIET_AFTER;
         assert!(
             gone_quiet(Way::Socks5, Some(switched_on), &arrivals, later),
