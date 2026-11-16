@@ -1027,6 +1027,63 @@ t4e3af9c3 = 提问
 # Tools offered: {tools}
 tb871bcf4 = 提供的工具：{ $tools }
 
+# tracewing has no port open for the extension.
+tb0bf6486 = tracewing 没有为扩展打开端口。
+
+# Add an app first: it is the apps you add that are taken.
+t755769ba = 请先添加一个应用：捕获的是你添加的应用。
+
+# macOS is waiting for you to allow tracewing's network extension, in {place}.
+t7021684e = macOS 正在等你允许 tracewing 的网络扩展，位置：{ $place }。
+
+# Starting. The first time, macOS asks you to allow tracewing to add a proxy configuration.
+tc03f3fa0 = 正在启动。第一次时，macOS 会请你允许 tracewing 添加代理配置。
+
+# Stopping.
+t850deda5 = 正在停止。
+
+# On: the connections of the apps below come to tracewing, whatever their proxy settings say.
+t34cb0902 = 已开启：下面这些应用的连接都会来到 tracewing，不管它们的代理设置如何。
+
+# Off. Switching it on installs tracewing's network extension the first time, and macOS asks you to allow it, once.
+te5443642 = 已关闭。第一次开启时会安装 tracewing 的网络扩展，macOS 会请你允许一次。
+
+# Off. The extension is installed and waits to be allowed, in {place}.
+t66ca8601 = 已关闭。扩展已安装，正在等待允许，位置：{ $place }。
+
+# Off.
+t33ce2bcc = 已关闭。
+
+# Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
+td99daed8 = 已关闭。这个 tracewing 不是从 tracewing.app 运行的，而 macOS 只允许应用本身安装它的扩展：请从“应用程序”中的 tracewing 开启。
+
+# Turn on
+t65a0c5a7 = 开启
+
+# Turn off
+tcd03e04b = 关闭
+
+# Open System Settings
+td22799a3 = 打开系统设置
+
+# Apps it takes
+t804bea32 = 捕获的应用
+
+# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
+t4a4185a4 = 还没有。从“应用程序”添加一个应用，或添加 /usr/bin/curl 这样的程序；应用里面的内容——浏览器或 Electron 应用用来连接的辅助程序——会一并添加。
+
+# Add an app…
+t98ea20ec = 添加应用…
+
+# Reading its signing ids…
+tb6411280 = 正在读取签名 ID…
+
+# {own} and {n} inside it | {own} and {n} inside it
+tdf02a0a5 =
+    { $n ->
+       *[other] { $own } 及其内部 { $n } 个
+    }
+
 # Not kept
 tba30b5fa = 未保留
 
@@ -1909,11 +1966,11 @@ t0d857250 = 手机加入隧道后发出的一切，包括忽略手机代理设�
 # Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
 tb457dd67 = 只信任自带证书的应用，以及在 tracewing 的 CA 装到手机上之前发出的一切。
 
-# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
-t018f7b7c = 指定的应用通过 TCP 发出的一切，无论它是否读取任何代理设置：任何版本的 Node、Java，连它的 localhost 也算。
+# Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
+t30f507c6 = 所选应用通过 TCP 发送的一切，不管它是否读取代理设置：浏览器、Electron 应用、任何版本的 Node、Java。
 
-# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
-t3f6bf403 = UDP，所以也包括 HTTP/3；以及没有自己签名标识的程序，比如 go build 生成的一切。
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
+t1a42de49 = UDP，也就是 HTTP/3；连向本机自身的连接，macOS 不会转交；以及没有自己签名 ID 的程序，例如 go build 生成的所有程序。
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = 自从打开以来，代理端口上什么都没到过 — 系统代理、tracewing 自己的浏览器、终端都从那里进来，这三样都没有。一个被指定走代理却忽略它的程序，看起来正是这样。
@@ -1921,17 +1978,8 @@ t4294729b = 自从打开以来，代理端口上什么都没到过 — 系统代
 # Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
 t7cb4303b = 自从打开以来，这条路上什么都没到过。一个被指定走这条路却忽略它的程序，看起来正是这样。
 
-# Turn off
-tcd03e04b = 关闭
-
-# Turn on
-t65a0c5a7 = 开启
-
 # Open from Set up
 tf0ad42dc = 从配置页打开
-
-# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
-t5b4d06d6 = 目前从命令行指定：它列出要抓的应用，首次会安装扩展，并请 macOS 允许。
 
 # macOS only: it is macOS that hands an app's connections over.
 t71872556 = 仅 macOS：交出应用连接的是 macOS 自己。
@@ -2196,6 +2244,9 @@ t4398b845 = 以及 Java 自带的证书库
 
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = 然后用这些参数启动你的程序：它发出的东西会出现在流量里。
+
+# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
+tbdc6cba5 = 添加应用，然后开启：不管它的代理设置如何，它的连接都会来到这里。与 设置 › 捕获 › 应用 相同。
 
 # the browsers' own stores
 tddf6836c = 各浏览器自己的证书库

@@ -1060,6 +1060,64 @@ t4e3af9c3 = Soru
 # Tools offered: {tools}
 tb871bcf4 = Sunulan araçlar: { $tools }
 
+# tracewing has no port open for the extension.
+tb0bf6486 = tracewing eklenti için bir port açmadı.
+
+# Add an app first: it is the apps you add that are taken.
+t755769ba = Önce bir uygulama ekleyin: yakalanan, eklediğiniz uygulamalardır.
+
+# macOS is waiting for you to allow tracewing's network extension, in {place}.
+t7021684e = macOS, tracewing'in ağ eklentisine izin vermenizi bekliyor: { $place }.
+
+# Starting. The first time, macOS asks you to allow tracewing to add a proxy configuration.
+tc03f3fa0 = Başlatılıyor. İlk seferde macOS, tracewing'in bir proxy yapılandırması eklemesine izin vermenizi ister.
+
+# Stopping.
+t850deda5 = Durduruluyor.
+
+# On: the connections of the apps below come to tracewing, whatever their proxy settings say.
+t34cb0902 = Açık: aşağıdaki uygulamaların bağlantıları, proxy ayarları ne derse desin tracewing'e gelir.
+
+# Off. Switching it on installs tracewing's network extension the first time, and macOS asks you to allow it, once.
+te5443642 = Kapalı. Açmak ilk seferde tracewing'in ağ eklentisini kurar ve macOS bir kez izin vermenizi ister.
+
+# Off. The extension is installed and waits to be allowed, in {place}.
+t66ca8601 = Kapalı. Eklenti kurulu ve izin verilmeyi bekliyor: { $place }.
+
+# Off.
+t33ce2bcc = Kapalı.
+
+# Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
+td99daed8 = Kapalı. Bu tracewing, tracewing.app'ten çalışmıyor ve macOS eklentiyi yalnızca uygulamanın kurmasına izin veriyor: Uygulamalar'daki tracewing'den açın.
+
+# Turn on
+t65a0c5a7 = Aç
+
+# Turn off
+tcd03e04b = Kapat
+
+# Open System Settings
+td22799a3 = Sistem Ayarları'nı aç
+
+# Apps it takes
+t804bea32 = Yakaladığı uygulamalar
+
+# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
+t4a4185a4 = Henüz yok. Uygulamalar'dan bir uygulama ya da /usr/bin/curl gibi bir program ekleyin; bir uygulamanın içindekiler — bir tarayıcının ya da Electron uygulamasının bağlandığı yardımcılar — onunla birlikte gelir.
+
+# Add an app…
+t98ea20ec = Uygulama ekle…
+
+# Reading its signing ids…
+tb6411280 = İmza kimlikleri okunuyor…
+
+# {own} and {n} inside it | {own} and {n} inside it
+tdf02a0a5 =
+    { $n ->
+        [one] { $own } ve içinde { $n } tane
+       *[other] { $own } ve içinde { $n } tane
+    }
+
 # Not kept
 tba30b5fa = Saklanmadı
 
@@ -1983,11 +2041,11 @@ t0d857250 = Telefon tünele katıldıktan sonra gönderdiği her şey — telefo
 # Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone.
 tb457dd67 = Yalnızca kendi sertifikalarına güvenen uygulamalar ve tracewing'in CA'sı telefona kurulmadan önce gönderilen her şey.
 
-# Whatever a named app sends over TCP, whether or not it reads any proxy setting: Node of any version, Java, and its localhost too.
-t018f7b7c = Adı verilen bir uygulamanın TCP üzerinden gönderdiği her şey, herhangi bir proxy ayarını okusa da okumasa da: her sürümden Node, Java ve kendi localhost'u da.
+# Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
+t30f507c6 = Seçilen bir uygulamanın TCP ile gönderdiği her şey, proxy ayarını okusun okumasın: bir tarayıcı, bir Electron uygulaması, her sürümden Node, Java.
 
-# UDP, so HTTP/3; and programs carrying no signing id of their own, such as everything go build makes.
-t3f6bf403 = UDP, dolayısıyla HTTP/3; ve kendi imza kimliği olmayan programlar, örneğin go build'in ürettiği her şey.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
+t1a42de49 = UDP, yani HTTP/3; macOS'un devretmediği, bu bilgisayarın kendisine giden bağlantılar; ve kendi imza kimliği olmayan programlar, go build'in ürettiği her şey gibi.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Açıldığından beri proxy portuna hiçbir şey gelmedi — ne sistem proxy'sinden, ne tracewing'in kendi tarayıcısından, ne de bir terminalden; hepsi oradan girer. Proxy'yi kullanması söylenip onu yok sayan bir program tam olarak böyle görünür.
@@ -1995,17 +2053,8 @@ t4294729b = Açıldığından beri proxy portuna hiçbir şey gelmedi — ne sis
 # Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this.
 t7cb4303b = Açıldığından beri bu yoldan hiçbir şey gelmedi. Bu yolu kullanması söylenip onu yok sayan bir program tam olarak böyle görünür.
 
-# Turn off
-tcd03e04b = Kapat
-
-# Turn on
-t65a0c5a7 = Aç
-
 # Open from Set up
 tf0ad42dc = Kurulum'dan aç
-
-# Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it.
-t5b4d06d6 = Şimdilik komut satırından ayarlanır: yakalanacak uygulamaları adlandırır, ilk seferde uzantıyı kurar ve macOS'tan izin ister.
 
 # macOS only: it is macOS that hands an app's connections over.
 t71872556 = Yalnızca macOS: bir uygulamanın bağlantılarını devreden macOS'un kendisidir.
@@ -2274,6 +2323,9 @@ t4398b845 = Ve Java'nın kendi deposu
 
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Sonra programınızı bu bayraklarla başlatın: gönderdikleri Trafik'te görünür.
+
+# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
+tbdc6cba5 = Uygulamayı ekleyin, sonra bunu açın: proxy ayarları ne derse desin bağlantıları buraya gelir. Ayarlar › Yakalama › Uygulamalar ile aynı.
 
 # the browsers' own stores
 tddf6836c = tarayıcıların kendi depoları

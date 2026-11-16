@@ -121,9 +121,18 @@ Settings › **Capture**, a tab for each way in
 - what each way in **catches**, and under it what it **does not**. The second
   line is the one worth the room: somebody whose Java program shows nothing
   has a way in that cannot catch it, not a tracewing that is broken.
-- for *Apps*, what is true today rather than a switch wired to nothing: on
-  macOS the command line that drives the extension, and on Linux and Windows
-  a line saying it is macOS that hands an app's connections over.
+- for *Apps*, on macOS, the apps and a switch
+  ([`mac_apps.rs`](../../crates/app/src/mac_apps.rs)), the same panel on the
+  tab and on Set up's answer for a Mac app; on Linux and Windows a line
+  saying it is macOS that hands an app's connections over. The window's
+  engine opens the extension's port as it starts, so switching on and adding
+  an app need no restart: each saves the configuration again. An app is
+  added from a file picker and read whole — its own signing id and those of
+  everything inside it that runs — because a browser's or an Electron app's
+  connections come from a helper with an id of its own, and an app picked by
+  its id alone would show nothing. The list is kept in `mac-apps.toml`; the
+  switch starts off, as the system proxy's does, so opening tracewing never
+  asks anything of macOS by itself.
 
 A tab is a place in the window's history, so Back goes from the terminal tab
 to the WireGuard tab rather than out of Capture altogether, and the tab open
@@ -345,7 +354,6 @@ and it works the same on all three operating systems.
    exclusion, there is nothing for a switch to switch. The tab strip has a
    place for it; its middle gets designed where the capture is.
 
-   The macOS tab is no longer in this list. `tracewing capture --app` settled
-   its shape — a list of signing ids, the install and the allow, and a
-   status — and the window should wear that rather than invent a second
-   model of the same thing.
+   The macOS tab is no longer in this list: it has its apps and its switch,
+   in the shape `tracewing capture --app` settled — a list of signing ids,
+   the install and the allow, and a status.

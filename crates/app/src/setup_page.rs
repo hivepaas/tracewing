@@ -463,7 +463,7 @@ impl Traffic {
                 }
                 Way::Apps => {
                     steps.push(ca_step.into_any_element());
-                    steps.push(self.render_mac_apps(cx).into_any_element());
+                    steps.push(self.render_mac_apps_step(cx).into_any_element());
                 }
                 Way::Browser | Way::Socks5 => {}
             }
@@ -480,9 +480,7 @@ impl Traffic {
                             .map(gpui::IntoElement::into_any_element),
                     ),
                     Card::Http3 => cards.push(self.render_http3(cx).into_any_element()),
-                    // Nothing of Set up's draws this one: the window has no
-                    // surface for the extension yet, so what is shown is the
-                    // command line that does work.
+                    // Drawn as a step, above: the switch is what the step is.
                     Card::MacApps => {}
                 }
             }
@@ -711,23 +709,15 @@ impl Traffic {
         )
     }
 
-    /// The macOS extension, which has no surface in the window yet: what is
-    /// shown is the command line that drives it, in the same words the
-    /// Capture tab uses.
-    fn render_mac_apps(&self, cx: &mut Context<Self>) -> Div {
-        let _ = cx;
+    /// The macOS extension's apps and switch, as the Capture tab has them.
+    fn render_mac_apps_step(&mut self, cx: &mut Context<Self>) -> Div {
         aside(
             tr!("Apps"),
             tr!(
-                "Set from the command line for now: this names the apps to take, installs the extension the first time, and asks macOS to allow it."
+                "Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps."
             ),
         )
-        .child(
-            div().w_full().child(code_block(
-                "setup-wizard-app",
-                "tracewing capture --app com.example.theapp".to_owned(),
-            )),
-        )
+        .child(self.render_mac_apps(cx))
     }
 }
 

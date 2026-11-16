@@ -612,9 +612,10 @@ What is left, and what no longer is:
    ([`crates/system/src/extension`](../../crates/system/src/extension.rs)).
    No key is kept between runs, so a configuration a killed run left behind
    names a port and a key nobody answers for, and the extension sends every
-   flow out as it would have. What is left is the window's end — choosing the
-   apps on Set up — and choosing a program that has no signing id of its own
-   (Go's `a.out`, Homebrew's builds) by its file.
+   flow out as it would have. The window does the same from Settings ›
+   Capture › Apps, with a port opened as it starts so that the list can
+   change while it runs. What is left is choosing a program that has no
+   signing id of its own (Go's `a.out`, Homebrew's builds) by its file.
 2. The TCP/IP stack is **in**, in [`stack.rs`](../../crates/proxy/src/stack.rs):
    packets in, [`Took::Flow`](../../crates/proxy/src/source.rs) out, on
    `smoltcp`, answering each `SYN` as the server the client was going to. What

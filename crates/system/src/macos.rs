@@ -454,23 +454,37 @@ pub fn ca_install(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
     Ok(())
 }
 
-pub fn ca_uninstall(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
+pub fn ca_uninstall(cert_pem: &Path, der: &[u8], scope: Scope) -> Result<()> {
     let pem = cert_pem.display().to_string();
+    // By its fingerprint, not its name: every tracewing authority has the
+    // same name, so with two in a keychain — another data directory's, a
+    // build of your own — the name matches both and `security` deletes
+    // neither.
+    let hash = fingerprint(der);
     match scope {
         Scope::User => {
             let keychain = login_keychain()?;
             run("/usr/bin/security", &["remove-trusted-cert", &pem])?;
             run(
                 "/usr/bin/security",
-                &["delete-certificate", "-c", CA_NAME, &keychain],
+                &["delete-certificate", "-Z", &hash, &keychain],
             )?;
         }
         Scope::Machine => {
             security_as_admin(&["remove-trusted-cert", "-d", &pem])?;
-            security_as_admin(&["delete-certificate", "-c", CA_NAME, SYSTEM_KEYCHAIN])?;
+            security_as_admin(&["delete-certificate", "-Z", &hash, SYSTEM_KEYCHAIN])?;
         }
     }
     Ok(())
+}
+
+/// A certificate's SHA-256, as `security` takes it with `-Z`.
+fn fingerprint(der: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(der)
+        .iter()
+        .map(|b| format!("{b:02X}"))
+        .collect()
 }
 
 /// Writes a script that sets the variables and starts the user's shell, and has
@@ -544,6 +558,15 @@ pub fn environment() -> Environment {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// As `security` prints it beside "SHA-256 hash:", so `-Z` finds it.
+    #[test]
+    fn a_certificate_is_named_by_its_fingerprint() {
+        assert_eq!(
+            fingerprint(b""),
+            "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+        );
+    }
 
     /// launchd keeps the waiter while there is a journal and only then, and
     /// reads every argument as written, whatever the data folder is called.

@@ -37,6 +37,9 @@ const ANSWER_WITHIN: Duration = Duration::from_secs(30);
 const RUNNING_WITHIN: Duration = Duration::from_secs(15);
 /// What the configuration is called in System Settings › VPN.
 const NAME: &str = "tracewing";
+/// How long [`stop_on_exit`] leaves macOS to take the word to stop before
+/// the program goes on to exit.
+const EXIT_GRACE: Duration = Duration::from_millis(300);
 
 /// A value of macOS's to send from the thread its answer came on to the one
 /// waiting. These are used from any thread in Apple's own samples.
@@ -361,11 +364,29 @@ pub fn start(config: &Config) -> Result<()> {
     }
     unsafe { manager.connection().startVPNTunnelAndReturnError() }
         .map_err(|e| anyhow!("starting tracewing's proxy: macOS says {}", said(&e)))?;
-    until(&manager, &[Running::On], "starting tracewing's proxy")
+    until(&manager, &[Running::On], "starting tracewing's proxy")?;
+    *STARTED.lock().unwrap_or_else(|e| e.into_inner()) = Some(Sendable(manager));
+    Ok(())
+}
+
+/// The configuration this program started last, kept so that it can be
+/// stopped as the program exits without first being read again: reading
+/// needs an answer on the main queue, which an exiting window cannot serve.
+static STARTED: Mutex<Option<Sendable<Retained<NETransparentProxyManager>>>> = Mutex::new(None);
+
+pub fn stop_on_exit() {
+    let Some(Sendable(manager)) = STARTED.lock().unwrap_or_else(|e| e.into_inner()).take() else {
+        return;
+    };
+    // Sent, not waited for: the word goes out on macOS's own connection,
+    // which needs no main queue, and a moment is all it takes to leave.
+    unsafe { manager.connection().stopVPNTunnel() };
+    std::thread::sleep(EXIT_GRACE);
 }
 
 pub fn stop() -> Result<()> {
     not_on_main_thread()?;
+    STARTED.lock().unwrap_or_else(|e| e.into_inner()).take();
     let Some(manager) = ours()? else {
         return Ok(());
     };
