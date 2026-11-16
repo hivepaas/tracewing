@@ -45,17 +45,17 @@ pub struct Sieve {
 
 /// Whether the program behind a connection from `client` to `to` is one
 /// somebody chose.
-type Keeps = Box<dyn Fn(SocketAddr, SocketAddr) -> Asking + Send + Sync>;
+pub type Keeps = Box<dyn Fn(SocketAddr, SocketAddr) -> Asking + Send + Sync>;
 
 /// A way to `to` that does not come back through the adapter.
-type StraightTo = Box<dyn Fn(SocketAddr) -> Leaving + Send + Sync>;
+pub type StraightTo = Box<dyn Fn(SocketAddr) -> Leaving + Send + Sync>;
 
 /// The answer comes later: which program holds a socket is looked for by a
 /// thread of its own, and nothing here may block the stack's loop while it
 /// does.
-type Asking = Pin<Box<dyn Future<Output = bool> + Send>>;
+pub type Asking = Pin<Box<dyn Future<Output = bool> + Send>>;
 
-type Leaving = Pin<Box<dyn Future<Output = io::Result<Box<dyn Duplex>>> + Send>>;
+pub type Leaving = Pin<Box<dyn Future<Output = io::Result<Box<dyn Duplex>>> + Send>>;
 
 impl Sieve {
     pub fn new(keeps: Keeps, straight_to: StraightTo) -> Self {
