@@ -353,6 +353,57 @@ adapter takes whatever is routed into it. So:
   *this machine* on Windows and Linux, where the route decides and the
   choosing is ours. What that costs is [below](#what-capturing-the-whole-machine-costs).
 
+#### Who holds the adapter, which is still open
+
+Creating a Wintun adapter needs an administrator, and so do the address and
+the routes. tracewing is not elevated, and **it already has an answer to
+exactly this shape of problem**: blocking HTTP/3 needs a Windows Filtering
+Platform filter, which needs an administrator, so
+[`quic_windows.rs`](../../crates/system/src/quic_windows.rs) launches an
+elevated copy of this program through the UAC dialog (`runas` via
+`ShellExecuteExW`), and that copy holds the filter in a dynamic session and
+ends when told to or when the app it serves has gone. So the honest line for
+the window is not *run tracewing as an administrator* and not *you are or
+are not one*: it is that **Windows asks when the switch is turned on**, as
+it already does for HTTP/3.
+
+What is **not** settled is whether the same arrangement carries an adapter,
+and the difference between the two cases is the whole question. A WFP filter
+is a kernel-side object held by a handle: whoever owns the handle is done. An
+adapter has to be **read from** — a session's ring buffers live in the
+address space of the process that started the session — so if the pump
+cannot be in the unelevated process, it has to be in the helper.
+
+The crate cannot answer it. `Adapter::open` exists (`adapter.rs:109`,
+`WintunOpenAdapter`), and the only privilege note anywhere in `wintun` 0.5.1
+is "Must be run as Administrator **because we create network adapters**",
+which is about creating. `bindgen` carried no doc comment for
+`WintunOpenAdapter`, so the signature is all there is here; `wintun.h` itself
+is on the Windows VM, not in the crate.
+
+**The experiment, for when the VM is up:** create the adapter in an elevated
+process, leave it, and from an unelevated process call `WintunOpenAdapter`
+and `WintunStartSession` on it. Two outcomes, and they cost very different
+amounts:
+
+- **Opening needs no administrator.** The helper creates the adapter, adds
+  the address and the routes, and waits; the proxy opens the adapter and
+  pumps packets as it does today. Closest to the existing `QuicBlock`
+  shape, and the route guards move into the helper, which means the helper
+  rather than the proxy is what has to be told to stop.
+- **Opening needs an administrator too.** Then the pump is in the helper,
+  and either the whole stack goes with it or packets cross a pipe — which is
+  a far larger change than the wiring this is otherwise waiting on, and
+  worth knowing before promising a date. WireGuard for Windows does not
+  settle it either way: its tunnel service runs as `SYSTEM`, so it never has
+  to ask.
+
+Either way the window's line has to be true of whichever it is, and "only
+for as long as it is on" has a second half that is already known to be
+unverified: `Drop` takes the address and the route down and that is tested,
+but `Drop` does not run for a killed process — see the last item under
+[what capturing the whole machine costs](#what-capturing-the-whole-machine-costs).
+
 #### What is in
 
 [`tun.rs`](../../crates/proxy/src/tun.rs) and
