@@ -353,7 +353,7 @@ adapter takes whatever is routed into it. So:
   *this machine* on Windows and Linux, where the route decides and the
   choosing is ours. What that costs is [below](#what-capturing-the-whole-machine-costs).
 
-#### Who holds the adapter, which is still open
+#### Who holds the adapter, and the answer
 
 Creating a Wintun adapter needs an administrator, and so do the address and
 the routes. tracewing is not elevated, and **it already has an answer to
@@ -381,26 +381,63 @@ which is about creating. `bindgen` carried no doc comment for
 `WintunOpenAdapter`, so the signature is all there is here; `wintun.h` itself
 is on the Windows VM, not in the crate.
 
-**The experiment, for when the VM is up:** create the adapter in an elevated
-process, leave it, and from an unelevated process call `WintunOpenAdapter`
-and `WintunStartSession` on it. Two outcomes, and they cost very different
-amounts:
+**The experiment was run on the VM on 2026-11-16, and it is the expensive
+answer: opening needs an administrator too.** What was measured, in one
+transcript, with the adapter visible as `tracewing-probe / tracewing Tunnel`
+between the steps:
 
-- **Opening needs no administrator.** The helper creates the adapter, adds
-  the address and the routes, and waits; the proxy opens the adapter and
-  pumps packets as it does today. Closest to the existing `QuicBlock`
-  shape, and the route guards move into the helper, which means the helper
-  rather than the proxy is what has to be told to stop.
-- **Opening needs an administrator too.** Then the pump is in the helper,
-  and either the whole stack goes with it or packets cross a pipe — which is
-  a far larger change than the wiring this is otherwise waiting on, and
-  worth knowing before promising a date. WireGuard for Windows does not
-  settle it either way: its tunnel service runs as `SYSTEM`, so it never has
-  to ask.
+| The token | `WintunOpenAdapter` |
+|---|---|
+| a **second elevated** process, Administrators enabled | **OK**, and `WintunStartSession` on it OK too |
+| Administrators **deny-only** (`runas /trustlevel:0x20000`) | **`ERROR_ACCESS_DENIED`** |
+| a scheduled task of the same account | OK — but see below, it is not the case it looks like |
 
-Either way the window's line has to be true of whichever it is, and "only
-for as long as it is on" has a second half that is already known to be
-unverified: `Drop` takes the address and the route down and that is tested,
+The middle row is the one that decides it: **an unelevated process of an
+administrator holds a token with Administrators present *for deny only*,**
+and a deny-only SID does not satisfy an access check against a DACL that
+grants Administrators. That is exactly the token tracewing itself would have.
+The probe's token was high integrity with Administrators deny-only rather
+than a full UAC-filtered token, which is medium; since the denial comes from
+the group and not from the integrity level, a medium-integrity token can only
+be denied as well.
+
+The third row is a trap worth writing down rather than repeating: a scheduled
+task of an administrator account **opened the adapter successfully**, because
+**UAC token filtering is a property of interactive logon**. A batch logon
+gets the full administrator token. So a scheduled task is no way to measure
+what an unelevated app can do, and reading that row alone would have given
+the opposite answer.
+
+Two things that are good news inside the bad:
+
+- **The pump does not have to be in the creating process.** A different
+  process opened the adapter and started a session on it, so the two halves
+  can be split — as long as both are elevated.
+- **The adapter's lifetime is the creator's handle.** Closing it removed the
+  adapter, twice, and `Get-NetAdapter` showed it gone. So "only for as long
+  as it is on" is true of the adapter itself, whatever happens to the routes.
+
+So this mode is the larger shape, and the cost is named rather than
+discovered later: **the packet pump has to be elevated**, which means either
+the stack moves into the elevated helper or packets cross a pipe between the
+two. A third possibility exists and is not yet examined — an elevated creator
+loosening the DACL on the adapter's device object so an unelevated proxy can
+open it — which trades a smaller change for a wider grant, and wants its own
+thinking before anybody writes it. WireGuard for Windows never had to choose:
+its tunnel service runs as `SYSTEM`.
+
+One method note, because it nearly cost a wrong answer. The first run of the
+probe reported `CREATE OK` and then failed to open the adapter **from the
+elevated session that had just created it**, with `ERROR_NOT_FOUND`, and no
+adapter appeared under the name asked for. That was not a finding about
+Wintun: a PowerShell delegate marshals `string` as **ANSI** unless told
+otherwise, Wintun takes `LPCWSTR`, and the adapter had been created under a
+garbled name. What exposed it was the control step failing and listing the
+adapters **unfiltered** — a list filtered by the name we meant to use is
+exactly how a garbled name hides.
+
+The window's line still has to be true of this, and "only for as long as it
+is on" has a second half that is still unverified: `Drop` takes the address and the route down and that is tested,
 but `Drop` does not run for a killed process — see the last item under
 [what capturing the whole machine costs](#what-capturing-the-whole-machine-costs).
 
