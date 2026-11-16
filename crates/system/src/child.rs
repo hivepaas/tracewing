@@ -301,8 +301,7 @@ fn as_the_shell(command: std::process::Command) -> anyhow::Result<()> {
     use windows_sys::Win32::{
         Foundation::{CloseHandle, HANDLE},
         Security::{
-            DuplicateTokenEx, SECURITY_IMPERSONATION_LEVEL, SecurityImpersonation, TOKEN_DUPLICATE,
-            TOKEN_QUERY, TokenPrimary,
+            DuplicateTokenEx, SecurityImpersonation, TOKEN_DUPLICATE, TOKEN_QUERY, TokenPrimary,
         },
         System::Threading::{
             CREATE_UNICODE_ENVIRONMENT, OpenProcess, OpenProcessToken, PROCESS_INFORMATION,
@@ -366,7 +365,7 @@ fn as_the_shell(command: std::process::Command) -> anyhow::Result<()> {
             theirs,
             0,
             std::ptr::null(),
-            SecurityImpersonation as SECURITY_IMPERSONATION_LEVEL,
+            SecurityImpersonation,
             TokenPrimary,
             &mut ours,
         ) != 0
@@ -386,7 +385,7 @@ fn as_the_shell(command: std::process::Command) -> anyhow::Result<()> {
             .filter_map(|(name, value)| Some((name.to_str()?, value?.to_str()?))),
     );
     let dir = dir.map(|dir| wide(&dir));
-    let mut startup = STARTUPINFOW {
+    let startup = STARTUPINFOW {
         cb: size_of::<STARTUPINFOW>() as u32,
         ..unsafe { std::mem::zeroed() }
     };
@@ -416,7 +415,6 @@ fn as_the_shell(command: std::process::Command) -> anyhow::Result<()> {
             CloseHandle(made.hThread);
         }
     }
-    let _ = &mut startup;
     if started {
         Ok(())
     } else {
