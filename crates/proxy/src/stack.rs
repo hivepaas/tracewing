@@ -44,6 +44,7 @@
 
 use crate::{
     datagrams::{self, Bind},
+    icmp::{self, Echo},
     sieve::{Sieve, sift},
     source::{By, Flow, Found, Source, Stop, Target, stopped},
 };
@@ -134,6 +135,9 @@ pub struct Stack {
     /// rather than refused. `None` refuses them, as a tunnel a phone joined
     /// should: see [`crate::datagrams`] for why the two answers differ.
     passing: Option<Bind>,
+    /// How an echo is really sent, for `ping` and `tracert`. `None` leaves
+    /// them unanswered, which is what they get today -- see [`crate::icmp`].
+    echoing: Option<Echo>,
 }
 
 impl Stack {
@@ -143,6 +147,7 @@ impl Stack {
             most: FLOWS_MAX,
             sieve: None,
             passing: None,
+            echoing: None,
         }
     }
 
@@ -167,6 +172,15 @@ impl Stack {
         }
     }
 
+    /// The same, answering `ping` and `tracert` by really sending the echo
+    /// through `echo` rather than leaving them silent.
+    pub fn answering(self, echo: Echo) -> Self {
+        Self {
+            echoing: Some(echo),
+            ..self
+        }
+    }
+
     #[cfg(test)]
     fn holding_at_most(wire: Wire, most: usize) -> Self {
         Self {
@@ -174,6 +188,7 @@ impl Stack {
             most,
             sieve: None,
             passing: None,
+            echoing: None,
         }
     }
 }
@@ -197,6 +212,7 @@ impl Source for Stack {
             self.most,
             self.sieve,
             self.passing,
+            self.echoing,
             found,
             stop,
         ));
@@ -440,6 +456,7 @@ async fn run(
     most: usize,
     sieve: Option<Arc<Sieve>>,
     passing: Option<Bind>,
+    echoing: Option<Echo>,
     found: Found,
     stop: Stop,
 ) {
@@ -452,6 +469,9 @@ async fn run(
     // `smoltcp`'s in the way: UDP has no sequence numbers and no window, so
     // there is nothing for a TCP/IP stack to keep.
     let passing = passing.map(|bind| datagrams::passing(outgoing.clone(), bind, stop.clone()));
+    // `ping` and `tracert`, which otherwise meet a stack with no socket for
+    // them and get nothing at all.
+    let pinging = echoing.map(|echo| icmp::answering(outgoing.clone(), echo, stop.clone()));
     let mut device = Device {
         waiting: VecDeque::new(),
         out: outgoing,
@@ -547,26 +567,38 @@ async fn run(
             .min(SWEEP_EVERY);
         tokio::select! {
             packet = incoming.recv() => match packet {
-                Some(packet) => match passing
-                    .as_ref()
-                    .and_then(|to| taken_on(&packet).map(|datagram| (to, datagram)))
-                {
-                    // Passed on, and deliberately not handed to the stack as
-                    // well: a stack with no socket for a datagram answers it
-                    // with an ICMP port unreachable, which is the refusal
-                    // this is here to avoid.
-                    Some((to, datagram)) => {
-                        if to.try_send(datagram).is_err() {
-                            // A full queue drops, which is what a congested
-                            // network does.
-                            tracing::debug!("a datagram was dropped on its way out");
+                Some(packet) => {
+                    // One packet is never both, so which is tried first does
+                    // not matter; what matters is that neither is handed to
+                    // the stack as well. A stack with no socket for a
+                    // datagram answers it with an ICMP port unreachable, and
+                    // one with no socket for an echo answers nothing -- both
+                    // of which are what these two are here to replace.
+                    let datagram = passing
+                        .as_ref()
+                        .and_then(|to| taken_on(&packet).map(|datagram| (to, datagram)));
+                    let ping = pinging
+                        .as_ref()
+                        .and_then(|to| icmp::echo_request(&packet).map(|ping| (to, ping)));
+                    match (datagram, ping) {
+                        (Some((to, datagram)), _) => {
+                            if to.try_send(datagram).is_err() {
+                                // A full queue drops, which is what a
+                                // congested network does.
+                                tracing::debug!("a datagram was dropped on its way out");
+                            }
+                        }
+                        (None, Some((to, ping))) => {
+                            if to.try_send(ping).is_err() {
+                                tracing::debug!("an echo was dropped on its way out");
+                            }
+                        }
+                        (None, None) => {
+                            open_for(&packet, most, &mut sockets, &mut conns, &woken);
+                            device.waiting.push_back(packet);
                         }
                     }
-                    None => {
-                        open_for(&packet, most, &mut sockets, &mut conns, &woken);
-                        device.waiting.push_back(packet);
-                    }
-                },
+                }
                 None => break,
             },
             answer = answers.recv() => {
@@ -1228,6 +1260,135 @@ mod tests {
             .running
             .nothing_taken(Duration::from_millis(500))
             .await;
+    }
+
+    /// An ICMP echo request, as `ping` sends. Measured rather than assumed:
+    /// the interface has `set_any_ip(true)`, which makes it answer for every
+    /// destination, and whether that extends to answering a ping **as the
+    /// host being pinged** is the difference between `ping` timing out and
+    /// `ping` reporting a lie.
+    fn pinging(from: &str, to: &str, seq: u16) -> Vec<u8> {
+        use smoltcp::wire::{Icmpv4Packet, Icmpv4Repr};
+        let (IpAddr::V4(src), IpAddr::V4(dst)) = (
+            from.parse::<IpAddr>().unwrap(),
+            to.parse::<IpAddr>().unwrap(),
+        ) else {
+            panic!("IPv4 in this test");
+        };
+        let icmp = Icmpv4Repr::EchoRequest {
+            ident: 0x4321,
+            seq_no: seq,
+            data: b"abcdefghijklmnop",
+        };
+        let ip = Ipv4Repr {
+            src_addr: src,
+            dst_addr: dst,
+            next_header: IpProtocol::Icmp,
+            payload_len: icmp.buffer_len(),
+            hop_limit: 64,
+        };
+        let caps = Default::default();
+        let mut bytes = vec![0u8; ip.buffer_len() + icmp.buffer_len()];
+        ip.emit(&mut Ipv4Packet::new_unchecked(&mut bytes), &caps);
+        icmp.emit(
+            &mut Icmpv4Packet::new_unchecked(&mut bytes[ip.buffer_len()..]),
+            &caps,
+        );
+        bytes
+    }
+
+    /// With nowhere to send the echo, a `ping` gets **nothing** -- which is
+    /// what a tunnel a phone joined should give it, and what this machine's
+    /// own adapter must not.
+    ///
+    /// This began as a measurement rather than an assertion, because the
+    /// interface has `set_any_ip(true)` and an interface that answers for
+    /// every destination could as easily have answered the ping itself, as
+    /// the host being pinged -- which would be far worse than silence, since
+    /// `ping` would report every address on the internet as reachable in
+    /// under a millisecond. It answers nothing, so this is now the assertion.
+    ///
+    /// "Nothing arrived" is weak on its own, so its control is the test
+    /// below: the same harness with somewhere to send the echo, answering.
+    #[tokio::test]
+    async fn a_ping_gets_nothing_with_nowhere_to_send_it() {
+        let mut running = start(8);
+        running
+            .into
+            .send(pinging("10.78.0.2", "8.8.8.8", 1))
+            .await
+            .unwrap();
+        match tokio::time::timeout(Duration::from_millis(500), running.out.recv()).await {
+            Err(_) => {}
+            Ok(Some(packet)) => {
+                let ip = Ipv4Packet::new_checked(&packet[..]).expect("an IPv4 packet");
+                panic!(
+                    "nothing should answer, but {:?} came from {} -- an interface answering as \
+                     the host being pinged would make `ping` lie about every address",
+                    ip.next_header(),
+                    ip.src_addr()
+                )
+            }
+            Ok(None) => panic!("the stack let go of its end"),
+        }
+    }
+
+    /// And with somewhere to send it, `ping` is answered and `tracert` is
+    /// told who complained -- the same harness answering the other way,
+    /// which is what makes the test above mean silence rather than a broken
+    /// stack.
+    #[tokio::test]
+    async fn a_ping_with_somewhere_to_send_it_is_answered() {
+        let (wire, into, out) = Wire::channels();
+        let (found, took) = Found::channel();
+        let (stop_tx, stop) = tokio::sync::watch::channel(false);
+        let echo: crate::icmp::Echo = Arc::new(|ping: crate::icmp::Ping| {
+            Box::pin(async move {
+                match ping.ttl {
+                    // A router at the second hop, as a tracert probe meets.
+                    2 => crate::icmp::Answer::Expired {
+                        from: "203.0.113.1".parse().unwrap(),
+                    },
+                    _ => crate::icmp::Answer::Answered {
+                        from: ping.to,
+                        data: Vec::new(),
+                    },
+                }
+            })
+        });
+        Box::new(Stack::new(wire).answering(echo))
+            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+            .unwrap();
+        let mut running = Running {
+            into,
+            out,
+            took,
+            _stop: stop_tx,
+        };
+
+        // The ordinary ping: an echo reply from the host asked about.
+        let mut hop = pinging("10.78.0.2", "8.8.8.8", 1);
+        hop[8] = 64;
+        running.into.send(hop).await.unwrap();
+        let back = running.next().await;
+        let ip = Ipv4Packet::new_checked(&back[..]).expect("an IPv4 packet");
+        assert_eq!(ip.next_header(), IpProtocol::Icmp);
+        assert_eq!(ip.src_addr().octets(), [8, 8, 8, 8], "from the host pinged");
+        assert_eq!(ip.dst_addr().octets(), [10, 78, 0, 2], "back to the client");
+        assert_eq!(ip.payload()[0], 0, "an echo reply is type 0");
+
+        // And a tracert probe: whoever would not carry it says so.
+        let mut probe = pinging("10.78.0.2", "8.8.8.8", 2);
+        probe[8] = 2;
+        running.into.send(probe).await.unwrap();
+        let back = running.next().await;
+        let ip = Ipv4Packet::new_checked(&back[..]).expect("an IPv4 packet");
+        assert_eq!(
+            ip.src_addr().octets(),
+            [203, 0, 113, 1],
+            "from the router, which is the address tracert prints for that hop"
+        );
+        assert_eq!(ip.payload()[0], 11, "a time exceeded is type 11");
     }
 
     /// A datagram on a port nobody answers here reaches where it was going,
