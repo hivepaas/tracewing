@@ -2323,6 +2323,9 @@ t17abebbc = Verifica in quel terminale
 # And Java's own store
 t4398b845 = E l'archivio proprio di Java
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = Poi avvia il tuo programma con queste opzioni: ciò che invia compare in Traffico.
+
 # the browsers' own stores
 tddf6836c = gli archivi propri dei browser
 

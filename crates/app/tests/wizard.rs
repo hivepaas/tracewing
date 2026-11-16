@@ -23,7 +23,7 @@ use gpui::{AppContext as _, HeadlessAppContext, WindowHandle, px, size};
 use std::{path::Path, sync::Arc};
 use tracewing::{
     engine::{Engine, EngineOptions},
-    layout::Layout,
+    layout::{Layout, SettingsSection, Way},
     traffic::{Screen, Traffic},
     wizard::{Target, route},
 };
@@ -36,6 +36,22 @@ fn draw(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>) {
     cx.run_until_parked();
     cx.capture_screenshot(window.into())
         .expect("the window drew");
+}
+
+/// Draws, and keeps the picture in `target/shots`.
+///
+/// A test can say that a page drew and that the right words are on it; it
+/// cannot say whether three lines of text crowd a tab or whether a strip of
+/// seven tabs wraps into something anybody would read. These are for looking
+/// at, which is the only way to find that out.
+fn shot(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>, name: &str) {
+    cx.run_until_parked();
+    let out = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/shots");
+    std::fs::create_dir_all(&out).unwrap();
+    cx.capture_screenshot(window.into())
+        .expect("the window drew")
+        .save(out.join(format!("{name}.png")))
+        .unwrap();
 }
 
 /// The answer as the next start would read it.
@@ -129,6 +145,33 @@ fn every_answer_draws_a_page_and_the_answer_is_kept() {
         .unwrap();
     draw(cx, window);
     assert_eq!(kept(&dir), None, "taking it back is written too");
+
+    // And pictures of both surfaces, for looking at: the wizard unanswered,
+    // the answer that has the most on it, and two Capture tabs — the one
+    // whose three lines are longest and the one with a QR code in it.
+    window
+        .update(cx, |view, _, cx| {
+            view.set_screen(Screen::Setup, cx);
+            view.choose_target(None, cx);
+        })
+        .unwrap();
+    shot(cx, window, "300-wizard-asking");
+    window
+        .update(cx, |view, _, cx| view.choose_target(Some(Target::Java), cx))
+        .unwrap();
+    shot(cx, window, "301-wizard-java");
+    window
+        .update(cx, |view, _, cx| {
+            view.set_screen(Screen::Settings, cx);
+            view.show_settings_section(SettingsSection::Capture, cx);
+            view.show_way(Way::SystemProxy, cx);
+        })
+        .unwrap();
+    shot(cx, window, "302-capture-system-proxy");
+    window
+        .update(cx, |view, _, cx| view.show_way(Way::WireGuard, cx))
+        .unwrap();
+    shot(cx, window, "303-capture-wireguard");
 
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -2194,6 +2194,9 @@ t17abebbc = 在那個終端機裡檢查
 # And Java's own store
 t4398b845 = 以及 Java 自帶的憑證庫
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = 然後用這些參數啟動你的程式：它送出的東西會出現在流量裡。
+
 # the browsers' own stores
 tddf6836c = 各瀏覽器自己的憑證庫
 

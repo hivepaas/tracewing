@@ -574,15 +574,9 @@ impl Traffic {
                 Some(_) => tr!("Choose again to set up something else."),
             },
         )
-        .child(
-            div()
-                .w_full()
-                .flex()
-                .flex_row()
-                .flex_wrap()
-                .gap(ui(8.))
-                .children(answers),
-        )
+        // Beside the question rather than among the answers: in the row of
+        // pills it reads as an eighth thing somebody might be trying to
+        // capture, which it is not.
         .when(chosen.is_some(), |d| {
             d.child(
                 button("setup-every-way", tr!("Every way in"), false).on_click(cx.listener(
@@ -593,6 +587,15 @@ impl Traffic {
                 )),
             )
         })
+        .child(
+            div()
+                .w_full()
+                .flex()
+                .flex_row()
+                .flex_wrap()
+                .gap(ui(8.))
+                .children(answers),
+        )
         .child(div().text_size(ui(12.)).text_color(rgb(c.muted)).child(tr!(
             "The answer is kept, so this page opens where you left it."
         )))
@@ -675,7 +678,20 @@ impl Traffic {
         let addr = self.engine.addr;
         let store =
             tracewing_system::java::truststore(&self.data_dir.join("ca.pem"), &self.data_dir);
-        aside(tr!("And Java's own store"), says).child(
+        aside(tr!("And Java's own store"), says)
+            .child(
+                div()
+                    .w_full()
+                    .text_size(ui(12.))
+                    .text_color(rgb(colors().muted))
+                    // The step above checks a browser, which proves the proxy
+                    // and the authority but says nothing about this store:
+                    // the check for a Java program is the program.
+                    .child(tr!(
+                        "Then start your program with these flags: what it sends appears in Traffic."
+                    )),
+            )
+            .child(
             div().w_full().child(match &store {
                 Ok(path) => code_block(
                     "setup-wizard-java",

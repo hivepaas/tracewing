@@ -2194,6 +2194,9 @@ t17abebbc = Periksa di terminal itu
 # And Java's own store
 t4398b845 = Dan penyimpanan milik Java sendiri
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = Lalu jalankan programmu dengan flag ini: apa pun yang dikirimnya muncul di Traffic.
+
 # the browsers' own stores
 tddf6836c = penyimpanan milik browser sendiri
 

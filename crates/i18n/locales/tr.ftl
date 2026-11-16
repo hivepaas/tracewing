@@ -2272,6 +2272,9 @@ t17abebbc = O terminalde sına
 # And Java's own store
 t4398b845 = Ve Java'nın kendi deposu
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = Sonra programınızı bu bayraklarla başlatın: gönderdikleri Trafik'te görünür.
+
 # the browsers' own stores
 tddf6836c = tarayıcıların kendi depoları
 

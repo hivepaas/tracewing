@@ -2194,6 +2194,9 @@ t17abebbc = 在那个终端里检查
 # And Java's own store
 t4398b845 = 以及 Java 自带的证书库
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = 然后用这些参数启动你的程序：它发出的东西会出现在流量里。
+
 # the browsers' own stores
 tddf6836c = 各浏览器自己的证书库
 
