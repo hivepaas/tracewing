@@ -2176,8 +2176,8 @@ t95e7a36a = 답은 보관되므로, 이 페이지는 떠난 자리에서 열립�
 # The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
 tab552f0c = 그 일은 터미널이 합니다. 그 안에서 시작한 것은 tracewing의 루트 인증서를 파일에서 읽으므로, 이 컴퓨터에는 아무것도 설치되지 않고 다른 것도 바뀌지 않습니다.
 
-# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
-t42c38a18 = Java는 자체 인증서 저장소를 두고 시스템의 것도 환경 변수도 읽지 않습니다. tracewing이 아직 그 저장소를 대신 써 주지 못하니, 아래 플래그로 직접 하나를 넘기세요.
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
+t5951384c = Java는 자체 인증서 저장소를 두고 시스템의 것도 환경 변수도 읽지 않습니다. tracewing이 자기 폴더에 하나를 써 두었고, 아래 플래그가 JVM을 그곳으로 향하게 합니다. 사용자의 것은 아무것도 건드리지 않으며, 만드는 데 JDK도 필요하지 않습니다.
 
 # The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
 t38958f05 = tracewing의 인증서는 휴대폰이 직접 설치해야 합니다. 기기 종류별 방법은 아래 안내에 있습니다.

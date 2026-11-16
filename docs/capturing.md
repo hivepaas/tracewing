@@ -91,9 +91,20 @@ What does not come through, although started in such a terminal:
   ignores `SSL_CERT_FILE`, so `urllib` turns down tracewing's certificates.
   `requests` and `httpx` load the file themselves and work; so does Python
   from python.org, Homebrew or uv.
-- **Java**, which reads neither: start it with
-  `-Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9090`, and add tracewing's
-  `ca.pem` to the keystore it uses.
+- **Java**, which reads neither the proxy variables nor the trust ones. Set
+  up, with *a Java program* as the answer, writes a truststore of Java's own
+  — `java-truststore.p12` in tracewing's data folder — and gives the flags
+  that point a JVM at it, port and path filled in. Nothing of yours is
+  touched: not the JDK's `cacerts`, which takes an administrator, is shared
+  with everything else on the machine, and is replaced by the next JDK. No
+  `keytool` is needed either, which matters because somebody running a Java
+  program may have no JDK on their `PATH`.
+
+  One of those flags is `-Dhttp.nonProxyHosts=`, and it is not decoration. A
+  JVM's default is `localhost|127.*|[::1]|0.0.0.0|[::0]`, so without it a
+  program talking to a server **on this computer** — which is most of what
+  anybody debugs — goes straight past tracewing, and the only sign is HTTPS
+  failing against that server's own certificate instead of tracewing's.
 - **Docker**, where the daemon and a container are two different problems.
   The daemon's own traffic — pulling an image — does not inherit the
   terminal's environment: on Linux it takes a systemd drop-in, and on Docker
@@ -242,7 +253,7 @@ computer.
 | **Firefox**, every profile its own | NSS, one store per profile | Set up installs it into each profile it finds, the one **Open on its own** makes included. On Linux that needs `certutil`, and step 1 says how to install it when it is missing |
 | **Python** `requests`, `httpx`, `pip` | `certifi` | `REQUESTS_CA_BUNDLE` or `SSL_CERT_FILE`, both of which a terminal sets |
 | **Node.js**, Deno, Bun | roots built into the binary | `NODE_EXTRA_CA_CERTS`, `DENO_CERT`, which a terminal sets; `--use-system-ca` on a new enough Node |
-| **Java** | its own `cacerts` | `keytool -importcert`, or `-Djavax.net.ssl.trustStore` |
+| **Java** | its own store, in its own format | `-Djavax.net.ssl.trustStore`, pointed at the PKCS#12 Set up writes. A certificate in a PKCS#12 is not enough: the entry has to be a *trustedCertEntry*, and the store's password cannot be empty, or a JVM reads it as holding nothing |
 | **Flutter and Dart** | BoringSSL's own list | a `SecurityContext` in the app's code |
 | A **Rust** program on rustls with `webpki-roots` | roots compiled in | nothing from outside: it has to be built against `rustls-native-certs` |
 

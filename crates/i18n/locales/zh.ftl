@@ -2176,8 +2176,8 @@ t95e7a36a = 回答会留着，所以这页会从你上次离开的地方打开�
 # The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
 tab552f0c = 这由终端负责：在它里面启动的东西从一个文件读取 tracewing 的根证书，所以这台电脑上不装任何东西，别的也都不变。
 
-# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
-t42c38a18 = Java 自带一个证书库，既不读系统的，也不读环境变量。那个库 tracewing 还不能替你写：用下面的参数给它一个。
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
+t5951384c = Java 自带一个证书库，既不读系统的，也不读环境变量。tracewing 已经在自己的文件夹里给它写了一个，下面的参数把 JVM 指向那里：你的东西一点都没动，创建它也不需要 JDK。
 
 # The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
 t38958f05 = tracewing 的证书得由手机自己装 — 下面的指南按设备类型说明怎么做。

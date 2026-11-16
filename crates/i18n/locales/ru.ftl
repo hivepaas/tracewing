@@ -2374,8 +2374,8 @@ t95e7a36a = Ответ сохраняется, поэтому страница �
 # The terminal sets it: what starts in it reads tracewing's roots from a file, so nothing is installed on this computer and nothing else is changed.
 tab552f0c = Это делает терминал: то, что в нём запущено, читает корневые сертификаты tracewing из файла, так что на этот компьютер ничего не устанавливается и ничего больше не меняется.
 
-# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing cannot write that store for you yet: pass it one, with the flags below.
-t42c38a18 = Java держит своё хранилище сертификатов и не читает ни системное, ни переменные. tracewing пока не может записать это хранилище за вас: передайте ему своё, с флагами ниже.
+# Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
+t5951384c = Java держит своё хранилище сертификатов и не читает ни системное, ни переменные. tracewing записал ему своё, в своей же папке, а флаги ниже направляют на него JVM: ничего вашего не затронуто, и для создания не нужен JDK.
 
 # The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
 t38958f05 = Сертификат tracewing телефон должен установить сам — в руководствах ниже сказано, как это делается для каждого вида устройств.

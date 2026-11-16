@@ -617,10 +617,11 @@ impl Traffic {
             wizard::Trust::JavaItself => (
                 tr!(
                     "Java keeps an authority store of its own and reads neither the system's nor \
-                     the variables. tracewing cannot write that store for you yet: pass it one, \
-                     with the flags below."
+                     the variables. tracewing has written it one, in its own folder, and the \
+                     flags below point a JVM at it: nothing of yours is touched, and no JDK is \
+                     needed to make it."
                 ),
-                false,
+                true,
             ),
             wizard::Trust::ThePhone => (
                 tr!(
@@ -662,23 +663,35 @@ impl Traffic {
         ))
     }
 
-    /// What a Java program needs, which is the one route tracewing cannot
-    /// finish for somebody: the proxy flags, which do work, and the
-    /// truststore, which it does not write yet.
+    /// What a Java program needs: the proxy flags, and a truststore of its
+    /// own, which tracewing writes.
+    ///
+    /// Written here, as the step is drawn, rather than when the authority
+    /// changes: somebody who never runs a Java program never gets the file,
+    /// and somebody who does gets one that matches the authority as it is
+    /// now. [`tracewing_system::java`] does the checking.
     fn render_java(&self, says: String, cx: &mut Context<Self>) -> Div {
         let _ = cx;
         let addr = self.engine.addr;
+        let store =
+            tracewing_system::java::truststore(&self.data_dir.join("ca.pem"), &self.data_dir);
         aside(tr!("And Java's own store"), says).child(
-            div()
-                .w_full()
-                .child(code_block(
+            div().w_full().child(match &store {
+                Ok(path) => code_block(
                     "setup-wizard-java",
-                    format!(
-                        "-Dhttps.proxyHost={host} -Dhttps.proxyPort={port} \\\n  -Dhttp.proxyHost={host} -Dhttp.proxyPort={port}",
-                        host = addr.ip(),
-                        port = addr.port()
-                    ),
-                )),
+                    tracewing_system::java::flags(addr, path),
+                )
+                .into_any_element(),
+                // Said rather than swallowed, and the flags are not shown:
+                // a line of flags pointing at a file that is not there is
+                // worse than a sentence saying the file could not be
+                // written.
+                Err(e) => div()
+                    .text_size(ui(12.))
+                    .text_color(rgb(colors().error))
+                    .child(format!("{e:#}"))
+                    .into_any_element(),
+            }),
         )
     }
 
