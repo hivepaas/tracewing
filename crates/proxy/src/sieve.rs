@@ -19,8 +19,18 @@
 //! it. Those are written up in
 //! [capture-modes.md](../../../docs/design/capture-modes.md).
 
-use crate::source::{Duplex, Flow, Found, Target};
-use std::{future::Future, io, net::SocketAddr, pin::Pin};
+use crate::{
+    apps::Apps,
+    source::{Duplex, Flow, Found, Target},
+};
+use std::{
+    future::Future,
+    io,
+    net::SocketAddr,
+    pin::Pin,
+    sync::{Arc, RwLock},
+    time::{Duration, Instant},
+};
 
 /// Whether a connection is kept, and the way out for one that is not.
 ///
@@ -51,6 +61,97 @@ impl Sieve {
     pub fn new(keeps: Keeps, straight_to: StraightTo) -> Self {
         Self { keeps, straight_to }
     }
+}
+
+/// The programs somebody chose, as the window keeps them.
+///
+/// Read for every connection and changed while the mode is on, because
+/// somebody adding an app must not have to turn the switch off and on again.
+///
+/// **Empty means nothing is kept**, and that is worth being plain about
+/// rather than treating as a mode that does nothing: with no program chosen,
+/// every connection on the machine is passed straight through, so the mode is
+/// on and watching nobody. It is also the state a first run is in, which is
+/// why the switch is not something to offer before there is a list.
+#[derive(Clone, Default)]
+pub struct Chosen(Arc<RwLock<Vec<String>>>);
+
+impl Chosen {
+    pub fn of(programs: Vec<String>) -> Self {
+        Self(Arc::new(RwLock::new(programs)))
+    }
+
+    /// What the window has now, in place of what it had.
+    pub fn these(&self, programs: Vec<String>) {
+        *self.0.write().unwrap_or_else(|e| e.into_inner()) = programs;
+    }
+
+    pub fn none(&self) -> bool {
+        self.0.read().unwrap_or_else(|e| e.into_inner()).is_empty()
+    }
+
+    fn holds(&self, program: &str) -> bool {
+        one_of(
+            program,
+            &self.0.read().unwrap_or_else(|e| e.into_inner()).clone(),
+        )
+    }
+}
+
+/// How long a connection waits for the operating system to say which program
+/// made it.
+///
+/// Paid once per connection, and by **every** connection on the machine while
+/// the mode is on: a program nobody chose waits too, because until the answer
+/// comes there is nothing to say it is nobody's. It is one look at a table of
+/// the kernel's, so this is a bug's timeout rather than a network's.
+const NAMED_WITHIN: Duration = Duration::from_millis(500);
+
+/// The sieve a mode that captures by route needs: keep the programs somebody
+/// chose, and pass everything else on.
+///
+/// `out` is the way out for what is passed on, injected because on Windows it
+/// has to be a socket pinned to the interface the machine's own traffic
+/// leaves by -- one following the ordinary routes would go back into
+/// tracewing's own adapter.
+///
+/// A connection whose program cannot be named is **passed on**. Keeping it
+/// would mean offering tracewing's certificate to a program on the strength
+/// of a guess, which breaks one that pins its own for no gain; passing it on
+/// costs nothing but the sight of it.
+pub fn by_programs(apps: Apps, chosen: Chosen, out: StraightTo) -> Sieve {
+    Sieve::new(
+        Box::new(move |client, to| {
+            let apps = apps.clone();
+            let chosen = chosen.clone();
+            Box::pin(async move {
+                // Nothing chosen keeps nothing, and asks the operating system
+                // nothing either: the answer is the same and this is the one
+                // state every machine starts in.
+                if chosen.none() {
+                    return false;
+                }
+                // `None` is an address that is not this machine's, which is
+                // no program of ours to find.
+                let Some(answer) = apps.took(client, to) else {
+                    return false;
+                };
+                let deadline = Instant::now() + NAMED_WITHIN;
+                // `wait_until` waits on a condition variable, and nothing on
+                // the runtime may: one of these would hold a worker thread
+                // for as long as the look-up takes.
+                let named = tokio::task::spawn_blocking(move || answer.wait_until(deadline)).await;
+                match named.ok().flatten().and_then(|app| app.path) {
+                    Some(path) => chosen.holds(&path),
+                    // Either the look-up found nobody, or it found a process
+                    // whose file could not be read -- one that ended while we
+                    // asked, or another user's.
+                    None => false,
+                }
+            })
+        }),
+        out,
+    )
 }
 
 /// One taken connection, kept or passed on.
@@ -175,6 +276,121 @@ mod tests {
 
     fn chosen(of: &[&str]) -> Vec<String> {
         of.iter().map(|s| (*s).to_owned()).collect()
+    }
+
+    /// Nowhere to go: `by_programs` never asks for a way out in these
+    /// tests, and a sieve that did would say so rather than pass silently.
+    fn nowhere() -> StraightTo {
+        Box::new(|to| {
+            Box::pin(async move { Err(io::Error::other(format!("no way out to {to} in a test"))) })
+        })
+    }
+
+    /// The whole decision against a real program, a real connection and a
+    /// real look-up: this test's own process is the program behind the
+    /// connection, so choosing the folder its binary is in must keep it, and
+    /// choosing somewhere else must not.
+    #[tokio::test]
+    async fn the_program_behind_a_connection_decides_whether_it_is_kept() {
+        let far = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let to = far.local_addr().unwrap();
+        let client = std::net::TcpStream::connect(to).unwrap();
+        let _accepted = far.accept().unwrap();
+        let from = client.local_addr().unwrap();
+
+        // No port of tracewing's is given: this connection was taken on its
+        // way, and all four addresses are what name it. See `apps::Look`.
+        let apps = Apps::spawn(Vec::new()).unwrap();
+        // These two agree because they are the same file read the same way,
+        // not because they happened to on this machine: `current_exe` reads
+        // `/proc/self/exe` and `apps::os::path_of` reads `/proc/<pid>/exe`,
+        // and both resolve the link. A test that leaned on them merely
+        // looking alike would be a fact about one checkout's paths.
+        let exe = std::env::current_exe().unwrap();
+        let folder = format!("{}/", exe.parent().unwrap().display());
+
+        let kept = by_programs(apps.clone(), Chosen::of(vec![folder.clone()]), nowhere());
+        assert!(
+            (kept.keeps)(from, to).await,
+            "this program is in the folder that was chosen"
+        );
+
+        let others = by_programs(
+            apps.clone(),
+            Chosen::of(vec!["/nowhere/in/particular/".to_owned()]),
+            nowhere(),
+        );
+        assert!(
+            !(others.keeps)(from, to).await,
+            "and is not in one that was not"
+        );
+
+        // Nothing chosen keeps nothing, which is the state a first run is in.
+        let empty = by_programs(apps, Chosen::default(), nowhere());
+        assert!(
+            !(empty.keeps)(from, to).await,
+            "nothing chosen, nothing kept"
+        );
+    }
+
+    /// A connection whose near end is not this machine's has no program here
+    /// to find, and is passed on rather than kept on a guess.
+    #[tokio::test]
+    async fn a_connection_from_somewhere_else_is_not_kept() {
+        let apps = Apps::spawn(Vec::new()).unwrap();
+        let sieve = by_programs(apps, Chosen::of(vec!["/".to_owned()]), nowhere());
+        assert!(
+            !(sieve.keeps)(
+                "198.51.100.9:51000".parse().unwrap(),
+                "203.0.113.9:443".parse().unwrap()
+            )
+            .await,
+            "not an address of ours, so not a program of ours"
+        );
+    }
+
+    /// An address of this machine's with no connection behind it: the
+    /// look-up is made and answers nobody, which is a different arm from an
+    /// address that is not ours at all. Found by ablation -- turning the
+    /// final `None` into `true` left all ten other tests passing, because
+    /// every one of them stopped at the earlier guard.
+    #[tokio::test]
+    async fn a_connection_that_is_not_there_is_not_kept() {
+        let apps = Apps::spawn(Vec::new()).unwrap();
+        let sieve = by_programs(apps, Chosen::of(vec!["/".to_owned()]), nowhere());
+        assert!(
+            !(sieve.keeps)(
+                // Loopback, so it is an address of ours and the look-up
+                // happens; port 1, so there is nothing holding it.
+                "127.0.0.1:1".parse().unwrap(),
+                "127.0.0.1:2".parse().unwrap()
+            )
+            .await,
+            "the look-up answered nobody, and nobody is not kept"
+        );
+    }
+
+    /// The list is read for every connection, so the window changing it
+    /// reaches the next one without the switch being turned off and on.
+    #[tokio::test]
+    async fn changing_the_list_changes_the_next_answer() {
+        let far = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let to = far.local_addr().unwrap();
+        let client = std::net::TcpStream::connect(to).unwrap();
+        let _accepted = far.accept().unwrap();
+        let from = client.local_addr().unwrap();
+
+        let apps = Apps::spawn(Vec::new()).unwrap();
+        let chosen = Chosen::default();
+        let sieve = by_programs(apps, chosen.clone(), nowhere());
+        assert!(!(sieve.keeps)(from, to).await, "nothing chosen yet");
+
+        let exe = std::env::current_exe().unwrap();
+        chosen.these(vec![format!("{}/", exe.parent().unwrap().display())]);
+        assert!(
+            (sieve.keeps)(from, to).await,
+            "and the same sieve answers the other way once the window has said so"
+        );
     }
 
     #[test]
