@@ -41,11 +41,25 @@ pub const FILE: &str = "mac-apps.toml";
 /// An app as it was picked: where it was, and the signing ids read from it
 /// then — its own first. Read once, so that a list of apps does not run
 /// `codesign` over each of them every time the window starts.
+///
+/// Or a program, or a folder of them, taken **by where it is**: one with no
+/// signing id of its own, such as what `go build` makes. Its path is what the
+/// extension is told, made real as it is told, so that a link chosen — a
+/// Homebrew program's — follows the version it points at.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Chosen {
     pub name: String,
     pub path: PathBuf,
     pub ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub by_path: bool,
+}
+
+impl Chosen {
+    /// A folder, for every program under it.
+    pub fn is_folder(&self) -> bool {
+        self.by_path && self.path.is_dir() && self.path.extension().is_none_or(|e| e != "app")
+    }
 }
 
 #[derive(Default, Serialize, Deserialize)]
@@ -77,12 +91,31 @@ pub fn save(dir: &Path, apps: &[Chosen]) -> Result<()> {
 /// Every signing id of `apps`, each once, in the order they were picked.
 pub fn ids_of(apps: &[Chosen]) -> Vec<String> {
     let mut ids: Vec<String> = Vec::new();
-    for id in apps.iter().flat_map(|app| &app.ids) {
+    for id in apps
+        .iter()
+        .filter(|app| !app.by_path)
+        .flat_map(|app| &app.ids)
+    {
         if !ids.contains(id) {
             ids.push(id.clone());
         }
     }
     ids
+}
+
+/// What the extension is told of those taken by where they are; and those
+/// that are not there any more, by name.
+pub fn programs_of(apps: &[Chosen]) -> (Vec<String>, Vec<String>) {
+    let mut rules = Vec::new();
+    let mut gone = Vec::new();
+    for app in apps.iter().filter(|app| app.by_path) {
+        match extension::program_rule(&app.path) {
+            Ok(rule) if !rules.contains(&rule) => rules.push(rule),
+            Ok(_) => {}
+            Err(_) => gone.push(app.path.display().to_string()),
+        }
+    }
+    (rules, gone)
 }
 
 /// `chosen` with `picked` added, an app picked again taking the place of
@@ -146,6 +179,14 @@ impl Traffic {
                 .unwrap_or_else(|| tr!("tracewing has no port open for the extension."))
         })?;
         config.apps = ids_of(&self.mac_apps.chosen);
+        let (programs, gone) = programs_of(&self.mac_apps.chosen);
+        config.programs = programs;
+        if !gone.is_empty() {
+            return Err(tr!(
+                "Not there any more: {paths}. Remove it, or put it back.",
+                paths = gone.join(", ")
+            ));
+        }
         Ok(config)
     }
 
@@ -170,7 +211,7 @@ impl Traffic {
     pub fn ask_add_mac_apps(&mut self, cx: &mut Context<Self>) {
         let chosen = cx.prompt_for_paths(PathPromptOptions {
             files: true,
-            directories: false,
+            directories: true,
             multiple: true,
             prompt: Some(tr!("Add").into()),
         });
@@ -197,6 +238,7 @@ impl Traffic {
                                 name: program.name,
                                 path,
                                 ids: program.ids,
+                                by_path: program.by_path,
                             })
                         })
                         .collect()
@@ -437,9 +479,15 @@ impl Traffic {
             .enumerate()
             .map(|(index, app)| {
                 let inside = app.ids.len().saturating_sub(1);
-                let ids = match inside {
-                    0 => app.ids.first().cloned().unwrap_or_default(),
-                    _ => tr_inside(&app.ids[0], inside),
+                let path = app.path.display().to_string();
+                let ids = if app.is_folder() {
+                    tr!("every program in {path}", path = path)
+                } else if app.by_path {
+                    tr!("{path}, by where it is", path = path)
+                } else if inside == 0 {
+                    app.ids.first().cloned().unwrap_or_default()
+                } else {
+                    tr_inside(&app.ids[0], inside)
                 };
                 div()
                     .flex()
@@ -491,7 +539,7 @@ impl Traffic {
             .child(eyebrow(tr!("Apps it takes")))
             .when(empty, |d| {
                 d.child(div().text_color(rgb(c.muted)).child(tr!(
-                    "None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it."
+                    "None yet. Add an app from Applications, a program such as /usr/bin/curl, or a folder your builds go to; what is inside an app — the helpers a browser or an Electron app connects from — comes with it, and a program with no signing id of its own, such as what go build makes, is taken by where it is."
                 )))
             })
             .children(rows)
@@ -553,7 +601,48 @@ mod tests {
             name: name.into(),
             path: PathBuf::from(format!("/Applications/{name}.app")),
             ids: ids.iter().map(|s| s.to_string()).collect(),
+            by_path: false,
         }
+    }
+
+    fn by_path(path: &Path) -> Chosen {
+        Chosen {
+            name: "built".into(),
+            path: path.to_owned(),
+            ids: Vec::new(),
+            by_path: true,
+        }
+    }
+
+    #[test]
+    fn a_program_by_path_is_told_as_its_real_path_and_not_as_an_id() {
+        let dir = std::env::temp_dir().join(format!("tracewing-by-path-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("bin")).unwrap();
+        let real = std::fs::canonicalize(&dir).unwrap();
+        let apps = [
+            app("curl", &["com.apple.curl"]),
+            by_path(&dir.join("bin")),
+            by_path(&dir.join("gone")),
+        ];
+        assert_eq!(ids_of(&apps), ["com.apple.curl"]);
+        let (rules, gone) = programs_of(&apps);
+        assert_eq!(rules, [format!("{}/bin/", real.display())]);
+        assert_eq!(gone, [dir.join("gone").display().to_string()]);
+        assert!(apps[1].is_folder());
+        // Kept, and read back as chosen; an app by id keeps the file as it was.
+        save(&dir, &apps).unwrap();
+        assert_eq!(load(&dir), apps);
+        assert!(
+            !std::fs::read_to_string(dir.join(FILE))
+                .unwrap()
+                .split("[[app]]")
+                .nth(1)
+                .unwrap()
+                .contains("by_path"),
+            "nothing new in what an app by id is kept as"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

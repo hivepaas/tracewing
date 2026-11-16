@@ -1063,6 +1063,9 @@ tb871bcf4 = Angebotene Tools: { $tools }
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing hat keinen Port für die Erweiterung geöffnet.
 
+# Not there any more: {paths}. Remove it, or put it back.
+t77cc5956 = Nicht mehr da: { $paths }. Entferne es oder lege es zurück.
+
 # Add an app first: it is the apps you add that are taken.
 t755769ba = Füge zuerst eine App hinzu: Erfasst werden die Apps, die du hinzufügst.
 
@@ -1099,11 +1102,17 @@ tcd03e04b = Ausschalten
 # Open System Settings
 td22799a3 = Systemeinstellungen öffnen
 
+# every program in {path}
+tfa65268c = jedes Programm in { $path }
+
+# {path}, by where it is
+t346faa65 = { $path }, nach seinem Ort
+
 # Apps it takes
 t804bea32 = Erfasste Apps
 
-# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
-t4a4185a4 = Noch keine. Füge eine App aus Programme hinzu oder ein Programm wie /usr/bin/curl; was in einer App steckt — die Helfer, über die ein Browser oder eine Electron-App verbindet — kommt mit.
+# None yet. Add an app from Applications, a program such as /usr/bin/curl, or a folder your builds go to; what is inside an app — the helpers a browser or an Electron app connects from — comes with it, and a program with no signing id of its own, such as what go build makes, is taken by where it is.
+te78c7fcc = Noch keine. Füge eine App aus Programme hinzu, ein Programm wie /usr/bin/curl oder einen Ordner, in den deine Builds gehen; was in einer App steckt — die Helfer, über die ein Browser oder eine Electron-App verbindet — kommt mit, und ein Programm ohne eigene Signatur-ID, wie es go build erzeugt, wird nach seinem Ort erfasst.
 
 # Add an app…
 t98ea20ec = App hinzufügen…
@@ -2080,8 +2089,8 @@ tb457dd67 = Apps, die nur ihren eigenen Zertifikaten vertrauen, und alles, was g
 # Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
 t30f507c6 = Alles, was eine gewählte App über TCP sendet, ob sie Proxy-Einstellungen liest oder nicht: ein Browser, eine Electron-App, Node jeder Version, Java.
 
-# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
-t1a42de49 = UDP, also HTTP/3; Verbindungen zu diesem Computer selbst, die macOS nicht übergibt; und Programme ohne eigene Signatur-ID, wie alles, was go build erzeugt.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t767f449d = UDP, also HTTP/3; Verbindungen zu diesem Computer selbst, die macOS nicht übergibt; und go run, das sein Programm jedes Mal woanders baut: füge stattdessen den Ordner hinzu, in den go build -o schreibt.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Seit dem Einschalten ist am Proxy-Port nichts angekommen — nicht über den Systemproxy, nicht über einen Browser von tracewing und nicht über ein Terminal, die alle dort hereinkommen. Ein Programm, dem der Proxy genannt wurde und das ihn ignoriert, sieht genau so aus.

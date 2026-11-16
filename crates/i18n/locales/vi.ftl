@@ -1030,6 +1030,9 @@ tb871bcf4 = Tool được cung cấp: { $tools }
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing chưa mở cổng nào cho extension.
 
+# Not there any more: {paths}. Remove it, or put it back.
+t77cc5956 = Không còn ở đó nữa: { $paths }. Hãy gỡ nó, hoặc đặt nó lại chỗ cũ.
+
 # Add an app first: it is the apps you add that are taken.
 t755769ba = Hãy thêm một app trước: chỉ những app bạn thêm mới được bắt.
 
@@ -1066,11 +1069,17 @@ tcd03e04b = Tắt
 # Open System Settings
 td22799a3 = Mở System Settings
 
+# every program in {path}
+tfa65268c = mọi chương trình trong { $path }
+
+# {path}, by where it is
+t346faa65 = { $path }, theo vị trí của nó
+
 # Apps it takes
 t804bea32 = Các app được bắt
 
-# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
-t4a4185a4 = Chưa có app nào. Thêm một app từ Applications, hoặc một chương trình như /usr/bin/curl; những gì nằm trong app — các helper mà trình duyệt hay app Electron dùng để kết nối — được thêm theo.
+# None yet. Add an app from Applications, a program such as /usr/bin/curl, or a folder your builds go to; what is inside an app — the helpers a browser or an Electron app connects from — comes with it, and a program with no signing id of its own, such as what go build makes, is taken by where it is.
+te78c7fcc = Chưa có app nào. Thêm một app từ Applications, một chương trình như /usr/bin/curl, hoặc thư mục chứa bản build của bạn; những gì nằm trong app — các helper mà trình duyệt hay app Electron dùng để kết nối — được thêm theo, còn chương trình không có signing id riêng, như thứ go build tạo ra, được bắt theo vị trí của nó.
 
 # Add an app…
 t98ea20ec = Thêm app…
@@ -1969,8 +1978,8 @@ tb457dd67 = Các app chỉ tin chứng chỉ riêng của chúng, và mọi th�
 # Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
 t30f507c6 = Mọi thứ một app được chọn gửi qua TCP, dù nó có đọc cài đặt proxy hay không: trình duyệt, app Electron, Node mọi phiên bản, Java.
 
-# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
-t1a42de49 = UDP, tức HTTP/3; kết nối tới chính máy này, vì macOS không chuyển chúng; và chương trình không có signing id riêng, như mọi thứ go build tạo ra.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t767f449d = UDP, tức HTTP/3; kết nối tới chính máy này, vì macOS không chuyển chúng; và go run, vì mỗi lần nó build chương trình ở một chỗ mới: hãy thêm thư mục mà go build -o ghi ra.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Chưa có gì tới cổng proxy kể từ lúc bật — không từ system proxy, không từ trình duyệt riêng của tracewing, cũng không từ terminal, vì cả ba đều vào ở đó. Một chương trình được chỉ dùng proxy nhưng bỏ qua nó thì trông đúng như thế này.

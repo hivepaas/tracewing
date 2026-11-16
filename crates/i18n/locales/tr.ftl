@@ -1063,6 +1063,9 @@ tb871bcf4 = Sunulan araçlar: { $tools }
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing eklenti için bir port açmadı.
 
+# Not there any more: {paths}. Remove it, or put it back.
+t77cc5956 = Artık orada değil: { $paths }. Kaldırın ya da yerine koyun.
+
 # Add an app first: it is the apps you add that are taken.
 t755769ba = Önce bir uygulama ekleyin: yakalanan, eklediğiniz uygulamalardır.
 
@@ -1099,11 +1102,17 @@ tcd03e04b = Kapat
 # Open System Settings
 td22799a3 = Sistem Ayarları'nı aç
 
+# every program in {path}
+tfa65268c = { $path } içindeki her program
+
+# {path}, by where it is
+t346faa65 = { $path }, bulunduğu yere göre
+
 # Apps it takes
 t804bea32 = Yakaladığı uygulamalar
 
-# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
-t4a4185a4 = Henüz yok. Uygulamalar'dan bir uygulama ya da /usr/bin/curl gibi bir program ekleyin; bir uygulamanın içindekiler — bir tarayıcının ya da Electron uygulamasının bağlandığı yardımcılar — onunla birlikte gelir.
+# None yet. Add an app from Applications, a program such as /usr/bin/curl, or a folder your builds go to; what is inside an app — the helpers a browser or an Electron app connects from — comes with it, and a program with no signing id of its own, such as what go build makes, is taken by where it is.
+te78c7fcc = Henüz yok. Uygulamalar'dan bir uygulama, /usr/bin/curl gibi bir program ya da derlemelerinizin gittiği bir klasör ekleyin; bir uygulamanın içindekiler — bir tarayıcının ya da Electron uygulamasının bağlandığı yardımcılar — onunla birlikte gelir, kendi imza kimliği olmayan bir program ise, go build'in ürettiği gibi, bulunduğu yere göre yakalanır.
 
 # Add an app…
 t98ea20ec = Uygulama ekle…
@@ -2044,8 +2053,8 @@ tb457dd67 = Yalnızca kendi sertifikalarına güvenen uygulamalar ve tracewing'i
 # Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
 t30f507c6 = Seçilen bir uygulamanın TCP ile gönderdiği her şey, proxy ayarını okusun okumasın: bir tarayıcı, bir Electron uygulaması, her sürümden Node, Java.
 
-# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
-t1a42de49 = UDP, yani HTTP/3; macOS'un devretmediği, bu bilgisayarın kendisine giden bağlantılar; ve kendi imza kimliği olmayan programlar, go build'in ürettiği her şey gibi.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t767f449d = UDP, yani HTTP/3; macOS'un devretmediği, bu bilgisayarın kendisine giden bağlantılar; ve programını her seferinde yeni bir yerde derleyen go run: onun yerine go build -o'nun yazdığı klasörü ekleyin.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Açıldığından beri proxy portuna hiçbir şey gelmedi — ne sistem proxy'sinden, ne tracewing'in kendi tarayıcısından, ne de bir terminalden; hepsi oradan girer. Proxy'yi kullanması söylenip onu yok sayan bir program tam olarak böyle görünür.

@@ -82,6 +82,12 @@ enum Command {
         /// the first time, and macOS asks for it to be allowed.
         #[arg(long = "app", value_name = "SIGNING_ID")]
         apps: Vec<String>,
+        /// Take this program's traffic the same way, by where it is rather
+        /// than by a signing id: for what has none of its own, such as what
+        /// `go build` or `cargo build` makes. A folder takes every program
+        /// under it. As often as there are programs.
+        #[arg(long = "program", value_name = "PATH")]
+        programs: Vec<PathBuf>,
     },
     /// macOS's network extension, which takes apps' traffic with no proxy
     /// settings of their own (`capture --app`): install it, say how it is,
@@ -230,6 +236,7 @@ pub fn run(args: &[String]) -> Result<()> {
             ca_key_in_file,
             data_dir,
             apps,
+            programs,
         } => {
             let data_dir = data_dir.unwrap_or_else(default_data_dir);
             let har = har.map(|path| HarOut {
@@ -238,13 +245,14 @@ pub fn run(args: &[String]) -> Result<()> {
                 without_secrets,
             });
             let seconds = seconds.map(Duration::from_secs);
-            if apps.is_empty() {
-                capture(&data_dir, ca_key_in_file, port, seconds, har, apps)
+            let taken = Taken { apps, programs };
+            if taken.is_empty() {
+                capture(&data_dir, ca_key_in_file, port, seconds, har, taken)
             } else {
                 // macOS answers the extension's calls on the main queue,
                 // which this thread serves while another records.
                 tracewing_system::extension::serve_main_thread_while(move || {
-                    capture(&data_dir, ca_key_in_file, port, seconds, har, apps)
+                    capture(&data_dir, ca_key_in_file, port, seconds, har, taken)
                 })
             }
         }
@@ -401,7 +409,7 @@ fn capture(
     port: Option<u16>,
     seconds: Option<Duration>,
     har: Option<HarOut>,
-    apps: Vec<String>,
+    taken: Taken,
 ) -> Result<()> {
     std::fs::create_dir_all(data_dir).with_context(|| format!("create {}", data_dir.display()))?;
     let ports = port.map_or(PORTS, |port| port..port.saturating_add(1));
@@ -412,7 +420,13 @@ fn capture(
     if let Some(problem) = problem {
         eprintln!("tracewing: left out, as it cannot be read: {problem}");
     }
-    let engine = Engine::start_with_apps(options, apps.clone())?;
+    let programs = taken
+        .programs
+        .iter()
+        .map(|path| tracewing_system::extension::program_rule(path))
+        .collect::<Result<Vec<_>>>()?;
+    let wanted = !taken.is_empty();
+    let engine = Engine::start_with_extension(options, wanted.then(|| taken.apps.clone()))?;
     // The CA is made, or read, as the proxy starts.
     let ca = data_dir.join("ca.pem");
     let deadline = Instant::now() + Duration::from_secs(30);
@@ -440,7 +454,12 @@ fn capture(
         ca.display()
     );
     let extension = match (&engine.extension, &engine.extension_problem) {
-        (Some(config), _) => Some(ExtensionRunning::start(config)?),
+        (Some(config), _) => Some(ExtensionRunning::start(
+            &tracewing_system::extension::Config {
+                programs,
+                ..config.clone()
+            },
+        )?),
         (None, Some(problem)) => bail!("no port for the network extension: {problem}"),
         (None, None) => None,
     };
@@ -490,6 +509,19 @@ fn capture(
 /// goes, however the capture ends.
 struct ExtensionRunning;
 
+/// What `capture` has the extension take: apps by signing id, programs by
+/// where they are.
+struct Taken {
+    apps: Vec<String>,
+    programs: Vec<PathBuf>,
+}
+
+impl Taken {
+    fn is_empty(&self) -> bool {
+        self.apps.is_empty() && self.programs.is_empty()
+    }
+}
+
 impl ExtensionRunning {
     fn start(config: &tracewing_system::extension::Config) -> Result<Self> {
         use tracewing_system::extension;
@@ -502,7 +534,13 @@ impl ExtensionRunning {
         extension::start(config)?;
         eprintln!(
             "  and, with no proxy settings of their own: {}",
-            config.apps.join(", ")
+            config
+                .apps
+                .iter()
+                .chain(&config.programs)
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+                .join(", ")
         );
         Ok(Self)
     }

@@ -127,6 +127,14 @@ async fn take_one(
             return Err(why.into());
         }
     };
+    // tracewing's own connections out, which would come back to it forever.
+    // The extension never takes the app's, by its signing id; a build of
+    // tracewing's own has none, and a folder chosen by path can hold it.
+    if hello.pid == Some(std::process::id()) {
+        let why = Refused::Bad("pid");
+        let _ = stream.write_all(&tracewing_handoff::refusal(&why)).await;
+        bail!("{} is tracewing itself", hello.app);
+    }
     let to = target(&hello);
     if let Target::Addr(addr) = &to
         && ours.contains(addr)

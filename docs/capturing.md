@@ -177,22 +177,28 @@ kept; the switch starts off each time, as the system proxy's does.
 - **The app still has to trust tracewing's authority** to have its HTTPS
   read: the CA in the keychain for a Mac app, `NODE_EXTRA_CA_CERTS` or its own
   setting for the rest, as below.
-- **A program built without a name of its own cannot be named.** Every Go
-  program `go build` makes is `a.out`, and what Homebrew builds is named after
-  its file and a hash that changes with each version (`git-55554944…`).
-  Choosing those by their file is still to come.
+- **A program with no name of its own is taken by where it is.** Every Go
+  program `go build` makes is `a.out`, and what a linker signs — `cargo
+  build`'s, Homebrew's — is named after its file and a hash that changes with
+  each build (`git-55554944…`). So such a program, picked by its file, goes
+  by its path, and a **folder** picked takes every program under it: the
+  folder `go build -o` or `cargo build` writes to keeps working across
+  rebuilds. A link is followed when it is turned on, so Homebrew's
+  `/opt/homebrew/bin/git` follows the version it points at. `go run` builds
+  somewhere new each time, so it is the one thing this cannot reach.
 - When tracewing closes, or the capture stops, so does the proxy. If tracewing
   is killed instead, the extension finds nothing answering for tracewing and
   every flow goes out as it would have; `tracewing extension uninstall`
   removes it.
 
 The same from the command line, with no window, names the signing ids itself
-— `codesign -dv /usr/bin/curl 2>&1 | grep Identifier` says one — and records
-until Ctrl+C:
+— `codesign -dv /usr/bin/curl 2>&1 | grep Identifier` says one — or the
+programs and folders by path, and records until Ctrl+C:
 
 ```sh
 /Applications/tracewing.app/Contents/MacOS/tracewing capture \
-  --app com.apple.curl --app com.anthropic.claude-code
+  --app com.apple.curl --app com.anthropic.claude-code \
+  --program ~/dev/api/bin
 ```
 
 ## A phone, over WireGuard

@@ -614,8 +614,15 @@ What is left, and what no longer is:
    names a port and a key nobody answers for, and the extension sends every
    flow out as it would have. The window does the same from Settings ›
    Capture › Apps, with a port opened as it starts so that the list can
-   change while it runs. What is left is choosing a program that has no
-   signing id of its own (Go's `a.out`, Homebrew's builds) by its file.
+   change while it runs.
+
+   **A program with no signing id of its own goes by its path.** Go's are
+   all `a.out`, and a linker's are named after the file and a hash that
+   changes each build, so the configuration carries `programs` as well as
+   `apps`: files, and folders ending in `/`. The extension asks the system
+   for the file the process runs (`proc_pidpath`, which its sandbox allows)
+   only when there are any, and tracewing turns down a flow from its own
+   process, which a folder holding a build of its own could hand over.
 2. The TCP/IP stack is **in**, in [`stack.rs`](../../crates/proxy/src/stack.rs):
    packets in, [`Took::Flow`](../../crates/proxy/src/source.rs) out, on
    `smoltcp`, answering each `SYN` as the server the client was going to. What

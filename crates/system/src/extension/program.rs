@@ -8,6 +8,13 @@
 //! nothing, which is exactly the failure this way in exists to put right.
 //! So an app is read whole: the bundle, and every app, XPC service, app
 //! extension and helper program inside it.
+//!
+//! **A program whose id is not its own is taken by where it is.** What
+//! `go build` makes is `a.out`, every one of them, and what a linker signs
+//! ad hoc is named after its file and a hash that changes with each build
+//! (`git-55554944…`). Neither picks out the program somebody chose, so such a
+//! program — and a folder, for every program built into it — is given to the
+//! extension as a path, which it matches against the file the process runs.
 
 use anyhow::{Result, bail};
 use std::path::{Path, PathBuf};
@@ -17,8 +24,12 @@ use std::path::{Path, PathBuf};
 pub struct Program {
     /// What to call it: the bundle's or the file's name.
     pub name: String,
-    /// Its signing id first, then those of what is inside it.
+    /// Its signing id first, then those of what is inside it. None when it
+    /// is taken by its path.
     pub ids: Vec<String>,
+    /// Taken by where it is: a program signed ad hoc or not at all, an app
+    /// not signed, or a folder of programs.
+    pub by_path: bool,
 }
 
 /// The most pieces of code read from one app. Xcode has hundreds; what is
@@ -28,18 +39,44 @@ const MOST: usize = 160;
 /// Kinds of bundle that run as a process of their own.
 const RUNS: &[&str] = &["app", "xpc", "appex"];
 
-/// The app or program at `path`, read for its signing ids.
+/// The app, program or folder at `path`, read for its signing ids.
 pub fn program_at(path: &Path) -> Result<Program> {
     let name = path
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string());
+    if !path.exists() {
+        bail!("{} is not there", path.display());
+    }
+    let bundle = is_bundle(path);
+    if path.is_dir() && !bundle {
+        return Ok(Program {
+            name,
+            ids: Vec::new(),
+            by_path: true,
+        });
+    }
+    let by_path = Program {
+        name: name.clone(),
+        ids: Vec::new(),
+        by_path: true,
+    };
+    if !bundle {
+        // A program: its own id if it has one, else where it is.
+        return Ok(match signing(path) {
+            Some(Signed { id, adhoc: false }) => Program {
+                name,
+                ids: vec![id],
+                by_path: false,
+            },
+            _ => by_path,
+        });
+    }
     let code = code_within(path);
     let ids = signing_ids(&code);
+    // An app nobody signed is taken as the folder it is.
     let Some(own) = ids.first().and_then(Option::as_ref) else {
-        bail!(
-            "{name} carries no signing id, so macOS gives its connections nothing to pick it out by: a terminal (Set up › curl, git, a script) catches a program like this"
-        );
+        return Ok(by_path);
     };
     let mut all = vec![own.clone()];
     // What is inside it is kept when it is named as its maker names things.
@@ -50,7 +87,48 @@ pub fn program_at(path: &Path) -> Result<Program> {
             all.push(id);
         }
     }
-    Ok(Program { name, ids: all })
+    Ok(Program {
+        name,
+        ids: all,
+        by_path: false,
+    })
+}
+
+/// What the extension is told of a program taken by its path: the file it
+/// runs, links followed, as the system reports a process's; a folder, the
+/// same, ending in `/`.
+pub fn program_rule(path: &Path) -> Result<String> {
+    let real =
+        std::fs::canonicalize(path).map_err(|e| anyhow::anyhow!("{}: {e}", path.display()))?;
+    let mut rule = real.to_string_lossy().into_owned();
+    if real.is_dir() && !rule.ends_with('/') {
+        rule.push('/');
+    }
+    Ok(rule)
+}
+
+fn is_bundle(path: &Path) -> bool {
+    path.is_dir()
+        && path
+            .extension()
+            .is_some_and(|e| RUNS.iter().any(|r| e == *r))
+}
+
+/// What `codesign` says of a piece of code.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Signed {
+    pub id: String,
+    /// Signed with no identity: by a linker, or by hand with `-s -`. Its id
+    /// is whatever was made up for it.
+    pub adhoc: bool,
+}
+
+/// What `codesign -d -v` says, which it says on standard error.
+pub fn signed_in(said: &str) -> Option<Signed> {
+    Some(Signed {
+        id: identifier_in(said)?,
+        adhoc: said.lines().any(|line| line.trim() == "Signature=adhoc"),
+    })
 }
 
 /// The pieces of code to read: `path` itself first, then, in a bundle,
@@ -124,7 +202,7 @@ fn signing_ids(code: &[PathBuf]) -> Vec<Option<String>> {
         for (paths, ids) in code.chunks(8).zip(ids.chunks_mut(8)) {
             scope.spawn(move || {
                 for (path, id) in paths.iter().zip(ids.iter_mut()) {
-                    *id = signing_id(path);
+                    *id = signing(path).map(|signed| signed.id);
                 }
             });
         }
@@ -133,7 +211,7 @@ fn signing_ids(code: &[PathBuf]) -> Vec<Option<String>> {
 }
 
 #[cfg(target_os = "macos")]
-fn signing_id(path: &Path) -> Option<String> {
+fn signing(path: &Path) -> Option<Signed> {
     let out = std::process::Command::new("/usr/bin/codesign")
         .args(["-d", "-v"])
         .arg(path)
@@ -141,12 +219,12 @@ fn signing_id(path: &Path) -> Option<String> {
         .ok()?;
     out.status
         .success()
-        .then(|| identifier_in(&String::from_utf8_lossy(&out.stderr)))
+        .then(|| signed_in(&String::from_utf8_lossy(&out.stderr)))
         .flatten()
 }
 
 #[cfg(not(target_os = "macos"))]
-fn signing_id(_: &Path) -> Option<String> {
+fn signing(_: &Path) -> Option<Signed> {
     None
 }
 
@@ -161,6 +239,45 @@ mod tests {
                     Format=app bundle with Mach-O universal (x86_64 arm64)\n";
         assert_eq!(identifier_in(said).as_deref(), Some("com.google.Chrome"));
         assert_eq!(identifier_in("x: code object is not signed at all\n"), None);
+        let go = "Identifier=a.out\n\
+                  CodeDirectory v=20400 size=162718 flags=0x20002(adhoc,linker-signed)\n\
+                  Signature=adhoc\n";
+        assert_eq!(
+            signed_in(go),
+            Some(Signed {
+                id: "a.out".into(),
+                adhoc: true
+            })
+        );
+        assert!(!signed_in(said).unwrap().adhoc);
+    }
+
+    #[test]
+    fn a_rule_is_the_real_path_and_a_folder_ends_in_a_slash() {
+        let dir = std::env::temp_dir().join(format!("tracewing-rule-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("bin")).unwrap();
+        std::fs::write(dir.join("bin/server"), b"").unwrap();
+        let real = std::fs::canonicalize(&dir).unwrap();
+        assert_eq!(
+            program_rule(&dir.join("bin")).unwrap(),
+            format!("{}/bin/", real.display())
+        );
+        assert_eq!(
+            program_rule(&dir.join("bin/../bin/server")).unwrap(),
+            format!("{}/bin/server", real.display())
+        );
+        assert!(program_rule(&dir.join("gone")).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_folder_is_taken_by_where_it_is() {
+        let dir = std::env::temp_dir().join(format!("tracewing-folder-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let folder = program_at(&dir).unwrap();
+        assert!(folder.by_path && folder.ids.is_empty());
+        assert!(program_at(&dir.join("gone")).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// The shape of Chrome: helpers inside a framework, a version reached
@@ -221,5 +338,16 @@ mod tests {
         let curl = program_at(Path::new("/usr/bin/curl")).unwrap();
         assert_eq!(curl.name, "curl");
         assert_eq!(curl.ids, ["com.apple.curl"]);
+        assert!(!curl.by_path);
+    }
+
+    /// This test's own program is what a linker signed ad hoc, as `go build`
+    /// and `cargo build` sign theirs: its id is made up, so it goes by path.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_program_signed_ad_hoc_is_taken_by_where_it_is() {
+        let me = program_at(&std::env::current_exe().unwrap()).unwrap();
+        assert!(me.by_path, "{me:?}");
+        assert!(me.ids.is_empty());
     }
 }

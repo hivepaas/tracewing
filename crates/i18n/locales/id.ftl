@@ -1030,6 +1030,9 @@ tb871bcf4 = Alat yang ditawarkan: { $tools }
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing belum membuka port untuk ekstensi.
 
+# Not there any more: {paths}. Remove it, or put it back.
+t77cc5956 = Sudah tidak ada: { $paths }. Hapus, atau kembalikan ke tempatnya.
+
 # Add an app first: it is the apps you add that are taken.
 t755769ba = Tambahkan aplikasi dulu: aplikasi yang Anda tambahkan itulah yang ditangkap.
 
@@ -1066,11 +1069,17 @@ tcd03e04b = Matikan
 # Open System Settings
 td22799a3 = Buka Pengaturan Sistem
 
+# every program in {path}
+tfa65268c = setiap program di { $path }
+
+# {path}, by where it is
+t346faa65 = { $path }, menurut letaknya
+
 # Apps it takes
 t804bea32 = Aplikasi yang ditangkap
 
-# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
-t4a4185a4 = Belum ada. Tambahkan aplikasi dari Applications, atau program seperti /usr/bin/curl; isi sebuah aplikasi — helper tempat browser atau aplikasi Electron terhubung — ikut ditambahkan.
+# None yet. Add an app from Applications, a program such as /usr/bin/curl, or a folder your builds go to; what is inside an app — the helpers a browser or an Electron app connects from — comes with it, and a program with no signing id of its own, such as what go build makes, is taken by where it is.
+te78c7fcc = Belum ada. Tambahkan aplikasi dari Applications, program seperti /usr/bin/curl, atau folder tempat hasil build Anda; isi sebuah aplikasi — helper tempat browser atau aplikasi Electron terhubung — ikut ditambahkan, dan program tanpa ID tanda tangan sendiri, seperti hasil go build, ditangkap menurut letaknya.
 
 # Add an app…
 t98ea20ec = Tambah aplikasi…
@@ -1969,8 +1978,8 @@ tb457dd67 = App yang hanya mempercayai sertifikatnya sendiri, dan apa pun yang d
 # Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
 t30f507c6 = Apa pun yang dikirim aplikasi terpilih lewat TCP, membaca pengaturan proxy atau tidak: browser, aplikasi Electron, Node versi apa pun, Java.
 
-# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
-t1a42de49 = UDP, jadi HTTP/3; koneksi ke komputer ini sendiri, yang tidak diserahkan macOS; dan program tanpa ID tanda tangan sendiri, seperti semua hasil go build.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t767f449d = UDP, jadi HTTP/3; koneksi ke komputer ini sendiri, yang tidak diserahkan macOS; dan go run, yang membuat programnya di tempat baru setiap kali: tambahkan folder tujuan go build -o sebagai gantinya.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Sejak dinyalakan belum ada apa pun yang masuk ke port proxy — tidak dari proxy sistem, tidak dari browser milik tracewing, tidak juga dari terminal, yang semuanya masuk di situ. Program yang sudah diberi tahu soal proxy tetapi mengabaikannya tampak persis seperti ini.

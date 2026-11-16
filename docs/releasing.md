@@ -96,6 +96,12 @@ APPLE_API_KEY_PATH=AuthKey_ID.p8 APPLE_API_KEY_ID=ID APPLE_API_ISSUER_ID=issuer 
 MACOS_EXTENSION_EXPECTED=1 scripts/check_macos_app.sh dist/tracewing_*.dmg
 ```
 
+**To try a change to the extension** on a Mac that has one installed, give
+the build a number of its own with `EXTENSION_BUILD=0.1.$(date +%s)`: macOS
+replaces an installed extension only by one of another `CFBundleVersion`, and
+every build of one version says the same. Without it the app is new and the
+extension running is still the old one, and nothing says so.
+
 ## Cutting one
 
 1. `version` in `Cargo.toml`, in a commit of its own.

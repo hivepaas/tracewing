@@ -286,6 +286,9 @@ impl Engine {
                 port: listener.local_addr().ok()?.port(),
                 key: key.clone(),
                 apps: apps.clone().unwrap_or_default(),
+                // Given by whoever starts the extension: the command line's
+                // --program, the window's apps chosen by path.
+                programs: Vec::new(),
                 // A flow already going to tracewing goes on as it is.
                 own: [Some(addr), socks_at]
                     .into_iter()

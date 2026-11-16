@@ -128,7 +128,10 @@ fn start(provider: &TracewingProxy, done: &DynBlock<dyn Fn(*mut NSError)>) {
         done.call((Retained::as_ptr(&error) as *mut NSError,));
         return;
     };
-    info!("starting: port {}, apps {:?}", config.port, config.apps);
+    info!(
+        "starting: port {}, apps {:?}, programs {:?}",
+        config.port, config.apps, config.programs
+    );
     *CONFIG.lock().unwrap_or_else(|e| e.into_inner()) = Some(config);
 
     // Every outbound TCP flow is offered; `take` chooses.
@@ -198,11 +201,17 @@ fn take(flow: &NEAppProxyFlow) -> bool {
     let Ok(port) = unsafe { endpoint.port() }.to_string().parse::<u16>() else {
         return false;
     };
-    if !config.takes(&app, &ip, port) {
+    let pid = unsafe { meta.sourceAppAuditToken() }.and_then(|t| flow::pid_of(&t.to_vec()));
+    // Asked of the system only when a program is chosen by where it is.
+    let path = if config.by_path() {
+        pid.and_then(path_of)
+    } else {
+        None
+    };
+    if !config.takes(&app, path.as_deref(), &ip, port) {
         return false;
     }
 
-    let pid = unsafe { meta.sourceAppAuditToken() }.and_then(|t| flow::pid_of(&t.to_vec()));
     let name = unsafe { flow.remoteHostname() }.map(|n| n.to_string());
     let hello = flow::hello(name.as_deref(), &ip, port, &app, pid);
     // Handed over before macOS is answered, so that a flow tracewing does not
@@ -218,6 +227,29 @@ fn take(flow: &NEAppProxyFlow) -> bool {
     let flow = Flow(tcp.retain());
     thread::spawn(move || carry(flow, socket));
     true
+}
+
+unsafe extern "C" {
+    /// libproc's, in libSystem: the file a process runs, links followed.
+    fn proc_pidpath(pid: i32, buffer: *mut std::ffi::c_void, size: u32) -> i32;
+}
+
+/// The file process `pid` runs.
+fn path_of(pid: u32) -> Option<String> {
+    // PROC_PIDPATHINFO_MAXSIZE.
+    let mut buffer = vec![0u8; 4 * 1024];
+    let len = unsafe {
+        proc_pidpath(
+            i32::try_from(pid).ok()?,
+            buffer.as_mut_ptr().cast(),
+            buffer.len() as u32,
+        )
+    };
+    if len <= 0 {
+        return None;
+    }
+    buffer.truncate(len as usize);
+    String::from_utf8(buffer).ok()
 }
 
 /// Connects to tracewing's port, says the hello, and reads the answer: a line,
