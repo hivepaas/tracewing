@@ -1047,7 +1047,10 @@ impl Traffic {
                     )
                     .children(control),
             )
-            .children(trust_link)
+            // In a row of its own: a column stretches what is in it, and a
+            // button the width of the card reads as a banner rather than as
+            // something to press.
+            .children(trust_link.map(|button| div().flex().flex_row().child(button)))
             .children(instead.map(|(says, command)| {
                 div()
                     .flex()

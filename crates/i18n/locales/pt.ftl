@@ -2323,6 +2323,9 @@ t17abebbc = Verificar nesse terminal
 # And Java's own store
 t4398b845 = E o repositório próprio do Java
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = Depois inicie o seu programa com estas opções: o que ele enviar aparece em Tráfego.
+
 # the browsers' own stores
 tddf6836c = os repositórios próprios dos navegadores
 

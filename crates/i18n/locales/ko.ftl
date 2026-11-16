@@ -2194,6 +2194,9 @@ t17abebbc = 그 터미널에서 확인
 # And Java's own store
 t4398b845 = 그리고 Java 자체 저장소
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = 그런 다음 이 플래그를 붙여 프로그램을 실행하세요. 보낸 것이 트래픽에 나타납니다.
+
 # the browsers' own stores
 tddf6836c = 브라우저 자체 저장소
 

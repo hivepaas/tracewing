@@ -882,6 +882,7 @@ t4353a046 = What an image trusts is its own: some read the system's roots, some 
 t3b39a3f5 = Run this in that terminal. A certificate error means the terminal is not one tracewing opened.
 t17abebbc = Check it in that terminal
 t4398b845 = And Java's own store
+t9e2570bd = Then start your program with these flags: what it sends appears in Traffic.
 tddf6836c = the browsers' own stores
 tc5bba858 = Trusts the certificate.
 tf2a0b8c5 = Does not trust the certificate yet.

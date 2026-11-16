@@ -2194,6 +2194,9 @@ t17abebbc = Kiểm tra trong terminal đó
 # And Java's own store
 t4398b845 = Và kho riêng của Java
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = Rồi chạy chương trình của bạn với các cờ này: những gì nó gửi sẽ hiện ở Traffic.
+
 # the browsers' own stores
 tddf6836c = kho riêng của các trình duyệt
 

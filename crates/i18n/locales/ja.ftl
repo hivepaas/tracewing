@@ -2194,6 +2194,9 @@ t17abebbc = そのターミナルで確認する
 # And Java's own store
 t4398b845 = そして Java 独自のストア
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = そのうえで、このフラグを付けてプログラムを起動してください。送ったものが「トラフィック」に現れます。
+
 # the browsers' own stores
 tddf6836c = 各ブラウザー独自のストア
 

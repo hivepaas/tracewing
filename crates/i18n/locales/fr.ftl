@@ -2323,6 +2323,9 @@ t17abebbc = Vérifier dans ce terminal
 # And Java's own store
 t4398b845 = Et le magasin propre à Java
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = Lancez ensuite votre programme avec ces options : ce qu'il envoie apparaît dans Trafic.
+
 # the browsers' own stores
 tddf6836c = les magasins propres aux navigateurs
 

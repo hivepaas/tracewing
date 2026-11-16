@@ -2392,6 +2392,9 @@ t17abebbc = Проверить в том терминале
 # And Java's own store
 t4398b845 = И собственное хранилище Java
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = Затем запустите свою программу с этими флагами: то, что она отправит, появится в «Трафике».
+
 # the browsers' own stores
 tddf6836c = собственные хранилища браузеров
 

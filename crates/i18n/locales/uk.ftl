@@ -2392,6 +2392,9 @@ t17abebbc = Перевірити в тому терміналі
 # And Java's own store
 t4398b845 = І власне сховище Java
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = Потім запустіть свою програму з цими прапорцями: те, що вона надішле, з'явиться у «Трафіку».
+
 # the browsers' own stores
 tddf6836c = власні сховища браузерів
 

@@ -2308,6 +2308,9 @@ t17abebbc = In diesem Terminal prüfen
 # And Java's own store
 t4398b845 = Und Javas eigener Speicher
 
+# Then start your program with these flags: what it sends appears in Traffic.
+t9e2570bd = Starten Sie Ihr Programm dann mit diesen Flags: was es sendet, erscheint unter Traffic.
+
 # the browsers' own stores
 tddf6836c = die eigenen Speicher der Browser
 
