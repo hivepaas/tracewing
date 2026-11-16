@@ -438,6 +438,9 @@ fn asking_windows(command: std::process::Command) -> anyhow::Result<()> {
         Shell::{SEE_MASK_NOASYNC, SHELLEXECUTEINFOW, ShellExecuteExW},
         WindowsAndMessaging::SW_SHOWNORMAL,
     };
+    // `SW_SHOWNORMAL` is a plain `i32` here, not a newtype as the `windows`
+    // crate has it, so there is no `.0` to take. `quic_windows.rs` writes
+    // this field as a bare number for the same reason.
     if command.get_envs().next().is_some() {
         anyhow::bail!(
             "a child started as an administrator cannot be given variables through its \
@@ -457,7 +460,7 @@ fn asking_windows(command: std::process::Command) -> anyhow::Result<()> {
         lpFile: file.as_ptr(),
         lpParameters: rest.as_ptr(),
         lpDirectory: dir.as_ref().map_or(std::ptr::null(), |dir| dir.as_ptr()),
-        nShow: SW_SHOWNORMAL.0,
+        nShow: SW_SHOWNORMAL,
         ..unsafe { std::mem::zeroed() }
     };
     // SAFETY: a structure of the size it is told, whose strings outlive the
