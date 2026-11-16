@@ -441,7 +441,7 @@ fn anchor_path(dir: &str) -> PathBuf {
 }
 
 /// Runs a shell script as root: directly if we are, else through polkit's dialog.
-fn run_as_admin(script: &str) -> Result<()> {
+pub(crate) fn run_as_admin(script: &str) -> Result<()> {
     if run("id", &["-u"]).is_ok_and(|id| id == "0") {
         run("sh", &["-c", script])?;
     } else {

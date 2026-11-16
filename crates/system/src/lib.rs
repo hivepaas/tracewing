@@ -29,6 +29,13 @@ mod os;
 #[path = "windows.rs"]
 mod os;
 
+/// Linux only: the privileged step local mode's TUN adapter needs. Windows
+/// makes its adapter another way and macOS has no local mode at all, so this
+/// has no sibling to be one of.
+#[cfg(target_os = "linux")]
+#[path = "adapter_linux.rs"]
+pub mod adapter;
+
 #[cfg(target_os = "linux")]
 #[path = "quic_linux.rs"]
 mod quic;
