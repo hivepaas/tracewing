@@ -84,7 +84,9 @@ if [ -d "$EXTENSION" ]; then
 	[ -e "$APP/Contents/embedded.provisionprofile" ] || wrong "missing: Contents/embedded.provisionprofile"
 	said="$(plutil -extract CFBundleIdentifier raw -o - "$EXTENSION/Contents/Info.plist")"
 	[ "$said" = "com.hivepaas.tracewing.proxy" ] || wrong "the extension's id is $said"
-	said="$(plutil -extract CFBundleVersion raw -o - "$EXTENSION/Contents/Info.plist")"
+	# The short version: the build number is the version too, unless
+	# EXTENSION_BUILD gave a local build one of its own.
+	said="$(plutil -extract CFBundleShortVersionString raw -o - "$EXTENSION/Contents/Info.plist")"
 	[ "$said" = "$VERSION" ] || wrong "the extension says version $said, not $VERSION"
 	grep -q "^  objc2 " "$EXTENSION/Contents/Resources/THIRD-PARTY-LICENSES.txt" ||
 		wrong "no license for objc2 in the extension's THIRD-PARTY-LICENSES.txt"

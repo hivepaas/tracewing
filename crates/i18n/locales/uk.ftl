@@ -1093,6 +1093,9 @@ tb871bcf4 = Запропоновані інструменти: { $tools }
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing не відкрив порт для розширення.
 
+# Not there any more: {paths}. Remove it, or put it back.
+t77cc5956 = Більше немає на місці: { $paths }. Видаліть або поверніть на місце.
+
 # Add an app first: it is the apps you add that are taken.
 t755769ba = Спершу додайте застосунок: перехоплюються саме додані застосунки.
 
@@ -1129,11 +1132,17 @@ tcd03e04b = Вимкнути
 # Open System Settings
 td22799a3 = Відкрити Системні параметри
 
+# every program in {path}
+tfa65268c = будь-яка програма в { $path }
+
+# {path}, by where it is
+t346faa65 = { $path }, за розташуванням
+
 # Apps it takes
 t804bea32 = Застосунки, які перехоплюються
 
-# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
-t4a4185a4 = Поки немає. Додайте застосунок із Програм або програму на кшталт /usr/bin/curl; те, що всередині застосунку, — помічники, через які під'єднується браузер чи Electron-застосунок, — додається разом із ним.
+# None yet. Add an app from Applications, a program such as /usr/bin/curl, or a folder your builds go to; what is inside an app — the helpers a browser or an Electron app connects from — comes with it, and a program with no signing id of its own, such as what go build makes, is taken by where it is.
+te78c7fcc = Поки немає. Додайте застосунок із Програм, програму на кшталт /usr/bin/curl або теку, куди потрапляють ваші збірки; те, що всередині застосунку, — помічники, через які під'єднується браузер чи Electron-застосунок, — додається разом із ним, а програма без власного ідентифікатора підпису, як те, що збирає go build, перехоплюється за розташуванням.
 
 # Add an app…
 t98ea20ec = Додати застосунок…
@@ -2164,8 +2173,8 @@ tb457dd67 = Застосунки, що довіряють лише власни�
 # Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
 t30f507c6 = Усе, що вибраний застосунок надсилає через TCP, читає він налаштування проксі чи ні: браузер, Electron-застосунок, Node будь-якої версії, Java.
 
-# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
-t1a42de49 = UDP, тобто HTTP/3; з'єднання з цим самим комп'ютером, які macOS не передає; і програми без власного ідентифікатора підпису, як усе, що збирає go build.
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t767f449d = UDP, тобто HTTP/3; з'єднання з цим самим комп'ютером, які macOS не передає; і go run, який щоразу збирає програму в новому місці: додайте натомість теку, куди пише go build -o.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Відколи це ввімкнено, на порт проксі нічого не надійшло — ні через системний проксі, ні через браузер самого tracewing, ні через термінал: усі вони входять там. Програма, якій указали проксі і яка його нехтує, виглядає саме так.

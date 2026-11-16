@@ -20,6 +20,10 @@ pub mod keys {
     /// tracewing's other ports on this computer, its proxy port among them,
     /// separated by commas: a flow going to one of them goes on as it is.
     pub const OWN: &str = "own";
+    /// Programs taken by where they are rather than by a signing id, one
+    /// path per line: a program's file, or a folder ending in `/`, for every
+    /// program under it.
+    pub const PROGRAMS: &str = "programs";
 }
 
 /// Programs whose flows are never taken, whatever the configuration says:
@@ -34,6 +38,11 @@ pub struct Config {
     pub apps: Vec<String>,
     /// tracewing's other ports.
     pub own: Vec<u16>,
+    /// Programs by path, for those whose signing id is not their own: what
+    /// `go build` makes is `a.out`, every one of them, and what a linker
+    /// signs is named after its file and a hash that changes with each build.
+    /// A path ending in `/` is a folder, and takes every program under it.
+    pub programs: Vec<String>,
 }
 
 impl Config {
@@ -54,11 +63,21 @@ impl Config {
             .split(',')
             .filter_map(|p| p.trim().parse().ok())
             .collect();
+        let programs = saved(keys::PROGRAMS)
+            .unwrap_or_default()
+            .lines()
+            .map(str::trim)
+            // Only a whole path: a relative one names nothing a process runs
+            // from, and `/` alone would be every program there is.
+            .filter(|p| p.starts_with('/') && *p != "/")
+            .map(str::to_owned)
+            .collect();
         Some(Config {
             port,
             key,
             apps,
             own,
+            programs,
         })
     }
 
@@ -76,15 +95,34 @@ impl Config {
                     .collect::<Vec<_>>()
                     .join(","),
             ),
+            (keys::PROGRAMS, self.programs.join("\n")),
         ]
     }
 
+    /// Whether any program is taken by its path, which is then worth the
+    /// asking.
+    pub fn by_path(&self) -> bool {
+        !self.programs.is_empty()
+    }
+
     /// Whether a flow from `app` to `ip`, port `port`, goes to tracewing.
-    pub fn takes(&self, app: &str, ip: &str, port: u16) -> bool {
+    pub fn takes(&self, app: &str, path: Option<&str>, ip: &str, port: u16) -> bool {
         !NEVER.contains(&app)
-            && self.apps.iter().any(|a| a == app)
+            && (self.apps.iter().any(|a| a == app)
+                || path.is_some_and(|path| self.programs.iter().any(|p| is_within(p, path))))
             // What already goes to tracewing goes on as it is.
             && !(is_loopback(ip) && (port == self.port || self.own.contains(&port)))
+    }
+}
+
+/// Whether the program at `path` is the one `program` names, or under the
+/// folder it names.
+fn is_within(program: &str, path: &str) -> bool {
+    match program.strip_suffix('/') {
+        Some(folder) => path
+            .strip_prefix(folder)
+            .is_some_and(|rest| rest.starts_with('/')),
+        None => path == program,
     }
 }
 
@@ -138,6 +176,10 @@ mod tests {
             ("key", &key().to_hex()),
             ("apps", "com.apple.curl\n org.python.python \n\n"),
             ("own", "9090, 1080"),
+            (
+                "programs",
+                "/Users/me/dev/api/bin/\n/opt/tools/server\nrelative\n/\n",
+            ),
         ]))
         .unwrap()
     }
@@ -149,6 +191,11 @@ mod tests {
         assert_eq!(c.key, key());
         assert_eq!(c.apps, ["com.apple.curl", "org.python.python"]);
         assert_eq!(c.own, [9090, 1080]);
+        assert_eq!(
+            c.programs,
+            ["/Users/me/dev/api/bin/", "/opt/tools/server"],
+            "whole paths only, and never everything"
+        );
         let again: HashMap<&str, String> = c.to_saved().into_iter().collect();
         assert_eq!(Config::read(|k| again.get(k).cloned()), Some(c));
     }
@@ -164,7 +211,7 @@ mod tests {
             None
         );
         let bare = Config::read(saved(&[("port", "9"), ("key", &hex)])).unwrap();
-        assert!(bare.apps.is_empty() && bare.own.is_empty());
+        assert!(bare.apps.is_empty() && bare.own.is_empty() && bare.programs.is_empty());
         // tracewing itself is never named, whatever was saved.
         let named = Config::read(saved(&[
             ("port", "9"),
@@ -178,22 +225,60 @@ mod tests {
     #[test]
     fn only_the_apps_named_are_taken() {
         let c = config();
-        assert!(c.takes("com.apple.curl", "93.184.215.14", 443));
-        assert!(c.takes("org.python.python", "2606:4700::6810:85e5", 80));
-        assert!(!c.takes("com.apple.Safari", "93.184.215.14", 443));
-        assert!(!c.takes("", "93.184.215.14", 443));
+        assert!(c.takes("com.apple.curl", None, "93.184.215.14", 443));
+        assert!(c.takes("org.python.python", None, "2606:4700::6810:85e5", 80));
+        assert!(!c.takes("com.apple.Safari", None, "93.184.215.14", 443));
+        assert!(!c.takes("", None, "93.184.215.14", 443));
         // A server on this computer is taken; tracewing's own ports are not.
-        assert!(c.takes("com.apple.curl", "127.0.0.1", 8080));
-        assert!(!c.takes("com.apple.curl", "127.0.0.1", 20399));
-        assert!(!c.takes("com.apple.curl", "::1", 20399));
+        assert!(c.takes("com.apple.curl", None, "127.0.0.1", 8080));
+        assert!(!c.takes("com.apple.curl", None, "127.0.0.1", 20399));
+        assert!(!c.takes("com.apple.curl", None, "::1", 20399));
         assert!(
-            !c.takes("com.apple.curl", "127.0.0.1", 9090),
+            !c.takes("com.apple.curl", None, "127.0.0.1", 9090),
             "curl --proxy"
         );
         assert!(
-            c.takes("com.apple.curl", "93.184.215.14", 9090),
+            c.takes("com.apple.curl", None, "93.184.215.14", 9090),
             "elsewhere"
         );
+    }
+
+    #[test]
+    fn a_program_is_taken_by_where_it_is() {
+        let c = config();
+        // What go build makes: no id of its own, so its path decides.
+        assert!(c.takes("a.out", Some("/opt/tools/server"), "93.184.215.14", 443));
+        assert!(c.takes(
+            "a.out",
+            Some("/Users/me/dev/api/bin/api"),
+            "93.184.215.14",
+            443
+        ));
+        assert!(
+            c.takes(
+                "api-55554944",
+                Some("/Users/me/dev/api/bin/sub/tool"),
+                "1.2.3.4",
+                80
+            ),
+            "anywhere under the folder"
+        );
+        assert!(!c.takes("a.out", Some("/opt/tools/server2"), "93.184.215.14", 443));
+        assert!(
+            !c.takes(
+                "a.out",
+                Some("/Users/me/dev/api/binary"),
+                "93.184.215.14",
+                443
+            ),
+            "a folder is not a prefix of a name"
+        );
+        assert!(
+            !c.takes("a.out", None, "93.184.215.14", 443),
+            "no path, no program"
+        );
+        // And its own ports are still left alone.
+        assert!(!c.takes("a.out", Some("/opt/tools/server"), "127.0.0.1", 9090));
     }
 
     #[test]
@@ -202,8 +287,21 @@ mod tests {
             apps: vec!["com.hivepaas.tracewing".into(), EXTENSION_ID.into()],
             ..config()
         };
-        assert!(!c.takes("com.hivepaas.tracewing", "93.184.215.14", 443));
-        assert!(!c.takes(EXTENSION_ID, "93.184.215.14", 443));
+        assert!(!c.takes("com.hivepaas.tracewing", None, "93.184.215.14", 443));
+        let c = Config {
+            programs: vec!["/Applications/".into()],
+            ..config()
+        };
+        assert!(
+            !c.takes(
+                "com.hivepaas.tracewing",
+                Some("/Applications/tracewing.app/Contents/MacOS/tracewing"),
+                "93.184.215.14",
+                443
+            ),
+            "not by its path either"
+        );
+        assert!(!c.takes(EXTENSION_ID, None, "93.184.215.14", 443));
     }
 
     #[test]

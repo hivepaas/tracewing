@@ -3,8 +3,9 @@
 <!--
   The network extension's Info.plist (crates/netext), in
   tracewing.app/Contents/Library/SystemExtensions/: scripts/package_macos.sh
-  puts the version in. macOS replaces an installed extension by a newer
-  CFBundleVersion.
+  puts the version in. macOS replaces an installed extension only by one of
+  another CFBundleVersion: the version, or EXTENSION_BUILD for a build tried
+  locally.
 -->
 <plist version="1.0">
 <dict>
@@ -25,7 +26,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>@VERSION@</string>
 	<key>CFBundleVersion</key>
-	<string>@VERSION@</string>
+	<string>@BUILD@</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>NSHumanReadableCopyright</key>

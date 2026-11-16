@@ -1030,6 +1030,9 @@ tb871bcf4 = 提供的工具：{ $tools }
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing 沒有為延伸功能開啟連接埠。
 
+# Not there any more: {paths}. Remove it, or put it back.
+t77cc5956 = 已不在原處：{ $paths }。請移除，或放回原處。
+
 # Add an app first: it is the apps you add that are taken.
 t755769ba = 請先加入一個 App：擷取的是你加入的 App。
 
@@ -1066,11 +1069,17 @@ tcd03e04b = 關閉
 # Open System Settings
 td22799a3 = 打開系統設定
 
+# every program in {path}
+tfa65268c = { $path } 中的所有程式
+
+# {path}, by where it is
+t346faa65 = { $path }，依位置
+
 # Apps it takes
 t804bea32 = 擷取的 App
 
-# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
-t4a4185a4 = 還沒有。從「應用程式」加入一個 App，或加入 /usr/bin/curl 這樣的程式；App 裡面的內容——瀏覽器或 Electron App 用來連線的輔助程式——會一併加入。
+# None yet. Add an app from Applications, a program such as /usr/bin/curl, or a folder your builds go to; what is inside an app — the helpers a browser or an Electron app connects from — comes with it, and a program with no signing id of its own, such as what go build makes, is taken by where it is.
+te78c7fcc = 還沒有。從「應用程式」加入一個 App、/usr/bin/curl 這樣的程式，或你的建置輸出所在的資料夾；App 裡面的內容——瀏覽器或 Electron App 用來連線的輔助程式——會一併加入，而沒有自己簽署 ID 的程式（例如 go build 產生的程式）依其位置擷取。
 
 # Add an app…
 t98ea20ec = 加入 App…
@@ -1969,8 +1978,8 @@ tb457dd67 = 只信任自帶憑證的應用程式，以及在 tracewing 的 CA �
 # Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
 t30f507c6 = 所選 App 透過 TCP 送出的一切，不論它是否讀取代理伺服器設定：瀏覽器、Electron App、任何版本的 Node、Java。
 
-# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
-t1a42de49 = UDP，也就是 HTTP/3；連向這部電腦本身的連線，macOS 不會轉交；以及沒有自己簽署 ID 的程式，例如 go build 產生的所有程式。
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t767f449d = UDP，也就是 HTTP/3；連向這部電腦本身的連線，macOS 不會轉交；以及 go run，它每次都在新位置建置程式：請改為加入 go build -o 寫入的資料夾。
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = 自從開啟以來，代理連接埠上什麼都沒到過 — 系統代理、tracewing 自己的瀏覽器、終端機都從那裡進來，這三樣都沒有。一個被指定走代理卻忽略它的程式，看起來正是這樣。

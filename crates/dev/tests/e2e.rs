@@ -4250,6 +4250,12 @@ async fn a_flow_the_extension_hands_over_is_recorded_as_its_app() {
     use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
     let h = Harness::start("extension").await;
     let port = h.playground_port;
+    // The app: a process other than this one, which is the proxy, and
+    // tracewing turns its own process down.
+    let mut app = std::process::Command::new("sleep")
+        .arg("30")
+        .spawn()
+        .unwrap();
     let stream = tokio::net::TcpStream::connect(("127.0.0.1", h.extension_port))
         .await
         .unwrap();
@@ -4259,7 +4265,7 @@ async fn a_flow_the_extension_hands_over_is_recorded_as_its_app() {
         host: "localhost".to_owned(),
         port,
         app: "com.example.tool".to_owned(),
-        pid: Some(std::process::id()),
+        pid: Some(app.id()),
     };
     stream
         .write_all(&hello.write(&h.extension_key, nonce))
@@ -4294,14 +4300,21 @@ async fn a_flow_the_extension_hands_over_is_recorded_as_its_app() {
 
     let (summary, conn, dir) = h.finish(1).await;
     assert_eq!(summary.written, 1);
-    let (method, host, app, pid, req_bytes): (String, String, Option<String>, Option<i64>, i64) =
-        conn.query_row(
+    let (method, host, app_name, pid, req_bytes): (
+        String,
+        String,
+        Option<String>,
+        Option<i64>,
+        i64,
+    ) = conn
+        .query_row(
             "SELECT method, host, app, app_pid, req_bytes FROM flows",
             [],
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
         )
         .unwrap();
-    let me = std::env::current_exe().unwrap();
+    let _ = app.kill();
+    let _ = app.wait();
     assert_eq!(method, "POST");
     assert_eq!(
         host,
@@ -4309,11 +4322,11 @@ async fn a_flow_the_extension_hands_over_is_recorded_as_its_app() {
         "named as the extension said"
     );
     assert_eq!(
-        app,
-        tracewing_store::app::name_of(&me.to_string_lossy()),
-        "the program of the process the extension named, this test"
+        app_name.as_deref(),
+        Some("sleep"),
+        "the program of the process the extension named"
     );
-    assert_eq!(pid, Some(i64::from(std::process::id())));
+    assert_eq!(pid, Some(i64::from(app.id())));
     assert_eq!(req_bytes, body.len() as i64);
     clean_up(conn, dir);
 }
@@ -4327,12 +4340,12 @@ async fn a_hand_off_without_the_key_is_turned_down() {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     let h = Harness::start("extension-refused").await;
     let proxy_port: u16 = h.proxy_url.rsplit(':').next().unwrap().parse().unwrap();
-    let turned_down = |key: tracewing_handoff::Key, host: &str, port: u16| {
+    let turned_down = |key: tracewing_handoff::Key, host: &str, port: u16, pid: Option<u32>| {
         let hello = tracewing_handoff::Hello {
             host: host.to_owned(),
             port,
             app: "com.apple.Safari".to_owned(),
-            pid: None,
+            pid,
         };
         let at = h.extension_port;
         async move {
@@ -4354,10 +4367,21 @@ async fn a_hand_off_without_the_key_is_turned_down() {
         tracewing_handoff::Key::new().unwrap(),
         "localhost",
         h.playground_port,
+        None,
     )
     .await;
     assert_eq!(answer, "NO the proof is not tracewing's key\r\n");
-    let answer = turned_down(h.extension_key.clone(), "127.0.0.1", proxy_port).await;
+    let answer = turned_down(h.extension_key.clone(), "127.0.0.1", proxy_port, None).await;
+    assert!(answer.starts_with("NO "), "{answer}");
+    // tracewing's own connection out, as a build of its own in a folder
+    // chosen by path would hand it over: this process is the proxy.
+    let answer = turned_down(
+        h.extension_key.clone(),
+        "localhost",
+        h.playground_port,
+        Some(std::process::id()),
+    )
+    .await;
     assert!(answer.starts_with("NO "), "{answer}");
 
     let (summary, conn, dir) = h.finish(0).await;

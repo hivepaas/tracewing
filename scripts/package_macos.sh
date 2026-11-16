@@ -38,6 +38,11 @@
 #   MACOS_PROFILE_APP           the "tracewing Developer ID" profile
 #   MACOS_PROFILE_PROXY         the "tracewing proxy Developer ID" profile
 #   PROXY_BIN                   default target/release/tracewing-netext
+#   EXTENSION_BUILD             the extension's CFBundleVersion, default the
+#                               version. macOS replaces an installed extension
+#                               only by one of another CFBundleVersion, so a
+#                               build tried on one Mac after another gives
+#                               each its own: EXTENSION_BUILD=0.1.$(date +%s)
 
 set -euo pipefail
 
@@ -100,7 +105,8 @@ if [ -n "$IDENTITY" ] && [ -n "$PROFILE_APP" ] && [ -n "$PROFILE_PROXY" ]; then
 	mkdir -p "$EXTENSION/Contents/MacOS" "$EXTENSION/Contents/Resources"
 	cp "$PROXY_BIN" "$EXTENSION/Contents/MacOS/com.hivepaas.tracewing.proxy"
 	strip -x "$EXTENSION/Contents/MacOS/com.hivepaas.tracewing.proxy"
-	sed "s/@VERSION@/$VERSION/g" packaging/macos/proxy-Info.plist >"$EXTENSION/Contents/Info.plist"
+	sed -e "s/@BUILD@/${EXTENSION_BUILD:-$VERSION}/g" -e "s/@VERSION@/$VERSION/g" \
+		packaging/macos/proxy-Info.plist >"$EXTENSION/Contents/Info.plist"
 	plutil -lint "$EXTENSION/Contents/Info.plist"
 	cargo about generate --locked --fail -c about.toml -m crates/netext/Cargo.toml \
 		--target "$TARGET" -o "$EXTENSION/Contents/Resources/THIRD-PARTY-LICENSES.txt" packaging/licenses.hbs

@@ -27,7 +27,9 @@ mod os;
 #[path = "extension/program.rs"]
 mod program;
 
-pub use program::{Program, code_within, identifier_in, program_at};
+pub use program::{
+    Program, Signed, code_within, identifier_in, program_at, program_rule, signed_in,
+};
 
 use anyhow::Result;
 pub use tracewing_handoff::Key;
@@ -197,6 +199,7 @@ mod tests {
             key: Key::from_bytes([0; 32]),
             apps: vec!["curl".into()],
             own: vec![],
+            programs: vec![],
         };
         assert!(start(&config).unwrap_err().to_string().contains("macOS"));
         assert_eq!(serve_main_thread_while(|| 7), 7);

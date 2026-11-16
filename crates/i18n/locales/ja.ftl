@@ -1030,6 +1030,9 @@ tb871bcf4 = 提供されたツール: { $tools }
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing は拡張機能用のポートを開いていません。
 
+# Not there any more: {paths}. Remove it, or put it back.
+t77cc5956 = もうありません: { $paths }。削除するか、元の場所に戻してください。
+
 # Add an app first: it is the apps you add that are taken.
 t755769ba = 先にアプリを追加してください: 取り込まれるのは追加したアプリです。
 
@@ -1066,11 +1069,17 @@ tcd03e04b = オフにする
 # Open System Settings
 td22799a3 = システム設定を開く
 
+# every program in {path}
+tfa65268c = { $path } 内のすべてのプログラム
+
+# {path}, by where it is
+t346faa65 = { $path } (場所で判断)
+
 # Apps it takes
 t804bea32 = 取り込むアプリ
 
-# None yet. Add an app from Applications, or a program such as /usr/bin/curl; what is inside an app — the helpers a browser or an Electron app connects from — comes with it.
-t4a4185a4 = まだありません。アプリケーションからアプリを、または /usr/bin/curl のようなプログラムを追加してください。アプリの中身 — ブラウザや Electron アプリが接続に使うヘルパー — も一緒に追加されます。
+# None yet. Add an app from Applications, a program such as /usr/bin/curl, or a folder your builds go to; what is inside an app — the helpers a browser or an Electron app connects from — comes with it, and a program with no signing id of its own, such as what go build makes, is taken by where it is.
+te78c7fcc = まだありません。アプリケーションからアプリを、/usr/bin/curl のようなプログラムを、またはビルドの出力先フォルダを追加してください。アプリの中身 — ブラウザや Electron アプリが接続に使うヘルパー — も一緒に追加され、go build で作ったもののように独自の署名 ID を持たないプログラムは、その場所で取り込まれます。
 
 # Add an app…
 t98ea20ec = アプリを追加…
@@ -1969,8 +1978,8 @@ tb457dd67 = 自分の証明書しか信頼しないアプリ、および tracewi
 # Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java.
 t30f507c6 = 選んだアプリが TCP で送るものすべて。プロキシ設定を読むかどうかは問いません: ブラウザ、Electron アプリ、どのバージョンの Node も、Java も。
 
-# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and programs carrying no signing id of their own, such as everything go build makes.
-t1a42de49 = UDP、つまり HTTP/3。このコンピュータ自身への接続 (macOS が渡さないため)。独自の署名 ID を持たないプログラム (go build で作ったものすべてなど)。
+# UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t767f449d = UDP、つまり HTTP/3。このコンピュータ自身への接続 (macOS が渡さないため)。go run (毎回別の場所にプログラムをビルドするため): 代わりに go build -o の出力先フォルダを追加してください。
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = オンにしてから、プロキシのポートには何も届いていません。システムプロキシ、tracewing 専用のブラウザー、ターミナルはどれもそこへ入ってきますが、そのいずれからも届いていません。プロキシを使うよう指定したのに無視するプログラムは、まさにこう見えます。
