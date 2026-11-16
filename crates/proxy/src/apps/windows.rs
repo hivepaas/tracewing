@@ -8,7 +8,7 @@
 //! identifies a TCP connection anyway, and what a source of packets has in
 //! hand. See [`Look`].
 
-use crate::apps::{Look, canonical};
+use crate::apps::Look;
 use std::{
     collections::HashMap,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -64,10 +64,10 @@ pub fn owners(looks: &[Look], ours: &[u16], _recent: &[u32]) -> Vec<Option<u32>>
     looks
         .iter()
         .map(|look| {
-            let client = canonical(look.client);
+            let look = look.plain();
             match look.to {
-                Some(to) => whole.get(&(client, canonical(to))).copied(),
-                None => to_ours.get(&client).copied(),
+                Some(to) => whole.get(&(look.client, to)).copied(),
+                None => to_ours.get(&look.client).copied(),
             }
         })
         .collect()
