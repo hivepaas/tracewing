@@ -2206,6 +2206,9 @@ te4e36f65 = 打开测试页面
 # Open a terminal
 t4b629c72 = 打开终端
 
+# What the device does
+t8f16360f = 设备那边要做的事
+
 # Set up
 t43c06abc = 配置
 
@@ -2236,8 +2239,8 @@ tab552f0c = 这由终端负责：在它里面启动的东西从一个文件读�
 # Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
 t5951384c = Java 自带一个证书库，既不读系统的，也不读环境变量。tracewing 已经在自己的文件夹里给它写了一个，下面的参数把 JVM 指向那里：你的东西一点都没动，创建它也不需要 JDK。
 
-# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
-t38958f05 = tracewing 的证书得由手机自己装 — 下面的指南按设备类型说明怎么做。
+# The phone has to install tracewing's certificate itself. The guide for each kind of device is in Other devices, below, once that is on.
+t543988da = tracewing 的证书得由手机自己装。各类设备的指南在下面的"其他设备"里，把它打开后就会出现。
 
 # What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
 t4353a046 = 一个镜像信任什么是它自己的事：有的读系统根证书，有的自带，从这里 tracewing 看不出是哪一种。

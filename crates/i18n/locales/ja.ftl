@@ -2206,6 +2206,9 @@ te4e36f65 = テストページを開く
 # Open a terminal
 t4b629c72 = ターミナルを開く
 
+# What the device does
+t8f16360f = 端末の側ですること
+
 # Set up
 t43c06abc = セットアップ
 
@@ -2236,8 +2239,8 @@ tab552f0c = これはターミナルが行います。その中で起動した�
 # Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
 t5951384c = Java は独自の証明書ストアを持ち、システムのものも環境変数も読みません。tracewing が自分のフォルダーにストアを書き出しました。下のフラグが JVM をそこへ向けます。あなたのものには何も触れず、作成に JDK も要りません。
 
-# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
-t38958f05 = tracewing の証明書はスマートフォン自身に入れてもらう必要があります。端末の種類ごとの手順は下のガイドにあります。
+# The phone has to install tracewing's certificate itself. The guide for each kind of device is in Other devices, below, once that is on.
+t543988da = tracewing の証明書はスマートフォン自身に入れてもらいます。端末の種類ごとの手順は、下の「他のデバイス」をオンにすると、そこに出ます。
 
 # What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
 t4353a046 = イメージが何を信頼するかはそのイメージ次第です。システムのルート証明書を読むものもあれば、独自に持つものもあり、ここからはどちらか分かりません。

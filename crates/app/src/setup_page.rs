@@ -458,8 +458,13 @@ impl Traffic {
                 // A phone's steps are inside the guide for its kind of
                 // device, and numbering them twice would have two step 1s on
                 // one page.
+                // A phone's steps are inside the guide for its kind of
+                // device, so there is nothing to number — but the line
+                // saying what the phone itself has to do belongs in a card
+                // like everything else on the page, not loose on the
+                // background between two of them.
                 Way::OtherDevices | Way::WireGuard => {
-                    steps.push(marked(trust_says, Mark::Missing).into_any_element());
+                    steps.push(aside(tr!("What the device does"), trust_says).into_any_element());
                 }
                 Way::Apps => {
                     steps.push(ca_step.into_any_element());
@@ -485,7 +490,6 @@ impl Traffic {
                 }
             }
         }
-        let answered = route.is_some();
         div()
             .id("setup")
             .flex_1()
@@ -527,7 +531,18 @@ impl Traffic {
             .child(self.render_question(cx))
             .children(steps)
             .children(cards)
-            .when(answered, |d| d.child(self.render_when_done(cx)))
+            // Only where something on this computer, or on a device, was
+            // changed and will have to go back. A terminal changes none of
+            // it: what that card describes — the system proxy, the HTTP/3
+            // block, a certificate removed in "step 1" — is not on this
+            // answer's page at all, and the step it names does not exist
+            // here, since a terminal brings its own trust.
+            .when(
+                route.as_ref().is_some_and(|route| {
+                    !matches!(route.way, Way::Terminal | Way::Browser)
+                }),
+                |d| d.child(self.render_when_done(cx)),
+            )
     }
 
     /// What somebody said they want to capture, which is the whole of what
@@ -625,9 +640,12 @@ impl Traffic {
                 true,
             ),
             wizard::Trust::ThePhone => (
+                // Not "the guides below": they are inside Other devices and
+                // that card shows nothing but a switch until it is on, which
+                // is how a first run finds it.
                 tr!(
-                    "The phone has to install tracewing's certificate itself — the guides below \
-                     say how for each kind of device."
+                    "The phone has to install tracewing's certificate itself. The guide for each \
+                     kind of device is in Other devices, below, once that is on."
                 ),
                 false,
             ),

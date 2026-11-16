@@ -2321,6 +2321,9 @@ te4e36f65 = Testseite öffnen
 # Open a terminal
 t4b629c72 = Terminal öffnen
 
+# What the device does
+t8f16360f = Was das Gerät selbst tut
+
 # Set up
 t43c06abc = Einrichten
 
@@ -2351,8 +2354,8 @@ tab552f0c = Das Terminal setzt es: was darin startet, liest tracewings Wurzelzer
 # Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
 t5951384c = Java hält einen eigenen Zertifikatsspeicher und liest weder den des Systems noch die Variablen. tracewing hat ihm einen geschrieben, im eigenen Ordner, und die Flags unten verweisen eine JVM darauf: nichts von Ihnen wird angetastet, und für das Erstellen ist kein JDK nötig.
 
-# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
-t38958f05 = Das Smartphone muss tracewings Zertifikat selbst installieren — die Anleitungen unten sagen, wie das je Gerät geht.
+# The phone has to install tracewing's certificate itself. The guide for each kind of device is in Other devices, below, once that is on.
+t543988da = Das Smartphone muss tracewings Zertifikat selbst installieren. Die Anleitung für jede Geräteart steht unten unter „Andere Geräte“, sobald das eingeschaltet ist.
 
 # What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
 t4353a046 = Was ein Image vertraut, ist seine Sache: manche lesen die Wurzelzertifikate des Systems, manche bringen eigene mit, und von hier aus kann tracewing nicht erkennen, welches davon.

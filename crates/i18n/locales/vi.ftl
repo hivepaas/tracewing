@@ -2206,6 +2206,9 @@ te4e36f65 = Mở trang kiểm tra
 # Open a terminal
 t4b629c72 = Mở terminal
 
+# What the device does
+t8f16360f = Thiết bị phải tự làm gì
+
 # Set up
 t43c06abc = Thiết lập
 
@@ -2236,8 +2239,8 @@ tab552f0c = Terminal tự đặt: những gì chạy trong đó đọc các CA g
 # Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
 t5951384c = Java giữ một kho CA riêng và không đọc cả kho của hệ thống lẫn các biến môi trường. tracewing đã ghi cho nó một kho, trong thư mục của chính tracewing, và các cờ bên dưới trỏ JVM tới đó: không có gì của bạn bị đụng tới, và cũng không cần JDK để tạo ra nó.
 
-# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
-t38958f05 = Điện thoại phải tự cài chứng chỉ của tracewing — các hướng dẫn bên dưới nói cách làm cho từng loại thiết bị.
+# The phone has to install tracewing's certificate itself. The guide for each kind of device is in Other devices, below, once that is on.
+t543988da = Điện thoại phải tự cài chứng chỉ của tracewing. Hướng dẫn cho từng loại thiết bị nằm ở mục Thiết bị khác bên dưới, sau khi mục đó được bật.
 
 # What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
 t4353a046 = Một image tin gì là việc của nó: có image đọc CA gốc của hệ thống, có image mang kho riêng, và từ đây tracewing không biết được là loại nào.

@@ -2407,6 +2407,9 @@ te4e36f65 = Відкрити тестову сторінку
 # Open a terminal
 t4b629c72 = Відкрити термінал
 
+# What the device does
+t8f16360f = Що робить сам пристрій
+
 # Set up
 t43c06abc = Підготовка
 
@@ -2437,8 +2440,8 @@ tab552f0c = Це робить термінал: те, що в ньому зап�
 # Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
 t5951384c = Java тримає власне сховище сертифікатів і не читає ні системного, ні змінних. tracewing записав йому своє, у власній теці, а прапорці нижче спрямовують на нього JVM: нічого вашого не зачеплено, і для створення не потрібен JDK.
 
-# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
-t38958f05 = Сертифікат tracewing телефон має встановити сам — посібники нижче кажуть, як це робиться для кожного виду пристроїв.
+# The phone has to install tracewing's certificate itself. The guide for each kind of device is in Other devices, below, once that is on.
+t543988da = Сертифікат tracewing телефон має встановити сам. Посібник для кожного виду пристроїв — нижче, в «Інших пристроях», після того як їх увімкнено.
 
 # What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
 t4353a046 = Чому довіряє образ — його справа: одні читають системні кореневі сертифікати, інші несуть власні, і звідси tracewing не може дізнатися, які саме.
