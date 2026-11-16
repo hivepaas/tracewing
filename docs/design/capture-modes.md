@@ -661,13 +661,85 @@ the mode.
 
 ### Local mode, Linux
 
-A root helper that loads a `BPF_PROG_TYPE_CGROUP_SOCK` program, keeps the list
-of process names to catch in a BPF map, and sends sockets that match to a TUN
-device; packets from there go through our TCP stack. Lowest priority of the
-three: it needs kernel 6.8, which is past the glibc 2.35 floor the `.deb` aims
-at, it only catches outbound connections, process names match on 16 characters,
-containers need `--network host`, and WSL cannot do it at all — while Linux
-developers are the ones most at home with `tracewing env` anyway.
+**It starts somewhere else now.** The plan written here was a root helper
+loading a `BPF_PROG_TYPE_CGROUP_SOCK` program, keeping process names in a BPF
+map and sending the sockets that match to a TUN device. That was written
+before the Windows work, and the Windows work built everything above the
+device: the pump ([`tun.rs`](../../crates/proxy/src/tun.rs)), the stack, and
+the sieve that decides at the `SYN` which connections are kept and splices the
+rest. All of it is platform-independent. So the Linux mode is an
+`impl Device` over `/dev/net/tun` and the setting up around it, not an eBPF
+program — and it shares the deciding with Windows rather than doing it a
+second way in the kernel.
+
+The eBPF plan's objections stand against the eBPF plan: kernel 6.8, past the
+glibc 2.35 floor the `.deb` aims at, outbound connections only, process names
+matching on 16 characters, containers needing `--network host`, WSL unable to
+do it at all. None of them is an objection to a TUN device.
+
+**What is in:** [`tun_linux.rs`](../../crates/proxy/src/tun_linux.rs) — the
+device, its four methods, and an `eventfd` beside the descriptor so that
+`shutdown` ends a read that is waiting on a quiet machine. Three tests that
+need no privilege and one that needs a device, which is `#[ignore]`d and
+documented like the Wintun one.
+
+#### What a Linux machine said, and the Windows answer it is not
+
+Measured on 2026-11-16 with a control in the same transcript, because a step
+that succeeds is the one nobody re-reads:
+
+| What | Privilege | What happened |
+|---|---|---|
+| create a new TUN | none | `EPERM` |
+| `ip tuntap add dev … mode tun user <uid>` | root | `tun persist user 1000` |
+| `TUNSETIFF` on **that** device | **none** | **opened** |
+| `TUNSETIFF` on a *different* name | none | `EPERM` again |
+| `ip addr add`, `ip link set up` | none | not permitted, exit 2 |
+
+The fourth row is what makes the first three mean anything: the open succeeds
+because the device was created persistent and owned, not because the process
+had gained something.
+
+So **the pump stays in tracewing, unelevated**, and only the setting up needs
+privilege — create the device owned by this user, give it an address, bring it
+up, route into it. Windows could not have that: there, opening an adapter
+needs an administrator too, so the pump itself has to be elevated.
+
+**The carrier follows whoever holds the device open.** With the address and
+route in place, an unprivileged process holding the descriptor takes the link
+`UP` and the route live. When that process goes the link reads
+`<NO-CARRIER,…,UP>` — the administrative flag `ip link set up` wrote stays,
+and the **carrier** drops — and the route reads `linkdown`, so nothing is
+routed into a device nobody is reading.
+
+**Measured for a hard kill as well, not only a clean exit.** `SIGKILL` to the
+holder leaves exactly that state: the kernel closes the descriptor whatever
+killed the process. So the capture ends when tracewing ends, however it ends,
+with nothing to undo — the piece that is dangerous to get wrong on Windows,
+where the equivalent is so far measured only for a graceful close.
+
+**A device takes one holder.** A second `TUNSETIFF` on a device somebody has
+answers `EBUSY`; the live tests found it by running in parallel on one device.
+The error for that case says so rather than telling somebody to create a
+device that already exists, and a tracewing that crashed leaves nothing to
+clean up, since the kernel closes the descriptor while the device, being
+persistent, waits for the next run.
+
+#### What is not in, and nothing captures until it is
+
+The address, the route, and the exclusion that keeps tracewing's own
+connections out of the adapter — the same three Windows is missing, and the
+third is the dangerous one for the same reason: without it every connection
+tracewing makes on a captured program's behalf is routed back into the
+adapter. Linux's answer to it is `SO_BINDTODEVICE` or a `fwmark` rule rather
+than `IP_UNICAST_IF`, and nothing in the tree does either yet
+(`upstream::leave_by` is `#[cfg(windows)]` throughout).
+
+Addressing and routing go through netlink, which is a dependency this
+workspace does not have; shelling out to `ip` is the same trade `wintun.rs`
+turned down with `netsh` and should be turned down here for the same reason.
+Who creates the device, and when, is also open: a privileged step at install
+time, or one asked for the first time somebody switches the mode on.
 
 ### WireGuard
 
