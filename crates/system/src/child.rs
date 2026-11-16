@@ -329,12 +329,22 @@ fn as_the_shell(command: std::process::Command) -> anyhow::Result<()> {
     // SAFETY: a window handle that is only compared, and the ids it fills in.
     let shell = unsafe { GetShellWindow() };
     if shell.is_null() {
-        // No shell is running -- a kiosk, a server session, an explorer that
-        // died. There is no token to borrow, and the one thing this must not
-        // do is start the child elevated anyway: that is the fault being
-        // avoided, and it would be invisible.
+        // **In this session**, which is the part worth saying. `GetShellWindow`
+        // answers per session, and that was measured rather than read: over
+        // SSH on the test machine this process sits in session 0 while
+        // `explorer` runs in session 1, and the call returns zero although a
+        // shell is plainly running. An error saying "no shell is running"
+        // would have been true about the wrong thing -- the shell is there,
+        // it is not ours to reach.
+        //
+        // tracewing in use runs in the person's own session, so this is the
+        // path for the cases where it does not: a service, a scheduled task,
+        // a remote session, a machine with no shell at all. And the one thing
+        // it must not do is start the child elevated anyway -- that is the
+        // fault being avoided, and it would be invisible.
         anyhow::bail!(
-            "no desktop shell is running, so there is no ordinary level to start this at"
+            "no desktop shell in this session, so there is no ordinary level to borrow; \
+             tracewing has to be running in the session it is starting a program for"
         );
     }
     let mut pid = 0u32;
@@ -592,6 +602,90 @@ mod tests {
         assert_eq!(environment([], []), vec![0u16]);
         let one = environment([("A".to_owned(), "b".to_owned())], []);
         assert_eq!(one, vec!['A' as u16, '=' as u16, 'b' as u16, 0, 0]);
+    }
+
+    /// The one claim nothing else can check: that a child started at the
+    /// person's own level really **is** at it, and that the same command
+    /// started as an administrator really is not.
+    ///
+    /// Ignored, as the Wintun tests are, because it needs an **elevated
+    /// process in an interactive session** and no ordinary run has one. Over
+    /// SSH it cannot work at all: that lands in session 0 while the shell
+    /// runs in session 1, and `GetShellWindow` answers per session -- which
+    /// is measured in the comment beside that call. On a machine with a
+    /// desktop, run it from an elevated prompt:
+    ///
+    /// ```text
+    /// cargo test -p tracewing-system --release child -- --ignored --nocapture
+    /// ```
+    ///
+    /// The integrity level is the signal rather than `IsInRole`, because it
+    /// is what the access checks actually use: `S-1-16-8192` is medium, which
+    /// is what a program started by double-clicking runs at, and
+    /// `S-1-16-12288` is high, which is what elevation gives.
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "needs an elevated process in an interactive session"]
+    fn a_child_starts_at_the_level_it_was_asked_for() {
+        assert!(
+            elevated(),
+            "this has to be run from an elevated process, or there is nothing to lower from"
+        );
+        // Both halves in one run: the same command at both levels, so a pass
+        // cannot be a child that came up the same way twice.
+        let their_own = token_of(Level::TheirOwn);
+        let administrator = token_of(Level::Administrator);
+        println!("at their own level: {their_own}");
+        println!("as an administrator: {administrator}");
+        assert!(
+            their_own.contains("S-1-16-8192"),
+            "a child at the person's own level runs at medium integrity"
+        );
+        assert!(
+            !their_own.contains("S-1-16-12288"),
+            "and not at high, which would mean the elevation was handed down"
+        );
+        assert!(
+            administrator.contains("S-1-16-12288"),
+            "while the same command as an administrator runs at high"
+        );
+    }
+
+    /// Starts `cmd` at `want`, has it write its own groups to a file, and
+    /// gives back what it wrote.
+    #[cfg(windows)]
+    fn token_of(want: Level) -> String {
+        let out = std::env::temp_dir().join(format!(
+            "tracewing-level-{:?}-{}.txt",
+            want,
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&out);
+        let mut command = std::process::Command::new("cmd");
+        command.args([
+            "/c".to_owned(),
+            format!("whoami /groups > \"{}\"", out.display()),
+        ]);
+        start(command, want).expect("start the child");
+        let deadline = Instant::now() + Duration::from_secs(20);
+        loop {
+            if let Ok(text) = std::fs::read_to_string(&out)
+                && text.contains("S-1-16-")
+            {
+                let _ = std::fs::remove_file(&out);
+                return text
+                    .lines()
+                    .filter(|line| line.contains("S-1-16-") || line.contains("S-1-5-32-544"))
+                    .collect::<Vec<_>>()
+                    .join(" | ");
+            }
+            assert!(
+                Instant::now() < deadline,
+                "the child never wrote its groups to {}",
+                out.display()
+            );
+            std::thread::sleep(Duration::from_millis(100));
+        }
     }
 
     /// `CommandLineToArgvW`'s rules, applied here so that the quoting above
