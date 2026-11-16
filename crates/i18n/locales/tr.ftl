@@ -693,6 +693,21 @@ t9b63eb05 = Uygulama, tracewing'in sertifikasından hemen sonra hiçbir şey ist
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = Bir uygulama bu host'la başarısız oluyorsa, sertifika sabitleme (pinning) yapıyor olabilir.
 
+# This browser trusts tracewing's CA now. If it still turns the certificate down, restart it and try again. If it goes on, the host pins its own certificate, and is better not decrypted.
+tb9d9703b = Bu tarayıcı artık tracewing'in CA'sına güveniyor. Sertifikayı hâlâ reddediyorsa tarayıcıyı yeniden başlatıp tekrar deneyin. Devam ederse host kendi sertifikasını sabitliyordur (pinning) ve şifresini çözmemek daha iyidir.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Linux'ta tarayıcılara sertifikaya güvenmelerini söylemek için certutil gerekir. Onu yükleyin, sonra burada Yükle'ye basın:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Linux'ta tarayıcılara sertifikaya güvenmelerini söylemek için certutil gerekir. Dağıtımınızın NSS araçlarını yükleyin, sonra burada Yükle'ye basın.
+
+# Installing. The system may ask you to confirm.
+ta41c38ec = Yükleniyor. Sistem onaylamanızı isteyebilir.
+
+# Install
+tb50cbd40 = Yükle
+
 # Make a rule
 t0ac0e062 = Kural oluştur
 
@@ -2243,9 +2258,6 @@ tc8ccf306 = Cihazda Wi-Fi proxy'sini { $addr } olarak ayarlayın. Sonra orada ht
 # Looking for it…
 t50ee7452 = Aranıyor…
 
-# Installing. The system may ask you to confirm.
-ta41c38ec = Yükleniyor. Sistem onaylamanızı isteyebilir.
-
 # Removing. The system may ask you to confirm.
 t62b22726 = Kaldırılıyor. Sistem onay isteyebilir.
 
@@ -2264,20 +2276,11 @@ tafd8dae2 = tracewing HTTPS'i yalnızca bu bilgisayar için üretilmiş bir sert
 # Trust the certificate
 t26618699 = Sertifikaya güven
 
-# Install
-tb50cbd40 = Yükle
-
 # Also for command-line tools
 t0db8faea = Komut satırı araçları için de
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = Sertifika bu bilgisayardaki tüm depolardan kaldırılsın mı? Yeniden yüklenene kadar tracewing üzerinden HTTPS başarısız olur. tracewing sertifikayı daha sonra yeniden yüklemek için saklar.
-
-# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
-t76cf4bfa = Linux'ta tarayıcılara sertifikaya güvenmelerini söylemek için certutil gerekir. Onu yükleyin, sonra burada Yükle'ye basın:
-
-# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
-td2606dbb = Linux'ta tarayıcılara sertifikaya güvenmelerini söylemek için certutil gerekir. Dağıtımınızın NSS araçlarını yükleyin, sonra burada Yükle'ye basın.
 
 # This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
 tb13a87e6 = Bu masaüstünde tracewing'in değiştirebileceği bir sistem proxy ayarı yok. Aşağıda Tarayıcılar'dan bir tarayıcıyı ayrı açın ya da bir terminal açın.

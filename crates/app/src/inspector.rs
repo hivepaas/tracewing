@@ -1,6 +1,7 @@
 //! The inspector: one flow, in full. Bodies are unpacked to a file on a background
 //! thread and mapped from there, so a body of any size opens without a pause.
 
+use crate::system::BrowserFix;
 use crate::text_size::ui;
 use crate::{
     body::Body,
@@ -1020,15 +1021,34 @@ impl Traffic {
         };
         // Where this program looks for authorities, when it is known which
         // program it is, and the answer of Set up's wizard that deals with it.
-        let fix = turned_down.and_then(|_| {
-            crate::wizard::fix_for(
-                detail.app.as_deref().or(detail.app_path.as_deref()),
-                device_of(&detail.client).is_some(),
-            )
-        });
-        let says = fix.as_ref().map(|fix| fix.says.clone());
+        let program = detail.app.as_deref().or(detail.app_path.as_deref());
+        let fix = turned_down
+            .and_then(|_| crate::wizard::fix_for(program, device_of(&detail.client).is_some()));
+        // A browser on this computer: what it lacks is put right from here,
+        // with the same Install as Set up's.
+        let browser = fix
+            .as_ref()
+            .filter(|fix| fix.target == crate::wizard::Target::Website)
+            .map(|_| self.browser_fix(program.is_some_and(crate::wizard::is_firefox)));
+        let says = match &browser {
+            Some(BrowserFix::Trusted) => Some(tr!(
+                "This browser trusts tracewing's CA now. If it still turns the certificate down, restart it and try again. If it goes on, the host pins its own certificate, and is better not decrypted."
+            )),
+            _ => fix.as_ref().map(|fix| fix.says.clone()),
+        };
+        let certutil = match &browser {
+            Some(BrowserFix::NeedsCertutil(command)) => Some(*command),
+            _ => None,
+        };
+        let offer_install = matches!(
+            browser,
+            Some(BrowserFix::Install | BrowserFix::NeedsCertutil(_))
+        );
+        let installing = browser == Some(BrowserFix::Installing);
         let target = fix.map(|fix| fix.target);
-        let (ground, ink) = if turned_down.is_some() {
+        // The way out that stands out: installing, when that is what is
+        // missing, and otherwise not decrypting.
+        let (ground, ink) = if turned_down.is_some() && !offer_install {
             (c.accent, c.on_accent)
         } else {
             (c.chip, c.on_chip)
@@ -1070,6 +1090,53 @@ impl Traffic {
                         .child(text.clone())
                         .children(says.map(|says| {
                             div().id("trust-hint").text_color(rgb(c.text)).child(says)
+                        }))
+                        // The words are Set up's own, whose Install is the
+                        // same as the one beside them here.
+                        .when_some(certutil, |d, command| {
+                            d.child(div().text_color(rgb(c.muted)).child(match command {
+                                Some(_) => tr!(
+                                    "Browsers on Linux need certutil to be told to trust it. Install it, \
+                                     then Install here:"
+                                ),
+                                None => tr!(
+                                    "Browsers on Linux need certutil to be told to trust it. Install your \
+                                     distribution's NSS tools, then Install here."
+                                ),
+                            }))
+                            .when_some(command, |d, command| {
+                                d.child(crate::setup_page::code_block(
+                                    "trust-certutil",
+                                    command.to_owned(),
+                                ))
+                            })
+                        })
+                        .when(installing, |d| {
+                            d.child(div().text_color(rgb(c.muted)).child(tr!(
+                                "Installing. The system may ask you to confirm."
+                            )))
+                        }),
+                )
+            })
+            .when(offer_install, |d| {
+                d.child(
+                    div()
+                        .id("trust-install")
+                        .flex_shrink_0()
+                        .h(ui(28.))
+                        .px(ui(10.))
+                        .rounded(ui(14.))
+                        .flex()
+                        .items_center()
+                        .cursor_pointer()
+                        .reachable()
+                        .bg(rgb(c.accent))
+                        .text_color(rgb(c.on_accent))
+                        .text_size(ui(12.))
+                        .font_weight(FontWeight::BOLD)
+                        .child(tr!("Install"))
+                        .on_click(cx.listener(|view, _, _, cx| {
+                            view.install_certificate(tracewing_system::Scope::User, cx);
                         })),
                 )
             })

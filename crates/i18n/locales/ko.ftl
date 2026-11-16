@@ -664,6 +664,21 @@ t9b63eb05 = 앱이 tracewing의 인증서를 받은 직후 아무것도 요청�
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = 이 호스트에서 앱이 실패한다면 앱이 인증서를 고정(피닝)하고 있을 수 있습니다.
 
+# This browser trusts tracewing's CA now. If it still turns the certificate down, restart it and try again. If it goes on, the host pins its own certificate, and is better not decrypted.
+tb9d9703b = 이제 이 브라우저는 tracewing의 CA를 신뢰합니다. 그래도 인증서를 거부하면 브라우저를 다시 시작한 뒤 다시 시도하세요. 계속 그렇다면 이 호스트는 자체 인증서를 고정(피닝)하므로 복호화하지 않는 편이 좋습니다.
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = Linux의 브라우저가 인증서를 신뢰하게 하려면 certutil이 필요합니다. 설치한 다음 여기서 설치를 누르세요:
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = Linux의 브라우저가 인증서를 신뢰하게 하려면 certutil이 필요합니다. 배포판의 NSS 도구를 설치한 다음 여기서 설치를 누르세요.
+
+# Installing. The system may ask you to confirm.
+ta41c38ec = 설치 중입니다. 시스템에서 확인을 요청할 수 있습니다.
+
+# Install
+tb50cbd40 = 설치
+
 # Make a rule
 t0ac0e062 = 규칙 만들기
 
@@ -2164,9 +2179,6 @@ tc8ccf306 = 기기의 Wi-Fi 프록시를 설정합니다: { $addr }. 그런 다�
 # Looking for it…
 t50ee7452 = 찾는 중…
 
-# Installing. The system may ask you to confirm.
-ta41c38ec = 설치 중입니다. 시스템에서 확인을 요청할 수 있습니다.
-
 # Removing. The system may ask you to confirm.
 t62b22726 = 제거하는 중입니다. 시스템이 확인을 요청할 수 있습니다.
 
@@ -2185,20 +2197,11 @@ tafd8dae2 = tracewing은 이 컴퓨터 전용으로 만든 인증서로 HTTPS를
 # Trust the certificate
 t26618699 = 인증서 신뢰하기
 
-# Install
-tb50cbd40 = 설치
-
 # Also for command-line tools
 t0db8faea = 명령줄 도구에도 적용
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = 이 컴퓨터의 모든 저장소에서 인증서를 제거할까요? 다시 설치할 때까지 tracewing을 거치는 HTTPS는 실패합니다. 인증서는 tracewing이 보관하므로 나중에 다시 설치할 수 있습니다.
-
-# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
-t76cf4bfa = Linux의 브라우저가 인증서를 신뢰하게 하려면 certutil이 필요합니다. 설치한 다음 여기서 설치를 누르세요:
-
-# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
-td2606dbb = Linux의 브라우저가 인증서를 신뢰하게 하려면 certutil이 필요합니다. 배포판의 NSS 도구를 설치한 다음 여기서 설치를 누르세요.
 
 # This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
 tb13a87e6 = 이 데스크톱에는 tracewing이 바꿀 수 있는 시스템 프록시 설정이 없습니다. 아래 브라우저 항목에서 브라우저를 따로 열거나 터미널을 여세요.

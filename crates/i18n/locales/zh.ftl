@@ -664,6 +664,21 @@ t9b63eb05 = 应用在收到 tracewing 的证书后立即断开，没有发出任
 # If an app fails with this host, it may pin its certificates.
 t3cbba118 = 如果某个应用连接此主机失败，它可能使用了证书锁定。
 
+# This browser trusts tracewing's CA now. If it still turns the certificate down, restart it and try again. If it goes on, the host pins its own certificate, and is better not decrypted.
+tb9d9703b = 此浏览器现在已信任 tracewing 的 CA。如果它仍然拒绝证书，请重启浏览器后再试。如果问题依旧，说明该主机锁定了自己的证书，最好不要解密它。
+
+# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
+t76cf4bfa = 在 Linux 上，需要 certutil 才能让浏览器信任它。先安装 certutil，再在这里点“安装”：
+
+# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
+td2606dbb = 在 Linux 上，需要 certutil 才能让浏览器信任它。先安装发行版的 NSS 工具，再在这里点“安装”。
+
+# Installing. The system may ask you to confirm.
+ta41c38ec = 正在安装。系统可能会要求你确认。
+
+# Install
+tb50cbd40 = 安装
+
 # Make a rule
 t0ac0e062 = 创建规则
 
@@ -2164,9 +2179,6 @@ tc8ccf306 = 在该设备上，将 Wi-Fi 代理设置为 { $addr }。然后在设
 # Looking for it…
 t50ee7452 = 正在查找…
 
-# Installing. The system may ask you to confirm.
-ta41c38ec = 正在安装。系统可能会要求你确认。
-
 # Removing. The system may ask you to confirm.
 t62b22726 = 正在移除。系统可能会请你确认。
 
@@ -2185,20 +2197,11 @@ tafd8dae2 = tracewing 使用专为本机生成的证书来读取 HTTPS。在该�
 # Trust the certificate
 t26618699 = 信任证书
 
-# Install
-tb50cbd40 = 安装
-
 # Also for command-line tools
 t0db8faea = 同时用于命令行工具
 
 # Take the certificate out of every store on this computer? HTTPS through tracewing then fails until it is installed again. tracewing keeps it, to install again later.
 t3c9fc304 = 要从这台电脑的所有证书库中移除该证书吗？重新安装之前，经过 tracewing 的 HTTPS 都会失败。tracewing 会保留它，以便以后重新安装。
-
-# Browsers on Linux need certutil to be told to trust it. Install it, then Install here:
-t76cf4bfa = 在 Linux 上，需要 certutil 才能让浏览器信任它。先安装 certutil，再在这里点“安装”：
-
-# Browsers on Linux need certutil to be told to trust it. Install your distribution's NSS tools, then Install here.
-td2606dbb = 在 Linux 上，需要 certutil 才能让浏览器信任它。先安装发行版的 NSS 工具，再在这里点“安装”。
 
 # This desktop has no system proxy setting that tracewing can change. Open a browser on its own from Browsers, or a terminal, below.
 tb13a87e6 = 这个桌面没有 tracewing 能更改的系统代理设置。请在下方“浏览器”中单独打开一个浏览器，或打开终端。
