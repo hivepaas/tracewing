@@ -980,18 +980,106 @@ they need no privilege, so CI runs them. The ablation is the Windows trap
 transplanted: byte-swapping the index makes the read-back say 16777216 where 1
 was set, and both tests fail.
 
+#### The privileged work is one step, and holding the device is the switch
+
+The address and the routes need `CAP_NET_ADMIN`: as an ordinary user both `ip
+addr add` and `ip link set up` answered `RTNETLINK answers: Operation not
+permitted`, and no knob changes that. The question was what that costs
+tracewing — netlink in-process, a dependency this workspace does not have; a
+shell script through polkit, which this workspace already does, with `nft` for
+the HTTP/3 block in
+[`quic_linux.rs`](../../crates/system/src/quic_linux.rs) and with `trust`,
+`update-ca-certificates` and the rest behind `run_as_admin` in
+[`linux.rs`](../../crates/system/src/linux.rs); or an elevated process that
+stays running, which is the shape Windows is in.
+
+It costs none of them. All of it is **one step, run once**, and afterwards
+tracewing's unprivileged hold on the device is the switch:
+
+```sh
+ip tuntap add dev tracewing mode tun user $UID
+sysctl -w net.ipv4.conf.tracewing.ignore_routes_with_linkdown=1
+sysctl -w net.ipv6.conf.tracewing.ignore_routes_with_linkdown=1
+ip addr add 10.77.0.1/24 dev tracewing
+ip addr add fd00:77::1/64 dev tracewing
+ip link set tracewing up
+ip route add default dev tracewing metric 50
+ip -6 route add default dev tracewing metric 50
+```
+
+What this machine said, with `CapEff: 0000000000000000` in the process doing
+the holding every time:
+
+- **The addresses and the routes outlive the holder.** Opened, closed and
+  opened again, the device keeps both addresses and both routes. Only the
+  carrier follows the holder, and it drops on a clean `shutdown` and on a
+  `SIGKILL` alike.
+- **A route down a device nobody holds is used, and the packets vanish.** At
+  the knob's default of 0, `sendto` to an address routed down the unheld
+  device **succeeds**, says nothing, and goes nowhere. Routes left in place
+  would mean a machine that blackholes whenever tracewing is not running.
+  That, and not tidiness, is what the knob is for.
+- **At 1 the kernel skips the route instead.** The table marks it `dead
+  linkdown` rather than `linkdown`, and a lookup falls through to the real
+  interface: with a **default route of metric 50 down the unheld adapter above
+  the real one**, `8.8.8.8` still resolved to `via 192.168.1.1 dev wlp8s0`,
+  `2001:4860:4860::8888` to `via fe80::1 dev wlp8s0`, and a DNS lookup worked
+  while they did. Held, the same lookups choose the adapter.
+- **The order matters, and that is the trap.** Set *after* the carrier had
+  already dropped, the knob left the IPv4 route plain `linkdown` and still
+  chosen, while IPv6 fell through — which read as "IPv4 does not support
+  this" until the order was the thing that changed. Set before the routes are
+  installed, both families behave alike. So the two `sysctl` lines belong
+  above the addresses rather than beside them, and the word `dead` in `ip
+  route show` is how to tell which of the two happened.
+- **The device is not quiet once it is up.** The moment it is held the
+  machine's own multicast arrives: IGMP to `224.0.0.22`, SSDP to
+  `239.255.255.250` and `ff02::c`, MLDv2 to `ff02::16`. A packet off the
+  device is no evidence that anything was captured, so the measurement that
+  proves capture carries bytes to recognise — 51 bytes, `10.77.0.1 ->
+  192.0.2.1`, our own payload inside.
+
+So the mode turns itself on and off: holding the device raises the carrier,
+letting go lowers it, and a tracewing that is not running leaves a machine
+that routes normally. A `SIGKILL` on the holder does the same as a clean
+`shutdown` — same `NO-CARRIER`, same `dead linkdown`, same immediate
+fall-through — so the recovery does not depend on anything of ours running,
+which is the only reason to trust it.
+
+**Both platforms end up there, by opposite mechanisms.** Windows removes the
+adapter when the process dies and the routes go with it, measured by a
+`Stop-Process -Force` in the section above; Linux keeps the device, the
+addresses and the routes, and stops using them. Removing and ignoring are not
+the same guarantee — Windows has nothing left to be wrong about, while Linux
+depends on a knob being right — but both leave a crashed tracewing with a
+machine that routes as it did. The nftables block gets there a third way:
+`flags owner` has the kernel drop the table when the `nft` holding it exits.
+That property is the one to insist on for anything privileged this mode
+adds.
+
+What stays open is only **who runs the step**. The `.deb`'s `postinst` makes
+the device part of installing tracewing; `run_as_admin` asked the first time
+somebody switches local mode on keeps a tracewing nobody switched on from
+owning an adapter, and reuses a dialog this codebase already shows. The second
+is the one to write unless packaging says otherwise.
+
 #### What is not in, and nothing captures until it is
 
-The address and the route on the adapter, and the `Tun` source that hands the
-engine flows. Until that wiring exists nothing calls `straight_to`,
-`bound_datagrams` or `leave_by` on either platform — the machinery above is
-complete and idle.
+Two things. **Reading back whether the adapter is already as it should be** —
+the device, its owner, the two addresses, the two routes, the two knobs — so
+that switching the mode on asks for a password only when there is something to
+do. All of it is readable unprivileged: the owner and `tun_flags` from
+`/sys/class/net/<dev>/`, the routes from the tables `roads.rs` already parses,
+the knobs from `/proc/sys`, the IPv4 address by `SIOCGIFADDR` and the IPv6 one
+from `/proc/net/if_inet6`. Until then `make_adapter` is called when somebody
+switches the mode on and the script's first line deletes whatever was there.
 
-Addressing and routing go through netlink, which is a dependency this
-workspace does not have; shelling out to `ip` is the same trade `wintun.rs`
-turned down with `netsh` and should be turned down here for the same reason.
-Who creates the device, and when, is also open: a privileged step at install
-time, or one asked for the first time somebody switches the mode on.
+And **the `Tun` source that hands the engine flows**, which is the piece that
+makes any of this capture anything. Nothing calls `make_adapter`,
+`straight_to`, `bound_datagrams` or `leave_by` yet, on either platform, and
+`by_programs` — which is what would pass `straight_to` in — has no caller
+either. The machinery is complete and idle, and `make lint` is what keeps it
+from rotting until the wiring arrives.
 
 ### WireGuard
 
