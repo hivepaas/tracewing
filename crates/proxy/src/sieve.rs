@@ -322,7 +322,28 @@ mod tests {
         // normalisation directly, so it goes red before this test does if
         // the normalisation is ever dropped. Without it this test would
         // simply stop keeping anything on Windows and say nothing about why.
-        let folder = format!("{}/", exe.parent().unwrap().display());
+        //
+        // **Canonicalized on purpose**, and this is the line that makes the
+        // `\\?\` strip load-bearing rather than decorative. A rule the
+        // window writes goes through `program_rule`, which canonicalizes --
+        // it has to, or a program chosen through a junction or one of
+        // Windows' app aliases would never match the resolved path
+        // `path_of` answers with. On Windows `canonicalize` therefore puts
+        // `\\?\` in front of the rule while `QueryFullProcessImageNameW`
+        // answers without it, so this test only passes there if `plain`
+        // takes the prefix off. On Linux it adds nothing: `current_exe`
+        // already read a resolved link.
+        let real = std::fs::canonicalize(&exe).unwrap();
+        let folder = format!("{}/", real.parent().unwrap().display());
+        // The premise, measured rather than assumed: `canonicalize` is
+        // documented to answer a verbatim path on Windows, and if it ever
+        // stopped doing so this test would go on passing while quietly
+        // covering nothing of the strip. Then this line says so instead.
+        #[cfg(windows)]
+        assert!(
+            folder.starts_with(r"\\?\"),
+            "a canonical path carries the prefix, which is what the strip is for: {folder}"
+        );
 
         let kept = by_programs(apps.clone(), Chosen::of(vec![folder.clone()]), nowhere());
         assert!(
@@ -402,9 +423,11 @@ mod tests {
 
         let exe = std::env::current_exe().unwrap();
         // A folder rule, written as the test above writes one and right for
-        // the same reason: `plain` normalises the trailing slash with the
-        // rest before comparing.
-        chosen.these(vec![format!("{}/", exe.parent().unwrap().display())]);
+        // the same reasons: `plain` normalises the trailing slash with the
+        // rest, and canonicalizing is what a rule from the window carries,
+        // so on Windows this also depends on the `\\?\` strip.
+        let real = std::fs::canonicalize(&exe).unwrap();
+        chosen.these(vec![format!("{}/", real.parent().unwrap().display())]);
         assert!(
             (sieve.keeps)(from, to).await,
             "and the same sieve answers the other way once the window has said so"
