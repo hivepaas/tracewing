@@ -2285,6 +2285,9 @@ te4e36f65 = Test sayfasını aç
 # Open a terminal
 t4b629c72 = Terminal aç
 
+# What the device does
+t8f16360f = Cihazın kendi yaptığı
+
 # Set up
 t43c06abc = Kurulum
 
@@ -2315,8 +2318,8 @@ tab552f0c = Bunu terminal yapar: içinde başlayan her şey tracewing'in kök se
 # Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
 t5951384c = Java kendi sertifika deposunu tutar ve ne sistemin deposunu ne de değişkenleri okur. tracewing ona bir tane yazdı, kendi klasöründe, ve aşağıdaki bayraklar bir JVM'yi oraya yönlendirir: sizden hiçbir şeye dokunulmaz ve bunu oluşturmak için JDK gerekmez.
 
-# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
-t38958f05 = tracewing'in sertifikasını telefonun kendisi kurmalı — aşağıdaki kılavuzlar her cihaz türü için nasıl olduğunu anlatır.
+# The phone has to install tracewing's certificate itself. The guide for each kind of device is in Other devices, below, once that is on.
+t543988da = tracewing'in sertifikasını telefonun kendisi kurmalı. Her cihaz türü için kılavuz, aşağıdaki Diğer cihazlar bölümünde, orası açıldıktan sonra yer alır.
 
 # What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
 t4353a046 = Bir imajın neye güvendiği kendi işidir: bazıları sistemin köklerini okur, bazıları kendi köklerini taşır ve tracewing buradan hangisi olduğunu anlayamaz.

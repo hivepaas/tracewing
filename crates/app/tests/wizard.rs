@@ -173,5 +173,22 @@ fn every_answer_draws_a_page_and_the_answer_is_kept() {
         .unwrap();
     shot(cx, window, "303-capture-wireguard");
 
+    // The two answers with the most on them, which nothing has looked at:
+    // a phone shows three of Set up's cards at once, and a terminal is the
+    // answer four of the eight targets come out at.
+    window
+        .update(cx, |view, _, cx| {
+            view.set_screen(Screen::Setup, cx);
+            view.choose_target(Some(Target::Phone), cx);
+        })
+        .unwrap();
+    shot(cx, window, "304-wizard-phone");
+    window
+        .update(cx, |view, _, cx| {
+            view.choose_target(Some(Target::CommandLine), cx)
+        })
+        .unwrap();
+    shot(cx, window, "305-wizard-terminal");
+
     let _ = std::fs::remove_dir_all(&dir);
 }

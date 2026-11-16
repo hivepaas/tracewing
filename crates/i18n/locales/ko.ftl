@@ -2206,6 +2206,9 @@ te4e36f65 = 테스트 페이지 열기
 # Open a terminal
 t4b629c72 = 터미널 열기
 
+# What the device does
+t8f16360f = 기기 쪽에서 할 일
+
 # Set up
 t43c06abc = 시작하기
 
@@ -2236,8 +2239,8 @@ tab552f0c = 그 일은 터미널이 합니다. 그 안에서 시작한 것은 tr
 # Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
 t5951384c = Java는 자체 인증서 저장소를 두고 시스템의 것도 환경 변수도 읽지 않습니다. tracewing이 자기 폴더에 하나를 써 두었고, 아래 플래그가 JVM을 그곳으로 향하게 합니다. 사용자의 것은 아무것도 건드리지 않으며, 만드는 데 JDK도 필요하지 않습니다.
 
-# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
-t38958f05 = tracewing의 인증서는 휴대폰이 직접 설치해야 합니다. 기기 종류별 방법은 아래 안내에 있습니다.
+# The phone has to install tracewing's certificate itself. The guide for each kind of device is in Other devices, below, once that is on.
+t543988da = tracewing의 인증서는 휴대폰이 직접 설치해야 합니다. 기기 종류별 안내는 아래 '다른 기기'를 켜면 그곳에 나옵니다.
 
 # What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
 t4353a046 = 이미지가 무엇을 신뢰하는지는 그 이미지의 몫입니다. 시스템 루트를 읽는 것도 있고 자체 인증서를 들고 오는 것도 있어, 여기서는 어느 쪽인지 알 수 없습니다.

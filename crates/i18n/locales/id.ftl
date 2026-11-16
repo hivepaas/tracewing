@@ -2206,6 +2206,9 @@ te4e36f65 = Buka halaman uji
 # Open a terminal
 t4b629c72 = Buka terminal
 
+# What the device does
+t8f16360f = Yang dilakukan perangkat
+
 # Set up
 t43c06abc = Siapkan
 
@@ -2236,8 +2239,8 @@ tab552f0c = Terminal yang mengaturnya: apa pun yang dijalankan di dalamnya memba
 # Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
 t5951384c = Java punya penyimpanan sertifikat sendiri dan tidak membaca milik sistem maupun variabel lingkungan. tracewing sudah menuliskan satu untuknya, di folder tracewing sendiri, dan flag di bawah mengarahkan JVM ke sana: tidak ada milikmu yang disentuh, dan tidak perlu JDK untuk membuatnya.
 
-# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
-t38958f05 = Ponsel harus memasang sertifikat tracewing sendiri — panduan di bawah menjelaskan caranya untuk tiap jenis perangkat.
+# The phone has to install tracewing's certificate itself. The guide for each kind of device is in Other devices, below, once that is on.
+t543988da = Ponsel harus memasang sertifikat tracewing sendiri. Panduan untuk tiap jenis perangkat ada di Perangkat lain di bawah, setelah itu dinyalakan.
 
 # What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
 t4353a046 = Apa yang dipercaya sebuah image adalah urusannya: ada yang membaca akar sistem, ada yang membawa sendiri, dan dari sini tracewing tidak bisa tahu yang mana.

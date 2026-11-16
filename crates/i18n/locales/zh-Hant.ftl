@@ -2206,6 +2206,9 @@ te4e36f65 = 開啟測試頁面
 # Open a terminal
 t4b629c72 = 開啟終端機
 
+# What the device does
+t8f16360f = 裝置那邊要做的事
+
 # Set up
 t43c06abc = 初始設定
 
@@ -2236,8 +2239,8 @@ tab552f0c = 這由終端機負責：在它裡面啟動的東西從一個檔案�
 # Java keeps an authority store of its own and reads neither the system's nor the variables. tracewing has written it one, in its own folder, and the flags below point a JVM at it: nothing of yours is touched, and no JDK is needed to make it.
 t5951384c = Java 自帶一個憑證庫，既不讀系統的，也不讀環境變數。tracewing 已經在自己的資料夾裡給它寫了一個，下面的參數把 JVM 指向那裡：你的東西一點都沒動，建立它也不需要 JDK。
 
-# The phone has to install tracewing's certificate itself — the guides below say how for each kind of device.
-t38958f05 = tracewing 的憑證得由手機自己裝 — 下面的指南按裝置類型說明怎麼做。
+# The phone has to install tracewing's certificate itself. The guide for each kind of device is in Other devices, below, once that is on.
+t543988da = tracewing 的憑證得由手機自己裝。各類裝置的指南在下面的「其他裝置」裡，把它打開後就會出現。
 
 # What an image trusts is its own: some read the system's roots, some carry their own, and tracewing cannot tell which from here.
 t4353a046 = 一個映像信任什麼是它自己的事：有的讀系統根憑證，有的自帶，從這裡 tracewing 看不出是哪一種。
