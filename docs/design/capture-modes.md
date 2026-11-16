@@ -737,14 +737,64 @@ device.
   two `/1`s, so file shares, printers and anything else beside this machine
   keep using the real interface and are never captured. The blast radius is
   what leaves the machine, not what is next to it.
-- **Not yet known: what a hard kill leaves behind.** The address and the route
-  are deleted on `Drop`, and that is tested
-  ([`wintun_live.rs`](../../crates/proxy/tests/wintun_live.rs)) — but `Drop`
-  does not run for a killed process. The adapter should close with the process
-  and take its routes with it, leaving the machine's networking as it was;
-  that has not been tried in the VM. It is the one failure here that would
-  cost a user their network rather than a session, so it is worth trying
-  before the mode is switchable.
+- **A hard kill leaves nothing behind, and that is now measured.** The
+  address and the route are deleted on `Drop`, which
+  [`wintun_live.rs`](../../crates/proxy/tests/wintun_live.rs) tests — but
+  `Drop` does not run for a killed process, and this was the one failure here
+  that would cost somebody their network rather than their session. On
+  2026-11-16 the holder was killed with `Stop-Process -Force`, so none of
+  tracewing's cleanup ran, and afterwards the adapter was **gone** and the
+  route on it was gone with it. Twice, consistently, with `Get-NetAdapter`
+  and `Get-NetRoute` both asked.
+
+  So a tracewing that crashes does not leave a Windows machine routing into a
+  device nobody reads. That is better than it has to be on Linux, where the
+  device survives its holder and what saves the machine is
+  `ignore_routes_with_linkdown` — and where the order it is set in decides
+  whether a dead default route is *still chosen*, with `sendto` succeeding and
+  the packets vanishing. Windows removes the device, so there is no such state
+  to ignore and no such ordering to get wrong.
+
+  **Three things that run did not establish**, stated rather than rounded up.
+  The last two were spotted by the session doing the Linux half, from its own
+  hard-kill measurements, and both are cheap to close in the next window:
+
+  - whether **traffic was flowing** into the adapter at the moment of the
+    kill. The claim rests on the mechanism — the kernel closes handles on
+    process death whatever the handle was doing — not on having watched
+    packets in flight.
+  - the routes were looked for **by their prefix**, so a route on some other
+    prefix still naming the dead interface would not have shown. A
+    `Get-NetRoute` with no filter at all, before and after, is what catches a
+    route that outlived its interface — which is the same class of fault as
+    Linux's plain-`linkdown` case: a destination that resolves to nothing.
+  - the state was read **once**, about three seconds after. A graceful close
+    removes the adapter and its routes in an order the code chose; a kill
+    leaves that order to the kernel, so there may be a brief window where the
+    adapter is gone while a route still names it. Small, silent, and only
+    visible if the state is sampled several times rather than once.
+
+- **A session is what brings the adapter up**, which took three runs to see
+  and is worth knowing before anybody wonders why nothing is routed. An
+  adapter that has been created and has no session is `Disconnected`, and
+  Windows does not route through a disconnected interface; with
+  `WintunStartSession` held it is `Up` at a nominal 100 Gbps. So **holding the
+  session is the switch**, which is the same shape as Linux, where holding the
+  device is.
+
+  The first attempt at the kill experiment missed that and was therefore
+  vacuous: the route was `Alive` on the adapter, nothing was using it because
+  the adapter was `Disconnected`, and "after the kill, traffic went back to
+  the real interface" was true of traffic that had never left it. The second
+  attempt asserts the precondition and says so when it fails, which is what
+  caught it.
+
+- **`Find-NetRoute` is not a usable instrument for "is this route in use".**
+  Asked about an address inside a live `/24` on an interface that was `Up`, it
+  answered **"no route"** — where with the adapter `Disconnected` it had
+  named the real interface. Whatever it is doing, it cannot be read as route
+  selection, and the only instrument that answers that question is a holder
+  that reads its session and says what arrived.
 
 ##### Keeping one program, three ways
 
