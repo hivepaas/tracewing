@@ -513,7 +513,7 @@ pub fn leave_by(out: Option<OutBy>) {
 }
 
 /// What a connection of one family has to do about all that.
-#[cfg(any(windows, test))]
+#[cfg(any(windows, target_os = "linux", test))]
 #[derive(Debug, PartialEq, Eq)]
 enum Out {
     /// No adapter is held, so the routing table decides as it always has.
@@ -529,7 +529,7 @@ enum Out {
 /// The decision, taken apart from where the answer is kept so that it can be
 /// tested without a global: tests run beside each other, and shared state
 /// read by several of them is how a suite starts failing one time in ten.
-#[cfg(any(windows, test))]
+#[cfg(any(windows, target_os = "linux", test))]
 fn out_from(holding: bool, index: u32) -> Out {
     match (holding, index) {
         (false, _) => Out::AsAlways,
@@ -538,7 +538,7 @@ fn out_from(holding: bool, index: u32) -> Out {
     }
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 fn out_for(v6: bool) -> Out {
     let holding = HOLDING.load(Ordering::Acquire);
     let index = match v6 {
@@ -572,11 +572,11 @@ async fn connect_straight(
     };
 
     let connecting = Instant::now();
-    // Windows, and only once something has pinned an interface: hyper's
-    // connector cannot be told which one to leave by there, so that one case
-    // connects for itself. Every other platform, and Windows with nothing
-    // pinned, goes through hyper exactly as before.
-    #[cfg(windows)]
+    // Windows and Linux, and only once something has pinned an interface:
+    // hyper's connector cannot be told which one to leave by on either, so
+    // that one case connects for itself. macOS, and either of those two with
+    // nothing pinned, goes through hyper exactly as before.
+    #[cfg(any(windows, target_os = "linux"))]
     if HOLDING.load(Ordering::Acquire) {
         let tcp = picking::first_to_answer(addresses.clone(), pinned)
             .await
@@ -599,7 +599,7 @@ async fn connect_straight(
 /// Shared by everything that must not go back into the adapter: a connection
 /// the proxy makes, a connection spliced past it, and a datagram passed on.
 /// `about` is what is being reached, for the message.
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 fn out_by(v6: bool, about: &dyn std::fmt::Display) -> io::Result<u32> {
     match out_for(v6) {
         Out::By(index) => Ok(index),
@@ -623,7 +623,7 @@ fn out_by(v6: bool, about: &dyn std::fmt::Display) -> io::Result<u32> {
 
 /// Connects to `addr` on a socket pinned to the interface the machine's own
 /// traffic leaves by.
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 async fn pinned(addr: SocketAddr) -> io::Result<TcpStream> {
     let index = out_by(addr.is_ipv6(), &addr)?;
     let socket = match addr {
@@ -646,13 +646,19 @@ fn handle(socket: &impl std::os::windows::io::AsRawSocket) -> usize {
     socket.as_raw_socket() as usize
 }
 
+/// The same, where a socket is a descriptor.
+#[cfg(target_os = "linux")]
+fn handle(socket: &impl std::os::fd::AsRawFd) -> std::os::fd::RawFd {
+    socket.as_raw_fd()
+}
+
 /// A datagram socket pinned the same way, for what [`crate::datagrams`]
 /// passes on.
 ///
 /// Bound to the family's unspecified address and a port of the operating
 /// system's choosing: it is only ever `connect`ed afterwards, and a NAT's
 /// source port is nobody's business.
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 async fn pinned_datagrams(v6: bool) -> io::Result<tokio::net::UdpSocket> {
     let family = match v6 {
         true => "IPv6",
@@ -672,7 +678,7 @@ async fn pinned_datagrams(v6: bool) -> io::Result<tokio::net::UdpSocket> {
 }
 
 /// The way out for a connection nobody chose, for [`crate::sieve`].
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 pub fn straight_to() -> crate::sieve::StraightTo {
     Box::new(|to| {
         Box::pin(async move {
@@ -684,7 +690,7 @@ pub fn straight_to() -> crate::sieve::StraightTo {
 }
 
 /// The way out for a datagram nobody answers here, for [`crate::datagrams`].
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 pub fn bound_datagrams() -> crate::datagrams::Bind {
     std::sync::Arc::new(|v6| Box::pin(pinned_datagrams(v6)))
 }
@@ -723,6 +729,138 @@ fn leave_socket_by(socket: usize, v6: bool, index: u32) -> io::Result<()> {
     match set {
         0 => Ok(()),
         _ => Err(io::Error::last_os_error()),
+    }
+}
+
+/// Sets `SO_BINDTOIFINDEX`, which both families take the same way.
+///
+/// No byte order to get wrong, unlike the Windows pair above: one option, at
+/// the socket level rather than the protocol's, taking the index as it is.
+///
+/// **It accepts an index nothing has.** Measured: setting 9999 on an
+/// ordinary socket succeeds and reads back 9999, and the failure arrives at
+/// `connect` as `ENODEV`. So this call returning `Ok` says the option was
+/// set, not that the interface exists — which is the right shape for the
+/// caller it has, since the index came from this machine's own routing table
+/// a moment earlier and the watcher is what keeps it current.
+///
+/// And the failure that matters most is quiet: an index that **does** exist
+/// but is the wrong one does not fail at all. Measured against this
+/// machine's gateway — pinned to the real interface it connected in 0.84s,
+/// pinned to the loopback it timed out with nothing said. That is the loop
+/// this whole seam exists to stop, arriving as a hang rather than an error.
+///
+/// No privilege: measured with `CapEff: 0000000000000000`, where `SO_MARK`
+/// in the same transcript answered `EPERM`. That is what keeps the pump in
+/// tracewing rather than in a helper.
+#[cfg(target_os = "linux")]
+fn leave_socket_by(socket: std::os::fd::RawFd, _v6: bool, index: u32) -> io::Result<()> {
+    let index = index as libc::c_int;
+    // SAFETY: a descriptor this call only reads, and four bytes of ours
+    // whose length is given as four.
+    let set = unsafe {
+        libc::setsockopt(
+            socket,
+            libc::SOL_SOCKET,
+            libc::SO_BINDTOIFINDEX,
+            std::ptr::addr_of!(index).cast(),
+            std::mem::size_of::<libc::c_int>() as libc::socklen_t,
+        )
+    };
+    match set {
+        0 => Ok(()),
+        _ => Err(io::Error::last_os_error()),
+    }
+}
+
+/// What a real socket does with the option, on the machine running the
+/// tests — no privilege, so CI runs all of it.
+///
+/// Three things, and the second two are the ones that would be guessed
+/// wrong. The option is set on both kinds of socket this uses, one of
+/// `tokio`'s and one of `std`'s, because "the same call works" on a socket
+/// bound before the option rather than after is a thing to measure.
+#[cfg(all(target_os = "linux", test))]
+mod pinning {
+    use super::{handle, leave_socket_by};
+
+    /// Loopback, which every Linux machine numbers 1 and has.
+    const SOME_INTERFACE: u32 = 1;
+    /// An index nothing has. Chosen high rather than clever: the point is
+    /// that nothing on the machine answers to it.
+    const NO_INTERFACE: u32 = 9_999;
+
+    fn read_back(socket: &impl std::os::fd::AsRawFd) -> u32 {
+        let mut value: libc::c_int = -1;
+        let mut len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+        // SAFETY: four bytes of ours, with four given as their length.
+        let got = unsafe {
+            libc::getsockopt(
+                socket.as_raw_fd(),
+                libc::SOL_SOCKET,
+                libc::SO_BINDTOIFINDEX,
+                std::ptr::addr_of_mut!(value).cast(),
+                &mut len,
+            )
+        };
+        assert_eq!(
+            got,
+            0,
+            "read the option back: {}",
+            std::io::Error::last_os_error()
+        );
+        value as u32
+    }
+
+    /// Set, then read: the index arrives as the index, for both families and
+    /// both kinds of socket.
+    #[test]
+    fn the_index_set_is_the_index_the_socket_holds() {
+        for v6 in [false, true] {
+            let socket = match v6 {
+                true => tokio::net::TcpSocket::new_v6(),
+                false => tokio::net::TcpSocket::new_v4(),
+            }
+            .expect("a socket");
+            leave_socket_by(handle(&socket), v6, SOME_INTERFACE).expect("set");
+            assert_eq!(read_back(&socket), SOME_INTERFACE, "v6: {v6}");
+
+            // Bound before the option rather than after, as the datagram
+            // path does it.
+            let any = match v6 {
+                true => "[::]:0",
+                false => "0.0.0.0:0",
+            };
+            let datagrams = std::net::UdpSocket::bind(any).expect("bound");
+            leave_socket_by(handle(&datagrams), v6, SOME_INTERFACE).expect("set");
+            assert_eq!(read_back(&datagrams), SOME_INTERFACE, "datagrams, v6: {v6}");
+        }
+    }
+
+    /// **The option does not check the index.** Setting one nothing has
+    /// succeeds and reads back, and the failure waits for `connect`. So a
+    /// caller cannot treat `Ok` here as "that interface exists" — which is
+    /// why the index comes from the routing table rather than from
+    /// anywhere else, and why the watcher keeps it current.
+    #[test]
+    fn an_index_nothing_has_is_taken_now_and_refused_later() {
+        let socket = tokio::net::TcpSocket::new_v4().expect("a socket");
+        leave_socket_by(handle(&socket), false, NO_INTERFACE).expect("taken");
+        assert_eq!(read_back(&socket), NO_INTERFACE, "and read back");
+
+        // TEST-NET-1, which goes nowhere: what fails is the device, before
+        // anything is sent, so this needs no network of any kind.
+        let refused = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("a runtime")
+            .block_on(socket.connect("192.0.2.1:80".parse().expect("a literal")));
+        let problem = refused.expect_err("connecting through a device that is not there");
+        assert_eq!(
+            problem.raw_os_error(),
+            Some(libc::ENODEV),
+            "the index is checked when it is used: {problem}"
+        );
     }
 }
 
@@ -812,7 +950,7 @@ mod pinning {
 /// Gated on `test` as well as `windows` so that the trying is tested on
 /// every platform rather than only on the one that runs it: none of it is
 /// about Windows, and Linux is what sees every change.
-#[cfg(any(windows, test))]
+#[cfg(any(windows, target_os = "linux", test))]
 mod picking {
     use std::{future::Future, io, net::SocketAddr, time::Duration};
 
