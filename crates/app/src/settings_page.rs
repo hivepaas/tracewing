@@ -948,7 +948,17 @@ impl Traffic {
                 Way::SystemProxy => tr!(
                     "Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this."
                 ),
-                _ => tr!(
+                // Listed rather than caught by `_`, so that a way in added
+                // later has to say whether this sentence is true of it. It
+                // is true of all of these; a way in that shares a listener
+                // with another, as the proxy port's three do, would need its
+                // own line saying so.
+                Way::Browser
+                | Way::Terminal
+                | Way::OtherDevices
+                | Way::Socks5
+                | Way::WireGuard
+                | Way::Apps => tr!(
                     "Nothing has arrived by this since it was switched on. A program that was told to use it and ignores it looks exactly like this."
                 ),
             }
@@ -999,12 +1009,23 @@ impl Traffic {
         };
         // The apps and their switch, on the Mac; elsewhere a line saying
         // why there is none, rather than a switch that could not work.
+        // The one thing on a tab that is not a sentence: what a way in that
+        // chooses programs shows for choosing them. Listed rather than caught
+        // by `_`, because `_ => None` gives a way in added later a tab whose
+        // whole subject is which programs, with nothing on it to choose any —
+        // and the compiler, which asks about every other `Way` match in this
+        // file, would say nothing at all about that one.
         let apps = match way {
             Way::Apps if cfg!(target_os = "macos") => Some(self.render_mac_apps(cx)),
             Way::Apps => Some(div().text_size(ui(12.)).child(tr!(
                 "macOS only: it is macOS that hands an app's connections over."
             ))),
-            _ => None,
+            Way::SystemProxy
+            | Way::Browser
+            | Way::Terminal
+            | Way::OtherDevices
+            | Way::Socks5
+            | Way::WireGuard => None,
         };
         div()
             .flex()
