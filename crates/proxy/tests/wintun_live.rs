@@ -212,3 +212,51 @@ fn an_address_brings_an_on_link_route_and_takes_it_away_again() {
     );
     println!("after dropping it: 0");
 }
+
+/// 6. **A route in, and the machine still reachable afterwards.**
+///
+///    The prefix is `203.0.113.0/26` and both halves of that are chosen, not
+///    convenient. `203.0.113.0/24` is the documentation range: reserved,
+///    never routed, so a route into it cannot take traffic away from
+///    anything real. And `/26` because [`roads::Road`] carries a prefix
+///    *length* and not a prefix, so a `/24` here would be
+///    indistinguishable from the on-link route the address test's
+///    `10.6.6.1/24` brings with it. Nothing else uses `/26`.
+///
+///    **What this deliberately does not do is route the two default
+///    halves.** `0.0.0.0/1` and `128.0.0.0/1` are what the real thing will
+///    add, and adding them here — to an adapter whose packets nothing is
+///    reading, in a test running over SSH — would black-hole the connection
+///    the test is being watched through. The FFI and its failure modes are
+///    the same either way; only the blast radius differs.
+#[test]
+#[ignore = "needs Administrator and wintun.dll"]
+fn a_route_goes_into_the_adapter_and_comes_out_again() {
+    let adapter = WintunAdapter::open(&dll()).expect("open the adapter");
+    let ours = adapter.luid().expect("the adapter's LUID");
+    let to: std::net::IpAddr = "203.0.113.0".parse().expect("an address");
+    const BITS: u8 = 26;
+
+    assert_eq!(
+        rows(ours, BITS, false),
+        0,
+        "nothing of ours at /{BITS} before the route"
+    );
+    {
+        let _route = adapter
+            .route(to, BITS)
+            .expect("route the prefix into the adapter");
+        assert_eq!(
+            rows_become(ours, BITS, false, 1),
+            1,
+            "the route is in the table, against our adapter"
+        );
+        println!("with the route, rows of ours at /{BITS}: 1");
+    }
+    assert_eq!(
+        rows_become(ours, BITS, false, 0),
+        0,
+        "and gone again when the route was dropped"
+    );
+    println!("after dropping it: 0");
+}

@@ -46,8 +46,8 @@
 //!
 //! The address setters the `wintun` crate offers are deliberately unused:
 //! they shell out to `netsh`. [`WintunAdapter::address`] does it through
-//! `windows-sys` instead, with the rest of this program's Windows calls.
-//! Routing is still to come.
+//! `windows-sys` instead, with the rest of this program's Windows calls, and
+//! [`WintunAdapter::route`] the same for routing.
 
 use crate::tun::Device;
 use anyhow::{Result, anyhow};
@@ -199,6 +199,60 @@ impl WintunAdapter {
             _ => Err(anyhow!("give the adapter {addr}/{bits}: error {got}")),
         }
     }
+
+    /// Routes `to`/`bits` into the adapter, until the returned [`Route`] is
+    /// dropped.
+    ///
+    /// **This is the call that makes the capture happen**, and the one that
+    /// can take a machine off the network. What is routed in arrives as
+    /// packets for [`crate::tun`] to pump and [`crate::stack`] to answer, so
+    /// a route added with nothing reading the other end is traffic going
+    /// nowhere — not an error, a black hole.
+    ///
+    /// Which prefixes is the caller's, and
+    /// [capture-modes.md](../../../docs/design/capture-modes.md) says why the
+    /// answer should be `0.0.0.0/1` and `128.0.0.0/1` rather than
+    /// `0.0.0.0/0`: a `/0` gives the interface a metric of zero and turns
+    /// Windows' automatic metric logic off, where the two halves reach just
+    /// as far and leave the real default route in place.
+    pub fn route(&self, to: IpAddr, bits: u8) -> Result<Route<'_>> {
+        use windows_sys::Win32::{
+            Foundation::NO_ERROR,
+            NetworkManagement::IpHelper::{
+                CreateIpForwardEntry2, IP_ADDRESS_PREFIX, InitializeIpForwardEntry,
+                MIB_IPFORWARD_ROW2,
+            },
+            NetworkManagement::Ndis::NET_LUID_LH,
+        };
+        let mut row = MIB_IPFORWARD_ROW2::default();
+        // As with an address, the defaults are not zeroes: this is what sets
+        // the metric and the protocol to something Windows will accept.
+        // SAFETY: a row of ours for the call to fill in.
+        unsafe { InitializeIpForwardEntry(&mut row) };
+        row.InterfaceLuid = NET_LUID_LH {
+            Value: self.luid()?,
+        };
+        row.DestinationPrefix = IP_ADDRESS_PREFIX {
+            Prefix: sockaddr(to),
+            PrefixLength: bits,
+        };
+        // The unspecified address, which is what makes this on-link: there
+        // is no gateway beyond a TUN device, the adapter *is* the far end.
+        // A next hop of anything else would be a router to look for.
+        row.NextHop = sockaddr(match to {
+            IpAddr::V4(_) => IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED),
+            IpAddr::V6(_) => IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED),
+        });
+        // SAFETY: a row this call reads and does not keep.
+        let got = unsafe { CreateIpForwardEntry2(&row) };
+        match got {
+            NO_ERROR => Ok(Route {
+                row,
+                held: PhantomData,
+            }),
+            _ => Err(anyhow!("route {to}/{bits} into the adapter: error {got}")),
+        }
+    }
 }
 
 /// An address on the adapter, taken away again when this is dropped.
@@ -263,6 +317,30 @@ fn sockaddr(addr: IpAddr) -> ::windows_sys::Win32::Networking::WinSock::SOCKADDR
                 Anonymous: SOCKADDR_IN6_0 { sin6_scope_id: 0 },
             },
         },
+    }
+}
+
+/// A route into the adapter, taken away again when this is dropped.
+///
+/// The lifetime is [`Address`]'s, for the same reason: a route outliving the
+/// interface it points at is nothing Windows will act on, and the order is
+/// better a compile error than a call that fails quietly.
+#[must_use = "dropping this takes the route away again"]
+pub struct Route<'a> {
+    row: ::windows_sys::Win32::NetworkManagement::IpHelper::MIB_IPFORWARD_ROW2,
+    held: PhantomData<&'a WintunAdapter>,
+}
+
+impl Drop for Route<'_> {
+    fn drop(&mut self) {
+        use windows_sys::Win32::{
+            Foundation::NO_ERROR, NetworkManagement::IpHelper::DeleteIpForwardEntry2,
+        };
+        // SAFETY: the row this route was made from, untouched since.
+        let got = unsafe { DeleteIpForwardEntry2(&self.row) };
+        if got != NO_ERROR {
+            tracing::warn!("take the adapter's route away again: error {got}");
+        }
     }
 }
 
