@@ -553,8 +553,20 @@ pub fn open_terminal(
     std::fs::write(&script, launch::cmd_script(env, banner))
         .with_context(|| format!("write {}", script.display()))?;
 
+    // Which way will start it decides the shape: an ordinary spawn hands the
+    // child `NUL` for its three handles, and a console that reads its
+    // commands from `NUL` is one nobody can type in. `console_args` says why
+    // at length.
+    let (args, suppress) = launch::console_args(
+        crate::child::start_at(crate::child::elevated(), level),
+        &script,
+    );
     let mut command = std::process::Command::new("cmd");
-    command.arg("/k").arg(&script);
+    command.args(args);
+    if suppress {
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        std::os::windows::process::CommandExt::creation_flags(&mut command, CREATE_NO_WINDOW);
+    }
     if let Some(home) = std::env::var_os("USERPROFILE") {
         command.current_dir(home);
     }

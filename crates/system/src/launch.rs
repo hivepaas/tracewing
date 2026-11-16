@@ -11,7 +11,10 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::{child::Level, os};
+use crate::{
+    child::{Level, Start},
+    os,
+};
 
 /// The roots a terminal opened from here trusts, kept in the data directory.
 const TERMINAL_BUNDLE: &str = "terminal-roots.pem";
@@ -142,6 +145,46 @@ pub(crate) fn cmd_script(vars: &[(&str, String)], banner: &str) -> String {
     text.push_str("echo.\n");
     // Only a name or a value can carry one: `set "` and `"` have none.
     text.replace('%', "%%").replace('\n', "\r\n")
+}
+
+/// How a console has to be started so that somebody can type in it, which
+/// depends on **which of the three ways** starts it.
+///
+/// The three ways do not hand a child the same console, and only one of them
+/// has to be worked around:
+///
+/// - an **ordinary spawn** puts the child's three handles on `NUL`, which is
+///   what a windowed process with no console of its own has to hand down. A
+///   `cmd /k` started that way opens a window that reads its commands from
+///   `NUL`: it takes nothing the person types and ends at the first read. So
+///   this one asks `start` for a console of its own -- `start` makes a fresh
+///   `cmd` with real handles -- and the launcher's own window is suppressed
+///   with `CREATE_NO_WINDOW`, which only an ordinary spawn reads anyway.
+/// - the **shell's token** (`CreateProcessWithTokenW` with a `STARTUPINFOW`
+///   that is zeroed but for its size, so no `STARTF_USESTDHANDLES`) and
+///   **Windows' own raising** (`ShellExecuteExW`, which is what
+///   double-clicking a `.cmd` does) each give the child a fresh console with
+///   real handles. Going through `start` there would flash a second window
+///   for nothing, since neither call carries `CREATE_NO_WINDOW`.
+///
+/// Returns the arguments for `cmd` and whether the launcher's window is to be
+/// suppressed. A plain function over the three ways so that all of it is
+/// readable from a test on any machine, while only the FFI needs Windows.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn console_args(start: Start, script: &Path) -> (Vec<std::ffi::OsString>, bool) {
+    let script = script.as_os_str().to_owned();
+    if start == Start::AsWeAre {
+        // `tracewing` is the window's title: `start` reads a bare first word
+        // as one. The program is `cmd` either way, so the inner `cmd` is an
+        // argument here and not there.
+        let mut args: Vec<std::ffi::OsString> = ["/c", "start", "tracewing", "cmd", "/k"]
+            .map(Into::into)
+            .into();
+        args.push(script);
+        (args, true)
+    } else {
+        (vec!["/k".into(), script], false)
+    }
 }
 
 /// Whether Node.js of this version (`v22.17.1`, `22.17.1`) sends its requests
@@ -782,6 +825,41 @@ echo"#,
             !worth_asking_again(&Asked::Version("22.17.1".to_owned())),
             "and neither is one that answered"
         );
+    }
+
+    /// Only an ordinary spawn needs `start`, and it is the one that needs it
+    /// badly: its child's handles are `NUL`, so a `cmd /k` reads its commands
+    /// from nothing. The other two are given a console already.
+    #[test]
+    fn a_console_goes_through_start_only_when_it_has_to() {
+        let script = Path::new("C:\\d\\terminal.cmd");
+        let (args, suppress) = console_args(Start::AsWeAre, script);
+        assert_eq!(
+            args,
+            [
+                "/c",
+                "start",
+                "tracewing",
+                "cmd",
+                "/k",
+                "C:\\d\\terminal.cmd"
+            ]
+            .map(std::ffi::OsString::from)
+        );
+        assert!(suppress, "the launcher's own window has nothing to show");
+
+        for start in [Start::AsTheShell, Start::Elevated] {
+            let (args, suppress) = console_args(start, script);
+            assert_eq!(
+                args,
+                ["/k", "C:\\d\\terminal.cmd"].map(std::ffi::OsString::from),
+                "{start:?} is handed a console of its own"
+            );
+            assert!(
+                !suppress,
+                "{start:?} carries no creation flags, so there is no second window to suppress"
+            );
+        }
     }
 
     #[test]
