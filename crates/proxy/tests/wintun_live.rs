@@ -4,7 +4,7 @@
 #![cfg(windows)]
 
 use std::{path::PathBuf, sync::Arc, sync::mpsc, thread, time::Duration};
-use tracewing_proxy::{tun::Device, wintun::WintunAdapter};
+use tracewing_proxy::{roads, tun::Device, wintun::WintunAdapter};
 
 fn dll() -> PathBuf {
     PathBuf::from(std::env::var("WINTUN_DLL").expect("WINTUN_DLL: the path to wintun.dll"))
@@ -84,4 +84,62 @@ fn a_shutdown_ends_the_reading_loop() {
     for packet in packets.iter().take(5) {
         println!("  {} bytes, IP version {}", packet.len(), packet[0] >> 4);
     }
+}
+
+/// 4. **The adapter has a LUID, and is never the way out.**
+///
+///    What this checks today is the first half: that `luid()` works against
+///    a real adapter — the driver's index call and the conversion — and that
+///    it is not zero, since a zero would exclude nothing and the exclusion
+///    is the whole point.
+///
+///    The second half is **nearly free today and will not stay that way**,
+///    and the reason is not the one a first draft of this comment gave. It
+///    said the adapter is not in the routing table. It is: a fresh Wintun
+///    adapter with no address of ours already has five routes, which a probe
+///    on the VM printed as IPv4 `/4` and a loopback `/32`, and IPv6 `/64`,
+///    `/8` and a loopback `/128`. What makes the exclusion idle today is
+///    that none of those reaches further than `WIDE_ENOUGH`, so they are
+///    filtered out as ways out before the question of whose they are arises.
+///
+///    Which is exactly why this will bite later rather than never. The
+///    moment the adapter is given the two halves of a default route, it
+///    gains rows at `/1` — candidates, and ones that **reach further than
+///    another interface's `/0`**, so they would win. On that day the only
+///    thing standing between tracewing and a loop is that these rows are
+///    recognised as ours, and this test is what says they are.
+#[test]
+#[ignore = "needs Administrator and wintun.dll"]
+fn the_adapter_has_a_luid_and_is_never_the_way_out() {
+    let adapter = WintunAdapter::open(&dll()).expect("open the adapter");
+    let ours = adapter.luid().expect("the adapter's LUID");
+    assert_ne!(ours, 0, "a LUID of zero would leave our own adapter in");
+
+    let roads = roads::roads_now().expect("this machine's routes");
+    let mine: Vec<u32> = roads
+        .iter()
+        .filter(|road| road.luid == ours)
+        .map(|road| road.interface)
+        .collect();
+    for v6 in [false, true] {
+        let family = match v6 {
+            true => "IPv6",
+            false => "IPv4",
+        };
+        if let Some(out) = roads::out_by(&roads, ours, v6) {
+            assert!(
+                !mine.contains(&out),
+                "the way out for {family} is our own adapter, interface {out}"
+            );
+        }
+    }
+    println!(
+        "ours = {ours:#018x}, with {} row(s) in the table",
+        mine.len()
+    );
+    println!(
+        "out by: IPv4 {:?}, IPv6 {:?}",
+        roads::out_by(&roads, ours, false),
+        roads::out_by(&roads, ours, true)
+    );
 }

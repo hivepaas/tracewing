@@ -24,10 +24,15 @@
 /// One row of the routing table, as much of it as choosing needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Road {
-    /// The interface it leaves by, as Windows numbers them. **The two
-    /// families number the same adapter separately**, so this says nothing
-    /// without [`Road::v6`] beside it.
+    /// The interface it leaves by, as Windows numbers them for this family.
+    /// **The two families number an adapter separately**, so this says
+    /// nothing without [`Road::v6`] beside it — and it is what the socket
+    /// option wants, since that option is per family too.
     pub interface: u32,
+    /// The same interface, as Windows *identifies* rather than numbers it.
+    /// One LUID per interface, whatever the family, which is why the adapter
+    /// to leave out is named by this and not by an index.
+    pub luid: u64,
     /// How many bits of the destination it matches. Zero is a default route;
     /// one is each half of a default written as two, which is how a TUN
     /// adapter is routed and how some VPNs route themselves.
@@ -54,7 +59,20 @@ pub struct Road {
 const WIDE_ENOUGH: u8 = 1;
 
 /// The interface tracewing's own connections of family `v6` should leave by,
-/// given the routing table and `ours`, the adapter tracewing itself holds.
+/// given the routing table and `ours`, the **LUID** of the adapter tracewing
+/// itself holds.
+///
+/// A LUID rather than an index, and that is not a detail. An index belongs
+/// to one family: the documentation says `Ipv6IfIndex` is zero where an
+/// interface has no IPv6 at all, and says neither index is persistent across
+/// an adapter being disabled and enabled. A machine where ours happened to
+/// be numbered differently in the two families would have had one family
+/// excluded and the other not — and the family that was not excluded is the
+/// one whose connections loop. A LUID names the interface in both.
+///
+/// The number that comes *back* is still the per-family index, because that
+/// is what `IP_UNICAST_IF` and `IPV6_UNICAST_IF` take, and it comes from the
+/// row of the family that was asked for rather than from any conversion.
 ///
 /// Ours is never the answer; that is the entire purpose. Among the rest the
 /// order is the one the operating system forwards by: **the route that
@@ -66,11 +84,11 @@ const WIDE_ENOUGH: u8 = 1;
 /// `None` means there is no way out that is not ours. That is the case
 /// WireGuard describes as its packets being blackholed, and it is a caller's
 /// to handle: pinning to nothing is not the same as not pinning.
-pub fn out_by(roads: &[Road], ours: u32, v6: bool) -> Option<u32> {
+pub fn out_by(roads: &[Road], ours: u64, v6: bool) -> Option<u32> {
     roads
         .iter()
         .filter(|road| {
-            road.v6 == v6 && !road.loopback && road.interface != ours && road.bits <= WIDE_ENOUGH
+            road.v6 == v6 && !road.loopback && road.luid != ours && road.bits <= WIDE_ENOUGH
         })
         .min_by_key(|road| (std::cmp::Reverse(road.bits), road.metric, road.interface))
         .map(|road| road.interface)
@@ -99,6 +117,9 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
             .iter()
             .map(|row| Road {
                 interface: row.InterfaceIndex,
+                // SAFETY: a union over a `u64` and a bitfield of the same
+                // eight bytes; the whole value is what identifies it.
+                luid: row.InterfaceLuid.Value,
                 bits: row.DestinationPrefix.PrefixLength,
                 metric: row.Metric,
                 loopback: row.Loopback,
@@ -157,9 +178,13 @@ mod reading {
 mod tests {
     use super::*;
 
+    /// A road whose interface and LUID are the same number, which is only a
+    /// convenience: nothing but `the_same_adapter_numbered_differently…`
+    /// cares that they are two things.
     fn road(interface: u32, bits: u8, metric: u32) -> Road {
         Road {
             interface,
+            luid: interface as u64,
             bits,
             metric,
             loopback: false,
@@ -222,6 +247,38 @@ mod tests {
         let roads = [road(7, 0, 25), six];
         assert_eq!(out_by(&roads, 99, false), Some(7));
         assert_eq!(out_by(&roads, 99, true), Some(9));
+    }
+
+    /// Why this takes a LUID. An adapter can be numbered differently in the
+    /// two families, and an index can only ever exclude one of them — the
+    /// other family's connections would then be routed into the adapter we
+    /// are holding, which is the loop.
+    #[test]
+    fn the_same_adapter_numbered_differently_in_each_family_is_still_ours() {
+        let ours = 0x1234_5678_9abc_def0;
+        let mine_v4 = Road {
+            interface: 11,
+            luid: ours,
+            ..road(11, 0, 0)
+        };
+        let mine_v6 = Road {
+            interface: 22,
+            luid: ours,
+            v6: true,
+            ..road(22, 0, 0)
+        };
+        let other_v4 = road(7, 0, 25);
+        let other_v6 = Road {
+            v6: true,
+            ..road(8, 0, 25)
+        };
+        let roads = [mine_v4, mine_v6, other_v4, other_v6];
+        assert_eq!(out_by(&roads, ours, false), Some(7));
+        assert_eq!(
+            out_by(&roads, ours, true),
+            Some(8),
+            "excluding by index would have left this family pointing at ours"
+        );
     }
 
     #[test]
