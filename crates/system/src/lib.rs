@@ -41,6 +41,7 @@ mod quic;
 
 mod alive;
 pub mod android;
+pub mod child;
 pub mod extension;
 pub mod ios_sim;
 pub mod java;
