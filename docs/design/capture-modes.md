@@ -1001,6 +1001,29 @@ Two things the real tables of an ordinary machine taught the parser:
   rather than fails** — 0.84s against a 3s timeout — so this was the quiet
   failure the whole seam exists to prevent, reachable by accident.
 
+**And where an echo leaves from takes two sources, because Linux has no one
+source.** `addresses_now` reads `/proc/net/if_inet6` for the IPv6 addresses,
+with the flags that say whether one may be sent from — still in duplicate
+address detection, failed it, or deprecated, which is an address the kernel
+keeps for being reached at rather than for reaching out — and `SIOCGIFCONF`
+for the IPv4 ones, which carries no flags at all, so those are settled by
+construction. Both are readable by anybody, measured with `CapEff:
+0000000000000000`, and `source_on` is the judgement over both, shared with
+Windows.
+
+Two things to know about it:
+
+- **`SIOCGIFCONF` answers in this machine's byte order**, like the error
+  queue and unlike the routing tables. Read big-endian, `AF_INET` is 512 and
+  **every IPv4 address silently disappears**: the ablation takes this
+  machine's 20 addresses down to 16 and turns the echo's source into `None`,
+  so nothing would ever leave and nothing would say why.
+- **The answer has to be the address the kernel would have chosen anyway**,
+  which the live test asserts by connecting a UDP socket out and comparing:
+  `the way out is 6, echoing from Some(192.168.1.6)`. An echo from any other
+  address would be routed into tracewing's own adapter, which is the loop
+  this whole seam exists to prevent.
+
 What this cannot see: both files are the **main** table, so a machine routing
 by `ip rule` has routes that are not here — the same class of gap as an
 interface's own metric being absent from a Windows row.

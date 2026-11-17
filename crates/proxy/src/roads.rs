@@ -500,6 +500,167 @@ fn is_link_local(addr: std::net::IpAddr) -> bool {
 }
 
 /// Every unicast address this machine holds, in both families.
+///
+/// Two sources, because Linux has no single one: `/proc/net/if_inet6` lists
+/// the IPv6 addresses with their flags, and `SIOCGIFCONF` lists the IPv4
+/// ones. Both are readable by anybody -- measured with `CapEff:
+/// 0000000000000000`.
+#[cfg(target_os = "linux")]
+pub fn addresses_now() -> anyhow::Result<Vec<Mine>> {
+    let mut mine = mine_v4()?;
+    mine.extend(mine_v6(
+        &std::fs::read_to_string("/proc/net/if_inet6").unwrap_or_default(),
+    ));
+    Ok(mine)
+}
+
+/// `<address> <index> <prefix> <scope> <flags> <name>`, all but the name in
+/// hex, which is what `/proc/net/if_inet6` is.
+///
+/// The flags are the point of reading this file rather than asking for
+/// addresses alone: an address still in duplicate address detection, or one
+/// that failed it, is not one to send from, and a **deprecated** address is
+/// one the kernel keeps for being reached at rather than for reaching out.
+/// [`source_on`] is what acts on them.
+#[cfg(target_os = "linux")]
+fn mine_v6(table: &str) -> Vec<Mine> {
+    /// Still in duplicate address detection.
+    const TENTATIVE: u32 = 0x40;
+    /// Found to be somebody else's.
+    const DADFAILED: u32 = 0x08;
+    /// Kept to be reached at, not to send from.
+    const DEPRECATED: u32 = 0x20;
+    table
+        .lines()
+        .filter_map(|line| {
+            let mut field = line.split_whitespace();
+            let (addr, index, _prefix, _scope, flags, name) = (
+                field.next()?,
+                field.next()?,
+                field.next()?,
+                field.next()?,
+                field.next()?,
+                field.next()?,
+            );
+            let _ = name;
+            let octets: [u8; 16] = (0..16)
+                .map(|i| u8::from_str_radix(addr.get(i * 2..i * 2 + 2)?, 16).ok())
+                .collect::<Option<Vec<u8>>>()?
+                .try_into()
+                .ok()?;
+            let flags = u32::from_str_radix(flags, 16).ok()?;
+            Some(Mine {
+                // The index this line carries, not `if_nametoindex` of the
+                // name: the file has it already and it cannot disagree with
+                // itself.
+                luid: u64::from(u32::from_str_radix(index, 16).ok()?),
+                addr: std::net::Ipv6Addr::from(octets).into(),
+                settled: flags & (TENTATIVE | DADFAILED) == 0,
+                skip_as_source: flags & DEPRECATED != 0,
+            })
+        })
+        .collect()
+}
+
+/// The IPv4 addresses, from `SIOCGIFCONF`.
+///
+/// There is no file to read them from, and `SIOCGIFCONF` is the call that
+/// lists them all in one go rather than one interface at a time. It carries
+/// **no flags**, so these are `settled` and not skipped: duplicate address
+/// detection is an IPv6 idea, and a deprecated IPv4 address is a netlink
+/// concept this call cannot see. Said rather than implied, because it is a
+/// difference between the families and not a decision.
+#[cfg(target_os = "linux")]
+fn mine_v4() -> anyhow::Result<Vec<Mine>> {
+    use std::os::fd::{AsRawFd, FromRawFd};
+    const SIOCGIFCONF: libc::c_ulong = 0x8912;
+    /// `struct ifreq`: a name, then a union whose first arm is the address.
+    /// 16 + 24 on every Linux this builds for.
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct Entry {
+        name: [libc::c_char; libc::IFNAMSIZ],
+        addr: libc::sockaddr_in,
+        _rest: [u8; 8],
+    }
+    #[repr(C)]
+    struct Conf {
+        len: libc::c_int,
+        buf: *mut libc::c_char,
+    }
+    // SAFETY: a datagram socket, which this call only reads through.
+    let socket = unsafe { libc::socket(libc::AF_INET, libc::SOCK_DGRAM, 0) };
+    anyhow::ensure!(socket >= 0, "a socket to ask for addresses through");
+    // SAFETY: a descriptor just made, held by nothing else.
+    let socket = unsafe { std::os::fd::OwnedFd::from_raw_fd(socket) };
+    let mut room = 32usize;
+    loop {
+        let mut entries = vec![
+            Entry {
+                name: [0; libc::IFNAMSIZ],
+                // SAFETY: zeroes are a valid `sockaddr_in`.
+                addr: unsafe { std::mem::zeroed() },
+                _rest: [0; 8],
+            };
+            room
+        ];
+        let bytes = std::mem::size_of::<Entry>() * room;
+        let mut conf = Conf {
+            len: bytes as libc::c_int,
+            buf: entries.as_mut_ptr().cast(),
+        };
+        // SAFETY: a buffer of ours whose length is given as its own size.
+        let got = unsafe {
+            libc::ioctl(
+                socket.as_raw_fd(),
+                SIOCGIFCONF,
+                std::ptr::addr_of_mut!(conf),
+            )
+        };
+        anyhow::ensure!(
+            got == 0,
+            "ask this machine for its addresses: {}",
+            std::io::Error::last_os_error()
+        );
+        let filled = conf.len.max(0) as usize;
+        // A full buffer may have been truncated -- the call says nothing
+        // about it -- so the only safe reading of "exactly full" is "ask
+        // again with more room".
+        if filled == bytes {
+            room *= 2;
+            anyhow::ensure!(
+                room <= 4096,
+                "this machine has more addresses than expected"
+            );
+            continue;
+        }
+        return Ok(entries
+            .iter()
+            .take(filled / std::mem::size_of::<Entry>())
+            .filter_map(|entry| {
+                // The family is in **this machine's** byte order, which is
+                // the trap here: read the other way round `AF_INET` is 512.
+                if libc::c_int::from(entry.addr.sin_family) != libc::AF_INET {
+                    return None;
+                }
+                let name = entry
+                    .name
+                    .iter()
+                    .take_while(|byte| **byte != 0)
+                    .map(|byte| *byte as u8 as char)
+                    .collect::<String>();
+                Some(Mine {
+                    luid: u64::from(index_of(&name)?),
+                    addr: std::net::Ipv4Addr::from(entry.addr.sin_addr.s_addr.to_ne_bytes()).into(),
+                    settled: true,
+                    skip_as_source: false,
+                })
+            })
+            .collect());
+    }
+}
+
+/// Every unicast address this machine holds, in both families.
 #[cfg(windows)]
 pub fn addresses_now() -> anyhow::Result<Vec<Mine>> {
     use windows_sys::Win32::{
@@ -980,6 +1141,94 @@ wlp8s0\t0001A8C0\t00000000\t0001\t0\t0\t600\t00FFFFFF\t0\t0\t0
     /// the parsing tests cannot say: that the columns are where this kernel
     /// puts them, and that the names in them resolve to numbers.
     ///
+    /// `/proc/net/if_inet6` as this machine wrote it: two global addresses
+    /// on the Wi-Fi, which are what an echo can leave from, and link-locals
+    /// everywhere, which cannot. Kept as it came.
+    #[cfg(target_os = "linux")]
+    const INET6: &str = "\
+fe8000000000000085e1888c1423c6a7 06 40 20 80 wlp8s0
+20010ee040c17debd5a0bad383e4d251 06 40 00 00 wlp8s0
+20010ee040c1b8bea6fe45d927bf7b52 06 40 00 00 wlp8s0
+fe80000000000000d4dda0fffe166316 04 40 20 80 docker0
+";
+
+    /// The real lines, read as addresses, and then the choice made from them.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn the_ipv6_addresses_this_machine_holds() {
+        let mine = mine_v6(INET6);
+        assert_eq!(mine.len(), 4, "{mine:?}");
+        assert!(mine.iter().all(|one| one.settled && !one.skip_as_source));
+        assert_eq!(mine[0].luid, 6);
+        assert_eq!(mine[3].luid, 4);
+        // The lowest of the Wi-Fi's two globals, and never a link-local:
+        // an echo from `fe80::` goes nowhere.
+        assert_eq!(
+            source_on(&mine, 6, true),
+            Some("2001:ee0:40c1:7deb:d5a0:bad3:83e4:d251".parse().unwrap())
+        );
+        // Nothing to send from on an interface that holds only a
+        // link-local, which is every veth and every docker bridge here.
+        assert_eq!(source_on(&mine, 4, true), None);
+    }
+
+    /// The flags are why this file is read rather than the addresses alone.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn an_address_that_cannot_be_sent_from() {
+        let one = |flags: &str| {
+            mine_v6(&format!(
+                "20010ee040c17debd5a0bad383e4d251 06 40 00 {flags} wlp8s0\n"
+            ))[0]
+        };
+        // Still in duplicate address detection, and failed it: neither is
+        // settled, and Windows would refuse to send from either.
+        assert!(!one("40").settled);
+        assert!(!one("48").settled);
+        assert!(!one("08").settled);
+        // Deprecated: kept to be reached at rather than to reach out.
+        assert!(one("20").skip_as_source);
+        assert!(!one("80").skip_as_source);
+        // And a settled, undeprecated address is what is left.
+        let plain = one("00");
+        assert!(plain.settled && !plain.skip_as_source);
+        // A line that stops early costs only itself, as a route line does.
+        assert_eq!(mine_v6("20010ee0 06 40\nnot an address at all\n").len(), 0);
+        // An address that is not 32 hex digits is not an address.
+        assert_eq!(
+            mine_v6("zzzz0ee040c17debd5a0bad383e4d251 06 40 00 00 x\n").len(),
+            0
+        );
+    }
+
+    /// Really asks this machine, both families, and takes the answer
+    /// through the judgement an echo would use.
+    #[cfg(target_os = "linux")]
+    #[test]
+    #[ignore = "asks this machine about its own addresses"]
+    fn the_real_addresses_name_somewhere_to_echo_from() {
+        let mine = addresses_now().expect("the addresses read");
+        println!("{} address(es)", mine.len());
+        for one in &mine {
+            println!(
+                "  if {} {} settled {} skip {}",
+                one.luid, one.addr, one.settled, one.skip_as_source
+            );
+        }
+        let roads = roads_now().expect("the routes read");
+        let out = out_by(&roads, u64::MAX, false).expect("a way out");
+        let source = source_on(&mine, u64::from(out), false);
+        println!("the way out is {out}, echoing from {source:?}");
+        let source = source.expect("the way out holds an address to echo from");
+        assert!(!source.is_loopback() && !is_link_local(source), "{source}");
+        // The same address the kernel would choose for a connection out,
+        // which is the point: an echo that left from another one would be
+        // routed into tracewing's own adapter.
+        let probe = std::net::UdpSocket::bind("0.0.0.0:0").expect("a socket");
+        probe.connect("1.1.1.1:53").expect("a route out");
+        assert_eq!(source, probe.local_addr().expect("an address").ip());
+    }
+
     /// The carrier policy: a plain `1`, and nothing else.
     #[cfg(target_os = "linux")]
     #[test]
