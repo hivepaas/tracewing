@@ -195,7 +195,7 @@ fn rows_become(luid: u64, bits: u8, v6: bool, want: usize) -> usize {
 #[test]
 #[ignore = "needs Administrator and wintun.dll"]
 fn an_address_brings_an_on_link_route_and_takes_it_away_again() {
-    let adapter = WintunAdapter::open(&dll()).expect("open the adapter");
+    let adapter = Arc::new(WintunAdapter::open(&dll()).expect("open the adapter"));
     let ours = adapter.luid().expect("the adapter's LUID");
     // A private prefix of its own, so that a machine running this does not
     // lose a route it was using.
@@ -245,7 +245,7 @@ fn an_address_brings_an_on_link_route_and_takes_it_away_again() {
 #[test]
 #[ignore = "needs Administrator and wintun.dll"]
 fn a_route_goes_into_the_adapter_and_comes_out_again() {
-    let adapter = WintunAdapter::open(&dll()).expect("open the adapter");
+    let adapter = Arc::new(WintunAdapter::open(&dll()).expect("open the adapter"));
     let ours = adapter.luid().expect("the adapter's LUID");
     let to: std::net::IpAddr = "203.0.113.0".parse().expect("an address");
     const BITS: u8 = 26;

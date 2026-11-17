@@ -207,7 +207,7 @@ impl WintunAdapter {
         match got {
             NO_ERROR => Ok(Address {
                 row,
-                held: Arc::clone(self),
+                _held: Arc::clone(self),
             }),
             _ => Err(anyhow!("give the adapter {addr}/{bits}: error {got}")),
         }
@@ -261,7 +261,7 @@ impl WintunAdapter {
         match got {
             NO_ERROR => Ok(Route {
                 row,
-                held: Arc::clone(self),
+                _held: Arc::clone(self),
             }),
             _ => Err(anyhow!("route {to}/{bits} into the adapter: error {got}")),
         }
@@ -282,7 +282,8 @@ impl WintunAdapter {
 #[must_use = "dropping this takes the address off the adapter again"]
 pub struct Address {
     row: ::windows_sys::Win32::NetworkManagement::IpHelper::MIB_UNICASTIPADDRESS_ROW,
-    held: Arc<WintunAdapter>,
+    /// Held so the adapter cannot go first. Nothing reads it.
+    _held: Arc<WintunAdapter>,
 }
 
 impl Drop for Address {
@@ -345,7 +346,8 @@ fn sockaddr(addr: IpAddr) -> ::windows_sys::Win32::Networking::WinSock::SOCKADDR
 #[must_use = "dropping this takes the route away again"]
 pub struct Route {
     row: ::windows_sys::Win32::NetworkManagement::IpHelper::MIB_IPFORWARD_ROW2,
-    held: Arc<WintunAdapter>,
+    /// Held so the adapter cannot go first. Nothing reads it.
+    _held: Arc<WintunAdapter>,
 }
 
 impl Drop for Route {
