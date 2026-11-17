@@ -2161,6 +2161,21 @@ t07b9de08 = Пам’ять для великих тіл, що чекають н
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Понад цей обсяг великі тіла більше не зберігаються.
 
+# Level
+t4155597d = Рівень прав
+
+# Open the browser as an administrator
+tfe926254 = Відкривати браузер від імені адміністратора
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = Те, що запустить tracewing, отримає повний контроль над цим комп’ютером, і tracewing не зможе його обмежити. До того ж браузери на Chromium відмовляються запускатися або скаржаться, коли їх запускають так, — це для рідкісних випадків, коли розширення або кіоск налагоджують із підвищеними правами. Поки сам tracewing не адміністратор, Windows питає при кожному відкриванні. Читається при кожному відкриванні.
+
+# Open the terminal as an administrator
+t0b0e9c20 = Відкривати термінал від імені адміністратора
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = Програма, якій потрібен адміністратор, не запуститься в терміналі без цих прав, а цей термінал і існує, щоб передати програмі змінні проксі, — тобто це звичайний випадок, а не крайній. Те, що запуститься в ньому, отримає повний контроль над цим комп’ютером, і tracewing не зможе його обмежити. Поки сам tracewing не адміністратор, Windows питає при кожному відкриванні. Читається при кожному відкриванні.
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key }: "{ $text }" не є цілим числом
 

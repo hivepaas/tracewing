@@ -1966,6 +1966,21 @@ t07b9de08 = Memori untuk body besar yang menunggu ditulis
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Lewat dari ini, body besar tidak lagi disimpan.
 
+# Level
+t4155597d = Tingkat izin
+
+# Open the browser as an administrator
+tfe926254 = Buka browser sebagai administrator
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = Apa pun yang dijalankan tracewing lalu punya kendali penuh atas komputer ini, dan tracewing tidak bisa membatasinya. Browser berbasis Chromium juga menolak berjalan atau mengeluh ketika dijalankan seperti ini, jadi ini untuk kasus yang jarang: men-debug sebuah ekstensi atau kiosk yang berjalan dengan izin tinggi. Selama tracewing sendiri bukan administrator, Windows bertanya setiap kali dibuka. Dibaca setiap kali dibuka.
+
+# Open the terminal as an administrator
+t0b0e9c20 = Buka terminal sebagai administrator
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = Program yang memerlukan administrator tidak akan berjalan di terminal yang bukan administrator, dan terminal ini ada untuk menaruh variabel proxy di depan sebuah program — jadi ini kasus biasa, bukan kasus pinggiran. Apa pun yang berjalan di dalamnya punya kendali penuh atas komputer ini, dan tracewing tidak bisa membatasinya. Selama tracewing sendiri bukan administrator, Windows bertanya setiap kali dibuka. Dibaca setiap kali dibuka.
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key }: "{ $text }" bukan bilangan bulat
 

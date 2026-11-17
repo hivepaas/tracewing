@@ -2161,6 +2161,21 @@ t07b9de08 = Память для больших тел, ожидающих зап
 # Past this, large bodies stop being kept.
 tfe61a4f3 = При превышении большие тела перестают сохраняться.
 
+# Level
+t4155597d = Уровень прав
+
+# Open the browser as an administrator
+tfe926254 = Открывать браузер от имени администратора
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = То, что запустит tracewing, получит полный контроль над этим компьютером, и tracewing не сможет его ограничить. К тому же браузеры на Chromium отказываются запускаться или жалуются, когда их запускают так, — это для редких случаев, когда расширение или киоск отлаживают с повышенными правами. Пока сам tracewing не администратор, Windows спрашивает при каждом открытии. Читается при каждом открытии.
+
+# Open the terminal as an administrator
+t0b0e9c20 = Открывать терминал от имени администратора
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = Программа, которой нужен администратор, не запустится в терминале без этих прав, а этот терминал и существует для того, чтобы передать программе переменные прокси, — то есть это обычный случай, а не крайний. То, что запустится в нём, получит полный контроль над этим компьютером, и tracewing не сможет его ограничить. Пока сам tracewing не администратор, Windows спрашивает при каждом открытии. Читается при каждом открытии.
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key }: "{ $text }" — не целое число
 

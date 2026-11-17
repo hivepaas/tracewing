@@ -1966,6 +1966,21 @@ t07b9de08 = 書き込み待ちの大きなボディ用メモリ
 # Past this, large bodies stop being kept.
 tfe61a4f3 = これを超えると、大きなボディは保持されなくなります。
 
+# Level
+t4155597d = 権限レベル
+
+# Open the browser as an administrator
+tfe926254 = ブラウザーを管理者として開く
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = tracewing が起動したものはこのコンピュータを完全に制御でき、tracewing はそれを制限できません。さらに Chromium 系のブラウザーは管理者として実行されると起動を拒否するか警告を出すため、これは拡張機能やキオスク端末を昇格した権限でデバッグするという稀な場合のためのものです。tracewing 自身が管理者でない間は、Windows が開くたびに確認します。開くたびに読み込まれます。
+
+# Open the terminal as an administrator
+t0b0e9c20 = ターミナルを管理者として開く
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = 管理者を必要とするプログラムは、管理者でないターミナルでは起動しません。そしてこのターミナルは、プロキシの環境変数をプログラムの前に置くためにあります — つまりこれは例外ではなく通常の場合です。そこで起動したものはこのコンピュータを完全に制御でき、tracewing はそれを制限できません。tracewing 自身が管理者でない間は、Windows が開くたびに確認します。開くたびに読み込まれます。
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key }: "{ $text }" は整数ではありません
 

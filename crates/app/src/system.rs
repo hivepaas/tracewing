@@ -309,9 +309,7 @@ impl Traffic {
     pub fn open_terminal(&mut self, cx: &mut Context<Self>) {
         let (addr, data_dir) = (self.engine.addr, self.data_dir.clone());
         let store = self.engine.key_store;
-        // What level it starts at. The person's own until the tab offers the
-        // choice; see `tracewing_system::child`.
-        let level = system::child::Level::default();
+        let level = level_wanted(self.engine.settings.terminal_as_administrator);
         self.run_launch(
             tr!("The terminal"),
             move || {
@@ -329,7 +327,7 @@ impl Traffic {
             return;
         };
         let browser = browser.clone();
-        let level = system::child::Level::default();
+        let level = level_wanted(self.engine.settings.browser_as_administrator);
         self.run_launch(
             browser.name.to_owned(),
             move || system::launch::open_url(&browser, &format!("https://{CHECK_HOST}/"), level),
@@ -345,7 +343,7 @@ impl Traffic {
             return;
         };
         let browser = browser.clone();
-        let level = system::child::Level::default();
+        let level = level_wanted(self.engine.settings.browser_as_administrator);
         // Trusted, the CA is in the browser's store, and the flag would only
         // add a warning bar.
         let trusted = match *trust {
@@ -519,9 +517,49 @@ impl Traffic {
     }
 }
 
+/// The level a launch asks for, from the switch that says so.
+///
+/// Passed about as a [`system::child::Level`] rather than as the `bool` it is
+/// stored as, so that a call site says what it means rather than carrying a
+/// flag whose sense has to be remembered.
+///
+/// **Only Windows is asked for the other level.** It is the only system where
+/// the two differ, and the only one where Settings offers the switch -- but a
+/// settings file is a file, and one carried from a Windows machine to a Mac
+/// would otherwise fail every launch with "this system cannot start a child
+/// Elevated". A switch that cannot apply here is read as off rather than as
+/// an error, because nobody asked for it on this machine.
+fn level_wanted(as_administrator: bool) -> system::child::Level {
+    match as_administrator && cfg!(windows) {
+        true => system::child::Level::Administrator,
+        false => system::child::Level::TheirOwn,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Both halves on every platform, since the answer differs by platform
+    /// and the wrong one is silent: a launch at the wrong level either asks
+    /// for a password nobody expected or runs with more than it should.
+    #[test]
+    fn a_launch_asks_for_the_level_the_switch_says() {
+        assert_eq!(level_wanted(false), system::child::Level::TheirOwn);
+        if cfg!(windows) {
+            assert_eq!(
+                level_wanted(true),
+                system::child::Level::Administrator,
+                "where the switch is offered, it is honoured"
+            );
+        } else {
+            assert_eq!(
+                level_wanted(true),
+                system::child::Level::TheirOwn,
+                "and where it is not offered, a settings file carrying it is read as off"
+            );
+        }
+    }
 
     fn found(verified: bool, places: &[bool]) -> CaFound {
         CaFound {

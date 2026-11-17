@@ -89,6 +89,22 @@ pub struct StorageSettings {
     /// what a phone's configuration suggests and what a router is most
     /// likely to already allow.
     pub wireguard_port: u64,
+    /// Start the browser tracewing opens **as an administrator**, rather than
+    /// at the level the person using the computer has. Windows only, where
+    /// the two differ; read at each launch.
+    ///
+    /// Off by default, and the weaker of the two cases: a Chromium refuses or
+    /// complains when it is run as an administrator, so this is for the rare
+    /// extension or kiosk being debugged under elevation.
+    pub browser_as_administrator: bool,
+    /// Start the terminal tracewing opens **as an administrator**. Windows
+    /// only; read at each launch.
+    ///
+    /// Off by default, but a first-class case rather than an edge: a program
+    /// that needs an administrator will not start in a terminal that is not
+    /// one, and the terminal way in exists to put the proxy's variables in
+    /// front of a program.
+    pub terminal_as_administrator: bool,
 }
 
 impl Default for StorageSettings {
@@ -117,6 +133,10 @@ impl Default for StorageSettings {
             socks_port: 1080,
             wireguard: false,
             wireguard_port: 51820,
+            // Both off: what tracewing starts for somebody to use gets the
+            // level they have, until they say otherwise.
+            browser_as_administrator: false,
+            terminal_as_administrator: false,
         }
     }
 }

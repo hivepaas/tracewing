@@ -171,7 +171,8 @@ fn shown_in(at: SettingsSection, way: Way) -> Vec<Group> {
 /// The settings by group, each in its part of Settings, said in the language
 /// in use.
 fn groups() -> Vec<Group> {
-    vec![
+    #[allow(unused_mut)]
+    let mut all = vec![
         group(
             SettingsSection::Capture,
             Some(Way::OtherDevices),
@@ -427,7 +428,50 @@ fn groups() -> Vec<Group> {
                 ),
             ],
         ),
-    ]
+    ];
+    // Windows only, where a program's level and the person's can differ and
+    // where tracewing has a way to ask for the other one. Nothing to choose
+    // between elsewhere, so nothing is shown: see `system::level_wanted`,
+    // which reads the switch as off on a machine that cannot offer it.
+    #[cfg(windows)]
+    all.extend([
+        group(
+            SettingsSection::Capture,
+            Some(Way::Browser),
+            tr!("Level"),
+            vec![row(
+                "browser_as_administrator",
+                tr!("Open the browser as an administrator"),
+                tr!(
+                    "What tracewing starts then has full control of this computer, and tracewing \
+                     cannot limit it. Chromium-based browsers also refuse or complain when they \
+                     are run this way, so this is for the rare extension or kiosk being debugged \
+                     under elevation. While tracewing is not an administrator itself, Windows \
+                     asks at each launch. Read at each launch."
+                ),
+                "",
+            )],
+        ),
+        group(
+            SettingsSection::Capture,
+            Some(Way::Terminal),
+            tr!("Level"),
+            vec![row(
+                "terminal_as_administrator",
+                tr!("Open the terminal as an administrator"),
+                tr!(
+                    "A program that needs an administrator will not start in a terminal that is \
+                     not one, and this terminal is here to put the proxy's variables in front of \
+                     a program -- so this is an ordinary case rather than an edge. What it starts \
+                     has full control of this computer, and tracewing cannot limit it. While \
+                     tracewing is not an administrator itself, Windows asks at each launch. Read \
+                     at each launch."
+                ),
+                "",
+            )],
+        ),
+    ]);
+    all
 }
 
 enum Field {
@@ -2241,7 +2285,7 @@ mod tests {
                 );
             }
         }
-        // Three ways in have settings of their own; the rest are a switch or
+        // Which ways in have settings of their own; the rest are a switch or
         // an action, and their tabs are text and a button. Said here so that
         // an empty tab is a decision rather than a group somebody forgot to
         // give a `way`.
@@ -2250,14 +2294,19 @@ mod tests {
             .filter(|way| !shown_in(SettingsSection::Capture, *way).is_empty())
             .map(Way::name)
             .collect();
-        assert_eq!(
-            with_rows,
-            vec![
-                tr!("Other devices"),
-                "SOCKS5".to_owned(),
-                "WireGuard".to_owned()
-            ]
-        );
+        // A browser and a terminal carry the level switch, and only on
+        // Windows, where a program's level and the person's can differ. In
+        // `Way::ALL`'s order, which is the order the tabs are in.
+        let mut want = Vec::new();
+        if cfg!(windows) {
+            want.extend([tr!("A browser"), tr!("A terminal")]);
+        }
+        want.extend([
+            tr!("Other devices"),
+            "SOCKS5".to_owned(),
+            "WireGuard".to_owned(),
+        ]);
+        assert_eq!(with_rows, want);
     }
 
     /// What is left of `Network` after the ways in moved out of it: the things
@@ -2280,6 +2329,9 @@ mod tests {
         }
     }
 
+    /// Nothing is stored that cannot be changed in Settings -- with two
+    /// named exceptions, rather than a pattern, so that a third is a
+    /// decision somebody makes here.
     #[test]
     fn every_setting_has_a_row() {
         let table = toml::Value::try_from(StorageSettings::default()).unwrap();
@@ -2289,6 +2341,17 @@ mod tests {
             .keys()
             .map(String::as_str)
             .collect();
+        // The level switches are **stored** on every platform and **offered**
+        // only on Windows. Stored everywhere because a settings file travels:
+        // the struct denies unknown fields, so dropping them off Windows
+        // would make a settings.toml written on Windows unreadable on a Mac.
+        // Offered only on Windows because that is the only system where a
+        // program's level and the person's can differ.
+        if !cfg!(windows) {
+            keys.retain(|key| {
+                !["browser_as_administrator", "terminal_as_administrator"].contains(key)
+            });
+        }
         let mut rows: Vec<&str> = groups()
             .into_iter()
             .flat_map(|group| group.rows.into_iter().map(|row| row.key))

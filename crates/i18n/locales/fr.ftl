@@ -2091,6 +2091,21 @@ t07b9de08 = Mémoire pour les gros corps en attente d'écriture
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Au-delà, les gros corps ne sont plus conservés.
 
+# Level
+t4155597d = Niveau de droits
+
+# Open the browser as an administrator
+tfe926254 = Ouvrir le navigateur en tant qu'administrateur
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = Ce que tracewing lance a alors le contrôle total de cet ordinateur, et tracewing ne peut pas le limiter. Les navigateurs basés sur Chromium refusent en outre de démarrer ou protestent lorsqu'ils sont lancés ainsi : c'est donc pour les rares cas où une extension ou une borne est déboguée avec des droits élevés. Tant que tracewing n'est pas lui-même administrateur, Windows demande à chaque ouverture. Lu à chaque ouverture.
+
+# Open the terminal as an administrator
+t0b0e9c20 = Ouvrir le terminal en tant qu'administrateur
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = Un programme qui a besoin d'un administrateur ne démarrera pas dans un terminal qui n'en est pas un, et ce terminal est là pour mettre les variables du proxy devant un programme — c'est donc un cas ordinaire et non un cas limite. Ce qui y démarre a le contrôle total de cet ordinateur, et tracewing ne peut pas le limiter. Tant que tracewing n'est pas lui-même administrateur, Windows demande à chaque ouverture. Lu à chaque ouverture.
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key } : « { $text } » n'est pas un nombre entier
 
