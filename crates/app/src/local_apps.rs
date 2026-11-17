@@ -241,6 +241,16 @@ impl crate::traffic::Traffic {
             (Support::NeedsAdministrator, _, _) => tr!(
                 "Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list."
             ),
+            // Two of them, because it is not the same press. On Windows a
+            // `Ready` tracewing is already an administrator and nothing is
+            // asked; on Linux the one privileged step asks while it runs,
+            // and a line that says so only once the dialog is on screen is
+            // not a line that said so before it was pressed -- which is the
+            // whole of what the `NeedsAdministrator` line above does for
+            // Windows.
+            (Support::Ready, false, _) if cfg!(target_os = "linux") => tr!(
+                "Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on."
+            ),
             (Support::Ready, false, _) => tr!(
                 "Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on."
             ),

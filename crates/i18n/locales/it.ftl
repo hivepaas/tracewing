@@ -1108,6 +1108,9 @@ tab504c3d = Non su questo sistema. Su Windows e Linux tracewing prende il traffi
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Spento. Prendere il traffico di questo computer richiede un amministratore: accenderlo riavvia tracewing come tale, e questo inizia una nuova sessione — quella aperta ora resta su disco e si può riaprire dall'elenco.
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = Spento. Accenderlo crea l'adattatore di tracewing, per cui il sistema ti chiede il permesso, e poi inizia a prendere il traffico di questo computer — senza riavvio, e la sessione aperta prosegue.
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = Spento. Accenderlo crea l'adattatore di tracewing e inizia a prendere il traffico di questo computer — senza riavvio, e la sessione aperta prosegue.
 
@@ -2462,8 +2465,8 @@ t4398b845 = E l'archivio proprio di Java
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Poi avvia il tuo programma con queste opzioni: ciò che invia compare in Traffico.
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = Aggiungi l'app, poi attiva questo: le sue connessioni arrivano qui qualunque cosa dicano le sue impostazioni proxy. Come Impostazioni › Cattura › App.
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = Aggiungi ciò che vuoi catturare, poi attiva questo: le sue connessioni arrivano qui qualunque cosa dicano le sue impostazioni proxy. Come Impostazioni › Cattura › { $tab }.
 
 # the browsers' own stores
 tddf6836c = gli archivi propri dei browser
@@ -3018,8 +3021,11 @@ t9aea7fb0 = Un programma Java
 # My phone
 te1545f43 = Il mio telefono
 
-# A Mac app that ignores the proxy
-t2c2204d9 = Una app per Mac che ignora il proxy
+# A program that ignores the proxy
+t18f796bd = Un programma che ignora il proxy
+
+# An app that ignores the proxy
+te5d26bae = Una app che ignora il proxy
 
 # Something in Docker
 t51e75492 = Qualcosa in Docker

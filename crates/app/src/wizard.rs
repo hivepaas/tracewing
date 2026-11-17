@@ -42,8 +42,20 @@ pub enum Target {
     Java,
     /// A phone or a tablet.
     Phone,
-    /// A Mac app that ignores proxy settings altogether.
-    MacApp,
+    /// A program on this computer that ignores proxy settings altogether.
+    ///
+    /// One answer on all three systems, because what somebody arrives
+    /// wanting is the same on each: macOS hands the flows over through its
+    /// network extension, Windows and Linux by route through an adapter of
+    /// tracewing's. Which of the two is underneath is exactly the kind of
+    /// thing the wizard exists so that nobody has to know.
+    ///
+    /// The alias is what an older `layout.toml` holds: this answer was
+    /// `mac-app` while macOS was the only system that had it, and a kept
+    /// answer that no longer parses would put the question back in front of
+    /// somebody who had already answered it.
+    #[serde(alias = "mac-app")]
+    LocalApp,
     /// Something in Docker or Podman.
     Container,
 }
@@ -58,18 +70,23 @@ impl Target {
         Self::Python,
         Self::Java,
         Self::Phone,
-        Self::MacApp,
+        Self::LocalApp,
         Self::Container,
     ];
 
-    /// The ways in that are worth offering on this computer. A Mac app is
-    /// taken by a macOS extension, and on Linux or Windows there is nothing
-    /// behind that answer, so it is not asked.
+    /// The answers worth offering on this computer.
+    ///
+    /// Nothing is left out today. The one answer that used to be left out
+    /// was the local way in, when macOS was the only system that could take
+    /// a chosen program's traffic; it reaches [`Way::Apps`] on all three now,
+    /// and leaving it out on two of them made the tab that Settings draws
+    /// everywhere findable only by somebody who already knew to look there.
+    ///
+    /// The seam stays although it filters nothing: the next answer that is
+    /// true of one system only has to be left out somewhere, and a caller
+    /// reading [`Self::ALL`] straight would not know to.
     pub fn here() -> Vec<Self> {
-        Self::ALL
-            .into_iter()
-            .filter(|target| cfg!(target_os = "macos") || *target != Self::MacApp)
-            .collect()
+        Self::ALL.to_vec()
     }
 
     /// As somebody would say it, in the first person, because the question is
@@ -83,7 +100,12 @@ impl Target {
             Self::Python => "Python".to_owned(),
             Self::Java => tr!("A Java program"),
             Self::Phone => tr!("My phone"),
-            Self::MacApp => tr!("A Mac app that ignores the proxy"),
+            // The word the reader's own system uses, as `Way::name` does
+            // for the tab this answer leads to. A row of pills is scanned
+            // rather than read, and somebody on Windows looking for where to
+            // capture a service or an installer does not stop at "app".
+            Self::LocalApp if cfg!(windows) => tr!("A program that ignores the proxy"),
+            Self::LocalApp => tr!("An app that ignores the proxy"),
             Self::Container => tr!("Something in Docker"),
         }
     }
@@ -117,7 +139,9 @@ pub enum Card {
     OtherDevices,
     Android,
     Simulators,
-    MacApps,
+    /// The chosen programs and the switch over them, whichever of the two
+    /// local ways in this system has behind it.
+    LocalApps,
     /// Blocking UDP port 443, so apps that speak HTTP/3 fall back to HTTP/2
     /// and come through the proxy at all. Not a way in and not a setting:
     /// it is the companion of the system proxy, and the only place in the
@@ -172,7 +196,10 @@ pub fn route(target: Target) -> Route {
             Trust::ThePhone,
             &[Card::OtherDevices, Card::Android, Card::Simulators],
         ),
-        Target::MacApp => with(Way::Apps, Trust::SystemStore, &[Card::MacApps]),
+        // The same store as the system proxy's, and for the same reason on
+        // either machinery: whatever hands the connection over, the program
+        // at the end of it still checks the certificate it is given.
+        Target::LocalApp => with(Way::Apps, Trust::SystemStore, &[Card::LocalApps]),
         // A terminal inside the container; the daemon's own traffic is a
         // different question, and what the image trusts is not ours to say.
         Target::Container => with(Way::Terminal, Trust::Unknown, &[Card::Terminal]),
@@ -376,10 +403,6 @@ mod tests {
         );
     }
 
-    /// A phone's cards are the guides for it, and a Mac app's is the one that
-    /// names apps: a route shows what has something to say about it and
-    /// nothing else, because the pile of cards is what made Set up hard to
-    /// read.
     /// Blocking UDP 443 is offered where it helps and nowhere else. It is
     /// the window's only surface for that block, so dropping it from a route
     /// is the kind of thing that loses a feature quietly.
@@ -392,13 +415,17 @@ mod tests {
         assert_eq!(with_http3, vec![Target::Website]);
     }
 
+    /// A phone's cards are the guides for it, and the local way in's is the
+    /// one that names programs: a route shows what has something to say
+    /// about it and nothing else, because the pile of cards is what made Set
+    /// up hard to read.
     #[test]
     fn a_route_shows_the_cards_that_are_about_it() {
         assert_eq!(
             route(Target::Phone).cards,
             vec![Card::OtherDevices, Card::Android, Card::Simulators]
         );
-        assert_eq!(route(Target::MacApp).cards, vec![Card::MacApps]);
+        assert_eq!(route(Target::LocalApp).cards, vec![Card::LocalApps]);
         assert!(
             !route(Target::Website).cards.contains(&Card::OtherDevices),
             "a website in a browser has nothing to do with another device"
@@ -411,16 +438,65 @@ mod tests {
         }
     }
 
-    /// A Mac app is only offered where macOS could take it.
+    /// What is asked is what this computer can do: an answer with nothing
+    /// behind it is worse than one fewer answer.
+    ///
+    /// Every answer is offered on every system today, which is the whole of
+    /// what this says. It is written as an equality rather than as a count
+    /// so that the next answer that is true of one system only cannot be
+    /// filtered out quietly: filtering is what left the local way in
+    /// unaskable on two systems for as long as it did.
     #[test]
     fn what_is_asked_here_is_what_this_computer_can_do() {
-        let here = Target::here();
         assert_eq!(
-            here.contains(&Target::MacApp),
-            cfg!(target_os = "macos"),
-            "an answer with nothing behind it is worse than one fewer answer"
+            Target::here(),
+            Target::ALL.to_vec(),
+            "an answer is being left out; the test below says whether the \
+             tab it leads to was left out with it"
         );
-        assert!(here.contains(&Target::Website));
+    }
+
+    /// The local way in is reachable from the question wherever it does
+    /// anything, which is the gap this test exists for: Settings drew the
+    /// `Way::Apps` tab on all three systems while only macOS had an answer
+    /// that led to it, so on Windows and Linux the one way in that takes an
+    /// app ignoring the proxy could be found only by somebody who already
+    /// knew to look in Settings.
+    ///
+    /// Neither surface's own tests could see it. This one reads both: the
+    /// question on one side, and on the other what `settings_page` puts in
+    /// that tab -- the route-capturing switch where this machine captures by
+    /// route, and the network extension on macOS.
+    #[test]
+    fn the_local_way_in_has_an_answer_wherever_it_does_anything() {
+        let asked = Target::here()
+            .into_iter()
+            .any(|target| route(target).way == Way::Apps);
+        let in_the_tab = crate::local_apps::Support::here()
+            != crate::local_apps::Support::NotOnThisSystem
+            || cfg!(target_os = "macos");
+        assert_eq!(
+            asked, in_the_tab,
+            "the Apps tab and Set up's question disagree about whether this \
+             system can take a program that ignores the proxy"
+        );
+    }
+
+    /// An answer kept before the rename is still read. `layout.toml` holds
+    /// the answer by name, and this one was `mac-app` for as long as macOS
+    /// was the only system that had it: a kept answer that no longer parsed
+    /// would put the question back in front of somebody who had answered it,
+    /// which is the one way this rename could be felt by anybody.
+    #[test]
+    fn an_answer_kept_before_the_rename_is_still_read() {
+        #[derive(serde::Deserialize)]
+        struct Kept {
+            capture_target: Option<Target>,
+        }
+        let old: Kept = toml::from_str("capture_target = \"mac-app\"").unwrap();
+        assert_eq!(old.capture_target, Some(Target::LocalApp));
+        let now: Kept = toml::from_str("capture_target = \"local-app\"").unwrap();
+        assert_eq!(now.capture_target, Some(Target::LocalApp));
     }
 
     #[test]

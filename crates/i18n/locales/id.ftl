@@ -1069,6 +1069,9 @@ tab504c3d = Tidak ada di sistem ini. Di Windows dan Linux, tracewing mengambil t
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Mati. Mengambil trafik komputer ini perlu administrator: menyalakannya memulai ulang tracewing sebagai administrator, dan itu memulai sesi baru — sesi yang terbuka sekarang tetap ada di disk dan bisa dibuka lagi dari daftar.
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = Mati. Menyalakannya membuat adapter milik tracewing sendiri, yang izinnya diminta oleh sistem, lalu mulai mengambil trafik komputer ini — tanpa memulai ulang, dan sesi yang terbuka tetap berjalan.
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = Mati. Menyalakannya membuat adapter milik tracewing sendiri dan mulai mengambil trafik komputer ini — tanpa memulai ulang, dan sesi yang terbuka tetap berjalan.
 
@@ -2332,8 +2335,8 @@ t4398b845 = Dan penyimpanan milik Java sendiri
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Lalu jalankan programmu dengan flag ini: apa pun yang dikirimnya muncul di Traffic.
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = Tambahkan aplikasinya, lalu nyalakan ini: koneksinya masuk ke sini apa pun pengaturan proxy-nya. Sama dengan Pengaturan › Tangkap › Aplikasi.
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = Tambahkan yang ingin ditangkap, lalu nyalakan ini: koneksinya masuk ke sini apa pun pengaturan proxy-nya. Sama dengan Setelan › Tangkap › { $tab }.
 
 # the browsers' own stores
 tddf6836c = penyimpanan milik browser sendiri
@@ -2873,8 +2876,11 @@ t9aea7fb0 = Sebuah program Java
 # My phone
 te1545f43 = Ponsel saya
 
-# A Mac app that ignores the proxy
-t2c2204d9 = Sebuah app Mac yang mengabaikan proxy
+# A program that ignores the proxy
+t18f796bd = Program yang mengabaikan proxy
+
+# An app that ignores the proxy
+te5d26bae = Aplikasi yang mengabaikan proxy
 
 # Something in Docker
 t51e75492 = Sesuatu di Docker

@@ -1132,6 +1132,9 @@ tab504c3d = Не на цій системі. У Windows і Linux tracewing бе�
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Вимкнено. Щоб брати трафік цього комп'ютера, потрібен адміністратор: увімкнення перезапустить tracewing від його імені, і це почне новий сеанс — відкритий зараз залишиться на диску, його можна відкрити знову зі списку.
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = Вимкнено. Увімкнення створює власний адаптер tracewing, на що система запитає дозвіл, і далі починає брати трафік цього комп'ютера — без перезапуску, і відкритий сеанс триває далі.
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = Вимкнено. Увімкнення створює власний адаптер tracewing і починає брати трафік цього комп'ютера — без перезапуску, і відкритий сеанс триває далі.
 
@@ -2533,8 +2536,8 @@ t4398b845 = І власне сховище Java
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Потім запустіть свою програму з цими прапорцями: те, що вона надішле, з'явиться у «Трафіку».
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = Додайте застосунок і ввімкніть це: його з'єднання йдуть сюди, що б не казали його налаштування проксі. Те саме, що Налаштування › Перехоплення › Застосунки.
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = Додайте те, що хочете перехоплювати, і ввімкніть це: його з'єднання йдуть сюди, що б не казали його налаштування проксі. Те саме, що Налаштування › Захоплення › { $tab }.
 
 # the browsers' own stores
 tddf6836c = власні сховища браузерів
@@ -3103,8 +3106,11 @@ t9aea7fb0 = Програма на Java
 # My phone
 te1545f43 = Мій телефон
 
-# A Mac app that ignores the proxy
-t2c2204d9 = Застосунок для Mac, який нехтує проксі
+# A program that ignores the proxy
+t18f796bd = Програма, яка нехтує проксі
+
+# An app that ignores the proxy
+te5d26bae = Застосунок, який нехтує проксі
 
 # Something in Docker
 t51e75492 = Щось у Docker

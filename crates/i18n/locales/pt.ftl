@@ -1108,6 +1108,9 @@ tab504c3d = Não neste sistema. No Windows e no Linux, o tracewing pega o tráfe
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Desligado. Pegar o tráfego deste computador precisa de administrador: ligar reinicia o tracewing como tal, e isso começa uma sessão nova — a que está aberta fica no disco e pode ser reaberta a partir da lista.
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = Desligado. Ligar cria o adaptador do próprio tracewing, para o que o sistema pede sua permissão, e então começa a pegar o tráfego deste computador — sem reiniciar, e a sessão aberta continua.
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = Desligado. Ligar cria o adaptador do próprio tracewing e começa a pegar o tráfego deste computador — sem reiniciar, e a sessão aberta continua.
 
@@ -2462,8 +2465,8 @@ t4398b845 = E o repositório próprio do Java
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Depois inicie o seu programa com estas opções: o que ele enviar aparece em Tráfego.
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = Adicione o app e ligue isto: as conexões dele chegam aqui seja o que for que digam as configurações de proxy. O mesmo que Ajustes › Captura › Apps.
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = Adicione o que quiser capturar e ligue isto: as conexões dele chegam aqui seja o que for que digam as configurações de proxy. O mesmo que Configurações › Captura › { $tab }.
 
 # the browsers' own stores
 tddf6836c = os repositórios próprios dos navegadores
@@ -3018,8 +3021,11 @@ t9aea7fb0 = Um programa Java
 # My phone
 te1545f43 = Meu celular
 
-# A Mac app that ignores the proxy
-t2c2204d9 = Um app de Mac que ignora o proxy
+# A program that ignores the proxy
+t18f796bd = Um programa que ignora o proxy
+
+# An app that ignores the proxy
+te5d26bae = Um app que ignora o proxy
 
 # Something in Docker
 t51e75492 = Algo no Docker

@@ -1069,6 +1069,9 @@ tab504c3d = 此系统上没有。在 Windows 和 Linux 上，tracewing 按路由
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = 已关闭。接收本机流量需要管理员权限：打开它会以管理员身份重新启动 tracewing，并开始一个新会话——当前会话仍保存在磁盘上，可从列表重新打开。
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = 已关闭。打开后会创建 tracewing 自己的适配器，系统会询问是否允许，然后开始接收本机流量——无需重启，当前会话会继续。
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = 已关闭。打开后会创建 tracewing 自己的适配器并开始接收本机流量——无需重启，当前会话会继续。
 
@@ -2332,8 +2335,8 @@ t4398b845 = 以及 Java 自带的证书库
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = 然后用这些参数启动你的程序：它发出的东西会出现在流量里。
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = 添加应用，然后开启：不管它的代理设置如何，它的连接都会来到这里。与 设置 › 捕获 › 应用 相同。
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = 添加你想抓取的对象，然后开启：不管它的代理设置如何，它的连接都会来到这里。与 设置 › 抓取 › { $tab } 相同。
 
 # the browsers' own stores
 tddf6836c = 各浏览器自己的证书库
@@ -2873,8 +2876,11 @@ t9aea7fb0 = 一个 Java 程序
 # My phone
 te1545f43 = 我的手机
 
-# A Mac app that ignores the proxy
-t2c2204d9 = 一个忽略代理的 Mac 应用
+# A program that ignores the proxy
+t18f796bd = 忽略代理的程序
+
+# An app that ignores the proxy
+te5d26bae = 忽略代理的应用
 
 # Something in Docker
 t51e75492 = Docker 里的东西

@@ -1069,6 +1069,9 @@ tab504c3d = Không có trên hệ thống này. tracewing bắt traffic của m�
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Đang tắt. Để bắt traffic của máy này cần quyền quản trị: bật lên sẽ khởi động lại tracewing với quyền đó, và điều đó bắt đầu một phiên mới — phiên đang mở vẫn nằm trên đĩa và mở lại được từ danh sách.
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = Đang tắt. Bật lên sẽ tạo adapter của chính tracewing, việc mà hệ thống sẽ hỏi bạn cho phép, rồi bắt đầu nhận traffic của máy này — không cần khởi động lại, và phiên đang mở vẫn tiếp tục.
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = Đang tắt. Bật lên sẽ tạo adapter của chính tracewing và bắt đầu nhận traffic của máy này — không cần khởi động lại, và phiên đang mở vẫn tiếp tục.
 
@@ -2332,8 +2335,8 @@ t4398b845 = Và kho riêng của Java
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Rồi chạy chương trình của bạn với các cờ này: những gì nó gửi sẽ hiện ở Traffic.
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = Thêm app, rồi bật lên: kết nối của nó về đây dù cài đặt proxy của nó nói gì. Giống Settings › Capture › Apps.
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = Thêm thứ bạn muốn bắt, rồi bật lên: kết nối của nó về đây dù cài đặt proxy của nó nói gì. Giống Cài đặt › Bắt traffic › { $tab }.
 
 # the browsers' own stores
 tddf6836c = kho riêng của các trình duyệt
@@ -2873,8 +2876,11 @@ t9aea7fb0 = Một chương trình Java
 # My phone
 te1545f43 = Điện thoại của tôi
 
-# A Mac app that ignores the proxy
-t2c2204d9 = Một app Mac bỏ qua proxy
+# A program that ignores the proxy
+t18f796bd = Một chương trình bỏ qua proxy
+
+# An app that ignores the proxy
+te5d26bae = Một app bỏ qua proxy
 
 # Something in Docker
 t51e75492 = Cái gì đó trong Docker

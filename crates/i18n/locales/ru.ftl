@@ -1132,6 +1132,9 @@ tab504c3d = Не на этой системе. В Windows и Linux tracewing б�
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Выключено. Чтобы брать трафик этого компьютера, нужен администратор: включение перезапустит tracewing от его имени, и это начнёт новую сессию — открытая сейчас останется на диске, её можно открыть снова из списка.
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = Выключено. Включение создаёт собственный адаптер tracewing, на что система запросит разрешение, и затем начинает брать трафик этого компьютера — без перезапуска, и открытая сессия продолжается.
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = Выключено. Включение создаёт собственный адаптер tracewing и начинает брать трафик этого компьютера — без перезапуска, и открытая сессия продолжается.
 
@@ -2533,8 +2536,8 @@ t4398b845 = И собственное хранилище Java
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Затем запустите свою программу с этими флагами: то, что она отправит, появится в «Трафике».
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = Добавьте приложение и включите это: его соединения идут сюда, что бы ни говорили его настройки прокси. То же, что Настройки › Перехват › Приложения.
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = Добавьте то, что хотите перехватывать, и включите это: его соединения идут сюда, что бы ни говорили его настройки прокси. То же, что Настройки › Захват › { $tab }.
 
 # the browsers' own stores
 tddf6836c = собственные хранилища браузеров
@@ -3103,8 +3106,11 @@ t9aea7fb0 = Программа на Java
 # My phone
 te1545f43 = Мой телефон
 
-# A Mac app that ignores the proxy
-t2c2204d9 = Приложение для Mac, которое игнорирует прокси
+# A program that ignores the proxy
+t18f796bd = Программа, которая игнорирует прокси
+
+# An app that ignores the proxy
+te5d26bae = Приложение, которое игнорирует прокси
 
 # Something in Docker
 t51e75492 = Что-то в Docker
