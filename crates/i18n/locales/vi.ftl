@@ -1060,8 +1060,8 @@ t4e3af9c3 = Đã hỏi
 # Tools offered: {tools}
 tb871bcf4 = Tool được cung cấp: { $tools }
 
-# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
-t53ab4670 = Không có trên hệ thống này. tracewing bắt traffic của một chương trình đã chọn theo route trên Windows; trên macOS thì đó là network extension, có tab riêng.
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
+tab504c3d = Không có trên hệ thống này. tracewing bắt traffic của một chương trình đã chọn theo route trên Windows và Linux; trên macOS thì đó là network extension, có tab riêng.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Đang tắt. Để bắt traffic của máy này cần quyền quản trị: bật lên sẽ khởi động lại tracewing với quyền đó, và điều đó bắt đầu một phiên mới — phiên đang mở vẫn nằm trên đĩa và mở lại được từ danh sách.

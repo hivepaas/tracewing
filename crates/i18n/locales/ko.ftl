@@ -1060,8 +1060,8 @@ t4e3af9c3 = 질문
 # Tools offered: {tools}
 tb871bcf4 = 제공된 도구: { $tools }
 
-# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
-t53ab4670 = 이 시스템에는 없습니다. tracewing은 Windows에서 선택한 프로그램의 트래픽을 경로로 받습니다. macOS에서는 네트워크 확장이며, 별도의 탭이 있습니다.
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
+tab504c3d = 이 시스템에는 없습니다. tracewing은 Windows와 Linux에서 선택한 프로그램의 트래픽을 경로로 받습니다. macOS에서는 네트워크 확장이며, 별도의 탭이 있습니다.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = 꺼짐. 이 컴퓨터의 트래픽을 받으려면 관리자 권한이 필요합니다. 켜면 tracewing이 관리자로 다시 시작되고 새 세션이 시작됩니다 — 지금 열린 세션은 디스크에 남아 목록에서 다시 열 수 있습니다.

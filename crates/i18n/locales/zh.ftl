@@ -1060,8 +1060,8 @@ t4e3af9c3 = 提问
 # Tools offered: {tools}
 tb871bcf4 = 提供的工具：{ $tools }
 
-# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
-t53ab4670 = 此系统上没有。在 Windows 上，tracewing 按路由接收所选程序的流量；在 macOS 上则是网络扩展，有自己的标签页。
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
+tab504c3d = 此系统上没有。在 Windows 和 Linux 上，tracewing 按路由接收所选程序的流量；在 macOS 上则是网络扩展，有自己的标签页。
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = 已关闭。接收本机流量需要管理员权限：打开它会以管理员身份重新启动 tracewing，并开始一个新会话——当前会话仍保存在磁盘上，可从列表重新打开。

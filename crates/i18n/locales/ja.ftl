@@ -1060,8 +1060,8 @@ t4e3af9c3 = 質問
 # Tools offered: {tools}
 tb871bcf4 = 提供されたツール: { $tools }
 
-# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
-t53ab4670 = このシステムにはありません。tracewing は Windows では選んだプログラムの通信を経路で受け取ります。macOS ではネットワーク拡張で、専用のタブがあります。
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
+tab504c3d = このシステムにはありません。tracewing は Windows と Linux では選んだプログラムの通信を経路で受け取ります。macOS ではネットワーク拡張で、専用のタブがあります。
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = オフ。このコンピュータの通信を受け取るには管理者が必要です。オンにすると tracewing が管理者として起動し直し、新しいセッションが始まります — いま開いているセッションはディスクに残り、一覧から開き直せます。

@@ -76,6 +76,33 @@ pub trait Device: Send + Sync + 'static {
     fn shutdown(&self);
 }
 
+/// A device held by more than one owner, which is what a mode the window can
+/// switch off needs: the pump reads it and the window ends it, and both have
+/// to name the same device.
+///
+/// Delegation rather than a wrapper per platform. Windows has one already --
+/// [`crate::wintun::Held`] owns its adapter in an `Arc` and forwards all four
+/// methods -- and writing that again for every device is three files saying
+/// the same thing. `?Sized` so that an `Arc<dyn Device>`, which is what a
+/// stopper holds, is itself one.
+impl<D: Device + ?Sized> Device for std::sync::Arc<D> {
+    fn name(&self) -> String {
+        (**self).name()
+    }
+
+    fn read(&self) -> Result<Vec<u8>> {
+        (**self).read()
+    }
+
+    fn write(&self, packet: &[u8]) -> Result<()> {
+        (**self).write(packet)
+    }
+
+    fn shutdown(&self) {
+        (**self).shutdown();
+    }
+}
+
 /// A way in: a device, and the stack that turns what it takes into flows.
 /// One type, because the two are no use apart — a device with nothing to
 /// read its packets, or a stack with nothing to feed it. The same reason

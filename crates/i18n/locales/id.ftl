@@ -1060,8 +1060,8 @@ t4e3af9c3 = Ditanyakan
 # Tools offered: {tools}
 tb871bcf4 = Alat yang ditawarkan: { $tools }
 
-# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
-t53ab4670 = Tidak ada di sistem ini. Di Windows, tracewing mengambil trafik program yang dipilih lewat rute; di macOS itu adalah ekstensi jaringan, yang punya tabnya sendiri.
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
+tab504c3d = Tidak ada di sistem ini. Di Windows dan Linux, tracewing mengambil trafik program yang dipilih lewat rute; di macOS itu adalah ekstensi jaringan, yang punya tabnya sendiri.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Mati. Mengambil trafik komputer ini perlu administrator: menyalakannya memulai ulang tracewing sebagai administrator, dan itu memulai sesi baru — sesi yang terbuka sekarang tetap ada di disk dan bisa dibuka lagi dari daftar.

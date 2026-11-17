@@ -36,6 +36,13 @@ mod os;
 #[path = "adapter_linux.rs"]
 pub mod adapter;
 
+/// Why a privileged step did not run, for a caller that has to tell a
+/// refusal from a fault. Out of `linux.rs`, which is otherwise private,
+/// because the one caller is the window and the reason is that this crate
+/// has no `tr!` in it.
+#[cfg(target_os = "linux")]
+pub use os::Denied;
+
 #[cfg(target_os = "linux")]
 #[path = "quic_linux.rs"]
 mod quic;
