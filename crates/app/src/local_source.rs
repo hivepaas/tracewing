@@ -158,18 +158,34 @@ pub fn start(
         Support::NeedsAdministrator => return Err(NoSource::NeedsAdministrator),
         Support::Ready => {}
     }
-    // Borrowed, not moved: the Windows arm below takes them. Off Windows
-    // nothing reaches that arm, and without this line the arguments read as
-    // unused -- which was a line this file carried in the shape that moved
-    // them, and only a Windows compiler said so.
-    let _ = (&ports, data_dir, &local.programs);
-    #[cfg(windows)]
-    {
-        return windows::start(local, ports, data_dir)
-            .map(Some)
-            .map_err(|why| NoSource::Failed(format!("{why:#}")));
-    }
-    #[cfg(not(windows))]
+    platform(local, ports, data_dir)
+}
+
+/// The arm for this platform. One function per platform rather than one
+/// `cfg` block inside `start`, because a block that is the tail expression
+/// on one platform and a statement on another is a `return` that is needed
+/// here and warned about there -- which is how this shape arrived, from a
+/// Windows compiler.
+#[cfg(windows)]
+fn platform(
+    local: &Local,
+    ports: Vec<u16>,
+    data_dir: &std::path::Path,
+) -> Result<Option<Started>, NoSource> {
+    windows::start(local, ports, data_dir)
+        .map(Some)
+        .map_err(|why| NoSource::Failed(format!("{why:#}")))
+}
+
+/// Nothing here captures by route, and [`Support::here`] has already said so
+/// above -- so this is unreachable rather than a case. A Linux arm goes
+/// beside the Windows one, not here.
+#[cfg(not(windows))]
+fn platform(
+    _local: &Local,
+    _ports: Vec<u16>,
+    _data_dir: &std::path::Path,
+) -> Result<Option<Started>, NoSource> {
     unreachable!("Support::here() answers NotOnThisSystem off Windows")
 }
 
