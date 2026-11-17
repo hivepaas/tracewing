@@ -4,7 +4,11 @@
 #![cfg(windows)]
 
 use std::{path::PathBuf, sync::Arc, sync::mpsc, thread, time::Duration};
-use tracewing_proxy::{roads, tun::Device, wintun::WintunAdapter};
+use tracewing_proxy::{
+    roads,
+    tun::Device,
+    wintun::{Held, WintunAdapter},
+};
 
 /// **Run these one at a time.** They share one adapter, by a fixed GUID, so
 /// `cargo test`'s default threads have several of them calling
@@ -155,6 +159,64 @@ fn the_adapter_has_a_luid_and_is_never_the_way_out() {
         roads::out_by(&roads, ours, false),
         roads::out_by(&roads, ours, true)
     );
+}
+
+/// The adapter **up**, which is what the capture mode holds: an address of
+/// each family and the two halves of each address space, and all of it gone
+/// when it is dropped.
+///
+/// This is the case the comment on
+/// `the_adapter_has_a_luid_and_is_never_the_way_out` says will bite later: at
+/// `/1` our own rows reach **further** than another interface's `/0`, so they
+/// would win `out_by` on reach, and the only thing standing between tracewing
+/// and routing its own connections back into itself is that they are
+/// recognised as ours. Here they exist, so the exclusion is tested against
+/// the arrangement that needs it rather than against one where it is idle.
+#[test]
+#[ignore = "needs Administrator and wintun.dll"]
+fn the_adapter_comes_up_with_both_halves_and_goes_down_again() {
+    let luid = {
+        let held = Held::up(&dll()).expect("bring the adapter up");
+        let luid = held.luid().expect("the adapter's LUID");
+        assert_ne!(luid, 0);
+        assert_eq!(
+            rows_become(luid, 1, false, 2),
+            2,
+            "both halves of the IPv4 address space"
+        );
+        assert_eq!(rows_become(luid, 1, true, 2), 2, "and both of IPv6's");
+
+        let roads = roads::roads_now().expect("this machine's routes");
+        let mine: Vec<u32> = roads
+            .iter()
+            .filter(|road| road.luid == luid)
+            .map(|road| road.interface)
+            .collect();
+        for v6 in [false, true] {
+            let family = match v6 {
+                true => "IPv6",
+                false => "IPv4",
+            };
+            let out = roads::out_by(&roads, luid, v6);
+            println!("with the halves up, {family} goes out by {out:?}; ours are {mine:?}");
+            if let Some(out) = out {
+                assert!(
+                    !mine.contains(&out),
+                    "the way out for {family} is our own adapter, interface {out} -- \
+                     at /1 our rows reach further than any /0, so this is the \
+                     arrangement where the exclusion is the only thing holding"
+                );
+            }
+        }
+        luid
+    };
+    // The handle gone takes the adapter, and the adapter takes its rows.
+    assert_eq!(
+        rows_become(luid, 1, false, 0),
+        0,
+        "the halves go when it is dropped"
+    );
+    assert_eq!(rows_become(luid, 1, true, 0), 0);
 }
 
 /// How many routes the table holds for `luid` at exactly `bits`, in the
