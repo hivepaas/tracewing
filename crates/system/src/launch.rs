@@ -11,7 +11,10 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::{child::Level, os};
+use crate::{
+    child::{Level, Start},
+    os,
+};
 
 /// The roots a terminal opened from here trusts, kept in the data directory.
 const TERMINAL_BUNDLE: &str = "terminal-roots.pem";
@@ -142,6 +145,58 @@ pub(crate) fn cmd_script(vars: &[(&str, String)], banner: &str) -> String {
     text.push_str("echo.\n");
     // Only a name or a value can carry one: `set "` and `"` have none.
     text.replace('%', "%%").replace('\n', "\r\n")
+}
+
+/// How a console has to be started so that it is still there to type in,
+/// which depends on **which of the three ways** starts it.
+///
+/// Measured on a Windows machine, because the first two readings of this were
+/// both wrong:
+///
+/// - an **ordinary spawn** puts the child's three handles on `NUL`, which is
+///   what a windowed process with no console of its own has to hand down. A
+///   `cmd /k <script>` started that way **does** run the script -- `/k` takes
+///   its command from the command line, not from `stdin` -- and then reads
+///   the next one from `NUL`, reaches the end of it at once and exits. So the
+///   variables are set in a window that is gone before anybody sees it, which
+///   is worse than not running: it looks like the proxy, not like the window.
+/// - the **shell's token** (`CreateProcessWithTokenW` with a `STARTUPINFOW`
+///   zeroed but for its size, so no `STARTF_USESTDHANDLES`) and **Windows'
+///   own raising** (`ShellExecuteExW`, which is what double-clicking a `.cmd`
+///   does) each give the child a console of its own, whose `stdin` is that
+///   console. Those two stay.
+///
+/// So only the ordinary spawn is asked to go through `start`, which makes a
+/// fresh `cmd` with a console of its own, and the launcher's own window is
+/// suppressed with `CREATE_NO_WINDOW` -- a flag only an ordinary spawn reads.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn console(start: Start, script: &Path) -> Console {
+    if start == Start::AsWeAre {
+        // **The title has to be quoted.** `start` reads an unquoted first
+        // word as the program to run, so `start tracewing cmd /k x` looks for
+        // a program called `tracewing` and opens nothing at all -- which is
+        // what the shape before this one did, measured rather than reasoned
+        // about. And the line is written out rather than passed as arguments
+        // because `cmd` does not read its command line by
+        // `CommandLineToArgvW`'s rules: `Command` would escape these quotes
+        // with backslashes and `cmd` would keep them.
+        Console::Line(format!(
+            "/c start \"tracewing\" cmd /k \"{}\"",
+            script.display()
+        ))
+    } else {
+        Console::Args(vec!["/k".into(), script.as_os_str().to_owned()])
+    }
+}
+
+/// What to give `cmd`, as the way of starting it needs it given.
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) enum Console {
+    /// Arguments, quoted by `Command` as it quotes any others.
+    Args(Vec<std::ffi::OsString>),
+    /// A command line written out, with `CREATE_NO_WINDOW` for the launcher.
+    Line(String),
 }
 
 /// Whether Node.js of this version (`v22.17.1`, `22.17.1`) sends its requests
@@ -782,6 +837,154 @@ echo"#,
             !worth_asking_again(&Asked::Version("22.17.1".to_owned())),
             "and neither is one that answered"
         );
+    }
+
+    /// Only an ordinary spawn goes through `start`, and the title it gives
+    /// `start` is quoted -- an unquoted first word is read as the program to
+    /// run, which is the fault this shape replaces.
+    #[test]
+    fn a_console_goes_through_start_with_a_quoted_title() {
+        let script = Path::new("C:\\d\\terminal.cmd");
+        assert_eq!(
+            console(Start::AsWeAre, script),
+            Console::Line("/c start \"tracewing\" cmd /k \"C:\\d\\terminal.cmd\"".to_owned())
+        );
+        for start in [Start::AsTheShell, Start::Elevated] {
+            assert_eq!(
+                console(start, script),
+                Console::Args(["/k", "C:\\d\\terminal.cmd"].map(Into::into).into()),
+                "{start:?} is handed a console of its own, so it needs no wrapper"
+            );
+        }
+    }
+
+    /// What the shape is **for**, on a real Windows machine: a console that
+    /// is still there a moment later.
+    ///
+    /// Two things are measured for each shape, because the first reading of
+    /// this got the first one backwards. Each script writes a file and exits,
+    /// so **did it run** is that file; and **did the console survive** is
+    /// whether a `cmd` running that script is still there three seconds on.
+    /// Neither needs a window to be seen, which is what makes this runnable
+    /// over SSH where there is no desktop.
+    ///
+    /// The control is the shape that is in main as this is written, in the
+    /// same run, and it is expected to **run and then die**: `/k` takes its
+    /// command from the command line, so the variables are set, and the
+    /// console then reads from `NUL` and ends. A window that sets up and
+    /// vanishes looks like the proxy failing rather than the window failing,
+    /// which is why it is worth a test of its own.
+    ///
+    /// Ignored because it opens a console and leaves it open; run it with
+    /// `cargo test -p tracewing-system --release -- --ignored a_console_that`.
+    #[cfg(windows)]
+    #[test]
+    #[ignore]
+    fn a_console_survives_only_when_it_has_one_of_its_own() {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+        let dir = std::env::temp_dir().join(format!("tracewing-console-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let ran = |which: &str| dir.join(format!("{which}-ran.txt"));
+        let script = |which: &str| {
+            let path = dir.join(format!("{which}.cmd"));
+            let text = format!("@echo off\r\necho ran> \"{}\"\r\n", ran(which).display());
+            fs::write(&path, text).unwrap();
+            path
+        };
+        let nul = |command: &mut Command| {
+            command
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap()
+        };
+        // Asked of the system rather than of a handle, because the console
+        // `start` makes is nobody's child: `start` exits and leaves it.
+        let still_running = |which: &str| -> usize {
+            let out = Command::new("powershell")
+                .args([
+                    "-NoProfile",
+                    "-Command",
+                    &format!(
+                        "@(Get-CimInstance Win32_Process -Filter \"Name='cmd.exe'\" | \
+                         Where-Object {{ $_.CommandLine -like '*{which}.cmd*' }}).Count"
+                    ),
+                ])
+                .output()
+                .unwrap();
+            String::from_utf8_lossy(&out.stdout).trim().parse().unwrap()
+        };
+
+        // The control: the shape in main, started the way `child::plainly`
+        // starts one.
+        let bare = script("bare");
+        let mut command = Command::new("cmd");
+        command.arg("/k").arg(&bare);
+        let mut child = nul(&mut command);
+
+        // And this shape, whose inner `cmd` has a console of its own.
+        let wrapped = script("wrapped");
+        let mut command = Command::new("cmd");
+        match console(Start::AsWeAre, &wrapped) {
+            Console::Line(line) => {
+                command.raw_arg(line).creation_flags(CREATE_NO_WINDOW);
+            }
+            other => panic!("an ordinary spawn is meant to go through `start`: {other:?}"),
+        }
+        // `start` hands the console over and exits, so this one is waited for
+        // rather than left: what it leaves behind is the thing being measured.
+        let mut launcher = nul(&mut command);
+        let _ = launcher.wait();
+
+        std::thread::sleep(std::time::Duration::from_secs(3));
+
+        let bare_ran = ran("bare").exists();
+        let bare_alive = child.try_wait().unwrap().is_none();
+        let wrapped_ran = ran("wrapped").exists();
+        let wrapped_alive = still_running("wrapped");
+        // Printed before anything is asserted, so that a failing run says
+        // what all four readings were rather than only the first that broke.
+        println!(
+            "bare: ran={bare_ran} alive={bare_alive} | wrapped: ran={wrapped_ran} \
+             alive={wrapped_alive}"
+        );
+        let _ = child.kill();
+        let _ = child.wait();
+        // Not `taskkill /fi "WINDOWTITLE eq tracewing"`, which was the first
+        // try and left the console running: the title filter matches nothing
+        // for a console in a session with no desktop, which is where this
+        // test runs. Asked for by the script it is running instead, which is
+        // the same query `still_running` above answers with.
+        let _ = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                "Get-CimInstance Win32_Process -Filter \"Name='cmd.exe'\" | \
+                 Where-Object { $_.CommandLine -like '*tracewing-console-*' } | \
+                 ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
+            ])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+
+        assert!(wrapped_ran, "the console `start` makes runs the script");
+        assert!(
+            wrapped_alive >= 1,
+            "and stays, because its `stdin` is that console and not `NUL`"
+        );
+        assert!(
+            bare_ran,
+            "a `/k` command comes from the command line, so `NUL` does not stop it"
+        );
+        assert!(
+            !bare_alive,
+            "but the console does not survive its first read from `NUL`, which is \
+             the whole fault: the variables are set in a window that is already gone"
+        );
+        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
