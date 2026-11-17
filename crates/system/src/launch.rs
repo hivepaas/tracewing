@@ -954,7 +954,10 @@ echo"#,
         let _ = child.kill();
         let _ = child.wait();
         let _ = Command::new("taskkill")
-            .args(["/f", "/fi", "WINDOWTITLE eq tracewing*"])
+            // The exact title `console` gives it, with no wildcard: this
+            // runs on a machine with other consoles on it, one of which may
+            // be the one watching this test.
+            .args(["/f", "/fi", "WINDOWTITLE eq tracewing"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
