@@ -151,8 +151,17 @@ pub struct Engine {
     /// Why there is no port for the extension although apps were asked for.
     pub extension_problem: Option<String>,
     /// The local way in while it runs: what it keeps, and what ends it.
-    /// `None` with no problem beside it is the switch being off.
+    ///
+    /// Set by the **window**, not here: see the channel below. `None` with no
+    /// problem beside it is the switch being off, or being on and not yet
+    /// started.
     pub local: Option<crate::local_source::Running>,
+    /// Where a way in built after the proxy started is handed over.
+    ///
+    /// One at a time, which is the size the queue needs: there is one such
+    /// way in, and a second attempt while the first is in flight is a bug
+    /// rather than something to buffer.
+    pub serving: tokio::sync::mpsc::Sender<Box<dyn tracewing_proxy::source::Source>>,
     /// Why this machine's traffic is not coming through tracewing's own
     /// adapter although the switch is on -- a system that cannot, or an
     /// administrator that is wanted. For the tab to show instead of a switch
@@ -355,54 +364,15 @@ impl Engine {
         let _ = std::fs::write(&address_file, addr.to_string());
         let scripts = Arc::new(Scripts::default());
         let (stop, stopped) = oneshot::channel::<()>();
-        // The local way in, before the sources are gathered: its source goes
-        // in with the rest, and the two handles stay here for the tab. Built
-        // here rather than in the block below because that one is a struct
-        // literal and these have to come out of it.
-        let wanted = crate::local_apps::load(&opts.data_dir);
-        let (mut local, mut local_in, mut local_problem) = (None, None, None);
-        match crate::local_source::start(
-            &wanted,
-            // Every port of tracewing's that programs on this machine connect
-            // to, which is what `Apps` tells their sockets apart by.
-            [Some(addr.port()), socks_at.map(|at| at.port())]
-                .into_iter()
-                .flatten()
-                .collect(),
-            &opts.data_dir,
-        ) {
-            Ok(Some(started)) => {
-                local = Some(crate::local_source::Running {
-                    chosen: started.chosen,
-                    stopper: started.stopper,
-                });
-                local_in = Some(started.source);
-            }
-            Ok(None) => {}
-            // Kept as the case rather than as its words: the window has a
-            // translated sentence per case, and `crates/system` has no `tr!`
-            // in it at all.
-            Err(why) => {
-                // A refusal means **nothing was done**, so the switch must
-                // not stay on: the next start would ask again and be
-                // refused again, and nothing on screen would say why. Here
-                // rather than in the arm that was refused, because the rule
-                // is the mode's rather than a platform's and this already
-                // holds the file the switch was read from. The window reads
-                // it after this returns, so what it draws is off with the
-                // reason beside it.
-                if matches!(why, crate::local_source::NoSource::Refused) {
-                    let _ = crate::local_apps::save(
-                        &opts.data_dir,
-                        &crate::local_apps::Local {
-                            on: false,
-                            ..wanted
-                        },
-                    );
-                }
-                local_problem = Some(why);
-            }
-        }
+        // **The local way in is not built here.** Its adapter needs a
+        // privileged step, and a step that asks for a password while there
+        // is no window on screen is a password nobody can place: with the
+        // switch on, the first start after a boot used to block here behind
+        // a dialog that nothing explained. So the engine keeps the end of a
+        // channel and the window hands the source over once it is up, which
+        // is also what lets the switch take effect when it is pressed rather
+        // than at the next start.
+        let (serving, later) = tokio::sync::mpsc::channel(1);
 
         let proxy = ProxyOptions {
             listener: None,
@@ -427,9 +397,7 @@ impl Engine {
             find_apps: opts.find_apps,
             stop_limit: std::time::Duration::from_secs(2),
             live: Arc::clone(&live),
-            // Nothing hands one over yet: the window builds the local way
-            // in at startup, which is the thing the next change moves.
-            later: None,
+            later: Some(later),
             sources: {
                 let mut sources: Vec<Box<dyn tracewing_proxy::source::Source>> = vec![Box::new(
                     tracewing_proxy::source::Lan::new(Arc::clone(&other_devices)),
@@ -454,9 +422,6 @@ impl Engine {
                             keepalive: None,
                         },
                     )));
-                }
-                if let Some(source) = local_in {
-                    sources.push(source);
                 }
                 sources
             },
@@ -510,8 +475,9 @@ impl Engine {
             wireguard: wireguard_at,
             wireguard_keys,
             wireguard_problem,
-            local,
-            local_problem,
+            local: None,
+            local_problem: None,
+            serving,
             extension: extension_config,
             extension_problem,
             live,

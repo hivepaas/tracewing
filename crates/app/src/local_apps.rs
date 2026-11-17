@@ -196,6 +196,11 @@ pub struct Shown {
     pub support: Support,
     /// What went wrong turning it on or writing the list, for the tab.
     pub problem: Option<String>,
+    /// A start is in flight: the adapter is being made, which on Linux is
+    /// where the password is asked for. Drawn, because a window that looks
+    /// idle while a dialog waits behind it is the fault this whole change
+    /// exists to fix.
+    pub starting: bool,
 }
 
 impl Shown {
@@ -204,6 +209,7 @@ impl Shown {
             local: load(dir),
             support: Support::here(),
             problem: None,
+            starting: false,
         }
     }
 }
@@ -223,6 +229,12 @@ impl crate::traffic::Traffic {
         let running = self.engine.local.is_some();
         let nothing = self.local.local.programs.is_empty();
         let says = match (self.local.support, on, running) {
+            // Before the rest, because it is true whatever the switch says
+            // and it is the state a person is looking at while a password
+            // dialog waits in front of this window.
+            _ if self.local.starting => tr!(
+                "Starting: tracewing is making its adapter, and the system may ask you to allow it."
+            ),
             (Support::NotOnThisSystem, _, _) => tr!(
                 "Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own."
             ),
@@ -230,13 +242,14 @@ impl crate::traffic::Traffic {
                 "Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list."
             ),
             (Support::Ready, false, _) => tr!(
-                "Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list."
+                "Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on."
             ),
-            // On in the file and not in this run: the way in is made as the
-            // engine starts, so saying "on" alone would be a switch that
-            // looks like it is taking traffic when nothing is.
+            // On in the file and nothing running, with no start in flight:
+            // the attempt ended without one. Saying "on" alone would be a
+            // switch that looks like it is taking traffic when nothing is,
+            // and the reason sits below this line.
             (Support::Ready, true, false) => tr!(
-                "On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts."
+                "On, and taking nothing: the adapter was not made. Turning it off and on again tries once more."
             ),
             (Support::Ready, true, true) if nothing => tr!(
                 "On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below."
@@ -366,6 +379,11 @@ impl crate::traffic::Traffic {
             cx.notify();
             return;
         }
+        // Ready means it can be made now, with this window on screen to say
+        // what is happening and to show what it asks for.
+        if want && self.local.support == Support::Ready {
+            self.start_local(cx);
+        }
         if want && self.local.support == Support::NeedsAdministrator {
             match tracewing_system::child::relaunch_as_administrator() {
                 // It started; this one's turn to go, so that two copies do
@@ -386,6 +404,79 @@ impl crate::traffic::Traffic {
             }
         }
         cx.notify();
+    }
+
+    /// Builds the local way in and hands it to the running proxy.
+    ///
+    /// **On one background thread, and not on the window's.** The Linux arm
+    /// deletes the device, makes it again, reads it back and only then opens
+    /// it, and those steps have to stay in that order and in one thread; it
+    /// is also where a password is asked for, which must not block the
+    /// drawing. The window stays up and says it is starting.
+    ///
+    /// Called when the switch goes on and once at startup when it was left
+    /// on. Does nothing while one is running or in flight, so a second press
+    /// cannot make two adapters.
+    pub fn start_local(&mut self, cx: &mut Context<Self>) {
+        if self.engine.local.is_some() || self.local.starting {
+            return;
+        }
+        let wanted = self.local.local.clone();
+        let ports: Vec<u16> = [
+            Some(self.engine.addr.port()),
+            self.engine.socks.map(|at| at.port()),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        let data_dir = self.data_dir.clone();
+        let serving = self.engine.serving.clone();
+        self.local.starting = true;
+        self.local.problem = None;
+        cx.notify();
+        cx.spawn(async move |this, cx| {
+            let made = cx
+                .background_executor()
+                .spawn(async move { crate::local_source::start(&wanted, ports, &data_dir) })
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                this.local.starting = false;
+                match made {
+                    // Turned off while it was being made, which the button
+                    // allows on purpose: making it can ask for a password and
+                    // somebody may change their mind at the dialog. Dropping
+                    // the source here is what takes the adapter down again --
+                    // the guards go with it -- and handing it to the proxy
+                    // instead would leave a way in nobody asked for.
+                    Ok(Some(_)) if !this.local.local.on => {}
+                    Ok(Some(started)) => {
+                        // The proxy takes it from here. A full queue would
+                        // mean one is already in flight, which the guard
+                        // above rules out.
+                        let _ = serving.try_send(started.source);
+                        this.engine.local = Some(crate::local_source::Running {
+                            chosen: started.chosen,
+                            stopper: started.stopper,
+                        });
+                    }
+                    Ok(None) => {}
+                    Err(why) => {
+                        // A refusal means **nothing was done**, so the switch
+                        // must not stay on: the next start would ask again,
+                        // be refused again, and nothing would say why. The
+                        // window is the one writer of that file now, which is
+                        // what moving the step here bought.
+                        if matches!(why, crate::local_source::NoSource::Refused) {
+                            this.local.local.on = false;
+                            let _ = save(&this.data_dir, &this.local.local);
+                        }
+                        this.engine.local_problem = Some(why);
+                    }
+                }
+                cx.notify();
+            });
+        })
+        .detach();
     }
 
     /// Asks for programs to add, and adds them.

@@ -1093,17 +1093,20 @@ t4e3af9c3 = Soru
 # Tools offered: {tools}
 tb871bcf4 = Sunulan araçlar: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = Başlatılıyor: tracewing kendi bağdaştırıcısını oluşturuyor ve sistem izin isteyebilir.
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = Bu sistemde yok. Windows ve Linux'ta tracewing seçilen bir programın trafiğini rota üzerinden alır; macOS'ta bu, kendi sekmesi olan ağ uzantısıdır.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Kapalı. Bu bilgisayarın trafiğini almak için yönetici gerekir: açmak tracewing'i yönetici olarak yeniden başlatır ve bu yeni bir oturum başlatır — şu an açık olan diskte kalır ve listeden yeniden açılabilir.
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = Kapalı. Açmak, tracewing bir sonraki başlatıldığında geçerli olur ve yeni bir oturum başlatır — şu an açık olan diskte kalır ve listeden yeniden açılabilir.
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = Kapalı. Açmak tracewing'in kendi bağdaştırıcısını oluşturur ve bu bilgisayarın trafiğini almaya başlar — yeniden başlatma gerekmez, açık oturum devam eder.
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = Sonraki başlatmadan itibaren açık. Bu oturumda hiçbir şey alınmıyor: bu giriş yolu tracewing başlarken oluşturulur.
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = Açık, ama hiçbir şey alınmıyor: bağdaştırıcı oluşturulamadı. Kapatıp yeniden açmak bir kez daha dener.
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = Açık, ama hiçbir şey tutulmuyor: bu bilgisayarın trafiği tracewing'in bağdaştırıcısından geçip hemen dışarı çıkıyor; aşağıdan bir program ekleyin.

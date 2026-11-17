@@ -1093,17 +1093,20 @@ t4e3af9c3 = Gefragt
 # Tools offered: {tools}
 tb871bcf4 = Angebotene Tools: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = Startet: tracewing legt seinen Adapter an, und das System fragt möglicherweise nach Ihrer Erlaubnis.
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = Nicht auf diesem System. Unter Windows und Linux nimmt tracewing den Verkehr eines gewählten Programms über die Route auf; unter macOS ist das die Netzwerkerweiterung, die einen eigenen Tab hat.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Aus. Den Verkehr dieses Computers aufzunehmen braucht einen Administrator: Einschalten startet tracewing erneut als einen, und das beginnt eine neue Sitzung — die jetzt offene bleibt auf der Festplatte und lässt sich aus der Liste wieder öffnen.
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = Aus. Einschalten wirkt beim nächsten Start von tracewing und beginnt eine neue Sitzung — die jetzt offene bleibt auf der Festplatte und lässt sich aus der Liste wieder öffnen.
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = Aus. Einschalten legt tracewings eigenen Adapter an und beginnt, den Verkehr dieses Computers aufzunehmen — ohne Neustart, und die offene Sitzung läuft weiter.
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = Ab dem nächsten Start an. In dieser Sitzung wird nichts aufgenommen: Dieser Weg herein entsteht, wenn tracewing startet.
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = An, und nimmt nichts auf: Der Adapter wurde nicht angelegt. Aus- und wieder einschalten versucht es erneut.
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = An, und es wird nichts behalten: Der Verkehr dieses Computers läuft durch tracewings Adapter und gleich wieder hinaus, bis unten ein Programm hinzugefügt wird.

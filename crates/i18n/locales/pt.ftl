@@ -1099,17 +1099,20 @@ t4e3af9c3 = Pergunta
 # Tools offered: {tools}
 tb871bcf4 = Ferramentas oferecidas: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = A iniciar: o tracewing está a criar o seu adaptador, e o sistema pode pedir-lhe autorização.
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = Não neste sistema. No Windows e no Linux, o tracewing pega o tráfego de um programa escolhido pela rota; no macOS é a extensão de rede, que tem um separador próprio.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Desligado. Pegar o tráfego deste computador precisa de administrador: ligar reinicia o tracewing como tal, e isso começa uma sessão nova — a que está aberta fica no disco e pode ser reaberta a partir da lista.
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = Desligado. Ligar passa a valer quando o tracewing arrancar de novo, e isso começa uma sessão nova — a que está aberta fica no disco e pode ser reaberta a partir da lista.
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = Desligado. Ligar cria o adaptador do próprio tracewing e começa a pegar o tráfego deste computador — sem reiniciar, e a sessão aberta continua.
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = Ligado a partir do próximo arranque. Nesta sessão não está a ser pego nada: esta entrada é criada quando o tracewing arranca.
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = Ligado, e não pega nada: o adaptador não foi criado. Desligar e ligar de novo tenta mais uma vez.
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = Ligado, e sem guardar nada: o tráfego deste computador passa pelo adaptador do tracewing e sai logo a seguir, até que se adicione um programa abaixo.

@@ -1060,17 +1060,20 @@ t4e3af9c3 = 質問
 # Tools offered: {tools}
 tb871bcf4 = 提供されたツール: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = 起動中: tracewing がアダプターを作成しています。システムが許可を求めることがあります。
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = このシステムにはありません。tracewing は Windows と Linux では選んだプログラムの通信を経路で受け取ります。macOS ではネットワーク拡張で、専用のタブがあります。
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = オフ。このコンピュータの通信を受け取るには管理者が必要です。オンにすると tracewing が管理者として起動し直し、新しいセッションが始まります — いま開いているセッションはディスクに残り、一覧から開き直せます。
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = オフ。オンにすると次に tracewing が起動したときに有効になり、新しいセッションが始まります — いま開いているセッションはディスクに残り、一覧から開き直せます。
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = オフ。オンにすると tracewing 自身のアダプターを作り、このコンピュータの通信を受け取り始めます — 再起動は不要で、いま開いているセッションはそのまま続きます。
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = 次回の起動からオン。このセッションでは何も受け取っていません。この経路は tracewing の起動時に作られます。
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = オンですが、何も受け取っていません: アダプターを作成できませんでした。オフにしてからオンにすると、もう一度試します。
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = オンですが、何も保持していません。このコンピュータの通信は tracewing のアダプターを通ってそのまま外へ出ます。下でプログラムを追加してください。

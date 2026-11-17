@@ -1099,17 +1099,20 @@ t4e3af9c3 = Domanda
 # Tools offered: {tools}
 tb871bcf4 = Strumenti offerti: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = Avvio in corso: tracewing sta creando il suo adattatore e il sistema potrebbe chiederti di consentirlo.
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = Non su questo sistema. Su Windows e Linux tracewing prende il traffico di un programma scelto tramite la route; su macOS è l'estensione di rete, che ha una scheda propria.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Spento. Prendere il traffico di questo computer richiede un amministratore: accenderlo riavvia tracewing come tale, e questo inizia una nuova sessione — quella aperta ora resta su disco e si può riaprire dall'elenco.
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = Spento. Accenderlo ha effetto al prossimo avvio di tracewing, e questo inizia una nuova sessione — quella aperta ora resta su disco e si può riaprire dall'elenco.
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = Spento. Accenderlo crea l'adattatore di tracewing e inizia a prendere il traffico di questo computer — senza riavvio, e la sessione aperta prosegue.
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = Acceso dal prossimo avvio. In questa sessione non viene preso nulla: questa via d'ingresso nasce all'avvio di tracewing.
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = Acceso, e non prende nulla: l'adattatore non è stato creato. Spegnerlo e riaccenderlo riprova.
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = Acceso, e non tiene nulla: il traffico di questo computer passa per l'adattatore di tracewing ed esce subito, finché non si aggiunge un programma qui sotto.
