@@ -207,6 +207,7 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
     );
     Ok(rows
         .into_iter()
+        .filter(|row| carrier_is_up(&row.iface))
         .filter_map(|row| {
             let index = index_of(&row.iface)?;
             Some(Road {
@@ -219,6 +220,42 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
             })
         })
         .collect())
+}
+
+/// Whether the link is really up, from `/sys/class/net/<iface>/carrier`.
+///
+/// **This is the one thing the tables cannot say.** A route the kernel is
+/// ignoring — `dead linkdown` in `ip route show` — is listed in
+/// `/proc/net/route` with `RTF_UP` set and nothing else to mark it. Without
+/// this, a device that is up with its carrier down is a way out: measured on
+/// 2026-11-17 with a second device in that state carrying a default route of
+/// metric 40 beside the real one's 600, [`out_by`] chose it — index 44 —
+/// while the kernel itself routed through the Wi-Fi, index 6. An unplugged
+/// cable with a static route is enough to arrange it, and a connection
+/// pinned to an interface the kernel is ignoring **hangs** rather than
+/// fails: 0.84s against a 3s timeout, measured when the exclusion went in.
+///
+/// **Anything but a plain `1` excludes the interface, unreadable included.**
+/// That is the safe direction rather than the cautious-looking one: a family
+/// left with no way out at all is `Out::Nowhere` in
+/// [`crate::upstream::leave_by`]'s reader, which refuses the connection and
+/// says so, where keeping a dead interface means pinning to it and waiting.
+/// A loud failure beats a silent wait, and neither is the loop this seam
+/// exists to prevent.
+#[cfg(target_os = "linux")]
+fn carrier_is_up(iface: &str) -> bool {
+    says_up(
+        std::fs::read_to_string(format!("/sys/class/net/{iface}/carrier"))
+            .ok()
+            .as_deref(),
+    )
+}
+
+/// The policy above as a function, so that it is a test rather than a
+/// sentence.
+#[cfg(target_os = "linux")]
+fn says_up(carrier: Option<&str>) -> bool {
+    carrier.is_some_and(|carrier| carrier.trim() == "1")
 }
 
 /// What the kernel numbers an interface, from its name.
@@ -830,6 +867,56 @@ wlp8s0\t0001A8C0\t00000000\t0001\t0\t0\t600\t00FFFFFF\t0\t0\t0
     /// the parsing tests cannot say: that the columns are where this kernel
     /// puts them, and that the names in them resolve to numbers.
     ///
+    /// The carrier policy: a plain `1`, and nothing else.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn only_a_carrier_that_says_one_is_a_way_out() {
+        assert!(says_up(Some("1\n")));
+        assert!(says_up(Some("1")));
+        // A device up with its carrier down, which is what an unplugged
+        // cable leaves and what the tables cannot see.
+        assert!(!says_up(Some("0\n")));
+        // Unreadable, empty, or something else: excluded, on purpose. A
+        // family with no way out at all is refused loudly in `upstream`,
+        // where a dead interface kept is pinned to and waited on.
+        assert!(!says_up(None));
+        assert!(!says_up(Some("")));
+        assert!(!says_up(Some("yes")));
+        assert!(!says_up(Some("10")));
+    }
+
+    /// No road came from an interface whose carrier is down, asked of this
+    /// machine both ways round: the roads, and every interface it has.
+    ///
+    /// Before the carrier was read this failed with a device up, carrier
+    /// down, and a default route of its own -- which is how the bug was
+    /// found.
+    #[cfg(target_os = "linux")]
+    #[test]
+    #[ignore = "asks this machine about its own interfaces"]
+    fn no_way_out_is_an_interface_the_kernel_is_ignoring() {
+        let roads = roads_now().expect("the tables read");
+        let indices: Vec<u32> = roads.iter().map(|road| road.interface).collect();
+        let mut looked = 0;
+        for entry in std::fs::read_dir("/sys/class/net").expect("the interfaces") {
+            let name = entry.expect("an entry").file_name();
+            let name = name.to_string_lossy();
+            let carrier = std::fs::read_to_string(format!("/sys/class/net/{name}/carrier")).ok();
+            if says_up(carrier.as_deref()) {
+                continue;
+            }
+            looked += 1;
+            let Some(index) = index_of(&name) else {
+                continue;
+            };
+            assert!(
+                !indices.contains(&index),
+                "{name} ({index}) has carrier {carrier:?} and is a way out: {roads:?}"
+            );
+        }
+        println!("{looked} interface(s) with no carrier, none of them a road");
+    }
+
     /// `#[ignore]`d because it asserts about the machine rather than about
     /// the code — a build box with no network has no way out and would fail
     /// it honestly. Run it beside `ip -4 route show default` and the index
