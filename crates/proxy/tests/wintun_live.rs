@@ -6,6 +6,19 @@
 use std::{path::PathBuf, sync::Arc, sync::mpsc, thread, time::Duration};
 use tracewing_proxy::{roads, tun::Device, wintun::WintunAdapter};
 
+/// **Run these one at a time.** They share one adapter, by a fixed GUID, so
+/// `cargo test`'s default threads have several of them calling
+/// `Adapter::create` at once and all but one fails -- with
+/// *"Failed to create adapter. Wintun needs Administrator"*, which is the
+/// message for every creation failure and sends the reader after elevation
+/// they already have. Measured: three of six failed that way in an elevated
+/// session at High integrity, and all six passed in the same session with
+/// `--test-threads=1`.
+///
+/// ```powershell
+/// $env:WINTUN_DLL = "$HOME\wintun-dist\wintun\bin\amd64\wintun.dll"
+/// cargo test -p tracewing-proxy --release --test wintun_live -- --ignored --test-threads=1
+/// ```
 fn dll() -> PathBuf {
     PathBuf::from(std::env::var("WINTUN_DLL").expect("WINTUN_DLL: the path to wintun.dll"))
 }
