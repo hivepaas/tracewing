@@ -731,6 +731,74 @@ is a filter applied after the packets are already ours rather than an
 exemption the operating system makes on our behalf. `features.md` now says so
 in two rows rather than one, and what the filter costs is next.
 
+#### The switch: what turning it on needs, and what turning it off does
+
+**Read out of the code rather than decided freshly**, because three facts
+about the proxy settle it:
+
+- the sources are assembled as the engine starts
+  ([`engine.rs`](../../crates/app/src/engine.rs) builds the
+  `Vec<Box<dyn Source>>`), and there is no adding one to a running engine;
+- `ways_in` and the `apps` matcher are derived from those sources *there*, so
+  a source appearing later would leave both behind it;
+- there is one stop for all of them: `Source::start(self, proxy, found, stop)`
+  takes the same `Stop` every source gets.
+
+So:
+
+**Turning it on needs a new engine.** On Windows that costs nothing extra,
+because switching on already means coming back as an administrator -- the
+relaunch is a new process and therefore a new engine. When tracewing is
+*already* elevated there is nothing to raise, and it is then a plain restart
+of the kind SOCKS5 and the tunnel already ask for in their own tabs. The
+window says which of the two it is going to be before it asks.
+
+**Turning it off does not, which is what was decided.** A process cannot drop
+to a filtered token, so a relaunch to go back would be a second restart for
+no gain. What makes an immediate off possible without one is that the source
+can carry **a stop of its own** alongside the shared one -- an end its own
+loop watches, owned by the window -- and the adapter, its address and its
+routes then go with `Drop` as they do when the process ends. Nothing about
+the trait has to change for that: the extra stop goes inside the source when
+the window builds it.
+
+**The switch persists**, which is the one place this parts company with the
+macOS way in. That one starts off every run on purpose, so that opening
+tracewing installs nothing and asks macOS nothing; this one cannot, because
+the relaunch is a new process with nothing but a file to learn from. What
+keeps it honest is that an elevated process is visible in the window and a
+non-elevated one cannot act on the switch at all: it says it needs an
+administrator instead of quietly doing nothing.
+
+**Nothing chosen keeps nothing**, and that is the state every machine starts
+in: `sieve::by_programs` answers `false` before it asks the operating system
+anything. So "on with no programs" is an adapter that is up and a machine
+whose traffic is spliced straight through -- which is also what the tab has
+to say, rather than implying that capture is happening.
+
+##### Two things the assembly needs that are not there yet
+
+**One `Apps`, not two.** `sieve::by_programs` takes an `Apps`, and the proxy
+builds its own inside `run` from `ways_in`. The source is built by the window
+before the proxy starts, so the window would build a second one -- a second
+thread asking the same operating system the same question. It works, and the
+cost is roughly one extra lookup per kept connection, but the shape that does
+not duplicate it is one `Apps` built by the window and handed to both, which
+means `ProxyOptions` taking an `Apps` where it now takes `find_apps: bool`.
+The window already knows every port it would need (it binds the proxy
+listener and SOCKS5's itself), so nothing stands in the way but the change
+to shared code.
+
+**The address and route guards have to own the adapter.**
+[`wintun.rs`](../../crates/proxy/src/wintun.rs)'s `Address<'a>` and
+`Route<'a>` borrow the `WintunAdapter` they were made from, which is right
+for a test that holds both in one scope and impossible for a source that
+holds the adapter and must keep the guards for as long as it runs. They want
+an `Arc<WintunAdapter>` of their own, and then the device the pump is given
+is a small type that owns the adapter and the guards together and delegates
+`Device` to the adapter -- the same shape as the `Held(Arc<...>)` wrapper in
+`tun.rs`'s own tests.
+
 #### What capturing the whole machine costs
 
 What follows is what changes when this stack is fed a machine's traffic
