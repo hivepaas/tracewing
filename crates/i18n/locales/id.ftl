@@ -2554,6 +2554,18 @@ tb198618d = Simulator iOS
 # Find simulators
 ta969b661 = Cari simulator
 
+# Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
+tbc409e23 = Tidak ada apa pun dari jalan masuk ini yang tertinggal di komputer: adapter tracewing ikut pergi bersamanya, begitu pula rutenya, baik ditutup maupun dimatikan paksa.
+
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
+tac4db5f4 = Perangkat yang dibuat tracewing tetap ada, dengan tautannya mati dan rutenya ditandai mati, jadi tidak ada yang dikirim ke sana — dan jalan berikutnya memakainya kembali tanpa meminta kata sandi lagi.
+
+# A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
+t7342daf6 = Jalan yang berakhir buruk bisa meninggalkan konfigurasi proxy. Ia tidak menangkap apa pun: ekstensi hanya menyerahkan aliran kepada yang memegang kunci yang dibuat pada jalan itu, jadi tanpa tracewing setiap aliran keluar seperti biasa. Jalan berikutnya menggantikannya, dan mematikan ini menghapusnya.
+
+# The certificate stays trusted until Remove, in step 1, takes it out.
+tff791d1f = Sertifikat tetap dipercaya sampai Hapus, di langkah 1, mengeluarkannya.
+
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = Proxy sistem dan pemblokiran HTTP/3 kembali seperti semula saat tracewing ditutup atau crash, begitu juga perangkat Android yang disiapkan lewat USB. Sertifikat tetap dipercaya sampai tombol Hapus di langkah 1 mengeluarkannya. Ponsel yang disiapkan secara manual tetap menyimpan proxy Wi-Fi dan sertifikatnya sampai dihapus di ponsel itu: panduan tiap perangkat menjelaskan caranya. Perangkat lain bisa memakai proxy komputer ini sampai itu dimatikan di Settings.
 

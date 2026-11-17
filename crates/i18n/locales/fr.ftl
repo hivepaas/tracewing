@@ -2694,6 +2694,18 @@ tb198618d = Simulateurs iOS
 # Find simulators
 ta969b661 = Chercher des simulateurs
 
+# Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
+tbc409e23 = Rien de cette voie d'entrée ne reste sur cet ordinateur : l'adaptateur de tracewing s'en va avec lui, et ses routes avec, qu'il soit fermé ou tué.
+
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
+tac4db5f4 = L'interface créée par tracewing reste, lien coupé et routes marquées mortes, donc rien n'y est envoyé — et la prochaine exécution la reprend sans redemander de mot de passe.
+
+# A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
+t7342daf6 = Une exécution qui se termine mal peut laisser la configuration du proxy en place. Elle ne capture rien : l'extension ne remet un flux qu'à ce qui détient la clé créée par cette exécution, donc sans tracewing chaque flux sort comme il l'aurait fait. La prochaine exécution la remplace, et désactiver ceci la supprime.
+
+# The certificate stays trusted until Remove, in step 1, takes it out.
+tff791d1f = Le certificat reste approuvé jusqu'à ce que Supprimer, à l'étape 1, l'enlève.
+
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = Le proxy système et le blocage de HTTP/3 reviennent à leur état quand tracewing se ferme ou plante, de même qu’un appareil Android configuré par USB. Le certificat reste approuvé jusqu’à ce que Retirer, à l’étape 1, l’enlève. Un téléphone configuré à la main garde son proxy Wi-Fi et son certificat jusqu’à ce qu’on les retire sur place : le guide de chaque appareil dit comment. Les autres appareils peuvent joindre le proxy de cet ordinateur jusqu’à ce que ce soit désactivé dans Réglages.
 

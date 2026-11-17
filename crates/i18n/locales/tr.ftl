@@ -2641,6 +2641,18 @@ tb198618d = iOS simülatörleri
 # Find simulators
 ta969b661 = Simülatörleri bul
 
+# Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
+tbc409e23 = Bu giriş yolundan bu bilgisayarda hiçbir şey kalmaz: tracewing'in bağdaştırıcısı onunla birlikte gider, rotaları da; kapatılsa da öldürülse de.
+
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
+tac4db5f4 = tracewing'in oluşturduğu aygıt kalır — bağlantısı kapalı ve rotaları ölü olarak işaretli, dolayısıyla içine bir şey gönderilmez — ve sonraki çalıştırma onu yeniden alır, parolayı bir daha sormadan.
+
+# A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
+t7342daf6 = Kötü biten bir çalıştırma, proxy yapılandırmasını yerinde bırakabilir. Hiçbir şey yakalamaz: uzantı bir akışı yalnızca o çalıştırmanın ürettiği anahtarı taşıyana verir, bu yüzden tracewing yokken her akış normalde olduğu gibi dışarı çıkar. Sonraki çalıştırma onun yerini alır, bunu kapatmak ise onu kaldırır.
+
+# The certificate stays trusted until Remove, in step 1, takes it out.
+tff791d1f = Sertifika, 1. adımdaki Kaldır onu çıkarana kadar güvenilir kalır.
+
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = Sistem proxy'si ve HTTP/3 engeli, tracewing kapandığında ya da çöktüğünde eski hâline döner; USB ile kurulan bir Android cihaz da öyle. Sertifika, 1. adımdaki Kaldır onu çıkarana kadar güvenilir kalır. Elle kurulan bir telefon, Wi-Fi proxy'sini ve sertifikasını orada kaldırılana kadar tutar: her cihazın kılavuzu nasıl yapılacağını söyler. Diğer cihazlar, bu Ayarlar'da kapatılana kadar bu bilgisayarın proxy'sine ulaşabilir.
 

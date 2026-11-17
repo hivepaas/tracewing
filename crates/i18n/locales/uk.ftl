@@ -2767,6 +2767,18 @@ tb198618d = Симулятори iOS
 # Find simulators
 ta969b661 = Знайти симулятори
 
+# Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
+tbc409e23 = Від цього входу на комп'ютері не лишається нічого: адаптер tracewing зникає разом із ним, і його маршрути теж, хай його закрили чи вбили.
+
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
+tac4db5f4 = Пристрій, який створив tracewing, лишається — зі знятим з'єднанням і маршрутами, позначеними мертвими, тож у нього нічого не надсилається, — і наступний запуск бере його, не питаючи пароль знову.
+
+# A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
+t7342daf6 = Запуск, що завершився погано, може лишити конфігурацію проксі. Вона нічого не захоплює: розширення віддає потік лише тому, хто має ключ, створений у тому запуску, тож без tracewing кожен потік виходить як вийшов би. Наступний запуск замінює її, а вимкнення цього її видаляє.
+
+# The certificate stays trusted until Remove, in step 1, takes it out.
+tff791d1f = Сертифікат лишається довіреним, доки «Вилучити» на кроці 1 не прибере його.
+
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = Системний проксі й блокування HTTP/3 повертаються як було, коли tracewing закривається або падає, як і Android-пристрій, налаштований через USB. Сертифікат лишається довіреним, доки «Видалити» на кроці 1 його не прибере. Телефон, налаштований вручну, зберігає проксі Wi-Fi і сертифікат, доки їх не приберуть на ньому: як це зробити, сказано в інструкції для кожного пристрою. Інші пристрої можуть під’єднуватися до проксі цього комп’ютера, доки це не вимкнено в Налаштуваннях.
 
