@@ -687,6 +687,31 @@ rediscovering:
   why [`wintun.rs`](../../crates/proxy/src/wintun.rs) pins one, and now there
   is a source for it rather than a hunch.
 
+**Whether Windows has the dead-route problem too is not known here.** On
+Linux it did: a device up with its carrier down keeps its routes, `/proc`
+lists them as up, and `out_by` chose one of them over the real interface
+until the carrier was read — the measurement is under "Which way out is not
+ours" in the Linux section. Windows reads `GetIpForwardTable2`, and whether a
+disconnected interface's rows survive there, and whether `Metric` or the
+`MIB_IPFORWARD_ROW2` flags say so, has not been tested. If they do survive,
+the same silent hang is reachable, and the two `/1` halves above make it
+worse rather than better: a dead interface with a `/1` pair beats a live
+default route on reach. The case to arrange is a **second** interface going
+down while tracewing holds its own — not the adapter itself, which is
+already measured — with the table dumped before and after, and
+`GetIfEntry2`'s `MediaConnectState` and `OperStatus` beside it, since that is
+the Windows analogue of a carrier and the likelier place the state shows.
+
+**Whichever way those tables answer, the rule that decides it is the same on
+both platforms, and it is not symmetric.** Excluding too much leaves a family
+with no way out, which is `Out::Nowhere` in `upstream.rs`: the connection is
+refused and says why. Excluding too little pins to an interface the kernel is
+ignoring, and that **hangs**. So anything the tables cannot vouch for is not
+a way out — a loud failure beats a silent wait, and neither of them is the
+loop. Worth having here rather than in each platform's own section, because
+it is the kind of choice that looks like caution and is the opposite: the
+cautious-looking default is the quiet one.
+
 One thing this settles, and it is worth saying plainly: a TUN captures by
 **route**, which is to say by destination, and no route can express "this
 program". So this mode captures the whole machine, and choosing one program
