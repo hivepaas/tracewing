@@ -1102,6 +1102,9 @@ tab504c3d = Bu sistemde yok. Windows ve Linux'ta tracewing seçilen bir program�
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Kapalı. Bu bilgisayarın trafiğini almak için yönetici gerekir: açmak tracewing'i yönetici olarak yeniden başlatır ve bu yeni bir oturum başlatır — şu an açık olan diskte kalır ve listeden yeniden açılabilir.
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = Kapalı. Açmak tracewing'in kendi bağdaştırıcısını oluşturur — sistem bunun için izin ister — ve sonra bu bilgisayarın trafiğini almaya başlar; yeniden başlatma gerekmez, açık oturum devam eder.
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = Kapalı. Açmak tracewing'in kendi bağdaştırıcısını oluşturur ve bu bilgisayarın trafiğini almaya başlar — yeniden başlatma gerekmez, açık oturum devam eder.
 
@@ -2411,8 +2414,8 @@ t4398b845 = Ve Java'nın kendi deposu
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Sonra programınızı bu bayraklarla başlatın: gönderdikleri Trafik'te görünür.
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = Uygulamayı ekleyin, sonra bunu açın: proxy ayarları ne derse desin bağlantıları buraya gelir. Ayarlar › Yakalama › Uygulamalar ile aynı.
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = Yakalamak istediğinizi ekleyin, sonra bunu açın: proxy ayarları ne derse desin bağlantıları buraya gelir. Ayarlar › Yakalama › { $tab } ile aynı.
 
 # the browsers' own stores
 tddf6836c = tarayıcıların kendi depoları
@@ -2965,8 +2968,11 @@ t9aea7fb0 = Bir Java programı
 # My phone
 te1545f43 = Telefonum
 
-# A Mac app that ignores the proxy
-t2c2204d9 = Proxy'yi yok sayan bir Mac uygulaması
+# A program that ignores the proxy
+t18f796bd = Proxy'yi yok sayan bir program
+
+# An app that ignores the proxy
+te5d26bae = Proxy'yi yok sayan bir uygulama
 
 # Something in Docker
 t51e75492 = Docker'daki bir şey

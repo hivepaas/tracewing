@@ -468,7 +468,7 @@ impl Traffic {
                 }
                 Way::Apps => {
                     steps.push(ca_step.into_any_element());
-                    steps.push(self.render_mac_apps_step(cx).into_any_element());
+                    steps.push(self.render_local_way_step(cx).into_any_element());
                 }
                 Way::Browser | Way::Socks5 => {}
             }
@@ -486,7 +486,7 @@ impl Traffic {
                     ),
                     Card::Http3 => cards.push(self.render_http3(cx).into_any_element()),
                     // Drawn as a step, above: the switch is what the step is.
-                    Card::MacApps => {}
+                    Card::LocalApps => {}
                 }
             }
         }
@@ -740,15 +740,27 @@ impl Traffic {
         )
     }
 
-    /// The macOS extension's apps and switch, as the Capture tab has them.
-    fn render_mac_apps_step(&mut self, cx: &mut Context<Self>) -> Div {
-        aside(
-            tr!("Apps"),
+    /// The local way in's programs and switch, as the Capture tab has them.
+    ///
+    /// Two machineries, one step: macOS hands the flows over through its
+    /// network extension and Windows and Linux by route through an adapter,
+    /// and the renderer under each says what its own switch will do. The
+    /// title is the tab's own name rather than a word of this page's, so
+    /// that the step and the tab it points at cannot come to disagree about
+    /// whether this system says "Apps" or "Programs".
+    fn render_local_way_step(&mut self, cx: &mut Context<Self>) -> Div {
+        let step = aside(
+            Way::Apps.name(),
             tr!(
-                "Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps."
+                "Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.",
+                tab = Way::Apps.name()
             ),
-        )
-        .child(self.render_mac_apps(cx))
+        );
+        if cfg!(target_os = "macos") {
+            step.child(self.render_mac_apps(cx))
+        } else {
+            step.child(self.render_local_apps(cx))
+        }
     }
 }
 

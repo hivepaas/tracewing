@@ -1102,6 +1102,9 @@ tab504c3d = Nicht auf diesem System. Unter Windows und Linux nimmt tracewing den
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Aus. Den Verkehr dieses Computers aufzunehmen braucht einen Administrator: Einschalten startet tracewing erneut als einen, und das beginnt eine neue Sitzung — die jetzt offene bleibt auf der Festplatte und lässt sich aus der Liste wieder öffnen.
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = Aus. Einschalten legt tracewings eigenen Adapter an, wofür das System um Erlaubnis bittet, und beginnt dann, den Verkehr dieses Computers aufzunehmen — ohne Neustart, und die offene Sitzung läuft weiter.
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = Aus. Einschalten legt tracewings eigenen Adapter an und beginnt, den Verkehr dieses Computers aufzunehmen — ohne Neustart, und die offene Sitzung läuft weiter.
 
@@ -2447,8 +2450,8 @@ t4398b845 = Und Javas eigener Speicher
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Starten Sie Ihr Programm dann mit diesen Flags: was es sendet, erscheint unter Traffic.
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = Füge die App hinzu und schalte dies ein: Ihre Verbindungen kommen hierher, egal was ihre Proxy-Einstellungen sagen. Dasselbe wie Einstellungen › Erfassen › Apps.
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = Füge hinzu, was du erfassen willst, und schalte dies ein: Seine Verbindungen kommen hierher, egal was seine Proxy-Einstellungen sagen. Dasselbe wie Einstellungen › Erfassen › { $tab }.
 
 # the browsers' own stores
 tddf6836c = die eigenen Speicher der Browser
@@ -3001,8 +3004,11 @@ t9aea7fb0 = Ein Java-Programm
 # My phone
 te1545f43 = Mein Smartphone
 
-# A Mac app that ignores the proxy
-t2c2204d9 = Eine Mac-App, die den Proxy ignoriert
+# A program that ignores the proxy
+t18f796bd = Ein Programm, das den Proxy ignoriert
+
+# An app that ignores the proxy
+te5d26bae = Eine App, die den Proxy ignoriert
 
 # Something in Docker
 t51e75492 = Etwas in Docker

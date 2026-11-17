@@ -1069,6 +1069,9 @@ tab504c3d = このシステムにはありません。tracewing は Windows と 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = オフ。このコンピュータの通信を受け取るには管理者が必要です。オンにすると tracewing が管理者として起動し直し、新しいセッションが始まります — いま開いているセッションはディスクに残り、一覧から開き直せます。
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = オフ。オンにすると tracewing 自身のアダプターを作り（システムが許可を求めます）、それからこのコンピュータの通信を受け取り始めます — 再起動は不要で、いま開いているセッションはそのまま続きます。
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = オフ。オンにすると tracewing 自身のアダプターを作り、このコンピュータの通信を受け取り始めます — 再起動は不要で、いま開いているセッションはそのまま続きます。
 
@@ -2332,8 +2335,8 @@ t4398b845 = そして Java 独自のストア
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = そのうえで、このフラグを付けてプログラムを起動してください。送ったものが「トラフィック」に現れます。
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = アプリを追加してからこれをオンにすると、プロキシ設定にかかわらずその接続がここに届きます。設定 › 取り込み › アプリ と同じです。
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = 取り込みたいものを追加してからこれをオンにすると、プロキシ設定にかかわらずその接続がここに届きます。設定 › キャプチャ › { $tab } と同じです。
 
 # the browsers' own stores
 tddf6836c = 各ブラウザー独自のストア
@@ -2873,8 +2876,11 @@ t9aea7fb0 = Java のプログラム
 # My phone
 te1545f43 = 自分のスマートフォン
 
-# A Mac app that ignores the proxy
-t2c2204d9 = プロキシを無視する Mac アプリ
+# A program that ignores the proxy
+t18f796bd = プロキシを無視するプログラム
+
+# An app that ignores the proxy
+te5d26bae = プロキシを無視するアプリ
 
 # Something in Docker
 t51e75492 = Docker の中のもの

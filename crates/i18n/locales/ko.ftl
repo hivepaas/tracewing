@@ -1069,6 +1069,9 @@ tab504c3d = 이 시스템에는 없습니다. tracewing은 Windows와 Linux에�
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = 꺼짐. 이 컴퓨터의 트래픽을 받으려면 관리자 권한이 필요합니다. 켜면 tracewing이 관리자로 다시 시작되고 새 세션이 시작됩니다 — 지금 열린 세션은 디스크에 남아 목록에서 다시 열 수 있습니다.
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = 꺼짐. 켜면 tracewing 자체 어댑터를 만들며, 이때 시스템이 허용을 묻습니다. 그런 다음 이 컴퓨터의 트래픽을 받기 시작합니다 — 다시 시작할 필요가 없고, 지금 열린 세션은 그대로 이어집니다.
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = 꺼짐. 켜면 tracewing 자체 어댑터를 만들고 이 컴퓨터의 트래픽을 받기 시작합니다 — 다시 시작할 필요가 없고, 지금 열린 세션은 그대로 이어집니다.
 
@@ -2332,8 +2335,8 @@ t4398b845 = 그리고 Java 자체 저장소
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = 그런 다음 이 플래그를 붙여 프로그램을 실행하세요. 보낸 것이 트래픽에 나타납니다.
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = 앱을 추가한 뒤 이것을 켜세요: 프록시 설정과 상관없이 그 연결이 여기로 옵니다. 설정 › 캡처 › 앱과 같습니다.
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = 캡처하려는 것을 추가한 뒤 이것을 켜세요: 프록시 설정과 상관없이 그 연결이 여기로 옵니다. 설정 › 캡처 › { $tab }에 있는 것과 같습니다.
 
 # the browsers' own stores
 tddf6836c = 브라우저 자체 저장소
@@ -2873,8 +2876,11 @@ t9aea7fb0 = Java 프로그램
 # My phone
 te1545f43 = 내 휴대폰
 
-# A Mac app that ignores the proxy
-t2c2204d9 = 프록시를 무시하는 Mac 앱
+# A program that ignores the proxy
+t18f796bd = 프록시를 무시하는 프로그램
+
+# An app that ignores the proxy
+te5d26bae = 프록시를 무시하는 앱
 
 # Something in Docker
 t51e75492 = Docker 안의 무언가

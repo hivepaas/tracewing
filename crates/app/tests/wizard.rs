@@ -112,8 +112,10 @@ fn every_answer_draws_a_page_and_the_answer_is_kept() {
     );
 
     // Every answer, drawn. `Target::here` rather than `ALL`, because an
-    // answer this computer cannot do is not offered: on Linux that leaves the
-    // Mac app out.
+    // answer this computer cannot do is not offered -- nothing is left out
+    // today, and the loop is over whatever is offered rather than over a
+    // list written here, so the next answer that is true of one system only
+    // is drawn where it is offered and nowhere else.
     for target in Target::here() {
         window
             .update(cx, |view, _, cx| {
@@ -189,6 +191,18 @@ fn every_answer_draws_a_page_and_the_answer_is_kept() {
         })
         .unwrap();
     shot(cx, window, "305-wizard-terminal");
+
+    // The local way in, which is the answer this page had none of on Linux
+    // and Windows until the Windows and Linux arms landed: the step under it
+    // is the Capture tab's own panel, so this picture is also the one that
+    // shows whether a switch that can raise a password dialog reads as
+    // something to press on a first run.
+    window
+        .update(cx, |view, _, cx| {
+            view.choose_target(Some(Target::LocalApp), cx)
+        })
+        .unwrap();
+    shot(cx, window, "306-wizard-local-app");
 
     let _ = std::fs::remove_dir_all(&dir);
 }

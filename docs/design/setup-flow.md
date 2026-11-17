@@ -121,10 +121,15 @@ Settings › **Capture**, a tab for each way in
 - what each way in **catches**, and under it what it **does not**. The second
   line is the one worth the room: somebody whose Java program shows nothing
   has a way in that cannot catch it, not a tracewing that is broken.
-- for *Apps*, on macOS, the apps and a switch
-  ([`mac_apps.rs`](../../crates/app/src/mac_apps.rs)), the same panel on the
-  tab and on Set up's answer for a Mac app; on Linux and Windows a line
-  saying it is macOS that hands an app's connections over. The window's
+- for *Apps* — *Programs* on Windows — the chosen programs and a switch over
+  them, the same panel on the tab and on Set up's answer for a program that
+  ignores the proxy. Two machineries under one tab and one answer: on macOS
+  the network extension
+  ([`mac_apps.rs`](../../crates/app/src/mac_apps.rs)), on Windows and Linux
+  an adapter of tracewing's own that takes this machine's traffic by route
+  ([`local_apps.rs`](../../crates/app/src/local_apps.rs)). Which of the two
+  is underneath is what the wizard exists so that nobody has to know. The
+  macOS half: the window's
   engine opens the extension's port as it starts, so switching on and adding
   an app need no restart: each saves the configuration again. An app is
   added from a file picker and read whole — its own signing id and those of
@@ -226,7 +231,7 @@ at:
 | Python | A terminal | The terminal sets it | Yes |
 | A Java program | System proxy | A store of Java's own | **No** — the flags are given, the store is not written |
 | My phone | Other devices | On the phone | No — the guides say how |
-| A Mac app that ignores the proxy | Apps (macOS) | This computer's store | Yes |
+| An app that ignores the proxy (a *program* on Windows) | Apps | This computer's store | Yes |
 | Something in Docker | A terminal | Whatever the image brings | No — tracewing cannot tell from here |
 
 Three things that fell out of writing it down:
@@ -263,8 +268,7 @@ for that answer. The knowledge is already written down in
 | A Python program | A terminal | `REQUESTS_CA_BUNDLE`, which the terminal sets |
 | A Java program | System proxy **and** JVM flags | A truststore of its own — see below |
 | My phone | WireGuard, or Other devices | The authority installed on the phone |
-| A Mac app that ignores the proxy | Apps (macOS) | The system store |
-| A Windows app that ignores the proxy | Local mode (Windows), once it captures — the machine, not one app (below); until then, a terminal or nothing | The system store |
+| An app that ignores the proxy (a *program* on Windows) | Apps — the network extension on macOS, an adapter of tracewing's by route on Windows and Linux | The system store |
 | Something in Docker | A terminal for the container; the daemon is its own problem | Varies |
 
 Each step ends in a **check**, following the one Setup already has for the

@@ -1108,6 +1108,9 @@ tab504c3d = Pas sur ce système. Sous Windows et Linux, tracewing prend le trafi
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Désactivé. Prendre le trafic de cet ordinateur demande un administrateur : l'activer relance tracewing en tant qu'administrateur, et cela commence une nouvelle session — celle qui est ouverte reste sur le disque et peut être rouverte depuis la liste.
 
+# Off. Switching it on makes tracewing's own adapter, which the system asks you to allow, and then starts taking this machine's traffic — no restart, and the session open now carries on.
+te269f1a9 = Désactivé. L'activer crée l'adaptateur de tracewing, ce pour quoi le système vous demande l'autorisation, puis commence à prendre le trafic de cet ordinateur — sans redémarrage, et la session ouverte continue.
+
 # Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
 tc237f728 = Désactivé. L'activer crée l'adaptateur de tracewing et commence à prendre le trafic de cet ordinateur — sans redémarrage, et la session ouverte continue.
 
@@ -2462,8 +2465,8 @@ t4398b845 = Et le magasin propre à Java
 # Then start your program with these flags: what it sends appears in Traffic.
 t9e2570bd = Lancez ensuite votre programme avec ces options : ce qu'il envoie apparaît dans Trafic.
 
-# Add the app, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › Apps.
-tbdc6cba5 = Ajoutez l'app, puis activez ceci : ses connexions arrivent ici quels que soient ses réglages de proxy. Comme Réglages › Capture › Apps.
+# Add what you want to capture, then switch this on: its connections come here whatever its proxy settings say. The same as Settings › Capture › {tab}.
+tda3c5496 = Ajoutez ce que vous voulez capturer, puis activez ceci : ses connexions arrivent ici quels que soient ses réglages de proxy. Comme Paramètres › Capture › { $tab }.
 
 # the browsers' own stores
 tddf6836c = les magasins propres aux navigateurs
@@ -3018,8 +3021,11 @@ t9aea7fb0 = Un programme Java
 # My phone
 te1545f43 = Mon téléphone
 
-# A Mac app that ignores the proxy
-t2c2204d9 = Une app Mac qui ignore le proxy
+# A program that ignores the proxy
+t18f796bd = Un programme qui ignore le proxy
+
+# An app that ignores the proxy
+te5d26bae = Une app qui ignore le proxy
 
 # Something in Docker
 t51e75492 = Quelque chose dans Docker
