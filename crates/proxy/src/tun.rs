@@ -38,6 +38,9 @@
 //! See [capture-modes.md](../../../docs/design/capture-modes.md).
 
 use crate::{
+    datagrams::Bind,
+    icmp::Echo,
+    sieve::Sieve,
     source::{Found, Source, Stop, stopped},
     stack::{Stack, Wire},
 };
@@ -49,7 +52,7 @@ use tokio::sync::mpsc;
 ///
 /// Every method takes `&self` because reading and writing both block and so
 /// run on threads of their own. Implementations are platform code:
-/// `crate::wintun` is the first.
+/// `crate::wintun` on Windows and `crate::tun_linux` on Linux.
 pub trait Device: Send + Sync + 'static {
     /// What this way in is called, where a flow says where it came from.
     fn name(&self) -> String;
@@ -77,17 +80,55 @@ pub trait Device: Send + Sync + 'static {
 /// One type, because the two are no use apart — a device with nothing to
 /// read its packets, or a stack with nothing to feed it. The same reason
 /// [`crate::wireguard::Endpoint`] holds both.
-pub struct Tun<D>(D);
+pub struct Tun<D> {
+    device: D,
+    /// Which connections the proxy is to see, and the way out for the rest.
+    sieve: Sieve,
+    /// How a socket to the far side is made for a datagram that is passed on.
+    datagrams: Bind,
+    /// Where an echo leaves from, for `ping` and `tracert`.
+    echo: Option<Echo>,
+}
 
 impl<D: Device> Tun<D> {
-    pub fn new(device: D) -> Self {
-        Self(device)
+    /// **The sieve and the bind are arguments rather than builders**, because
+    /// a mode that captures by *route* has no safe default for either and
+    /// both mistakes are quiet ones.
+    ///
+    /// Without a sieve the stack keeps every connection on the machine and
+    /// offers tracewing's certificate to all of them — which breaks programs
+    /// that pin their own, for traffic nobody asked to see. Without a bind,
+    /// every datagram the sieve does not keep is refused instead of passed
+    /// on, so a captured machine loses the UDP it did not choose to show.
+    /// Neither fails loudly, and neither is visible in a test that only asks
+    /// whether a flow arrived.
+    ///
+    /// A tunnel a phone joined is the other case and is why
+    /// [`crate::stack::Stack`] keeps both optional: everything down it was
+    /// sent on purpose, so there is nothing to sift and nothing to pass.
+    pub fn new(device: D, sieve: Sieve, datagrams: Bind) -> Self {
+        Self {
+            device,
+            sieve,
+            datagrams,
+            echo: None,
+        }
+    }
+
+    /// Answers `ping` and `tracert` by really sending the echo, rather than
+    /// leaving them silent. Optional because silence is a feature missing
+    /// rather than traffic going somewhere it should not.
+    pub fn answering(self, echo: Echo) -> Self {
+        Self {
+            echo: Some(echo),
+            ..self
+        }
     }
 }
 
 impl<D: Device> Source for Tun<D> {
     fn name(&self) -> String {
-        self.0.name()
+        self.device.name()
     }
 
     fn by(&self) -> crate::source::By {
@@ -100,11 +141,21 @@ impl<D: Device> Source for Tun<D> {
     // and the WireGuard endpoint say the same, for the same reason.
 
     fn start(self: Box<Self>, proxy: SocketAddr, found: Found, stop: Stop) -> Result<()> {
+        let Self {
+            device,
+            sieve,
+            datagrams,
+            echo,
+        } = *self;
         let (wire, into_stack, from_stack) = Wire::channels();
+        let mut stack = Stack::new(wire).sifting(sieve).passing(datagrams);
+        if let Some(echo) = echo {
+            stack = stack.answering(echo);
+        }
         // The stack first: it is what `found` hears from, and a packet that
         // arrived before it was listening would have nowhere to go.
-        Box::new(Stack::new(wire)).start(proxy, found, stop.clone())?;
-        run(Arc::new(self.0), into_stack, from_stack, stop);
+        Box::new(stack).start(proxy, found, stop.clone())?;
+        run(Arc::new(device), into_stack, from_stack, stop);
         Ok(())
     }
 }
@@ -362,5 +413,197 @@ mod tests {
             .await
             .expect("the reading thread ended");
         assert_eq!(ended, None);
+    }
+    /// What a `Tun` is given has to reach the stack, and these are the three
+    /// that are quiet when it does not. Built through `Tun::start` rather
+    /// than by handing a `Stack` the same arguments, because the wiring is
+    /// what is being tested.
+    ///
+    /// The proxy address is one nothing listens on, as `stack.rs`'s own
+    /// tests use: a flow is handed over when the connection is taken, not
+    /// when the proxy answers.
+    const NOWHERE: &str = "127.0.0.1:9090";
+
+    /// Starts a `Tun` over a fake device, and hands back what the test
+    /// watches: the flows, what the sieve was asked, the far end of anything
+    /// it sent straight out, and whether a datagram asked for a socket.
+    fn start_tun(keeps: bool) -> (Arc<Fake>, Watching) {
+        let (found, took) = Found::channel();
+        let (stop_tx, stop) = watch::channel(false);
+        let (asked_tx, asked) = mpsc::channel(8);
+        let (out_tx, out) = mpsc::channel(8);
+        let (bound_tx, bound) = mpsc::channel(8);
+        let sieve = Sieve::new(
+            Box::new(move |client, to| {
+                let asked = asked_tx.clone();
+                Box::pin(async move {
+                    let _ = asked.send((client, to)).await;
+                    keeps
+                })
+            }),
+            Box::new(move |to| {
+                let out = out_tx.clone();
+                Box::pin(async move {
+                    let (ours, theirs) = tokio::io::duplex(1024);
+                    let _ = out.send((to, theirs)).await;
+                    Ok(Box::new(ours) as Box<dyn crate::source::Duplex>)
+                })
+            }),
+        );
+        let datagrams: Bind = Arc::new(move |v6| {
+            let bound = bound_tx.clone();
+            Box::pin(async move {
+                let _ = bound.send(v6).await;
+                tokio::net::UdpSocket::bind("127.0.0.1:0").await
+            })
+        });
+        let device = Arc::new(Fake::default());
+        // Through `Found::start` and not `Source::start`, because that is
+        // where a way in is stamped on what a source hands over -- so this
+        // sees what the proxy sees, including whether `Tun`'s own `by` is
+        // what reaches a flow or whether the stack inside overwrites it.
+        found
+            .start(
+                Box::new(Tun::new(Held(Arc::clone(&device)), sieve, datagrams)),
+                NOWHERE.parse().unwrap(),
+                stop,
+            )
+            .expect("the source starts");
+        (
+            device,
+            Watching {
+                took,
+                asked,
+                out,
+                bound,
+                _stop: stop_tx,
+            },
+        )
+    }
+
+    struct Watching {
+        took: mpsc::Receiver<crate::source::Took>,
+        asked: mpsc::Receiver<(SocketAddr, SocketAddr)>,
+        out: mpsc::Receiver<(SocketAddr, tokio::io::DuplexStream)>,
+        bound: mpsc::Receiver<bool>,
+        _stop: watch::Sender<bool>,
+    }
+
+    /// The `Device` the pump owns is the fake the test still holds, which is
+    /// what this stands in for: `Tun` takes a device by value and the test
+    /// needs it afterwards.
+    struct Held(Arc<Fake>);
+
+    impl Device for Held {
+        fn name(&self) -> String {
+            self.0.name()
+        }
+        fn read(&self) -> Result<Vec<u8>> {
+            self.0.read()
+        }
+        fn write(&self, packet: &[u8]) -> Result<()> {
+            self.0.write(packet)
+        }
+        fn shutdown(&self) {
+            self.0.shutdown();
+        }
+    }
+
+    /// The three-way handshake, through the device rather than through a
+    /// channel: the stack writes its SYN-ACK to the device like any other
+    /// packet, so the test reads it back out of the fake. A connection is
+    /// not a connection until this is done, which is why both tests below
+    /// need it -- the sieve is asked once the handshake is complete, not
+    /// when the SYN arrives.
+    async fn shake_hands(device: &Fake, client: &mut crate::stack::Client) {
+        device.will_read(client.send(smoltcp::wire::TcpControl::Syn, &[]));
+        let answer = next_written(device, 0).await;
+        let (control, _) = client.heard(&answer);
+        assert_eq!(
+            control,
+            smoltcp::wire::TcpControl::Syn,
+            "a SYN-ACK answers the SYN"
+        );
+        device.will_read(client.send(smoltcp::wire::TcpControl::None, &[]));
+    }
+
+    /// The packet after `already`, waited for rather than looked for once: a
+    /// stack that answers nothing must fail this test, not hang the suite.
+    async fn next_written(device: &Fake, already: usize) -> Vec<u8> {
+        let deadline = tokio::time::Instant::now() + SOON;
+        loop {
+            let written = device.written();
+            if written.len() > already {
+                return written[already].clone();
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "the stack wrote nothing back"
+            );
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    }
+
+    /// The sieve reaches the stack, and a connection it keeps is a flow that
+    /// says it came in this way.
+    #[tokio::test]
+    async fn what_the_sieve_keeps_becomes_a_flow_from_this_way_in() {
+        let (device, mut watching) = start_tun(true);
+        let mut client = crate::stack::Client::new("10.77.0.9:40000", "93.184.216.34:443");
+        shake_hands(&device, &mut client).await;
+        let took = timeout(SOON, watching.took.recv())
+            .await
+            .expect("a flow before the timeout")
+            .expect("the stack is running");
+        match took {
+            crate::source::Took::Flow(_, by) => assert_eq!(by, crate::source::By::Tun),
+            crate::source::Took::Port(..) => panic!("a TUN takes flows, not ports"),
+        }
+        let (_, to) = timeout(SOON, watching.asked.recv())
+            .await
+            .expect("the sieve is asked")
+            .expect("the channel is open");
+        assert_eq!(to.to_string(), "93.184.216.34:443");
+    }
+
+    /// And the way out reaches it: a connection the sieve does not keep is
+    /// connected straight to where it was going, and is never a flow.
+    #[tokio::test]
+    async fn what_the_sieve_refuses_goes_straight_out_and_is_never_a_flow() {
+        let (device, mut watching) = start_tun(false);
+        let mut client = crate::stack::Client::new("10.77.0.9:40001", "93.184.216.34:443");
+        shake_hands(&device, &mut client).await;
+        let (to, _far) = timeout(SOON, watching.out.recv())
+            .await
+            .expect("the way out is asked")
+            .expect("the channel is open");
+        assert_eq!(to.to_string(), "93.184.216.34:443");
+        // And nothing was handed to the proxy. `try_recv` rather than a
+        // second timeout: the flow would already be there if it were coming,
+        // since the connection above has been made.
+        assert!(
+            watching.took.try_recv().is_err(),
+            "a connection nobody chose is not tracewing's to see"
+        );
+    }
+
+    /// The bind reaches it too, which is the one of the three with no
+    /// symptom at all when it does not: a datagram would simply be refused,
+    /// and a captured machine would lose the UDP nobody chose to show.
+    #[tokio::test]
+    async fn a_datagram_nobody_chose_asks_for_a_socket_rather_than_being_refused() {
+        let (device, mut watching) = start_tun(false);
+        let packet = crate::datagrams::packet_for(
+            "10.77.0.9:40002".parse().unwrap(),
+            "93.184.216.34:7777".parse().unwrap(),
+            b"a datagram",
+        )
+        .expect("a packet");
+        device.will_read(packet);
+        let v6 = timeout(SOON, watching.bound.recv())
+            .await
+            .expect("a socket is asked for")
+            .expect("the channel is open");
+        assert!(!v6, "an IPv4 datagram asks for an IPv4 socket");
     }
 }

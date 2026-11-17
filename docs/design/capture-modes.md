@@ -1162,14 +1162,47 @@ passed:
   `Look` deliberately says nothing about the carrier: that follows the
   holder, which is the whole shape.
 
+#### The source, and what it refuses to be built without
+
+[`tun.rs`](../../crates/proxy/src/tun.rs) was already the pump both
+platforms share — two real threads, because a blocked read cannot poll a
+stop, and a cascade of closing channels to end them. What it handed the
+stack was a bare `Stack::new(wire)`, and that is the gap this closed:
+**`Tun::new` now takes the sieve and the datagram bind as arguments rather
+than builders**, because a mode that captures by *route* has no safe default
+for either and both mistakes are quiet:
+
+- with no sieve the stack keeps every connection on the machine and offers
+  tracewing's certificate to all of them, which breaks programs that pin
+  their own, for traffic nobody asked to see;
+- with no bind every datagram the sieve does not keep is **refused** rather
+  than passed on, so a captured machine loses the UDP it did not choose to
+  show.
+
+Neither fails loudly, and neither shows up in a test that only asks whether a
+flow arrived. A tunnel a phone joined is the opposite case, and is why
+[`Stack`](../../crates/proxy/src/stack.rs) keeps both optional: everything
+sent down it was sent on purpose, so there is nothing to sift and nothing to
+pass. The echo stays a builder, since `ping` left silent is a feature missing
+rather than traffic going where it should not.
+
+That gives `sieve::by_programs`, `upstream::straight_to` and
+`upstream::bound_datagrams` their first caller, and the tests go through
+`Found::start` rather than `Source::start` on purpose. **A source that starts
+another source inside it hands down its own stamp**: `Tun` starts a `Stack`,
+and the flows say `By::Tun` rather than the stack's own answer — which is
+also why a phone's flows say `WireGuard` though a stack does the work. That
+is now a test rather than a thing to notice: with `Tun::by` changed to
+anything else, the flow arrives stamped wrongly and the test says so.
+
 #### What is not in, and nothing captures until it is
 
-**The `Tun` source that hands the engine flows**, which is the piece that
-makes any of this capture anything. Nothing calls `make_adapter`,
-`straight_to`, `bound_datagrams` or `leave_by` yet, on either platform, and
-`by_programs` — which is what would pass `straight_to` in — has no caller
-either. The machinery is complete and idle, and `make lint` is what keeps it
-from rotting until the wiring arrives.
+**The engine never builds one.** `make_adapter`, `roads::watching` and
+`leave_by` have no caller, so no adapter is made, no way out is pinned, and
+no `Tun` is pushed into the sources. Until that lands this mode still
+captures nothing — the difference is that the piece it is missing is now
+wiring rather than design, and a `Tun` that would capture the machine can no
+longer be written by accident.
 
 ### WireGuard
 
