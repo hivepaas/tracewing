@@ -562,102 +562,83 @@ fn mine_v6(table: &str) -> Vec<Mine> {
         .collect()
 }
 
-/// The IPv4 addresses, from `SIOCGIFCONF`.
+/// Every address this machine holds, as the one call that lists them gives
+/// them: the interface it is on, the address, and whether that interface is
+/// up.
 ///
-/// There is no file to read them from, and `SIOCGIFCONF` is the call that
-/// lists them all in one go rather than one interface at a time. It carries
-/// **no flags**, so these are `settled` and not skipped: duplicate address
-/// detection is an IPv6 idea, and a deprecated IPv4 address is a netlink
-/// concept this call cannot see. Said rather than implied, because it is a
-/// difference between the families and not a decision.
+/// `getifaddrs` is what [`crate::lan`] already walks for the same machine's
+/// IPv4 addresses, and walking it twice in one crate is one mechanism too
+/// many, so this is the walk and both questions are asked of it. The
+/// questions differ: `lan` wants the addresses **other devices could reach
+/// this machine at** and filters on the interface being up; this wants the
+/// one to **send an echo from**, and leaves that filtering to [`source_on`]
+/// and to the way out already having been carrier-checked.
+///
+/// What it does **not** carry is an address's own flags -- `ifa_flags` is
+/// the *interface*'s, so tentative and deprecated are not in here. That is
+/// why IPv6 is read from `/proc/net/if_inet6` instead, which has them.
+#[cfg(unix)]
+pub fn every_address() -> Vec<(u32, std::net::IpAddr, bool)> {
+    let mut found = Vec::new();
+    let mut list: *mut libc::ifaddrs = std::ptr::null_mut();
+    // SAFETY: `getifaddrs` writes a list that `freeifaddrs` frees; each entry
+    // is read while the list lives, and an address only as its family says.
+    unsafe {
+        if libc::getifaddrs(&mut list) != 0 {
+            return found;
+        }
+        let mut at = list;
+        while !at.is_null() {
+            let entry = &*at;
+            let up = entry.ifa_flags & libc::IFF_UP as u32 != 0;
+            if !entry.ifa_addr.is_null() {
+                let family = i32::from((*entry.ifa_addr).sa_family);
+                let addr = match family {
+                    libc::AF_INET => {
+                        let addr = &*entry.ifa_addr.cast::<libc::sockaddr_in>();
+                        Some(std::net::IpAddr::from(addr.sin_addr.s_addr.to_ne_bytes()))
+                    }
+                    libc::AF_INET6 => {
+                        let addr = &*entry.ifa_addr.cast::<libc::sockaddr_in6>();
+                        Some(std::net::IpAddr::from(addr.sin6_addr.s6_addr))
+                    }
+                    _ => None,
+                };
+                // The name is what the list carries; the index is what
+                // `Mine` and `Road` are identified by.
+                let index = (!entry.ifa_name.is_null())
+                    .then(|| libc::if_nametoindex(entry.ifa_name))
+                    .filter(|index| *index != 0);
+                if let (Some(addr), Some(index)) = (addr, index) {
+                    found.push((index, addr, up));
+                }
+            }
+            at = entry.ifa_next;
+        }
+        libc::freeifaddrs(list);
+    }
+    found
+}
+
+/// The IPv4 addresses, out of [`every_address`].
+///
+/// They come with **no flags**: duplicate address detection is an IPv6 idea,
+/// and a deprecated IPv4 address is a netlink concept neither `getifaddrs`
+/// nor anything else here can see. So these are settled and not skipped,
+/// which is said rather than implied, because it is a difference between the
+/// families and not a decision.
 #[cfg(target_os = "linux")]
 fn mine_v4() -> anyhow::Result<Vec<Mine>> {
-    use std::os::fd::{AsRawFd, FromRawFd};
-    const SIOCGIFCONF: libc::c_ulong = 0x8912;
-    /// `struct ifreq`: a name, then a union whose first arm is the address.
-    /// 16 + 24 on every Linux this builds for.
-    #[repr(C)]
-    #[derive(Clone, Copy)]
-    struct Entry {
-        name: [libc::c_char; libc::IFNAMSIZ],
-        addr: libc::sockaddr_in,
-        _rest: [u8; 8],
-    }
-    #[repr(C)]
-    struct Conf {
-        len: libc::c_int,
-        buf: *mut libc::c_char,
-    }
-    // SAFETY: a datagram socket, which this call only reads through.
-    let socket = unsafe { libc::socket(libc::AF_INET, libc::SOCK_DGRAM, 0) };
-    anyhow::ensure!(socket >= 0, "a socket to ask for addresses through");
-    // SAFETY: a descriptor just made, held by nothing else.
-    let socket = unsafe { std::os::fd::OwnedFd::from_raw_fd(socket) };
-    let mut room = 32usize;
-    loop {
-        let mut entries = vec![
-            Entry {
-                name: [0; libc::IFNAMSIZ],
-                // SAFETY: zeroes are a valid `sockaddr_in`.
-                addr: unsafe { std::mem::zeroed() },
-                _rest: [0; 8],
-            };
-            room
-        ];
-        let bytes = std::mem::size_of::<Entry>() * room;
-        let mut conf = Conf {
-            len: bytes as libc::c_int,
-            buf: entries.as_mut_ptr().cast(),
-        };
-        // SAFETY: a buffer of ours whose length is given as its own size.
-        let got = unsafe {
-            libc::ioctl(
-                socket.as_raw_fd(),
-                SIOCGIFCONF,
-                std::ptr::addr_of_mut!(conf),
-            )
-        };
-        anyhow::ensure!(
-            got == 0,
-            "ask this machine for its addresses: {}",
-            std::io::Error::last_os_error()
-        );
-        let filled = conf.len.max(0) as usize;
-        // A full buffer may have been truncated -- the call says nothing
-        // about it -- so the only safe reading of "exactly full" is "ask
-        // again with more room".
-        if filled == bytes {
-            room *= 2;
-            anyhow::ensure!(
-                room <= 4096,
-                "this machine has more addresses than expected"
-            );
-            continue;
-        }
-        return Ok(entries
-            .iter()
-            .take(filled / std::mem::size_of::<Entry>())
-            .filter_map(|entry| {
-                // The family is in **this machine's** byte order, which is
-                // the trap here: read the other way round `AF_INET` is 512.
-                if libc::c_int::from(entry.addr.sin_family) != libc::AF_INET {
-                    return None;
-                }
-                let name = entry
-                    .name
-                    .iter()
-                    .take_while(|byte| **byte != 0)
-                    .map(|byte| *byte as u8 as char)
-                    .collect::<String>();
-                Some(Mine {
-                    luid: u64::from(index_of(&name)?),
-                    addr: std::net::Ipv4Addr::from(entry.addr.sin_addr.s_addr.to_ne_bytes()).into(),
-                    settled: true,
-                    skip_as_source: false,
-                })
-            })
-            .collect());
-    }
+    Ok(every_address()
+        .into_iter()
+        .filter(|(_, addr, _)| addr.is_ipv4())
+        .map(|(index, addr, _)| Mine {
+            luid: u64::from(index),
+            addr,
+            settled: true,
+            skip_as_source: false,
+        })
+        .collect())
 }
 
 /// Every unicast address this machine holds, in both families.
