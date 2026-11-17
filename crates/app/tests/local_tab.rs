@@ -259,5 +259,20 @@ fn every_state_of_the_local_tab_draws() {
         .unwrap();
     shot(cx, window, "local-9-not-on-this-system");
 
+    // And the line that says tracewing itself is elevated, which is the
+    // visible half of the relaunch: the thing worth avoiding was never
+    // elevation, which somebody agreed to, but elevation nobody can see. It
+    // lives in the status bar rather than the title bar because the title
+    // bar is the system's on some platforms and is not drawn here at all --
+    // a state nobody can draw is a state nobody checks.
+    window
+        .update(cx, |view, _, cx| {
+            set(view, Support::Ready, Local::default());
+            view.elevated = true;
+            cx.notify();
+        })
+        .unwrap();
+    shot(cx, window, "local-10-running-as-administrator");
+
     let _ = std::fs::remove_dir_all(&dir);
 }

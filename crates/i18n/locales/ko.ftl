@@ -2846,6 +2846,12 @@ t8c2c795e =
 # Export as HAR
 t95b6b766 = HAR로 내보내기
 
+# Running as an administrator
+t1037321e = 관리자로 실행 중
+
+# A browser or a terminal tracewing opens for you runs at your own level unless its tab says otherwise. These rights last until tracewing is closed and started again.
+te17d688c = tracewing이 열어 주는 브라우저나 터미널은 해당 탭에서 달리 정하지 않는 한 사용자 본인의 권한으로 실행됩니다. 이 권한은 tracewing을 닫았다 다시 시작할 때까지 유지됩니다.
+
 # Shortcuts {keys}
 t4ab0ecb4 = 단축키 { $keys }
 

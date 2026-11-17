@@ -2846,6 +2846,12 @@ t8c2c795e =
 # Export as HAR
 t95b6b766 = Xuất HAR
 
+# Running as an administrator
+t1037321e = Đang chạy với quyền quản trị
+
+# A browser or a terminal tracewing opens for you runs at your own level unless its tab says otherwise. These rights last until tracewing is closed and started again.
+te17d688c = Trình duyệt hay terminal mà tracewing mở cho bạn vẫn chạy ở cấp của bạn, trừ khi tab của nó nói khác. Quyền này còn tới khi tracewing được đóng và mở lại.
+
 # Shortcuts {keys}
 t4ab0ecb4 = Phím tắt { $keys }
 
