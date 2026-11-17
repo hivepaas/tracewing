@@ -527,7 +527,7 @@ fn as_the_shell(command: std::process::Command) -> anyhow::Result<()> {
 /// anyway. Refused rather than dropped: a terminal that came up without the
 /// proxy variables would look like the proxy not working.
 #[cfg(windows)]
-fn asking_windows(command: std::process::Command) -> anyhow::Result<()> {
+fn asking_windows(command: std::process::Command) -> anyhow::Result<Raised> {
     use windows_sys::Win32::UI::{
         Shell::{SEE_MASK_NOASYNC, SHELLEXECUTEINFOW, ShellExecuteExW},
         WindowsAndMessaging::SW_SHOWNORMAL,
