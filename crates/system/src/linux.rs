@@ -440,14 +440,73 @@ fn anchor_path(dir: &str) -> PathBuf {
     Path::new(dir).join(format!("{ANCHOR_NAME}.crt"))
 }
 
-/// Runs a shell script as root: directly if we are, else through polkit's dialog.
-pub(crate) fn run_as_admin(script: &str) -> Result<()> {
+/// Runs a shell script as root: directly if we are, else through polkit's
+/// dialog. `what` is what the script is for, in a few words, and it is what
+/// a failure is reported as.
+///
+/// **The script must not reach the error**, which is why `what` exists.
+/// Measured: the adapter step failing left a message of 971 characters over
+/// 17 lines -- the whole script, comments and all, with the one useful
+/// sentence after the last of them. Worse, a person who answers No to the
+/// dialog gets the same wall with **nothing** after it, since `pkexec` says
+/// that in its exit code rather than on its error stream.
+pub(crate) fn run_as_admin(what: &str, script: &str) -> Result<()> {
     if run("id", &["-u"]).is_ok_and(|id| id == "0") {
-        run("sh", &["-c", script])?;
-    } else {
-        run("pkexec", &["sh", "-c", script]).context("ask for administrator rights")?;
+        run("sh", &["-c", script]).with_context(|| what.to_owned())?;
+        return Ok(());
     }
-    Ok(())
+    let out = Command::new("pkexec")
+        .args(["sh", "-c", script])
+        .output()
+        .with_context(|| format!("{what}: run pkexec"))?;
+    if out.status.success() {
+        return Ok(());
+    }
+    bail!(
+        "{what}: {}",
+        why_pkexec_failed(
+            out.status.code(),
+            String::from_utf8_lossy(&out.stderr).trim()
+        )
+    )
+}
+
+/// What to say about a `pkexec` that did not run the script.
+///
+/// The two that are its own rather than the script's are worth telling
+/// apart, because what somebody does next differs: answering the dialog
+/// again, or starting an agent. The strings and the two exit codes are the
+/// ones [`crate::quic`]'s own reader already matches -- `pkexec(1)` gives 126
+/// for "not authorized" and 127 for "the dialog was dismissed", and says
+/// nothing on its error stream for either.
+///
+/// Anything else is handed on as the script's own complaint, which is the
+/// case that was already readable.
+fn why_pkexec_failed(code: Option<i32>, said: &str) -> String {
+    let first = said.lines().next().unwrap_or_default().trim();
+    if first.contains("Not authorized")
+        || first.contains("dismissed")
+        || (said.is_empty() && matches!(code, Some(126 | 127)))
+    {
+        return "administrator rights were not given".to_owned();
+    }
+    if first.contains("authentication agent") {
+        return "no password dialog could be shown (no polkit agent is running)".to_owned();
+    }
+    if said.is_empty() {
+        return match code {
+            Some(code) => format!("it stopped with status {code} and said nothing"),
+            None => "it was killed before it could finish".to_owned(),
+        };
+    }
+    // The last line, not the first: `set -e` scripts say what went wrong
+    // where they stopped, and what comes before it is progress.
+    said.lines()
+        .map(str::trim)
+        .rev()
+        .find(|line| !line.is_empty())
+        .unwrap_or(first)
+        .to_owned()
 }
 
 fn quote(path: &Path) -> String {
@@ -609,12 +668,15 @@ pub fn ca_install(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
     match scope {
         Scope::Machine => {
             let (dir, apply) = system_store()?;
-            run_as_admin(&format!(
-                "install -m 0644 {} {} && {}",
-                quote(cert_pem),
-                quote(&anchor_path(dir)),
-                apply.join(" ")
-            ))
+            run_as_admin(
+                "add tracewing's certificate to this computer's store",
+                &format!(
+                    "install -m 0644 {} {} && {}",
+                    quote(cert_pem),
+                    quote(&anchor_path(dir)),
+                    apply.join(" ")
+                ),
+            )
         }
         Scope::User => {
             if !on_path("certutil") {
@@ -646,11 +708,10 @@ pub fn ca_uninstall(_cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
     match scope {
         Scope::Machine => {
             let (dir, apply) = system_store()?;
-            run_as_admin(&format!(
-                "rm -f {} && {}",
-                quote(&anchor_path(dir)),
-                apply.join(" ")
-            ))
+            run_as_admin(
+                "take tracewing's certificate out of this computer's store",
+                &format!("rm -f {} && {}", quote(&anchor_path(dir)), apply.join(" ")),
+            )
         }
         Scope::User => {
             let holding = nss_databases(false)?.into_iter().filter(|db| nss_holds(db));
@@ -909,6 +970,60 @@ pub fn browser_trust(browser: &Browser) -> BrowserTrust {
 
 #[cfg(test)]
 mod tests {
+    /// What a failed privileged step says, which before this was the script.
+    ///
+    /// The two `pkexec` answers are told apart because what somebody does
+    /// next differs, and the dismissed one says **nothing**: it is the exit
+    /// code or it is a wall of script with an empty line after it.
+    #[test]
+    fn a_privileged_step_that_failed_says_which_and_why() {
+        // Its own refusals, with nothing on the error stream.
+        assert_eq!(
+            why_pkexec_failed(Some(126), ""),
+            "administrator rights were not given"
+        );
+        assert_eq!(
+            why_pkexec_failed(Some(127), ""),
+            "administrator rights were not given"
+        );
+        // And when it does say so.
+        assert_eq!(
+            why_pkexec_failed(
+                Some(1),
+                "Error executing command as another user: Not authorized"
+            ),
+            "administrator rights were not given"
+        );
+        assert_eq!(
+            why_pkexec_failed(
+                Some(1),
+                "polkit-agent-helper-1: no authentication agent found"
+            ),
+            "no password dialog could be shown (no polkit agent is running)"
+        );
+        // The script's own complaint, which is the case that already read
+        // well -- and the **last** line of it, because `set -e` stops where
+        // it went wrong and what comes before is progress.
+        assert_eq!(
+            why_pkexec_failed(
+                Some(255),
+                "RTNETLINK answers: File exists\nError: either \"name\" is duplicate."
+            ),
+            "Error: either \"name\" is duplicate."
+        );
+        // A status with nothing said at all, which is not the same as being
+        // refused: 126 and 127 are `pkexec`'s own, anything else is the
+        // script's silence.
+        assert_eq!(
+            why_pkexec_failed(Some(2), ""),
+            "it stopped with status 2 and said nothing"
+        );
+        assert_eq!(
+            why_pkexec_failed(None, ""),
+            "it was killed before it could finish"
+        );
+    }
+
     use super::*;
 
     #[test]
