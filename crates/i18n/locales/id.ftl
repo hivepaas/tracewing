@@ -1060,6 +1060,45 @@ t4e3af9c3 = Ditanyakan
 # Tools offered: {tools}
 tb871bcf4 = Alat yang ditawarkan: { $tools }
 
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
+t53ab4670 = Tidak ada di sistem ini. Di Windows, tracewing mengambil trafik program yang dipilih lewat rute; di macOS itu adalah ekstensi jaringan, yang punya tabnya sendiri.
+
+# Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+tadffa882 = Mati. Mengambil trafik komputer ini perlu administrator: menyalakannya memulai ulang tracewing sebagai administrator, dan itu memulai sesi baru — sesi yang terbuka sekarang tetap ada di disk dan bisa dibuka lagi dari daftar.
+
+# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+t81e3dcfa = Mati. Menyalakannya berlaku saat tracewing dijalankan lagi, dan itu memulai sesi baru — sesi yang terbuka sekarang tetap ada di disk dan bisa dibuka lagi dari daftar.
+
+# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
+t5585ff8f = Menyala mulai jalan berikutnya. Di sesi ini tidak ada yang diambil: jalan masuk ini dibuat saat tracewing mulai.
+
+# On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
+t9055e0b6 = Menyala, tapi tidak menyimpan apa pun: trafik komputer ini lewat adapter tracewing lalu langsung keluar, sampai sebuah program ditambahkan di bawah.
+
+# On: the connections of the programs below come to tracewing, whatever their proxy settings say. Everything else goes straight through, unrecorded.
+tf893347b = Menyala: koneksi program-program di bawah masuk ke tracewing, apa pun pengaturan proxy mereka. Selebihnya lewat begitu saja dan tidak direkam.
+
+# Turn off
+tcd03e04b = Matikan
+
+# Turn on as administrator…
+t741e3108 = Nyalakan sebagai administrator…
+
+# Turn on
+t65a0c5a7 = Aktifkan
+
+# Administrator rights were not given, so nothing was turned on.
+t15853aab = Hak administrator tidak diberikan, jadi tidak ada yang dinyalakan.
+
+# Programs it keeps
+t265ab5a7 = Program yang disimpan
+
+# None yet. This way in takes every connection on the machine and keeps only what is listed here — there is no capture-everything mode, by design: the rest is spliced straight through and never recorded.
+tfe4121e9 = Belum ada. Jalan masuk ini mengambil setiap koneksi di mesin dan hanya menyimpan yang terdaftar di sini — tidak ada mode tangkap-semua, memang disengaja: sisanya lewat begitu saja dan tidak pernah direkam.
+
+# Add a program…
+t7f6c6835 = Tambah program…
+
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing belum membuka port untuk ekstensi.
 
@@ -1092,12 +1131,6 @@ t33ce2bcc = Mati.
 
 # Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
 td99daed8 = Mati. tracewing ini tidak berjalan dari tracewing.app, dan macOS hanya membiarkan aplikasi itu memasang ekstensinya: nyalakan dari tracewing di Applications.
-
-# Turn on
-t65a0c5a7 = Aktifkan
-
-# Turn off
-tcd03e04b = Matikan
 
 # Open System Settings
 td22799a3 = Buka Pengaturan Sistem
@@ -1813,6 +1846,9 @@ t1d84ee29 = Perangkat yang lain, yang memasang CA itu sendiri. Siapkan punya pan
 # This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
 t1dd036b6 = Penyimpanan milik komputer ini sendiri, seperti untuk proxy sistem: macOS menyerahkan alirannya, dan app tetap memeriksa sertifikat yang diterimanya.
 
+# This computer's own store, as for the system proxy: the adapter hands the connection over, and the program still checks the certificate it is given.
+tceac3b0a = Penyimpanan milik komputer ini sendiri, seperti pada proxy sistem: adapter menyerahkan koneksinya, dan program tetap memeriksa sertifikat yang diterimanya.
+
 # Let other devices use the proxy
 t13e626b3 = Izinkan perangkat lain memakai proxy
 
@@ -2029,6 +2065,12 @@ t30f507c6 = Apa pun yang dikirim aplikasi terpilih lewat TCP, membaca pengaturan
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, jadi HTTP/3; koneksi ke komputer ini sendiri, yang tidak diserahkan macOS; dan go run, yang membuat programnya di tempat baru setiap kali: tambahkan folder tujuan go build -o sebagai gantinya.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+t980d767e = Apa pun yang dikirim program pilihan lewat TCP, baik ia membaca pengaturan proxy atau tidak: trafik komputer ini lewat adapter milik tracewing sendiri, dan yang disimpan adalah program yang Anda pilih.
+
+# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t3c7f9a98 = UDP, yang diteruskan apa adanya, sehingga server yang menawarkan HTTP/3 ditolak dan program turun ke HTTP/2; koneksi ke komputer ini sendiri, yang tidak pernah keluar; dan go run, yang membangun programnya di tempat baru setiap kali: tambahkan saja folder tujuan go build -o.
+
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Sejak dinyalakan belum ada apa pun yang masuk ke port proxy — tidak dari proxy sistem, tidak dari browser milik tracewing, tidak juga dari terminal, yang semuanya masuk di situ. Program yang sudah diberi tahu soal proxy tetapi mengabaikannya tampak persis seperti ini.
 
@@ -2037,9 +2079,6 @@ t7cb4303b = Sejak dinyalakan belum ada apa pun yang masuk lewat jalan ini. Progr
 
 # Open from Set up
 tf0ad42dc = Buka dari Siapkan
-
-# macOS only: it is macOS that hands an app's connections over.
-t71872556 = Hanya macOS: macOS sendirilah yang menyerahkan koneksi sebuah app.
 
 # Catches
 tf5f3fe08 = Tertangkap

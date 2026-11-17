@@ -438,6 +438,7 @@ pub struct Traffic {
     pub company_ca_note: Option<(String, bool)>,
     /// The apps macOS's network extension is to take, and its switch.
     pub mac_apps: crate::mac_apps::MacApps,
+    pub local: crate::local_apps::Shown,
     pub protos_fetching: bool,
     /// What came of the last time a server was asked: what it has, or why
     /// not.
@@ -688,6 +689,7 @@ impl Traffic {
             client_cert_form: None,
             company_ca_note: None,
             mac_apps: crate::mac_apps::MacApps::load(data_dir),
+            local: crate::local_apps::Shown::load(data_dir),
             protos_fetching: false,
             protos_fetched: None,
             device_name,

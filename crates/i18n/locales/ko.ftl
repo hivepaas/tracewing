@@ -1060,6 +1060,45 @@ t4e3af9c3 = 질문
 # Tools offered: {tools}
 tb871bcf4 = 제공된 도구: { $tools }
 
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
+t53ab4670 = 이 시스템에는 없습니다. tracewing은 Windows에서 선택한 프로그램의 트래픽을 경로로 받습니다. macOS에서는 네트워크 확장이며, 별도의 탭이 있습니다.
+
+# Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+tadffa882 = 꺼짐. 이 컴퓨터의 트래픽을 받으려면 관리자 권한이 필요합니다. 켜면 tracewing이 관리자로 다시 시작되고 새 세션이 시작됩니다 — 지금 열린 세션은 디스크에 남아 목록에서 다시 열 수 있습니다.
+
+# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+t81e3dcfa = 꺼짐. 켜면 tracewing이 다시 시작될 때 적용되며 새 세션이 시작됩니다 — 지금 열린 세션은 디스크에 남아 목록에서 다시 열 수 있습니다.
+
+# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
+t5585ff8f = 다음 시작부터 켜짐. 이 세션에서는 아무것도 받고 있지 않습니다. 이 경로는 tracewing이 시작할 때 만들어집니다.
+
+# On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
+t9055e0b6 = 켜져 있지만 아무것도 보관하지 않습니다. 이 컴퓨터의 트래픽은 tracewing의 어댑터를 지나 그대로 나갑니다. 아래에서 프로그램을 추가하세요.
+
+# On: the connections of the programs below come to tracewing, whatever their proxy settings say. Everything else goes straight through, unrecorded.
+tf893347b = 켜짐: 아래 프로그램의 연결은 프록시 설정과 상관없이 tracewing으로 들어옵니다. 나머지는 그대로 지나가며 기록되지 않습니다.
+
+# Turn off
+tcd03e04b = 끄기
+
+# Turn on as administrator…
+t741e3108 = 관리자로 켜기…
+
+# Turn on
+t65a0c5a7 = 켜기
+
+# Administrator rights were not given, so nothing was turned on.
+t15853aab = 관리자 권한이 주어지지 않아 아무것도 켜지지 않았습니다.
+
+# Programs it keeps
+t265ab5a7 = 보관할 프로그램
+
+# None yet. This way in takes every connection on the machine and keeps only what is listed here — there is no capture-everything mode, by design: the rest is spliced straight through and never recorded.
+tfe4121e9 = 아직 없습니다. 이 경로는 컴퓨터의 모든 연결을 받아 여기 적힌 것만 보관합니다 — 전부 캡처하는 모드는 의도적으로 없습니다. 나머지는 그대로 지나가며 결코 기록되지 않습니다.
+
+# Add a program…
+t7f6c6835 = 프로그램 추가…
+
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing이 확장 프로그램용 포트를 열지 않았습니다.
 
@@ -1092,12 +1131,6 @@ t33ce2bcc = 꺼짐.
 
 # Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
 td99daed8 = 꺼짐. 이 tracewing은 tracewing.app에서 실행되지 않았고, macOS는 앱 자신만 확장 프로그램을 설치하게 합니다: 응용 프로그램의 tracewing에서 켜세요.
-
-# Turn on
-t65a0c5a7 = 켜기
-
-# Turn off
-tcd03e04b = 끄기
 
 # Open System Settings
 td22799a3 = 시스템 설정 열기
@@ -1813,6 +1846,9 @@ t1d84ee29 = 상대 기기이며, 인증 기관은 그 기기가 직접 설치합
 # This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
 t1dd036b6 = 시스템 프록시와 마찬가지로 이 컴퓨터 자체의 저장소입니다. macOS가 흐름을 넘겨주더라도 앱은 받은 인증서를 그대로 확인합니다.
 
+# This computer's own store, as for the system proxy: the adapter hands the connection over, and the program still checks the certificate it is given.
+tceac3b0a = 시스템 프록시와 마찬가지로 이 컴퓨터의 저장소입니다. 어댑터가 연결을 넘겨주고, 프로그램은 받은 인증서를 그대로 확인합니다.
+
 # Let other devices use the proxy
 t13e626b3 = 다른 기기에서 프록시 사용 허용
 
@@ -2029,6 +2065,12 @@ t30f507c6 = 선택한 앱이 TCP로 보내는 모든 것, 프록시 설정을 �
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, 즉 HTTP/3; macOS가 넘겨주지 않는 이 컴퓨터 자신으로의 연결; 그리고 매번 새 위치에 프로그램을 빌드하는 go run: 대신 go build -o가 쓰는 폴더를 추가하세요.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+t980d767e = 선택한 프로그램이 TCP로 보내는 모든 것. 프록시 설정을 읽는지와 무관합니다. 이 컴퓨터의 트래픽은 tracewing 자신의 어댑터를 지나며, 보관되는 것은 선택한 프로그램입니다.
+
+# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t3c7f9a98 = UDP는 그대로 지나가므로 HTTP/3를 제안하는 서버는 거절되고 프로그램은 HTTP/2로 돌아갑니다. 이 컴퓨터 자신으로 가는 연결은 밖으로 나가지 않습니다. 그리고 go run은 매번 다른 곳에 프로그램을 만드니, go build -o가 쓰는 폴더를 대신 추가하세요.
+
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = 켠 뒤로 프록시 포트에 아무것도 들어오지 않았습니다. 시스템 프록시, tracewing 전용 브라우저, 터미널이 모두 그곳으로 들어오는데, 그 어느 쪽에서도 없었습니다. 프록시를 쓰라고 지정했는데 무시하는 프로그램이 바로 이렇게 보입니다.
 
@@ -2037,9 +2079,6 @@ t7cb4303b = 켠 뒤로 이 경로로는 아무것도 들어오지 않았습니�
 
 # Open from Set up
 tf0ad42dc = 시작하기에서 열기
-
-# macOS only: it is macOS that hands an app's connections over.
-t71872556 = macOS 전용: 앱의 연결을 넘겨주는 것은 macOS 자체입니다.
 
 # Catches
 tf5f3fe08 = 잡는 것

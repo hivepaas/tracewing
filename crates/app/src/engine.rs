@@ -157,7 +157,7 @@ pub struct Engine {
     /// adapter although the switch is on -- a system that cannot, or an
     /// administrator that is wanted. For the tab to show instead of a switch
     /// that looks on with nothing behind it.
-    pub local_problem: Option<String>,
+    pub local_problem: Option<crate::local_source::NoSource>,
     /// The keys the tunnel was started with, so that the configuration a
     /// phone needs can be written again whenever it is asked for. Not public:
     /// one of them is a private key, and what Settings wants is
@@ -379,7 +379,10 @@ impl Engine {
                 local_in = Some(started.source);
             }
             Ok(None) => {}
-            Err(why) => local_problem = Some(format!("{why:#}")),
+            // Kept as the case rather than as its words: the window has a
+            // translated sentence per case, and `crates/system` has no `tr!`
+            // in it at all.
+            Err(why) => local_problem = Some(why),
         }
 
         let proxy = ProxyOptions {

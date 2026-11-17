@@ -1060,6 +1060,45 @@ t4e3af9c3 = 提問
 # Tools offered: {tools}
 tb871bcf4 = 提供的工具：{ $tools }
 
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
+t53ab4670 = 此系統上沒有。在 Windows 上，tracewing 依路由接收所選程式的流量；在 macOS 上則是網路擴充功能，有自己的分頁。
+
+# Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+tadffa882 = 已關閉。接收這台電腦的流量需要管理員權限：開啟會以管理員身分重新啟動 tracewing，並開始新的工作階段——目前的工作階段仍保存在磁碟上，可從清單重新開啟。
+
+# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+t81e3dcfa = 已關閉。開啟後會在 tracewing 下次啟動時生效，並開始新的工作階段——目前的工作階段仍保存在磁碟上，可從清單重新開啟。
+
+# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
+t5585ff8f = 下次啟動後開啟。這個工作階段沒有接收任何流量：這條入口在 tracewing 啟動時建立。
+
+# On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
+t9055e0b6 = 已開啟，但沒有保留任何東西：這台電腦的流量經過 tracewing 的介面卡後直接出去，直到你在下方加入程式。
+
+# On: the connections of the programs below come to tracewing, whatever their proxy settings say. Everything else goes straight through, unrecorded.
+tf893347b = 已開啟：下方程式的連線會進入 tracewing，無論它們的代理設定為何。其餘流量直接通過，不會被記錄。
+
+# Turn off
+tcd03e04b = 關閉
+
+# Turn on as administrator…
+t741e3108 = 以管理員身分開啟…
+
+# Turn on
+t65a0c5a7 = 開啟
+
+# Administrator rights were not given, so nothing was turned on.
+t15853aab = 未取得管理員權限，因此沒有開啟任何項目。
+
+# Programs it keeps
+t265ab5a7 = 保留的程式
+
+# None yet. This way in takes every connection on the machine and keeps only what is listed here — there is no capture-everything mode, by design: the rest is spliced straight through and never recorded.
+tfe4121e9 = 尚未有。這條入口接收這台電腦的每個連線，但只保留這裡列出的項目——刻意沒有「全部擷取」模式：其餘流量直接通過，永不記錄。
+
+# Add a program…
+t7f6c6835 = 加入程式…
+
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing 沒有為延伸功能開啟連接埠。
 
@@ -1092,12 +1131,6 @@ t33ce2bcc = 已關閉。
 
 # Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
 td99daed8 = 已關閉。這個 tracewing 不是從 tracewing.app 執行的，而 macOS 只讓 App 本身安裝它的延伸功能：請從「應用程式」中的 tracewing 開啟。
-
-# Turn on
-t65a0c5a7 = 開啟
-
-# Turn off
-tcd03e04b = 關閉
 
 # Open System Settings
 td22799a3 = 打開系統設定
@@ -1813,6 +1846,9 @@ t1d84ee29 = 對面那台裝置，CA 由它自己裝。初始設定的「我的�
 # This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
 t1dd036b6 = 和系統代理一樣，是這台電腦自己的憑證庫：macOS 把流交過來，應用程式仍然會檢查它收到的憑證。
 
+# This computer's own store, as for the system proxy: the adapter hands the connection over, and the program still checks the certificate it is given.
+tceac3b0a = 這台電腦自己的憑證存放區，與系統代理相同：介面卡把連線交過來，程式仍會檢查收到的憑證。
+
 # Let other devices use the proxy
 t13e626b3 = 允許其他裝置使用代理伺服器
 
@@ -2029,6 +2065,12 @@ t30f507c6 = 所選 App 透過 TCP 送出的一切，不論它是否讀取代理�
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP，也就是 HTTP/3；連向這部電腦本身的連線，macOS 不會轉交；以及 go run，它每次都在新位置建置程式：請改為加入 go build -o 寫入的資料夾。
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+t980d767e = 所選程式透過 TCP 送出的一切，無論它是否讀取代理設定：這台電腦的流量會經過 tracewing 自己的介面卡，而被保留的是你選擇的程式。
+
+# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t3c7f9a98 = UDP 會直接通過，因此提供 HTTP/3 的伺服器會被拒絕，程式退回 HTTP/2；送往這台電腦自身的連線從不離開本機；還有 go run，它每次都把程式編譯到新位置：請改為加入 go build -o 寫入的資料夾。
+
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = 自從開啟以來，代理連接埠上什麼都沒到過 — 系統代理、tracewing 自己的瀏覽器、終端機都從那裡進來，這三樣都沒有。一個被指定走代理卻忽略它的程式，看起來正是這樣。
 
@@ -2037,9 +2079,6 @@ t7cb4303b = 自從開啟以來，這條路上什麼都沒到過。一個被指�
 
 # Open from Set up
 tf0ad42dc = 從初始設定開啟
-
-# macOS only: it is macOS that hands an app's connections over.
-t71872556 = 僅 macOS：交出應用程式連線的是 macOS 自己。
 
 # Catches
 tf5f3fe08 = 擷取得到

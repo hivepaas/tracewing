@@ -573,7 +573,7 @@ fn tr_inside(own: &str, inside: usize) -> String {
     )
 }
 
-fn small_button(id: impl Into<gpui::ElementId>, label: String) -> gpui::Stateful<Div> {
+pub(crate) fn small_button(id: impl Into<gpui::ElementId>, label: String) -> gpui::Stateful<Div> {
     let c = colors();
     div()
         .id(id)

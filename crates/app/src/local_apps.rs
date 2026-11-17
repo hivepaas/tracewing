@@ -26,9 +26,12 @@
 //! program under it, and they are tested there against both platforms'
 //! spellings.
 
+use crate::{colors::colors, text_size::ui, widgets::eyebrow};
 use anyhow::{Context as _, Result};
+use gpui::{Context, Div, FontWeight, div, prelude::*, rgb};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use tracewing_i18n::tr;
 
 /// Where the picked programs are kept, in the data directory.
 pub const FILE: &str = "local-programs.toml";
@@ -163,6 +166,271 @@ pub fn programs_of(picked: &[Picked]) -> Vec<String> {
         }
     }
     out
+}
+
+/// The local way in as the window holds it.
+pub struct Shown {
+    pub local: Local,
+    /// What this machine can do about it.
+    ///
+    /// **Held rather than asked for per frame**, and that is what lets a test
+    /// draw the states this machine is not in. A tab assembled per answer
+    /// inherits text written while another answer was on screen, and the only
+    /// way to catch that is to draw every answer and look -- which is
+    /// impossible if the answer is a `cfg!` inside the drawing.
+    pub support: Support,
+    /// What went wrong turning it on or writing the list, for the tab.
+    pub problem: Option<String>,
+}
+
+impl Shown {
+    pub fn load(dir: &std::path::Path) -> Self {
+        Self {
+            local: load(dir),
+            support: Support::here(),
+            problem: None,
+        }
+    }
+}
+
+impl crate::traffic::Traffic {
+    /// The local way in's tab: what it can do here, what it keeps, and the
+    /// switch.
+    ///
+    /// Every state is drawn from `self.local.support` and the engine's own
+    /// answer rather than from a `cfg!`, so that `tests/local_tab.rs` can
+    /// take a picture of each one from any machine. A tab assembled per
+    /// answer otherwise carries text written while another answer was on
+    /// screen -- correct text, about the wrong page.
+    pub(crate) fn render_local_apps(&mut self, cx: &mut Context<Self>) -> Div {
+        let c = colors();
+        let on = self.local.local.on;
+        let running = self.engine.local.is_some();
+        let nothing = self.local.local.programs.is_empty();
+        let says = match (self.local.support, on, running) {
+            (Support::NotOnThisSystem, _, _) => tr!(
+                "Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own."
+            ),
+            (Support::NeedsAdministrator, _, _) => tr!(
+                "Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list."
+            ),
+            (Support::Ready, false, _) => tr!(
+                "Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list."
+            ),
+            // On in the file and not in this run: the way in is made as the
+            // engine starts, so saying "on" alone would be a switch that
+            // looks like it is taking traffic when nothing is.
+            (Support::Ready, true, false) => tr!(
+                "On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts."
+            ),
+            (Support::Ready, true, true) if nothing => tr!(
+                "On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below."
+            ),
+            (Support::Ready, true, true) => tr!(
+                "On: the connections of the programs below come to tracewing, whatever their proxy settings say. Everything else goes straight through, unrecorded."
+            ),
+        };
+        let switch = (self.local.support != Support::NotOnThisSystem).then(|| {
+            let label = match (on, self.local.support) {
+                (true, _) => tr!("Turn off"),
+                (false, Support::NeedsAdministrator) => tr!("Turn on as administrator…"),
+                (false, _) => tr!("Turn on"),
+            };
+            crate::setup_page::button("local-switch", label, !on)
+                .on_click(cx.listener(|this, _, _, cx| this.toggle_local(cx)))
+        });
+        let rows: Vec<_> = self
+            .local
+            .local
+            .programs
+            .iter()
+            .enumerate()
+            .map(|(index, program)| {
+                let path = program.path.display().to_string();
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap(ui(10.))
+                    .py(ui(6.))
+                    .border_t_1()
+                    .border_color(rgb(c.line))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .child(
+                                div()
+                                    .font_weight(FontWeight::BOLD)
+                                    .child(program.name.clone()),
+                            )
+                            .child(
+                                div()
+                                    .text_size(ui(12.))
+                                    .text_color(rgb(c.muted))
+                                    .font_family(crate::mono_font())
+                                    .child(path),
+                            ),
+                    )
+                    .child(
+                        crate::mac_apps::small_button(("local-remove", index), tr!("Remove"))
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                this.remove_local_program(index, cx)
+                            })),
+                    )
+            })
+            .collect();
+        let chooses = self.local.support != Support::NotOnThisSystem;
+        // What went wrong, said once. The engine's answer is a case, with a
+        // sentence of its own per case; two of them are already the switch's
+        // line above, so saying them again here would be the same fact
+        // twice.
+        let problem =
+            self.local
+                .problem
+                .clone()
+                .or_else(|| match self.engine.local_problem.as_ref()? {
+                    crate::local_source::NoSource::NotHere
+                    | crate::local_source::NoSource::NeedsAdministrator => None,
+                    crate::local_source::NoSource::Refused => Some(tr!(
+                        "Administrator rights were not given, so nothing was turned on."
+                    )),
+                    crate::local_source::NoSource::Failed(why) => Some(why.clone()),
+                });
+        div()
+            .flex()
+            .flex_col()
+            .gap(ui(8.))
+            .w_full()
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .items_center()
+                    .gap(ui(12.))
+                    .children(switch)
+                    .child(div().flex_1().min_w(ui(240.)).child(says)),
+            )
+            .when(chooses, |d| {
+                d.child(eyebrow(tr!("Programs it keeps")))
+                    .when(nothing, |d| {
+                        d.child(div().text_color(rgb(c.muted)).child(tr!(
+                            "None yet. This way in takes every connection on the machine and keeps only what is listed here — there is no capture-everything mode, by design: the rest is spliced straight through and never recorded."
+                        )))
+                    })
+                    .children(rows)
+                    .child(
+                        crate::mac_apps::small_button("local-add", tr!("Add a program…")).on_click(
+                            cx.listener(|this, _, _, cx| this.ask_add_local_programs(cx)),
+                        ),
+                    )
+            })
+            .children(problem.map(|problem| div().text_color(rgb(c.error)).child(problem)))
+    }
+
+    /// Turns it on or off.
+    ///
+    /// **Off takes effect now**, which is what was decided: the device's read
+    /// is ended and the adapter, its address and its routes go with it. **On
+    /// takes a new engine**, because the proxy's sources are gathered as it
+    /// starts -- so on Windows without an administrator it is the relaunch,
+    /// and with one it is the next start, which the tab says.
+    pub fn toggle_local(&mut self, cx: &mut Context<Self>) {
+        self.local.problem = None;
+        let want = !self.local.local.on;
+        if !want && let Some(running) = &self.engine.local {
+            running.stopper.stop();
+        }
+        self.local.local.on = want;
+        if let Err(e) = save(&self.data_dir, &self.local.local) {
+            self.local.problem = Some(format!("{e:#}"));
+            self.local.local.on = !want;
+            cx.notify();
+            return;
+        }
+        if want && self.local.support == Support::NeedsAdministrator {
+            match tracewing_system::child::relaunch_as_administrator() {
+                // It started; this one's turn to go, so that two copies do
+                // not race for the proxy's ports.
+                Ok(tracewing_system::child::Raised::Started) => cx.quit(),
+                // Refused is an answer, not a fault: nothing started and
+                // nothing changed, so the switch goes back off rather than
+                // looking on with nothing behind it.
+                Ok(tracewing_system::child::Raised::Refused) => {
+                    self.local.local.on = false;
+                    let _ = save(&self.data_dir, &self.local.local);
+                }
+                Err(e) => {
+                    self.local.problem = Some(format!("{e:#}"));
+                    self.local.local.on = false;
+                    let _ = save(&self.data_dir, &self.local.local);
+                }
+            }
+        }
+        cx.notify();
+    }
+
+    /// Asks for programs to add, and adds them.
+    pub fn ask_add_local_programs(&mut self, cx: &mut Context<Self>) {
+        let asked = cx.prompt_for_paths(gpui::PathPromptOptions {
+            files: true,
+            directories: true,
+            multiple: true,
+            prompt: Some(tr!("Add").into()),
+        });
+        cx.spawn(async move |this, cx| {
+            if let Ok(Ok(Some(paths))) = asked.await {
+                let _ = this.update(cx, |this, cx| this.add_local_programs(paths, cx));
+            }
+        })
+        .detach();
+    }
+
+    fn add_local_programs(&mut self, paths: Vec<std::path::PathBuf>, cx: &mut Context<Self>) {
+        let mut programs = self.local.local.programs.clone();
+        for path in paths {
+            if !programs.iter().any(|program| program.path == path) {
+                programs.push(Picked::at(path));
+            }
+        }
+        self.set_local_programs(programs, cx);
+    }
+
+    pub fn remove_local_program(&mut self, index: usize, cx: &mut Context<Self>) {
+        let mut programs = self.local.local.programs.clone();
+        if index < programs.len() {
+            programs.remove(index);
+            self.set_local_programs(programs, cx);
+        }
+    }
+
+    /// Keeps them, and has the running capture keep them too.
+    ///
+    /// The running one is told through `Chosen`, which is the same list the
+    /// sieve reads: no restart, and no rebuilding the source, which is why
+    /// the sieve takes the list by handle rather than by value.
+    fn set_local_programs(&mut self, programs: Vec<Picked>, cx: &mut Context<Self>) {
+        self.local.problem = None;
+        if let Err(e) = save(
+            &self.data_dir,
+            &Local {
+                on: self.local.local.on,
+                programs: programs.clone(),
+            },
+        ) {
+            self.local.problem = Some(format!("{e:#}"));
+            cx.notify();
+            return;
+        }
+        if let Some(running) = &self.engine.local {
+            running.chosen.these(programs_of(&programs));
+        }
+        self.local.local.programs = programs;
+        cx.notify();
+    }
 }
 
 #[cfg(test)]

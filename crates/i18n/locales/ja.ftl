@@ -1060,6 +1060,45 @@ t4e3af9c3 = 質問
 # Tools offered: {tools}
 tb871bcf4 = 提供されたツール: { $tools }
 
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
+t53ab4670 = このシステムにはありません。tracewing は Windows では選んだプログラムの通信を経路で受け取ります。macOS ではネットワーク拡張で、専用のタブがあります。
+
+# Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+tadffa882 = オフ。このコンピュータの通信を受け取るには管理者が必要です。オンにすると tracewing が管理者として起動し直し、新しいセッションが始まります — いま開いているセッションはディスクに残り、一覧から開き直せます。
+
+# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+t81e3dcfa = オフ。オンにすると次に tracewing が起動したときに有効になり、新しいセッションが始まります — いま開いているセッションはディスクに残り、一覧から開き直せます。
+
+# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
+t5585ff8f = 次回の起動からオン。このセッションでは何も受け取っていません。この経路は tracewing の起動時に作られます。
+
+# On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
+t9055e0b6 = オンですが、何も保持していません。このコンピュータの通信は tracewing のアダプターを通ってそのまま外へ出ます。下でプログラムを追加してください。
+
+# On: the connections of the programs below come to tracewing, whatever their proxy settings say. Everything else goes straight through, unrecorded.
+tf893347b = オン。下のプログラムの接続は、プロキシ設定にかかわらず tracewing に届きます。それ以外はそのまま通過し、記録されません。
+
+# Turn off
+tcd03e04b = オフにする
+
+# Turn on as administrator…
+t741e3108 = 管理者としてオンにする…
+
+# Turn on
+t65a0c5a7 = オンにする
+
+# Administrator rights were not given, so nothing was turned on.
+t15853aab = 管理者権限が与えられなかったため、何もオンになっていません。
+
+# Programs it keeps
+t265ab5a7 = 保持するプログラム
+
+# None yet. This way in takes every connection on the machine and keeps only what is listed here — there is no capture-everything mode, by design: the rest is spliced straight through and never recorded.
+tfe4121e9 = まだありません。この経路はマシン上のすべての接続を受け取り、ここに挙げたものだけを保持します — すべてを取り込むモードは意図的にありません。残りはそのまま通過し、記録されることはありません。
+
+# Add a program…
+t7f6c6835 = プログラムを追加…
+
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing は拡張機能用のポートを開いていません。
 
@@ -1092,12 +1131,6 @@ t33ce2bcc = オフ。
 
 # Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
 td99daed8 = オフ。この tracewing は tracewing.app から動いておらず、macOS は拡張機能のインストールをアプリ自身にしか許しません: アプリケーションの tracewing からオンにしてください。
-
-# Turn on
-t65a0c5a7 = オンにする
-
-# Turn off
-tcd03e04b = オフにする
 
 # Open System Settings
 td22799a3 = システム設定を開く
@@ -1813,6 +1846,9 @@ t1d84ee29 = 相手の端末で、認証局はその端末自身が入れます�
 # This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
 t1dd036b6 = システムプロキシと同じく、このコンピューター自身のストアです。macOS がフローを渡しても、アプリは受け取った証明書を確かめます。
 
+# This computer's own store, as for the system proxy: the adapter hands the connection over, and the program still checks the certificate it is given.
+tceac3b0a = このコンピュータ自身のストアで、システムプロキシと同じです。アダプターが接続を渡し、プログラムは渡された証明書を確認します。
+
 # Let other devices use the proxy
 t13e626b3 = 他のデバイスにプロキシの使用を許可
 
@@ -2029,6 +2065,12 @@ t30f507c6 = 選んだアプリが TCP で送るものすべて。プロキシ設
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP、つまり HTTP/3。このコンピュータ自身への接続 (macOS が渡さないため)。go run (毎回別の場所にプログラムをビルドするため): 代わりに go build -o の出力先フォルダを追加してください。
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+t980d767e = 選んだプログラムが TCP で送るものすべて。プロキシ設定を読むかどうかは関係ありません。このコンピュータの通信は tracewing 自身のアダプターを通り、保持されるのは選んだプログラムです。
+
+# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t3c7f9a98 = UDP はそのまま通過するため、HTTP/3 を提示するサーバーは拒否され、プログラムは HTTP/2 に戻ります。このコンピュータ自身への接続も外に出ません。また go run は毎回別の場所にプログラムを作るので、代わりに go build -o の書き込み先フォルダーを追加してください。
+
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = オンにしてから、プロキシのポートには何も届いていません。システムプロキシ、tracewing 専用のブラウザー、ターミナルはどれもそこへ入ってきますが、そのいずれからも届いていません。プロキシを使うよう指定したのに無視するプログラムは、まさにこう見えます。
 
@@ -2037,9 +2079,6 @@ t7cb4303b = オンにしてから、この経路では何も届いていませ�
 
 # Open from Set up
 tf0ad42dc = セットアップから開く
-
-# macOS only: it is macOS that hands an app's connections over.
-t71872556 = macOS のみ: アプリの接続を渡すのは macOS 自身です。
 
 # Catches
 tf5f3fe08 = 取れるもの

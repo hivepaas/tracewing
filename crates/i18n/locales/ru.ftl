@@ -1123,6 +1123,45 @@ t4e3af9c3 = Вопрос
 # Tools offered: {tools}
 tb871bcf4 = Предложенные инструменты: { $tools }
 
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
+t53ab4670 = Не на этой системе. В Windows tracewing берёт трафик выбранной программы по маршруту; в macOS это сетевое расширение, у которого своя вкладка.
+
+# Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+tadffa882 = Выключено. Чтобы брать трафик этого компьютера, нужен администратор: включение перезапустит tracewing от его имени, и это начнёт новую сессию — открытая сейчас останется на диске, её можно открыть снова из списка.
+
+# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+t81e3dcfa = Выключено. Включение подействует при следующем запуске tracewing и начнёт новую сессию — открытая сейчас останется на диске, её можно открыть снова из списка.
+
+# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
+t5585ff8f = Включено со следующего запуска. В этой сессии ничего не берётся: этот вход создаётся при запуске tracewing.
+
+# On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
+t9055e0b6 = Включено, но ничего не сохраняется: трафик этого компьютера проходит через адаптер tracewing и сразу выходит наружу, пока ниже не добавлена программа.
+
+# On: the connections of the programs below come to tracewing, whatever their proxy settings say. Everything else goes straight through, unrecorded.
+tf893347b = Включено: соединения программ ниже приходят в tracewing, что бы ни говорили их настройки прокси. Всё остальное проходит мимо и не записывается.
+
+# Turn off
+tcd03e04b = Выключить
+
+# Turn on as administrator…
+t741e3108 = Включить от имени администратора…
+
+# Turn on
+t65a0c5a7 = Включить
+
+# Administrator rights were not given, so nothing was turned on.
+t15853aab = Права администратора не были даны, поэтому ничего не включено.
+
+# Programs it keeps
+t265ab5a7 = Программы, которые сохраняются
+
+# None yet. This way in takes every connection on the machine and keeps only what is listed here — there is no capture-everything mode, by design: the rest is spliced straight through and never recorded.
+tfe4121e9 = Пока ни одной. Этот вход берёт каждое соединение на машине и сохраняет только перечисленное здесь — режима «записывать всё» нет намеренно: остальное проходит мимо и никогда не записывается.
+
+# Add a program…
+t7f6c6835 = Добавить программу…
+
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing не открыл порт для расширения.
 
@@ -1155,12 +1194,6 @@ t33ce2bcc = Выключено.
 
 # Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
 td99daed8 = Выключено. Этот tracewing запущен не из tracewing.app, а macOS позволяет устанавливать расширение только самому приложению: включите его из tracewing в Программах.
-
-# Turn on
-t65a0c5a7 = Включить
-
-# Turn off
-tcd03e04b = Выключить
 
 # Open System Settings
 td22799a3 = Открыть Системные настройки
@@ -2008,6 +2041,9 @@ t1d84ee29 = Другое устройство — оно устанавлива�
 # This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
 t1dd036b6 = Собственное хранилище этого компьютера, как и для системного прокси: macOS передаёт поток, а приложение всё равно проверяет полученный сертификат.
 
+# This computer's own store, as for the system proxy: the adapter hands the connection over, and the program still checks the certificate it is given.
+tceac3b0a = Собственное хранилище этого компьютера, как и для системного прокси: адаптер передаёт соединение, а программа всё так же проверяет полученный сертификат.
+
 # Let other devices use the proxy
 t13e626b3 = Разрешить другим устройствам использовать прокси
 
@@ -2224,6 +2260,12 @@ t30f507c6 = Всё, что выбранное приложение отправ�
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, то есть HTTP/3; соединения с этим же компьютером, которые macOS не передаёт; и go run, который каждый раз собирает программу в новом месте: добавьте вместо этого папку, куда пишет go build -o.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+t980d767e = Всё, что выбранная программа отправляет по TCP, читает она настройки прокси или нет: трафик этого компьютера идёт через собственный адаптер tracewing, а сохраняются выбранные вами программы.
+
+# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t3c7f9a98 = UDP, который проходит насквозь, поэтому сервер с предложением HTTP/3 получает отказ и программа возвращается к HTTP/2; соединения с самим этим компьютером, которые его не покидают; и go run, который каждый раз собирает программу в новом месте: добавьте вместо этого папку, куда пишет go build -o.
+
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = С момента включения на порт прокси ничего не пришло — ни через системный прокси, ни через браузер самого tracewing, ни через терминал: все они входят там. Программа, которой указали прокси и которая его игнорирует, выглядит именно так.
 
@@ -2232,9 +2274,6 @@ t7cb4303b = С момента включения этим путём ничег�
 
 # Open from Set up
 tf0ad42dc = Открыть в Настройке
-
-# macOS only: it is macOS that hands an app's connections over.
-t71872556 = Только macOS: соединения приложения передаёт сам macOS.
 
 # Catches
 tf5f3fe08 = Ловит

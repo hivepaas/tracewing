@@ -26,7 +26,7 @@
 //!   `ping` goes unanswered, which is a feature missing rather than a wrong
 //!   behaviour. The other three have no safe default at all.
 
-use anyhow::{Result, bail};
+use anyhow::Result as Built;
 use tracewing_proxy::{
     apps::Apps,
     roads,
@@ -77,17 +77,62 @@ pub struct Started {
 }
 
 /// What ends the capture, held by the window rather than by the source.
-pub struct Stopper(#[cfg(windows)] std::sync::Arc<tracewing_proxy::wintun::WintunAdapter>);
+/// **The device itself, by trait rather than by platform**, because ending a
+/// capture is `Device::shutdown` wherever there is one to end -- so an arm
+/// added later hands over its own device and needs nothing changed here. It
+/// was a Windows-shaped field first, which would have meant the next arm
+/// beginning by widening it.
+pub struct Stopper(std::sync::Arc<dyn tracewing_proxy::tun::Device>);
 
 impl Stopper {
-    /// Ends it. Safe to call twice: the second shutdown of a session that has
-    /// already gone is what the live test
-    /// `a_shutdown_ends_the_reading_loop` leaves behind.
+    /// The device whose read this ends.
+    pub fn of(device: std::sync::Arc<dyn tracewing_proxy::tun::Device>) -> Self {
+        Self(device)
+    }
+
+    /// Ends it. Safe to call twice: shutting down a session that has already
+    /// gone is what the live test `a_shutdown_ends_the_reading_loop` leaves
+    /// behind, and the device says so rather than failing.
     pub fn stop(&self) {
-        #[cfg(windows)]
-        {
-            use tracewing_proxy::tun::Device;
-            self.0.shutdown();
+        self.0.shutdown();
+    }
+}
+
+/// Why there is no source, where the window has something to say about it.
+///
+/// **Cases rather than prose, and that was measured rather than preferred:**
+/// `crates/system` contains no `tr!` at all, and nor did the `bail!`s this
+/// replaces -- so an error carried from there to the window is untranslated
+/// English in somebody's Vietnamese or Russian tab. A case has one
+/// translated sentence per arm, and each platform maps its own refusal into
+/// the same one.
+#[derive(Debug)]
+pub enum NoSource {
+    /// Nothing here captures by route.
+    NotHere,
+    /// It needs an administrator and tracewing is not one. The tab normally
+    /// heads this off by offering the relaunch; reaching it means a switch
+    /// left on by an elevated run with this one not elevated.
+    NeedsAdministrator,
+    /// The privileged step was refused -- a UAC dialog dismissed, a `pkexec`
+    /// denied. **Nothing was done**, so the switch goes back off with this
+    /// beside it rather than looking on with nothing behind it.
+    Refused,
+    /// Something else, which the window shows as it came and the log keeps
+    /// in full. Prose, and the only case that is: an unexpected failure has
+    /// no sentence written for it in fourteen languages, and inventing one
+    /// that says nothing would be worse than the words that happened.
+    Failed(String),
+}
+
+impl std::fmt::Display for NoSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // For the log. The window matches on the case instead.
+        match self {
+            Self::NotHere => write!(f, "this system does not capture by route"),
+            Self::NeedsAdministrator => write!(f, "an administrator is needed"),
+            Self::Refused => write!(f, "the privileged step was refused"),
+            Self::Failed(why) => write!(f, "{why}"),
         }
     }
 }
@@ -104,29 +149,21 @@ pub fn start(
     local: &Local,
     ports: Vec<u16>,
     data_dir: &std::path::Path,
-) -> Result<Option<Started>> {
+) -> Result<Option<Started>, NoSource> {
     if !local.on {
         return Ok(None);
     }
     match Support::here() {
-        Support::NotOnThisSystem => bail!(
-            "this system has no way to capture by route yet, so there is nothing for the \
-             switch to turn on"
-        ),
-        // The window offers the relaunch rather than reaching this, so this
-        // is the case where a switch was left on by a run that was elevated
-        // and the next one is not. Said, because the alternative is a switch
-        // that looks on with nothing behind it.
-        Support::NeedsAdministrator => bail!(
-            "capturing this machine's traffic needs an administrator: tracewing has to be \
-             started again as one"
-        ),
+        Support::NotOnThisSystem => return Err(NoSource::NotHere),
+        Support::NeedsAdministrator => return Err(NoSource::NeedsAdministrator),
         Support::Ready => {}
     }
     let _ = (ports, data_dir, &local.programs);
     #[cfg(windows)]
     {
-        return windows::start(local, ports, data_dir).map(Some);
+        return windows::start(local, ports, data_dir)
+            .map(Some)
+            .map_err(|why| NoSource::Failed(format!("{why:#}")));
     }
     #[cfg(not(windows))]
     unreachable!("Support::here() answers NotOnThisSystem off Windows")
@@ -170,7 +207,7 @@ impl Source for Pinned {
         proxy: std::net::SocketAddr,
         found: tracewing_proxy::source::Found,
         stop: tracewing_proxy::source::Stop,
-    ) -> Result<()> {
+    ) -> Built<()> {
         let me = *self;
         watching(me.ours, stop.clone())?;
         me.inner.start(proxy, found, stop)
@@ -187,7 +224,7 @@ impl Source for Pinned {
 /// design doc, which names it as the follow-up rather than leaving it to be
 /// discovered.
 #[cfg_attr(not(windows), allow(dead_code))]
-fn sieving(programs: &[local_apps::Picked], ports: Vec<u16>) -> Result<(sieve::Sieve, Chosen)> {
+fn sieving(programs: &[local_apps::Picked], ports: Vec<u16>) -> Built<(sieve::Sieve, Chosen)> {
     let apps = Apps::spawn(ports)?;
     let chosen = Chosen::of(local_apps::programs_of(programs));
     let sieve = sieve::by_programs(apps, chosen.clone(), upstream::straight_to());
@@ -201,7 +238,7 @@ fn sieving(programs: &[local_apps::Picked], ports: Vec<u16>) -> Result<(sieve::S
 /// the question matter: with no adapter held there is nothing to pin away
 /// from, and `leave_by(None)` is that state.
 #[cfg_attr(not(windows), allow(dead_code))]
-fn watching(ours: u64, stop: tracewing_proxy::source::Stop) -> Result<()> {
+fn watching(ours: u64, stop: tracewing_proxy::source::Stop) -> Built<()> {
     roads::watch(ours, LOOK_EVERY, roads::roads_now, upstream::leave_by, stop)
 }
 
@@ -214,10 +251,10 @@ mod windows {
         local: &Local,
         ports: Vec<u16>,
         data_dir: &std::path::Path,
-    ) -> Result<Started> {
+    ) -> Built<Started> {
         let held = Held::up(&dll(data_dir))?;
         let ours = held.luid()?;
-        let stopper = Stopper(held.adapter());
+        let stopper = Stopper::of(held.adapter());
         let (sieve, chosen) = sieving(&local.programs, ports)?;
         let pump = Tun::new(held, sieve, upstream::bound_datagrams()).answering(echo(ours));
         let source = Pinned {
@@ -290,14 +327,14 @@ mod tests {
             on: true,
             ..Local::default()
         };
-        let said = match start(&on, vec![9090], dir) {
-            Err(why) => why.to_string(),
+        let why = match start(&on, vec![9090], dir) {
+            Err(why) => why,
             Ok(_) => panic!("on, where nothing captures by route, is worth saying"),
         };
         match cfg!(windows) {
-            // Elevated or not, it has something else to say.
-            true => assert!(!said.contains("no way to capture by route"), "{said}"),
-            false => assert!(said.contains("no way to capture by route"), "{said}"),
+            // Elevated or not, it is one of the other cases.
+            true => assert!(!matches!(why, NoSource::NotHere), "{why:?}"),
+            false => assert!(matches!(why, NoSource::NotHere), "{why:?}"),
         }
     }
 }
