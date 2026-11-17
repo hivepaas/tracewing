@@ -953,11 +953,19 @@ echo"#,
         );
         let _ = child.kill();
         let _ = child.wait();
-        let _ = Command::new("taskkill")
-            // The exact title `console` gives it, with no wildcard: this
-            // runs on a machine with other consoles on it, one of which may
-            // be the one watching this test.
-            .args(["/f", "/fi", "WINDOWTITLE eq tracewing"])
+        // Not `taskkill /fi "WINDOWTITLE eq tracewing"`, which was the first
+        // try and left the console running: the title filter matches nothing
+        // for a console in a session with no desktop, which is where this
+        // test runs. Asked for by the script it is running instead, which is
+        // the same query `still_running` above answers with.
+        let _ = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                "Get-CimInstance Win32_Process -Filter \"Name='cmd.exe'\" | \
+                 Where-Object { $_.CommandLine -like '*tracewing-console-*' } | \
+                 ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
+            ])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
