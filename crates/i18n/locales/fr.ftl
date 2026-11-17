@@ -2856,6 +2856,16 @@ tcf9aefb4 = Hôtes
 # Newest
 t324b6d0b = Plus récents
 
+# The search index is {count} flow behind. A word in it is not found yet; this answer changes by itself in a moment. | The search index is {count} flows behind. A word in them is not found yet; this answer changes by itself in a moment.
+te5dff54b =
+    { $n ->
+        [one] L'index de recherche a { $count } flow de retard. Un mot qui s'y trouve n'est pas encore trouvé ; cette réponse changera d'elle-même dans un instant.
+       *[other] L'index de recherche a { $count } flows de retard. Un mot qui s'y trouve n'est pas encore trouvé ; cette réponse changera d'elle-même dans un instant.
+    }
+
+# This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that.
+tf541f79a = Cette session n'a pas d'index des corps, les mots sont donc cherchés dans les URL seulement. Un mot qui n'apparaît que dans un corps n'est pas trouvé du tout, et attendre n'y changera rien.
+
 # No flow fits this filter
 t7eb295f4 = Aucun flow ne correspond à ce filtre
 

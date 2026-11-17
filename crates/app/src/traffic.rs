@@ -56,7 +56,10 @@ use std::{
 };
 use tracewing_i18n::{tr, tr_n};
 use tracewing_proxy::{capture::CheckVisit, rules::HostRules};
-use tracewing_store::{search::Indexer, session};
+use tracewing_store::{
+    search::{self, Indexer},
+    session,
+};
 
 pub const ROW_HEIGHT: f32 = 32.;
 const LOOK_EVERY: Duration = Duration::from_millis(100);
@@ -95,6 +98,8 @@ enum Done {
         generation: u64,
         ids: Vec<i64>,
         took: Duration,
+        /// Why an empty answer is empty, where that is worth saying.
+        behind: Option<Behind>,
     },
     Hosts {
         hosts: Vec<(SharedString, u64)>,
@@ -124,6 +129,59 @@ fn take_jobs(
     (filter, hosts)
 }
 
+/// Why a word filter found nothing, where that is worth a sentence.
+///
+/// **An empty answer and an unfinished index look exactly alike**, and the
+/// difference decides what somebody should do: wait, or stop waiting. So the
+/// two states worth saying are kept and the third is not --
+/// [`search::Reach::Whole`] means an empty answer is an answer, and there is
+/// nothing to add to it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Behind {
+    /// This many flows are newer than the index has reached. A word in them
+    /// is not found **yet**; asking again later finds it.
+    Flows(i64),
+    /// There is no body index at all, so a word that appears only in a body
+    /// is not found **at all** and waiting will not change it. URLs are still
+    /// searched, by a scan.
+    NoBodies,
+}
+
+/// What an empty answer rested on, asked only when there is an empty answer
+/// to explain and the filter had a word in it.
+///
+/// `None` where it cannot be told, and that is treated as nothing to add
+/// rather than as a problem: the fallback is the bare "no flow fits this
+/// filter", which is what it has always said.
+fn behind(conn: &Connection, session_dir: &Path) -> Option<Behind> {
+    let newest: i64 = conn
+        .query_row("SELECT COALESCE(MAX(id), 0) FROM flows", [], |row| {
+            row.get(0)
+        })
+        .ok()?;
+    behind_from(search::reach(session_dir, newest).ok()?, newest)
+}
+
+/// The reading turned into what the sentence needs, or nothing to say.
+///
+/// A plain function over the two numbers, because the arithmetic has a case
+/// in it that is easy to get wrong in the quiet direction: **behind by none
+/// is not behind.** `Reach::Behind` means the index has reached a flow and
+/// the session has newer ones, and it is answered with the id it reached --
+/// which equals the newest when the index has in fact caught up. Reported as
+/// "behind" there, the window would tell somebody to wait for an answer that
+/// is already final.
+fn behind_from(reach: search::Reach, newest: i64) -> Option<Behind> {
+    match reach {
+        search::Reach::Whole => None,
+        search::Reach::NoBodies => Some(Behind::NoBodies),
+        search::Reach::Behind(through) => match newest - through {
+            newer if newer > 0 => Some(Behind::Flows(newer)),
+            _ => None,
+        },
+    }
+}
+
 fn work(session_dir: PathBuf, jobs: Receiver<Job>, done: Sender<Done>) {
     let mut conn = None;
     while let Ok(job) = jobs.recv() {
@@ -142,6 +200,8 @@ fn work(session_dir: PathBuf, jobs: Receiver<Job>, done: Sender<Done>) {
                     generation,
                     ids: Vec::new(),
                     took: Duration::ZERO,
+                    // No session to read is not an index that is behind.
+                    behind: None,
                 });
             }
             if hosts_job.is_some() {
@@ -164,11 +224,18 @@ fn work(session_dir: PathBuf, jobs: Receiver<Job>, done: Sender<Done>) {
                 eprintln!("tracewing: cannot search this session's flows: {why:#}");
                 Vec::new()
             });
+            // Only with nothing to show, and only when the answer rested on
+            // the index: this opens the index's pieces, and the common case
+            // must not pay for a sentence it will not show.
+            let behind = (ids.is_empty() && filter.text.is_some())
+                .then(|| behind(conn, &session_dir))
+                .flatten();
             let took = started.elapsed();
             let _ = done.send(Done::Filter {
                 generation,
                 ids,
                 took,
+                behind,
             });
         }
         if let Some(from_id) = hosts_job {
@@ -311,6 +378,10 @@ pub struct Traffic {
     pub settings_page: Option<SettingsPage>,
     /// Why the settings file was not used, if it was not.
     pub settings_problem: Option<String>,
+    /// Why the filter found nothing, where that is worth saying rather than
+    /// leaving somebody to wonder whether to wait. Set with the ids it
+    /// explains, so the two cannot disagree.
+    behind: Option<Behind>,
     /// Why a setting was not written when Settings was left.
     pub settings_left: Option<String>,
     layout_path: PathBuf,
@@ -563,6 +634,7 @@ impl Traffic {
             system: SystemState::default(),
             settings_page: None,
             settings_problem: None,
+            behind: None,
             settings_left: None,
             layout,
             ui_scale: 1.,
@@ -1048,9 +1120,11 @@ impl Traffic {
                     generation,
                     ids,
                     took,
+                    behind,
                 } => {
                     if generation == self.generation {
                         self.ids = (!self.filter.is_empty()).then(|| Arc::new(ids));
+                        self.behind = behind;
                         self.filtering = false;
                         self.filter_due = Instant::now() + WORK_EVERY.max(took * WORK_SHARE);
                     }
@@ -2607,7 +2681,22 @@ impl Traffic {
         let addr = self.engine.addr;
         let (title, hint): (SharedString, Option<String>) = if self.ids.is_some() || self.filtering
         {
-            (tr!("No flow fits this filter").into(), None)
+            // Nothing found and nothing to add is the common case and says
+            // nothing extra. The two cases worth a line are the ones where
+            // "nothing matched" is not the whole truth: see `Behind`.
+            let hint = match self.behind {
+                Some(Behind::Flows(newer)) => Some(tr_n!(
+                    newer as usize,
+                    "The search index is {count} flow behind. A word in it is not found yet; this answer changes by itself in a moment.",
+                    "The search index is {count} flows behind. A word in them is not found yet; this answer changes by itself in a moment.",
+                    count = group_digits(newer as u64)
+                )),
+                Some(Behind::NoBodies) => Some(tr!(
+                    "This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that."
+                )),
+                None => None,
+            };
+            (tr!("No flow fits this filter").into(), hint)
         } else {
             (
                 tr!("Nothing yet").into(),
@@ -3555,6 +3644,34 @@ fn pill_button(id: &'static str) -> Stateful<Div> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// What an empty answer is worth saying about, and the case that is easy
+    /// to get wrong quietly: the index having reached the newest flow is not
+    /// being behind, and saying it was would ask somebody to wait for an
+    /// answer that is already final.
+    #[test]
+    fn an_empty_answer_says_why_only_when_there_is_a_why() {
+        assert_eq!(behind_from(search::Reach::Whole, 100), None);
+        assert_eq!(
+            behind_from(search::Reach::Behind(100), 100),
+            None,
+            "reached the newest flow: not behind"
+        );
+        assert_eq!(
+            behind_from(search::Reach::Behind(93), 100),
+            Some(Behind::Flows(7))
+        );
+        assert_eq!(
+            behind_from(search::Reach::NoBodies, 100),
+            Some(Behind::NoBodies),
+            "waiting never fixes this one, and the sentence must not suggest it"
+        );
+        assert_eq!(
+            behind_from(search::Reach::Behind(101), 100),
+            None,
+            "an index ahead of the flows is not something to tell anybody about"
+        );
+    }
 
     fn filter(generation: u64) -> Job {
         Job::Filter {

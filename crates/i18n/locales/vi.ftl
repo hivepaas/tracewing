@@ -2716,6 +2716,16 @@ tcf9aefb4 = Host
 # Newest
 t324b6d0b = Mới nhất
 
+# The search index is {count} flow behind. A word in it is not found yet; this answer changes by itself in a moment. | The search index is {count} flows behind. A word in them is not found yet; this answer changes by itself in a moment.
+te5dff54b =
+    { $n ->
+        [one] Chỉ mục tìm kiếm còn thiếu { $count } flow mới nhất. Một từ nằm trong đó thì chưa tìm thấy; câu trả lời này sẽ tự đổi sau một lát.
+       *[other] Chỉ mục tìm kiếm còn thiếu { $count } flow mới nhất. Một từ nằm trong đó thì chưa tìm thấy; câu trả lời này sẽ tự đổi sau một lát.
+    }
+
+# This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that.
+tf541f79a = Phiên này không có chỉ mục cho body, nên từ chỉ được tìm trong URL. Một từ chỉ xuất hiện trong body thì sẽ không tìm thấy, và chờ cũng không thay đổi điều đó.
+
 # No flow fits this filter
 t7eb295f4 = Không có flow nào khớp bộ lọc này
 

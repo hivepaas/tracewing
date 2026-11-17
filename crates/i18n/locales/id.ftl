@@ -2716,6 +2716,16 @@ tcf9aefb4 = Host
 # Newest
 t324b6d0b = Terbaru
 
+# The search index is {count} flow behind. A word in it is not found yet; this answer changes by itself in a moment. | The search index is {count} flows behind. A word in them is not found yet; this answer changes by itself in a moment.
+te5dff54b =
+    { $n ->
+        [one] Indeks pencarian tertinggal { $count } flow. Kata yang ada di dalamnya belum ditemukan; jawaban ini berubah sendiri sebentar lagi.
+       *[other] Indeks pencarian tertinggal { $count } flow. Kata yang ada di dalamnya belum ditemukan; jawaban ini berubah sendiri sebentar lagi.
+    }
+
+# This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that.
+tf541f79a = Sesi ini tidak punya indeks body, jadi kata hanya dicari di URL. Kata yang hanya muncul di body tidak ditemukan sama sekali, dan menunggu tidak akan mengubahnya.
+
 # No flow fits this filter
 t7eb295f4 = Tidak ada flow yang cocok dengan filter ini
 

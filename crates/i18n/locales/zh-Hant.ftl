@@ -2716,6 +2716,16 @@ tcf9aefb4 = 主機
 # Newest
 t324b6d0b = 最新
 
+# The search index is {count} flow behind. A word in it is not found yet; this answer changes by itself in a moment. | The search index is {count} flows behind. A word in them is not found yet; this answer changes by itself in a moment.
+te5dff54b =
+    { $n ->
+        [one] 搜尋索引落後 { $count } 筆流量紀錄。其中的字詞暫時搜不到；這個結果過一會兒會自動改變。
+       *[other] 搜尋索引落後 { $count } 筆流量紀錄。其中的字詞暫時搜不到；這個結果過一會兒會自動改變。
+    }
+
+# This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that.
+tf541f79a = 此工作階段沒有本文索引，因此只在 URL 中尋找字詞。只出現在本文裡的字詞根本搜不到，等待也不會改變。
+
 # No flow fits this filter
 t7eb295f4 = 沒有符合此篩選條件的流量紀錄
 
