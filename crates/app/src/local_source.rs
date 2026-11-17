@@ -52,6 +52,16 @@ const LOOK_EVERY: std::time::Duration = std::time::Duration::from_secs(2);
 #[cfg_attr(not(windows), allow(dead_code))]
 const ECHO_WITHIN: std::time::Duration = std::time::Duration::from_secs(4);
 
+/// A local way in that is running, as the engine keeps it: what it keeps,
+/// and what ends it. The source itself has gone into the proxy's list by
+/// then, which is why this is not simply [`Started`].
+pub struct Running {
+    /// What is kept, changeable while it runs: the tab writes through this.
+    pub chosen: Chosen,
+    /// Turning the mode off without a restart.
+    pub stopper: Stopper,
+}
+
 /// A way in that is running, and the two handles the window keeps.
 pub struct Started {
     /// For the engine's list of sources.
@@ -122,6 +132,51 @@ pub fn start(
     unreachable!("Support::here() answers NotOnThisSystem off Windows")
 }
 
+/// A source with the machine's way out pinned **before** it starts.
+///
+/// The order is the whole point, and it is the discipline `Tun::start`
+/// already keeps for its own stack: with no pinning in place, the first
+/// connection tracewing makes on a captured program's behalf follows the
+/// ordinary routes -- which now lead into tracewing's own adapter, where the
+/// stack answers it as the server it was going to, which makes another
+/// connection, which is routed back in. A loop with nothing bounding it.
+///
+/// It is a wrapper rather than something inside `tun.rs` because the pump is
+/// generic over its device and has no business knowing about routes, and
+/// because [`roads::watch`] wants two things only `start` has: the proxy's
+/// stop, and the proxy's runtime to spawn on.
+#[cfg_attr(not(windows), allow(dead_code))]
+struct Pinned {
+    inner: Box<dyn Source>,
+    /// The adapter's own LUID, which is never a way out.
+    ours: u64,
+}
+
+impl Source for Pinned {
+    fn name(&self) -> String {
+        self.inner.name()
+    }
+
+    fn by(&self) -> tracewing_proxy::source::By {
+        self.inner.by()
+    }
+
+    fn own_ports(&self) -> Vec<u16> {
+        self.inner.own_ports()
+    }
+
+    fn start(
+        self: Box<Self>,
+        proxy: std::net::SocketAddr,
+        found: tracewing_proxy::source::Found,
+        stop: tracewing_proxy::source::Stop,
+    ) -> Result<()> {
+        let me = *self;
+        watching(me.ours, stop.clone())?;
+        me.inner.start(proxy, found, stop)
+    }
+}
+
 /// The sieve, shared with the window so that what is kept can change while
 /// the capture runs.
 ///
@@ -164,7 +219,11 @@ mod windows {
         let ours = held.luid()?;
         let stopper = Stopper(held.adapter());
         let (sieve, chosen) = sieving(&local.programs, ports)?;
-        let source = Tun::new(held, sieve, upstream::bound_datagrams()).answering(echo(ours));
+        let pump = Tun::new(held, sieve, upstream::bound_datagrams()).answering(echo(ours));
+        let source = Pinned {
+            inner: Box::new(pump),
+            ours,
+        };
         Ok(Started {
             source: Box::new(source),
             chosen,
