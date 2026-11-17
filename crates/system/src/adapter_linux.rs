@@ -289,7 +289,7 @@ pub fn make_adapter() -> Result<()> {
     if look().ready() {
         return Ok(());
     }
-    crate::os::run_as_admin(&script(users_id()))
+    crate::os::run_as_admin("make tracewing's network adapter", &script(users_id()))
 }
 
 /// This user, whom the device must belong to.
@@ -585,8 +585,11 @@ tracewing\t00000000\t00000000\t0000\t0\t0\t50\t00000000\t0\t0\t0
         let owner = std::fs::read_to_string(format!("/sys/class/net/{DEVICE}/owner"))
             .expect("read the owner");
         assert_eq!(owner.trim(), users_id().to_string());
-        crate::os::run_as_admin(&format!("ip tuntap del dev {DEVICE} mode tun"))
-            .expect("delete the adapter");
+        crate::os::run_as_admin(
+            "delete the adapter",
+            &format!("ip tuntap del dev {DEVICE} mode tun"),
+        )
+        .expect("delete the adapter");
         // And gone is read as gone, so that the next run asks again.
         let after = look();
         assert!(!after.ready(), "{after:?}");
