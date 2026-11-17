@@ -41,11 +41,11 @@ work the source is:
 
 | | macOS | Windows | Linux |
 |---|---|---|---|
-| Mechanism | NetworkExtension, App Proxy Provider | Wintun (WireGuard's layer-3 TUN driver) | eBPF on `cgroup/sock`, into a TUN device |
+| Mechanism | NetworkExtension, App Proxy Provider | Wintun (WireGuard's layer-3 TUN driver) | A TUN device (`/dev/net/tun`) and the routes into it |
 | Hands over | **flows** | packets | packets |
 | Needs our own TCP stack | no | **yes** | **yes** |
-| Privilege | the user approves a system extension | Administrator | root, for `bpf()` |
-| Shipping | Developer ID, notarized, packaged as a system extension | Wintun's signed `wintun.dll` beside our executable, driver inside it; nothing of ours to sign, but its licence is not ours either | kernel 6.8 or newer |
+| Privilege | the user approves a system extension | Administrator | root for one script, asked with `pkexec` while it runs; the capture itself is unprivileged |
+| Shipping | Developer ID, notarized, packaged as a system extension | Wintun's signed `wintun.dll` beside our executable, driver inside it; nothing of ours to sign, but its licence is not ours either | nothing of ours to sign, and no kernel floor: `/dev/net/tun` has been there for twenty years |
 | Knows the app by | audit token, so bundle id | the TCP table, by address | name, first 16 characters only (`task->comm`) |
 
 mitmproxy has all three and is worth reading before starting any of them; the
