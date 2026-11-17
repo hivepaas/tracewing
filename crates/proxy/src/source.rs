@@ -276,6 +276,14 @@ impl Found {
             .with_context(|| format!("start {name}"))
     }
 
+    /// Another handle on the same channel, for whoever starts sources that
+    /// arrive after the proxy is running. Stamping stays per source: this
+    /// carries [`By::Given`] as [`Self::channel`] does, and
+    /// [`Self::start`] replaces it with the source's own.
+    pub fn again(&self) -> Self {
+        Self(self.0.clone(), By::Given)
+    }
+
     /// The channel a source sends to, and the end the proxy serves from.
     pub fn channel() -> (Self, mpsc::Receiver<Took>) {
         let (tx, rx) = mpsc::channel(WAITING_MAX);

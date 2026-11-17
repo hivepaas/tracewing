@@ -132,6 +132,21 @@ pub struct ProxyOptions {
     /// Where traffic comes from, besides the proxy port itself: other devices
     /// on the network today, and whatever is added after. See [`source`].
     pub sources: Vec<Box<dyn Source>>,
+    /// Sources that arrive **after** the proxy is running, if anything is to
+    /// send any.
+    ///
+    /// A way in that needs a privileged step cannot be built before the
+    /// window is on screen -- the step asks the person for a password, and a
+    /// password asked for by a program with no window yet is a password
+    /// nobody can place. So the window builds that source when somebody asks
+    /// for it and hands it over here.
+    ///
+    /// **It changes when the proxy ends.** Without this, the proxy stops once
+    /// its last source has ended, because nothing else can arrive; with it,
+    /// something else can, so it runs until it is stopped. That is the right
+    /// reading of "a source may arrive later" and it is worth saying out loud,
+    /// since the old behaviour was load-bearing for nothing else.
+    pub later: Option<tokio::sync::mpsc::Receiver<Box<dyn Source>>>,
     /// Another proxy that connections to servers go through, as a company's.
     /// Changes apply to the next connection.
     pub relay: Arc<relay::Relay>,
@@ -177,6 +192,27 @@ pub fn crypto_provider() -> CryptoProvider {
 
 /// Runs the proxy until `shutdown` resolves, then waits for every flow to be
 /// written.
+/// Starts each source as it arrives, until the sender is dropped.
+///
+/// **One that cannot start is said and stepped over.** By the time anything
+/// arrives here the proxy is serving, and a way in that failed is not a
+/// reason to take down the ones that are working. Whoever sent it -- the
+/// window -- reports it in its own words; this is the log's copy.
+async fn start_as_they_arrive(
+    mut later: tokio::sync::mpsc::Receiver<Box<dyn Source>>,
+    found: Found,
+    proxy: SocketAddr,
+    stop: Stop,
+) {
+    while let Some(source) = later.recv().await {
+        let name = source.name();
+        match found.start(source, proxy, stop.clone()) {
+            Ok(()) => tracing::info!("{name} started"),
+            Err(e) => tracing::warn!("{e:#}"),
+        }
+    }
+}
+
 pub async fn run_proxy(
     opts: ProxyOptions,
     shutdown: impl Future<Output = ()> + Send + 'static,
@@ -309,7 +345,18 @@ pub async fn run_proxy(
         // see `Took` for why no source fills that in itself.
         found.start(source, own_addr, stop.clone())?;
     }
-    // With ours gone, the channel closes once the last source has ended.
+    // One more starter for whatever arrives later, which also keeps the
+    // channel open: see `ProxyOptions::later`.
+    let arriving = opts.later.map(|later| {
+        tokio::spawn(start_as_they_arrive(
+            later,
+            found.again(),
+            own_addr,
+            stop.clone(),
+        ))
+    });
+    // With ours gone, the channel closes once the last source has ended --
+    // unless something may still arrive, which is what `arriving` holds.
     drop(found);
 
     let reporter = opts
@@ -324,6 +371,12 @@ pub async fn run_proxy(
     }
     if let Some(reporter) = reporter {
         reporter.abort();
+    }
+    // Nothing more can arrive once the proxy is stopping, and a task waiting
+    // on a channel the window still holds would keep the runtime from
+    // finishing.
+    if let Some(arriving) = arriving {
+        arriving.abort();
     }
 
     // The index goes first, with the writer still there to keep the session to its
@@ -571,4 +624,73 @@ fn status_mib(pid: &str, field: &str) -> Option<f64> {
         .parse()
         .ok()?;
     Some(kib / 1024.0)
+}
+
+#[cfg(test)]
+mod arriving_tests {
+    use super::*;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    /// A source that records that it was started, and can refuse to.
+    struct Counts {
+        started: Arc<AtomicUsize>,
+        refuses: bool,
+    }
+
+    impl Source for Counts {
+        fn name(&self) -> String {
+            "a counted way in".to_owned()
+        }
+
+        fn by(&self) -> source::By {
+            source::By::Given
+        }
+
+        fn start(self: Box<Self>, _proxy: SocketAddr, _found: Found, _stop: Stop) -> Result<()> {
+            if self.refuses {
+                anyhow::bail!("this one will not start");
+            }
+            self.started.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+    }
+
+    /// A way in handed over after the proxy is running is started, and one
+    /// that cannot start does not take the next one with it.
+    ///
+    /// The second half is the one worth a test: by the time anything arrives
+    /// here the proxy is serving other ways in, so a `?` in that loop would
+    /// end them all because one that was added late said no.
+    #[tokio::test]
+    async fn sources_that_arrive_later_are_started_and_a_refusal_is_stepped_over() {
+        let started = Arc::new(AtomicUsize::new(0));
+        let (found, _took) = Found::channel();
+        let (stop_tx, stop) = tokio::sync::watch::channel(false);
+        let (tx, rx) = tokio::sync::mpsc::channel(4);
+        let addr: SocketAddr = "127.0.0.1:9090".parse().unwrap();
+        let task = tokio::spawn(start_as_they_arrive(rx, found, addr, stop));
+
+        for refuses in [false, true, false] {
+            tx.send(Box::new(Counts {
+                started: Arc::clone(&started),
+                refuses,
+            }) as Box<dyn Source>)
+                .await
+                .expect("the proxy is listening for more");
+        }
+        // Dropping the sender ends the loop, which is also how the window
+        // closing ends it.
+        drop(tx);
+        task.await
+            .expect("the loop ends when nothing more can arrive");
+        assert_eq!(
+            started.load(Ordering::SeqCst),
+            2,
+            "both of the two that could start did, with the refusal between them"
+        );
+        let _ = stop_tx.send(true);
+    }
 }
