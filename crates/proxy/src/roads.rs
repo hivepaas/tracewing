@@ -51,6 +51,24 @@ pub struct Road {
     pub loopback: bool,
     /// Of the IPv6 table rather than the IPv4 one.
     pub v6: bool,
+    /// Whether the interface's link is really up.
+    ///
+    /// **A disconnected interface keeps every one of its routes**, which is
+    /// what makes this a field rather than something the table says. Measured
+    /// on a Windows machine with two NAT adapters: pulling the second cable
+    /// left all six of its rows in place, default route included, with the
+    /// row's own `Metric` unchanged at 0 -- and the *interface* metric
+    /// improved, 25 to 5, so nothing in the numbers makes a dead interface
+    /// look worse than a live one. Linux is the same shape (#332): `RTF_UP`
+    /// stays set and `/proc/net/route` has nothing to mark it.
+    ///
+    /// Read rather than guessed, and read as **plainly connected or not**:
+    /// unknown, and a reading that fails, both count as not. The asymmetry
+    /// that settles it is that the two mistakes are not alike -- excluding
+    /// too much ends as [`Out::Nowhere`], which refuses the connection and
+    /// says why, while excluding too little pins to an interface the stack is
+    /// ignoring, and that does not fail, it **hangs**.
+    pub connected: bool,
 }
 
 /// How far a route may reach and still count as a way out of here: all of
@@ -87,7 +105,14 @@ pub fn out_by(roads: &[Road], ours: u64, v6: bool) -> Option<u32> {
     roads
         .iter()
         .filter(|road| {
-            road.v6 == v6 && !road.loopback && road.luid != ours && road.bits <= WIDE_ENOUGH
+            road.v6 == v6
+                && !road.loopback
+                && road.luid != ours
+                && road.bits <= WIDE_ENOUGH
+                // A route on an interface whose link is down is still in the
+                // table, and nothing in its numbers says so: see
+                // `Road::connected`. Pinning to one does not fail, it hangs.
+                && road.connected
         })
         .min_by_key(|road| (std::cmp::Reverse(road.bits), road.metric, road.interface))
         .map(|road| road.interface)
@@ -217,6 +242,13 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
                 metric: row.metric,
                 loopback: is_loopback(&row.iface),
                 v6: row.v6,
+                // The rows of an interface whose carrier is down were taken
+                // out above, so what reaches here is connected by
+                // construction. Windows reads it per interface instead,
+                // because its rows cannot be dropped that early: our own
+                // adapter's have to stay in the table to be recognised as
+                // ours (`wintun_live.rs`).
+                connected: true,
             })
         })
         .collect())
@@ -295,6 +327,7 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
         NetworkManagement::IpHelper::{FreeMibTable, GetIpForwardTable2, MIB_IPFORWARD_TABLE2},
         Networking::WinSock::{AF_INET6, AF_UNSPEC},
     };
+    let connected = connected_luids();
     let mut table: *mut MIB_IPFORWARD_TABLE2 = std::ptr::null_mut();
     // SAFETY: a pointer the call fills in, and nothing is read from it
     // unless it says it succeeded.
@@ -317,12 +350,59 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
                 metric: row.Metric,
                 loopback: row.Loopback,
                 v6: row.DestinationPrefix.Prefix.si_family == AF_INET6,
+                connected: connected.contains(&row.InterfaceLuid.Value),
             })
             .collect()
     };
     // SAFETY: the pointer that call gave us, given back exactly once.
     unsafe { FreeMibTable(table as *const core::ffi::c_void) };
     Ok(roads)
+}
+
+/// The interfaces whose link is plainly connected, by LUID.
+///
+/// Windows' answer to Linux's `/sys/class/net/<iface>/carrier`. Taken from
+/// `GetIfTable2` in one call rather than `GetIfEntry2` per route, since an
+/// ordinary machine has a few interfaces and a good many routes.
+///
+/// `MediaConnectState` is the field that says it -- measured: a NAT adapter
+/// whose cable was pulled went to `MediaConnectStateDisconnected` while every
+/// one of its six routes stayed in `GetIpForwardTable2`. `OperStatus` said
+/// `IfOperStatusDown` in the same breath, so either would have done; this one
+/// is named for the link itself rather than for the interface's willingness
+/// to carry traffic, which is the question being asked.
+///
+/// A table that cannot be read leaves **nothing** connected, which turns
+/// every way out into [`Out::Nowhere`] -- loud, and the safe direction of the
+/// two (see [`Road::connected`]).
+#[cfg(windows)]
+fn connected_luids() -> std::collections::HashSet<u64> {
+    use windows_sys::Win32::{
+        Foundation::NO_ERROR,
+        NetworkManagement::{
+            IpHelper::{FreeMibTable, GetIfTable2, MIB_IF_TABLE2},
+            Ndis::MediaConnectStateConnected,
+        },
+    };
+    let mut table: *mut MIB_IF_TABLE2 = std::ptr::null_mut();
+    // SAFETY: a pointer the call fills in, and nothing is read from it unless
+    // it says it succeeded.
+    if unsafe { GetIfTable2(&mut table) } != NO_ERROR {
+        return std::collections::HashSet::new();
+    }
+    // SAFETY: the table's first row is followed by `NumEntries` of them,
+    // which is how this structure is always read, and the LUID is a plain
+    // `u64` taken out of a union over the same eight bytes.
+    let luids = unsafe {
+        std::slice::from_raw_parts((*table).Table.as_ptr(), (*table).NumEntries as usize)
+            .iter()
+            .filter(|row| row.MediaConnectState == MediaConnectStateConnected)
+            .map(|row| row.InterfaceLuid.Value)
+            .collect()
+    };
+    // SAFETY: the pointer that call gave us, given back exactly once.
+    unsafe { FreeMibTable(table as *const core::ffi::c_void) };
+    luids
 }
 
 /// One address an interface holds, as the table has it.
@@ -538,6 +618,7 @@ mod watching {
             metric: 10,
             loopback: false,
             v6: false,
+            connected: true,
         }
     }
 
@@ -852,6 +933,7 @@ wlp8s0\t0001A8C0\t00000000\t0001\t0\t0\t600\t00FFFFFF\t0\t0\t0
                 metric: row.metric,
                 loopback: row.iface == "lo",
                 v6: row.v6,
+                connected: true,
             })
             .collect();
         assert_eq!(out_by(&roads, 99, false), Some(3), "IPv4 leaves by wlp8s0");
@@ -1053,7 +1135,111 @@ mod tests {
             metric,
             loopback: false,
             v6: false,
+            connected: true,
         }
+    }
+
+    /// What this machine says, with the control in the same run.
+    ///
+    /// Needs arranging, which is why it is `#[ignore]`d: a second interface
+    /// whose link is **down**, holding a route wide enough to be a candidate
+    /// and wider than the live interface's -- a `/1` beats a `/0` on reach.
+    /// On the VM:
+    ///
+    /// On the VirtualBox test machine, from the host and then in the guest:
+    ///
+    /// ```powershell
+    /// # host, with the VM off: a second interface to take down
+    /// VBoxManage modifyvm windows-11 --nic2 nat --cableconnected2 on
+    /// # guest, while its cable is still on
+    /// New-NetRoute -InterfaceIndex 20 -DestinationPrefix 0.0.0.0/1 -NextHop 10.0.3.2
+    /// # host again
+    /// VBoxManage controlvm windows-11 setlinkstate2 off
+    /// ```
+    ///
+    /// What that run said, and it is the whole point of the arrangement:
+    /// `without the link check: Some(20); out_by: Some(5)` -- 20 being the
+    /// interface whose cable had been pulled, and whose fourteen rows all
+    /// came back `connected false`.
+    ///
+    /// The control is computed here rather than in another run: the same
+    /// ordering with the one new filter left out. So a passing run says both
+    /// halves -- that without the link check a dead interface **wins**, and
+    /// that with it the answer is a live one. A run on a machine that is not
+    /// arranged says so instead of quietly passing.
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "needs a second interface whose link is down"]
+    fn a_dead_interface_that_would_otherwise_win_is_not_the_way_out() {
+        let roads = roads_now().expect("the tables read");
+        for road in &roads {
+            println!(
+                "  if {} luid {:#018x} bits {} metric {} loopback {} v6 {} connected {}",
+                road.interface,
+                road.luid,
+                road.bits,
+                road.metric,
+                road.loopback,
+                road.v6,
+                road.connected
+            );
+        }
+        let dead: Vec<u32> = roads
+            .iter()
+            .filter(|road| !road.connected)
+            .map(|road| road.interface)
+            .collect();
+        // Nothing of ours is held in this test, so no LUID is excluded.
+        let out = out_by(&roads, 0, false);
+        let blind = roads
+            .iter()
+            .filter(|road| !road.v6 && !road.loopback && road.bits <= WIDE_ENOUGH)
+            .min_by_key(|road| (std::cmp::Reverse(road.bits), road.metric, road.interface))
+            .map(|road| road.interface);
+        println!("dead interfaces: {dead:?}");
+        println!("without the link check: {blind:?}; out_by: {out:?}");
+        assert!(
+            !dead.is_empty(),
+            "this test needs an interface whose link is down; see the doc comment"
+        );
+        let blind = blind.expect("something is wide enough to be a way out");
+        assert!(
+            dead.contains(&blind),
+            "the arrangement is not set up: without the link check the answer is \
+             interface {blind}, which is not one of the dead ones {dead:?}"
+        );
+        let out = out.expect("a live interface is still a way out");
+        assert!(
+            !dead.contains(&out),
+            "out_by chose interface {out}, whose link is down"
+        );
+    }
+
+    /// A route on an interface whose link is down is not a way out, even
+    /// when the table makes it the best one going.
+    ///
+    /// The arrangement is the one measured on Windows: the dead interface
+    /// wins every tie-break `out_by` has -- as wide, as cheap, lower index --
+    /// because a pulled cable changes none of them. On that machine the live
+    /// interface happened to hold the lower index and so was chosen by luck;
+    /// with the numbers the other way round, this is what it does.
+    #[test]
+    fn a_route_on_a_dead_interface_is_not_a_way_out() {
+        let dead = Road {
+            connected: false,
+            ..road(3, 0, 0)
+        };
+        assert_eq!(
+            out_by(&[dead, road(7, 0, 0)], 99, false),
+            Some(7),
+            "the live interface, although it is dearer by every number here"
+        );
+        assert_eq!(
+            out_by(&[dead], 99, false),
+            None,
+            "and with nothing else there is no way out at all, which refuses \
+             the connection and says why, rather than hanging on a dead one"
+        );
     }
 
     #[test]
@@ -1097,6 +1283,7 @@ mod tests {
     fn loopback_is_not_a_way_out() {
         let home = Road {
             loopback: true,
+            connected: true,
             ..road(1, 0, 0)
         };
         assert_eq!(out_by(&[home], 99, false), None);
@@ -1106,6 +1293,7 @@ mod tests {
     fn each_family_is_asked_separately() {
         let six = Road {
             v6: true,
+            connected: true,
             ..road(9, 0, 10)
         };
         let roads = [road(7, 0, 25), six];
@@ -1123,17 +1311,20 @@ mod tests {
         let mine_v4 = Road {
             interface: 11,
             luid: ours,
+            connected: true,
             ..road(11, 0, 0)
         };
         let mine_v6 = Road {
             interface: 22,
             luid: ours,
             v6: true,
+            connected: true,
             ..road(22, 0, 0)
         };
         let other_v4 = road(7, 0, 25);
         let other_v6 = Road {
             v6: true,
+            connected: true,
             ..road(8, 0, 25)
         };
         let roads = [mine_v4, mine_v6, other_v4, other_v6];
