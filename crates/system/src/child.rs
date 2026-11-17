@@ -77,6 +77,38 @@ pub fn start_at(tracewing_is_elevated: bool, want: Level) -> Start {
     }
 }
 
+/// What came of asking Windows to raise something.
+///
+/// Two answers rather than `Result<()>`, because **the person saying no is not
+/// a fault** and the two want opposite treatment: a refusal leaves everything
+/// as it was and the switch that asked goes back off, while an error is worth
+/// showing. For a relaunch the difference is the whole thing -- tracewing
+/// quits on `Started` and must not quit on `Refused`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Raised {
+    /// It started. For a relaunch, the caller's turn to go.
+    Started,
+    /// The dialog was dismissed, or policy would not allow it. Nothing
+    /// started and nothing changed.
+    Refused,
+}
+
+/// `ERROR_CANCELLED`, which is what `ShellExecuteExW` leaves behind when the
+/// UAC dialog is dismissed -- by the person, or by a policy that shows them
+/// nothing to dismiss.
+const CANCELLED: i32 = 1223;
+
+/// Whether a failed raise was a refusal rather than a fault.
+///
+/// A plain function over the code so that the one number with a meaning is
+/// written down once, with a test, rather than inside an `unsafe` block where
+/// no test on this machine can reach it. `None` is a failure with no code at
+/// all, which is a fault: a refusal always carries 1223.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn refused(code: Option<i32>) -> bool {
+    code == Some(CANCELLED)
+}
+
 /// Whether tracewing itself is running elevated.
 ///
 /// On Windows this is a real question, and the capture mode makes it one that
@@ -117,6 +149,55 @@ pub fn elevated() -> bool {
 #[cfg(not(windows))]
 pub fn elevated() -> bool {
     false
+}
+
+/// Starts another tracewing as an administrator, with the same arguments, and
+/// says whether it started.
+///
+/// **This does not quit.** Two copies cannot both hold the proxy's ports, so
+/// one has to go -- but which moment is safe to go at is the app's to know
+/// rather than this module's: settings to write, a session to close, a system
+/// proxy to put back where it was. So this starts the other one and reports,
+/// and the caller goes on [`Raised::Started`] and stays on
+/// [`Raised::Refused`].
+///
+/// Nothing is handed across. The session that was open stays on disk and can
+/// be reopened from the list, which is what the window has to say before it
+/// asks -- not afterwards.
+#[cfg(windows)]
+pub fn relaunch_as_administrator() -> anyhow::Result<Raised> {
+    if elevated() {
+        // Not a failure to report so much as a question that should not have
+        // been asked: a second copy would find the ports taken.
+        anyhow::bail!("tracewing is already running as an administrator");
+    }
+    let program = std::env::current_exe().context("find tracewing's own program")?;
+    let mut command = std::process::Command::new(program);
+    command.args(same_arguments(std::env::args_os()));
+    asking_windows(command)
+}
+
+/// Elsewhere there is no second level for tracewing to come back at: its
+/// privileged steps are separate children it raises, and the app itself is
+/// never the elevated one (see [`elevated`]).
+#[cfg(not(windows))]
+pub fn relaunch_as_administrator() -> anyhow::Result<Raised> {
+    anyhow::bail!("only Windows has another level for tracewing itself to come back at")
+}
+
+/// The arguments to start the next copy with: these ones, without the name
+/// this copy was started by.
+///
+/// A function with a test because the off-by-one is silent in the direction
+/// that keeps it: tracewing would relaunch with a path to itself as its first
+/// argument, which `clap` would read as a subcommand it does not have, and
+/// the new copy would exit before the old one noticed anything.
+// Only the Windows relaunch calls it; the test does too, but a lib built
+// without its tests does not, which `-D dead-code` says. Same idiom as
+// `refused` above.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn same_arguments(args: impl Iterator<Item = std::ffi::OsString>) -> Vec<std::ffi::OsString> {
+    args.skip(1).collect()
 }
 
 /// A Windows command line for `program` with `args`, quoted as
@@ -244,7 +325,12 @@ pub fn start(command: std::process::Command, want: Level) -> anyhow::Result<()> 
         #[cfg(windows)]
         Start::AsTheShell => as_the_shell(command),
         #[cfg(windows)]
-        Start::Elevated => asking_windows(command),
+        Start::Elevated => match asking_windows(command)? {
+            Raised::Started => Ok(()),
+            // Nothing started, and the person is the one who decided that, so
+            // it is said shortly rather than as a failure with an error code.
+            Raised::Refused => anyhow::bail!("Windows was not allowed to start it"),
+        },
         // Neither exists off Windows, and nothing asks for them there: the
         // choice is only offered on Windows. Said rather than ignored,
         // because a level quietly dropped is a child running at the wrong
@@ -474,15 +560,52 @@ fn asking_windows(command: std::process::Command) -> anyhow::Result<()> {
     // SAFETY: a structure of the size it is told, whose strings outlive the
     // call.
     if unsafe { ShellExecuteExW(&mut what) } != 0 {
-        return Ok(());
+        return Ok(Raised::Started);
     }
-    Err(std::io::Error::last_os_error())
-        .with_context(|| format!("ask Windows to start {program} as an administrator"))
+    let failed = std::io::Error::last_os_error();
+    if refused(failed.raw_os_error()) {
+        return Ok(Raised::Refused);
+    }
+    Err(failed).with_context(|| format!("ask Windows to start {program} as an administrator"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 1223 is the one number here with a meaning, and the meaning is the
+    /// opposite of a fault: on a refusal tracewing stays as it is.
+    #[test]
+    fn only_1223_is_a_refusal() {
+        assert!(refused(Some(1223)));
+        assert!(!refused(Some(5)), "access denied is a fault, not a refusal");
+        assert!(
+            !refused(None),
+            "a failure with no code is a fault: a refusal always carries 1223"
+        );
+    }
+
+    /// The name this copy was started by is not an argument to the next one.
+    #[test]
+    fn the_next_copy_gets_these_arguments_and_not_our_name() {
+        let args = ["C:\\p\\tracewing.exe", "--data-dir", "D:\\somewhere else"]
+            .map(std::ffi::OsString::from);
+        assert_eq!(
+            same_arguments(args.into_iter()),
+            ["--data-dir", "D:\\somewhere else"].map(std::ffi::OsString::from)
+        );
+        // Started by name alone, there is nothing to carry.
+        assert!(same_arguments(["tracewing"].map(std::ffi::OsString::from).into_iter()).is_empty());
+    }
+
+    /// Off Windows this is not a thing that can be asked for, and it says so
+    /// rather than starting something at the level it already has.
+    #[cfg(not(windows))]
+    #[test]
+    fn elsewhere_there_is_no_level_to_come_back_at() {
+        let said = relaunch_as_administrator().unwrap_err().to_string();
+        assert!(said.contains("only Windows"), "{said}");
+    }
 
     /// All four cells, including the two that no machine here can carry out.
     #[test]
