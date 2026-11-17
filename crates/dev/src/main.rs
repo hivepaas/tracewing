@@ -360,6 +360,8 @@ async fn main() -> Result<()> {
                     find_apps: !no_apps,
                     stop_limit: Duration::from_secs(5),
                     live: Default::default(),
+                    // The playground builds every way in up front.
+                    later: None,
                     sources: {
                         let mut sources: Vec<Box<dyn tracewing_proxy::source::Source>> = Vec::new();
                         if let Some(at) = socks {

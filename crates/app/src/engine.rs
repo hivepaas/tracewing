@@ -427,6 +427,9 @@ impl Engine {
             find_apps: opts.find_apps,
             stop_limit: std::time::Duration::from_secs(2),
             live: Arc::clone(&live),
+            // Nothing hands one over yet: the window builds the local way
+            // in at startup, which is the thing the next change moves.
+            later: None,
             sources: {
                 let mut sources: Vec<Box<dyn tracewing_proxy::source::Source>> = vec![Box::new(
                     tracewing_proxy::source::Lan::new(Arc::clone(&other_devices)),

@@ -167,6 +167,7 @@ impl Harness {
                 find_apps: true,
                 stop_limit: Duration::from_secs(1),
                 live: Arc::clone(&live),
+                later: None,
                 sources: vec![
                     Box::new(Lan::new(Arc::clone(&other_devices))),
                     Box::new(given),
