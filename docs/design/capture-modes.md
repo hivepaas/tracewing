@@ -45,8 +45,8 @@ work the source is:
 | Hands over | **flows** | packets | packets |
 | Needs our own TCP stack | no | **yes** | **yes** |
 | Privilege | the user approves a system extension | Administrator | root for one script, asked with `pkexec` while it runs; the capture itself is unprivileged |
-| Shipping | Developer ID, notarized, packaged as a system extension | Wintun's signed `wintun.dll` beside our executable, driver inside it; nothing of ours to sign, but its licence is not ours either | nothing of ours to sign, and no kernel floor: `/dev/net/tun` has been there for twenty years |
-| Knows the app by | audit token, so bundle id | the TCP table, by address | name, first 16 characters only (`task->comm`) |
+| Shipping | Developer ID, notarized, packaged as a system extension | Wintun's signed `wintun.dll` beside our executable, driver inside it; nothing of ours to sign, but its licence is not ours either | nothing of ours to sign and no driver; the floor is `SO_BINDTOIFINDEX`, which the pinning uses and which arrived in early 2019 (musl's header patch says 5.1, systemd's wrapper says 5.0 — take it as 2019 rather than a version), older than any supported distribution |
+| Knows the app by | audit token, so bundle id | the TCP table, by address | its full path, from `/proc/<pid>/exe` |
 
 mitmproxy has all three and is worth reading before starting any of them; the
 design here is deliberately close to theirs, and `mitmproxy_rs` is MIT, so its
