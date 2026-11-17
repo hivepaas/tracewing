@@ -1093,8 +1093,8 @@ t4e3af9c3 = Soru
 # Tools offered: {tools}
 tb871bcf4 = Sunulan araçlar: { $tools }
 
-# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
-t53ab4670 = Bu sistemde yok. Windows'ta tracewing seçilen bir programın trafiğini rota üzerinden alır; macOS'ta bu, kendi sekmesi olan ağ uzantısıdır.
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
+tab504c3d = Bu sistemde yok. Windows ve Linux'ta tracewing seçilen bir programın trafiğini rota üzerinden alır; macOS'ta bu, kendi sekmesi olan ağ uzantısıdır.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Kapalı. Bu bilgisayarın trafiğini almak için yönetici gerekir: açmak tracewing'i yönetici olarak yeniden başlatır ve bu yeni bir oturum başlatır — şu an açık olan diskte kalır ve listeden yeniden açılabilir.

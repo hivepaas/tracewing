@@ -382,7 +382,26 @@ impl Engine {
             // Kept as the case rather than as its words: the window has a
             // translated sentence per case, and `crates/system` has no `tr!`
             // in it at all.
-            Err(why) => local_problem = Some(why),
+            Err(why) => {
+                // A refusal means **nothing was done**, so the switch must
+                // not stay on: the next start would ask again and be
+                // refused again, and nothing on screen would say why. Here
+                // rather than in the arm that was refused, because the rule
+                // is the mode's rather than a platform's and this already
+                // holds the file the switch was read from. The window reads
+                // it after this returns, so what it draws is off with the
+                // reason beside it.
+                if matches!(why, crate::local_source::NoSource::Refused) {
+                    let _ = crate::local_apps::save(
+                        &opts.data_dir,
+                        &crate::local_apps::Local {
+                            on: false,
+                            ..wanted
+                        },
+                    );
+                }
+                local_problem = Some(why);
+            }
         }
 
         let proxy = ProxyOptions {

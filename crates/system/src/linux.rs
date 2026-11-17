@@ -462,14 +462,61 @@ pub(crate) fn run_as_admin(what: &str, script: &str) -> Result<()> {
     if out.status.success() {
         return Ok(());
     }
-    bail!(
-        "{what}: {}",
-        why_pkexec_failed(
-            out.status.code(),
-            String::from_utf8_lossy(&out.stderr).trim()
-        )
-    )
+    // The case travels, and `what` is the context in front of it, so
+    // `{e:#}` still reads as the one sentence it did before.
+    Err(anyhow::Error::new(why_pkexec_failed(
+        out.status.code(),
+        String::from_utf8_lossy(&out.stderr).trim(),
+    ))
+    .context(what.to_owned()))
 }
+
+/// Why a privileged step did not run.
+///
+/// **Cases rather than a sentence, and that is measured rather than
+/// preferred**: this crate contains no `tr!` at all, so words carried from
+/// here to the window are untranslated English in somebody's Vietnamese or
+/// Russian tab. A caller that had to tell apart the one case somebody can
+/// act on -- rights not given -- would be matching on these words and then
+/// showing them.
+///
+/// It travels inside [`anyhow::Error`], so every caller that only wanted a
+/// message is unchanged and the one that cares asks
+/// `err.downcast_ref::<Denied>()`. The [`std::fmt::Display`] is still the
+/// line a log gets.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Denied {
+    /// The dialog was dismissed, or answered No. **Nothing ran**, so there
+    /// is nothing to put back and nothing to warn about -- which is what
+    /// lets a caller turn its switch off again rather than report a fault.
+    NotGiven,
+    /// There was no way to ask: polkit answered, and no agent is running to
+    /// show a dialog with. A different remedy from the above, which is the
+    /// whole reason it is a different case.
+    NoAgent,
+    /// Anything else, in the words that happened: the script's own last
+    /// line, or a status with nothing said. Prose, and the only one that is
+    /// -- an unexpected failure has no sentence written for it in fourteen
+    /// languages, and inventing one that says nothing would be worse.
+    Said(String),
+}
+
+impl std::fmt::Display for Denied {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotGiven => write!(f, "administrator rights were not given"),
+            Self::NoAgent => {
+                write!(
+                    f,
+                    "no password dialog could be shown (no polkit agent is running)"
+                )
+            }
+            Self::Said(said) => write!(f, "{said}"),
+        }
+    }
+}
+
+impl std::error::Error for Denied {}
 
 /// What to say about a `pkexec` that did not run the script.
 ///
@@ -482,31 +529,33 @@ pub(crate) fn run_as_admin(what: &str, script: &str) -> Result<()> {
 ///
 /// Anything else is handed on as the script's own complaint, which is the
 /// case that was already readable.
-fn why_pkexec_failed(code: Option<i32>, said: &str) -> String {
+fn why_pkexec_failed(code: Option<i32>, said: &str) -> Denied {
     let first = said.lines().next().unwrap_or_default().trim();
     if first.contains("Not authorized")
         || first.contains("dismissed")
         || (said.is_empty() && matches!(code, Some(126 | 127)))
     {
-        return "administrator rights were not given".to_owned();
+        return Denied::NotGiven;
     }
     if first.contains("authentication agent") {
-        return "no password dialog could be shown (no polkit agent is running)".to_owned();
+        return Denied::NoAgent;
     }
     if said.is_empty() {
-        return match code {
+        return Denied::Said(match code {
             Some(code) => format!("it stopped with status {code} and said nothing"),
             None => "it was killed before it could finish".to_owned(),
-        };
+        });
     }
     // The last line, not the first: `set -e` scripts say what went wrong
     // where they stopped, and what comes before it is progress.
-    said.lines()
-        .map(str::trim)
-        .rev()
-        .find(|line| !line.is_empty())
-        .unwrap_or(first)
-        .to_owned()
+    Denied::Said(
+        said.lines()
+            .map(str::trim)
+            .rev()
+            .find(|line| !line.is_empty())
+            .unwrap_or(first)
+            .to_owned(),
+    )
 }
 
 fn quote(path: &Path) -> String {
@@ -970,36 +1019,33 @@ pub fn browser_trust(browser: &Browser) -> BrowserTrust {
 
 #[cfg(test)]
 mod tests {
-    /// What a failed privileged step says, which before this was the script.
+    /// Which case a failed privileged step is, and what it says.
     ///
     /// The two `pkexec` answers are told apart because what somebody does
     /// next differs, and the dismissed one says **nothing**: it is the exit
-    /// code or it is a wall of script with an empty line after it.
+    /// code or it is a wall of script with an empty line after it. They are
+    /// cases rather than sentences because a window has to show a translated
+    /// one -- see [`Denied`] -- so both are asserted here: the case a caller
+    /// matches on, and the line a log gets.
     #[test]
     fn a_privileged_step_that_failed_says_which_and_why() {
         // Its own refusals, with nothing on the error stream.
-        assert_eq!(
-            why_pkexec_failed(Some(126), ""),
-            "administrator rights were not given"
-        );
-        assert_eq!(
-            why_pkexec_failed(Some(127), ""),
-            "administrator rights were not given"
-        );
+        assert_eq!(why_pkexec_failed(Some(126), ""), Denied::NotGiven);
+        assert_eq!(why_pkexec_failed(Some(127), ""), Denied::NotGiven);
         // And when it does say so.
         assert_eq!(
             why_pkexec_failed(
                 Some(1),
                 "Error executing command as another user: Not authorized"
             ),
-            "administrator rights were not given"
+            Denied::NotGiven
         );
         assert_eq!(
             why_pkexec_failed(
                 Some(1),
                 "polkit-agent-helper-1: no authentication agent found"
             ),
-            "no password dialog could be shown (no polkit agent is running)"
+            Denied::NoAgent
         );
         // The script's own complaint, which is the case that already read
         // well -- and the **last** line of it, because `set -e` stops where
@@ -1009,18 +1055,32 @@ mod tests {
                 Some(255),
                 "RTNETLINK answers: File exists\nError: either \"name\" is duplicate."
             ),
-            "Error: either \"name\" is duplicate."
+            Denied::Said("Error: either \"name\" is duplicate.".to_owned())
         );
         // A status with nothing said at all, which is not the same as being
         // refused: 126 and 127 are `pkexec`'s own, anything else is the
         // script's silence.
         assert_eq!(
             why_pkexec_failed(Some(2), ""),
-            "it stopped with status 2 and said nothing"
+            Denied::Said("it stopped with status 2 and said nothing".to_owned())
         );
         assert_eq!(
             why_pkexec_failed(None, ""),
-            "it was killed before it could finish"
+            Denied::Said("it was killed before it could finish".to_owned())
+        );
+        // The sentences themselves, which are what a log keeps and what the
+        // one case with no translation shows.
+        assert_eq!(
+            Denied::NotGiven.to_string(),
+            "administrator rights were not given"
+        );
+        assert_eq!(
+            Denied::NoAgent.to_string(),
+            "no password dialog could be shown (no polkit agent is running)"
+        );
+        assert_eq!(
+            Denied::Said("as it came".to_owned()).to_string(),
+            "as it came"
         );
     }
 

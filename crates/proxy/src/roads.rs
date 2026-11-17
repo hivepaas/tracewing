@@ -314,8 +314,14 @@ fn says_up(carrier: Option<&str>) -> bool {
 }
 
 /// What the kernel numbers an interface, from its name.
+///
+/// Public because the number is how an interface is named everywhere else
+/// here -- [`Road::interface`], [`Road::luid`], [`Mine::luid`], the socket
+/// option -- and the one caller outside this file holds a device by its
+/// name: the adapter local mode opens is `tracewing`, and what it has to
+/// leave out of its own way out is that name's index.
 #[cfg(target_os = "linux")]
-fn index_of(name: &str) -> Option<u32> {
+pub fn index_of(name: &str) -> Option<u32> {
     let name = std::ffi::CString::new(name).ok()?;
     // SAFETY: a null-terminated name, borrowed for the call.
     let index = unsafe { libc::if_nametoindex(name.as_ptr()) };

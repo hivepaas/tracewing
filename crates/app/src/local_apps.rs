@@ -53,14 +53,26 @@ pub enum Support {
 
 impl Support {
     /// Which of the three, for a machine that captures by route or does not,
-    /// and a tracewing that is elevated or is not.
+    /// a tracewing that is elevated or is not, and a system where the one
+    /// privileged step can ask for rights **by itself** rather than needing
+    /// the whole process to have them.
     ///
-    /// A plain function over two bits, so that every answer is reachable from
-    /// a test on any machine -- the same reason
+    /// The third bit is the difference between the two systems that capture
+    /// by route, and it is not a detail. On Windows the adapter is created
+    /// inside this process, so the process is what has to be elevated --
+    /// which means a relaunch, a new session, and a tab that says so before
+    /// it asks. On Linux the privileged part is one script, `pkexec` asks
+    /// for rights while it runs, and the capture itself is unprivileged: the
+    /// device exists already and belongs to this user. So Linux is `Ready`
+    /// without being elevated, and `NeedsAdministrator` is a state it never
+    /// reaches.
+    ///
+    /// A plain function over three bits, so that every answer is reachable
+    /// from a test on any machine -- the same reason
     /// [`tracewing_system::child::start_at`] is one. The single line no test
     /// can settle is which bits *this* machine has, and that is [`Self::here`].
-    pub fn of(by_route: bool, elevated: bool) -> Self {
-        match (by_route, elevated) {
+    pub fn of(by_route: bool, elevated: bool, asks_for_rights: bool) -> Self {
+        match (by_route, elevated || asks_for_rights) {
             (false, _) => Self::NotOnThisSystem,
             (true, true) => Self::Ready,
             (true, false) => Self::NeedsAdministrator,
@@ -68,12 +80,15 @@ impl Support {
     }
 
     /// This machine's answer.
-    ///
-    /// Windows only for now. Linux captures by route as well and its half is
-    /// being built beside this one; when it lands, this is the line that
-    /// changes, and `of` above is where the rest of the behaviour already is.
     pub fn here() -> Self {
-        Self::of(cfg!(windows), tracewing_system::child::elevated())
+        Self::of(
+            cfg!(any(windows, target_os = "linux")),
+            tracewing_system::child::elevated(),
+            // Linux asks when it takes the step, through the same polkit
+            // dialog the certificate and the HTTP/3 block already ask
+            // through. Windows cannot: see `of` above.
+            cfg!(target_os = "linux"),
+        )
     }
 }
 
@@ -209,7 +224,7 @@ impl crate::traffic::Traffic {
         let nothing = self.local.local.programs.is_empty();
         let says = match (self.local.support, on, running) {
             (Support::NotOnThisSystem, _, _) => tr!(
-                "Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own."
+                "Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own."
             ),
             (Support::NeedsAdministrator, _, _) => tr!(
                 "Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list."
@@ -448,28 +463,51 @@ mod tests {
         dir
     }
 
-    /// All four inputs, including the two no machine here can be in, so that
+    /// Every input, including the ones no machine here can be in, so that
     /// the tab's three states are settled by a test rather than by whichever
     /// machine somebody happens to run it on.
     #[test]
     fn what_a_machine_can_do_about_the_local_way_in() {
-        assert_eq!(Support::of(true, true), Support::Ready);
+        // Elevated already: the Windows shape, once the relaunch has
+        // happened.
+        assert_eq!(Support::of(true, true, false), Support::Ready);
         assert_eq!(
-            Support::of(true, false),
+            Support::of(true, false, false),
             Support::NeedsAdministrator,
             "it could, once tracewing comes back as one"
         );
+        // Not elevated, and does not need to be: the Linux shape, where the
+        // one privileged step asks for itself. This is the answer the third
+        // bit exists for -- without it a Linux tab would offer a relaunch
+        // that is neither needed nor possible.
         assert_eq!(
-            Support::of(false, false),
-            Support::NotOnThisSystem,
-            "and where nothing captures by route, elevation changes nothing"
+            Support::of(true, false, true),
+            Support::Ready,
+            "the step asks when it runs, so the process never has to be an administrator"
         );
-        assert_eq!(Support::of(false, true), Support::NotOnThisSystem);
+        assert_eq!(
+            Support::of(true, true, true),
+            Support::Ready,
+            "and being elevated as well changes nothing"
+        );
+        for asks in [false, true] {
+            for elevated in [false, true] {
+                assert_eq!(
+                    Support::of(false, elevated, asks),
+                    Support::NotOnThisSystem,
+                    "where nothing captures by route, neither bit changes anything"
+                );
+            }
+        }
         // What this machine is, which is the one line `of` cannot settle.
-        match cfg!(windows) {
+        match cfg!(any(windows, target_os = "linux")) {
             false => assert_eq!(Support::here(), Support::NotOnThisSystem),
-            // Elevated or not, it is one of the two that captures by route.
             true => assert_ne!(Support::here(), Support::NotOnThisSystem),
+        }
+        // And on Linux it is the one answer that needs nothing first, which
+        // is what the tab draws its switch from.
+        if cfg!(target_os = "linux") {
+            assert_eq!(Support::here(), Support::Ready);
         }
     }
 

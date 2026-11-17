@@ -1099,8 +1099,8 @@ t4e3af9c3 = Pregunta
 # Tools offered: {tools}
 tb871bcf4 = Herramientas ofrecidas: { $tools }
 
-# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
-t53ab4670 = No en este sistema. En Windows, tracewing toma el tráfico de un programa elegido por la ruta; en macOS es la extensión de red, que tiene su propia pestaña.
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
+tab504c3d = No en este sistema. En Windows y Linux, tracewing toma el tráfico de un programa elegido por la ruta; en macOS es la extensión de red, que tiene su propia pestaña.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Desactivado. Tomar el tráfico de este equipo requiere un administrador: activarlo inicia tracewing de nuevo como tal, y eso empieza una sesión nueva — la abierta ahora queda en el disco y se puede volver a abrir desde la lista.

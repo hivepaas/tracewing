@@ -1348,14 +1348,126 @@ Measured here, every line of it with `CapEff: 0000000000000000`:
   ICMPv6's own origin and type, which differ from IPv4's), and that is said
   here rather than left to look measured.
 
-#### What is not in, and nothing captures until it is
+#### The assembly: an arm, not a second mode
 
-**The engine never builds one.** `make_adapter`, `roads::watching` and
-`leave_by` have no caller, so no adapter is made, no way out is pinned, and
-no `Tun` is pushed into the sources. Until that lands this mode still
-captures nothing — the difference is that the piece it is missing is now
-wiring rather than design, and a `Tun` that would capture the machine can no
-longer be written by accident.
+The engine builds one now, and it builds it through the **same function** the
+Windows one goes through:
+[`local_source::start`](../../crates/app/src/local_source.rs) decides with
+`Support::of` and calls a `platform` function per system, over a sieve, a
+pinning watcher and a `Pinned` wrapper that are shared. What differs between
+the two arms is the device and how an echo leaves. Everything else — which
+programs are kept, what happens to the rest, what the window is told when
+there is no source — is the same question wherever it is asked.
+
+Three things in that shape had to widen for this arm, and each is a fact
+about Linux rather than a preference:
+
+- **`Support::of` takes a third bit, `asks_for_rights`.** Windows creates its
+  adapter inside tracewing's own process, so the *process* is what must be
+  elevated — a relaunch, a new session, and a tab that says so before it
+  asks. Linux needs rights for **one script**, `pkexec` asks for them while
+  it runs, and the capture itself is unprivileged. So Linux is `Ready`
+  without being elevated, and `NeedsAdministrator` is a state it never
+  reaches. Writing `elevated: true` from `here()` would have been the same
+  behaviour and a parameter that lied.
+- **`Device` is implemented for `Arc<D>`**, `?Sized`, so an `Arc<dyn Device>`
+  is one too. A mode the window can switch off needs the device twice: the
+  pump reads it and the window shuts it down. Windows had that already,
+  hand-written into `Held`.
+- **`run_as_admin` returns a typed refusal**,
+  [`Denied`](../../crates/system/src/linux.rs) — `NotGiven | NoAgent |
+  Said(String)` — carried inside `anyhow::Error`, which the Linux arm
+  downcasts into `NoSource::Refused`. Without it, a dismissed polkit dialog
+  — the commonest failure of the whole mode — arrives as
+  `Failed("make tracewing's network adapter: administrator rights were not
+  given")`, which is untranslated English in somebody's Vietnamese window.
+  `crates/system` contains no `tr!` at all, which is the measurement behind
+  both this and the `NoSource` cases themselves.
+
+##### Made and read back before the device is opened
+
+`make_adapter` **deletes the device and makes it again** — that is what makes
+switching on twice work — so the order is load-bearing: a pump that opened
+the device first would be holding a descriptor to a device about to go, and
+would read nothing for the rest of the session. So the arm makes the adapter,
+reads it back with `look()`, and only then opens it. Windows has no analogue:
+`WintunAdapter::open` creates the adapter and opens it in one call.
+
+Read back rather than trusted, because the step is a script run by another
+process, and "it exited 0 having done something else" is not a case this can
+rule out — while holding a device nothing routes into is a capture that
+silently sees nothing.
+
+##### A refused step leaves the switch off
+
+`Raised::Refused` on Windows is handled in the window, because that is where
+the relaunch is asked for. On Linux the asking happens inside
+`Engine::start`, where `pkexec` runs — so that is where the switch is written
+off, in the one `Err` arm that gathers the mode, rather than in the platform
+arm that was refused. One writer for one rule: a refusal means nothing was
+done, on either system.
+
+Not tidiness. Leaving it on means a polkit dialog at **every** start
+thereafter, refused each time, with nothing on screen saying why. The engine
+runs before the window loads the file, so what the tab draws is off with the
+reason beside it — the same ending as #334, reached from the other side.
+
+##### What a Linux machine said, and the Windows ending it is not
+
+The whole assembly, run here (`tests/local_live_linux.rs`, ignored):
+
+```
+the adapter: Look { device: true, ours: true, up: true, knobs: true,
+                    addresses: true, routes: true }
+  if 61 bits 0 metric 50 v6 false connected true
+  if 61 bits 24 metric 0 v6 false connected true
+  if 61 bits 0 metric 50 v6 true connected true
+  …
+way out for IPv4: Some(6)   way out for IPv6: Some(6)
+```
+
+A default route in each family at metric 50, under this machine's Wi-Fi
+default of 600, and the way out is still interface 6 — the real one — which
+is the loop this mode has to avoid.
+
+Then it lets go, and **this is where the two platforms end differently**.
+Windows asserts that none of the adapter's rows are left. Here they stay:
+
+```
+61: tracewing: <NO-CARRIER,POINTOPOINT,MULTICAST,NOARP,UP> state DOWN
+/sys/class/net/tracewing/carrier: 0
+default dev tracewing scope link metric 50 dead linkdown
+default via 192.168.1.1 dev wlp8s0 proto dhcp metric 600
+10.77.0.0/24 dev tracewing proto kernel scope link src 10.77.0.1 dead linkdown
+```
+
+The rows are still there and the machine routes as it did before. That is the
+whole shape of this mode rather than an untidiness: nothing has to be put
+back, so a crash or a `SIGKILL` ends the capture as cleanly as the switch
+does.
+
+What makes them harmless is one thing and it is now measured rather than
+reasoned: `out_by` called with `ours = 0` — excluding **nothing** — still
+answers interface 6 in both families, because `Road::connected` is false for
+a carrier-down interface. The routing tables themselves say nothing about it:
+`/proc/net/route` keeps `RTF_UP` set, which is why that field is read from
+`/sys/class/net/<i>/carrier` and not from the table.
+
+##### One dialog per boot, and it is on the startup path
+
+With the switch on, the first start after a **boot** asks polkit while
+`Engine::start` blocks, and the window does not appear until it is answered.
+`ip tuntap` devices are persistent but do not survive a reboot, so it is once
+per boot; every later start finds `look().ready()` and is silent.
+
+This is named rather than hidden because the failure it leads to is a bad
+one: somebody who has forgotten the switch is on meets a password prompt with
+no window to explain it, and the visible symptom is tracewing not starting.
+The fix is to take the privileged step off the startup path — the engine comes
+up with the way in **not** serving, the window says so, and the step runs from
+there with a line of its own in the tab. That is engine work rather than an
+arm, and it would improve the Windows side too, which today waits on the
+relaunch in the same place.
 
 ### WireGuard
 

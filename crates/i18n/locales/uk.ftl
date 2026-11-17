@@ -1123,8 +1123,8 @@ t4e3af9c3 = Запитано
 # Tools offered: {tools}
 tb871bcf4 = Запропоновані інструменти: { $tools }
 
-# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
-t53ab4670 = Не на цій системі. У Windows tracewing бере трафік вибраної програми за маршрутом; у macOS це мережеве розширення, яке має власну вкладку.
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
+tab504c3d = Не на цій системі. У Windows і Linux tracewing бере трафік вибраної програми за маршрутом; у macOS це мережеве розширення, яке має власну вкладку.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Вимкнено. Щоб брати трафік цього комп'ютера, потрібен адміністратор: увімкнення перезапустить tracewing від його імені, і це почне новий сеанс — відкритий зараз залишиться на диску, його можна відкрити знову зі списку.
