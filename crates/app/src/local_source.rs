@@ -158,7 +158,11 @@ pub fn start(
         Support::NeedsAdministrator => return Err(NoSource::NeedsAdministrator),
         Support::Ready => {}
     }
-    let _ = (ports, data_dir, &local.programs);
+    // Borrowed, not moved: the Windows arm below takes them. Off Windows
+    // nothing reaches that arm, and without this line the arguments read as
+    // unused -- which was a line this file carried in the shape that moved
+    // them, and only a Windows compiler said so.
+    let _ = (&ports, data_dir, &local.programs);
     #[cfg(windows)]
     {
         return windows::start(local, ports, data_dir)
@@ -245,6 +249,7 @@ fn watching(ours: u64, stop: tracewing_proxy::source::Stop) -> Built<()> {
 #[cfg(windows)]
 mod windows {
     use super::*;
+    use std::sync::Arc;
     use tracewing_proxy::{icmp, tun::Tun, wintun::Held};
 
     pub(super) fn start(
