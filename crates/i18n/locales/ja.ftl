@@ -2551,6 +2551,18 @@ tb198618d = iOS シミュレーター
 # Find simulators
 ta969b661 = シミュレーターを探す
 
+# Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
+tbc409e23 = この経路のものはコンピュータに残りません: tracewing のアダプターは本体とともに消え、そのルートも一緒です。閉じた場合も強制終了された場合も同じです。
+
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
+tac4db5f4 = tracewing が作成したデバイスは残りますが、キャリアは切れ、ルートは無効と印されるため、そこへは何も送られません — 次回の起動はそれをそのまま使い、パスワードを再び尋ねません。
+
+# A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
+t7342daf6 = 異常終了した実行は、プロキシ構成を残すことがあります。それは何も取り込みません: 拡張機能はその実行が作成した鍵を持つ相手にしかフローを渡さないため、tracewing が消えていれば各フローは本来どおり外へ出ます。次回の実行がそれを上書きし、これをオフにすると削除されます。
+
+# The certificate stays trusted until Remove, in step 1, takes it out.
+tff791d1f = 証明書は、手順 1 の「削除」で取り除くまで信頼されたままです。
+
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = システムプロキシと HTTP/3 のブロックは、tracewing を閉じたときやクラッシュしたときに元に戻ります。USB で設定した Android デバイスも同じです。証明書は、ステップ 1 の「削除」で外すまで信頼されたままです。手動で設定した電話は、その端末で外すまで Wi-Fi プロキシと証明書が残ります。方法は各デバイスのガイドにあります。他のデバイスは、設定でオフにするまでこのコンピューターのプロキシに接続できます。
 

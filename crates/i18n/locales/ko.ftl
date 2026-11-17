@@ -2551,6 +2551,18 @@ tb198618d = iOS 시뮬레이터
 # Find simulators
 ta969b661 = 시뮬레이터 찾기
 
+# Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
+tbc409e23 = 이 경로의 것은 컴퓨터에 남지 않습니다: tracewing의 어댑터는 본체와 함께 사라지고 경로도 함께 사라집니다. 닫든 강제 종료되든 같습니다.
+
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
+tac4db5f4 = tracewing이 만든 장치는 남지만 캐리어가 내려가고 경로는 죽은 것으로 표시되어 아무것도 그쪽으로 보내지지 않습니다 — 다음 실행은 그것을 그대로 사용하며 암호를 다시 묻지 않습니다.
+
+# A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
+t7342daf6 = 비정상적으로 끝난 실행은 프록시 구성을 남길 수 있습니다. 그것은 아무것도 수집하지 않습니다: 확장은 그 실행이 만든 키를 가진 상대에게만 플로우를 넘기므로, tracewing이 없으면 모든 플로우는 원래대로 나갑니다. 다음 실행이 덮어쓰며, 이것을 끄면 제거됩니다.
+
+# The certificate stays trusted until Remove, in step 1, takes it out.
+tff791d1f = 인증서는 1단계의 제거로 빼낼 때까지 신뢰된 상태로 남습니다.
+
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = 시스템 프록시와 HTTP/3 차단은 tracewing이 닫히거나 비정상 종료되면 원래대로 돌아가며, USB로 설정한 Android 기기도 마찬가지입니다. 인증서는 1단계의 제거로 빼기 전까지 계속 신뢰됩니다. 직접 설정한 휴대폰은 그 기기에서 지울 때까지 Wi-Fi 프록시와 인증서가 남아 있습니다. 방법은 각 기기의 안내에 있습니다. 다른 기기는 설정에서 끄기 전까지 이 컴퓨터의 프록시를 쓸 수 있습니다.
 

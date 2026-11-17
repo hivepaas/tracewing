@@ -2551,6 +2551,18 @@ tb198618d = iOS simulator
 # Find simulators
 ta969b661 = Tìm simulator
 
+# Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
+tbc409e23 = Không có gì của đường vào này ở lại máy: adapter của tracewing đi theo nó, kèm cả các route, dù nó được đóng hay bị giết.
+
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
+tac4db5f4 = Thiết bị mà tracewing tạo vẫn ở lại, với carrier đã tắt và các route bị đánh dấu chết, nên không có gì được gửi vào đó — và lần chạy sau dùng lại nó mà không hỏi mật khẩu nữa.
+
+# A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
+t7342daf6 = Một lần chạy kết thúc tồi có thể để lại cấu hình proxy. Nó không bắt được gì: extension chỉ trao flow cho thứ giữ đúng khoá mà lần chạy đó tạo ra, nên khi tracewing đã biến mất thì mọi flow đi ra như bình thường. Lần chạy sau ghi đè nó, và tắt mục này sẽ gỡ nó.
+
+# The certificate stays trusted until Remove, in step 1, takes it out.
+tff791d1f = Chứng chỉ vẫn được tin cho tới khi Remove ở bước 1 gỡ nó ra.
+
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = System proxy và việc chặn HTTP/3 tự trả về khi tracewing tắt hoặc bị crash, thiết bị Android thiết lập qua USB cũng vậy. Chứng chỉ vẫn được tin cho tới khi nút Remove ở bước 1 gỡ nó. Điện thoại thiết lập bằng tay vẫn giữ proxy Wi-Fi và chứng chỉ cho tới khi được gỡ trên chính nó: hướng dẫn của từng loại thiết bị nói cách làm. Thiết bị khác vẫn dùng được proxy của máy này cho tới khi tắt tùy chọn đó trong Settings.
 

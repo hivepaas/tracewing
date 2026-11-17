@@ -541,7 +541,10 @@ impl Traffic {
                 route.as_ref().is_some_and(|route| {
                     !matches!(route.way, Way::Terminal | Way::Browser)
                 }),
-                |d| d.child(self.render_when_done(cx)),
+                |d| {
+                    let way = route.as_ref().map(|route| route.way).unwrap_or(Way::SystemProxy);
+                    d.child(self.render_when_done(way, cx))
+                },
             )
     }
 
@@ -1690,14 +1693,77 @@ pub fn mcp_setup(exe: &str) -> (String, String) {
     (claude, config)
 }
 
+/// Which machinery the local way in rests on, for the one card whose answer
+/// differs by all three.
+///
+/// A value rather than a `cfg!` inside the sentence, so that every answer can
+/// be read by a test on any machine: two of the three are otherwise sentences
+/// nothing here ever renders, which is how a page ends up saying something
+/// nobody has read.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Machine {
+    Windows,
+    Linux,
+    Mac,
+}
+
+impl Machine {
+    pub fn here() -> Self {
+        match (cfg!(windows), cfg!(target_os = "macos")) {
+            (true, _) => Self::Windows,
+            (_, true) => Self::Mac,
+            _ => Self::Linux,
+        }
+    }
+}
+
+/// What the local way in leaves behind, which is not the same thing twice.
+///
+/// **Windows is measured**: with the adapter up on a real machine, a hard
+/// `Stop-Process -Force` left no adapter and no routes of ours. **Linux is
+/// measured too**, by the arm that built it: the device stays with its
+/// carrier down and its rows marked dead, and the next run finds it ready
+/// and asks for nothing. **macOS is documented rather than watched** --
+/// `system::extension`'s own header says a run that ends badly leaves the
+/// configuration in place and that this is harmless, because the extension
+/// hands a flow over only to something holding the key that run made. Nobody
+/// here has a Mac to see it, so the sentence says what the design
+/// guarantees and not what somebody observed.
+pub fn local_when_done(machine: Machine) -> String {
+    let left = match machine {
+        Machine::Windows => tr!(
+            "Nothing of the way in stays on this computer: tracewing's adapter goes when it \
+             does, and its routes with it, whether it is closed or killed."
+        ),
+        Machine::Linux => tr!(
+            "The device tracewing made stays, with its carrier down and its routes marked \
+             dead, so nothing is sent into it — and the next run picks it up without asking \
+             for a password again."
+        ),
+        Machine::Mac => tr!(
+            "A run that ends badly can leave the proxy configuration in place. It captures \
+             nothing: the extension hands a flow over only to something holding the key that \
+             run made, so with tracewing gone every flow goes out as it would have. The next \
+             run replaces it, and switching this off removes it."
+        ),
+    };
+    let certificate = tr!("The certificate stays trusted until Remove, in step 1, takes it out.");
+    format!("{left} {certificate}")
+}
+
 impl Traffic {
     /// AI tools, reading what tracewing records through its MCP server.
     /// What goes back by itself, and what is the user's to undo, gathered.
-    fn render_when_done(&mut self, cx: &mut Context<Self>) -> Div {
-        let other_devices = self.engine.settings.other_devices;
-        aside(
-            tr!("When you are done"),
-            tr!(
+    fn render_when_done(&mut self, way: Way, cx: &mut Context<Self>) -> Div {
+        // The local way in sets up none of what the paragraph below
+        // describes -- no system proxy, no device, no phone -- and what it
+        // *does* leave differs by system, so it says its own. The comment on
+        // the call site records the same fault being fixed for a terminal by
+        // hiding the card; here it is shown, because something really is
+        // left and somebody is owed the truth about what.
+        let says = match way {
+            Way::Apps => local_when_done(Machine::here()),
+            _ => tr!(
                 "The system proxy and the block on HTTP/3 go back when tracewing closes, or if \
                  it crashes, and so does an Android device set up over USB. The certificate \
                  stays trusted until Remove, in step 1, takes it out. A phone set up by hand \
@@ -1705,8 +1771,11 @@ impl Traffic {
                  device's guide says how. Other devices can reach this computer's proxy until \
                  that is turned off in Settings."
             ),
-        )
-        .when(other_devices, |d| {
+        };
+        // Other devices is not something this answer turned on, so the line
+        // about it and the button to it belong to the answers that did.
+        let other_devices = self.engine.settings.other_devices && way != Way::Apps;
+        aside(tr!("When you are done"), says).when(other_devices, |d| {
             d.child(
                 button("setup-done-devices", tr!("Open settings"), false).on_click(cx.listener(
                     |this, _, _, cx| {
@@ -1747,6 +1816,30 @@ impl Traffic {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// All three answers, including the two this machine never draws.
+    ///
+    /// The point is not the wording but that each says what **that** system
+    /// leaves: an adapter that goes, a device that stays, a configuration
+    /// that may linger harmlessly. A card with one paragraph for three
+    /// machineries was true of at most one of them.
+    #[test]
+    fn what_is_left_behind_is_said_per_machinery() {
+        let windows = local_when_done(Machine::Windows);
+        let linux = local_when_done(Machine::Linux);
+        let mac = local_when_done(Machine::Mac);
+        assert!(windows.contains("Nothing of the way in stays"), "{windows}");
+        assert!(linux.contains("stays"), "{linux}");
+        assert!(
+            !linux.contains("Nothing of the way in stays"),
+            "the device does stay on Linux, which is the whole difference: {linux}"
+        );
+        assert!(mac.contains("captures nothing"), "{mac}");
+        // The one sentence that was already about this page, on all three.
+        for said in [&windows, &linux, &mac] {
+            assert!(said.contains("certificate stays trusted"), "{said}");
+        }
+    }
 
     #[test]
     fn a_terminal_of_ones_own_is_told_how_to_go_through() {

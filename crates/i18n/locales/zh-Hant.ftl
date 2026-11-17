@@ -2551,6 +2551,18 @@ tb198618d = iOS 模擬器
 # Find simulators
 ta969b661 = 尋找模擬器
 
+# Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
+tbc409e23 = 這條入口不會在這台電腦留下任何東西：tracewing 的介面卡隨它一同消失，路由也隨之消失，無論是正常關閉還是被強制結束。
+
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
+tac4db5f4 = tracewing 建立的裝置會保留，但其連線已中斷、路由被標記為失效，因此不會有任何流量被送入 — 下次啟動會直接沿用它，不再詢問密碼。
+
+# A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
+t7342daf6 = 異常結束的執行可能會留下代理設定。它什麼也擷取不到：擴充功能只會把流量交給持有該次執行所產生金鑰的一方，所以 tracewing 不在時，每一條流量都照常送出。下次執行會覆蓋它，關閉此項則會移除它。
+
+# The certificate stays trusted until Remove, in step 1, takes it out.
+tff791d1f = 憑證會一直被信任，直到步驟 1 中的「移除」把它取出。
+
 # The system proxy and the block on HTTP/3 go back when tracewing closes, or if it crashes, and so does an Android device set up over USB. The certificate stays trusted until Remove, in step 1, takes it out. A phone set up by hand keeps its Wi-Fi proxy and certificate until they are taken off there: each device's guide says how. Other devices can reach this computer's proxy until that is turned off in Settings.
 tf4b6cd8a = tracewing 關閉或當機時，系統代理和 HTTP/3 封鎖都會恢復原狀，透過 USB 設定的 Android 裝置也是如此。憑證會一直受信任，直到第 1 步中的「移除」將其刪除。手動設定的手機會保留 Wi-Fi 代理伺服器和憑證，直到在手機上將其刪除：各裝置的指南說明了做法。在「設定」中關閉該選項之前，其他裝置都能使用這台電腦的代理伺服器。
 
