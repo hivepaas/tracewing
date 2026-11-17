@@ -687,6 +687,31 @@ rediscovering:
   why [`wintun.rs`](../../crates/proxy/src/wintun.rs) pins one, and now there
   is a source for it rather than a hunch.
 
+**Whether Windows has the dead-route problem too is not known here.** On
+Linux it did: a device up with its carrier down keeps its routes, `/proc`
+lists them as up, and `out_by` chose one of them over the real interface
+until the carrier was read — the measurement is under "Which way out is not
+ours" in the Linux section. Windows reads `GetIpForwardTable2`, and whether a
+disconnected interface's rows survive there, and whether `Metric` or the
+`MIB_IPFORWARD_ROW2` flags say so, has not been tested. If they do survive,
+the same silent hang is reachable, and the two `/1` halves above make it
+worse rather than better: a dead interface with a `/1` pair beats a live
+default route on reach. The case to arrange is a **second** interface going
+down while tracewing holds its own — not the adapter itself, which is
+already measured — with the table dumped before and after, and
+`GetIfEntry2`'s `MediaConnectState` and `OperStatus` beside it, since that is
+the Windows analogue of a carrier and the likelier place the state shows.
+
+**Whichever way those tables answer, the rule that decides it is the same on
+both platforms, and it is not symmetric.** Excluding too much leaves a family
+with no way out, which is `Out::Nowhere` in `upstream.rs`: the connection is
+refused and says why. Excluding too little pins to an interface the kernel is
+ignoring, and that **hangs**. So anything the tables cannot vouch for is not
+a way out — a loud failure beats a silent wait, and neither of them is the
+loop. Worth having here rather than in each platform's own section, because
+it is the kind of choice that looks like caution and is the opposite: the
+cautious-looking default is the quiet one.
+
 One thing this settles, and it is worth saying plainly: a TUN captures by
 **route**, which is to say by destination, and no route can express "this
 program". So this mode captures the whole machine, and choosing one program
@@ -934,6 +959,25 @@ Two things the real tables of an ordinary machine taught the parser:
   interface once for both families, where Windows numbers it per family and
   identifies it by a LUID spanning them. The distinction exists because
   Windows needs it.
+- **A route that is up is not a route that works**, which took a third
+  reading to see and is the one the flag cannot answer. A device that is up
+  with its **carrier** down keeps its routes, and `/proc` lists them with
+  `RTF_UP` set: that is the `dead linkdown` state, and the tables say nothing
+  about it. So the carrier is read too, from
+  `/sys/class/net/<iface>/carrier`, and anything but a plain `1` — including
+  unreadable — is not a way out. That direction is deliberate: a family left
+  with no way out at all is `Out::Nowhere` in `upstream.rs`, which refuses
+  the connection and says so, where a dead interface kept is pinned to and
+  waited on. A loud failure beats a silent wait.
+
+  Measured both ways round, with a second device up, carrier down, and a
+  default route of metric 40 beside the real one's 600. Without the carrier
+  read, `out_by` chose **that** interface while the kernel routed through the
+  Wi-Fi: `way out v4: Some(48)` against the kernel's index 6. With it,
+  `Some(6)`. An unplugged cable with a static route is enough to arrange it,
+  and a connection pinned to an interface the kernel is ignoring **hangs
+  rather than fails** — 0.84s against a 3s timeout — so this was the quiet
+  failure the whole seam exists to prevent, reachable by accident.
 
 What this cannot see: both files are the **main** table, so a machine routing
 by `ip rule` has routes that are not here — the same class of gap as an
@@ -1098,8 +1142,9 @@ passed:
   it. Pinned to an interface the kernel is ignoring, a connection **hangs
   rather than fails** (0.84s against a 3s timeout, measured for the
   exclusion), so this is the quiet failure that whole seam exists to avoid.
-  A carrier check is the next piece of work, and `/sys/class/net/<iface>/
-  carrier` is where it comes from — the same file this reading already uses.
+  That is **fixed**: `roads_now` reads
+  `/sys/class/net/<iface>/carrier` too, the same file this reading already
+  uses, and the measurement is in "Which way out is not ours" above.
 - **A destination of all zeros is not a default route.** `0.0.0.0/1` and
   `::/1` start at the same address and cover half of it — and are not a
   hypothetical: the two `/1` halves are exactly how the Windows side covers
