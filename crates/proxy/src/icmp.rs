@@ -295,7 +295,7 @@ pub fn answer_for(ping: &Ping, answer: &Answer) -> Option<Vec<u8>> {
 /// ([`crate::roads::watch`]) is already the thing that knows. `None` means
 /// there is no address to send from, and then nothing is sent: an echo from
 /// the wrong interface would be routed into tracewing's own adapter.
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 pub type From = std::sync::Arc<dyn Fn(bool) -> Option<IpAddr> + Send + Sync>;
 
 /// Echoes through IP Helper, which is what `ping` itself uses.
@@ -486,6 +486,318 @@ fn sockaddr6(addr: Ipv6Addr) -> windows_sys::Win32::Networking::WinSock::SOCKADD
     out
 }
 
+/// Echoes through a **ping socket**, which is what `ping` itself uses on
+/// Linux and which needs no privilege either.
+///
+/// `socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)` is allowed to any process
+/// whose group is inside `net.ipv4.ping_group_range`. Measured here with
+/// `CapEff: 0000000000000000`: the range is `0 2147483647`, both families
+/// open, an echo to `1.1.1.1` comes back, and the payload returns verbatim.
+/// A raw ICMP socket would need `CAP_NET_RAW`, which is the privilege this
+/// whole mode is shaped to avoid.
+///
+/// `None` where the machine will not allow one at all: with
+/// `ping_group_range` set to `1 0` both families answer **EACCES**, measured
+/// by setting it and putting it back. The mode then runs with no echo, which
+/// is a feature missing rather than traffic going where it should not -- see
+/// [`crate::tun::Tun::answering`].
+///
+/// ## Two things the kernel does that the caller has to know
+///
+/// - **The identifier is the kernel's, not ours.** A ping socket rewrites it
+///   to the socket's own port and recomputes the checksum: an echo sent with
+///   `0xbeef` came back as `3164`. So a reply is matched by its **sequence
+///   number**, which is passed through untouched. The answer put back on the
+///   wire carries the client's identifier, because [`answer_for`] builds it
+///   from the request rather than from the reply.
+/// - **A router's complaint arrives on the error queue**, not as a datagram.
+///   With `IP_RECVERR` set, `recv` fails with `EHOSTUNREACH` and
+///   `recvmsg(MSG_ERRQUEUE)` then carries a `sock_extended_err` and the
+///   router's address. Measured with a hop limit of 1 to `1.1.1.1`: origin
+///   `SO_EE_ORIGIN_ICMP`, type 11, and `192.168.1.1`, which is this
+///   machine's gateway. That is what `tracert` reads.
+#[cfg(target_os = "linux")]
+pub fn by_ping_socket(from: From, within: std::time::Duration) -> Option<Echo> {
+    // A trial open, because the setting is the machine's rather than this
+    // echo's: if it is forbidden it is forbidden for every ping, and the
+    // caller wants to know before it offers the feature.
+    let allowed = ping_socket(false).is_ok() || ping_socket(true).is_ok();
+    if !allowed {
+        tracing::debug!("no ping socket: net.ipv4.ping_group_range excludes this process");
+        return None;
+    }
+    Some(std::sync::Arc::new(move |ping: Ping| {
+        let from = std::sync::Arc::clone(&from);
+        Box::pin(async move {
+            let Some(source) = from(ping.to.is_ipv6()) else {
+                tracing::debug!("no address to echo {} from", ping.to);
+                return Answer::Silent;
+            };
+            tokio::task::spawn_blocking(move || echo_now(source, &ping, within))
+                .await
+                .unwrap_or(Answer::Silent)
+        })
+    }))
+}
+
+/// A ping socket of one family, owned so that it closes however this returns.
+#[cfg(target_os = "linux")]
+fn ping_socket(v6: bool) -> std::io::Result<std::os::fd::OwnedFd> {
+    use std::os::fd::FromRawFd;
+    let (family, proto) = match v6 {
+        true => (libc::AF_INET6, libc::IPPROTO_ICMPV6),
+        false => (libc::AF_INET, libc::IPPROTO_ICMP),
+    };
+    // SAFETY: a socket call with constants, which returns a descriptor or -1.
+    let fd = unsafe { libc::socket(family, libc::SOCK_DGRAM, proto) };
+    if fd < 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    // SAFETY: a descriptor this call has just made and nothing else holds.
+    Ok(unsafe { std::os::fd::OwnedFd::from_raw_fd(fd) })
+}
+
+/// One echo, synchronously. Only called on a blocking thread.
+#[cfg(target_os = "linux")]
+fn echo_now(source: IpAddr, ping: &Ping, within: std::time::Duration) -> Answer {
+    use std::os::fd::AsRawFd;
+    let v6 = ping.to.is_ipv6();
+    // A source address of one family and a destination of the other is
+    // nothing anybody sent, and `from` is asked for the family being echoed.
+    if source.is_ipv6() != v6 {
+        return Answer::Silent;
+    }
+    let Ok(socket) = ping_socket(v6) else {
+        return Answer::Silent;
+    };
+    let fd = socket.as_raw_fd();
+    let (level, recverr, hops) = match v6 {
+        true => (
+            libc::IPPROTO_IPV6,
+            libc::IPV6_RECVERR,
+            libc::IPV6_UNICAST_HOPS,
+        ),
+        false => (libc::IPPROTO_IP, libc::IP_RECVERR, libc::IP_TTL),
+    };
+    // The hop limit is passed on rather than normalised: varying it and
+    // reading who complains is what a `tracert` **is**.
+    let ttl = libc::c_int::from(ping.ttl.max(1));
+    let timeout = libc::timeval {
+        tv_sec: within.as_secs().min(i64::MAX as u64) as libc::time_t,
+        tv_usec: libc::suseconds_t::from(within.subsec_micros()),
+    };
+    // SAFETY: each value is of the type its option takes, with its own size
+    // given, on a socket this function owns.
+    let set = unsafe {
+        let one = 1 as libc::c_int;
+        let int = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+        libc::setsockopt(fd, level, recverr, std::ptr::addr_of!(one).cast(), int)
+            | libc::setsockopt(fd, level, hops, std::ptr::addr_of!(ttl).cast(), int)
+            | libc::setsockopt(
+                fd,
+                libc::SOL_SOCKET,
+                libc::SO_RCVTIMEO,
+                std::ptr::addr_of!(timeout).cast(),
+                std::mem::size_of::<libc::timeval>() as libc::socklen_t,
+            )
+    };
+    if set != 0 {
+        return Answer::Silent;
+    }
+    let (ours, ours_len) = sockaddr(source, 0);
+    // SAFETY: a `sockaddr_storage` of ours with the length its family needs.
+    if unsafe { libc::bind(fd, std::ptr::addr_of!(ours).cast(), ours_len) } != 0 {
+        tracing::debug!("a ping socket would not bind to {source}");
+        return Answer::Silent;
+    }
+    let (theirs, theirs_len) = sockaddr(ping.to, 0);
+    // The request goes out as it arrived. The kernel rewrites the identifier
+    // and the checksum with it, so there is nothing to put together here.
+    // SAFETY: a buffer of ours with its own length, and an address likewise.
+    let sent = unsafe {
+        libc::sendto(
+            fd,
+            ping.original.as_ptr().cast(),
+            ping.original.len(),
+            0,
+            std::ptr::addr_of!(theirs).cast(),
+            theirs_len,
+        )
+    };
+    if sent < 0 {
+        tracing::debug!(
+            "a ping to {} would not send: {}",
+            ping.to,
+            std::io::Error::last_os_error()
+        );
+        return Answer::Silent;
+    }
+    let mut reply = [0u8; 1500];
+    loop {
+        // SAFETY: a buffer of ours with its own length.
+        let got = unsafe { libc::recv(fd, reply.as_mut_ptr().cast(), reply.len(), 0) };
+        if got >= 0 {
+            let reply = &reply[..got as usize];
+            // The sequence number, and not the identifier: that one is the
+            // kernel's now. An answer to somebody else's probe on the same
+            // socket is not ours, so it is read past rather than taken.
+            if seq_of(reply) == Some(ping.seq) {
+                return Answer::Answered {
+                    from: ping.to,
+                    data: reply.get(ICMP_HEAD..).unwrap_or_default().to_vec(),
+                };
+            }
+            continue;
+        }
+        let why = std::io::Error::last_os_error();
+        return match why.kind() {
+            // Nothing came in time, which is the silence a client would have
+            // had from a network that did not answer.
+            std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut => Answer::Silent,
+            // Something complained, and what it said is on the error queue.
+            _ => from_error_queue(fd, ping),
+        };
+    }
+}
+
+/// The sequence number of an ICMP message, which both families keep in the
+/// same place.
+#[cfg(target_os = "linux")]
+fn seq_of(message: &[u8]) -> Option<u16> {
+    Some(u16::from_be_bytes([*message.get(6)?, *message.get(7)?]))
+}
+
+/// Reads the complaint the kernel queued, and says whether it was a router
+/// refusing to carry the probe further.
+#[cfg(target_os = "linux")]
+fn from_error_queue(fd: libc::c_int, ping: &Ping) -> Answer {
+    let mut body = [0u8; 1500];
+    let mut control = [0u8; 512];
+    let mut who: libc::sockaddr_storage = unsafe { std::mem::zeroed() };
+    let mut parts = libc::iovec {
+        iov_base: body.as_mut_ptr().cast(),
+        iov_len: body.len(),
+    };
+    let mut head: libc::msghdr = unsafe { std::mem::zeroed() };
+    head.msg_name = std::ptr::addr_of_mut!(who).cast();
+    head.msg_namelen = std::mem::size_of::<libc::sockaddr_storage>() as libc::socklen_t;
+    head.msg_iov = std::ptr::addr_of_mut!(parts);
+    head.msg_iovlen = 1;
+    head.msg_control = control.as_mut_ptr().cast();
+    head.msg_controllen = control.len();
+    // SAFETY: a message header of ours, pointing at buffers of ours with
+    // their own lengths, on a socket the caller owns.
+    let got = unsafe { libc::recvmsg(fd, std::ptr::addr_of_mut!(head), libc::MSG_ERRQUEUE) };
+    if got < 0 {
+        return Answer::Silent;
+    }
+    // SAFETY: the header the call above filled in.
+    let mut cmsg = unsafe { libc::CMSG_FIRSTHDR(std::ptr::addr_of!(head)) };
+    while !cmsg.is_null() {
+        // SAFETY: a control message the kernel wrote, read for its own
+        // length and never past it.
+        let (level, kind, bytes) = unsafe {
+            let len = (*cmsg).cmsg_len as usize;
+            let head_len = libc::CMSG_DATA(cmsg) as usize - cmsg as usize;
+            (
+                (*cmsg).cmsg_level,
+                (*cmsg).cmsg_type,
+                std::slice::from_raw_parts(libc::CMSG_DATA(cmsg), len.saturating_sub(head_len)),
+            )
+        };
+        let theirs = match (ping.to.is_ipv6(), level, kind) {
+            (false, libc::IPPROTO_IP, libc::IP_RECVERR) => expired(bytes, false),
+            (true, libc::IPPROTO_IPV6, libc::IPV6_RECVERR) => expired(bytes, true),
+            _ => None,
+        };
+        if let Some(from) = theirs {
+            return Answer::Expired { from };
+        }
+        // SAFETY: the header and a message that came out of it.
+        cmsg = unsafe { libc::CMSG_NXTHDR(std::ptr::addr_of!(head), cmsg) };
+    }
+    Answer::Silent
+}
+
+/// The router that would not carry the probe further, out of the bytes the
+/// kernel wrote: a `sock_extended_err` and, after it, the address it came
+/// from.
+///
+/// `None` for every other complaint -- unreachable, administratively
+/// filtered, a local error -- which the client is given as silence, the same
+/// as a network that said nothing.
+///
+/// **The fields are in this machine's own byte order**, not the network's,
+/// which is the trap here: read big-endian, the measured `ee_errno` of 113
+/// comes out as 1895825408.
+#[cfg(target_os = "linux")]
+fn expired(bytes: &[u8], v6: bool) -> Option<IpAddr> {
+    /// `struct sock_extended_err`, the 16 bytes before the offender.
+    const HEAD: usize = 16;
+    const ORIGIN_ICMP: u8 = 2;
+    const ORIGIN_ICMP6: u8 = 3;
+    /// ICMP "time exceeded" is 11, ICMPv6's is 3.
+    const TIME_EXCEEDED: u8 = 11;
+    const TIME_EXCEEDED_V6: u8 = 3;
+    let origin = *bytes.get(4)?;
+    let kind = *bytes.get(5)?;
+    let wanted = match v6 {
+        true => (ORIGIN_ICMP6, TIME_EXCEEDED_V6),
+        false => (ORIGIN_ICMP, TIME_EXCEEDED),
+    };
+    if (origin, kind) != wanted {
+        return None;
+    }
+    // The address is a `sockaddr` of its own family, which is read rather
+    // than assumed from `v6`: the two have the address at different offsets
+    // and a mistake here is a plausible-looking wrong address.
+    let family = u16::from_ne_bytes([*bytes.get(HEAD)?, *bytes.get(HEAD + 1)?]);
+    match i32::from(family) {
+        libc::AF_INET => {
+            let octets: [u8; 4] = bytes.get(HEAD + 4..HEAD + 8)?.try_into().ok()?;
+            Some(IpAddr::from(octets))
+        }
+        libc::AF_INET6 => {
+            let octets: [u8; 16] = bytes.get(HEAD + 8..HEAD + 24)?.try_into().ok()?;
+            Some(IpAddr::from(octets))
+        }
+        _ => None,
+    }
+}
+
+/// An address as the kernel takes one, with the length its family needs.
+#[cfg(target_os = "linux")]
+fn sockaddr(addr: IpAddr, port: u16) -> (libc::sockaddr_storage, libc::socklen_t) {
+    // SAFETY: zeroes are a valid `sockaddr_storage`, and the family below
+    // says which of its shapes this is.
+    let mut out: libc::sockaddr_storage = unsafe { std::mem::zeroed() };
+    match addr {
+        IpAddr::V4(addr) => {
+            // SAFETY: writing the `sockaddr_in` shape into storage sized for
+            // the largest of them.
+            let it = unsafe { &mut *std::ptr::addr_of_mut!(out).cast::<libc::sockaddr_in>() };
+            it.sin_family = libc::AF_INET as libc::sa_family_t;
+            it.sin_port = port.to_be();
+            it.sin_addr.s_addr = u32::from_ne_bytes(addr.octets());
+            (
+                out,
+                std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
+            )
+        }
+        IpAddr::V6(addr) => {
+            // SAFETY: the same for `sockaddr_in6`.
+            let it = unsafe { &mut *std::ptr::addr_of_mut!(out).cast::<libc::sockaddr_in6>() };
+            it.sin6_family = libc::AF_INET6 as libc::sa_family_t;
+            it.sin6_port = port.to_be();
+            it.sin6_addr.s6_addr = addr.octets();
+            (
+                out,
+                std::mem::size_of::<libc::sockaddr_in6>() as libc::socklen_t,
+            )
+        }
+    }
+}
+
 /// Starts answering echo requests, and returns where to put them.
 ///
 /// Each one is sent in a task of its own: a `tracert` has several probes out
@@ -520,6 +832,117 @@ pub fn answering(out: mpsc::Sender<Vec<u8>>, echo: Echo, stop: Stop) -> mpsc::Se
 
 #[cfg(test)]
 mod tests {
+
+    /// The bytes this machine's kernel really wrote on the error queue, for
+    /// a probe sent to `1.1.1.1` with a hop limit of 1. Kept as they came:
+    /// `ee_errno` 113 (`EHOSTUNREACH`), origin 2, type 11, then a
+    /// `sockaddr_in` holding 192.168.1.1, which is this machine's gateway.
+    #[cfg(target_os = "linux")]
+    const A_ROUTER_COMPLAINING: &str =
+        "71000000020b0000000000000000000002000000c0a801010000000000000000";
+
+    #[cfg(target_os = "linux")]
+    fn bytes(hex: &str) -> Vec<u8> {
+        (0..hex.len() / 2)
+            .map(|i| u8::from_str_radix(&hex[i * 2..i * 2 + 2], 16).expect("hex"))
+            .collect()
+    }
+
+    /// A real complaint reads as the router that made it.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn the_router_that_would_not_carry_it_further() {
+        let said = bytes(A_ROUTER_COMPLAINING);
+        assert_eq!(
+            expired(&said, false),
+            Some("192.168.1.1".parse::<IpAddr>().unwrap())
+        );
+        // Asked as though it were IPv6, the same bytes are not a hop limit
+        // complaint: origin and type both differ between the families, and
+        // taking one for the other would answer a `tracert` with a router
+        // that never spoke.
+        assert_eq!(expired(&said, true), None);
+    }
+
+    /// Everything else a complaint can be is silence, not a wrong router.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn what_is_not_a_hop_limit_complaint() {
+        let mut other_type = bytes(A_ROUTER_COMPLAINING);
+        other_type[5] = 3; // destination unreachable, not time exceeded
+        assert_eq!(expired(&other_type, false), None);
+        let mut local = bytes(A_ROUTER_COMPLAINING);
+        local[4] = 1; // SO_EE_ORIGIN_LOCAL: our own machine, not a router
+        assert_eq!(expired(&local, false), None);
+        // A family nobody sent, and bytes that stop early: both `None`
+        // rather than a panic or an address read out of whatever follows.
+        let mut family = bytes(A_ROUTER_COMPLAINING);
+        family[16] = 99;
+        assert_eq!(expired(&family, false), None);
+        for cut in [0, 4, 5, 16, 17, 19] {
+            assert_eq!(
+                expired(&bytes(A_ROUTER_COMPLAINING)[..cut], false),
+                None,
+                "{cut} bytes"
+            );
+        }
+    }
+
+    /// The sequence number is what a reply is matched by, because the
+    /// identifier is the kernel's. These are the bytes of the reply that
+    /// came back from `1.1.1.1`.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_reply_is_matched_by_its_sequence() {
+        // type 0, code 0, checksum, ident 0x0c5f (the socket's port, not
+        // the 0x1234 that was sent), sequence 9.
+        let reply = bytes("0000dfdb0c5f0009747261636577696e67");
+        assert_eq!(seq_of(&reply), Some(9));
+        assert_eq!(seq_of(&[]), None);
+        assert_eq!(seq_of(&reply[..7]), None);
+    }
+
+    /// Really echoes, on this machine's network: `1.1.1.1` answers, and a
+    /// hop limit of 1 is refused by the first router, which is what a
+    /// `tracert` reads.
+    ///
+    /// `cargo test -p tracewing-proxy -- --ignored really_echoes`
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    #[ignore = "sends real ICMP and needs a network that answers it"]
+    async fn really_echoes_and_hears_a_router() {
+        // This machine's own address for the family, found the way anything
+        // finds it: by asking the routing table where it would send from.
+        let probe = std::net::UdpSocket::bind("0.0.0.0:0").expect("a socket");
+        probe.connect("1.1.1.1:53").expect("a route to 1.1.1.1");
+        let ours = probe.local_addr().expect("an address").ip();
+        let from: From = std::sync::Arc::new(move |v6| (!v6).then_some(ours));
+        let echo = by_ping_socket(from, std::time::Duration::from_secs(3))
+            .expect("a ping socket on this machine");
+        let ping = |ttl: u8, seq: u16| Ping {
+            from: "10.77.0.9".parse().unwrap(),
+            to: "1.1.1.1".parse().unwrap(),
+            ident: 0x1234,
+            seq,
+            ttl,
+            original: {
+                let mut message = vec![8u8, 0, 0, 0, 0x12, 0x34, (seq >> 8) as u8, seq as u8];
+                message.extend_from_slice(b"tracewing");
+                message
+            },
+        };
+        match echo(ping(64, 101)).await {
+            Answer::Answered { from, data } => {
+                println!("answered from {from}, {} bytes back", data.len());
+                assert_eq!(data, b"tracewing", "the payload comes back as it went");
+            }
+            other => panic!("1.1.1.1 answers an echo: {other:?}"),
+        }
+        match echo(ping(1, 102)).await {
+            Answer::Expired { from } => println!("a hop limit of 1 was refused by {from}"),
+            other => panic!("the first router refuses a hop limit of 1: {other:?}"),
+        }
+    }
     use super::*;
 
     fn request(from: &str, to: &str, ttl: u8, seq: u16) -> Vec<u8> {

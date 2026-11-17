@@ -1217,6 +1217,46 @@ also why a phone's flows say `WireGuard` though a stack does the work. That
 is now a test rather than a thing to notice: with `Tun::by` changed to
 anything else, the flow arrives stamped wrongly and the test says so.
 
+#### Answering `ping` and `tracert`, unprivileged
+
+The echo is the one seam [`Tun`](../../crates/proxy/src/tun.rs) keeps
+optional, and Linux can now fill it: `by_ping_socket` in
+[`icmp.rs`](../../crates/proxy/src/icmp.rs), beside the `IcmpSendEcho2Ex` one
+Windows uses. A **ping socket** — `socket(AF_INET, SOCK_DGRAM,
+IPPROTO_ICMP)` — is what `ping` itself uses, and it needs no capability: a raw
+ICMP socket would need `CAP_NET_RAW`, which is the privilege this whole mode
+is shaped around.
+
+Measured here, every line of it with `CapEff: 0000000000000000`:
+
+- **It is allowed, and when it is not it says so.** `ping_group_range` is `0
+  2147483647` on this machine and both families open. Set to `1 0`, both
+  answer **EACCES** — measured by setting it and putting it back — so
+  `by_ping_socket` answers `None` and the mode runs with no echo, which is a
+  feature missing rather than traffic going where it should not.
+- **The identifier is the kernel's.** A ping socket rewrites it to the
+  socket's own port and recomputes the checksum: an echo sent with `0xbeef`
+  came back as `3164`, with the sequence number and the payload untouched. So
+  a reply is matched by its **sequence** — and that ablation is not
+  theoretical: matching on the identifier instead turns a real answer from
+  `1.1.1.1` into `Silent`.
+- **A router's complaint arrives on the error queue**, not as a datagram.
+  With `IP_RECVERR` set, `recv` fails and `recvmsg(MSG_ERRQUEUE)` carries a
+  `sock_extended_err` and the address it came from: origin
+  `SO_EE_ORIGIN_ICMP`, type 11, `192.168.1.1`, which is this machine's
+  gateway. That is what `tracert` reads, and the bytes are kept in the test
+  as the kernel wrote them. Without `IP_RECVERR` the hop-limit case is
+  silence, which is the second ablation.
+- **The fields are in this machine's byte order, not the network's.** Read
+  big-endian, the measured `ee_errno` of 113 comes out as 1895825408 and the
+  address comes out of whatever follows. That is the third ablation.
+- **IPv6 could not be measured here.** The socket opens, but nothing came
+  back from any address tried — and the system's own `ping` reports 100% loss
+  over IPv6 on this network, so it is the network and not the code. The v6
+  arm is written symmetrically (`IPV6_RECVERR`, `IPV6_UNICAST_HOPS`, and
+  ICMPv6's own origin and type, which differ from IPv4's), and that is said
+  here rather than left to look measured.
+
 #### What is not in, and nothing captures until it is
 
 **The engine never builds one.** `make_adapter`, `roads::watching` and
