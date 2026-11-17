@@ -2091,6 +2091,21 @@ t07b9de08 = Memória para corpos grandes esperando gravação
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Acima disto, os corpos grandes deixam de ser guardados.
 
+# Level
+t4155597d = Nível de permissões
+
+# Open the browser as an administrator
+tfe926254 = Abrir o navegador como administrador
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = O que o tracewing abrir passa a ter controle total deste computador, e o tracewing não consegue limitá-lo. Os navegadores baseados em Chromium também recusam abrir ou reclamam quando são executados assim, então isto é para os casos raros de depurar uma extensão ou um quiosque com permissões elevadas. Enquanto o tracewing não for administrador, o Windows pergunta a cada abertura. Lido a cada abertura.
+
+# Open the terminal as an administrator
+t0b0e9c20 = Abrir o terminal como administrador
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = Um programa que precisa de administrador não abre num terminal que não seja, e este terminal existe para pôr as variáveis do proxy na frente de um programa — é um caso comum, não uma exceção. O que abrir nele tem controle total deste computador, e o tracewing não consegue limitá-lo. Enquanto o tracewing não for administrador, o Windows pergunta a cada abertura. Lido a cada abertura.
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key }: "{ $text }" não é um número inteiro
 

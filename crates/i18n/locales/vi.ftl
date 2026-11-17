@@ -1966,6 +1966,21 @@ t07b9de08 = Bộ nhớ cho body lớn đang chờ ghi
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Vượt quá mức này, body lớn không còn được giữ.
 
+# Level
+t4155597d = Cấp quyền
+
+# Open the browser as an administrator
+tfe926254 = Mở trình duyệt với quyền quản trị
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = Thứ tracewing mở ra khi đó có toàn quyền trên máy này, và tracewing không giới hạn được nó. Các trình duyệt nền Chromium còn từ chối chạy hoặc báo cảnh báo khi bị mở theo cách này, nên mục này dành cho những trường hợp hiếm: một extension hoặc một máy kiosk đang được gỡ lỗi ở quyền cao. Khi bản thân tracewing không phải quản trị, Windows sẽ hỏi ở mỗi lần mở. Đọc ở mỗi lần mở.
+
+# Open the terminal as an administrator
+t0b0e9c20 = Mở terminal với quyền quản trị
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = Một chương trình cần quyền quản trị sẽ không chạy được trong một terminal không có quyền đó, mà terminal này có mặt để đặt các biến của proxy trước một chương trình — nên đây là trường hợp thường gặp chứ không phải ngoại lệ. Thứ nó mở ra có toàn quyền trên máy này, và tracewing không giới hạn được nó. Khi bản thân tracewing không phải quản trị, Windows sẽ hỏi ở mỗi lần mở. Đọc ở mỗi lần mở.
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key }: "{ $text }" không phải là số nguyên
 

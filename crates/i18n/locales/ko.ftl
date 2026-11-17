@@ -1966,6 +1966,21 @@ t07b9de08 = 기록 대기 중인 큰 본문용 메모리
 # Past this, large bodies stop being kept.
 tfe61a4f3 = 이를 넘으면 큰 본문은 보관되지 않습니다.
 
+# Level
+t4155597d = 권한 수준
+
+# Open the browser as an administrator
+tfe926254 = 브라우저를 관리자로 열기
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = 그렇게 하면 tracewing이 실행한 것이 이 컴퓨터를 완전히 제어하게 되며, tracewing은 이를 제한할 수 없습니다. 게다가 Chromium 계열 브라우저는 관리자로 실행되면 시작을 거부하거나 경고를 띄우므로, 이 설정은 확장 기능이나 키오스크를 높은 권한에서 디버깅하는 드문 경우를 위한 것입니다. tracewing 자체가 관리자가 아닌 동안에는 Windows가 열 때마다 확인합니다. 열 때마다 읽습니다.
+
+# Open the terminal as an administrator
+t0b0e9c20 = 터미널을 관리자로 열기
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = 관리자가 필요한 프로그램은 관리자가 아닌 터미널에서는 실행되지 않으며, 이 터미널은 프록시 환경 변수를 프로그램 앞에 놓기 위해 있습니다 — 그러므로 이는 예외가 아니라 일반적인 경우입니다. 거기서 실행된 것은 이 컴퓨터를 완전히 제어하게 되며, tracewing은 이를 제한할 수 없습니다. tracewing 자체가 관리자가 아닌 동안에는 Windows가 열 때마다 확인합니다. 열 때마다 읽습니다.
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key }: "{ $text }"은(는) 정수가 아닙니다
 

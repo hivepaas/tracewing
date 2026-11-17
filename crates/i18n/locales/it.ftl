@@ -2091,6 +2091,21 @@ t07b9de08 = Memoria per i body grandi in attesa di scrittura
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Oltre questo limite, i body grandi non vengono più conservati.
 
+# Level
+t4155597d = Livello di permessi
+
+# Open the browser as an administrator
+tfe926254 = Apri il browser come amministratore
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = Ciò che tracewing avvia ha allora il controllo completo di questo computer, e tracewing non può limitarlo. I browser basati su Chromium, inoltre, rifiutano di partire o protestano quando vengono eseguiti così: questo serve quindi per i rari casi in cui si fa il debug di un'estensione o di un chiosco con permessi elevati. Finché tracewing non è amministratore, Windows chiede a ogni apertura. Letto a ogni apertura.
+
+# Open the terminal as an administrator
+t0b0e9c20 = Apri il terminale come amministratore
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = Un programma che richiede un amministratore non parte in un terminale che non lo è, e questo terminale serve a mettere le variabili del proxy davanti a un programma — è quindi un caso ordinario e non un caso limite. Ciò che parte al suo interno ha il controllo completo di questo computer, e tracewing non può limitarlo. Finché tracewing non è amministratore, Windows chiede a ogni apertura. Letto a ogni apertura.
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key }: "{ $text }" non è un numero intero
 

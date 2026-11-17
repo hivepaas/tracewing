@@ -1966,6 +1966,21 @@ t07b9de08 = 待寫入大型本文的記憶體上限
 # Past this, large bodies stop being kept.
 tfe61a4f3 = 超過此值時，將不再保留大型本文。
 
+# Level
+t4155597d = 權限等級
+
+# Open the browser as an administrator
+tfe926254 = 以管理員身分開啟瀏覽器
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = 這樣 tracewing 啟動的程式將對這台電腦擁有完全控制權，而 tracewing 無法限制它。此外，基於 Chromium 的瀏覽器以管理員身分執行時會拒絕啟動或發出警告，所以這項設定是為少數情況準備的：除錯在提升權限下執行的擴充功能或 kiosk。當 tracewing 自己不是管理員時，Windows 會在每次開啟時詢問。每次開啟時讀取。
+
+# Open the terminal as an administrator
+t0b0e9c20 = 以管理員身分開啟終端機
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = 需要管理員權限的程式無法在非管理員的終端機中啟動，而這個終端機的用途正是把代理伺服器的環境變數放到程式面前——所以這是常見情況，而不是例外。在它裡面啟動的程式將對這台電腦擁有完全控制權，而 tracewing 無法限制它。當 tracewing 自己不是管理員時，Windows 會在每次開啟時詢問。每次開啟時讀取。
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key }：「{ $text }」不是整數
 

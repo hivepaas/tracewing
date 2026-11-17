@@ -2077,6 +2077,21 @@ t07b9de08 = Arbeitsspeicher für große Bodys, die auf das Schreiben warten
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Darüber hinaus werden große Bodys nicht mehr gespeichert.
 
+# Level
+t4155597d = Rechtestufe
+
+# Open the browser as an administrator
+tfe926254 = Browser als Administrator öffnen
+
+# What tracewing starts then has full control of this computer, and tracewing cannot limit it. Chromium-based browsers also refuse or complain when they are run this way, so this is for the rare extension or kiosk being debugged under elevation. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+tb8080255 = Was tracewing startet, hat dann die volle Kontrolle über diesen Computer, und tracewing kann es nicht einschränken. Chromium-basierte Browser verweigern zudem den Start oder warnen, wenn sie so ausgeführt werden — das ist also für die seltenen Fälle gedacht, in denen eine Erweiterung oder ein Kiosk mit erhöhten Rechten untersucht wird. Solange tracewing selbst kein Administrator ist, fragt Windows bei jedem Öffnen. Wird bei jedem Öffnen gelesen.
+
+# Open the terminal as an administrator
+t0b0e9c20 = Terminal als Administrator öffnen
+
+# A program that needs an administrator will not start in a terminal that is not one, and this terminal is here to put the proxy's variables in front of a program -- so this is an ordinary case rather than an edge. What it starts has full control of this computer, and tracewing cannot limit it. While tracewing is not an administrator itself, Windows asks at each launch. Read at each launch.
+t2ae85d5a = Ein Programm, das einen Administrator braucht, startet in einem Terminal ohne diese Rechte nicht, und dieses Terminal ist dafür da, einem Programm die Variablen des Proxys mitzugeben — das ist also der gewöhnliche Fall und kein Randfall. Was darin startet, hat die volle Kontrolle über diesen Computer, und tracewing kann es nicht einschränken. Solange tracewing selbst kein Administrator ist, fragt Windows bei jedem Öffnen. Wird bei jedem Öffnen gelesen.
+
 # {key}: "{text}" is not a whole number
 ta8606963 = { $key }: „{ $text }“ ist keine ganze Zahl
 
