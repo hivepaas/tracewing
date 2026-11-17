@@ -868,7 +868,10 @@ that needs a device, which is `#[ignore]`d and documented like the Wintun one.
 Then the two halves of staying out of our own adapter: the rows of
 [`roads.rs`](../../crates/proxy/src/roads.rs), which choose the way out, and
 the socket option in [`upstream.rs`](../../crates/proxy/src/upstream.rs),
-which applies that choice.
+which applies that choice. And
+[`adapter_linux.rs`](../../crates/system/src/adapter_linux.rs): the one
+privileged step, and the unprivileged reading that decides whether it has
+anything to do.
 
 #### What a Linux machine said, and the Windows answer it is not
 
@@ -1063,18 +1066,60 @@ somebody switches local mode on keeps a tracewing nobody switched on from
 owning an adapter, and reuses a dialog this codebase already shows. The second
 is the one to write unless packaging says otherwise.
 
+#### Looking before asking
+
+`make_adapter` reads the adapter first and asks for a password only when
+something is missing. A dialog for a machine that is already set up is how
+people learn to click dialogs away, and this mode will show one often enough
+without that.
+
+Every part of the reading is unprivileged, measured with `CapEff:
+0000000000000000` in the process doing it: `tun_flags` and `owner` under
+`/sys/class/net/<dev>/`, both `ignore_routes_with_linkdown` under
+`/proc/sys`, the routes from `/proc/net/route` and `/proc/net/ipv6_route`,
+the IPv6 address from `/proc/net/if_inet6`, and the IPv4 address by
+`SIOCGIFADDR` and `SIOCGIFNETMASK`. With the adapter made, all six parts read
+true; with nothing there, `Look::missing` names the five that are gone rather
+than saying "something".
+
+Four things the real tables taught it, three of which would otherwise have
+passed:
+
+- **`/proc` cannot see `dead linkdown`.** With nobody holding the device, the
+  default route is in `/proc/net/route` with `RTF_UP` set and nothing to say
+  the kernel is ignoring it. That is what makes the reading possible before
+  the mode is switched on — and it is why this answers **installed**, never
+  *in use*. It is also a **bug in
+  [`roads.rs`](../../crates/proxy/src/roads.rs)**, measured rather than
+  suspected: with a second device up, its carrier down, and a default route
+  of metric 40 beside the real one's 600, `roads_now` and `out_by` chose
+  **that** interface — index 44 — while the kernel itself routed through the
+  Wi-Fi, index 6. An unplugged cable with a static route is enough to arrange
+  it. Pinned to an interface the kernel is ignoring, a connection **hangs
+  rather than fails** (0.84s against a 3s timeout, measured for the
+  exclusion), so this is the quiet failure that whole seam exists to avoid.
+  A carrier check is the next piece of work, and `/sys/class/net/<iface>/
+  carrier` is where it comes from — the same file this reading already uses.
+- **A destination of all zeros is not a default route.** `0.0.0.0/1` and
+  `::/1` start at the same address and cover half of it — and are not a
+  hypothetical: the two `/1` halves are exactly how the Windows side covers
+  everything while leaving the real default alone. The mask and the prefix
+  length are what tell them apart, which the first version of this checked
+  for neither; the ablation found it, because both checks could be deleted
+  with every test still passing.
+- **The IPv4 address needs the `ioctl`.** `/proc/net/route` carries the
+  connected route an address implies — `10.77.0.0/24` on the device — which
+  would read `10.77.0.5/24` as the adapter being ready, and the stack needs
+  the address itself.
+- **Held, the kernel adds its own addresses.** A link-local `fe80::` appears
+  on the device the moment something holds it, along with multicast routes.
+  So the check is for the address asked for rather than for any address, and
+  `Look` deliberately says nothing about the carrier: that follows the
+  holder, which is the whole shape.
+
 #### What is not in, and nothing captures until it is
 
-Two things. **Reading back whether the adapter is already as it should be** —
-the device, its owner, the two addresses, the two routes, the two knobs — so
-that switching the mode on asks for a password only when there is something to
-do. All of it is readable unprivileged: the owner and `tun_flags` from
-`/sys/class/net/<dev>/`, the routes from the tables `roads.rs` already parses,
-the knobs from `/proc/sys`, the IPv4 address by `SIOCGIFADDR` and the IPv6 one
-from `/proc/net/if_inet6`. Until then `make_adapter` is called when somebody
-switches the mode on and the script's first line deletes whatever was there.
-
-And **the `Tun` source that hands the engine flows**, which is the piece that
+**The `Tun` source that hands the engine flows**, which is the piece that
 makes any of this capture anything. Nothing calls `make_adapter`,
 `straight_to`, `bound_datagrams` or `leave_by` yet, on either platform, and
 `by_programs` — which is what would pass `straight_to` in — has no caller
