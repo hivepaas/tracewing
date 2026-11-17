@@ -2716,6 +2716,16 @@ tcf9aefb4 = 호스트
 # Newest
 t324b6d0b = 최신
 
+# The search index is {count} flow behind. A word in it is not found yet; this answer changes by itself in a moment. | The search index is {count} flows behind. A word in them is not found yet; this answer changes by itself in a moment.
+te5dff54b =
+    { $n ->
+        [one] 검색 색인이 플로우 { $count }개만큼 뒤처져 있습니다. 그 안에 있는 단어는 아직 찾을 수 없으며, 이 답은 잠시 뒤 저절로 바뀝니다.
+       *[other] 검색 색인이 플로우 { $count }개만큼 뒤처져 있습니다. 그 안에 있는 단어는 아직 찾을 수 없으며, 이 답은 잠시 뒤 저절로 바뀝니다.
+    }
+
+# This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that.
+tf541f79a = 이 세션에는 본문 색인이 없어 단어를 URL에서만 찾습니다. 본문에만 나오는 단어는 아예 찾을 수 없고, 기다려도 달라지지 않습니다.
+
 # No flow fits this filter
 t7eb295f4 = 이 필터에 맞는 플로우가 없습니다
 

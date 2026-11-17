@@ -2716,6 +2716,16 @@ tcf9aefb4 = 主机
 # Newest
 t324b6d0b = 最新
 
+# The search index is {count} flow behind. A word in it is not found yet; this answer changes by itself in a moment. | The search index is {count} flows behind. A word in them is not found yet; this answer changes by itself in a moment.
+te5dff54b =
+    { $n ->
+        [one] 搜索索引落后 { $count } 条流量记录。其中的词暂时搜不到；这个结果过一会儿会自动变化。
+       *[other] 搜索索引落后 { $count } 条流量记录。其中的词暂时搜不到；这个结果过一会儿会自动变化。
+    }
+
+# This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that.
+tf541f79a = 此会话没有正文索引，因此只在 URL 中查找词。只出现在正文里的词根本搜不到，等待也不会改变这一点。
+
 # No flow fits this filter
 t7eb295f4 = 没有符合此过滤条件的流量记录
 

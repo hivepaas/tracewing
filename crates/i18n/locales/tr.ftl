@@ -2803,6 +2803,16 @@ tcf9aefb4 = Host'lar
 # Newest
 t324b6d0b = En yeni
 
+# The search index is {count} flow behind. A word in it is not found yet; this answer changes by itself in a moment. | The search index is {count} flows behind. A word in them is not found yet; this answer changes by itself in a moment.
+te5dff54b =
+    { $n ->
+        [one] Arama dizini { $count } akış geride. İçindeki bir kelime henüz bulunamıyor; bu yanıt birazdan kendiliğinden değişecek.
+       *[other] Arama dizini { $count } akış geride. İçindeki bir kelime henüz bulunamıyor; bu yanıt birazdan kendiliğinden değişecek.
+    }
+
+# This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that.
+tf541f79a = Bu oturumun gövde dizini yok, bu yüzden kelimeler yalnızca URL'lerde aranır. Sadece bir gövdede geçen bir kelime hiç bulunamaz ve beklemek bunu değiştirmez.
+
 # No flow fits this filter
 t7eb295f4 = Bu filtreye uyan akış yok
 

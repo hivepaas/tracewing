@@ -1067,6 +1067,12 @@ t27acf320 = Devices
 tfc7bfe37 = All hosts
 tcf9aefb4 = Hosts
 t324b6d0b = Newest
+te5dff54b =
+    { $n ->
+        [one] The search index is { $count } flow behind. A word in it is not found yet; this answer changes by itself in a moment.
+       *[other] The search index is { $count } flows behind. A word in them is not found yet; this answer changes by itself in a moment.
+    }
+tf541f79a = This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that.
 t7eb295f4 = No flow fits this filter
 tbd00747c = Nothing yet
 t61730a16 = Turn on the system proxy above, or point an app at { $addr }. To try it: curl --proxy http://{ $addr } --cacert { $ca } https://example.com/

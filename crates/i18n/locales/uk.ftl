@@ -2929,6 +2929,18 @@ tcf9aefb4 = Хости
 # Newest
 t324b6d0b = Найновіші
 
+# The search index is {count} flow behind. A word in it is not found yet; this answer changes by itself in a moment. | The search index is {count} flows behind. A word in them is not found yet; this answer changes by itself in a moment.
+te5dff54b =
+    { $n ->
+        [one] Індекс пошуку відстає на { $count } потік. Слово в ньому ще не знаходиться; ця відповідь зміниться сама за мить.
+        [few] Індекс пошуку відстає на { $count } потоки. Слово в них ще не знаходиться; ця відповідь зміниться сама за мить.
+        [many] Індекс пошуку відстає на { $count } потоків. Слово в них ще не знаходиться; ця відповідь зміниться сама за мить.
+       *[other] Індекс пошуку відстає на { $count } потоку. Слово в них ще не знаходиться; ця відповідь зміниться сама за мить.
+    }
+
+# This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that.
+tf541f79a = У цьому сеансі немає індексу тіл, тому слова шукаються лише в URL. Слово, що трапляється тільки в тілі, не знаходиться взагалі, і очікування цього не змінить.
+
 # No flow fits this filter
 t7eb295f4 = Жоден потік не відповідає цьому фільтру
 

@@ -2716,6 +2716,16 @@ tcf9aefb4 = ホスト
 # Newest
 t324b6d0b = 最新
 
+# The search index is {count} flow behind. A word in it is not found yet; this answer changes by itself in a moment. | The search index is {count} flows behind. A word in them is not found yet; this answer changes by itself in a moment.
+te5dff54b =
+    { $n ->
+        [one] 検索インデックスは { $count } 件のフローぶん遅れています。その中にある語はまだ見つかりません。この答えはしばらくすると自動的に変わります。
+       *[other] 検索インデックスは { $count } 件のフローぶん遅れています。その中にある語はまだ見つかりません。この答えはしばらくすると自動的に変わります。
+    }
+
+# This session has no index of bodies, so words are looked for in URLs alone. A word that appears only in a body is not found at all, and waiting will not change that.
+tf541f79a = このセッションにはボディのインデックスがないため、語は URL の中だけを探します。ボディにしか現れない語はまったく見つからず、待っても変わりません。
+
 # No flow fits this filter
 t7eb295f4 = このフィルタに一致するフローはありません
 
