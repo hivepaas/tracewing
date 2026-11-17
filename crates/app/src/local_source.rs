@@ -31,16 +31,16 @@
 //!   `ping` goes unanswered, which is a feature missing rather than a wrong
 //!   behaviour. The other three have no safe default at all.
 
-use anyhow::Result as Built;
-use tracewing_proxy::{
-    apps::Apps,
-    roads,
-    sieve::{self, Chosen},
-    source::Source,
-    upstream,
+use tracewing_proxy::{sieve::Chosen, source::Source};
+// What only the route-capturing arms use; macOS's way in is the extension.
+#[cfg(any(windows, target_os = "linux"))]
+use {
+    crate::local_apps,
+    anyhow::Result as Built,
+    tracewing_proxy::{apps::Apps, roads, sieve, upstream},
 };
 
-use crate::local_apps::{self, Local, Support};
+use crate::local_apps::{Local, Support};
 
 /// How often the way out is looked at again. A machine that moves between
 /// networks changes it, and nothing tells us when.
@@ -230,13 +230,14 @@ fn platform(
 /// generic over its device and has no business knowing about routes, and
 /// because [`roads::watch`] wants two things only `start` has: the proxy's
 /// stop, and the proxy's runtime to spawn on.
-#[cfg_attr(not(any(windows, target_os = "linux")), allow(dead_code))]
+#[cfg(any(windows, target_os = "linux"))]
 struct Pinned {
     inner: Box<dyn Source>,
     /// The adapter's own LUID, which is never a way out.
     ours: u64,
 }
 
+#[cfg(any(windows, target_os = "linux"))]
 impl Source for Pinned {
     fn name(&self) -> String {
         self.inner.name()
@@ -271,7 +272,7 @@ impl Source for Pinned {
 /// shape that does not duplicate it is one `Apps` handed to both -- see the
 /// design doc, which names it as the follow-up rather than leaving it to be
 /// discovered.
-#[cfg_attr(not(any(windows, target_os = "linux")), allow(dead_code))]
+#[cfg(any(windows, target_os = "linux"))]
 fn sieving(programs: &[local_apps::Picked], ports: Vec<u16>) -> Built<(sieve::Sieve, Chosen)> {
     let apps = Apps::spawn(ports)?;
     let chosen = Chosen::of(local_apps::programs_of(programs));
@@ -285,7 +286,7 @@ fn sieving(programs: &[local_apps::Picked], ports: Vec<u16>) -> Built<(sieve::Si
 /// Started here rather than by the engine because it is this mode that makes
 /// the question matter: with no adapter held there is nothing to pin away
 /// from, and `leave_by(None)` is that state.
-#[cfg_attr(not(any(windows, target_os = "linux")), allow(dead_code))]
+#[cfg(any(windows, target_os = "linux"))]
 fn watching(ours: u64, stop: tracewing_proxy::source::Stop) -> Built<()> {
     roads::watch(ours, LOOK_EVERY, roads::roads_now, upstream::leave_by, stop)
 }
