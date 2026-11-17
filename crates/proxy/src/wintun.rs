@@ -420,6 +420,15 @@ impl Held {
     pub fn luid(&self) -> Result<u64> {
         self.adapter.luid()
     }
+
+    /// A handle to the adapter itself, for whoever has to end the capture.
+    ///
+    /// Ending it is [`crate::tun::Device::shutdown`] on the adapter, and that
+    /// is the first link of the cascade `tun::run` documents -- so the window
+    /// can stop the mode without the source being handed back to it.
+    pub fn adapter(&self) -> Arc<WintunAdapter> {
+        Arc::clone(&self.adapter)
+    }
 }
 
 impl Device for Held {
