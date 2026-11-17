@@ -151,8 +151,8 @@ fn every_state_of_the_local_tab_draws() {
         .unwrap();
     shot(cx, window, "local-2-off-with-programs");
 
-    // On in the file, and this run is not serving it: the way in is made as
-    // the engine starts. The sentence has to say that rather than "on".
+    // On in the file and nothing running: the attempt ended without an
+    // adapter. The sentence has to say that rather than "on".
     window
         .update(cx, |view, _, cx| {
             set(
@@ -167,7 +167,7 @@ fn every_state_of_the_local_tab_draws() {
             cx.notify();
         })
         .unwrap();
-    shot(cx, window, "local-3-on-from-the-next-start");
+    shot(cx, window, "local-3-on-and-taking-nothing");
 
     // On and running, with nothing chosen: the adapter is up and the machine
     // is spliced straight through. The tab must not imply capture.
@@ -210,6 +210,32 @@ fn every_state_of_the_local_tab_draws() {
         .unwrap();
     shot(cx, window, "local-5-on-keeping-two");
 
+    // A start in flight, which is what somebody sees while a password
+    // dialog waits in front of this window — the state this whole change
+    // exists to make visible.
+    window
+        .update(cx, |view, _, cx| {
+            set(
+                view,
+                Support::Ready,
+                Local {
+                    on: true,
+                    programs: two.clone(),
+                },
+            );
+            view.engine.local = None;
+            view.local.starting = true;
+            cx.notify();
+        })
+        .unwrap();
+    shot(cx, window, "local-6-starting");
+    window
+        .update(cx, |view, _, cx| {
+            view.local.starting = false;
+            cx.notify();
+        })
+        .unwrap();
+
     // Not an administrator: the switch offers to come back as one, and says
     // what that costs before it is pressed.
     window
@@ -226,7 +252,7 @@ fn every_state_of_the_local_tab_draws() {
             cx.notify();
         })
         .unwrap();
-    shot(cx, window, "local-6-needs-administrator");
+    shot(cx, window, "local-7-needs-administrator");
 
     // Refused: nothing started and nothing changed, and the switch is off.
     window
@@ -235,7 +261,7 @@ fn every_state_of_the_local_tab_draws() {
             cx.notify();
         })
         .unwrap();
-    shot(cx, window, "local-7-refused");
+    shot(cx, window, "local-8-refused");
 
     // Something else went wrong, which is the one case shown as it came.
     window
@@ -246,7 +272,7 @@ fn every_state_of_the_local_tab_draws() {
             cx.notify();
         })
         .unwrap();
-    shot(cx, window, "local-8-failed");
+    shot(cx, window, "local-9-failed");
 
     // And a system that cannot: no switch, no list, and a sentence that is
     // about this tab rather than about the macOS one.
@@ -257,7 +283,7 @@ fn every_state_of_the_local_tab_draws() {
             cx.notify();
         })
         .unwrap();
-    shot(cx, window, "local-9-not-on-this-system");
+    shot(cx, window, "local-10-not-on-this-system");
 
     // And the line that says tracewing itself is elevated, which is the
     // visible half of the relaunch: the thing worth avoiding was never
@@ -272,7 +298,7 @@ fn every_state_of_the_local_tab_draws() {
             cx.notify();
         })
         .unwrap();
-    shot(cx, window, "local-10-running-as-administrator");
+    shot(cx, window, "local-11-running-as-administrator");
 
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -1123,17 +1123,20 @@ t4e3af9c3 = Вопрос
 # Tools offered: {tools}
 tb871bcf4 = Предложенные инструменты: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = Запуск: tracewing создаёт свой адаптер, и система может спросить разрешение.
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = Не на этой системе. В Windows и Linux tracewing берёт трафик выбранной программы по маршруту; в macOS это сетевое расширение, у которого своя вкладка.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Выключено. Чтобы брать трафик этого компьютера, нужен администратор: включение перезапустит tracewing от его имени, и это начнёт новую сессию — открытая сейчас останется на диске, её можно открыть снова из списка.
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = Выключено. Включение подействует при следующем запуске tracewing и начнёт новую сессию — открытая сейчас останется на диске, её можно открыть снова из списка.
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = Выключено. Включение создаёт собственный адаптер tracewing и начинает брать трафик этого компьютера — без перезапуска, и открытая сессия продолжается.
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = Включено со следующего запуска. В этой сессии ничего не берётся: этот вход создаётся при запуске tracewing.
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = Включено, но ничего не берётся: адаптер не создан. Выключить и включить снова — ещё одна попытка.
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = Включено, но ничего не сохраняется: трафик этого компьютера проходит через адаптер tracewing и сразу выходит наружу, пока ниже не добавлена программа.

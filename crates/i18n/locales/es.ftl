@@ -1099,17 +1099,20 @@ t4e3af9c3 = Pregunta
 # Tools offered: {tools}
 tb871bcf4 = Herramientas ofrecidas: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = Iniciando: tracewing está creando su adaptador, y el sistema puede pedirte permiso.
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = No en este sistema. En Windows y Linux, tracewing toma el tráfico de un programa elegido por la ruta; en macOS es la extensión de red, que tiene su propia pestaña.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Desactivado. Tomar el tráfico de este equipo requiere un administrador: activarlo inicia tracewing de nuevo como tal, y eso empieza una sesión nueva — la abierta ahora queda en el disco y se puede volver a abrir desde la lista.
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = Desactivado. Activarlo surte efecto cuando tracewing vuelva a iniciarse, y eso empieza una sesión nueva — la abierta ahora queda en el disco y se puede volver a abrir desde la lista.
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = Desactivado. Activarlo crea el adaptador propio de tracewing y empieza a tomar el tráfico de este equipo — sin reiniciar, y la sesión abierta continúa.
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = Activado a partir del próximo inicio. En esta sesión no se toma nada: esta vía de entrada se crea cuando tracewing arranca.
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = Activado, y no toma nada: no se pudo crear el adaptador. Desactivarlo y volver a activarlo lo intenta otra vez.
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = Activado, y sin guardar nada: el tráfico de este equipo pasa por el adaptador de tracewing y sale de inmediato, hasta que se añada un programa abajo.

@@ -1060,17 +1060,20 @@ t4e3af9c3 = Ditanyakan
 # Tools offered: {tools}
 tb871bcf4 = Alat yang ditawarkan: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = Memulai: tracewing sedang membuat adapternya, dan sistem mungkin meminta izin Anda.
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = Tidak ada di sistem ini. Di Windows dan Linux, tracewing mengambil trafik program yang dipilih lewat rute; di macOS itu adalah ekstensi jaringan, yang punya tabnya sendiri.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Mati. Mengambil trafik komputer ini perlu administrator: menyalakannya memulai ulang tracewing sebagai administrator, dan itu memulai sesi baru — sesi yang terbuka sekarang tetap ada di disk dan bisa dibuka lagi dari daftar.
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = Mati. Menyalakannya berlaku saat tracewing dijalankan lagi, dan itu memulai sesi baru — sesi yang terbuka sekarang tetap ada di disk dan bisa dibuka lagi dari daftar.
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = Mati. Menyalakannya membuat adapter milik tracewing sendiri dan mulai mengambil trafik komputer ini — tanpa memulai ulang, dan sesi yang terbuka tetap berjalan.
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = Menyala mulai jalan berikutnya. Di sesi ini tidak ada yang diambil: jalan masuk ini dibuat saat tracewing mulai.
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = Menyala, tapi tidak mengambil apa pun: adapter gagal dibuat. Matikan lalu nyalakan lagi untuk mencoba sekali lagi.
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = Menyala, tapi tidak menyimpan apa pun: trafik komputer ini lewat adapter tracewing lalu langsung keluar, sampai sebuah program ditambahkan di bawah.

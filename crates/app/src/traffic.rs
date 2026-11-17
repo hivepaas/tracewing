@@ -575,6 +575,14 @@ impl Traffic {
         cx.observe_window_bounds(window, Self::bounds_changed)
             .detach();
         cx.defer_in(window, Self::bounds_changed);
+        // The way in the switch was left on for, started now that there is a
+        // window to ask in front of. Deferred rather than done here: this is
+        // still building the view somebody would be shown it in.
+        cx.defer_in(window, |this, _, cx| {
+            if this.local.local.on {
+                this.start_local(cx);
+            }
+        });
         cx.on_app_quit(|this, cx| {
             // What was typed last in Settings, if the field was never left.
             this.save_settings(cx);

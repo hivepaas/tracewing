@@ -1060,17 +1060,20 @@ t4e3af9c3 = 질문
 # Tools offered: {tools}
 tb871bcf4 = 제공된 도구: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = 시작하는 중: tracewing이 어댑터를 만들고 있으며, 시스템이 허용을 요청할 수 있습니다.
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = 이 시스템에는 없습니다. tracewing은 Windows와 Linux에서 선택한 프로그램의 트래픽을 경로로 받습니다. macOS에서는 네트워크 확장이며, 별도의 탭이 있습니다.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = 꺼짐. 이 컴퓨터의 트래픽을 받으려면 관리자 권한이 필요합니다. 켜면 tracewing이 관리자로 다시 시작되고 새 세션이 시작됩니다 — 지금 열린 세션은 디스크에 남아 목록에서 다시 열 수 있습니다.
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = 꺼짐. 켜면 tracewing이 다시 시작될 때 적용되며 새 세션이 시작됩니다 — 지금 열린 세션은 디스크에 남아 목록에서 다시 열 수 있습니다.
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = 꺼짐. 켜면 tracewing 자체 어댑터를 만들고 이 컴퓨터의 트래픽을 받기 시작합니다 — 다시 시작할 필요가 없고, 지금 열린 세션은 그대로 이어집니다.
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = 다음 시작부터 켜짐. 이 세션에서는 아무것도 받고 있지 않습니다. 이 경로는 tracewing이 시작할 때 만들어집니다.
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = 켜져 있지만 아무것도 받지 못합니다: 어댑터를 만들지 못했습니다. 껐다 켜면 한 번 더 시도합니다.
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = 켜져 있지만 아무것도 보관하지 않습니다. 이 컴퓨터의 트래픽은 tracewing의 어댑터를 지나 그대로 나갑니다. 아래에서 프로그램을 추가하세요.

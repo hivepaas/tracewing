@@ -1123,17 +1123,20 @@ t4e3af9c3 = Запитано
 # Tools offered: {tools}
 tb871bcf4 = Запропоновані інструменти: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = Запуск: tracewing створює свій адаптер, і система може попросити дозволу.
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = Не на цій системі. У Windows і Linux tracewing бере трафік вибраної програми за маршрутом; у macOS це мережеве розширення, яке має власну вкладку.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Вимкнено. Щоб брати трафік цього комп'ютера, потрібен адміністратор: увімкнення перезапустить tracewing від його імені, і це почне новий сеанс — відкритий зараз залишиться на диску, його можна відкрити знову зі списку.
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = Вимкнено. Увімкнення подіє при наступному запуску tracewing і почне новий сеанс — відкритий зараз залишиться на диску, його можна відкрити знову зі списку.
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = Вимкнено. Увімкнення створює власний адаптер tracewing і починає брати трафік цього комп'ютера — без перезапуску, і відкритий сеанс триває далі.
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = Увімкнено з наступного запуску. У цьому сеансі нічого не береться: цей вхід створюється під час запуску tracewing.
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = Увімкнено, але нічого не береться: адаптер не створено. Вимкнути й увімкнути знову — ще одна спроба.
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = Увімкнено, але нічого не зберігається: трафік цього комп'ютера проходить через адаптер tracewing і одразу виходить назовні, доки нижче не додано програму.

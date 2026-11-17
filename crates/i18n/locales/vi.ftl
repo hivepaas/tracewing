@@ -1060,17 +1060,20 @@ t4e3af9c3 = Đã hỏi
 # Tools offered: {tools}
 tb871bcf4 = Tool được cung cấp: { $tools }
 
+# Starting: tracewing is making its adapter, and the system may ask you to allow it.
+t5cf37e28 = Đang khởi động: tracewing đang tạo adapter của nó, và hệ thống có thể hỏi bạn để cho phép.
+
 # Not on this system. tracewing takes a chosen program's traffic by route on Windows and Linux; on macOS that is the network extension, which has a tab of its own.
 tab504c3d = Không có trên hệ thống này. tracewing bắt traffic của một chương trình đã chọn theo route trên Windows và Linux; trên macOS thì đó là network extension, có tab riêng.
 
 # Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
 tadffa882 = Đang tắt. Để bắt traffic của máy này cần quyền quản trị: bật lên sẽ khởi động lại tracewing với quyền đó, và điều đó bắt đầu một phiên mới — phiên đang mở vẫn nằm trên đĩa và mở lại được từ danh sách.
 
-# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
-t81e3dcfa = Đang tắt. Bật lên sẽ có hiệu lực khi tracewing khởi động lại, và điều đó bắt đầu một phiên mới — phiên đang mở vẫn nằm trên đĩa và mở lại được từ danh sách.
+# Off. Switching it on makes tracewing's own adapter and starts taking this machine's traffic — no restart, and the session open now carries on.
+tc237f728 = Đang tắt. Bật lên sẽ tạo adapter của chính tracewing và bắt đầu nhận traffic của máy này — không cần khởi động lại, và phiên đang mở vẫn tiếp tục.
 
-# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
-t5585ff8f = Bật từ lần khởi động sau. Phiên này chưa bắt gì cả: đường vào được tạo lúc tracewing khởi động.
+# On, and taking nothing: the adapter was not made. Turning it off and on again tries once more.
+tc2395ac5 = Đang bật, và chưa nhận gì: adapter chưa tạo được. Tắt rồi bật lại sẽ thử một lần nữa.
 
 # On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
 t9055e0b6 = Đang bật, và chưa giữ gì: traffic của máy đi qua adapter của tracewing rồi ra thẳng, cho tới khi thêm một chương trình bên dưới.
