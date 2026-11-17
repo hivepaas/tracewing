@@ -38,6 +38,7 @@ pub mod jwt;
 pub mod layout;
 pub mod llm;
 pub mod llm_view;
+pub mod local_apps;
 pub mod mac_apps;
 pub mod mcp;
 pub mod messages;
