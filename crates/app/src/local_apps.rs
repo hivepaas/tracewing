@@ -33,6 +33,47 @@ use std::path::{Path, PathBuf};
 /// Where the picked programs are kept, in the data directory.
 pub const FILE: &str = "local-programs.toml";
 
+/// What this machine can do about the local way in, which the tab shows
+/// instead of a switch that could not work.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Support {
+    /// The switch does what it says.
+    Ready,
+    /// This system captures by route, and tracewing is not an administrator.
+    /// Switching on means coming back as one, which is a **new session**, and
+    /// the window has to say so before it asks rather than afterwards.
+    NeedsAdministrator,
+    /// Nothing here captures by route. On macOS that is not a gap: the apps
+    /// way in is the network extension, which is a different tab.
+    NotOnThisSystem,
+}
+
+impl Support {
+    /// Which of the three, for a machine that captures by route or does not,
+    /// and a tracewing that is elevated or is not.
+    ///
+    /// A plain function over two bits, so that every answer is reachable from
+    /// a test on any machine -- the same reason
+    /// [`tracewing_system::child::start_at`] is one. The single line no test
+    /// can settle is which bits *this* machine has, and that is [`Self::here`].
+    pub fn of(by_route: bool, elevated: bool) -> Self {
+        match (by_route, elevated) {
+            (false, _) => Self::NotOnThisSystem,
+            (true, true) => Self::Ready,
+            (true, false) => Self::NeedsAdministrator,
+        }
+    }
+
+    /// This machine's answer.
+    ///
+    /// Windows only for now. Linux captures by route as well and its half is
+    /// being built beside this one; when it lands, this is the line that
+    /// changes, and `of` above is where the rest of the behaviour already is.
+    pub fn here() -> Self {
+        Self::of(cfg!(windows), tracewing_system::child::elevated())
+    }
+}
+
 /// A program as it was picked: what to call it, and where it is.
 ///
 /// No signing ids, unlike the macOS way in: nothing here asks the operating
@@ -137,6 +178,31 @@ mod tests {
             std::env::temp_dir().join(format!("tracewing-local-{}-{which}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         dir
+    }
+
+    /// All four inputs, including the two no machine here can be in, so that
+    /// the tab's three states are settled by a test rather than by whichever
+    /// machine somebody happens to run it on.
+    #[test]
+    fn what_a_machine_can_do_about_the_local_way_in() {
+        assert_eq!(Support::of(true, true), Support::Ready);
+        assert_eq!(
+            Support::of(true, false),
+            Support::NeedsAdministrator,
+            "it could, once tracewing comes back as one"
+        );
+        assert_eq!(
+            Support::of(false, false),
+            Support::NotOnThisSystem,
+            "and where nothing captures by route, elevation changes nothing"
+        );
+        assert_eq!(Support::of(false, true), Support::NotOnThisSystem);
+        // What this machine is, which is the one line `of` cannot settle.
+        match cfg!(windows) {
+            false => assert_eq!(Support::here(), Support::NotOnThisSystem),
+            // Elevated or not, it is one of the two that captures by route.
+            true => assert_ne!(Support::here(), Support::NotOnThisSystem),
+        }
     }
 
     #[test]
