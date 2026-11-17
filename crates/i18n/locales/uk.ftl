@@ -1123,6 +1123,45 @@ t4e3af9c3 = Запитано
 # Tools offered: {tools}
 tb871bcf4 = Запропоновані інструменти: { $tools }
 
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
+t53ab4670 = Не на цій системі. У Windows tracewing бере трафік вибраної програми за маршрутом; у macOS це мережеве розширення, яке має власну вкладку.
+
+# Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+tadffa882 = Вимкнено. Щоб брати трафік цього комп'ютера, потрібен адміністратор: увімкнення перезапустить tracewing від його імені, і це почне новий сеанс — відкритий зараз залишиться на диску, його можна відкрити знову зі списку.
+
+# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+t81e3dcfa = Вимкнено. Увімкнення подіє при наступному запуску tracewing і почне новий сеанс — відкритий зараз залишиться на диску, його можна відкрити знову зі списку.
+
+# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
+t5585ff8f = Увімкнено з наступного запуску. У цьому сеансі нічого не береться: цей вхід створюється під час запуску tracewing.
+
+# On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
+t9055e0b6 = Увімкнено, але нічого не зберігається: трафік цього комп'ютера проходить через адаптер tracewing і одразу виходить назовні, доки нижче не додано програму.
+
+# On: the connections of the programs below come to tracewing, whatever their proxy settings say. Everything else goes straight through, unrecorded.
+tf893347b = Увімкнено: з'єднання програм нижче надходять до tracewing, хай що кажуть їхні налаштування проксі. Усе інше проходить повз і не записується.
+
+# Turn off
+tcd03e04b = Вимкнути
+
+# Turn on as administrator…
+t741e3108 = Увімкнути від імені адміністратора…
+
+# Turn on
+t65a0c5a7 = Увімкнути
+
+# Administrator rights were not given, so nothing was turned on.
+t15853aab = Права адміністратора не було надано, тож нічого не ввімкнено.
+
+# Programs it keeps
+t265ab5a7 = Програми, які зберігаються
+
+# None yet. This way in takes every connection on the machine and keeps only what is listed here — there is no capture-everything mode, by design: the rest is spliced straight through and never recorded.
+tfe4121e9 = Поки жодної. Цей вхід бере кожне з'єднання на машині та зберігає лише перелічене тут — режиму «записувати все» немає навмисне: решта проходить повз і ніколи не записується.
+
+# Add a program…
+t7f6c6835 = Додати програму…
+
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing не відкрив порт для розширення.
 
@@ -1155,12 +1194,6 @@ t33ce2bcc = Вимкнено.
 
 # Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
 td99daed8 = Вимкнено. Цей tracewing запущено не з tracewing.app, а macOS дозволяє встановлювати розширення лише самому застосунку: увімкніть його з tracewing у Програмах.
-
-# Turn on
-t65a0c5a7 = Увімкнути
-
-# Turn off
-tcd03e04b = Вимкнути
 
 # Open System Settings
 td22799a3 = Відкрити Системні параметри
@@ -2008,6 +2041,9 @@ t1d84ee29 = Інший пристрій — він встановлює цент
 # This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
 t1dd036b6 = Власне сховище цього комп'ютера, як і для системного проксі: macOS передає потік, а застосунок усе одно перевіряє отриманий сертифікат.
 
+# This computer's own store, as for the system proxy: the adapter hands the connection over, and the program still checks the certificate it is given.
+tceac3b0a = Власне сховище цього комп'ютера, як і для системного проксі: адаптер передає з'єднання, а програма так само перевіряє отриманий сертифікат.
+
 # Let other devices use the proxy
 t13e626b3 = Дозволити іншим пристроям використовувати проксі
 
@@ -2224,6 +2260,12 @@ t30f507c6 = Усе, що вибраний застосунок надсилає 
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, тобто HTTP/3; з'єднання з цим самим комп'ютером, які macOS не передає; і go run, який щоразу збирає програму в новому місці: додайте натомість теку, куди пише go build -o.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+t980d767e = Усе, що вибрана програма надсилає через TCP, читає вона налаштування проксі чи ні: трафік цього комп'ютера йде через власний адаптер tracewing, а зберігаються вибрані вами програми.
+
+# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t3c7f9a98 = UDP, що проходить наскрізь, тож сервер із пропозицією HTTP/3 отримує відмову і програма повертається до HTTP/2; з'єднання із самим цим комп'ютером, які його не залишають; і go run, який щоразу збирає програму в новому місці: додайте натомість теку, куди пише go build -o.
+
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Відколи це ввімкнено, на порт проксі нічого не надійшло — ні через системний проксі, ні через браузер самого tracewing, ні через термінал: усі вони входять там. Програма, якій указали проксі і яка його нехтує, виглядає саме так.
 
@@ -2232,9 +2274,6 @@ t7cb4303b = Відколи це ввімкнено, цим шляхом нічо
 
 # Open from Set up
 tf0ad42dc = Відкрити з Підготовки
-
-# macOS only: it is macOS that hands an app's connections over.
-t71872556 = Лише macOS: з'єднання застосунку передає сам macOS.
 
 # Catches
 tf5f3fe08 = Ловить

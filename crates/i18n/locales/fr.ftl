@@ -1099,6 +1099,45 @@ t4e3af9c3 = Question
 # Tools offered: {tools}
 tb871bcf4 = Outils proposés : { $tools }
 
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
+t53ab4670 = Pas sur ce système. Sous Windows, tracewing prend le trafic d'un programme choisi par la route ; sous macOS, c'est l'extension réseau, qui a son propre onglet.
+
+# Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+tadffa882 = Désactivé. Prendre le trafic de cet ordinateur demande un administrateur : l'activer relance tracewing en tant qu'administrateur, et cela commence une nouvelle session — celle qui est ouverte reste sur le disque et peut être rouverte depuis la liste.
+
+# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+t81e3dcfa = Désactivé. L'activer prendra effet au prochain démarrage de tracewing, et cela commencera une nouvelle session — celle qui est ouverte reste sur le disque et peut être rouverte depuis la liste.
+
+# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
+t5585ff8f = Activé à partir du prochain démarrage. Rien n'est pris dans cette session : cette voie d'entrée est créée au démarrage de tracewing.
+
+# On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
+t9055e0b6 = Activé, et ne garde rien : le trafic de cet ordinateur passe par l'adaptateur de tracewing et ressort aussitôt, jusqu'à ce qu'un programme soit ajouté ci-dessous.
+
+# On: the connections of the programs below come to tracewing, whatever their proxy settings say. Everything else goes straight through, unrecorded.
+tf893347b = Activé : les connexions des programmes ci-dessous arrivent à tracewing, quels que soient leurs réglages de proxy. Tout le reste passe sans être enregistré.
+
+# Turn off
+tcd03e04b = Désactiver
+
+# Turn on as administrator…
+t741e3108 = Activer en tant qu'administrateur…
+
+# Turn on
+t65a0c5a7 = Activer
+
+# Administrator rights were not given, so nothing was turned on.
+t15853aab = Les droits d'administrateur n'ont pas été accordés, rien n'a donc été activé.
+
+# Programs it keeps
+t265ab5a7 = Programmes qu'il garde
+
+# None yet. This way in takes every connection on the machine and keeps only what is listed here — there is no capture-everything mode, by design: the rest is spliced straight through and never recorded.
+tfe4121e9 = Aucun pour l'instant. Cette voie d'entrée prend toutes les connexions de la machine et ne garde que ce qui est listé ici — il n'y a pas de mode « tout capturer », à dessein : le reste passe directement et n'est jamais enregistré.
+
+# Add a program…
+t7f6c6835 = Ajouter un programme…
+
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing n'a ouvert aucun port pour l'extension.
 
@@ -1131,12 +1170,6 @@ t33ce2bcc = Désactivé.
 
 # Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
 td99daed8 = Désactivé. Ce tracewing ne tourne pas depuis tracewing.app, et macOS ne laisse que l'app installer son extension : activez-le depuis tracewing dans Applications.
-
-# Turn on
-t65a0c5a7 = Activer
-
-# Turn off
-tcd03e04b = Désactiver
 
 # Open System Settings
 td22799a3 = Ouvrir Réglages Système
@@ -1938,6 +1971,9 @@ t1d84ee29 = L'autre appareil, qui installe l'autorité lui-même. Configurer a u
 # This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
 t1dd036b6 = Le magasin propre à cet ordinateur, comme pour le proxy système : macOS transmet le flux, et l'app vérifie tout de même le certificat qu'elle reçoit.
 
+# This computer's own store, as for the system proxy: the adapter hands the connection over, and the program still checks the certificate it is given.
+tceac3b0a = Le magasin propre à cet ordinateur, comme pour le proxy système : l'adaptateur transmet la connexion, et le programme vérifie toujours le certificat qu'il reçoit.
+
 # Let other devices use the proxy
 t13e626b3 = Autoriser les autres appareils à utiliser le proxy
 
@@ -2154,6 +2190,12 @@ t30f507c6 = Tout ce qu'une app choisie envoie en TCP, qu'elle lise ou non un ré
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = L'UDP, donc HTTP/3 ; les connexions vers cet ordinateur lui-même, que macOS ne transmet pas ; et go run, qui construit son programme à un nouvel endroit à chaque fois : ajoutez plutôt le dossier où écrit go build -o.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+t980d767e = Tout ce qu'un programme choisi envoie en TCP, qu'il lise ou non un réglage de proxy : le trafic de cet ordinateur passe par l'adaptateur de tracewing, et ce qui est gardé, ce sont les programmes que vous avez choisis.
+
+# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t3c7f9a98 = UDP, qui passe tel quel, de sorte qu'un serveur proposant HTTP/3 est refusé et que le programme revient à HTTP/2 ; les connexions vers cet ordinateur lui-même, qui ne le quittent jamais ; et go run, qui construit son programme ailleurs à chaque fois : ajoutez plutôt le dossier où écrit go build -o.
+
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Rien n'est arrivé sur le port du proxy depuis son activation — ni par le proxy système, ni par un navigateur propre à tracewing, ni par un terminal, qui passent tous par là. Un programme à qui le proxy a été indiqué et qui l'ignore ressemble exactement à ceci.
 
@@ -2162,9 +2204,6 @@ t7cb4303b = Rien n'est arrivé par là depuis son activation. Un programme à qu
 
 # Open from Set up
 tf0ad42dc = Ouvrir depuis Configurer
-
-# macOS only: it is macOS that hands an app's connections over.
-t71872556 = macOS uniquement : c'est macOS qui transmet les connexions d'une application.
 
 # Catches
 tf5f3fe08 = Capture

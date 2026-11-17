@@ -146,9 +146,18 @@ fn trust_for(way: Way) -> (String, Option<SettingsSection>) {
             ),
             None,
         ),
-        Way::Apps => (
+        Way::Apps if cfg!(target_os = "macos") => (
             tr!(
                 "This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given."
+            ),
+            Some(SettingsSection::Certificates),
+        ),
+        // The same store, for the same reason, reached the other way: the
+        // adapter hands the connection over and the program still checks
+        // what it is given.
+        Way::Apps => (
+            tr!(
+                "This computer's own store, as for the system proxy: the adapter hands the connection over, and the program still checks the certificate it is given."
             ),
             Some(SettingsSection::Certificates),
         ),
@@ -962,12 +971,25 @@ impl Traffic {
                     "Apps that trust only their own certificates, and anything sent before tracewing's authority is installed on the phone."
                 ),
             ),
-            Way::Apps => (
+            // Two ways in wear this tab, and each needs its own pair: the
+            // macOS one is the network extension, the other is a route into
+            // tracewing's own adapter. The sentences below used to be the
+            // extension's on both, which said "macOS" on a Windows tab --
+            // true, and about the wrong page.
+            Way::Apps if cfg!(target_os = "macos") => (
                 tr!(
                     "Whatever a chosen app sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java."
                 ),
                 tr!(
                     "UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead."
+                ),
+            ),
+            Way::Apps => (
+                tr!(
+                    "Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose."
+                ),
+                tr!(
+                    "UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead."
                 ),
             ),
         };
@@ -1059,11 +1081,22 @@ impl Traffic {
         // whole subject is which programs, with nothing on it to choose any —
         // and the compiler, which asks about every other `Way` match in this
         // file, would say nothing at all about that one.
+        // Whether this tab describes a way in at all. A tab for one this
+        // system does not have must not say what it catches in the present
+        // tense: every one of those sentences is true **of the way in** and
+        // about the wrong page here, which is the failure no assertion
+        // catches.
+        let describes = way != Way::Apps
+            || cfg!(target_os = "macos")
+            || self.local.support != crate::local_apps::Support::NotOnThisSystem;
         let apps = match way {
             Way::Apps if cfg!(target_os = "macos") => Some(self.render_mac_apps(cx)),
-            Way::Apps => Some(div().text_size(ui(12.)).child(tr!(
-                "macOS only: it is macOS that hands an app's connections over."
-            ))),
+            // Windows and Linux: the same promise as the macOS tab -- choose
+            // the programs, see those programs -- reached by route rather
+            // than by an extension. The sentence that used to be here said
+            // "macOS only", which was true of the extension and about the
+            // wrong tab the moment this one existed.
+            Way::Apps => Some(self.render_local_apps(cx)),
             Way::SystemProxy
             | Way::Browser
             | Way::Terminal
@@ -1085,7 +1118,7 @@ impl Traffic {
                     .flex_wrap()
                     .items_center()
                     .gap(ui(16.))
-                    .child(
+                    .children(describes.then(|| {
                         div()
                             .flex_1()
                             .min_w_0()
@@ -1102,14 +1135,18 @@ impl Traffic {
                                 quiet.map(|says| {
                                     div().mt(ui(4.)).text_color(rgb(c.warn)).child(says)
                                 }),
-                            ),
-                    )
+                            )
+                    }))
                     .children(control),
             )
             // In a row of its own: a column stretches what is in it, and a
             // button the width of the card reads as a banner rather than as
             // something to press.
-            .children(trust_link.map(|button| div().flex().flex_row().child(button)))
+            .children(
+                trust_link
+                    .filter(|_| describes)
+                    .map(|button| div().flex().flex_row().child(button)),
+            )
             .children(apps)
     }
 

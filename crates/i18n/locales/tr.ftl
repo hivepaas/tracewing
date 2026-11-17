@@ -1093,6 +1093,45 @@ t4e3af9c3 = Soru
 # Tools offered: {tools}
 tb871bcf4 = Sunulan araçlar: { $tools }
 
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
+t53ab4670 = Bu sistemde yok. Windows'ta tracewing seçilen bir programın trafiğini rota üzerinden alır; macOS'ta bu, kendi sekmesi olan ağ uzantısıdır.
+
+# Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+tadffa882 = Kapalı. Bu bilgisayarın trafiğini almak için yönetici gerekir: açmak tracewing'i yönetici olarak yeniden başlatır ve bu yeni bir oturum başlatır — şu an açık olan diskte kalır ve listeden yeniden açılabilir.
+
+# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+t81e3dcfa = Kapalı. Açmak, tracewing bir sonraki başlatıldığında geçerli olur ve yeni bir oturum başlatır — şu an açık olan diskte kalır ve listeden yeniden açılabilir.
+
+# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
+t5585ff8f = Sonraki başlatmadan itibaren açık. Bu oturumda hiçbir şey alınmıyor: bu giriş yolu tracewing başlarken oluşturulur.
+
+# On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
+t9055e0b6 = Açık, ama hiçbir şey tutulmuyor: bu bilgisayarın trafiği tracewing'in bağdaştırıcısından geçip hemen dışarı çıkıyor; aşağıdan bir program ekleyin.
+
+# On: the connections of the programs below come to tracewing, whatever their proxy settings say. Everything else goes straight through, unrecorded.
+tf893347b = Açık: aşağıdaki programların bağlantıları, proxy ayarları ne derse desin tracewing'e gelir. Geri kalan her şey kaydedilmeden geçip gider.
+
+# Turn off
+tcd03e04b = Kapat
+
+# Turn on as administrator…
+t741e3108 = Yönetici olarak aç…
+
+# Turn on
+t65a0c5a7 = Aç
+
+# Administrator rights were not given, so nothing was turned on.
+t15853aab = Yönetici hakları verilmedi, bu yüzden hiçbir şey açılmadı.
+
+# Programs it keeps
+t265ab5a7 = Tuttuğu programlar
+
+# None yet. This way in takes every connection on the machine and keeps only what is listed here — there is no capture-everything mode, by design: the rest is spliced straight through and never recorded.
+tfe4121e9 = Henüz yok. Bu giriş yolu makinedeki her bağlantıyı alır ve yalnızca burada listelenenleri tutar — her şeyi yakalayan bir kip bilerek yoktur: gerisi doğrudan geçer ve asla kaydedilmez.
+
+# Add a program…
+t7f6c6835 = Program ekle…
+
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing eklenti için bir port açmadı.
 
@@ -1125,12 +1164,6 @@ t33ce2bcc = Kapalı.
 
 # Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
 td99daed8 = Kapalı. Bu tracewing, tracewing.app'ten çalışmıyor ve macOS eklentiyi yalnızca uygulamanın kurmasına izin veriyor: Uygulamalar'daki tracewing'den açın.
-
-# Turn on
-t65a0c5a7 = Aç
-
-# Turn off
-tcd03e04b = Kapat
 
 # Open System Settings
 td22799a3 = Sistem Ayarları'nı aç
@@ -1888,6 +1921,9 @@ t1d84ee29 = Öteki cihaz; yetkiliyi kendisi kurar. Kurulum'da "Telefonum" yanıt
 # This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
 t1dd036b6 = Bu bilgisayarın kendi deposu, sistem proxy'sinde olduğu gibi: macOS akışı devreder, uygulama ise aldığı sertifikayı yine de denetler.
 
+# This computer's own store, as for the system proxy: the adapter hands the connection over, and the program still checks the certificate it is given.
+tceac3b0a = Sistem proxy'sinde olduğu gibi bu bilgisayarın kendi deposu: bağlantıyı bağdaştırıcı devreder, program yine de aldığı sertifikayı denetler.
+
 # Let other devices use the proxy
 t13e626b3 = Diğer cihazların proxy'yi kullanmasına izin ver
 
@@ -2104,6 +2140,12 @@ t30f507c6 = Seçilen bir uygulamanın TCP ile gönderdiği her şey, proxy ayar�
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, yani HTTP/3; macOS'un devretmediği, bu bilgisayarın kendisine giden bağlantılar; ve programını her seferinde yeni bir yerde derleyen go run: onun yerine go build -o'nun yazdığı klasörü ekleyin.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+t980d767e = Seçilen bir programın TCP üzerinden gönderdiği her şey, proxy ayarını okusun ya da okumasın: bu bilgisayarın trafiği tracewing'in kendi bağdaştırıcısından geçer ve tutulan şey, seçtiğiniz programlardır.
+
+# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t3c7f9a98 = Doğrudan geçirilen UDP — bu yüzden HTTP/3 öneren bir sunucu reddedilir ve program HTTP/2'ye düşer; bu bilgisayarın kendisine giden ve onu hiç terk etmeyen bağlantılar; ve her seferinde programını başka bir yere derleyen go run: onun yerine go build -o'nun yazdığı klasörü ekleyin.
+
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Açıldığından beri proxy portuna hiçbir şey gelmedi — ne sistem proxy'sinden, ne tracewing'in kendi tarayıcısından, ne de bir terminalden; hepsi oradan girer. Proxy'yi kullanması söylenip onu yok sayan bir program tam olarak böyle görünür.
 
@@ -2112,9 +2154,6 @@ t7cb4303b = Açıldığından beri bu yoldan hiçbir şey gelmedi. Bu yolu kulla
 
 # Open from Set up
 tf0ad42dc = Kurulum'dan aç
-
-# macOS only: it is macOS that hands an app's connections over.
-t71872556 = Yalnızca macOS: bir uygulamanın bağlantılarını devreden macOS'un kendisidir.
 
 # Catches
 tf5f3fe08 = Yakaladıkları

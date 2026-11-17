@@ -1060,6 +1060,45 @@ t4e3af9c3 = Đã hỏi
 # Tools offered: {tools}
 tb871bcf4 = Tool được cung cấp: { $tools }
 
+# Not on this system. tracewing takes a chosen program's traffic by route on Windows; on macOS that is the network extension, which has a tab of its own.
+t53ab4670 = Không có trên hệ thống này. tracewing bắt traffic của một chương trình đã chọn theo route trên Windows; trên macOS thì đó là network extension, có tab riêng.
+
+# Off. Taking this machine's traffic needs an administrator: switching it on starts tracewing again as one, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+tadffa882 = Đang tắt. Để bắt traffic của máy này cần quyền quản trị: bật lên sẽ khởi động lại tracewing với quyền đó, và điều đó bắt đầu một phiên mới — phiên đang mở vẫn nằm trên đĩa và mở lại được từ danh sách.
+
+# Off. Switching it on takes effect when tracewing starts again, and that starts a new session — the one open now stays on disk and can be reopened from the list.
+t81e3dcfa = Đang tắt. Bật lên sẽ có hiệu lực khi tracewing khởi động lại, và điều đó bắt đầu một phiên mới — phiên đang mở vẫn nằm trên đĩa và mở lại được từ danh sách.
+
+# On from the next start. Nothing is being taken in this session: the way in is made as tracewing starts.
+t5585ff8f = Bật từ lần khởi động sau. Phiên này chưa bắt gì cả: đường vào được tạo lúc tracewing khởi động.
+
+# On, and keeping nothing: this machine's traffic goes through tracewing's adapter and straight out again until a program is added below.
+t9055e0b6 = Đang bật, và chưa giữ gì: traffic của máy đi qua adapter của tracewing rồi ra thẳng, cho tới khi thêm một chương trình bên dưới.
+
+# On: the connections of the programs below come to tracewing, whatever their proxy settings say. Everything else goes straight through, unrecorded.
+tf893347b = Đang bật: kết nối của các chương trình bên dưới đi vào tracewing, bất kể cài đặt proxy của chúng nói gì. Mọi thứ khác đi thẳng qua và không được ghi.
+
+# Turn off
+tcd03e04b = Tắt
+
+# Turn on as administrator…
+t741e3108 = Bật với quyền quản trị…
+
+# Turn on
+t65a0c5a7 = Bật
+
+# Administrator rights were not given, so nothing was turned on.
+t15853aab = Không được cấp quyền quản trị, nên chưa bật gì cả.
+
+# Programs it keeps
+t265ab5a7 = Các chương trình được giữ
+
+# None yet. This way in takes every connection on the machine and keeps only what is listed here — there is no capture-everything mode, by design: the rest is spliced straight through and never recorded.
+tfe4121e9 = Chưa có. Đường vào này nhận mọi kết nối trên máy và chỉ giữ những gì liệt kê ở đây — không có chế độ bắt tất cả, đó là chủ ý: phần còn lại đi thẳng qua và không bao giờ được ghi.
+
+# Add a program…
+t7f6c6835 = Thêm một chương trình…
+
 # tracewing has no port open for the extension.
 tb0bf6486 = tracewing chưa mở cổng nào cho extension.
 
@@ -1092,12 +1131,6 @@ t33ce2bcc = Đang tắt.
 
 # Off. This tracewing does not run from tracewing.app, and macOS lets only the app install its extension: switch it on from tracewing in Applications.
 td99daed8 = Đang tắt. tracewing này không chạy từ tracewing.app, mà macOS chỉ cho chính app đó cài extension: hãy bật từ tracewing trong Applications.
-
-# Turn on
-t65a0c5a7 = Bật
-
-# Turn off
-tcd03e04b = Tắt
 
 # Open System Settings
 td22799a3 = Mở System Settings
@@ -1813,6 +1846,9 @@ t1d84ee29 = Thiết bị kia, nó tự cài CA. Thiết lập có hướng dẫn
 # This computer's own store, as for the system proxy: macOS hands the flow over, and the app still checks the certificate it is given.
 t1dd036b6 = Kho của chính máy này, như với system proxy: macOS chuyển flow sang, còn app vẫn kiểm chứng chỉ mà nó nhận được.
 
+# This computer's own store, as for the system proxy: the adapter hands the connection over, and the program still checks the certificate it is given.
+tceac3b0a = Kho chứng chỉ của chính máy này, như với system proxy: adapter chuyển kết nối qua, còn chương trình vẫn kiểm chứng chỉ mà nó nhận được.
+
 # Let other devices use the proxy
 t13e626b3 = Cho thiết bị khác dùng proxy
 
@@ -2029,6 +2065,12 @@ t30f507c6 = Mọi thứ một app được chọn gửi qua TCP, dù nó có đ�
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, tức HTTP/3; kết nối tới chính máy này, vì macOS không chuyển chúng; và go run, vì mỗi lần nó build chương trình ở một chỗ mới: hãy thêm thư mục mà go build -o ghi ra.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+t980d767e = Mọi thứ một chương trình đã chọn gửi qua TCP, dù nó có đọc cài đặt proxy hay không: traffic của máy này đi qua adapter của chính tracewing, và thứ được giữ là những chương trình bạn chọn.
+
+# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t3c7f9a98 = UDP, vốn được cho đi thẳng, nên server chào HTTP/3 sẽ bị từ chối và chương trình quay về HTTP/2; các kết nối tới chính máy này, vốn không ra khỏi máy; và go run, vốn build chương trình ở chỗ mới mỗi lần: hãy thêm thư mục mà go build -o ghi vào.
+
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Chưa có gì tới cổng proxy kể từ lúc bật — không từ system proxy, không từ trình duyệt riêng của tracewing, cũng không từ terminal, vì cả ba đều vào ở đó. Một chương trình được chỉ dùng proxy nhưng bỏ qua nó thì trông đúng như thế này.
 
@@ -2037,9 +2079,6 @@ t7cb4303b = Chưa có gì tới bằng đường này kể từ lúc bật. Mộ
 
 # Open from Set up
 tf0ad42dc = Mở từ Thiết lập
-
-# macOS only: it is macOS that hands an app's connections over.
-t71872556 = Chỉ macOS: chính macOS là bên chuyển các kết nối của app sang.
 
 # Catches
 tf5f3fe08 = Bắt được

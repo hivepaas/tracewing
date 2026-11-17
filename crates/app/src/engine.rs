@@ -150,6 +150,14 @@ pub struct Engine {
     pub extension: Option<tracewing_system::extension::Config>,
     /// Why there is no port for the extension although apps were asked for.
     pub extension_problem: Option<String>,
+    /// The local way in while it runs: what it keeps, and what ends it.
+    /// `None` with no problem beside it is the switch being off.
+    pub local: Option<crate::local_source::Running>,
+    /// Why this machine's traffic is not coming through tracewing's own
+    /// adapter although the switch is on -- a system that cannot, or an
+    /// administrator that is wanted. For the tab to show instead of a switch
+    /// that looks on with nothing behind it.
+    pub local_problem: Option<crate::local_source::NoSource>,
     /// The keys the tunnel was started with, so that the configuration a
     /// phone needs can be written again whenever it is asked for. Not public:
     /// one of them is a private key, and what Settings wants is
@@ -347,6 +355,36 @@ impl Engine {
         let _ = std::fs::write(&address_file, addr.to_string());
         let scripts = Arc::new(Scripts::default());
         let (stop, stopped) = oneshot::channel::<()>();
+        // The local way in, before the sources are gathered: its source goes
+        // in with the rest, and the two handles stay here for the tab. Built
+        // here rather than in the block below because that one is a struct
+        // literal and these have to come out of it.
+        let wanted = crate::local_apps::load(&opts.data_dir);
+        let (mut local, mut local_in, mut local_problem) = (None, None, None);
+        match crate::local_source::start(
+            &wanted,
+            // Every port of tracewing's that programs on this machine connect
+            // to, which is what `Apps` tells their sockets apart by.
+            [Some(addr.port()), socks_at.map(|at| at.port())]
+                .into_iter()
+                .flatten()
+                .collect(),
+            &opts.data_dir,
+        ) {
+            Ok(Some(started)) => {
+                local = Some(crate::local_source::Running {
+                    chosen: started.chosen,
+                    stopper: started.stopper,
+                });
+                local_in = Some(started.source);
+            }
+            Ok(None) => {}
+            // Kept as the case rather than as its words: the window has a
+            // translated sentence per case, and `crates/system` has no `tr!`
+            // in it at all.
+            Err(why) => local_problem = Some(why),
+        }
+
         let proxy = ProxyOptions {
             listener: None,
             std_listener: Some(listener),
@@ -394,6 +432,9 @@ impl Engine {
                             keepalive: None,
                         },
                     )));
+                }
+                if let Some(source) = local_in {
+                    sources.push(source);
                 }
                 sources
             },
@@ -447,6 +488,8 @@ impl Engine {
             wireguard: wireguard_at,
             wireguard_keys,
             wireguard_problem,
+            local,
+            local_problem,
             extension: extension_config,
             extension_problem,
             live,

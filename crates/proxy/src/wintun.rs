@@ -51,7 +51,7 @@
 
 use crate::tun::Device;
 use anyhow::{Result, anyhow};
-use std::{marker::PhantomData, net::IpAddr, path::Path, sync::Arc};
+use std::{net::IpAddr, path::Path, sync::Arc};
 
 /// How much of the ring Wintun keeps for packets on their way in. It takes a
 /// power of two, and this is the `0x400000` Wintun's own README passes to
@@ -179,7 +179,7 @@ impl WintunAdapter {
     /// because the stack behind the adapter answers for every destination
     /// and this address is only what makes the adapter a place Windows will
     /// route to at all.
-    pub fn address(&self, addr: IpAddr, bits: u8) -> Result<Address<'_>> {
+    pub fn address(self: &Arc<Self>, addr: IpAddr, bits: u8) -> Result<Address> {
         use windows_sys::Win32::{
             Foundation::NO_ERROR,
             NetworkManagement::IpHelper::{
@@ -207,7 +207,7 @@ impl WintunAdapter {
         match got {
             NO_ERROR => Ok(Address {
                 row,
-                held: PhantomData,
+                _held: Arc::clone(self),
             }),
             _ => Err(anyhow!("give the adapter {addr}/{bits}: error {got}")),
         }
@@ -228,7 +228,7 @@ impl WintunAdapter {
     /// `0.0.0.0/0`: a `/0` gives the interface a metric of zero and turns
     /// Windows' automatic metric logic off, where the two halves reach just
     /// as far and leave the real default route in place.
-    pub fn route(&self, to: IpAddr, bits: u8) -> Result<Route<'_>> {
+    pub fn route(self: &Arc<Self>, to: IpAddr, bits: u8) -> Result<Route> {
         use windows_sys::Win32::{
             Foundation::NO_ERROR,
             NetworkManagement::IpHelper::{
@@ -261,7 +261,7 @@ impl WintunAdapter {
         match got {
             NO_ERROR => Ok(Route {
                 row,
-                held: PhantomData,
+                _held: Arc::clone(self),
             }),
             _ => Err(anyhow!("route {to}/{bits} into the adapter: error {got}")),
         }
@@ -270,17 +270,23 @@ impl WintunAdapter {
 
 /// An address on the adapter, taken away again when this is dropped.
 ///
-/// The lifetime is not decoration. Deleting an address after its adapter has
-/// gone is meaningless — the adapter going takes its addresses with it —
-/// and borrowing the adapter makes that order a compile error rather than a
-/// call that quietly fails.
+/// **It holds the adapter rather than borrowing it**, which is a stronger
+/// form of the same guarantee. Deleting an address after its adapter has gone
+/// is meaningless -- the adapter going takes its addresses with it -- and a
+/// borrow made that order a compile error at the call site. An `Arc` makes it
+/// impossible instead: while this lives, the adapter cannot go.
+///
+/// The borrow was changed for a reason, not for taste: the capture mode's
+/// source owns the adapter and must keep this for as long as it runs, and
+/// nothing can hold a value that borrows from a value it also owns.
 #[must_use = "dropping this takes the address off the adapter again"]
-pub struct Address<'a> {
+pub struct Address {
     row: ::windows_sys::Win32::NetworkManagement::IpHelper::MIB_UNICASTIPADDRESS_ROW,
-    held: PhantomData<&'a WintunAdapter>,
+    /// Held so the adapter cannot go first. Nothing reads it.
+    _held: Arc<WintunAdapter>,
 }
 
-impl Drop for Address<'_> {
+impl Drop for Address {
     fn drop(&mut self) {
         use windows_sys::Win32::{
             Foundation::NO_ERROR, NetworkManagement::IpHelper::DeleteUnicastIpAddressEntry,
@@ -335,16 +341,16 @@ fn sockaddr(addr: IpAddr) -> ::windows_sys::Win32::Networking::WinSock::SOCKADDR
 
 /// A route into the adapter, taken away again when this is dropped.
 ///
-/// The lifetime is [`Address`]'s, for the same reason: a route outliving the
-/// interface it points at is nothing Windows will act on, and the order is
-/// better a compile error than a call that fails quietly.
+/// Holds the adapter, as [`Address`] does and for the reason given there: a
+/// route outliving the interface it points at is nothing Windows will act on.
 #[must_use = "dropping this takes the route away again"]
-pub struct Route<'a> {
+pub struct Route {
     row: ::windows_sys::Win32::NetworkManagement::IpHelper::MIB_IPFORWARD_ROW2,
-    held: PhantomData<&'a WintunAdapter>,
+    /// Held so the adapter cannot go first. Nothing reads it.
+    _held: Arc<WintunAdapter>,
 }
 
-impl Drop for Route<'_> {
+impl Drop for Route {
     fn drop(&mut self) {
         use windows_sys::Win32::{
             Foundation::NO_ERROR, NetworkManagement::IpHelper::DeleteIpForwardEntry2,
@@ -354,6 +360,92 @@ impl Drop for Route<'_> {
         if got != NO_ERROR {
             tracing::warn!("take the adapter's route away again: error {got}");
         }
+    }
+}
+
+/// The adapter **up**: its addresses, the routes that send this machine's
+/// traffic into it, and the adapter itself, held together so that the pump
+/// can own all of it and dropping it takes all of it down.
+///
+/// Which addresses these are barely matters, for the reason
+/// [`WintunAdapter::address`] gives: the stack behind the adapter answers for
+/// every destination, so an address is only what makes the adapter something
+/// Windows will route to at all. What matters is that they are unlikely to be
+/// in use, since an address this machine really reaches another way would be
+/// shadowed by ours. Hence `198.18.0.1`, from the range RFC 2544 set aside
+/// for benchmarking and which no LAN legitimately routes, and a unique local
+/// address for IPv6.
+///
+/// **The routes are the two halves of the address space rather than a default
+/// route.** A `/1` reaches further than any `/0`, so the machine's own
+/// default route is left standing -- which is what tracewing's own
+/// connections still use, by pinning to the interface
+/// [`crate::roads::out_by`] names -- while everything that does not pin goes
+/// into the adapter. A default route of our own would have had to replace
+/// theirs, and putting a route back is a worse failure than never taking it.
+pub struct Held {
+    adapter: Arc<WintunAdapter>,
+    /// Held to be dropped: the names say what they are for, since nothing
+    /// reads them.
+    _addresses: Vec<Address>,
+    _routes: Vec<Route>,
+}
+
+impl Held {
+    /// Opens the adapter and brings it up.
+    ///
+    /// The addresses go on before the routes, which is the order Windows
+    /// wants: a route into an interface that holds no address of that family
+    /// is one it has nothing to send from.
+    pub fn up(dll: &Path) -> Result<Self> {
+        use std::net::{Ipv4Addr, Ipv6Addr};
+        const V4: IpAddr = IpAddr::V4(Ipv4Addr::new(198, 18, 0, 1));
+        const V6: IpAddr = IpAddr::V6(Ipv6Addr::new(0xfd77, 0x7472, 0x6163, 0, 0, 0, 0, 1));
+        let adapter = Arc::new(WintunAdapter::open(dll)?);
+        let addresses = vec![adapter.address(V4, 32)?, adapter.address(V6, 128)?];
+        let routes = vec![
+            adapter.route(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 1)?,
+            adapter.route(IpAddr::V4(Ipv4Addr::new(128, 0, 0, 0)), 1)?,
+            adapter.route(IpAddr::V6(Ipv6Addr::UNSPECIFIED), 1)?,
+            adapter.route(IpAddr::V6(Ipv6Addr::new(0x8000, 0, 0, 0, 0, 0, 0, 0)), 1)?,
+        ];
+        Ok(Self {
+            adapter,
+            _addresses: addresses,
+            _routes: routes,
+        })
+    }
+
+    /// The adapter's LUID, which the sieve's way out has to leave out.
+    pub fn luid(&self) -> Result<u64> {
+        self.adapter.luid()
+    }
+
+    /// A handle to the adapter itself, for whoever has to end the capture.
+    ///
+    /// Ending it is [`crate::tun::Device::shutdown`] on the adapter, and that
+    /// is the first link of the cascade `tun::run` documents -- so the window
+    /// can stop the mode without the source being handed back to it.
+    pub fn adapter(&self) -> Arc<WintunAdapter> {
+        Arc::clone(&self.adapter)
+    }
+}
+
+impl Device for Held {
+    fn name(&self) -> String {
+        self.adapter.name()
+    }
+
+    fn read(&self) -> Result<Vec<u8>> {
+        self.adapter.read()
+    }
+
+    fn write(&self, packet: &[u8]) -> Result<()> {
+        self.adapter.write(packet)
+    }
+
+    fn shutdown(&self) {
+        self.adapter.shutdown();
     }
 }
 
