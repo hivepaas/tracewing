@@ -347,6 +347,14 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
                 // eight bytes; the whole value is what identifies it.
                 luid: row.InterfaceLuid.Value,
                 bits: row.DestinationPrefix.PrefixLength,
+                // The **route's** metric, which is not what Windows itself
+                // routes by: it adds the interface's. Worth knowing before
+                // reaching for that one, because it leans the wrong way --
+                // on the adapter whose cable was pulled, the interface
+                // metric *improved*, 25 to 5, while this field stayed at 0
+                // (see `Road::connected`). A tie-break that took Windows'
+                // composite metric would inherit the fault rather than
+                // escape it, and would prefer a dead interface outright.
                 metric: row.Metric,
                 loopback: row.Loopback,
                 v6: row.DestinationPrefix.Prefix.si_family == AF_INET6,

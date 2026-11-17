@@ -106,9 +106,22 @@ impl WintunAdapter {
         let adapter =
             ::wintun::Adapter::create(&library, ADAPTER_NAME, ADAPTER_TYPE, Some(ADAPTER_GUID))
                 .map_err(|e| {
+                    // Three causes, said rather than one guessed at. The
+                    // third was measured: in a session already elevated at
+                    // High integrity, with the DLL where it should be, this
+                    // failed because another process held an adapter of this
+                    // name -- Wintun reports that the same way as a missing
+                    // privilege, and a reader told only "needs
+                    // Administrator" goes hunting for elevation they have.
+                    //
+                    // Not branched on the OS error code, because which code
+                    // each cause leaves has not been measured, and a mapping
+                    // guessed from the docs would put a confident wrong
+                    // sentence in front of somebody.
                     anyhow!(
-                        "create the {ADAPTER_NAME} adapter: {e}. Wintun needs Administrator, \
-                         and wintun.dll beside the program"
+                        "create the {ADAPTER_NAME} adapter: {e}. Wintun needs Administrator \
+                         and wintun.dll beside the program, and it also fails while another \
+                         program is holding an adapter of this name"
                     )
                 })?;
         let session = Arc::new(
