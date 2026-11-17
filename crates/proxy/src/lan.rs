@@ -89,31 +89,18 @@ pub fn addresses() -> Vec<Ipv4Addr> {
 mod os {
     use std::net::Ipv4Addr;
 
+    /// Out of the one walk of this machine's addresses, which
+    /// [`crate::roads::every_address`] is: this question wants the IPv4 ones
+    /// on interfaces that are up, and the other wants an address to send an
+    /// echo from. Two questions, one list.
     pub fn addresses() -> Vec<Ipv4Addr> {
-        let mut found = Vec::new();
-        let mut list: *mut libc::ifaddrs = std::ptr::null_mut();
-        // SAFETY: getifaddrs writes a list that freeifaddrs frees; each entry
-        // is read while the list lives, and an address only as its family says.
-        unsafe {
-            if libc::getifaddrs(&mut list) != 0 {
-                return found;
-            }
-            let mut at = list;
-            while !at.is_null() {
-                let entry = &*at;
-                let up = entry.ifa_flags & libc::IFF_UP as u32 != 0;
-                if up
-                    && !entry.ifa_addr.is_null()
-                    && i32::from((*entry.ifa_addr).sa_family) == libc::AF_INET
-                {
-                    let addr = &*(entry.ifa_addr as *const libc::sockaddr_in);
-                    found.push(Ipv4Addr::from(u32::from_be(addr.sin_addr.s_addr)));
-                }
-                at = entry.ifa_next;
-            }
-            libc::freeifaddrs(list);
-        }
-        found
+        crate::roads::every_address()
+            .into_iter()
+            .filter_map(|(_, addr, up)| match (up, addr) {
+                (true, std::net::IpAddr::V4(addr)) => Some(addr),
+                _ => None,
+            })
+            .collect()
     }
 }
 
