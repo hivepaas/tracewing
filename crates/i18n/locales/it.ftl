@@ -2991,6 +2991,12 @@ t8c2c795e =
 # Export as HAR
 t95b6b766 = Esporta come HAR
 
+# Running as an administrator
+t1037321e = In esecuzione come amministratore
+
+# A browser or a terminal tracewing opens for you runs at your own level unless its tab says otherwise. These rights last until tracewing is closed and started again.
+te17d688c = Un browser o un terminale che tracewing apre per te viene eseguito al tuo livello, a meno che la sua scheda non dica diversamente. Questi diritti durano finché tracewing non viene chiuso e riavviato.
+
 # Shortcuts {keys}
 t4ab0ecb4 = Scorciatoie { $keys }
 

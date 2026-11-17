@@ -2846,6 +2846,12 @@ t8c2c795e =
 # Export as HAR
 t95b6b766 = 匯出為 HAR
 
+# Running as an administrator
+t1037321e = 正以管理員身分執行
+
+# A browser or a terminal tracewing opens for you runs at your own level unless its tab says otherwise. These rights last until tracewing is closed and started again.
+te17d688c = tracewing 為你開啟的瀏覽器或終端機仍以你自己的權限執行，除非其分頁另有設定。這些權限會一直保留，直到關閉並重新啟動 tracewing。
+
 # Shortcuts {keys}
 t4ab0ecb4 = 快速鍵 { $keys }
 

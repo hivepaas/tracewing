@@ -1128,6 +1128,8 @@ t8c2c795e =
        *[other] { $count } hidden, still recorded · show them
     }
 t95b6b766 = Export as HAR
+t1037321e = Running as an administrator
+te17d688c = A browser or a terminal tracewing opens for you runs at your own level unless its tab says otherwise. These rights last until tracewing is closed and started again.
 t4ab0ecb4 = Shortcuts { $keys }
 tea156fdc = Columns
 td5d24782 = A website in my browser

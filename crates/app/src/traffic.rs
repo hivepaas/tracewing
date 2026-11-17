@@ -439,6 +439,15 @@ pub struct Traffic {
     /// The apps macOS's network extension is to take, and its switch.
     pub mac_apps: crate::mac_apps::MacApps,
     pub local: crate::local_apps::Shown,
+    /// Whether tracewing itself is running as an administrator.
+    ///
+    /// **Read once and kept**, for two reasons. It cannot change within a run
+    /// -- a process cannot drop a token it was given -- and a value on the
+    /// view is a state a test can draw, which a call inside the drawing is
+    /// not. The window says it for as long as it is true: what was worth
+    /// avoiding was never elevation, which somebody agreed to, but elevation
+    /// nobody can see.
+    pub elevated: bool,
     pub protos_fetching: bool,
     /// What came of the last time a server was asked: what it has, or why
     /// not.
@@ -690,6 +699,7 @@ impl Traffic {
             company_ca_note: None,
             mac_apps: crate::mac_apps::MacApps::load(data_dir),
             local: crate::local_apps::Shown::load(data_dir),
+            elevated: tracewing_system::child::elevated(),
             protos_fetching: false,
             protos_fetched: None,
             device_name,
@@ -3088,6 +3098,23 @@ impl Traffic {
                         .on_click(cx.listener(|this, _, _, cx| this.ask_export_shown(cx))),
                 )
             })
+            // Before the certificate, because it is about tracewing itself
+            // rather than about this computer's trust, and because a reader
+            // who has forgotten it meets it on the way to everything else.
+            .children(self.elevated.then(|| {
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap(ui(6.))
+                    .text_color(rgb(c.warn))
+                    .child(icon("shield", 14., c.warn))
+                    .child(tr!("Running as an administrator"))
+                    .id("running-elevated")
+                    .tooltip(tip(tr!(
+                        "A browser or a terminal tracewing opens for you runs at your own level unless its tab says otherwise. These rights last until tracewing is closed and started again."
+                    )))
+            }))
             .child(self.render_ca(cx))
             .child(
                 div()

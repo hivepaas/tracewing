@@ -2938,6 +2938,12 @@ t8c2c795e =
 # Export as HAR
 t95b6b766 = HAR olarak dışa aktar
 
+# Running as an administrator
+t1037321e = Yönetici olarak çalışıyor
+
+# A browser or a terminal tracewing opens for you runs at your own level unless its tab says otherwise. These rights last until tracewing is closed and started again.
+te17d688c = tracewing'in sizin için açtığı bir tarayıcı veya terminal, sekmesinde aksi belirtilmedikçe kendi yetki düzeyinizde çalışır. Bu yetkiler tracewing kapatılıp yeniden başlatılana kadar sürer.
+
 # Shortcuts {keys}
 t4ab0ecb4 = Kısayollar { $keys }
 
