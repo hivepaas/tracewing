@@ -733,42 +733,54 @@ in two rows rather than one, and what the filter costs is next.
 
 #### The switch: what turning it on needs, and what turning it off does
 
-**Read out of the code rather than decided freshly**, because three facts
-about the proxy settle it:
+**Read out of the code rather than decided freshly** -- and two of the three
+facts it was first read from have since been changed on purpose, so it is
+written out again rather than left to be worked out from a diff:
 
-- the sources are assembled as the engine starts
-  ([`engine.rs`](../../crates/app/src/engine.rs) builds the
-  `Vec<Box<dyn Source>>`), and there is no adding one to a running engine;
-- `ways_in` and the `apps` matcher are derived from those sources *there*, so
-  a source appearing later would leave both behind it;
-- there is one stop for all of them: `Source::start(self, proxy, found, stop)`
-  takes the same `Stop` every source gets.
+- the sources are assembled as the engine starts, **and one may be handed
+  over after it is running**. `ProxyOptions::later` is a channel whose
+  sending end the window keeps; the proxy starts whatever arrives on it.
+- `ways_in` and the `apps` matcher are derived from the sources at startup,
+  which looked like the obstacle to that and is not: a way in of this kind
+  opens **no port of tracewing's** -- `own_ports` is empty for the TUN, the
+  stack and the WireGuard endpoint alike -- so there is nothing for a late
+  arrival to have been missing from.
+- there is one stop for all of them, which is still true, and is why ending
+  one is the **device's own** `shutdown` rather than a second stop inside the
+  source.
 
 So:
 
-**Turning it on needs a new engine.** On Windows that costs nothing extra,
-because switching on already means coming back as an administrator -- the
-relaunch is a new process and therefore a new engine. When tracewing is
-*already* elevated there is nothing to raise, and it is then a plain restart
-of the kind SOCKS5 and the tunnel already ask for in their own tabs. The
-window says which of the two it is going to be before it asks.
+**Turning it on takes effect when it is pressed.** The window makes the
+adapter then and there and hands the way in to the running proxy; the
+session open carries on, and nothing restarts. The one exception is
+elevation, which cannot be acquired in place: on Windows, switching on while
+tracewing is not an administrator still means coming back as one, and the
+tab says so before it is pressed.
 
-**Turning it off does not, which is what was decided.** A process cannot drop
-to a filtered token, so a relaunch to go back would be a second restart for
-no gain. What makes an immediate off possible without one is that the source
-can carry **a stop of its own** alongside the shared one -- an end its own
-loop watches, owned by the window -- and the adapter, its address and its
-routes then go with `Drop` as they do when the process ends. Nothing about
-the trait has to change for that: the extra stop goes inside the source when
-the window builds it.
+**And the privileged step runs with a window on screen**, which is the point
+of building it there rather than in `Engine::start`. A step that asks for a
+password while no window exists is a password nobody can place: the tab says
+*"Starting: tracewing is making its adapter, and the system may ask you to
+allow it"*, and the dialog arrives in front of a window that has already
+explained itself. The step runs on one background thread, which the Linux
+arm requires -- the device is deleted, made again, read back and only then
+opened, in that order and in one thread.
+
+**Turning it off is immediate**, which is what was decided. A process cannot
+drop to a filtered token, so a relaunch to go back would be a second restart
+for no gain. What makes an immediate off possible is the cascade `tun::run`
+documents: the window holds the device, `Device::shutdown` ends the read, the
+reading thread ends, the stack ends with its channel, the writer ends with
+the stack, and the adapter's address and routes go with the last handle.
 
 **The switch persists**, which is the one place this parts company with the
 macOS way in. That one starts off every run on purpose, so that opening
-tracewing installs nothing and asks macOS nothing; this one cannot, because
-the relaunch is a new process with nothing but a file to learn from. What
-keeps it honest is that an elevated process is visible in the window and a
-non-elevated one cannot act on the switch at all: it says it needs an
-administrator instead of quietly doing nothing.
+tracewing installs nothing and asks macOS nothing; this one is read at
+startup and acted on by the window as soon as it is up. What keeps it honest
+is that a start in flight is drawn, an elevated process is visible in the
+window, and a non-elevated one on Windows says it needs an administrator
+rather than quietly doing nothing.
 
 **Nothing chosen keeps nothing**, and that is the state every machine starts
 in: `sieve::by_programs` answers `false` before it asks the operating system
@@ -1400,16 +1412,14 @@ silently sees nothing.
 
 ##### A refused step leaves the switch off
 
-`Raised::Refused` on Windows is handled in the window, because that is where
-the relaunch is asked for. On Linux the asking happens inside
-`Engine::start`, where `pkexec` runs — so that is where the switch is written
-off, in the one `Err` arm that gathers the mode, rather than in the platform
-arm that was refused. One writer for one rule: a refusal means nothing was
-done, on either system.
+A refusal is handled in the **window**, on both systems, because the window
+is what builds the way in: `Raised::Refused` from the relaunch on Windows and
+a refused `pkexec` on Linux arrive at the same place and write the switch
+off there. One writer for one rule: a refusal means nothing was done.
 
-Not tidiness. Leaving it on means a polkit dialog at **every** start
-thereafter, refused each time, with nothing on screen saying why. The engine
-runs before the window loads the file, so what the tab draws is off with the
+Not tidiness. Leaving it on means a dialog at **every** start thereafter,
+refused each time, with nothing on screen saying why. The window draws its
+own answer, so what the tab shows is off with the
 reason beside it — the same ending as #334, reached from the other side.
 
 ##### What a Linux machine said, and the Windows ending it is not
@@ -1453,21 +1463,26 @@ a carrier-down interface. The routing tables themselves say nothing about it:
 `/proc/net/route` keeps `RTF_UP` set, which is why that field is read from
 `/sys/class/net/<i>/carrier` and not from the table.
 
-##### One dialog per boot, and it is on the startup path
+##### One dialog per boot, no longer on the startup path
 
-With the switch on, the first start after a **boot** asks polkit while
-`Engine::start` blocks, and the window does not appear until it is answered.
-`ip tuntap` devices are persistent but do not survive a reboot, so it is once
-per boot; every later start finds `look().ready()` and is silent.
+With the switch on, the first start after a **boot** asks polkit once: `ip
+tuntap` devices are persistent but do not survive a reboot, so the device has
+to be made again, and every later start finds `look().ready()` and is silent.
+That much is measured and unchanged.
 
-This is named rather than hidden because the failure it leads to is a bad
-one: somebody who has forgotten the switch is on meets a password prompt with
-no window to explain it, and the visible symptom is tracewing not starting.
-The fix is to take the privileged step off the startup path — the engine comes
-up with the way in **not** serving, the window says so, and the step runs from
-there with a line of its own in the tab. That is engine work rather than an
-arm, and it would improve the Windows side too, which today waits on the
-relaunch in the same place.
+**What changed is where the asking happens.** It used to be inside
+`Engine::start`, which blocked until the dialog was answered -- so somebody
+who had forgotten the switch met a password prompt with no window to explain
+it, and the only visible symptom was tracewing not starting. The engine now
+comes up with the way in **not** serving; the window appears, says
+*"Starting: tracewing is making its adapter, and the system may ask you to
+allow it"*, and the step runs from there on a background thread. The dialog
+arrives in front of a window that has already said why.
+
+It improved the Windows side in the same stroke, which is what a shared
+arrangement should do: there the mode now starts when the switch is pressed
+rather than at the next start, and after a relaunch it comes up without the
+window waiting on anything.
 
 ### WireGuard
 
