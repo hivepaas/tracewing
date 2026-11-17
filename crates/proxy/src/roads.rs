@@ -230,9 +230,12 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
         !rows.is_empty(),
         "no routes in /proc/net/route or /proc/net/ipv6_route"
     );
+    // Once per interface and not once per row: this machine has forty-odd
+    // rows over thirteen interfaces, and the answer is the same for every
+    // row of one. Windows does the same with `connected_luids`.
+    let connected = connected_names();
     Ok(rows
         .into_iter()
-        .filter(|row| carrier_is_up(&row.iface))
         .filter_map(|row| {
             let index = index_of(&row.iface)?;
             Some(Road {
@@ -242,16 +245,31 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
                 metric: row.metric,
                 loopback: is_loopback(&row.iface),
                 v6: row.v6,
-                // The rows of an interface whose carrier is down were taken
-                // out above, so what reaches here is connected by
-                // construction. Windows reads it per interface instead,
-                // because its rows cannot be dropped that early: our own
-                // adapter's have to stay in the table to be recognised as
-                // ours (`wintun_live.rs`).
-                connected: true,
+                connected: connected.contains(&row.iface),
             })
         })
         .collect())
+}
+
+/// The interfaces whose link is plainly up, by name: Linux's answer to the
+/// same question `connected_luids` asks of Windows.
+///
+/// Read in one pass over `/sys/class/net` rather than per route, and a name
+/// that is missing from it is not connected — which is the same direction as
+/// a carrier that cannot be read, and the same reason: see [`Road::connected`].
+#[cfg(target_os = "linux")]
+fn connected_names() -> std::collections::HashSet<String> {
+    let Ok(entries) = std::fs::read_dir("/sys/class/net") else {
+        // Nothing connected, so every way out is `Out::Nowhere`: loud, and
+        // the safe direction of the two.
+        return std::collections::HashSet::new();
+    };
+    entries
+        .filter_map(|entry| {
+            let name = entry.ok()?.file_name().into_string().ok()?;
+            carrier_is_up(&name).then_some(name)
+        })
+        .collect()
 }
 
 /// Whether the link is really up, from `/sys/class/net/<iface>/carrier`.
@@ -267,13 +285,18 @@ pub fn roads_now() -> anyhow::Result<Vec<Road>> {
 /// pinned to an interface the kernel is ignoring **hangs** rather than
 /// fails: 0.84s against a 3s timeout, measured when the exclusion went in.
 ///
-/// **Anything but a plain `1` excludes the interface, unreadable included.**
-/// That is the safe direction rather than the cautious-looking one: a family
-/// left with no way out at all is `Out::Nowhere` in
-/// [`crate::upstream::leave_by`]'s reader, which refuses the connection and
-/// says so, where keeping a dead interface means pinning to it and waiting.
-/// A loud failure beats a silent wait, and neither is the loop this seam
-/// exists to prevent.
+/// **Anything but a plain `1` is not connected, unreadable included.** That
+/// is the safe direction rather than the cautious-looking one, and the reason
+/// is in [`Road::connected`]: too much excluded ends as `Out::Nowhere`, which
+/// refuses the connection and says why, while too little pins to an interface
+/// the kernel is ignoring, and that hangs.
+///
+/// What this answers is a **fact about the interface**, and the deciding is
+/// [`out_by`]'s: the rows used to be dropped here, which left two mechanisms
+/// for one rule once Windows had to mark its own rows instead of dropping
+/// them (#336). It also made the rule untestable away from this machine —
+/// `a_route_on_a_dead_interface_is_not_a_way_out` can only be written where
+/// a dead interface reaches the judgement.
 #[cfg(target_os = "linux")]
 fn carrier_is_up(iface: &str) -> bool {
     says_up(
@@ -986,7 +1009,10 @@ wlp8s0\t0001A8C0\t00000000\t0001\t0\t0\t600\t00FFFFFF\t0\t0\t0
     #[ignore = "asks this machine about its own interfaces"]
     fn no_way_out_is_an_interface_the_kernel_is_ignoring() {
         let roads = roads_now().expect("the tables read");
-        let indices: Vec<u32> = roads.iter().map(|road| road.interface).collect();
+        let ways_out = [
+            out_by(&roads, u64::MAX, false),
+            out_by(&roads, u64::MAX, true),
+        ];
         let mut looked = 0;
         for entry in std::fs::read_dir("/sys/class/net").expect("the interfaces") {
             let name = entry.expect("an entry").file_name();
@@ -999,12 +1025,27 @@ wlp8s0\t0001A8C0\t00000000\t0001\t0\t0\t600\t00FFFFFF\t0\t0\t0
             let Some(index) = index_of(&name) else {
                 continue;
             };
+            // Its rows are **in** the table now rather than dropped from it,
+            // so there are two things to be sure of and they fail
+            // differently: that the fact was read, and that the judgement
+            // used it.
+            for road in roads.iter().filter(|road| road.interface == index) {
+                assert!(
+                    !road.connected,
+                    "{name} ({index}) has carrier {carrier:?} and a road that says it is \
+                     connected: {road:?}"
+                );
+            }
             assert!(
-                !indices.contains(&index),
+                !ways_out.contains(&Some(index)),
                 "{name} ({index}) has carrier {carrier:?} and is a way out: {roads:?}"
             );
         }
-        println!("{looked} interface(s) with no carrier, none of them a road");
+        println!(
+            "{looked} interface(s) with no carrier, none of them a way out; \
+             ways out: v4 {:?}, v6 {:?}",
+            ways_out[0], ways_out[1]
+        );
     }
 
     /// `#[ignore]`d because it asserts about the machine rather than about

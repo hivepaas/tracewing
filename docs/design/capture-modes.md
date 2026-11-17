@@ -687,20 +687,32 @@ rediscovering:
   why [`wintun.rs`](../../crates/proxy/src/wintun.rs) pins one, and now there
   is a source for it rather than a hunch.
 
-**Whether Windows has the dead-route problem too is not known here.** On
-Linux it did: a device up with its carrier down keeps its routes, `/proc`
-lists them as up, and `out_by` chose one of them over the real interface
-until the carrier was read — the measurement is under "Which way out is not
-ours" in the Linux section. Windows reads `GetIpForwardTable2`, and whether a
-disconnected interface's rows survive there, and whether `Metric` or the
-`MIB_IPFORWARD_ROW2` flags say so, has not been tested. If they do survive,
-the same silent hang is reachable, and the two `/1` halves above make it
-worse rather than better: a dead interface with a `/1` pair beats a live
-default route on reach. The case to arrange is a **second** interface going
-down while tracewing holds its own — not the adapter itself, which is
-already measured — with the table dumped before and after, and
-`GetIfEntry2`'s `MediaConnectState` and `OperStatus` beside it, since that is
-the Windows analogue of a carrier and the likelier place the state shows.
+**Windows has the dead-route problem too, and it is measured** (#336). This
+paragraph asked the question and the answer came back worse than the guess: a
+NAT adapter whose cable was pulled kept **every one** of its six rows in
+`GetIpForwardTable2`, default route included, with the row's own `Metric`
+unchanged at 0. So nothing in the table says a route is dead, exactly as
+`/proc` does not on Linux.
+
+**And the numbers point the wrong way.** The dead adapter's *interface*
+metric **improved**, 25 to 5. We do not read that metric, so it is not what
+decides for us — but it means a future tie-break reaching for Windows' own
+composite metric would inherit the fault rather than escape it, which is why
+that fact sits beside the line that reads a route's metric and not only
+beside the field below.
+
+With the two `/1` halves arranged on the dead interface, the control was
+`without the link check: Some(20); out_by: Some(5)` — interface 20 being the
+pulled cable. The `/1` pair beats a live interface's `/0` on reach, so the
+halves make this worse rather than better, as this section's advice to use
+them implies.
+
+`MediaConnectState`, from `GetIfTable2` in one call, is the field that says
+it; `OperStatus` said `IfOperStatusDown` in the same breath, so either would
+have served. It is read per interface rather than per route, the same shape
+as Linux reading `/sys/class/net/<iface>/carrier`, and both arrive as
+[`Road::connected`](../../crates/proxy/src/roads.rs) — one field, one rule,
+judged in `out_by`.
 
 **Whichever way those tables answer, the rule that decides it is the same on
 both platforms, and it is not symmetric.** Excluding too much leaves a family
@@ -965,10 +977,20 @@ Two things the real tables of an ordinary machine taught the parser:
   `RTF_UP` set: that is the `dead linkdown` state, and the tables say nothing
   about it. So the carrier is read too, from
   `/sys/class/net/<iface>/carrier`, and anything but a plain `1` — including
-  unreadable — is not a way out. That direction is deliberate: a family left
+  unreadable — is not connected. That direction is deliberate: a family left
   with no way out at all is `Out::Nowhere` in `upstream.rs`, which refuses
   the connection and says so, where a dead interface kept is pinned to and
   waited on. A loud failure beats a silent wait.
+
+  **The reading is a fact and the deciding is `out_by`'s**, which took two
+  tries to get right. The rows were dropped in `roads_now` at first — which
+  worked, and left two mechanisms for one rule as soon as Windows had to mark
+  its rows instead of dropping them, since its own adapter's rows must stay
+  in the table to be recognised as ours. Both platforms now fill
+  `Road::connected`, read once per interface rather than once per route, and
+  `out_by` alone decides. That also made the rule testable away from either
+  machine: `a_route_on_a_dead_interface_is_not_a_way_out` can only be written
+  where a dead interface reaches the judgement.
 
   Measured both ways round, with a second device up, carrier down, and a
   default route of metric 40 beside the real one's 600. Without the carrier
