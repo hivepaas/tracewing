@@ -1978,11 +1978,11 @@ t46d53486 = Melalui server MCP, alat AI lalu boleh menambah dan menghapus aturan
 # HTTP/3
 tfec0f477 = HTTP/3
 
-# Keep apps off HTTP/3
-te42733a9 = Jauhkan aplikasi dari HTTP/3
+# Hide servers' offers of HTTP/3
+t2b74e518 = Sembunyikan tawaran HTTP/3 dari server
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
-t2ff32f01 = HTTP/3 berjalan di atas UDP, yang tidak dibawa proxy mana pun, jadi aplikasi yang memakainya melewati tracewing. Ini menghapus tawaran HTTP/3 dari respons server, sehingga aplikasi tetap di HTTP/2. Flow tetap menampilkan tawaran itu seperti yang dikirim server.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
+t5e1cd441 = HTTP/3 berjalan di atas UDP, yang tidak dibawa proxy mana pun, jadi aplikasi yang memakainya melewati tracewing. Ini menghapus tawaran HTTP/3 dari respons server, sehingga aplikasi yang tadinya akan tahu HTTP/3 dari tawaran itu tetap di HTTP/2. Aplikasi yang tahu dari catatan DNS tetap mencoba: memblokir port UDP 443, di halaman Siapkan, yang menghentikannya. Flow tetap menampilkan tawaran itu seperti yang dikirim server.
 
 # Size of a session
 ta20fa102 = Ukuran sesi

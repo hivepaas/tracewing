@@ -257,7 +257,7 @@ Two things to know before relying on it:
   clear and a note that it was sent back to TCP. Nothing of the attempt is
   read beyond that opening packet. The row carries no app name here, and
   cannot: the socket is on the phone. Captured on this computer, the same
-  row names the program that sent the datagram. `Hide HTTP/3` in Settings is the same gap
+  row names the program that sent the datagram. `Hide servers' offers of HTTP/3` in Settings is the same gap
   seen from the desktop.
 
 **Names are answered here.** A phone sends its DNS down the tunnel with

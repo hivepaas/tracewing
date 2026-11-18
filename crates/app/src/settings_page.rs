@@ -314,11 +314,13 @@ fn groups() -> Vec<Group> {
             tr!("HTTP/3"),
             vec![row(
                 "hide_http3",
-                tr!("Keep apps off HTTP/3"),
+                tr!("Hide servers' offers of HTTP/3"),
                 tr!(
                     "HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around \
-                     tracewing. This takes servers' offers of it out of their responses, and apps stay \
-                     on HTTP/2. Flows still show the offers as servers sent them."
+                     tracewing. This takes servers' offers of it out of their responses, so an app that \
+                     would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a \
+                     DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what \
+                     stops that. Flows still show the offers as servers sent them."
                 ),
                 "",
             )],

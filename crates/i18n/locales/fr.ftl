@@ -2103,11 +2103,11 @@ t46d53486 = Via le serveur MCP, un outil d'IA peut alors ajouter et retirer des 
 # HTTP/3
 tfec0f477 = HTTP/3
 
-# Keep apps off HTTP/3
-te42733a9 = Tenir les apps à l'écart de HTTP/3
+# Hide servers' offers of HTTP/3
+t2b74e518 = Masquer les offres HTTP/3 des serveurs
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
-t2ff32f01 = HTTP/3 passe par UDP, qu'aucun proxy ne transporte, donc une app qui l'utilise contourne tracewing. Cette option retire des réponses les offres HTTP/3 des serveurs, et les apps restent en HTTP/2. Les flows montrent toujours les offres telles que les serveurs les ont envoyées.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
+t5e1cd441 = HTTP/3 passe par UDP, qu'aucun proxy ne transporte, donc une app qui l'utilise contourne tracewing. Cette option retire des réponses les offres HTTP/3 des serveurs, de sorte qu'une app qui aurait appris HTTP/3 par l'une d'elles reste en HTTP/2. Une app qui l'apprend par un enregistrement DNS essaie quand même : seul le blocage du port UDP 443, sur la page Configurer, l'en empêche. Les flows montrent toujours les offres telles que les serveurs les ont envoyées.
 
 # Size of a session
 ta20fa102 = Taille d'une session

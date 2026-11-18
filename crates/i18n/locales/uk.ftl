@@ -2173,11 +2173,11 @@ t46d53486 = Через MCP-сервер ШІ-інструмент зможе д�
 # HTTP/3
 tfec0f477 = HTTP/3
 
-# Keep apps off HTTP/3
-te42733a9 = Не пускати застосунки на HTTP/3
+# Hide servers' offers of HTTP/3
+t2b74e518 = Приховувати пропозиції HTTP/3 від серверів
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
-t2ff32f01 = HTTP/3 працює поверх UDP, який жоден проксі не передає, тож застосунок, що використовує його, обходить tracewing. Це налаштування прибирає з відповідей серверів пропозиції HTTP/3, і застосунки залишаються на HTTP/2. Потоки все одно показують пропозиції так, як їх надіслали сервери.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
+t5e1cd441 = HTTP/3 працює поверх UDP, який жоден проксі не передає, тож застосунок, що використовує його, обходить tracewing. Це налаштування прибирає з відповідей серверів пропозиції HTTP/3, тож застосунок, який дізнався б про HTTP/3 із такої пропозиції, залишається на HTTP/2. Застосунок, який дізнається про нього з DNS-запису, усе одно спробує: зупинить це лише блокування UDP-порту 443 на сторінці «Підготовка». Потоки все одно показують пропозиції так, як їх надіслали сервери.
 
 # Size of a session
 ta20fa102 = Розмір сеансу

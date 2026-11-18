@@ -1978,11 +1978,11 @@ t46d53486 = 透過 MCP 伺服器，AI 工具可以新增和刪除規則（像你
 # HTTP/3
 tfec0f477 = HTTP/3
 
-# Keep apps off HTTP/3
-te42733a9 = 避免 App 使用 HTTP/3
+# Hide servers' offers of HTTP/3
+t2b74e518 = 隱藏伺服器的 HTTP/3 宣告
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
-t2ff32f01 = HTTP/3 走 UDP，而代理伺服器無法轉送 UDP，因此使用 HTTP/3 的 App 會繞過 tracewing。此選項會從伺服器回應中移除 HTTP/3 宣告，讓 App 繼續使用 HTTP/2。流量紀錄中仍會顯示伺服器送出的原始宣告。
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
+t5e1cd441 = HTTP/3 走 UDP，而代理伺服器無法轉送 UDP，因此使用 HTTP/3 的 App 會繞過 tracewing。此選項會從伺服器回應中移除 HTTP/3 宣告，因此原本會從宣告得知 HTTP/3 的 App 會繼續使用 HTTP/2。改從 DNS 記錄得知的 App 仍會嘗試：只有在「初始設定」頁面封鎖 UDP 連接埠 443 才能阻止。流量紀錄中仍會顯示伺服器送出的原始宣告。
 
 # Size of a session
 ta20fa102 = 工作階段大小

@@ -59,7 +59,8 @@ turned it on from.
 
 **Three ways in share one undifferentiated list.** *Other devices*, *SOCKS5*
 and *WireGuard* are three groups under one `SettingsSection::Network`, which
-is also where **HTTP/3** lives (`settings_page.rs:167`). HTTP/3 is not a way
+is also where **HTTP/3** lives (the `SettingsSection::Network` group in
+`settings_page.rs`; a line number here went stale once already). HTTP/3 is not a way
 in — it is about what is done with traffic that arrives. Having it in the
 same list is part of why the list does not read as a list of ways in.
 
