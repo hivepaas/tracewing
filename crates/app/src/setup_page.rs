@@ -1735,12 +1735,35 @@ impl Machine {
 /// `Stop-Process -Force` left no adapter and no routes of ours. **Linux is
 /// measured too**, by the arm that built it: the device stays with its
 /// carrier down and its rows marked dead, and the next run finds it ready
-/// and asks for nothing. **macOS is documented rather than watched** --
-/// `system::extension`'s own header says a run that ends badly leaves the
-/// configuration in place and that this is harmless, because the extension
-/// hands a flow over only to something holding the key that run made. Nobody
-/// here has a Mac to see it, so the sentence says what the design
-/// guarantees and not what somebody observed.
+/// and asks for nothing. **macOS is documented for one half and read for the
+/// other**: that a run ending badly leaves the configuration in place is
+/// `system::extension`'s own claim and is still unwatched, while that the
+/// leftover captures nothing is in the code -- the extension hands a flow
+/// over only once what answers the port has proved it holds the key that run
+/// made (`netext`'s `hand_over`, `tracewing_handoff::answered`), and that
+/// refusal has tests of its own.
+///
+/// That Linux's device does not outlive a restart is **read rather than
+/// watched**, and the two halves of the reading are worth keeping together:
+/// `ip tuntap add` makes a device persistent across the process that opened
+/// it and not across a boot -- it is kernel state with nothing on disk
+/// behind it -- and nothing here recreates it, the one privileged step being
+/// `tracewing_system::adapter::script`, which writes no unit, no udev rule
+/// and no network profile and sets its two knobs with `sysctl -w`. What
+/// reading cannot rule out is somebody else's software keeping a profile of
+/// a device it saw, and a device NetworkManager recreated is not tracewing's
+/// leftover, which is what this card is about.
+///
+/// The unwatched half of macOS's is unwatched for a reason worth writing
+/// down rather than rediscovering. The Mac this project has is a VirtualBox
+/// `macos-sequoia` VM, and a configuration cannot exist there at all: a
+/// `NETransparentProxyManager` belongs to a system extension, that VM has
+/// SIP enabled, `systemextensionsctl developer on` refuses while SIP is on,
+/// and `security find-identity -v -p codesigning` finds no identity to sign
+/// an extension with. `scutil --nc list` there shows no proxy configuration,
+/// for that reason and not from a clean exit. Watching it wants a Developer
+/// ID-signed build on a Mac where the extension can be approved in System
+/// Settings.
 pub fn local_when_done(machine: Machine) -> String {
     let left = match machine {
         Machine::Windows => tr!(
@@ -1750,7 +1773,7 @@ pub fn local_when_done(machine: Machine) -> String {
         Machine::Linux => tr!(
             "The device tracewing made stays, with its carrier down and its routes marked \
              dead, so nothing is sent into it — and the next run picks it up without asking \
-             for a password again."
+             for a password again. A restart clears it, since nothing on disk puts it back."
         ),
         Machine::Mac => tr!(
             "A run that ends badly can leave the proxy configuration in place. It captures \
@@ -1847,6 +1870,15 @@ mod tests {
             "the device does stay on Linux, which is the whole difference: {linux}"
         );
         assert!(mac.contains("captures nothing"), "{mac}");
+        // Linux is the only one with something left to clear, so it is the
+        // only one that says what clears it.
+        assert!(linux.contains("A restart clears it"), "{linux}");
+        for said in [&windows, &mac] {
+            assert!(
+                !said.contains("A restart clears it"),
+                "nothing is waiting for a restart here: {said}"
+            );
+        }
         // The one sentence that was already about this page, on all three.
         for said in [&windows, &linux, &mac] {
             assert!(said.contains("certificate stays trusted"), "{said}");

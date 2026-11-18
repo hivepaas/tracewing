@@ -2626,8 +2626,8 @@ ta969b661 = 시뮬레이터 찾기
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = 이 경로의 것은 컴퓨터에 남지 않습니다: tracewing의 어댑터는 본체와 함께 사라지고 경로도 함께 사라집니다. 닫든 강제 종료되든 같습니다.
 
-# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
-tac4db5f4 = tracewing이 만든 장치는 남지만 캐리어가 내려가고 경로는 죽은 것으로 표시되어 아무것도 그쪽으로 보내지지 않습니다 — 다음 실행은 그것을 그대로 사용하며 암호를 다시 묻지 않습니다.
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again. A restart clears it, since nothing on disk puts it back.
+tb894c24c = tracewing이 만든 장치는 남지만 캐리어가 내려가고 경로는 죽은 것으로 표시되어 아무것도 그쪽으로 보내지지 않습니다 — 다음 실행은 그것을 그대로 사용하며 암호를 다시 묻지 않습니다. 다시 시작하면 사라집니다. 디스크에 그것을 다시 만드는 것은 아무것도 없습니다.
 
 # A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
 t7342daf6 = 비정상적으로 끝난 실행은 프록시 구성을 남길 수 있습니다. 그것은 아무것도 수집하지 않습니다: 확장은 그 실행이 만든 키를 가진 상대에게만 플로우를 넘기므로, tracewing이 없으면 모든 플로우는 원래대로 나갑니다. 다음 실행이 덮어쓰며, 이것을 끄면 제거됩니다.

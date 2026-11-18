@@ -2626,8 +2626,8 @@ ta969b661 = Tìm simulator
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = Không có gì của đường vào này ở lại máy: adapter của tracewing đi theo nó, kèm cả các route, dù nó được đóng hay bị giết.
 
-# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
-tac4db5f4 = Thiết bị mà tracewing tạo vẫn ở lại, với carrier đã tắt và các route bị đánh dấu chết, nên không có gì được gửi vào đó — và lần chạy sau dùng lại nó mà không hỏi mật khẩu nữa.
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again. A restart clears it, since nothing on disk puts it back.
+tb894c24c = Thiết bị mà tracewing tạo vẫn ở lại, với carrier đã tắt và các route bị đánh dấu chết, nên không có gì được gửi vào đó — và lần chạy sau dùng lại nó mà không hỏi mật khẩu nữa. Khởi động lại là sạch, vì không có gì trên đĩa đặt nó lại.
 
 # A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
 t7342daf6 = Một lần chạy kết thúc tồi có thể để lại cấu hình proxy. Nó không bắt được gì: extension chỉ trao flow cho thứ giữ đúng khoá mà lần chạy đó tạo ra, nên khi tracewing đã biến mất thì mọi flow đi ra như bình thường. Lần chạy sau ghi đè nó, và tắt mục này sẽ gỡ nó.

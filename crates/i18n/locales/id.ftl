@@ -2626,8 +2626,8 @@ ta969b661 = Cari simulator
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = Tidak ada apa pun dari jalan masuk ini yang tertinggal di komputer: adapter tracewing ikut pergi bersamanya, begitu pula rutenya, baik ditutup maupun dimatikan paksa.
 
-# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
-tac4db5f4 = Perangkat yang dibuat tracewing tetap ada, dengan tautannya mati dan rutenya ditandai mati, jadi tidak ada yang dikirim ke sana — dan jalan berikutnya memakainya kembali tanpa meminta kata sandi lagi.
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again. A restart clears it, since nothing on disk puts it back.
+tb894c24c = Perangkat yang dibuat tracewing tetap ada, dengan tautannya mati dan rutenya ditandai mati, jadi tidak ada yang dikirim ke sana — dan jalan berikutnya memakainya kembali tanpa meminta kata sandi lagi. Memulai ulang menghapusnya, karena tidak ada apa pun di disk yang membuatnya kembali.
 
 # A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
 t7342daf6 = Jalan yang berakhir buruk bisa meninggalkan konfigurasi proxy. Ia tidak menangkap apa pun: ekstensi hanya menyerahkan aliran kepada yang memegang kunci yang dibuat pada jalan itu, jadi tanpa tracewing setiap aliran keluar seperti biasa. Jalan berikutnya menggantikannya, dan mematikan ini menghapusnya.

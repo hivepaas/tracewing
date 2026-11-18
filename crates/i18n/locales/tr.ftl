@@ -2713,8 +2713,8 @@ ta969b661 = Simülatörleri bul
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = Bu giriş yolundan bu bilgisayarda hiçbir şey kalmaz: tracewing'in bağdaştırıcısı onunla birlikte gider, rotaları da; kapatılsa da öldürülse de.
 
-# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
-tac4db5f4 = tracewing'in oluşturduğu aygıt kalır — bağlantısı kapalı ve rotaları ölü olarak işaretli, dolayısıyla içine bir şey gönderilmez — ve sonraki çalıştırma onu yeniden alır, parolayı bir daha sormadan.
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again. A restart clears it, since nothing on disk puts it back.
+tb894c24c = tracewing'in oluşturduğu aygıt kalır — bağlantısı kapalı ve rotaları ölü olarak işaretli, dolayısıyla içine bir şey gönderilmez — ve sonraki çalıştırma onu yeniden alır, parolayı bir daha sormadan. Yeniden başlatmak onu temizler, çünkü diskte onu geri getiren bir şey yoktur.
 
 # A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
 t7342daf6 = Kötü biten bir çalıştırma, proxy yapılandırmasını yerinde bırakabilir. Hiçbir şey yakalamaz: uzantı bir akışı yalnızca o çalıştırmanın ürettiği anahtarı taşıyana verir, bu yüzden tracewing yokken her akış normalde olduğu gibi dışarı çıkar. Sonraki çalıştırma onun yerini alır, bunu kapatmak ise onu kaldırır.
