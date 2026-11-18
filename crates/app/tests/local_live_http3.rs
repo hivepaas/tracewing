@@ -35,10 +35,21 @@
 //! nowhere and the way out cannot be made at all. The first run of this
 //! test proved that the hard way: every request came back 502 from the way
 //! out, having gone through the adapter, the catcher, the door and the core
-//! to get there. So the way in is assembled here without `Pinned`, and the
-//! pinning is what [`local_live_linux`](local_live_linux) tests instead.
+//! to get there. So the way in is assembled here without `Pinned`.
 //!
-//! `#[ignore]`d because it wants `unshare` and a few seconds:
+//! **And the pinning is not covered by `local_live_linux` either**, which
+//! this file said until TraceW 2 corrected it: that test builds the source
+//! and asserts on the routing table, then lets go, without ever calling
+//! `start` -- so `Pinned::start` and the watch behind it are reached by
+//! neither of us. What covers which part of the pinning, and what is left,
+//! is written down on `local_source::Pinned`.
+//!
+//! `#[ignore]`d because it wants `unshare` and a few seconds -- **and
+//! because CI cannot run it**, which is measured rather than assumed: the
+//! runner refuses the namespace with
+//! `unshare: write failed /proc/self/uid_map: Operation not permitted`,
+//! found by TraceW 2 on #368 when the sibling test was un-ignored. So this
+//! is a test somebody runs, by hand, with one command and no password:
 //!
 //! ```sh
 //! cargo test -p tracewing --release --test local_live_http3 -- --ignored --nocapture
@@ -78,7 +89,8 @@ const AS_IF_THE_SERVER: &str = "203.0.113.9:443";
 #[test]
 #[ignore = "wants `unshare`, and makes an adapter in a namespace of its own"]
 fn a_chosen_program_s_http3_goes_through_tracewing_on_a_real_adapter() {
-    let Some(()) = ours_to_run("a_chosen_program_s_http3_goes_through_tracewing_on_a_real_adapter")
+    let Some(witness) =
+        ours_to_run("a_chosen_program_s_http3_goes_through_tracewing_on_a_real_adapter")
     else {
         return;
     };
@@ -105,6 +117,7 @@ fn a_chosen_program_s_http3_goes_through_tracewing_on_a_real_adapter() {
         "by the way in that caught it, which only the catcher's own entry can say"
     );
     let _ = std::fs::remove_dir_all(&dir);
+    reached(&witness);
 }
 
 /// A program nobody chose keeps what it had: its QUIC is refused and it gets
@@ -116,7 +129,7 @@ fn a_chosen_program_s_http3_goes_through_tracewing_on_a_real_adapter() {
 #[test]
 #[ignore = "wants `unshare`, and makes an adapter in a namespace of its own"]
 fn a_program_nobody_chose_gets_nowhere_over_quic() {
-    let Some(()) = ours_to_run("a_program_nobody_chose_gets_nowhere_over_quic") else {
+    let Some(witness) = ours_to_run("a_program_nobody_chose_gets_nowhere_over_quic") else {
         return;
     };
     let dir = made();
@@ -143,16 +156,34 @@ fn a_program_nobody_chose_gets_nowhere_over_quic() {
         "the refused attempt, said once"
     );
     let _ = std::fs::remove_dir_all(&dir);
+    reached(&witness);
 }
 
-/// Whether this process is the one that does the work.
+/// Whether this process is the one that does the work, and where it is to
+/// leave word that it finished.
 ///
 /// `None` means it was the outer one: it has just run the inner one inside a
-/// namespace and asserted that it passed, and the caller should stop.
-fn ours_to_run(test: &str) -> Option<()> {
-    if std::env::var_os(IN_OURS).is_some() {
-        return Some(());
+/// namespace, asserted that it passed **and that it ran at all**, and the
+/// caller should stop.
+///
+/// **The exit status cannot tell "it passed" from "there was nothing to
+/// do".** A libtest run that executes no test exits 0, so an inner run that
+/// skipped this test -- because the filter stopped matching, or because
+/// `--ignored` was dropped, or because somebody ignored it for an unrelated
+/// reason -- would be reported as a pass by the outer one. TraceW 2 hit
+/// exactly that on #368 while putting `#[ignore]` back, and caught it only
+/// by reading the counts rather than the exit code. So the inner run leaves
+/// a witness file as its last act and the outer one looks for it: a run
+/// that measured nothing now says so.
+fn ours_to_run(test: &str) -> Option<PathBuf> {
+    if let Some(witness) = std::env::var_os(IN_OURS) {
+        return Some(PathBuf::from(witness));
     }
+    let witness = std::env::temp_dir().join(format!(
+        "tracewing-live-http3-{test}-{}.witness",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&witness);
     let exe = std::env::current_exe().expect("this test binary");
     let status = std::process::Command::new("unshare")
         // `--mount`, and the `sysfs` mounted below, are not spare belt. A
@@ -172,14 +203,26 @@ fn ours_to_run(test: &str) -> Option<()> {
             "--nocapture",
             "--test-threads=1",
         ])
-        .env(IN_OURS, "1")
+        .env(IN_OURS, &witness)
         .status()
         .expect("`unshare` is in util-linux and should be here");
     assert!(
         status.success(),
         "the run inside the namespace failed; its output is above"
     );
+    let ran = witness.exists();
+    let _ = std::fs::remove_file(&witness);
+    assert!(
+        ran,
+        "the run inside the namespace exited {status} without reaching the end of {test}, \
+         so nothing was measured"
+    );
     None
+}
+
+/// Left by the inner run as its last act. See [`ours_to_run`].
+fn reached(witness: &std::path::Path) {
+    std::fs::write(witness, "reached the end").expect("a witness the outer run can see");
 }
 
 /// The adapter, by the real step, in this namespace.

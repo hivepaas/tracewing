@@ -291,6 +291,26 @@ fn platform(
 /// generic over its device and has no business knowing about routes, and
 /// because [`roads::watch`] wants two things only `start` has: the proxy's
 /// stop, and the proxy's runtime to spawn on.
+///
+/// **This, and [`watching`] under it, have no test, and what that leaves
+/// open is worth naming.** Everything either of them is made of is covered:
+/// `roads::watch`'s decisions and its ordering, with fakes, in
+/// `tracewing_proxy::roads`; the decision itself in `upstream`'s
+/// `out_from`; that the option lands on a socket of either kind and either
+/// family in `upstream`'s own `pinning`; and that a socket really leaves by
+/// what was pinned, with a refusal that says which refusal it is, in
+/// `tracewing-proxy`'s `tests/pinning.rs`. What is joined nowhere is the
+/// wiring: that the **real** routing table goes in one end and the **real**
+/// `leave_by` comes out the other, and that this starts the watch before
+/// the way in it wraps rather than after.
+///
+/// `local_live_linux` does not reach it either: that test builds the source
+/// and asserts on the routing table, then lets go, and never calls `start`.
+/// Reaching it wants a way out that really carries traffic, which is a
+/// second network namespace -- a veth pair in one namespace is a stand-in
+/// for the route shape and not for reachability, since traffic to the
+/// peer's own address goes by the local table. TraceW 2 found the gap while
+/// taking that test into a namespace.
 #[cfg(any(windows, target_os = "linux"))]
 struct Pinned {
     inner: Box<dyn Source>,
