@@ -235,6 +235,57 @@ t13bc7052 = sertifika dosyasında
 # Add
 t9dc3aa14 = Ekle
 
+# Daylight
+t29cc3b47 = Gün ışığı
+
+# Paper
+tfea8bfd9 = Kâğıt
+
+# Soft gray
+t6d3b9d7c = Yumuşak gri
+
+# High contrast
+tdc2a9fd1 = Yüksek kontrast
+
+# Mist
+td071b28c = Sis
+
+# Sage
+t5152348d = Adaçayı
+
+# Lavender
+t40f6ad0e = Lavanta
+
+# Dusk
+t44655688 = Alacakaranlık
+
+# Graphite
+tcc5f9dad = Grafit
+
+# Midnight
+tfc321421 = Gece yarısı
+
+# Neutral
+te9330778 = Nötr
+
+# Slate
+t9637e38e = Arduvaz
+
+# Dim
+t35691dd9 = Loş
+
+# Deep sea
+t372a2e54 = Derin deniz
+
+# Espresso
+t77f4d515 = Espresso
+
+# Forest
+t953ca480 = Orman
+
+# Plum
+t1d8d478b = Erik
+
 # Method
 t98a2c750 = Metot
 

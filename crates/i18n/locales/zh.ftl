@@ -226,6 +226,57 @@ t13bc7052 = 在证书文件中
 # Add
 t9dc3aa14 = 添加
 
+# Daylight
+t29cc3b47 = 日光
+
+# Paper
+tfea8bfd9 = 纸张
+
+# Soft gray
+t6d3b9d7c = 柔灰
+
+# High contrast
+tdc2a9fd1 = 高对比度
+
+# Mist
+td071b28c = 薄雾
+
+# Sage
+t5152348d = 鼠尾草
+
+# Lavender
+t40f6ad0e = 薰衣草
+
+# Dusk
+t44655688 = 黄昏
+
+# Graphite
+tcc5f9dad = 石墨
+
+# Midnight
+tfc321421 = 午夜
+
+# Neutral
+te9330778 = 中性
+
+# Slate
+t9637e38e = 板岩
+
+# Dim
+t35691dd9 = 柔暗
+
+# Deep sea
+t372a2e54 = 深海
+
+# Espresso
+t77f4d515 = 浓缩咖啡
+
+# Forest
+t953ca480 = 森林
+
+# Plum
+t1d8d478b = 梅子
+
 # Method
 t98a2c750 = 方法
 

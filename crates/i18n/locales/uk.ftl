@@ -241,6 +241,57 @@ t13bc7052 = у файлі сертифіката
 # Add
 t9dc3aa14 = Додати
 
+# Daylight
+t29cc3b47 = Денний
+
+# Paper
+tfea8bfd9 = Папір
+
+# Soft gray
+t6d3b9d7c = М'який сірий
+
+# High contrast
+tdc2a9fd1 = Висока контрастність
+
+# Mist
+td071b28c = Туман
+
+# Sage
+t5152348d = Шавлія
+
+# Lavender
+t40f6ad0e = Лаванда
+
+# Dusk
+t44655688 = Сутінки
+
+# Graphite
+tcc5f9dad = Графіт
+
+# Midnight
+tfc321421 = Північ
+
+# Neutral
+te9330778 = Нейтральний
+
+# Slate
+t9637e38e = Сланець
+
+# Dim
+t35691dd9 = Приглушений
+
+# Deep sea
+t372a2e54 = Глибоке море
+
+# Espresso
+t77f4d515 = Еспресо
+
+# Forest
+t953ca480 = Ліс
+
+# Plum
+t1d8d478b = Слива
+
 # Method
 t98a2c750 = Метод
 

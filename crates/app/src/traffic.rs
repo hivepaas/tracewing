@@ -627,6 +627,7 @@ impl Traffic {
             Appearance::Dark => true,
             Appearance::System => system_dark,
         });
+        colors::set_styles(layout.light_style, layout.dark_style);
         Self {
             engine,
             viewing: None,
@@ -746,8 +747,33 @@ impl Traffic {
             Appearance::Dark => true,
             Appearance::System => self.system_dark,
         });
+        colors::set_styles(self.layout.light_style, self.layout.dark_style);
         window.refresh();
         cx.notify();
+    }
+
+    /// How light looks, kept and shown at once if light is what is shown.
+    pub fn set_light_style(
+        &mut self,
+        style: colors::LightStyle,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.layout.light_style = style;
+        self.save_layout();
+        self.apply_appearance(window, cx);
+    }
+
+    /// How dark looks, the same.
+    pub fn set_dark_style(
+        &mut self,
+        style: colors::DarkStyle,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.layout.dark_style = style;
+        self.save_layout();
+        self.apply_appearance(window, cx);
     }
 
     pub fn set_appearance(

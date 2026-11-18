@@ -226,6 +226,57 @@ t13bc7052 = nằm trong file chứng chỉ
 # Add
 t9dc3aa14 = Thêm
 
+# Daylight
+t29cc3b47 = Ánh ngày
+
+# Paper
+tfea8bfd9 = Giấy
+
+# Soft gray
+t6d3b9d7c = Xám dịu
+
+# High contrast
+tdc2a9fd1 = Tương phản cao
+
+# Mist
+td071b28c = Sương
+
+# Sage
+t5152348d = Xô thơm
+
+# Lavender
+t40f6ad0e = Oải hương
+
+# Dusk
+t44655688 = Hoàng hôn
+
+# Graphite
+tcc5f9dad = Than chì
+
+# Midnight
+tfc321421 = Nửa đêm
+
+# Neutral
+te9330778 = Trung tính
+
+# Slate
+t9637e38e = Đá phiến
+
+# Dim
+t35691dd9 = Dịu
+
+# Deep sea
+t372a2e54 = Biển sâu
+
+# Espresso
+t77f4d515 = Espresso
+
+# Forest
+t953ca480 = Rừng
+
+# Plum
+t1d8d478b = Mận
+
 # Method
 t98a2c750 = Method
 

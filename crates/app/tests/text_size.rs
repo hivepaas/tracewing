@@ -240,6 +240,48 @@ fn the_window_grows_with_the_text_size() {
     let kept = tracewing::layout::Layout::load(&dir.join("layout.toml"));
     assert_eq!((kept.ui_font, kept.code_font), (None, None));
 
+    // Styles: one for light and one for dark, each kept, each shown when its
+    // mode is. With the system's appearance both rows are there.
+    use tracewing::{
+        colors::{DarkStyle, LightStyle, colors},
+        layout::Appearance,
+    };
+    main.update(&mut cx, |view, window, cx| {
+        view.set_appearance(Appearance::Dark, window, cx);
+        view.set_dark_style(DarkStyle::Slate, window, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    assert_eq!(colors(), DarkStyle::Slate.palette());
+    shot(&mut cx, main.into(), "135-settings-dark-style");
+    main.update(&mut cx, |view, window, cx| {
+        view.set_appearance(Appearance::Light, window, cx);
+        view.set_light_style(LightStyle::Paper, window, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    assert_eq!(colors(), LightStyle::Paper.palette());
+    // Light keeps its own: dark's choice is still there for when it is dark.
+    let kept = tracewing::layout::Layout::load(&dir.join("layout.toml"));
+    assert_eq!(
+        (kept.light_style, kept.dark_style),
+        (LightStyle::Paper, DarkStyle::Slate)
+    );
+    main.update(&mut cx, |view, window, cx| {
+        view.set_appearance(Appearance::System, window, cx)
+    })
+    .unwrap();
+    cx.run_until_parked();
+    shot(&mut cx, main.into(), "136-settings-styles-both");
+    main.update(&mut cx, |view, window, cx| {
+        view.set_appearance(Appearance::Dark, window, cx);
+        view.set_light_style(LightStyle::default(), window, cx);
+        view.set_dark_style(DarkStyle::default(), window, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    assert_eq!(colors().page, 0x141517);
+
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);
 }

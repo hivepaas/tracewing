@@ -237,6 +237,57 @@ t13bc7052 = en el archivo del certificado
 # Add
 t9dc3aa14 = Añadir
 
+# Daylight
+t29cc3b47 = Luz de día
+
+# Paper
+tfea8bfd9 = Papel
+
+# Soft gray
+t6d3b9d7c = Gris suave
+
+# High contrast
+tdc2a9fd1 = Alto contraste
+
+# Mist
+td071b28c = Niebla
+
+# Sage
+t5152348d = Salvia
+
+# Lavender
+t40f6ad0e = Lavanda
+
+# Dusk
+t44655688 = Atardecer
+
+# Graphite
+tcc5f9dad = Grafito
+
+# Midnight
+tfc321421 = Medianoche
+
+# Neutral
+te9330778 = Neutro
+
+# Slate
+t9637e38e = Pizarra
+
+# Dim
+t35691dd9 = Atenuado
+
+# Deep sea
+t372a2e54 = Mar profundo
+
+# Espresso
+t77f4d515 = Espresso
+
+# Forest
+t953ca480 = Bosque
+
+# Plum
+t1d8d478b = Ciruela
+
 # Method
 t98a2c750 = Método
 

@@ -235,6 +235,57 @@ t13bc7052 = in der Zertifikatsdatei
 # Add
 t9dc3aa14 = Hinzufügen
 
+# Daylight
+t29cc3b47 = Tageslicht
+
+# Paper
+tfea8bfd9 = Papier
+
+# Soft gray
+t6d3b9d7c = Sanftes Grau
+
+# High contrast
+tdc2a9fd1 = Hoher Kontrast
+
+# Mist
+td071b28c = Nebel
+
+# Sage
+t5152348d = Salbei
+
+# Lavender
+t40f6ad0e = Lavendel
+
+# Dusk
+t44655688 = Dämmerung
+
+# Graphite
+tcc5f9dad = Graphit
+
+# Midnight
+tfc321421 = Mitternacht
+
+# Neutral
+te9330778 = Neutral
+
+# Slate
+t9637e38e = Schiefer
+
+# Dim
+t35691dd9 = Gedämpft
+
+# Deep sea
+t372a2e54 = Tiefsee
+
+# Espresso
+t77f4d515 = Espresso
+
+# Forest
+t953ca480 = Wald
+
+# Plum
+t1d8d478b = Pflaume
+
 # Method
 t98a2c750 = Methode
 
