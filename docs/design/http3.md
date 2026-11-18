@@ -251,16 +251,25 @@ that goes when the process does. Two things cost a run each to find out:
 real machine's interfaces and reports the device missing while `ip` has just
 made it — hence `--mount` and a fresh `sysfs`; `/proc` needs nothing,
 because the net sysctls and `/proc/net` are resolved against the reading
-task's own namespace. **The same trick would make `local_live_linux`
-runnable without polkit, and both of them runnable in CI.**
+task's own namespace. **The same trick made `local_live_linux` runnable
+without polkit** (#368), and it does **not** make either of them runnable
+in CI: the runner refuses the namespace with
+`unshare: write failed /proc/self/uid_map: Operation not permitted`, which
+is measured rather than assumed, and which one test un-ignored was enough to
+find. Both stay a thing somebody runs by hand, with one command and no
+password.
 
 Two things are deliberately not in it. **The way out is not pinned**: a
 namespace has one interface — ours — so `roads::out_by` answers nowhere and
 the way out cannot be made at all, which is the loop prevention doing its
 job and which the first run proved by answering 502 to everything, having
 gone through the adapter, the catcher, the door and the core to get there.
-The pinning is what `local_live_linux` tests. And the server is on the
-loopback rather than across a network, which the way out's own tests cover.
+**The pinning is covered by neither live test**, which this document said
+until TraceW 2 corrected it: `local_live_linux` builds the source and reads
+the routing table, then lets go, without ever calling `start`. What covers
+which part of it, and what is joined nowhere, is written down on
+`local_source::Pinned`. And the server is on the loopback rather than across
+a network, which the way out's own tests cover.
 
 What is still **unverified is a real browser** through a real adapter: its
 own policies, its HTTPS-record path to QUIC, and its own trust store are

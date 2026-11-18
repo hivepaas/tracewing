@@ -514,7 +514,12 @@ pub struct OutBy {
 /// into the adapter, answered by our own stack as the server it was going
 /// to, and made again — a loop with nothing bounding it.
 ///
-/// Nothing sets them yet, and nothing but Windows reads them.
+/// **Who sets them and who reads them**, since both halves of the sentence
+/// that used to be here have been wrong for a while. `local_source`'s
+/// `watching` sets them, through [`crate::roads::watch`], for as long as a
+/// local way in holds its adapter; Windows and Linux both read them, in
+/// `out_for` and in `connect_straight`'s pinned branch. What they decide is
+/// tested in three places and joined in one: see `tests/pinning.rs`.
 static HOLDING: AtomicBool = AtomicBool::new(false);
 static OUT_BY_V4: AtomicU32 = AtomicU32::new(0);
 static OUT_BY_V6: AtomicU32 = AtomicU32::new(0);
