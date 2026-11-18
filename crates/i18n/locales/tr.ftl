@@ -1058,8 +1058,8 @@ t114f9980 = Başlık
 # Payload
 ta0639745 = Payload
 
-# The simulator did not take it: {why}
-t7f8fa9c0 = Simülatör onu kabul etmedi: { $why }
+# {name} did not take the certificate: {why}
+t9c0af8eb = { $name } sertifikayı kabul etmedi: { $why }
 
 # General
 t5561fd0b = Genel
@@ -2668,8 +2668,8 @@ t13f68b64 = Hâlâ başlıyor. Birazdan yeniden bakın.
 # adb says it is {state}.
 t2b7d71da = adb'ye göre durumu: { $state }.
 
-# Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-tc28e5d10 = Bir Android emülatöründe ya da USB hata ayıklaması açık, USB ile bağlı bir telefonda proxy'yi ayarlar ve sertifikayı yükler. Trafik ADB üzerinden gelir, bu yüzden ikisinin de bu ağda olması gerekmez.
+# Sets the proxy on every Android emulator running, and every phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t7ba5700b = Çalışan her Android emülatöründe ve USB hata ayıklaması açık, USB ile bağlı her telefonda proxy'yi ayarlar ve sertifikayı yükler. Trafik ADB üzerinden gelir, bu yüzden hiçbirinin bu ağda olması gerekmez.
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
 t4af01006 = adb bulunamadı. Android Studio'yu ya da Android platform araçlarını yükleyin, sonra yeniden bakın.
@@ -2683,11 +2683,14 @@ t9144d1fc = Bir cihazı, trafiğini buraya gönderecek şekilde ayarlayın. Geri
 # Android emulators and USB devices
 t379e433c = Android emülatörleri ve USB cihazları
 
-# Find devices
-t54d4af39 = Cihazları bul
+# Set up every device
+t559d9d13 = Tüm cihazları kur
 
-# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
-t01863e29 = Bu Mac'te çalışan iOS simülatörlerinin sertifikaya güvenmesini sağlar. Simülatörler bu Mac'in proxy'sini kullanır, başka bir şeye gerek yoktur.
+# Set up all
+t566e5a8f = Tümünü kur
+
+# Trusts the certificate in every iOS simulator running on this Mac, and turns the system proxy on, since that is what a simulator goes through.
+t00c84b49 = Bu Mac'te çalışan her iOS simülatörünün sertifikaya güvenmesini sağlar ve simülatörlerin içinden geçtiği sistem proxy'sini açar.
 
 # xcrun was not found. Install Xcode, or its command line tools, then look again.
 t2bd95662 = xcrun bulunamadı. Xcode'u veya komut satırı araçlarını kurun, sonra yeniden arayın.
@@ -2695,8 +2698,8 @@ t2bd95662 = xcrun bulunamadı. Xcode'u veya komut satırı araçlarını kurun, 
 # No simulator is running. Start one from Xcode, then look again.
 tbd7bf840 = Çalışan simülatör yok. Xcode'dan birini başlatın, sonra yeniden arayın.
 
-# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
-tc88c5c9b = Bir simülatörde sertifikaya güvenin. Simülatör silinene kadar kalır; açık bir uygulamanın yeniden açılması gerekebilir.
+# The certificate stays until a simulator is erased; an app already open may need opening again. Set up again for a simulator started since.
+ted5fe7f2 = Sertifika, simülatör silinene kadar kalır; açık bir uygulamanın yeniden açılması gerekebilir. Sonradan başlatılan bir simülatör için Yeniden kur.
 
 # The certificate is trusted.
 tdbe3bd38 = Sertifikaya güveniliyor.
@@ -2707,8 +2710,14 @@ ta1c67066 = Çalışıyor.
 # iOS simulators
 tb198618d = iOS simülatörleri
 
-# Find simulators
-ta969b661 = Simülatörleri bul
+# Set up again
+t4ace72e8 = Yeniden kur
+
+# Set up the simulators
+t98667d7a = Simülatörleri kur
+
+# The system proxy is off, so the simulators send nothing here.
+t4effce55 = Sistem proxy'si kapalı, bu yüzden simülatörler buraya hiçbir şey göndermiyor.
 
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = Bu giriş yolundan bu bilgisayarda hiçbir şey kalmaz: tracewing'in bağdaştırıcısı onunla birlikte gider, rotaları da; kapatılsa da öldürülse de.

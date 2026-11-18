@@ -152,9 +152,9 @@ keyboard.
 | A setup page with a QR code: the proxy address, and the CA served by tracewing itself | Beta | Free |
 | Guides for iOS trust settings, Android user certificates (with the `network_security_config` snippet) and Flutter, each with how to undo it when done; a reminder of the devices that still have the proxy set | Beta | Free |
 | Let other devices in, or out again, without a restart: tracewing follows this computer's addresses as networks come and go | Beta | Free |
-| Android emulator over ADB: set the proxy and install the CA in one step | Beta | Free |
+| Android emulator over ADB: set the proxy and install the CA in one step, on every device found at once (Set up every device) or on one; Undo, or closing tracewing, puts each back | Beta | Free |
 | Android 14 and later on a device adb can root, as an emulator with a Google APIs image: the CA among the system's, where apps look (the Conscrypt APEX), for apps running and those started after, until the device restarts | Beta | Pro |
-| iOS Simulator (macOS): Set up lists the simulators running and trusts the CA in each with `xcrun simctl keychain … add-root-cert`; they go through the Mac's proxy | Beta | Free |
+| iOS Simulator (macOS), in one step: Set up the simulators trusts the CA in every simulator running with `xcrun simctl keychain … add-root-cert`, and turns the system proxy on if it is off, since that is what a simulator goes through; Set up again for one started since | Beta | Free |
 | Name devices and filter by device | Beta | Free |
 
 ## Import, export and sharing

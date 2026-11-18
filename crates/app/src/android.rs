@@ -1,10 +1,14 @@
-//! Android emulators and phones on USB, from the Set up page. Everything goes
-//! through `adb` off the window's thread; nothing touches a device until the
-//! user asks, and `adb` is not even started until they look for devices.
+//! Android emulators and phones on USB, from the Set up page: every device
+//! found set up in one go, or one at a time. Everything goes through `adb` off
+//! the window's thread; nothing touches a device until the user asks, and
+//! `adb` is not even started until they do.
 
 use crate::traffic::Traffic;
 use gpui::{AppContext as _, Context};
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 use tracewing_system::{
     self as system,
     android::{self, Device, SetUp},
@@ -24,6 +28,24 @@ pub struct AndroidState {
     pub problem: Option<String>,
 }
 
+/// Where `adb` is, if anywhere, and what it lists.
+type Looked = (Option<PathBuf>, Option<anyhow::Result<Vec<Device>>>);
+
+/// Finds `adb`, unless one was given, as a test does, and asks it for the
+/// devices.
+async fn look(given: Option<PathBuf>) -> Looked {
+    let adb = given.or_else(android::find_adb);
+    let found = adb.as_deref().map(android::devices);
+    (adb, found)
+}
+
+/// Points one device at the proxy, with the certificate.
+fn set_up_one(adb: &Path, serial: &str, port: u16, data_dir: &Path) -> anyhow::Result<SetUp> {
+    let pem = data_dir.join("ca.pem");
+    let der = system::ca_der(&pem)?;
+    android::set_up(adb, serial, port, &pem, &der, data_dir)
+}
+
 impl Traffic {
     pub fn find_android_devices(&mut self, cx: &mut Context<Self>) {
         if self.system.android.looking {
@@ -31,23 +53,91 @@ impl Traffic {
         }
         self.system.android.looking = true;
         self.system.android.problem = None;
+        let given = self.system.android.adb.clone().flatten();
         cx.spawn(async move |this, cx| {
-            let (adb, found) = cx
-                .background_spawn(async move {
-                    let adb = android::find_adb();
-                    let found = adb.as_deref().map(android::devices);
-                    (adb, found)
-                })
-                .await;
+            let found = cx.background_spawn(look(given)).await;
+            let _ = this.update(cx, |this, cx| {
+                this.system.android.looking = false;
+                this.found_android(found, cx);
+            });
+        })
+        .detach();
+        cx.notify();
+    }
+
+    fn found_android(&mut self, (adb, found): Looked, cx: &mut Context<Self>) {
+        let state = &mut self.system.android;
+        match found {
+            Some(Ok(devices)) => state.devices = devices,
+            Some(Err(e)) => state.problem = Some(format!("{e:#}")),
+            None => state.devices.clear(),
+        }
+        state.adb = Some(adb);
+        cx.notify();
+    }
+
+    /// The devices ready and not yet set up, by serial.
+    pub fn android_to_set_up(&self) -> Vec<String> {
+        let state = &self.system.android;
+        state
+            .devices
+            .iter()
+            .filter(|device| device.ready() && !state.set.contains_key(&device.serial))
+            .map(|device| device.serial.clone())
+            .collect()
+    }
+
+    /// Looks for the devices again, which also tells what changed on them
+    /// since, and sets up every one ready, one after another.
+    pub fn set_up_android_all(&mut self, cx: &mut Context<Self>) {
+        let state = &mut self.system.android;
+        if state.looking || state.working.is_some() {
+            return;
+        }
+        state.looking = true;
+        state.problem = None;
+        let given = state.adb.clone().flatten();
+        let data_dir = self.data_dir.clone();
+        let port = self.engine.addr.port();
+        cx.spawn(async move |this, cx| {
+            let found = cx.background_spawn(look(given)).await;
+            let _ = this.update(cx, |this, cx| this.found_android(found, cx));
+            let Ok((Some(Some(adb)), serials)) = this.update(cx, |this, _| {
+                (this.system.android.adb.clone(), this.android_to_set_up())
+            }) else {
+                let _ = this.update(cx, |this, cx| {
+                    this.system.android.looking = false;
+                    cx.notify();
+                });
+                return;
+            };
+            let mut failed = Vec::new();
+            for serial in serials {
+                let _ = this.update(cx, |this, cx| {
+                    this.system.android.working = Some(serial.clone());
+                    cx.notify();
+                });
+                let (adb, target, data_dir) = (adb.clone(), serial.clone(), data_dir.clone());
+                let result = cx
+                    .background_spawn(async move { set_up_one(&adb, &target, port, &data_dir) })
+                    .await;
+                let _ = this.update(cx, |this, _| {
+                    let state = &mut this.system.android;
+                    state.working = None;
+                    match result {
+                        Ok(done) => {
+                            state.set.insert(serial, done);
+                        }
+                        Err(e) => failed.push(format!("{serial}: {e:#}")),
+                    }
+                });
+            }
             let _ = this.update(cx, |this, cx| {
                 let state = &mut this.system.android;
                 state.looking = false;
-                match found {
-                    Some(Ok(devices)) => state.devices = devices,
-                    Some(Err(e)) => state.problem = Some(format!("{e:#}")),
-                    None => state.devices.clear(),
+                if !failed.is_empty() {
+                    state.problem = Some(failed.join("\n"));
                 }
-                state.adb = Some(adb);
                 cx.notify();
             });
         })
@@ -61,7 +151,7 @@ impl Traffic {
         let Some(Some(adb)) = self.system.android.adb.clone() else {
             return;
         };
-        if self.system.android.working.is_some() {
+        if self.system.android.working.is_some() || self.system.android.looking {
             return;
         }
         self.system.android.working = Some(serial.clone());
@@ -71,11 +161,7 @@ impl Traffic {
         cx.spawn(async move |this, cx| {
             let target = serial.clone();
             let result = cx
-                .background_spawn(async move {
-                    let pem = data_dir.join("ca.pem");
-                    let der = system::ca_der(&pem)?;
-                    android::set_up(&adb, &target, port, &pem, &der, &data_dir)
-                })
+                .background_spawn(async move { set_up_one(&adb, &target, port, &data_dir) })
                 .await;
             let _ = this.update(cx, |this, cx| {
                 let state = &mut this.system.android;
@@ -98,7 +184,7 @@ impl Traffic {
         let Some(Some(adb)) = self.system.android.adb.clone() else {
             return;
         };
-        if self.system.android.working.is_some() {
+        if self.system.android.working.is_some() || self.system.android.looking {
             return;
         }
         self.system.android.working = Some(serial.clone());

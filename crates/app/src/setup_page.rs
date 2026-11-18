@@ -1510,9 +1510,9 @@ impl Traffic {
         let state = &self.system.android;
         let text = match &state.adb {
             None => tr!(
-                "Sets the proxy on an Android emulator, or a phone plugged in with USB \
-                 debugging on, and installs the certificate. The traffic comes over ADB, so \
-                 neither has to be on this network."
+                "Sets the proxy on every Android emulator running, and every phone plugged \
+                 in with USB debugging on, and installs the certificate. The traffic comes \
+                 over ADB, so neither has to be on this network."
             ),
             Some(None) => tr!(
                 "adb was not found. Install Android Studio, or Android's platform \
@@ -1529,11 +1529,12 @@ impl Traffic {
         };
         let looking = state.looking;
         let looked = state.adb.is_some();
+        let busy = looking || state.working.is_some();
+        let more_than_one = self.android_to_set_up().len() > 1;
         let rows =
             state.devices.iter().enumerate().map(|(at, device)| {
                 let set = state.set.get(&device.serial);
                 let working = state.working.as_deref() == Some(device.serial.as_str());
-                let busy = state.working.is_some();
                 let serial = device.serial.clone();
                 div()
                     .flex()
@@ -1578,18 +1579,22 @@ impl Traffic {
             });
         let problem = state.problem.clone();
         aside(tr!("Android emulators and USB devices"), text)
-            .when(!looking, |d| {
+            .when(!busy && !looked, |d| {
                 d.child(
-                    button(
-                        "setup-android",
-                        if looked {
-                            tr!("Look again")
-                        } else {
-                            tr!("Find devices")
-                        },
-                        false,
-                    )
-                    .on_click(cx.listener(|this, _, _, cx| this.find_android_devices(cx))),
+                    button("setup-android", tr!("Set up every device"), true)
+                        .on_click(cx.listener(|this, _, _, cx| this.set_up_android_all(cx))),
+                )
+            })
+            .when(!busy && looked && more_than_one, |d| {
+                d.child(
+                    button("setup-android-all", tr!("Set up all"), true)
+                        .on_click(cx.listener(|this, _, _, cx| this.set_up_android_all(cx))),
+                )
+            })
+            .when(!busy && looked, |d| {
+                d.child(
+                    button("setup-android", tr!("Look again"), false)
+                        .on_click(cx.listener(|this, _, _, cx| this.find_android_devices(cx))),
                 )
             })
             .child(div().w_full().flex().flex_col().children(rows))
@@ -1607,8 +1612,8 @@ impl Traffic {
         }
         let text = match &state.xcrun {
             None => tr!(
-                "Trusts the certificate in the iOS simulators running on this Mac. They go \
-                 through this Mac's proxy, so that is all they need."
+                "Trusts the certificate in every iOS simulator running on this Mac, and turns \
+                 the system proxy on, since that is what a simulator goes through."
             ),
             Some(None) => tr!(
                 "xcrun was not found. Install Xcode, or its command line tools, then look again."
@@ -1617,17 +1622,19 @@ impl Traffic {
                 tr!("No simulator is running. Start one from Xcode, then look again.")
             }
             Some(Some(_)) => tr!(
-                "Trust the certificate in a simulator. It stays until the simulator is erased; \
-                 an app already open may need opening again."
+                "The certificate stays until a simulator is erased; an app already open may \
+                 need opening again. Set up again for a simulator started since."
             ),
         };
+        // What the certificate alone cannot do. Said on any machine, so that a
+        // test can read it; only a Mac turns the proxy on by itself.
+        let no_proxy =
+            !state.looking && state.any_trusted() && matches!(self.system.proxy, ProxySwitch::Off);
         let looked = state.xcrun.is_some();
         let looking = state.looking;
-        let busy = state.working.is_some();
-        let rows = state.simulators.iter().enumerate().map(|(at, sim)| {
+        let rows = state.simulators.iter().map(|sim| {
             let trusted = state.trusted.contains(&sim.udid);
             let working = state.working.as_deref() == Some(sim.udid.as_str());
-            let udid = sim.udid.clone();
             div()
                 .flex()
                 .flex_row()
@@ -1654,15 +1661,6 @@ impl Traffic {
                             tr!("Running.")
                         })),
                 )
-                .when(!trusted && !busy, |d| {
-                    d.child(
-                        button(("simulator", at), tr!("Trust the certificate"), true).on_click(
-                            cx.listener(move |this, _, _, cx| {
-                                this.trust_simulator(udid.clone(), cx)
-                            }),
-                        ),
-                    )
-                })
         });
         let problem = state.problem.clone();
         Some(
@@ -1672,16 +1670,21 @@ impl Traffic {
                         button(
                             "setup-simulators",
                             if looked {
-                                tr!("Look again")
+                                tr!("Set up again")
                             } else {
-                                tr!("Find simulators")
+                                tr!("Set up the simulators")
                             },
-                            false,
+                            !looked,
                         )
-                        .on_click(cx.listener(|this, _, _, cx| this.find_simulators(cx))),
+                        .on_click(cx.listener(|this, _, _, cx| this.set_up_simulators(cx))),
                     )
                 })
                 .child(div().w_full().flex().flex_col().children(rows))
+                .when(no_proxy, |d| {
+                    d.child(div().w_full().text_color(rgb(c.warn)).child(tr!(
+                        "The system proxy is off, so the simulators send nothing here."
+                    )))
+                })
                 .children(
                     problem.map(|problem| div().w_full().text_color(rgb(c.error)).child(problem)),
                 ),

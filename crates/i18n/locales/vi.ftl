@@ -1027,8 +1027,8 @@ t114f9980 = Header
 # Payload
 ta0639745 = Payload
 
-# The simulator did not take it: {why}
-t7f8fa9c0 = Simulator không nhận: { $why }
+# {name} did not take the certificate: {why}
+t9c0af8eb = { $name } không nhận chứng chỉ: { $why }
 
 # General
 t5561fd0b = Chung
@@ -2581,8 +2581,8 @@ t13f68b64 = Vẫn đang khởi động. Lát nữa hãy tìm lại.
 # adb says it is {state}.
 t2b7d71da = adb báo thiết bị đang { $state }.
 
-# Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-tc28e5d10 = Đặt proxy trên một Android emulator, hoặc điện thoại cắm USB có bật gỡ lỗi USB, và cài chứng chỉ. Traffic đi qua ADB, nên không cần chung mạng.
+# Sets the proxy on every Android emulator running, and every phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t7ba5700b = Đặt proxy trên mọi Android emulator đang chạy và mọi điện thoại cắm USB có bật gỡ lỗi USB, rồi cài chứng chỉ. Traffic đi qua ADB, nên không cần chung mạng.
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
 t4af01006 = Không tìm thấy adb. Hãy cài Android Studio, hoặc platform tools của Android, rồi tìm lại.
@@ -2596,11 +2596,14 @@ t9144d1fc = Thiết lập một thiết bị để gửi traffic của nó qua �
 # Android emulators and USB devices
 t379e433c = Android emulator và thiết bị USB
 
-# Find devices
-t54d4af39 = Tìm thiết bị
+# Set up every device
+t559d9d13 = Thiết lập mọi thiết bị
 
-# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
-t01863e29 = Đặt chứng chỉ vào danh sách tin cậy của các iOS simulator đang chạy trên Mac này. Chúng đi qua proxy của Mac, nên chỉ cần vậy.
+# Set up all
+t566e5a8f = Thiết lập tất cả
+
+# Trusts the certificate in every iOS simulator running on this Mac, and turns the system proxy on, since that is what a simulator goes through.
+t00c84b49 = Đặt chứng chỉ vào danh sách tin cậy của mọi iOS simulator đang chạy trên Mac này, và bật system proxy, vì simulator đi qua proxy của Mac.
 
 # xcrun was not found. Install Xcode, or its command line tools, then look again.
 t2bd95662 = Không tìm thấy xcrun. Hãy cài Xcode hoặc command line tools của nó, rồi tìm lại.
@@ -2608,8 +2611,8 @@ t2bd95662 = Không tìm thấy xcrun. Hãy cài Xcode hoặc command line tools 
 # No simulator is running. Start one from Xcode, then look again.
 tbd7bf840 = Không có simulator nào đang chạy. Hãy mở một cái từ Xcode, rồi tìm lại.
 
-# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
-tc88c5c9b = Tin chứng chỉ trong một simulator. Nó giữ nguyên cho tới khi simulator bị xoá; app đang mở có thể cần mở lại.
+# The certificate stays until a simulator is erased; an app already open may need opening again. Set up again for a simulator started since.
+ted5fe7f2 = Chứng chỉ giữ nguyên cho tới khi simulator bị xoá; app đang mở có thể cần mở lại. Bấm Thiết lập lại cho simulator khởi động sau đó.
 
 # The certificate is trusted.
 tdbe3bd38 = Chứng chỉ đã được tin.
@@ -2620,8 +2623,14 @@ ta1c67066 = Đang chạy.
 # iOS simulators
 tb198618d = iOS simulator
 
-# Find simulators
-ta969b661 = Tìm simulator
+# Set up again
+t4ace72e8 = Thiết lập lại
+
+# Set up the simulators
+t98667d7a = Thiết lập simulator
+
+# The system proxy is off, so the simulators send nothing here.
+t4effce55 = System proxy đang tắt, nên các simulator không gửi gì tới đây.
 
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = Không có gì của đường vào này ở lại máy: adapter của tracewing đi theo nó, kèm cả các route, dù nó được đóng hay bị giết.

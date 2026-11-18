@@ -1084,8 +1084,8 @@ t114f9980 = Заголовок
 # Payload
 ta0639745 = Payload
 
-# The simulator did not take it: {why}
-t7f8fa9c0 = Симулятор його не прийняв: { $why }
+# {name} did not take the certificate: {why}
+t9c0af8eb = { $name } не прийняв сертифікат: { $why }
 
 # General
 t5561fd0b = Загальні
@@ -2794,8 +2794,8 @@ t13f68b64 = Ще запускається. Пошукайте знову за м
 # adb says it is {state}.
 t2b7d71da = adb повідомляє стан: { $state }.
 
-# Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-tc28e5d10 = Налаштовує проксі на емуляторі Android або телефоні, підключеному через USB з увімкненим налагодженням через USB, і встановлює сертифікат. Трафік іде через ADB, тому жодному з них не потрібно бути в цій мережі.
+# Sets the proxy on every Android emulator running, and every phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t7ba5700b = Налаштовує проксі на кожному запущеному емуляторі Android і кожному телефоні, підключеному через USB з увімкненим налагодженням через USB, і встановлює сертифікат. Трафік іде через ADB, тому їм не потрібно бути в цій мережі.
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
 t4af01006 = adb не знайдено. Установіть Android Studio або Android Platform Tools, а потім пошукайте знову.
@@ -2809,11 +2809,14 @@ t9144d1fc = Налаштуйте пристрій, щоб він надсила�
 # Android emulators and USB devices
 t379e433c = Емулятори Android і USB-пристрої
 
-# Find devices
-t54d4af39 = Знайти пристрої
+# Set up every device
+t559d9d13 = Налаштувати всі пристрої
 
-# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
-t01863e29 = Додає сертифікат до довірених у запущених на цьому Mac симуляторах iOS. Вони ходять через проксі цього Mac, більше нічого не треба.
+# Set up all
+t566e5a8f = Налаштувати всі
+
+# Trusts the certificate in every iOS simulator running on this Mac, and turns the system proxy on, since that is what a simulator goes through.
+t00c84b49 = Додає сертифікат до довірених у всіх запущених на цьому Mac симуляторах iOS і вмикає системний проксі, адже симулятори ходять через нього.
 
 # xcrun was not found. Install Xcode, or its command line tools, then look again.
 t2bd95662 = xcrun не знайдено. Встановіть Xcode або його інструменти командного рядка й пошукайте знову.
@@ -2821,8 +2824,8 @@ t2bd95662 = xcrun не знайдено. Встановіть Xcode або йо�
 # No simulator is running. Start one from Xcode, then look again.
 tbd7bf840 = Жоден симулятор не запущено. Запустіть його з Xcode й пошукайте знову.
 
-# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
-tc88c5c9b = Зробіть сертифікат довіреним у симуляторі. Він лишиться, доки симулятор не стерто; вже відкритий застосунок, можливо, доведеться відкрити знову.
+# The certificate stays until a simulator is erased; an app already open may need opening again. Set up again for a simulator started since.
+ted5fe7f2 = Сертифікат лишиться, доки симулятор не стерто; вже відкритий застосунок, можливо, доведеться відкрити знову. «Налаштувати знову» — для симулятора, запущеного пізніше.
 
 # The certificate is trusted.
 tdbe3bd38 = Сертифікат довірений.
@@ -2833,8 +2836,14 @@ ta1c67066 = Запущено.
 # iOS simulators
 tb198618d = Симулятори iOS
 
-# Find simulators
-ta969b661 = Знайти симулятори
+# Set up again
+t4ace72e8 = Налаштувати знову
+
+# Set up the simulators
+t98667d7a = Налаштувати симулятори
+
+# The system proxy is off, so the simulators send nothing here.
+t4effce55 = Системний проксі вимкнено, тому симулятори нічого сюди не надсилають.
 
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = Від цього входу на комп'ютері не лишається нічого: адаптер tracewing зникає разом із ним, і його маршрути теж, хай його закрили чи вбили.
