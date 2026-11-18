@@ -13,6 +13,11 @@ const PROC_PIDFDSOCKETINFO: i32 = 3;
 /// A socket of one of the internet families, which a UDP one is: its part of
 /// the union is an `in_sockinfo`, and a TCP socket's starts with one, so both
 /// are read at the same offset.
+///
+/// Measured on macOS 15.8.2: a connected datagram socket is `soi_kind` 1 with
+/// `soi_protocol` 17, and its local end is the address its datagrams really
+/// carry (`10.0.2.15:49784`, not `0.0.0.0`) -- so here, as on Linux and
+/// unlike on Windows, a datagram is answered for by its address.
 const SOCKINFO_IN: i32 = 1;
 const SOCKINFO_TCP: i32 = 2;
 const INI_IPV4: u8 = 0x1;
@@ -300,12 +305,14 @@ fn ends(pid: u32, fd: i32, buffer: &mut Buffer) -> Option<Open> {
     // the union's IPv4 arm sits after three words of padding, which is why
     // the four bytes are taken from the end.
     //
-    // Unverified, and now load-bearing in one more place than it was: this
-    // reads the **far** end as well, so an IPv6 server address goes through
-    // it too. If the two flags were ever set together, `INI_IPV4` winning
-    // would read four bytes out of the middle of a v6 address and hand back
-    // an address that looks perfectly ordinary. Nobody here has a Mac to
-    // check what the kernel sets, so it is written down rather than asserted.
+    // Measured rather than reasoned about, because this reads the **far** end
+    // as well, so a server's IPv6 address goes through it too, and `INI_IPV4`
+    // winning over a real v6 address would take four bytes out of its middle
+    // and hand back an address that looks perfectly ordinary. Read at these
+    // offsets on macOS 15.8.2 (x86_64): a v6 connection is `0b10`, a v4 one
+    // `0b01`, and one over an AF_INET6 socket reached through a v4-mapped
+    // address is `0b01` as written above. Exactly one of the two in every
+    // case, never both.
     let at = |addr: &[u8; 16]| -> Option<IpAddr> {
         if tcp.insi_vflag & INI_IPV4 != 0 {
             let v4: [u8; 4] = addr[12..16].try_into().ok()?;
@@ -340,6 +347,71 @@ fn ends(pid: u32, fd: i32, buffer: &mut Buffer) -> Option<Open> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::fd::AsRawFd as _;
+
+    /// Which family the kernel names, and so which arm of a sixteen-byte
+    /// union this file reads an address out of. It decides the **far** end
+    /// as well, so `INI_IPV4` winning over a real v6 address would hand back
+    /// four bytes out of its middle and look perfectly ordinary.
+    ///
+    /// This was a comment saying nobody had a Mac to check it. It is a test
+    /// now so that it stays checked: each socket here is one the test opened,
+    /// so what it asserts is what the kernel said about a socket whose ends
+    /// are already known.
+    #[test]
+    fn one_family_is_named_and_only_one() {
+        let mut buffer: Box<Buffer> = Box::new([0; 256]);
+        let me = std::process::id();
+
+        // A pure IPv6 connection: both ends come back as they were given.
+        let six = std::net::TcpListener::bind("[::1]:0").unwrap();
+        let to = six.local_addr().unwrap();
+        let client = std::net::TcpStream::connect(to).unwrap();
+        let _accepted = six.accept().unwrap();
+        let from = client.local_addr().unwrap();
+        match ends(me, client.as_raw_fd(), &mut buffer) {
+            Some(Open::Connection { client, remote }) => {
+                assert_eq!((client, remote), (from, to), "a v6 connection's ends");
+            }
+            _ => panic!("a v6 connection is a connection"),
+        }
+
+        // A v4 listener reached over an AF_INET6 socket, whose peer is a
+        // v4-mapped address: the kernel names that IPv4, and both ends come
+        // back as the addresses a packet carries rather than as mapped ones.
+        let four = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let plain = four.local_addr().unwrap();
+        let mapped: SocketAddr = format!("[::ffff:127.0.0.1]:{}", plain.port())
+            .parse()
+            .unwrap();
+        let client = std::net::TcpStream::connect(mapped).unwrap();
+        let _accepted = four.accept().unwrap();
+        let from = canonical(client.local_addr().unwrap());
+        match ends(me, client.as_raw_fd(), &mut buffer) {
+            Some(Open::Connection { client, remote }) => {
+                assert_eq!((client, remote), (from, plain), "a v4-mapped connection");
+                assert!(client.is_ipv4() && remote.is_ipv4(), "as a packet has them");
+            }
+            _ => panic!("a v4-mapped connection is a connection"),
+        }
+
+        // A datagram socket is the other kind, and its end is its own.
+        let datagram = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+        let at = datagram.local_addr().unwrap();
+        match ends(me, datagram.as_raw_fd(), &mut buffer) {
+            Some(Open::Datagram { client }) => assert_eq!(client, at),
+            _ => panic!("a datagram socket is a datagram socket"),
+        }
+
+        // And something that is no socket at all is nothing here, which is
+        // what keeps the three above from passing on a reader that answers
+        // the same thing whatever it is handed.
+        let file = std::fs::File::open("/dev/null").unwrap();
+        assert!(
+            ends(me, file.as_raw_fd(), &mut buffer).is_none(),
+            "a file is not a socket"
+        );
+    }
 
     /// Where the header puts things: a wrong offset reads nonsense, not an error.
     #[test]

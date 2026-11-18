@@ -872,11 +872,22 @@ device.
   Which of those two rules does the work differs by system, and it was
   measured rather than assumed. A socket that binds no address and then
   connects — a browser's QUIC socket — is in `/proc/net/udp` under the
-  address it really used (`192.168.1.6:46672`), and in Windows's table under
-  `0.0.0.0` with the same port, though its own datagrams carry the
-  interface's address. So Linux answers by the address and Windows usually
-  by the port alone; a socket that *was* bound to an address is under it on
-  both, which is why the address is still asked first.
+  address it really used (`192.168.1.6:46672`) and in macOS's libproc under
+  its own (`10.0.2.15:49784`), but in Windows's table under `0.0.0.0` with
+  the same port, although its datagrams carry the interface's address. So
+  Linux and macOS answer by the address and Windows usually by the port
+  alone; a socket that *was* bound to an address is under it on all three,
+  which is why the address is still asked first.
+
+  macOS was the unverified one in this file and is no longer. On macOS
+  15.8.2 (x86_64) the struct offsets `apps/macos.rs` reads at are the
+  headers', a datagram socket is `soi_kind` 1 with `soi_protocol` 17, and
+  `insi_vflag` — which decides which arm of a sixteen-byte union is an
+  address, and so is load-bearing for the **far** end too — is `0b10` for a
+  v6 connection, `0b01` for a v4 one, and `0b01` for one over an AF_INET6
+  socket reached through a v4-mapped address: exactly one of the two in
+  every case, never both, which is what the code assumed and nobody had
+  checked.
 
   What such a row does not say, each a case rather than a guess: a hello
   split across two datagrams, and a version whose salt is not in the table
