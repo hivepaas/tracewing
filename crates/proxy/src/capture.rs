@@ -851,28 +851,46 @@ fn send_elsewhere(req: &mut Request<Body>, to: &http::Uri) {
     *req.uri_mut() = uri;
 }
 
-impl HttpHandler for FlowHandler {
-    async fn handle_request(&mut self, ctx: &HttpContext, req: Request<Body>) -> RequestOrResponse {
+impl FlowHandler {
+    /// A request from `client`: everything the proxy does with one, from
+    /// counting that something arrived to the flow it is written down as.
+    ///
+    /// Taken apart from [`HttpHandler::handle_request`], which is now a line,
+    /// because the core has to be callable by a front door that is not
+    /// hudsucker's: an HTTP/3 one, which cannot even build the `HttpContext`
+    /// that signature asks for -- the type is `#[non_exhaustive]`. What a
+    /// second front door needs is this and [`Self::response`]; the questions
+    /// hudsucker asks about a `CONNECT`, a ClientHello or its own client's
+    /// errors stay with it, because they are about TCP and about that client.
+    /// See `docs/design/http3.md`.
+    ///
+    /// `RequestOrResponse` is hudsucker's and stays: it is a plain enum of
+    /// "send this on" or "answer with this", which anything can match on.
+    pub(crate) async fn request(
+        &mut self,
+        client: SocketAddr,
+        req: Request<Body>,
+    ) -> RequestOrResponse {
         // Counted whether or not anything is being recorded, and before
         // anything can turn the request away: "is this way in doing
         // anything" is a question about the way in, and somebody who paused
         // recording has not stopped their programs.
-        self.arrived(ctx.client_addr);
+        self.arrived(client);
         // The tunnel itself is not a flow; the requests inside it are.
         if req.method() == Method::CONNECT {
             // A new connection, and the first the proxy hears of it.
             if let Some(apps) = &self.apps
                 && self.recording.load(Ordering::Relaxed)
-                && self.handed.of(ctx.client_addr).is_none()
+                && self.handed.of(client).is_none()
             {
-                apps.of(ctx.client_addr, true);
+                apps.of(client, true);
             }
             return req.into();
         }
         // A request: its connection took the certificate, if it was given one.
-        crate::refused::served(ctx.client_addr);
+        crate::refused::served(client);
         let req = with_http_scheme(req);
-        let req = self.as_absolute(ctx.client_addr, req);
+        let req = self.as_absolute(client, req);
         // Revocation checks ask for this while the handshake waits, directly or
         // through the system proxy. They are not traffic the user sent.
         if req.uri().path() == CRL_PATH && request_host(&req) == Some(self.crl.host.as_str()) {
@@ -966,9 +984,9 @@ impl HttpHandler for FlowHandler {
         let recording = self.recording.load(Ordering::Relaxed);
         // Asked for only while recording: looking for a program is work.
         let (client, app) = if recording {
-            self.client_of(ctx.client_addr)
+            self.client_of(client)
         } else {
-            (ctx.client_addr, None)
+            (client, None)
         };
         let flow = recording.then(|| Arc::new(Flow::start(self.recorder.clone(), client, &req)));
         if let Some(flow) = &flow {
@@ -1060,59 +1078,12 @@ impl HttpHandler for FlowHandler {
         self.slow_request(req).into()
     }
 
-    /// Left alone, a connection is a row and nothing more: all that can be known is
-    /// where it went.
-    async fn should_intercept_connect(&mut self, ctx: &HttpContext, req: &Request<Body>) -> bool {
-        let Some(host) = req.uri().authority().map(|a| a.as_str()) else {
-            return true;
-        };
-        let leave = self
-            .rules
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .leaves_alone(host);
-        if leave && self.recording.load(Ordering::Relaxed) {
-            let (client, app) = self.client_of(ctx.client_addr);
-            self.recorder.submit(FlowRecord {
-                started_us: unix_micros(),
-                client: client.to_string(),
-                kind: "tunnel",
-                method: "CONNECT".to_owned(),
-                scheme: "https".to_owned(),
-                host: without_default_port(host, "https").to_owned(),
-                client_version: format!("{:?}", req.version()),
-                app,
-                status: Some(200),
-                request: BodyRecord {
-                    complete: true,
-                    ..BodyRecord::default()
-                },
-                response: BodyRecord {
-                    complete: true,
-                    ..BodyRecord::default()
-                },
-                ..FlowRecord::default()
-            });
-        }
-        if !leave {
-            self.expect_handshake(ctx.client_addr, host, req.version());
-        }
-        !leave
-    }
-
-    /// Decrypted, always, once the host is not left alone; what is noted is
-    /// that the client started TLS, which a connection that goes without a
-    /// request soon after is then kept for. See [`crate::refused`].
-    async fn should_intercept_tls(
-        &mut self,
-        _ctx: &HttpContext,
-        _hello: hudsucker::rustls::server::ClientHello<'_>,
-    ) -> bool {
-        crate::refused::hello();
-        true
-    }
-
-    async fn handle_response(&mut self, _ctx: &HttpContext, res: Response<Body>) -> Response<Body> {
+    /// The answer to that request, on its way back to the client: what the
+    /// server said, as rules, scripts and a breakpoint leave it.
+    ///
+    /// Apart from [`HttpHandler::handle_response`] for the reason
+    /// [`Self::request`] is.
+    pub(crate) async fn response(&mut self, res: Response<Body>) -> Response<Body> {
         let flow = self.flow.take();
         // Before a breakpoint, which makes the response again.
         if let (Some(flow), Some(upstream)) = (&flow, res.extensions().get::<Arc<Upstream>>()) {
@@ -1168,6 +1139,68 @@ impl HttpHandler for FlowHandler {
             }
             None => res,
         }
+    }
+}
+
+impl HttpHandler for FlowHandler {
+    async fn handle_request(&mut self, ctx: &HttpContext, req: Request<Body>) -> RequestOrResponse {
+        self.request(ctx.client_addr, req).await
+    }
+
+    async fn handle_response(&mut self, _ctx: &HttpContext, res: Response<Body>) -> Response<Body> {
+        self.response(res).await
+    }
+
+    /// Left alone, a connection is a row and nothing more: all that can be
+    /// known is where it went.
+    async fn should_intercept_connect(&mut self, ctx: &HttpContext, req: &Request<Body>) -> bool {
+        let Some(host) = req.uri().authority().map(|a| a.as_str()) else {
+            return true;
+        };
+        let leave = self
+            .rules
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .leaves_alone(host);
+        if leave && self.recording.load(Ordering::Relaxed) {
+            let (client, app) = self.client_of(ctx.client_addr);
+            self.recorder.submit(FlowRecord {
+                started_us: unix_micros(),
+                client: client.to_string(),
+                kind: "tunnel",
+                method: "CONNECT".to_owned(),
+                scheme: "https".to_owned(),
+                host: without_default_port(host, "https").to_owned(),
+                client_version: format!("{:?}", req.version()),
+                app,
+                status: Some(200),
+                request: BodyRecord {
+                    complete: true,
+                    ..BodyRecord::default()
+                },
+                response: BodyRecord {
+                    complete: true,
+                    ..BodyRecord::default()
+                },
+                ..FlowRecord::default()
+            });
+        }
+        if !leave {
+            self.expect_handshake(ctx.client_addr, host, req.version());
+        }
+        !leave
+    }
+
+    /// Decrypted, always, once the host is not left alone; what is noted is
+    /// that the client started TLS, which a connection that goes without a
+    /// request soon after is then kept for. See [`crate::refused`].
+    async fn should_intercept_tls(
+        &mut self,
+        _ctx: &HttpContext,
+        _hello: hudsucker::rustls::server::ClientHello<'_>,
+    ) -> bool {
+        crate::refused::hello();
+        true
     }
 
     async fn handle_error(
@@ -2487,6 +2520,248 @@ fn quic_record(attempt: crate::quic::Attempt, app: Option<Arc<AppAnswer>>) -> Fl
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A handler with nothing behind it: no listener, no proxy, no network.
+    ///
+    /// Until the core stopped being hudsucker-shaped there was no way to make
+    /// one of these outside `run_proxy`, so everything `FlowHandler` does was
+    /// covered only by tests that start the whole proxy and drive a browser
+    /// at it. The three below are the first that ask it a question directly;
+    /// each is about an answer the proxy gives itself, with no server behind
+    /// it, which is what a handler alone can be asked.
+    fn alone(
+        dir: &std::path::Path,
+    ) -> (
+        FlowHandler,
+        (
+            tracewing_store::store::WriterThread,
+            tracewing_store::spool::SpoolThread,
+        ),
+    ) {
+        let settings = tracewing_store::settings::StorageSettings::default();
+        let live = Arc::new(tracewing_store::settings::Live::new(&settings));
+        let shared = Arc::new(tracewing_store::session::Shared::default());
+        tracewing_store::session::create(dir).unwrap();
+        let (spool, spool_thread) = Spool::spawn(
+            &tracewing_store::session::files_dir(dir),
+            settings.spool_budget(),
+            Arc::clone(&live),
+            Arc::clone(&shared),
+        )
+        .unwrap();
+        let (recorder, writer) = Recorder::spawn(
+            dir,
+            &settings,
+            Arc::clone(&shared),
+            Some(spool.clone()),
+            1024,
+        )
+        .unwrap();
+        let (upstream_tls, verifier) = crate::upstream_tls(&[], false).unwrap();
+        let relay = Arc::new(crate::relay::Relay::new(&Default::default()).unwrap());
+        let handler = FlowHandler::new(
+            recorder,
+            settings.log_max(),
+            Crl {
+                host: "crl.tracewing.invalid".to_owned(),
+                der: Bytes::from_static(b"a revocation list"),
+                ca_der: Bytes::from_static(b"a certificate authority"),
+            },
+            spool,
+            Controls {
+                recording: Arc::new(AtomicBool::new(true)),
+                rules: Default::default(),
+                traffic_rules: Default::default(),
+                check: Default::default(),
+                pauses: Default::default(),
+                apps: None,
+                handed: Default::default(),
+                arrivals: Default::default(),
+                live,
+                network: Default::default(),
+                relay: Arc::clone(&relay),
+                connector: crate::upstream::TimedConnector::new(
+                    upstream_tls,
+                    verifier,
+                    relay,
+                    Default::default(),
+                    Default::default(),
+                ),
+                sockets: Default::default(),
+                scripts: Default::default(),
+            },
+        );
+        (handler, (writer, spool_thread))
+    }
+
+    /// What the handler answered, as the client would read it.
+    async fn said(answer: RequestOrResponse) -> (http::StatusCode, http::HeaderMap, Vec<u8>) {
+        let RequestOrResponse::Response(res) = answer else {
+            panic!("an answer of its own, not a request to send on");
+        };
+        let (parts, body) = res.into_parts();
+        let bytes = http_body_util::BodyExt::collect(body)
+            .await
+            .expect("a body of our own")
+            .to_bytes();
+        (parts.status, parts.headers, bytes.to_vec())
+    }
+
+    fn at(dir: &str) -> std::path::PathBuf {
+        let path =
+            std::env::temp_dir().join(format!("tracewing-handler-{dir}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&path);
+        std::fs::create_dir_all(&path).unwrap();
+        path
+    }
+
+    /// The revocation list the proxy serves itself, which a client asks for
+    /// while a handshake waits on the answer. It is not traffic anybody sent,
+    /// so it is answered and not written down.
+    #[tokio::test]
+    async fn the_revocation_list_is_answered_and_is_no_flow() {
+        let dir = at("crl");
+        let (mut handler, _threads) = alone(&dir);
+        let client = "127.0.0.1:40000".parse().unwrap();
+        let answer = handler
+            .request(
+                client,
+                Request::get(format!("http://crl.tracewing.invalid{CRL_PATH}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        let (status, headers, body) = said(answer).await;
+        assert_eq!(status, http::StatusCode::OK);
+        assert_eq!(headers[header::CONTENT_TYPE], "application/pkix-crl");
+        assert_eq!(body, b"a revocation list");
+        assert!(handler.flow.is_none(), "nothing to write down");
+
+        // The same path on somebody else's host is traffic, not ours: it is
+        // sent on. Without this the assertions above would pass on a handler
+        // that answered every request with the list.
+        let elsewhere = handler
+            .request(
+                client,
+                Request::get(format!("http://example.com{CRL_PATH}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        assert!(
+            matches!(elsewhere, RequestOrResponse::Request(_)),
+            "another host's {CRL_PATH} is that host's business"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The certificate, offered at the check host, which is how a device that
+    /// cannot run the installer gets it.
+    #[tokio::test]
+    async fn the_certificate_is_offered_at_the_check_host() {
+        let dir = at("ca");
+        let (mut handler, _threads) = alone(&dir);
+        let answer = handler
+            .request(
+                "192.168.1.9:40001".parse().unwrap(),
+                Request::get(format!("http://{CHECK_HOST}{CA_PATH}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        let (status, headers, body) = said(answer).await;
+        assert_eq!(status, http::StatusCode::OK);
+        assert_eq!(headers[header::CONTENT_TYPE], "application/x-x509-ca-cert");
+        assert!(
+            headers[header::CONTENT_DISPOSITION]
+                .to_str()
+                .unwrap()
+                .contains("tracewing.crt"),
+            "offered as a file to save"
+        );
+        assert_eq!(body, b"a certificate authority");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A server's offer of HTTP/3 is taken out of its answer while the
+    /// setting says to. This is the response path end to end -- the one the
+    /// HTTP/3 front door will share -- rather than the header rewriting on
+    /// its own, which `without_http3` already covers.
+    #[tokio::test]
+    async fn an_offer_of_http3_is_taken_out_of_an_answer() {
+        let dir = at("offers");
+        let (mut handler, _threads) = alone(&dir);
+        let offering = || {
+            Response::builder()
+                .header(header::ALT_SVC, "h3=\":443\"; ma=86400")
+                .header(header::CONTENT_TYPE, "text/plain")
+                .body(Body::empty())
+                .unwrap()
+        };
+        assert!(
+            handler.live.hide_http3(),
+            "on by default, and what this asks"
+        );
+        let answer = handler.response(offering()).await;
+        // `clear` rather than no header at all, which is the better answer and
+        // worth having a test say so: a client that learned an offer earlier
+        // keeps it until something tells it not to, and RFC 7838's `clear` is
+        // that. Taking the header out would leave the old offer standing.
+        assert_eq!(
+            answer.headers()[header::ALT_SVC],
+            "clear",
+            "the offer is withdrawn, not merely unsaid"
+        );
+        assert_eq!(
+            answer.headers()[header::CONTENT_TYPE],
+            "text/plain",
+            "and nothing else is"
+        );
+
+        // With the setting off it stays, which is what says the line above is
+        // the setting at work and not the path dropping headers it does not
+        // know.
+        let settings = tracewing_store::settings::StorageSettings {
+            hide_http3: false,
+            ..Default::default()
+        };
+        handler.live.apply(&settings);
+        let answer = handler.response(offering()).await;
+        assert_eq!(
+            answer.headers()[header::ALT_SVC],
+            "h3=\":443\"; ma=86400",
+            "the server's offer, as it sent it"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Something arrived by this way in, which is a question about the way in
+    /// rather than about recording: somebody who paused recording has not
+    /// stopped their programs, and a tab that said "nothing is coming
+    /// through" while a request was being served would be wrong.
+    #[tokio::test]
+    async fn a_request_counts_as_arriving_even_with_recording_off() {
+        let dir = at("arrived");
+        let (handler, _threads) = alone(&dir);
+        handler.recording.store(false, Ordering::Relaxed);
+        let by = crate::source::By::OtherDevices;
+        let handler = &mut handler.serving(by);
+        assert_eq!(handler.arrivals.of(by).count, 0);
+        let _ = handler
+            .request(
+                "192.168.1.9:40002".parse().unwrap(),
+                Request::get("http://example.com/orders")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        let arrival = handler.arrivals.of(by);
+        assert_eq!(arrival.count, 1, "counted, recording or not");
+        assert!(arrival.last.is_some());
+        // And by that way in alone: the tabs ask one at a time.
+        assert_eq!(handler.arrivals.of(crate::source::By::ProxyPort).count, 0);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     /// What a refused QUIC attempt is kept as, in the three cases that
     /// differ. The row has to be readable with no body, no status and no
