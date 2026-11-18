@@ -250,14 +250,14 @@ t40f6ad0e = Lavender
 # Dusk
 t44655688 = Senja
 
+# Neutral
+te9330778 = Netral
+
 # Graphite
 tcc5f9dad = Grafit
 
 # Midnight
 tfc321421 = Tengah malam
-
-# Neutral
-te9330778 = Netral
 
 # Slate
 t9637e38e = Batu tulis

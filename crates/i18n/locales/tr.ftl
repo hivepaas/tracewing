@@ -259,14 +259,14 @@ t40f6ad0e = Lavanta
 # Dusk
 t44655688 = Alacakaranlık
 
+# Neutral
+te9330778 = Nötr
+
 # Graphite
 tcc5f9dad = Grafit
 
 # Midnight
 tfc321421 = Gece yarısı
-
-# Neutral
-te9330778 = Nötr
 
 # Slate
 t9637e38e = Arduvaz

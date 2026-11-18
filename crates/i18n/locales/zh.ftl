@@ -250,14 +250,14 @@ t40f6ad0e = 薰衣草
 # Dusk
 t44655688 = 黄昏
 
+# Neutral
+te9330778 = 中性
+
 # Graphite
 tcc5f9dad = 石墨
 
 # Midnight
 tfc321421 = 午夜
-
-# Neutral
-te9330778 = 中性
 
 # Slate
 t9637e38e = 板岩
