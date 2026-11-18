@@ -14,6 +14,18 @@
 //! socket that connected. So the end a datagram left is the whole question
 //! here, which is also what the other two systems can answer, and is why it
 //! is the question everywhere.
+//!
+//! **And less of that end than it looks.** Measured on Windows 11 rather than
+//! assumed, because which rule below does the work turns on it: a socket that
+//! was never bound to an address -- which is what a browser's QUIC socket is,
+//! bound to nothing and then connected -- is in the table as `0.0.0.0`, while
+//! the datagrams it sends carry the interface's address (`10.0.2.15:52951` to
+//! the socket itself, `0.0.0.0:52951` in the table). A socket bound to an
+//! address is in it under that address. So here the port is usually all there
+//! is to go on and the second rule is the common one, where on Linux the same
+//! socket is in `/proc/net/udp` under the address it really used and the first
+//! rule answers. Both are kept, and in this order, because a program that did
+//! bind an interface's address must not lose its row to one that bound none.
 
 use crate::apps::Look;
 use std::{

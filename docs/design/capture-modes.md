@@ -869,6 +869,15 @@ device.
   than the kernel asked, because an exact ask is both of a socket's ends and
   a socket that never connected has one.
 
+  Which of those two rules does the work differs by system, and it was
+  measured rather than assumed. A socket that binds no address and then
+  connects — a browser's QUIC socket — is in `/proc/net/udp` under the
+  address it really used (`192.168.1.6:46672`), and in Windows's table under
+  `0.0.0.0` with the same port, though its own datagrams carry the
+  interface's address. So Linux answers by the address and Windows usually
+  by the port alone; a socket that *was* bound to an address is under it on
+  both, which is why the address is still asked first.
+
   What such a row does not say, each a case rather than a guess: a hello
   split across two datagrams, and a version whose salt is not in the table
   (reported as QUIC with nothing read). Under Encrypted ClientHello the name
