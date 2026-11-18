@@ -2760,8 +2760,8 @@ ta969b661 = Procurar simuladores
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = Nada desta entrada fica neste computador: o adaptador do tracewing vai-se com ele, e as suas rotas também, quer seja fechado quer seja morto.
 
-# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
-tac4db5f4 = O dispositivo que o tracewing criou fica, com a ligação em baixo e as rotas marcadas como mortas, por isso nada lhe é enviado — e o próximo arranque reutiliza-o sem voltar a pedir a palavra-passe.
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again. A restart clears it, since nothing on disk puts it back.
+tb894c24c = O dispositivo que o tracewing criou fica, com a ligação em baixo e as rotas marcadas como mortas, por isso nada lhe é enviado — e o próximo arranque reutiliza-o sem voltar a pedir a palavra-passe. Um reinício limpa-o, porque nada no disco o volta a criar.
 
 # A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
 t7342daf6 = Uma execução que acaba mal pode deixar a configuração do proxy no lugar. Não captura nada: a extensão só entrega um fluxo a algo que tenha a chave criada nessa execução, por isso sem o tracewing cada fluxo sai como teria saído. A próxima execução substitui-a, e desligar isto remove-a.

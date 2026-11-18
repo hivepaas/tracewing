@@ -2620,8 +2620,8 @@ ta969b661 = 尋找模擬器
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = 這條入口不會在這台電腦留下任何東西：tracewing 的介面卡隨它一同消失，路由也隨之消失，無論是正常關閉還是被強制結束。
 
-# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again.
-tac4db5f4 = tracewing 建立的裝置會保留，但其連線已中斷、路由被標記為失效，因此不會有任何流量被送入 — 下次啟動會直接沿用它，不再詢問密碼。
+# The device tracewing made stays, with its carrier down and its routes marked dead, so nothing is sent into it — and the next run picks it up without asking for a password again. A restart clears it, since nothing on disk puts it back.
+tb894c24c = tracewing 建立的裝置會保留，但其連線已中斷、路由被標記為失效，因此不會有任何流量被送入 — 下次啟動會直接沿用它，不再詢問密碼。重新開機即可清除，磁碟上沒有任何東西會把它重新建立出來。
 
 # A run that ends badly can leave the proxy configuration in place. It captures nothing: the extension hands a flow over only to something holding the key that run made, so with tracewing gone every flow goes out as it would have. The next run replaces it, and switching this off removes it.
 t7342daf6 = 異常結束的執行可能會留下代理設定。它什麼也擷取不到：擴充功能只會把流量交給持有該次執行所產生金鑰的一方，所以 tracewing 不在時，每一條流量都照常送出。下次執行會覆蓋它，關閉此項則會移除它。
