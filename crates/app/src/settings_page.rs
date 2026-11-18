@@ -5,7 +5,7 @@
 
 use crate::text_size::ui;
 use crate::{
-    colors::colors,
+    colors::{DarkStyle, LightStyle, colors},
     input::TextInput,
     layout::{Appearance, SettingsSection, Way},
     system::ProxySwitch,
@@ -1348,7 +1348,8 @@ impl Traffic {
             )
     }
 
-    /// The look: the system's, light or dark, as the title bar's switch has it.
+    /// The look: the system's, light or dark, as the title bar's switch has it;
+    /// and how each looks, for those that can be shown.
     fn render_appearance(&self, cx: &mut Context<Self>) -> gpui::Div {
         let c = colors();
         let chosen = self.layout.appearance;
@@ -1389,6 +1390,48 @@ impl Traffic {
                     .gap(ui(6.))
                     .children([Appearance::System, Appearance::Light, Appearance::Dark].map(chip)),
             )
+            .when(chosen != Appearance::Dark, |d| {
+                d.child(style_row(tr!("Light")))
+                    .child(
+                        style_chips().children(LightStyle::ALL.into_iter().map(|style| {
+                            let name = if style == LightStyle::default() {
+                                tr!("{name} (default)", name = style.name())
+                            } else {
+                                style.name()
+                            };
+                            style_chip(
+                                ("light-style", style as usize).into(),
+                                name,
+                                style.palette(),
+                                style == self.layout.light_style,
+                            )
+                            .on_click(cx.listener(
+                                move |this, _, window, cx| this.set_light_style(style, window, cx),
+                            ))
+                        })),
+                    )
+            })
+            .when(chosen != Appearance::Light, |d| {
+                d.child(style_row(tr!("Dark")))
+                    .child(
+                        style_chips().children(DarkStyle::ALL.into_iter().map(|style| {
+                            let name = if style == DarkStyle::default() {
+                                tr!("{name} (default)", name = style.name())
+                            } else {
+                                style.name()
+                            };
+                            style_chip(
+                                ("dark-style", style as usize).into(),
+                                name,
+                                style.palette(),
+                                style == self.layout.dark_style,
+                            )
+                            .on_click(cx.listener(
+                                move |this, _, window, cx| this.set_dark_style(style, window, cx),
+                            ))
+                        })),
+                    )
+            })
     }
 
     /// The hosts whose traffic goes through unread.
@@ -2185,6 +2228,63 @@ impl Traffic {
                     .child(tr!("Applies at once.")),
             )
     }
+}
+
+/// The name over a row of styles.
+fn style_row(name: String) -> gpui::Div {
+    div()
+        .px(ui(6.))
+        .pt(ui(4.))
+        .text_size(ui(12.))
+        .font_weight(FontWeight::SEMIBOLD)
+        .child(name)
+}
+
+fn style_chips() -> gpui::Div {
+    div().px(ui(6.)).flex().flex_row().flex_wrap().gap(ui(6.))
+}
+
+/// A style's chip: its name after a dot of its panels on its page, so that
+/// it shows how it looks before it is chosen.
+fn style_chip(
+    id: gpui::ElementId,
+    name: String,
+    palette: &crate::colors::Palette,
+    on: bool,
+) -> gpui::Stateful<gpui::Div> {
+    let c = colors();
+    div()
+        .id(id)
+        .h(ui(30.))
+        .pl(ui(7.))
+        .pr(ui(12.))
+        .rounded(ui(15.))
+        .flex()
+        .items_center()
+        .gap(ui(7.))
+        .cursor_pointer()
+        .reachable()
+        .text_size(ui(12.5))
+        .font_weight(FontWeight::BOLD)
+        .when(on, |d| d.bg(rgb(c.accent)).text_color(rgb(c.on_accent)))
+        .when(!on, |d| d.bg(rgb(c.chip)).text_color(rgb(c.on_chip)))
+        .child(
+            div()
+                .size(ui(18.))
+                .flex_shrink_0()
+                .p(ui(1.))
+                .rounded(ui(9.))
+                .bg(rgb(palette.soft))
+                .child(
+                    div()
+                        .size_full()
+                        .rounded(ui(8.))
+                        .border(ui(4.))
+                        .border_color(rgb(palette.page))
+                        .bg(rgb(palette.surface)),
+                ),
+        )
+        .child(name)
 }
 
 #[cfg(test)]

@@ -226,6 +226,57 @@ t13bc7052 = di dalam file sertifikat
 # Add
 t9dc3aa14 = Tambah
 
+# Daylight
+t29cc3b47 = Siang
+
+# Paper
+tfea8bfd9 = Kertas
+
+# Soft gray
+t6d3b9d7c = Abu-abu lembut
+
+# High contrast
+tdc2a9fd1 = Kontras tinggi
+
+# Mist
+td071b28c = Kabut
+
+# Sage
+t5152348d = Sage
+
+# Lavender
+t40f6ad0e = Lavender
+
+# Dusk
+t44655688 = Senja
+
+# Graphite
+tcc5f9dad = Grafit
+
+# Midnight
+tfc321421 = Tengah malam
+
+# Neutral
+te9330778 = Netral
+
+# Slate
+t9637e38e = Batu tulis
+
+# Dim
+t35691dd9 = Redup
+
+# Deep sea
+t372a2e54 = Laut dalam
+
+# Espresso
+t77f4d515 = Espresso
+
+# Forest
+t953ca480 = Hutan
+
+# Plum
+t1d8d478b = Plum
+
 # Method
 t98a2c750 = Metode
 

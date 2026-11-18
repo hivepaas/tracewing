@@ -226,6 +226,57 @@ t13bc7052 = 인증서 파일 안에 있음
 # Add
 t9dc3aa14 = 추가
 
+# Daylight
+t29cc3b47 = 데이라이트
+
+# Paper
+tfea8bfd9 = 페이퍼
+
+# Soft gray
+t6d3b9d7c = 소프트 그레이
+
+# High contrast
+tdc2a9fd1 = 고대비
+
+# Mist
+td071b28c = 미스트
+
+# Sage
+t5152348d = 세이지
+
+# Lavender
+t40f6ad0e = 라벤더
+
+# Dusk
+t44655688 = 황혼
+
+# Graphite
+tcc5f9dad = 그래파이트
+
+# Midnight
+tfc321421 = 미드나이트
+
+# Neutral
+te9330778 = 뉴트럴
+
+# Slate
+t9637e38e = 슬레이트
+
+# Dim
+t35691dd9 = 딤
+
+# Deep sea
+t372a2e54 = 딥 시
+
+# Espresso
+t77f4d515 = 에스프레소
+
+# Forest
+t953ca480 = 포레스트
+
+# Plum
+t1d8d478b = 플럼
+
 # Method
 t98a2c750 = 메서드
 

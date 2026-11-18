@@ -226,6 +226,57 @@ t13bc7052 = 証明書ファイル内
 # Add
 t9dc3aa14 = 追加
 
+# Daylight
+t29cc3b47 = デイライト
+
+# Paper
+tfea8bfd9 = ペーパー
+
+# Soft gray
+t6d3b9d7c = ソフトグレー
+
+# High contrast
+tdc2a9fd1 = ハイコントラスト
+
+# Mist
+td071b28c = ミスト
+
+# Sage
+t5152348d = セージ
+
+# Lavender
+t40f6ad0e = ラベンダー
+
+# Dusk
+t44655688 = ダスク
+
+# Graphite
+tcc5f9dad = グラファイト
+
+# Midnight
+tfc321421 = ミッドナイト
+
+# Neutral
+te9330778 = ニュートラル
+
+# Slate
+t9637e38e = スレート
+
+# Dim
+t35691dd9 = ディム
+
+# Deep sea
+t372a2e54 = ディープシー
+
+# Espresso
+t77f4d515 = エスプレッソ
+
+# Forest
+t953ca480 = フォレスト
+
+# Plum
+t1d8d478b = プラム
+
 # Method
 t98a2c750 = メソッド
 

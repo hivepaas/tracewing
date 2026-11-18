@@ -1,7 +1,11 @@
 //! Where the panels are, and how large. Kept in a file, so the window comes back
 //! the way it was left.
 
-use crate::{columns::Columns, hosts::HostMarks};
+use crate::{
+    colors::{DarkStyle, LightStyle},
+    columns::Columns,
+    hosts::HostMarks,
+};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracewing_i18n::tr;
@@ -202,6 +206,10 @@ impl Appearance {
 #[serde(default)]
 pub struct Layout {
     pub appearance: Appearance,
+    /// How light looks, and how dark does: one of each is in use whatever
+    /// the appearance, the system's switching between them.
+    pub light_style: LightStyle,
+    pub dark_style: DarkStyle,
     /// Set up has been left once: it does not open by itself again.
     pub setup_seen: bool,
     pub place: Place,
@@ -283,6 +291,8 @@ impl Default for Layout {
     fn default() -> Self {
         Self {
             appearance: Appearance::System,
+            light_style: LightStyle::default(),
+            dark_style: DarkStyle::default(),
             setup_seen: false,
             place: Place::Beside,
             sidebar_shown: true,
@@ -426,6 +436,26 @@ mod tests {
         let layout: Layout = toml::from_str("place = \"below\"").unwrap();
         assert_eq!(layout.place, Place::Below);
         assert_eq!(layout.appearance, Appearance::System);
+    }
+
+    #[test]
+    fn the_styles_are_kept_and_one_from_a_later_version_spoils_nothing() {
+        let layout: Layout = toml::from_str("place = \"below\"").unwrap();
+        assert_eq!(layout.light_style, LightStyle::Daylight);
+        assert_eq!(layout.dark_style, DarkStyle::Graphite);
+        let layout = Layout {
+            light_style: LightStyle::Paper,
+            dark_style: DarkStyle::Slate,
+            ..Layout::default()
+        };
+        let text = toml::to_string(&layout).unwrap();
+        assert!(text.contains("light_style = \"paper\""), "{text}");
+        assert!(text.contains("dark_style = \"slate\""), "{text}");
+        assert_eq!(toml::from_str::<Layout>(&text).unwrap(), layout);
+        // A style this version does not know is the default; the rest stays.
+        let later: Layout = toml::from_str("place = \"below\"\ndark_style = \"aurora\"").unwrap();
+        assert_eq!(later.place, Place::Below);
+        assert_eq!(later.dark_style, DarkStyle::Graphite);
     }
 
     #[test]
