@@ -424,21 +424,30 @@ mod tests {
         // Who may be commanded is only half of it: a line whose every
         // piece is an `ip` can still write a file beside the command, and
         // nothing about that file has to be under /etc to outlive a boot.
-        // Both of these were green once, with `> /var/lib/…` and with
-        // `$(touch /var/lib/…)`.
+        //
+        // A whitelist again, and for the reason the first one was: every
+        // version of this that named the spellings to fear sprang another
+        // leak. `> /var/lib/x` passed the verb check, `$(touch …)` and a
+        // backticked one passed the redirection check, and `< <(touch …)`
+        // passed both of those -- no `>`, no `$(`, no backtick, every piece
+        // beginning with `ip `. So the commands may hold only the
+        // characters this step actually needs, and anything else, named or
+        // not yet thought of, is something happening besides asking the
+        // kernel.
         //
         // Asked of the commands rather than of the whole script, because
         // the comments in it are prose: the one above `sysctl` says
         // `linkdown` in backticks, and reading the script whole turned this
         // into a test that failed on the script it was written for.
-        let commands = doing.join("\n");
+        let commands = doing.join("\n").replace("2>/dev/null", "");
+        let odd: Vec<char> = commands
+            .chars()
+            .filter(|c| !c.is_ascii_alphanumeric() && !" \n-._/=:|".contains(*c))
+            .collect();
         assert!(
-            !commands.replace("2>/dev/null", "").contains('>'),
-            "a redirection writes a file, wherever it points:\n{script}"
-        );
-        assert!(
-            !commands.contains("$(") && !commands.contains('`'),
-            "a substitution runs a command the whitelist never sees:\n{script}"
+            odd.is_empty(),
+            "the step needs none of these, so something is happening besides \
+             asking the kernel: {odd:?}\n{script}"
         );
         // And a path under /etc needs neither: `sysctl -p /etc/sysctl.d/…`
         // is an allowed verb reading a file somebody put there.
