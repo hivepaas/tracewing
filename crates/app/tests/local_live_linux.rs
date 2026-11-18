@@ -1,4 +1,5 @@
-//! The local way in, assembled on a real Linux machine.
+//! The local way in, assembled on a real Linux kernel, in a namespace of its
+//! own.
 //!
 //! Everything else about this way in is tested where it can be: the sieve's
 //! rules, the switch's states, the tab's pictures, the script's ordering.
@@ -16,13 +17,47 @@
 //! So this asserts the opposite ending, and then asserts the thing that makes
 //! the rows harmless -- that the way out is not ours.
 //!
-//! `#[ignore]`d because it asks polkit for rights, and because for as long as
-//! it holds the device **this machine's traffic goes into a TUN nobody is
-//! pumping**: the source is never started here, so the packets are dropped.
-//! Seconds, and only while it runs, but it is not a test to leave in a loop:
+//! # Why it no longer needs a password, or this machine's network
+//!
+//! It used to ask polkit for rights and make its adapter on the machine it
+//! ran on, which meant it could not run at all while anybody else was using
+//! the network: for as long as it held the device, this machine's traffic
+//! went into a TUN nobody was pumping.
+//!
+//! It re-executes itself under `unshare --user --net --mount
+//! --map-root-user` instead. The kernel grants the capabilities inside a
+//! user namespace of our own, so `run_as_admin` takes its `id -u` is `0`
+//! road and runs the script directly -- the same nine lines, by the same
+//! call, with no dialog -- and the device, the addresses and the routes live
+//! in a network namespace that goes when the process does. The trick is
+//! TraceW 3's, from `local_live_http3.rs`; the traps are written down in
+//! [http3.md](../../../docs/design/http3.md) and not repeated here.
+//!
+//! # The way out is made, not borrowed, and that is what makes two of these
+//! assertions mean anything
+//!
+//! A fresh network namespace holds `lo` and nothing else, so `out_by` would
+//! answer nowhere -- and `assert_ne!(None, Some(ours))` passes while saying
+//! nothing at all. Both of the assertions this test exists for are of that
+//! shape, so this makes a veth pair to be the way out and asserts the way
+//! out **is that pair**, which the old version could not: on a real machine
+//! it could only say the answer was not ours.
+//!
+//! It is also a firmer statement of the thing being tested. The adapter's
+//! default route is at metric 50 and the pair's at 600, pinned here rather
+//! than inherited from whatever this machine's Wi-Fi happens to be, so the
+//! answer is the way out **although ours has the better metric** -- which is
+//! the whole of why `connected` has to carry it.
+//!
+//! **The pair is a stand-in for the route shape, not for reachability.**
+//! Both ends are in this namespace, so traffic to the peer's address goes
+//! through the local table on `lo` and never out of the pair. For a test
+//! that reads `/sys` and `/proc/net/route` that costs nothing. For anything
+//! that sends traffic through the way out it is a trap, and the symptom is
+//! everything answering 502.
 //!
 //! ```sh
-//! cargo test -p tracewing --release --test local_live_linux -- --ignored --nocapture
+//! cargo test -p tracewing --release --test local_live_linux -- --nocapture
 //! ```
 
 #![cfg(target_os = "linux")]
@@ -34,6 +69,17 @@ use tracewing::{
 use tracewing_proxy::roads;
 use tracewing_system::adapter;
 
+/// Set on the inner process, so that it does the work rather than unsharing
+/// again for ever.
+const IN_OURS: &str = "TRACEWING_LOCAL_LIVE_NS";
+
+/// Where the inner run says it got to the end, which is the only thing that
+/// tells the outer one it ran at all.
+const WITNESS: &str = "TRACEWING_LOCAL_LIVE_WITNESS";
+
+/// The interface standing in for this machine's real way out.
+const WAY_OUT: &str = "wayout";
+
 /// Our own rows, by the index the kernel gives the adapter's name.
 fn ours_in(roads: &[roads::Road], ours: u64) -> Vec<roads::Road> {
     roads
@@ -43,11 +89,144 @@ fn ours_in(roads: &[roads::Road], ours: u64) -> Vec<roads::Road> {
         .collect()
 }
 
+fn run(program: &str, args: &[&str]) {
+    let status = std::process::Command::new(program)
+        .args(args)
+        .status()
+        .unwrap_or_else(|e| panic!("{program}: {e}"));
+    assert!(status.success(), "{program} {args:?} failed: {status}");
+}
+
+/// Whether this process is the one that does the work.
+///
+/// `false` means it was the outer one: it has just run the inner one inside
+/// a namespace and asserted that it passed, and the caller should stop. The
+/// inner run is asked for by name and `--exact`, so a second test in this
+/// file would get a namespace of its own rather than share this one.
+///
+/// **`--ignored`, and a witness file.** This test is `#[ignore]`d, so
+/// without `--ignored` the inner run skips it -- and a run that executed no
+/// test exits `0`, so the outer one reported a pass having measured
+/// nothing. That is why the status is not trusted on its own: the inner run
+/// writes a file as its last act, and not finding it is a failure here. An
+/// exit code cannot tell "it passed" from "there was nothing to do".
+fn in_our_own_namespace(test: &str) -> bool {
+    if std::env::var_os(IN_OURS).is_some() {
+        return true;
+    }
+    let exe = std::env::current_exe().expect("this test binary");
+    let witness = std::env::temp_dir().join(format!("tracewing-live-ns-{}", std::process::id()));
+    let _ = std::fs::remove_file(&witness);
+    let status = std::process::Command::new("unshare")
+        .args(["--user", "--net", "--mount", "--map-root-user"])
+        .arg(&exe)
+        .args([
+            test,
+            "--exact",
+            "--ignored",
+            "--nocapture",
+            "--test-threads=1",
+        ])
+        .env(IN_OURS, "1")
+        .env(WITNESS, &witness)
+        .status()
+        .expect(
+            "`unshare` is in util-linux. If this fails on a machine rather than for want of \
+             the program, the kernel is refusing unprivileged user namespaces: read \
+             /proc/sys/user/max_user_namespaces",
+        );
+    assert!(
+        status.success(),
+        "the run inside the namespace failed; its output is above"
+    );
+    assert!(
+        witness.exists(),
+        "the run inside the namespace exited {status} without reaching the end of the test, \
+         so nothing was measured"
+    );
+    let _ = std::fs::remove_file(&witness);
+    false
+}
+
+/// The inner run's last act, read by the outer one. See
+/// [`in_our_own_namespace`].
+fn reached_the_end() {
+    if let Some(path) = std::env::var_os(WITNESS) {
+        std::fs::write(path, "ran").expect("say that this run reached the end");
+    }
+}
+
+/// This namespace's own `/sys`, its loopback, and a way out to be chosen.
+///
+/// The `sysfs` is the trap worth naming twice: without it `/sys` is still
+/// the one the outer namespace mounted, so `Road::connected` and
+/// `adapter::look` read **this machine's** interfaces and cannot see the
+/// device `ip` has just made.
+///
+/// The pair's default route is deliberately **worse** than the adapter's,
+/// which the script puts at metric 50.
+fn the_namespace() {
+    run("mount", &["-t", "sysfs", "sysfs", "/sys"]);
+    run("ip", &["link", "set", "lo", "up"]);
+    run(
+        "ip",
+        &[
+            "link", "add", WAY_OUT, "type", "veth", "peer", "name", "beyond",
+        ],
+    );
+    run("ip", &["addr", "add", "10.99.0.2/24", "dev", WAY_OUT]);
+    run("ip", &["addr", "add", "10.99.0.3/24", "dev", "beyond"]);
+    // Both ends up, or the pair reads as disconnected and `connected` drops
+    // it exactly as it drops the adapter.
+    run("ip", &["link", "set", WAY_OUT, "up"]);
+    run("ip", &["link", "set", "beyond", "up"]);
+    run("ip", &["addr", "add", "fd00:99::2/64", "dev", WAY_OUT]);
+    run("ip", &["addr", "add", "fd00:99::3/64", "dev", "beyond"]);
+    // Device routes rather than `via` the peer: both ends are in this
+    // namespace, so the peer's address is a local address and the kernel
+    // refuses it as a gateway for IPv6 ("Gateway can not be a local
+    // address"). It leaves the two default rows differing in exactly the
+    // two things this test is about, carrier and metric.
+    run(
+        "ip",
+        &["route", "add", "default", "dev", WAY_OUT, "metric", "600"],
+    );
+    run(
+        "ip",
+        &[
+            "-6", "route", "add", "default", "dev", WAY_OUT, "metric", "600",
+        ],
+    );
+}
+
 /// The whole assembly: it comes up, it is on the machine, and letting go
 /// leaves it harmless.
+///
+/// **Still `#[ignore]`d, and for a measured reason rather than the old one.**
+/// It no longer wants a password or this machine's network, so running it is
+/// cheap and safe -- but the CI runner refuses the namespace:
+///
+/// ```text
+/// unshare: write failed /proc/self/uid_map: Operation not permitted
+/// ```
+///
+/// (run 44366937310, `linux-x86_64`, every other test in the job passing.)
+/// That is not `unprivileged_userns_clone` being off, which fails earlier at
+/// the clone, and not the multi-threaded-caller rule, since the same binary
+/// unshares happily on a developer machine. What it is has not been
+/// measured; the newer runner images restrict unprivileged user namespaces
+/// through AppArmor, and that is a candidate and nothing more. So this is
+/// written down rather than diagnosed, and the next person to try does not
+/// start from zero.
 #[test]
-#[ignore = "asks polkit for rights, and blackholes this machine's traffic while it holds the device"]
+#[ignore = "the CI runner refuses the namespace: unshare cannot write /proc/self/uid_map"]
 fn the_local_way_in_comes_up_and_lets_go_again() {
+    if !in_our_own_namespace("the_local_way_in_comes_up_and_lets_go_again") {
+        return;
+    }
+    the_namespace();
+    let out = u64::from(roads::index_of(WAY_OUT).expect("the kernel numbers the way out"));
+
     let dir = std::env::temp_dir().join(format!("tracewing-local-live-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
 
@@ -57,6 +236,9 @@ fn the_local_way_in_comes_up_and_lets_go_again() {
         // empty one keeps nothing, which would test less.
         programs: vec![Picked::at("/usr/bin/curl".into())],
     };
+    // The real path, not a copy of the script: this reaches `make_adapter`,
+    // which looks before it asks, and `run_as_admin`, which takes its
+    // already-root road here and would have raised a dialog outside.
     let started = local_source::start(&local, vec![9090], &dir, &local_source::Http3::off())
         .expect("the way in assembles")
         .expect("the switch is on, so there is a source");
@@ -67,9 +249,9 @@ fn the_local_way_in_comes_up_and_lets_go_again() {
     assert!(look.ready(), "still missing {:?}", look.missing());
     let ours = u64::from(roads::index_of(adapter::DEVICE).expect("the kernel numbers it"));
 
-    let now = roads::roads_now().expect("this machine's routes");
+    let now = roads::roads_now().expect("this namespace's routes");
     let mine = ours_in(&now, ours);
-    for road in &mine {
+    for road in &now {
         println!(
             "  if {} bits {} metric {} v6 {} connected {}",
             road.interface, road.bits, road.metric, road.v6, road.connected
@@ -84,14 +266,20 @@ fn the_local_way_in_comes_up_and_lets_go_again() {
         mine.iter().all(|road| road.connected),
         "held, so the carrier is up: that is the switch"
     );
-    // And it is never the way out, which is the loop this mode has to avoid.
+    // And it is the way out that is chosen, not our own adapter, which is
+    // the loop this mode has to avoid. Named rather than merely denied: on a
+    // machine with no way out at all, `assert_ne!` here passes saying
+    // nothing.
     for v6 in [false, true] {
-        let out = roads::out_by(&now, ours, v6);
-        println!("way out for {}: {out:?}", if v6 { "IPv6" } else { "IPv4" });
-        assert_ne!(
-            out.map(u64::from),
-            Some(ours),
-            "the way out is our own adapter"
+        let chosen = roads::out_by(&now, ours, v6);
+        println!(
+            "way out for {}: {chosen:?}",
+            if v6 { "IPv6" } else { "IPv4" }
+        );
+        assert_eq!(
+            chosen.map(u64::from),
+            Some(out),
+            "the way out is not the one made for it"
         );
     }
 
@@ -104,7 +292,7 @@ fn the_local_way_in_comes_up_and_lets_go_again() {
     // here worth waiting for rather than reading once.
     let mut after = Vec::new();
     for _ in 0..50 {
-        after = ours_in(&roads::roads_now().expect("this machine's routes"), ours);
+        after = ours_in(&roads::roads_now().expect("this namespace's routes"), ours);
         if after.iter().all(|road| !road.connected) {
             break;
         }
@@ -119,22 +307,25 @@ fn the_local_way_in_comes_up_and_lets_go_again() {
         "the carrier is still up with nobody holding the device"
     );
     for v6 in [false, true] {
-        let out = roads::out_by(
-            &roads::roads_now().expect("this machine's routes"),
+        let chosen = roads::out_by(
+            &roads::roads_now().expect("this namespace's routes"),
             // Not told which is ours this time: anything may be the way out
-            // except a dead interface, and ours is now dead.
+            // except a dead interface, and ours is now dead. Passing the
+            // real `ours` would use the value the code really uses and prove
+            // nothing -- it is `connected` alone that has to carry this.
             0,
             v6,
         );
         println!(
-            "after letting go, way out for {}: {out:?}",
+            "after letting go, way out for {}: {chosen:?}",
             if v6 { "IPv6" } else { "IPv4" }
         );
-        assert_ne!(
-            out.map(u64::from),
-            Some(ours),
-            "a dead interface of ours is still being chosen as the way out"
+        assert_eq!(
+            chosen.map(u64::from),
+            Some(out),
+            "a dead adapter of ours is still being chosen, although nothing excluded it"
         );
     }
     let _ = std::fs::remove_dir_all(&dir);
+    reached_the_end();
 }
