@@ -259,14 +259,14 @@ t40f6ad0e = Lavendel
 # Dusk
 t44655688 = Dämmerung
 
+# Neutral
+te9330778 = Neutral
+
 # Graphite
 tcc5f9dad = Graphit
 
 # Midnight
 tfc321421 = Mitternacht
-
-# Neutral
-te9330778 = Neutral
 
 # Slate
 t9637e38e = Schiefer

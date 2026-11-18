@@ -82,7 +82,7 @@ li { margin: 0 0 .8em; }
 details { margin: .4em 0; }
 summary { cursor: pointer; font-weight: 600; }
 @media (prefers-color-scheme: dark) {
-  body { color: #e4e5e8; background: #141517; }
+  body { color: #e4e5e8; background: #1e1f22; }
   a { color: #8fa8ff; }
 }
 </style></head>

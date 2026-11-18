@@ -265,14 +265,14 @@ t40f6ad0e = Лаванда
 # Dusk
 t44655688 = Сумерки
 
+# Neutral
+te9330778 = Нейтральный
+
 # Graphite
 tcc5f9dad = Графит
 
 # Midnight
 tfc321421 = Полночь
-
-# Neutral
-te9330778 = Нейтральный
 
 # Slate
 t9637e38e = Сланец

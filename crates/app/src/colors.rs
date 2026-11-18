@@ -1,6 +1,6 @@
 //! The app's colors, in one place: what each one is for, and its value in the
 //! design's light palette, Daylight, and in Graphite, the dark one picked for
-//! tracewing. Views ask [`colors`] for a role, never for a value, so a palette
+//! tracewing. Dark opens in Neutral, Graphite on lighter, plainer grounds. Views ask [`colors`] for a role, never for a value, so a palette
 //! is changed here alone. The window picks light or dark with [`set_dark`], and
 //! a style for each with [`set_styles`], and redraws.
 //!
@@ -534,11 +534,11 @@ style! {
 }
 
 style! {
-    /// How the dark palette looks; Graphite is the one picked for tracewing.
+    /// How the dark palette looks; Neutral unless another is chosen.
     DarkStyle {
+        Neutral = "neutral" => NEUTRAL,
         Graphite = "graphite" => GRAPHITE,
         Midnight = "midnight" => MIDNIGHT,
-        Neutral = "neutral" => NEUTRAL,
         Slate = "slate" => SLATE,
         Dim = "dim" => DIM,
         DeepSea = "deep-sea" => DEEP_SEA,
@@ -566,9 +566,9 @@ impl LightStyle {
 impl DarkStyle {
     pub fn name(self) -> String {
         match self {
+            Self::Neutral => tr!("Neutral"),
             Self::Graphite => tr!("Graphite"),
             Self::Midnight => tr!("Midnight"),
-            Self::Neutral => tr!("Neutral"),
             Self::Slate => tr!("Slate"),
             Self::Dim => tr!("Dim"),
             Self::DeepSea => tr!("Deep sea"),
@@ -651,10 +651,12 @@ mod tests {
         light.chain(dark).collect()
     }
 
+    /// Light opens in the design's own; dark in Neutral, and Graphite is
+    /// still there as it was.
     #[test]
-    fn the_defaults_are_the_palettes_as_they_were() {
+    fn the_defaults_are_daylight_and_neutral() {
         assert_eq!(LightStyle::default().palette(), &LIGHT);
-        assert_eq!(DarkStyle::default().palette(), &GRAPHITE);
+        assert_eq!(DarkStyle::default().palette(), &NEUTRAL);
         assert_eq!(LIGHT.page, 0xf4f6fb);
         assert_eq!(GRAPHITE.page, 0x141517);
     }
@@ -731,7 +733,7 @@ mod tests {
             later,
             Kept {
                 light: LightStyle::Daylight,
-                dark: DarkStyle::Graphite
+                dark: DarkStyle::Neutral
             }
         );
     }
@@ -749,6 +751,6 @@ mod tests {
             assert_eq!(LightStyle::from_index(style as u8), style);
             assert_eq!(style as usize, i);
         }
-        assert_eq!(DarkStyle::from_index(200), DarkStyle::Graphite);
+        assert_eq!(DarkStyle::from_index(200), DarkStyle::Neutral);
     }
 }

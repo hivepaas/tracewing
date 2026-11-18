@@ -261,14 +261,14 @@ t40f6ad0e = Lavanda
 # Dusk
 t44655688 = Crepúsculo
 
+# Neutral
+te9330778 = Neutro
+
 # Graphite
 tcc5f9dad = Grafite
 
 # Midnight
 tfc321421 = Meia-noite
-
-# Neutral
-te9330778 = Neutro
 
 # Slate
 t9637e38e = Ardósia

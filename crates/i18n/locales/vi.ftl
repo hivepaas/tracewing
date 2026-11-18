@@ -250,14 +250,14 @@ t40f6ad0e = Oải hương
 # Dusk
 t44655688 = Hoàng hôn
 
+# Neutral
+te9330778 = Trung tính
+
 # Graphite
 tcc5f9dad = Than chì
 
 # Midnight
 tfc321421 = Nửa đêm
-
-# Neutral
-te9330778 = Trung tính
 
 # Slate
 t9637e38e = Đá phiến

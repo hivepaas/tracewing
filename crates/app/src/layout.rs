@@ -442,7 +442,7 @@ mod tests {
     fn the_styles_are_kept_and_one_from_a_later_version_spoils_nothing() {
         let layout: Layout = toml::from_str("place = \"below\"").unwrap();
         assert_eq!(layout.light_style, LightStyle::Daylight);
-        assert_eq!(layout.dark_style, DarkStyle::Graphite);
+        assert_eq!(layout.dark_style, DarkStyle::Neutral);
         let layout = Layout {
             light_style: LightStyle::Paper,
             dark_style: DarkStyle::Slate,
@@ -455,7 +455,7 @@ mod tests {
         // A style this version does not know is the default; the rest stays.
         let later: Layout = toml::from_str("place = \"below\"\ndark_style = \"aurora\"").unwrap();
         assert_eq!(later.place, Place::Below);
-        assert_eq!(later.dark_style, DarkStyle::Graphite);
+        assert_eq!(later.dark_style, DarkStyle::Neutral);
     }
 
     #[test]

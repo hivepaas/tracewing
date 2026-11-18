@@ -607,7 +607,7 @@ fn the_window_shows_real_traffic() {
         })
         .unwrap();
     cx.run_until_parked();
-    assert_eq!(colors::colors().page, 0x141517);
+    assert_eq!(colors::colors().page, 0x1e1f22);
 
     window
         .update(&mut cx, |view, _, cx| view.begin_inspector_drag(cx))

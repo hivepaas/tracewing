@@ -250,14 +250,14 @@ t40f6ad0e = ラベンダー
 # Dusk
 t44655688 = ダスク
 
+# Neutral
+te9330778 = ニュートラル
+
 # Graphite
 tcc5f9dad = グラファイト
 
 # Midnight
 tfc321421 = ミッドナイト
-
-# Neutral
-te9330778 = ニュートラル
 
 # Slate
 t9637e38e = スレート

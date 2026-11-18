@@ -280,7 +280,7 @@ fn the_window_grows_with_the_text_size() {
     })
     .unwrap();
     cx.run_until_parked();
-    assert_eq!(colors().page, 0x141517);
+    assert_eq!(colors().page, 0x1e1f22);
 
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);
