@@ -90,7 +90,10 @@ impl Chosen {
         self.0.read().unwrap_or_else(|e| e.into_inner()).is_empty()
     }
 
-    fn holds(&self, program: &str) -> bool {
+    /// Whether `program` is one of these. Public because the HTTP/3 catcher
+    /// asks the same question of a datagram's program that this file's sieve
+    /// asks of a connection's, and one list answers both.
+    pub fn holds(&self, program: &str) -> bool {
         one_of(
             program,
             &self.0.read().unwrap_or_else(|e| e.into_inner()).clone(),

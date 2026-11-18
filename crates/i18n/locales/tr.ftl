@@ -2059,6 +2059,12 @@ t2b74e518 = Sunucuların HTTP/3 tekliflerini gizle
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
 t5e1cd441 = HTTP/3, hiçbir proxy'nin taşımadığı UDP üzerinden gider, bu yüzden onu kullanan bir uygulama tracewing'i atlar. Bu ayar, sunucuların HTTP/3 tekliflerini yanıtlarından çıkarır, böylece HTTP/3'ü bir teklifle öğrenecek olan uygulama HTTP/2'de kalır. HTTP/3'ü bir DNS kaydından öğrenen uygulama yine dener: bunu ancak Kurulum sayfasında UDP port 443'ü engellemek durdurur. Akışlar teklifleri yine sunucuların gönderdiği gibi gösterir.
 
+# Read chosen programs' HTTP/3
+tc152d533 = Seçilen programların HTTP/3'ünü oku
+
+# Rather than refusing it. The HTTP/3 of the programs chosen for taking this computer's own traffic goes to a QUIC port of tracewing's own instead of to the server, and its flows are recorded like any others. A program nobody chose falls back to HTTP/2 as before, and so does every other way in. While this is on, servers' offers of HTTP/3 are left in whatever the setting above says, because a program never offered HTTP/3 never speaks it. Blocking UDP port 443, on the Set up page, stops it too: those datagrams never reach tracewing at all. Applies at once.
+t7b8d772d = Onu reddetmek yerine. Bu bilgisayarın trafiğini almak için seçilen programların HTTP/3'ü, sunucuya değil tracewing'in kendi QUIC portuna gider ve akışları diğerleri gibi kaydedilir. Kimsenin seçmediği bir program eskisi gibi HTTP/2'ye geri döner, diğer bütün yollar da öyle. Bu açıkken sunucuların HTTP/3 teklifleri, yukarıdaki ayar ne derse desin, oldukları gibi bırakılır: HTTP/3 hiç teklif edilmeyen bir program onu hiç konuşmaz. Kurulum sayfasında UDP port 443'ü engellemek de bunu durdurur: o datagramlar tracewing'e hiç ulaşmaz. Hemen uygulanır.
+
 # Size of a session
 ta20fa102 = Oturum boyutu
 

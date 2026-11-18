@@ -1984,6 +1984,12 @@ t2b74e518 = サーバーの HTTP/3 の提示を隠す
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
 t5e1cd441 = HTTP/3 は UDP 上で動作し、UDP を中継するプロキシはないため、HTTP/3 を使うアプリは tracewing を迂回します。この設定はサーバーのレスポンスから HTTP/3 の提示を取り除くため、提示から HTTP/3 を知るはずだったアプリは HTTP/2 のままになります。DNS レコードから知るアプリはそれでも試みます。それを止めるのは、セットアップ ページでの UDP ポート 443 のブロックです。フローには、サーバーが送ったとおりの提示が表示されます。
 
+# Read chosen programs' HTTP/3
+tc152d533 = 選んだプログラムの HTTP/3 を読む
+
+# Rather than refusing it. The HTTP/3 of the programs chosen for taking this computer's own traffic goes to a QUIC port of tracewing's own instead of to the server, and its flows are recorded like any others. A program nobody chose falls back to HTTP/2 as before, and so does every other way in. While this is on, servers' offers of HTTP/3 are left in whatever the setting above says, because a program never offered HTTP/3 never speaks it. Blocking UDP port 443, on the Set up page, stops it too: those datagrams never reach tracewing at all. Applies at once.
+t7b8d772d = 拒否するのではなく読み取ります。このコンピューターの通信を取り込む対象として選んだプログラムの HTTP/3 は、サーバーではなく tracewing 自身の QUIC ポートに送られ、そのフローは他と同じように記録されます。誰も選んでいないプログラムは以前どおり HTTP/2 にフォールバックし、ほかのどの経路も同じです。これがオンのあいだ、サーバーの HTTP/3 の提示は上の設定が何であれそのまま残されます。HTTP/3 を提示されないプログラムは HTTP/3 を話さないからです。セットアップ ページで UDP ポート 443 をブロックしても止まります。そのデータグラムは tracewing にまったく届きません。すぐに適用されます。
+
 # Size of a session
 ta20fa102 = セッションのサイズ
 

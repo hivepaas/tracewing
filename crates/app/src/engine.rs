@@ -191,6 +191,14 @@ pub struct Engine {
     pub client_certs: Arc<ClientCerts>,
     /// The scripts rules run, with what each has logged.
     pub scripts: Arc<Scripts>,
+    /// What a way in knows about each connection and captured QUIC client it
+    /// hands over. Held here because the local way in is built by the window
+    /// after the proxy started, and has to write into the same table the
+    /// proxy reads.
+    pub handed: Arc<tracewing_proxy::handover::Handed>,
+    /// Where the proxy's HTTP/3 door listens, for the local way in to send a
+    /// chosen program's UDP 443 to.
+    pub http3: Arc<tracewing_proxy::quic_server::Opened>,
     stop: Option<oneshot::Sender<()>>,
     thread: Option<JoinHandle<()>>,
 }
@@ -332,6 +340,11 @@ impl Engine {
         let live = Arc::new(Live::new(&opts.settings));
 
         let shared = Arc::new(Shared::default());
+        // Both are the meeting point between the proxy and a way in built
+        // after it: the proxy reads what a way in knows about each client,
+        // and a way in reads where the HTTP/3 door listens.
+        let handed: Arc<tracewing_proxy::handover::Handed> = Arc::default();
+        let http3: Arc<tracewing_proxy::quic_server::Opened> = Arc::default();
         let recording = Arc::new(AtomicBool::new(true));
         let failure = Arc::new(Mutex::new(None));
         let check = Arc::new(Check::default());
@@ -397,6 +410,8 @@ impl Engine {
             find_apps: opts.find_apps,
             stop_limit: std::time::Duration::from_secs(2),
             live: Arc::clone(&live),
+            handed: Arc::clone(&handed),
+            http3: Arc::clone(&http3),
             later: Some(later),
             sources: {
                 let mut sources: Vec<Box<dyn tracewing_proxy::source::Source>> = vec![Box::new(
@@ -487,6 +502,8 @@ impl Engine {
             sockets,
             client_certs,
             scripts,
+            handed,
+            http3,
             stop: Some(stop),
             thread: Some(thread),
         })

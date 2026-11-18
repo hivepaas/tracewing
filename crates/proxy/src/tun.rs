@@ -38,7 +38,7 @@
 //! See [capture-modes.md](../../../docs/design/capture-modes.md).
 
 use crate::{
-    datagrams::Bind,
+    datagrams::{Bind, Catching},
     icmp::Echo,
     sieve::Sieve,
     source::{Found, Source, Stop, stopped},
@@ -115,6 +115,10 @@ pub struct Tun<D> {
     datagrams: Bind,
     /// Where an echo leaves from, for `ping` and `tracert`.
     echo: Option<Echo>,
+    /// What makes a chosen program's UDP 443 something other than refused:
+    /// it goes to tracewing's own HTTP/3 door. `None` refuses it, which is
+    /// how it ships -- see [`crate::datagrams::Catching`].
+    catching: Option<Catching>,
 }
 
 impl<D: Device> Tun<D> {
@@ -139,6 +143,7 @@ impl<D: Device> Tun<D> {
             sieve,
             datagrams,
             echo: None,
+            catching: None,
         }
     }
 
@@ -148,6 +153,20 @@ impl<D: Device> Tun<D> {
     pub fn answering(self, echo: Echo) -> Self {
         Self {
             echo: Some(echo),
+            ..self
+        }
+    }
+
+    /// Reads a chosen program's HTTP/3 rather than refusing its UDP 443.
+    ///
+    /// Optional, and off is what ships: refusing sends a client back to TCP,
+    /// where tracewing has read it for as long as it has existed, and
+    /// reading HTTP/3 instead terminates QUIC for the programs somebody
+    /// chose. See [`crate::datagrams::Catching`] and
+    /// [`crate::quic_server::Door`].
+    pub fn catching(self, catching: Catching) -> Self {
+        Self {
+            catching: Some(catching),
             ..self
         }
     }
@@ -173,11 +192,15 @@ impl<D: Device> Source for Tun<D> {
             sieve,
             datagrams,
             echo,
+            catching,
         } = *self;
         let (wire, into_stack, from_stack) = Wire::channels();
         let mut stack = Stack::new(wire).sifting(sieve).passing(datagrams);
         if let Some(echo) = echo {
             stack = stack.answering(echo);
+        }
+        if let Some(catching) = catching {
+            stack = stack.catching(catching);
         }
         // The stack first: it is what `found` hears from, and a packet that
         // arrived before it was listening would have nowhere to go.

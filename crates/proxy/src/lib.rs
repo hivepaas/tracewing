@@ -162,6 +162,16 @@ pub struct ProxyOptions {
     pub client_certs: Arc<client_certs::ClientCerts>,
     /// The scripts rules run, with what each has logged.
     pub scripts: Arc<script::Scripts>,
+    /// What a way in knows about each connection or QUIC client it hands
+    /// over, which the handler reads by the address it arrives from. Given
+    /// from outside because a way in built before the proxy -- a local
+    /// mode's adapter -- has to put things in the same table. See
+    /// [`handover::Handed`].
+    pub handed: Arc<handover::Handed>,
+    /// Where the HTTP/3 door listens, filled in when it opens, for a way in
+    /// that sends a chosen program's UDP 443 to it. See
+    /// [`quic_server::Opened`].
+    pub http3: Arc<quic_server::Opened>,
 }
 
 #[derive(Debug)]
@@ -274,7 +284,7 @@ pub async fn run_proxy(
     upstream_tls.key_log = Arc::clone(&opts.tls_keys) as Arc<dyn hudsucker::rustls::KeyLog>;
     let connector = upstream::TimedConnector::new(
         upstream_tls,
-        verifier,
+        Arc::clone(&verifier),
         Arc::clone(&opts.relay),
         Arc::clone(&opts.client_certs),
         Arc::clone(&opts.traffic_rules),
@@ -297,7 +307,9 @@ pub async fn run_proxy(
     }
 
     // What a source knew of each connection it handed over, for the handler.
-    let handed = Arc::new(handover::Handed::default());
+    // The caller's, because a way in that is built before the proxy -- and
+    // the datagrams it sends to the HTTP/3 door -- writes into this one.
+    let handed = Arc::clone(&opts.handed);
     let handler = FlowHandler::new(
         recorder,
         opts.settings.log_max(),
@@ -306,7 +318,7 @@ pub async fn run_proxy(
         Controls {
             recording: opts.recording,
             rules: opts.rules,
-            traffic_rules: opts.traffic_rules,
+            traffic_rules: Arc::clone(&opts.traffic_rules),
             check: opts.check,
             pauses: Arc::clone(&opts.pauses),
             apps: opts
@@ -342,6 +354,40 @@ pub async fn run_proxy(
         let _ = stop_tx.send(true);
         let _ = stopping_tx.send(());
     });
+
+    // The HTTP/3 door. It takes what a way in sends it -- a chosen
+    // program's UDP 443, which `datagrams.rs` carries here instead of
+    // refusing -- and the way out over QUIC takes what is meant for a
+    // server. On the loopback whatever `other_devices` says, because the
+    // only thing that ever sends to it is tracewing itself.
+    //
+    // **Said and stepped over if it cannot be opened**, as a way in that
+    // fails to start is: everything else works, and what is lost is HTTP/3
+    // capture, which is off until somebody turns it on anyway. The way in
+    // goes on refusing UDP 443, because `Opened` stays empty.
+    match http3(
+        &serving.ca.0,
+        verifier,
+        Arc::clone(&opts.tls_keys),
+        Arc::clone(&opts.relay),
+        Arc::clone(&opts.client_certs),
+        Arc::clone(&opts.traffic_rules),
+        serving.connector.ids(),
+    ) {
+        Ok((door, way_out)) => {
+            tokio::spawn(door.serve(
+                // A captured client's way in is whatever put it in
+                // `handed`, which is where the handler reads it from; this
+                // is the answer for a connection with no entry at all,
+                // which only a client sending to the door itself could be.
+                handler.serving(source::By::Tun),
+                Arc::new(way_out),
+                Arc::clone(&opts.http3),
+                stop.clone(),
+            ));
+        }
+        Err(e) => tracing::warn!("no HTTP/3 door: {e:#}"),
+    }
 
     let (found, took) = Found::channel();
     for source in sources {
@@ -567,6 +613,37 @@ pub fn upstream_roots(extra_roots: &[PathBuf], os_roots: bool) -> Result<RootCer
         }
     }
     Ok(roots)
+}
+
+/// The HTTP/3 door and the way out over QUIC, which are two things built in
+/// one place because nothing else in the proxy wants either: a request that
+/// arrives over HTTP/3 goes out over HTTP/3, and both halves of such a flow
+/// are made here or neither is.
+///
+/// What the way out shares with the way out over TCP is passed to it --
+/// which roots to trust, which certificate to show a server that asks, what
+/// a rule says about a host, and the counter connections are numbered from.
+/// See [`quic_upstream::Way`].
+fn http3(
+    ca: &Arc<ca::LocalCa>,
+    verifier: Arc<dyn ServerCertVerifier>,
+    keys: Arc<key_log::TlsKeys>,
+    relay: Arc<relay::Relay>,
+    certs: Arc<client_certs::ClientCerts>,
+    rules: Arc<RwLock<TrafficRules>>,
+    ids: upstream::Ids,
+) -> Result<(quic_server::Door, quic_upstream::Way)> {
+    let door = quic_server::Door::open(SocketAddr::from((std::net::Ipv4Addr::LOCALHOST, 0)), ca)?;
+    let way_out = quic_upstream::Way::new(
+        verifier,
+        keys as Arc<dyn hudsucker::rustls::KeyLog>,
+        relay,
+        certs,
+        rules,
+        ids,
+    )
+    .map_err(|e| anyhow::anyhow!(e))?;
+    Ok((door, way_out))
 }
 
 fn upstream_tls(

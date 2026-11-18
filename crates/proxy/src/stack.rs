@@ -43,7 +43,7 @@
 //! See [capture-modes.md](../../../docs/design/capture-modes.md).
 
 use crate::{
-    datagrams::{self, Bind},
+    datagrams::{self, Bind, Catching},
     icmp::{self, Echo},
     sieve::{Sieve, sift},
     source::{By, Flow, Found, Source, Stop, Target, stopped},
@@ -138,6 +138,11 @@ pub struct Stack {
     /// How an echo is really sent, for `ping` and `tracert`. `None` leaves
     /// them unanswered, which is what they get today -- see [`crate::icmp`].
     echoing: Option<Echo>,
+    /// What makes UDP 443 something other than refused: a chosen program's
+    /// HTTP/3 goes to tracewing's own door instead. `None` refuses it, which
+    /// is how it ships and what a tunnel a phone joined gets -- see
+    /// [`crate::datagrams::Catching`].
+    catching: Option<Catching>,
 }
 
 impl Stack {
@@ -148,6 +153,7 @@ impl Stack {
             sieve: None,
             passing: None,
             echoing: None,
+            catching: None,
         }
     }
 
@@ -181,6 +187,18 @@ impl Stack {
         }
     }
 
+    /// The same, reading a chosen program's HTTP/3 rather than refusing its
+    /// UDP 443. Needs [`Self::passing`] as well: the table that carries a
+    /// datagram to tracewing's own door is the one that passes the rest on,
+    /// and without it every datagram is refused before any of this is
+    /// reached.
+    pub fn catching(self, catching: Catching) -> Self {
+        Self {
+            catching: Some(catching),
+            ..self
+        }
+    }
+
     #[cfg(test)]
     fn holding_at_most(wire: Wire, most: usize) -> Self {
         Self {
@@ -189,6 +207,7 @@ impl Stack {
             sieve: None,
             passing: None,
             echoing: None,
+            catching: None,
         }
     }
 }
@@ -213,6 +232,7 @@ impl Source for Stack {
             self.sieve,
             self.passing,
             self.echoing,
+            self.catching,
             found,
             stop,
         ));
@@ -240,14 +260,20 @@ const TCP: u8 = 6;
 /// The least a TCP header is, which is all of it this reads.
 const TCP_HEAD: usize = 20;
 
-/// The datagram in this packet, where it is one to pass on rather than to
-/// refuse: UDP, and to a port that is not answered or refused here. See
-/// [`crate::datagrams::ours_to_pass`] for which two those are.
+/// The datagram in this packet, where it is one for [`crate::datagrams`] to
+/// deal with rather than for the stack to refuse: UDP, and to a port that is
+/// not answered here -- and, while `catching`, UDP 443 as well, which that
+/// table then sends to tracewing's own door or hands back to be refused
+/// after all. See [`crate::datagrams::ours_to_pass`] and
+/// [`crate::datagrams::ours_to_catch`].
 ///
 /// Apart from the loop so that what it decides is testable without a stack.
-fn taken_on(packet: &[u8]) -> Option<crate::datagrams::Datagram> {
+fn taken_on(packet: &[u8], catching: bool) -> Option<crate::datagrams::Datagram> {
     let datagram = crate::datagrams::datagram(packet)?;
-    crate::datagrams::ours_to_pass(datagram.to.port()).then_some(datagram)
+    let port = datagram.to.port();
+    let ours =
+        crate::datagrams::ours_to_pass(port) || (catching && crate::datagrams::ours_to_catch(port));
+    ours.then_some(datagram)
 }
 
 /// The QUIC a packet carries, where it carries a client opening a connection
@@ -465,12 +491,14 @@ fn moment(started: Instant) -> Moment {
     Moment::from_micros(started.elapsed().as_micros() as i64)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run(
     wire: Wire,
     most: usize,
     sieve: Option<Arc<Sieve>>,
     passing: Option<Bind>,
     echoing: Option<Echo>,
+    catching: Option<Catching>,
     found: Found,
     stop: Stop,
 ) {
@@ -482,7 +510,20 @@ async fn run(
     // Answers to passed-on datagrams go straight out, with no socket of
     // `smoltcp`'s in the way: UDP has no sequence numbers and no window, so
     // there is nothing for a TCP/IP stack to keep.
-    let passing = passing.map(|bind| datagrams::passing(outgoing.clone(), bind, stop.clone()));
+    //
+    // `back` is the other direction, and only UDP 443 ever comes down it: a
+    // datagram whose program nobody chose, returned to be refused here.
+    // Refusing is the stack's own answer -- it holds no socket for port 443,
+    // so `smoltcp` answers an ICMP port unreachable -- and a datagram that
+    // comes back this way is not looked at again, so there is no going round
+    // and round.
+    // Asked for each datagram to port 443 rather than once here, because
+    // somebody may turn the setting on while this runs. It answers without
+    // waiting on anything; see `Catching::on`.
+    let catches: Option<datagrams::On> = catching.as_ref().map(|it| Arc::clone(&it.on));
+    let (again, mut back) = mpsc::channel(PACKETS_MAX);
+    let passing = passing
+        .map(|bind| datagrams::passing(outgoing.clone(), bind, catching, again, stop.clone()));
     // `ping` and `tracert`, which otherwise meet a stack with no socket for
     // them and get nothing at all.
     let pinging = echoing.map(|echo| icmp::answering(outgoing.clone(), echo, stop.clone()));
@@ -594,7 +635,10 @@ async fn run(
                     // of which are what these two are here to replace.
                     let datagram = passing
                         .as_ref()
-                        .and_then(|to| taken_on(&packet).map(|datagram| (to, datagram)));
+                        .and_then(|to| {
+                            let catching = catches.as_ref().is_some_and(|on| on());
+                            taken_on(&packet, catching).map(|datagram| (to, datagram))
+                        });
                     let ping = pinging
                         .as_ref()
                         .and_then(|to| icmp::echo_request(&packet).map(|ping| (to, ping)));
@@ -612,22 +656,8 @@ async fn run(
                             }
                         }
                         (None, None) => {
-                            // Refused either way -- the stack has no socket
-                            // for it and answers an ICMP port unreachable,
-                            // which is what sends the client back to TCP.
-                            // Saying so is all this adds.
-                            if let Some((datagram, quic)) = quic_in(&packet)
-                                && attempts.fresh(datagram.from, datagram.to, Instant::now())
-                            {
-                                found.quic(crate::quic::Attempt {
-                                    client: datagram.from,
-                                    to: datagram.to,
-                                    version: quic.version,
-                                    hello: quic.hello,
-                                });
-                            }
                             open_for(&packet, most, &mut sockets, &mut conns, &woken);
-                            device.waiting.push_back(packet);
+                            refused(packet, &found, &mut attempts, &mut device);
                         }
                     }
                 }
@@ -638,11 +668,43 @@ async fn run(
                     to_send.push_back(answer);
                 }
             }
+            // A datagram whose program nobody chose, to be refused here as
+            // every datagram to port 443 was before HTTP/3 capture existed.
+            // Nothing opens a connection for it: it is UDP, which
+            // `open_for` has nothing to do with.
+            returned = back.recv() => {
+                if let Some(packet) = returned {
+                    refused(packet, &found, &mut attempts, &mut device);
+                }
+            }
             _ = woken.notified() => {}
             _ = tokio::time::sleep(sleep) => {}
             _ = stopped(stop.clone()) => break,
         }
     }
+}
+
+/// A packet the stack answers itself. It holds no socket for the port, so
+/// `smoltcp` answers an ICMP port unreachable, and that is what sends a QUIC
+/// client back to TCP where tracewing can see it. Saying the attempt
+/// happened is all this adds; see [`crate::quic`].
+fn refused(
+    packet: Vec<u8>,
+    found: &Found,
+    attempts: &mut crate::quic::Attempts,
+    device: &mut Device,
+) {
+    if let Some((datagram, quic)) = quic_in(&packet)
+        && attempts.fresh(datagram.from, datagram.to, Instant::now())
+    {
+        found.quic(crate::quic::Attempt {
+            client: datagram.from,
+            to: datagram.to,
+            version: quic.version,
+            hello: quic.hello,
+        });
+    }
+    device.waiting.push_back(packet);
 }
 
 /// Takes the queries that have arrived and sets each one being looked up.
@@ -1132,6 +1194,44 @@ mod tests {
     /// The stack passing datagrams on, through ordinary sockets rather than
     /// pinned ones: what pinning is for is Windows routing, and what is being
     /// tested here is everything else.
+    /// The stack passing datagrams on **and** catching a chosen program's
+    /// UDP 443, with a door of the test's own for the catcher to send to.
+    /// `door` is `None` for a program nobody chose, which is the arm where
+    /// everything has to stay as it was.
+    fn start_catching(door: Option<SocketAddr>) -> Running {
+        let (wire, into, out) = Wire::channels();
+        let (found, took) = Found::channel();
+        let (stop_tx, stop) = tokio::sync::watch::channel(false);
+        let bind: crate::datagrams::Bind =
+            Arc::new(|_v6| Box::pin(tokio::net::UdpSocket::bind("127.0.0.1:0")));
+        let catching = crate::datagrams::Catching {
+            on: Arc::new(|| true),
+            handed: Arc::default(),
+            whether: Arc::new(move |datagram| {
+                Box::pin(async move {
+                    Some(crate::datagrams::Caught {
+                        door: door?,
+                        known: crate::handover::Known {
+                            by: By::Tun,
+                            client: datagram.from,
+                            to: Target::Addr(datagram.to),
+                            app: None,
+                        },
+                    })
+                })
+            }),
+        };
+        Box::new(Stack::new(wire).passing(bind).catching(catching))
+            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+            .unwrap();
+        Running {
+            into,
+            out,
+            took,
+            _stop: stop_tx,
+        }
+    }
+
     fn start_passing() -> Running {
         let (wire, into, out) = Wire::channels();
         let (found, took) = Found::channel();
@@ -2145,5 +2245,119 @@ mod tests {
         // The address itself: a loopback one, since that is what localhost is.
         let rr = &answer[asked.question_ends..];
         assert_eq!(&rr[12..16], &[127, 0, 0, 1]);
+    }
+
+    /// Which datagrams the stack hands to [`crate::datagrams`] and which it
+    /// keeps for itself, in the one place the answer differs: UDP 443 is the
+    /// stack's to refuse until something is catching it.
+    #[test]
+    fn udp_443_is_the_stack_s_to_refuse_until_it_is_catching() {
+        let client: SocketAddr = "10.78.0.2:51000".parse().unwrap();
+        let quic = crate::datagrams::packet_for(client, "10.78.0.1:443".parse().unwrap(), b"x")
+            .expect("a packet");
+        assert!(taken_on(&quic, false).is_none(), "refused here, as it was");
+        assert!(
+            taken_on(&quic, true).is_some(),
+            "and carried while catching"
+        );
+
+        // The other two answers are the same either way: a name is this
+        // stack's own to answer, and everything else is passed on.
+        let name = crate::datagrams::packet_for(client, "10.78.0.1:53".parse().unwrap(), b"x")
+            .expect("a packet");
+        assert!(taken_on(&name, false).is_none());
+        assert!(taken_on(&name, true).is_none(), "even while catching");
+        let other = crate::datagrams::packet_for(client, "10.78.0.1:123".parse().unwrap(), b"x")
+            .expect("a packet");
+        assert!(taken_on(&other, false).is_some());
+        assert!(taken_on(&other, true).is_some());
+    }
+
+    /// A chosen program's QUIC goes to tracewing's own door, and the answer
+    /// comes back as a packet from the server it was going to -- which is
+    /// the whole of what the stack does for HTTP/3 capture.
+    ///
+    /// **And it is no refused attempt**: the row that says a client was sent
+    /// back to TCP would be a lie about a connection tracewing is reading,
+    /// and the ICMP that goes with it would end the connection before the
+    /// door could answer.
+    #[tokio::test]
+    async fn a_chosen_program_s_quic_goes_to_the_door_rather_than_being_refused() {
+        let door = tokio::net::UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let at = door.local_addr().unwrap();
+        let mut running = start_catching(Some(at));
+        let client: SocketAddr = "10.78.0.2:51000".parse().unwrap();
+        let to: SocketAddr = "10.78.0.1:443".parse().unwrap();
+        let initial = crate::quic::vectors::bytes(crate::quic::vectors::RFC_9001_A2);
+        running
+            .into
+            .send(crate::datagrams::packet_for(client, to, &initial).expect("a packet"))
+            .await
+            .unwrap();
+
+        let mut buffer = vec![0u8; 2048];
+        let (len, ours) = tokio::time::timeout(Duration::from_secs(5), door.recv_from(&mut buffer))
+            .await
+            .expect("the Initial reaches the door instead of being refused")
+            .unwrap();
+        assert_eq!(
+            &buffer[..len],
+            &initial[..],
+            "the packet as the client sent it"
+        );
+
+        door.send_to(b"what the door says", ours).await.unwrap();
+        let packet = running.next().await;
+        let answer = crate::datagrams::datagram(&packet).expect("a datagram, not an ICMP error");
+        assert_eq!(
+            answer.from, to,
+            "from the server, which is all the client knows"
+        );
+        assert_eq!(answer.to, client);
+        assert_eq!(answer.body, b"what the door says");
+
+        assert!(
+            running.took.try_recv().is_err(),
+            "and no row saying the client was sent back to TCP"
+        );
+    }
+
+    /// A program nobody chose keeps exactly what it had: the attempt is said
+    /// and the stack refuses it, although the stack is catching for somebody
+    /// else at the same time.
+    #[tokio::test]
+    async fn quic_nobody_chose_is_said_and_refused_while_another_program_is_caught() {
+        let mut running = start_catching(None);
+        let client: SocketAddr = "10.78.0.2:51000".parse().unwrap();
+        let to: SocketAddr = "10.78.0.1:443".parse().unwrap();
+        let initial = crate::quic::vectors::bytes(crate::quic::vectors::RFC_9001_A2);
+        running
+            .into
+            .send(crate::datagrams::packet_for(client, to, &initial).expect("a packet"))
+            .await
+            .unwrap();
+
+        let told = tokio::time::timeout(Duration::from_secs(5), running.took.recv())
+            .await
+            .expect("the attempt is handed over, as it was before any of this")
+            .expect("the stack is running");
+        let attempt = match told {
+            Took::Quic(attempt, _) => attempt,
+            Took::Flow(..) | Took::Port(..) => panic!("QUIC, not a connection"),
+        };
+        assert_eq!(attempt.client, client);
+        assert_eq!(attempt.to, to);
+        assert_eq!(
+            attempt.hello.and_then(|hello| hello.server_name).as_deref(),
+            Some("example.com"),
+            "read from the hello the client sent in the clear"
+        );
+
+        // And the refusal itself: `smoltcp` holds no socket for port 443.
+        let packet = running.next().await;
+        assert!(
+            crate::datagrams::datagram(&packet).is_none(),
+            "an ICMP error rather than a datagram, which is what sends the client to TCP"
+        );
     }
 }

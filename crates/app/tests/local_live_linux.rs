@@ -57,7 +57,7 @@ fn the_local_way_in_comes_up_and_lets_go_again() {
         // empty one keeps nothing, which would test less.
         programs: vec![Picked::at("/usr/bin/curl".into())],
     };
-    let started = local_source::start(&local, vec![9090], &dir)
+    let started = local_source::start(&local, vec![9090], &dir, &local_source::Http3::off())
         .expect("the way in assembles")
         .expect("the switch is on, so there is a source");
 

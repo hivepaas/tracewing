@@ -30,14 +30,29 @@
 //! - **the echo** is optional, and the one of the four that is: without it
 //!   `ping` goes unanswered, which is a feature missing rather than a wrong
 //!   behaviour. The other three have no safe default at all.
+//! - **the catcher** is the fifth and is optional too, in the same sense:
+//!   without it a chosen program's UDP 443 is refused, which is what
+//!   tracewing has always done and what sends the program back to HTTP/2.
+//!   With it, that UDP goes to the proxy's own HTTP/3 door instead and the
+//!   program's HTTP/3 is read. It needs three things from the proxy, which
+//!   is already running by the time this is built -- see [`Http3`].
 
-use tracewing_proxy::{sieve::Chosen, source::Source};
+use std::sync::Arc;
+use tracewing_proxy::{quic_server::Opened, sieve::Chosen, source::Source};
+use tracewing_store::settings::Live;
 // What only the route-capturing arms use; macOS's way in is the extension.
 #[cfg(any(windows, target_os = "linux"))]
 use {
     crate::local_apps,
     anyhow::Result as Built,
-    tracewing_proxy::{apps::Apps, roads, sieve, upstream},
+    tracewing_proxy::{
+        apps::Apps,
+        datagrams::{self, Caught},
+        handover::Known,
+        quic, roads, sieve,
+        source::Target,
+        upstream,
+    },
 };
 
 use crate::local_apps::{Local, Support};
@@ -56,6 +71,48 @@ const LOOK_EVERY: std::time::Duration = std::time::Duration::from_secs(2);
 /// about this long.
 #[cfg_attr(not(any(windows, target_os = "linux")), allow(dead_code))]
 const ECHO_WITHIN: std::time::Duration = std::time::Duration::from_secs(4);
+
+/// How long one client's QUIC waits for the operating system to say which
+/// program sent it.
+///
+/// The sieve's own [`NAMED_WITHIN`](tracewing_proxy::sieve) for connections,
+/// for the same reason and with the same cost: it is one look at a table of
+/// the kernel's, so this is a bug's timeout rather than a network's. What is
+/// different is who pays it -- a datagram, not a connection -- and that the
+/// datagrams arriving meanwhile are held rather than made to wait, which is
+/// [`tracewing_proxy::datagrams`]'s doing.
+#[cfg_attr(not(any(windows, target_os = "linux")), allow(dead_code))]
+const NAMED_WITHIN: std::time::Duration = std::time::Duration::from_millis(500);
+
+/// What reading a chosen program's HTTP/3 takes from the proxy, which is
+/// already running by the time this way in is built.
+///
+/// Three things, and none of them can be known here: whether capture is on
+/// at all, which somebody may change while this runs; where the proxy's
+/// HTTP/3 door listens, which is a port of the operating system's choosing
+/// inside a process this is on the far side of; and the table the door reads
+/// each captured client's facts out of. See
+/// [`tracewing_proxy::datagrams::Catching`].
+#[derive(Clone)]
+pub struct Http3 {
+    pub live: Arc<Live>,
+    pub door: Arc<Opened>,
+    pub handed: Arc<tracewing_proxy::handover::Handed>,
+}
+
+impl Http3 {
+    /// A way in with nothing to capture HTTP/3 through: the setting is off
+    /// and no door is open, which are the two things the catcher asks
+    /// before anything else. For a way in built with no proxy behind it,
+    /// which is what the live tests of the assembly are.
+    pub fn off() -> Self {
+        Self {
+            live: Arc::new(Live::default()),
+            door: Arc::default(),
+            handed: Arc::default(),
+        }
+    }
+}
 
 /// A local way in that is running, as the engine keeps it: what it keeps,
 /// and what ends it. The source itself has gone into the proxy's list by
@@ -161,6 +218,7 @@ pub fn start(
     local: &Local,
     ports: Vec<u16>,
     data_dir: &std::path::Path,
+    http3: &Http3,
 ) -> Result<Option<Started>, NoSource> {
     if !local.on {
         return Ok(None);
@@ -170,7 +228,7 @@ pub fn start(
         Support::NeedsAdministrator => return Err(NoSource::NeedsAdministrator),
         Support::Ready => {}
     }
-    platform(local, ports, data_dir)
+    platform(local, ports, data_dir, http3)
 }
 
 /// The arm for this platform. One function per platform rather than one
@@ -183,8 +241,9 @@ fn platform(
     local: &Local,
     ports: Vec<u16>,
     data_dir: &std::path::Path,
+    http3: &Http3,
 ) -> Result<Option<Started>, NoSource> {
-    windows::start(local, ports, data_dir)
+    windows::start(local, ports, data_dir, http3)
         .map(Some)
         .map_err(|why| NoSource::Failed(format!("{why:#}")))
 }
@@ -199,8 +258,9 @@ fn platform(
     // Windows arm wants it for. What becomes of a refusal is
     // `Engine::start`'s, so that the file has one writer.
     _data_dir: &std::path::Path,
+    http3: &Http3,
 ) -> Result<Option<Started>, NoSource> {
-    linux::start(local, ports)
+    linux::start(local, ports, http3)
         .map(Some)
         .map_err(|why| linux::which(&why))
 }
@@ -213,6 +273,7 @@ fn platform(
     _local: &Local,
     _ports: Vec<u16>,
     _data_dir: &std::path::Path,
+    _http3: &Http3,
 ) -> Result<Option<Started>, NoSource> {
     unreachable!("Support::here() answers NotOnThisSystem where nothing captures by route")
 }
@@ -273,11 +334,110 @@ impl Source for Pinned {
 /// design doc, which names it as the follow-up rather than leaving it to be
 /// discovered.
 #[cfg(any(windows, target_os = "linux"))]
-fn sieving(programs: &[local_apps::Picked], ports: Vec<u16>) -> Built<(sieve::Sieve, Chosen)> {
+fn sieving(
+    programs: &[local_apps::Picked],
+    ports: Vec<u16>,
+) -> Built<(sieve::Sieve, Chosen, Apps)> {
     let apps = Apps::spawn(ports)?;
     let chosen = Chosen::of(local_apps::programs_of(programs));
-    let sieve = sieve::by_programs(apps, chosen.clone(), upstream::straight_to());
-    Ok((sieve, chosen))
+    let sieve = sieve::by_programs(apps.clone(), chosen.clone(), upstream::straight_to());
+    Ok((sieve, chosen, apps))
+}
+
+/// Whether a datagram's program is one somebody chose, and so whether its
+/// HTTP/3 is read instead of refused.
+///
+/// Four things have to hold, and they are asked in that order because only
+/// the last one costs anything: capture is on, a door is open, somebody has
+/// chosen something, and the program that sent this datagram is one of them.
+///
+/// **A program that cannot be named is refused**, which is the same arm the
+/// sieve takes for a connection and for the same reason: reading it would
+/// mean terminating QUIC and offering tracewing's certificate on the
+/// strength of a guess, and refusing costs the program one attempt and the
+/// slower protocol it would have had anyway.
+///
+/// The program is named **again** here rather than shared with the sieve,
+/// and the two tables are different questions: the sieve asks who holds a
+/// connection, this asks who holds a datagram socket, and on Windows those
+/// are two tables of the operating system's with nothing in common. See
+/// [`tracewing_proxy::apps::Look`].
+#[cfg(any(windows, target_os = "linux"))]
+fn catching(apps: Apps, chosen: Chosen, http3: Http3) -> datagrams::Catching {
+    let live = Arc::clone(&http3.live);
+    datagrams::Catching {
+        // The one question that is answered without waiting, so that the
+        // setting being off leaves UDP 443 exactly as it was.
+        on: Arc::new(move || live.capture_http3()),
+        handed: Arc::clone(&http3.handed),
+        whether: Arc::new(move |datagram| {
+            let apps = apps.clone();
+            let chosen = chosen.clone();
+            let http3 = http3.clone();
+            Box::pin(async move {
+                // Asked again rather than taken from `on` above: that one
+                // was asked as the datagram arrived and this is asked once
+                // the answer has come, and somebody may have turned the
+                // setting off in between. Cheap either way.
+                if !http3.live.capture_http3() || chosen.none() {
+                    return None;
+                }
+                // No door, nothing to send it to. The proxy opens one at
+                // every start, so this is a door that could not be opened
+                // and said so, or a proxy that is stopping.
+                let door = http3.door.at()?;
+                // `None` is an address that is not this machine's, which is
+                // no program of ours to find.
+                let answer = apps.sent(datagram.from)?;
+                let waiting = Arc::clone(&answer);
+                let deadline = std::time::Instant::now() + NAMED_WITHIN;
+                // `wait_until` waits on a condition variable, and nothing on
+                // the runtime may: one of these would hold a worker thread
+                // for as long as the look-up takes.
+                let named = tokio::task::spawn_blocking(move || waiting.wait_until(deadline)).await;
+                let path = named.ok().flatten().and_then(|app| app.path)?;
+                if !chosen.holds(&path) {
+                    return None;
+                }
+                Some(Caught {
+                    door,
+                    known: Known {
+                        by: tracewing_proxy::source::By::Tun,
+                        client: datagram.from,
+                        // The answer is already in, so the door asks the
+                        // operating system nothing: this is the look-up
+                        // above, not a second one.
+                        app: Some(answer),
+                        to: going_to(&datagram),
+                    },
+                })
+            })
+        }),
+    }
+}
+
+/// Where a captured client was really going, which the door cannot see: it
+/// is reached over the loopback from a socket of ours, so every client looks
+/// like tracewing itself.
+///
+/// By name where the client sent one in the clear, as
+/// [`tracewing_proxy::handover`] does with the first record of a taken
+/// connection and for the same reason -- `140.82.121.4:443` reads as
+/// `github.com:443`. The hello is in the first datagram of a connection and
+/// in no other, so the rest of them keep the address; the first is the one
+/// that makes the pair, which is the one this is asked about.
+#[cfg(any(windows, target_os = "linux"))]
+fn going_to(datagram: &datagrams::Datagram) -> Target {
+    match quic::opening(&datagram.body)
+        .and_then(|opening| opening.hello)
+        .and_then(|hello| hello.server_name)
+    {
+        Some(host) => Target::Named {
+            host,
+            port: datagram.to.port(),
+        },
+        None => Target::Addr(datagram.to),
+    }
 }
 
 /// Keeps the pinning up to date, and gives the echo a way to ask where to
@@ -301,12 +461,15 @@ mod windows {
         local: &Local,
         ports: Vec<u16>,
         data_dir: &std::path::Path,
+        http3: &Http3,
     ) -> Built<Started> {
         let held = Held::up(&dll(data_dir))?;
         let ours = held.luid()?;
         let stopper = Stopper::of(held.adapter());
-        let (sieve, chosen) = sieving(&local.programs, ports)?;
-        let pump = Tun::new(held, sieve, upstream::bound_datagrams()).answering(echo(ours));
+        let (sieve, chosen, apps) = sieving(&local.programs, ports)?;
+        let pump = Tun::new(held, sieve, upstream::bound_datagrams())
+            .answering(echo(ours))
+            .catching(catching(apps, chosen.clone(), http3.clone()));
         let source = Pinned {
             inner: Box::new(pump),
             ours,
@@ -380,7 +543,7 @@ mod linux {
     ///
     /// No `data_dir`: there is no library to find beside the program, which
     /// is the one thing the Windows arm needs it for.
-    pub(super) fn start(local: &Local, ports: Vec<u16>) -> Built<Started> {
+    pub(super) fn start(local: &Local, ports: Vec<u16>, http3: &Http3) -> Built<Started> {
         adapter::make_adapter()?;
         // Read back rather than trusted. The step is a script run by another
         // process, and a script that exits 0 having done something else is
@@ -404,8 +567,9 @@ mod linux {
         // implemented for `Arc`.
         let device = Arc::new(TunDevice::open(adapter::DEVICE)?);
         let stopper = Stopper::of(Arc::clone(&device) as Arc<dyn tracewing_proxy::tun::Device>);
-        let (sieve, chosen) = sieving(&local.programs, ports)?;
-        let pump = Tun::new(Arc::clone(&device), sieve, upstream::bound_datagrams());
+        let (sieve, chosen, apps) = sieving(&local.programs, ports)?;
+        let pump = Tun::new(Arc::clone(&device), sieve, upstream::bound_datagrams())
+            .catching(catching(apps, chosen.clone(), http3.clone()));
         // The echo is the one optional piece, and on Linux it is optional in
         // fact as well as in shape: a ping socket needs this process's group
         // to be inside `net.ipv4.ping_group_range`, and where it is not,
@@ -474,7 +638,7 @@ mod tests {
         let dir = std::path::Path::new("/nowhere");
         let off = Local::default();
         assert!(
-            matches!(start(&off, vec![9090], dir), Ok(None)),
+            matches!(start(&off, vec![9090], dir, &Http3::off()), Ok(None)),
             "off is nothing to start and nothing wrong"
         );
         // What `on` means, asked only where asking costs nothing. On a
@@ -490,12 +654,15 @@ mod tests {
         };
         match Support::here() {
             Support::NotOnThisSystem => assert!(
-                matches!(start(&on, vec![9090], dir), Err(NoSource::NotHere)),
+                matches!(
+                    start(&on, vec![9090], dir, &Http3::off()),
+                    Err(NoSource::NotHere)
+                ),
                 "on, where nothing captures by route, is worth saying"
             ),
             Support::NeedsAdministrator => assert!(
                 matches!(
-                    start(&on, vec![9090], dir),
+                    start(&on, vec![9090], dir, &Http3::off()),
                     Err(NoSource::NeedsAdministrator)
                 ),
                 "it could, once tracewing comes back as one"

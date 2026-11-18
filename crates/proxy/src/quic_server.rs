@@ -16,10 +16,14 @@
 //! rather than built here: the door and the way out are two things, and a
 //! test of one should not have to stand up the other.
 //!
-//! **Nothing opens this door yet.** No way in points at it and
-//! `datagrams.rs` still refuses UDP 443, so no client's traffic reaches it
-//! outside the tests. Giving a chosen program's UDP 443 to it is the next
-//! change; see `docs/design/http3.md`.
+//! What reaches it: a chosen program's UDP 443, sent here by
+//! [`crate::datagrams`] instead of being refused, which is the only way a
+//! client's QUIC gets in. Every such client arrives over the loopback from a
+//! socket of tracewing's own, so the address a connection comes from says
+//! nothing about who it is -- [`crate::handover::Handed`] is where that is
+//! written down, under exactly that address, and
+//! [`crate::capture::FlowHandler`] reads it there as it does for a taken
+//! connection. See `docs/design/http3.md`.
 
 use crate::{
     ca::LocalCa,
@@ -42,6 +46,39 @@ pub struct Door {
     endpoint: quinn::Endpoint,
 }
 
+/// Where the door listens, for the way in that has to send datagrams to it.
+///
+/// Shared rather than returned, because the two ends are built at different
+/// times and in different places: the door is opened inside the proxy, and
+/// the way in that feeds it is made outside and before it -- a local mode's
+/// adapter is set up when somebody presses the switch, which can be long
+/// after the proxy started. The port is the operating system's choice, so
+/// nothing can agree on it in advance.
+///
+/// `None` says no door is listening, and a datagram that arrives then is
+/// refused as one nobody captures. That is the state before the proxy
+/// starts and after it stops, not one anything sits in while it runs.
+#[derive(Default)]
+pub struct Opened(std::sync::Mutex<Option<SocketAddr>>);
+
+impl Opened {
+    pub fn at(&self) -> Option<SocketAddr> {
+        *self.lock()
+    }
+
+    pub(crate) fn opened(&self, at: SocketAddr) {
+        *self.lock() = Some(at);
+    }
+
+    pub(crate) fn closed(&self) {
+        *self.lock() = None;
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, Option<SocketAddr>> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
 impl Door {
     /// Binds an endpoint at `at`, with certificates minted by `ca` as each
     /// client asks for a name.
@@ -61,7 +98,16 @@ impl Door {
 
     /// Serves until `stop`, each connection on its own task, sending what
     /// is meant for a server over `out`.
-    pub async fn serve(self, handler: FlowHandler, out: Arc<Way>, stop: Stop) {
+    ///
+    /// `opened` is told where it listens for as long as it does, which is
+    /// how a way in learns where to send a captured client's datagrams.
+    pub async fn serve(self, handler: FlowHandler, out: Arc<Way>, opened: Arc<Opened>, stop: Stop) {
+        match self.endpoint.local_addr() {
+            Ok(at) => opened.opened(at),
+            // Nothing can be sent here, so nothing will be: the way in goes
+            // on refusing UDP 443 as it did before.
+            Err(e) => tracing::warn!("the HTTP/3 door cannot say where it listens: {e}"),
+        }
         loop {
             let waiting = tokio::select! {
                 waiting = self.endpoint.accept() => waiting,
@@ -77,6 +123,9 @@ impl Door {
                 }
             });
         }
+        // Nothing more is to be sent here, and a datagram that arrives
+        // after this is refused rather than carried to a door that is going.
+        opened.closed();
         // Each connection is told, rather than cut off: a client that is
         // mid-request gets an error it can read instead of a timeout.
         self.endpoint.close(0u32.into(), b"tracewing is stopping");
@@ -149,9 +198,15 @@ mod tests {
     use crate::{
         ca::LocalCa,
         ca_key::KeyStore,
-        capture::{CA_PATH, CHECK_HOST, harness::alone},
+        capture::{
+            CA_PATH, CHECK_HOST,
+            harness::{alone, alone_knowing},
+        },
+        datagrams::{Catching, Caught, Datagram, passing},
+        handover::{Handed, Known},
         quic_upstream::testing::{SAID, Server, way},
         relay::RelaySettings,
+        source::{Arrivals, By, Target},
         traffic_rules::TrafficRules,
     };
     use bytes::Buf as _;
@@ -166,7 +221,7 @@ mod tests {
         let door = Door::open(SocketAddr::from(([127, 0, 0, 1], 0)), ca).unwrap();
         let at = door.at().unwrap();
         let (tell, stop) = tokio::sync::watch::channel(false);
-        tokio::spawn(door.serve(handler, out, stop));
+        tokio::spawn(door.serve(handler, out, Arc::default(), stop));
         (at, (threads, tell))
     }
 
@@ -348,6 +403,129 @@ mod tests {
         assert_eq!(status, http::StatusCode::BAD_GATEWAY);
         let said = String::from_utf8_lossy(&body);
         assert!(said.contains("look up nothing.invalid"), "{said}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The way in, all of it, as a program on this machine would meet it:
+    /// datagrams addressed to a server's UDP 443, carrying QUIC that is
+    /// terminated here, an HTTP/3 request taken out of it, a server asked
+    /// over HTTP/3 of our own, and the answer back to the client as packets
+    /// from the address it sent to.
+    ///
+    /// Nothing here stands in for anything of tracewing's. The only
+    /// stand-in is the network: one socket the client talks to, where a
+    /// route and an adapter would be, and the datagrams are handed to
+    /// [`crate::datagrams`] exactly as [`crate::stack`] hands them over.
+    ///
+    /// **`arrivals` is the assertion that matters most** and it is worth
+    /// saying why. Every captured client reaches the door over the loopback
+    /// from a socket of tracewing's own, so the door itself cannot tell one
+    /// program from another or say which way in took it. A count against
+    /// `Tun` can only have come from the entry the catcher wrote in
+    /// `handed`, read by the handler under the address the connection came
+    /// from -- which is the whole mechanism by which a captured HTTP/3 flow
+    /// knows whose it is.
+    #[tokio::test]
+    async fn a_client_s_packets_carry_http3_through_to_the_server_and_back() {
+        let _ = crate::crypto_provider().install_default();
+        let dir = dir("packets-in");
+        let ca = ca(&dir);
+        let server = Server::start(&ca, "localhost");
+
+        // The proxy's side: the door, the core behind it, the way out.
+        let handed: Arc<Handed> = Arc::default();
+        let arrivals: Arc<Arrivals> = Arc::default();
+        let (handler, _threads) = alone_knowing(&dir, Arc::clone(&handed), Arc::clone(&arrivals));
+        let out = Arc::new(way(&ca, TrafficRules::default(), RelaySettings::default()));
+        let door = Door::open(SocketAddr::from(([127, 0, 0, 1], 0)), &ca).unwrap();
+        let at_door = door.at().unwrap();
+        let opened: Arc<Opened> = Arc::default();
+        let (_tell, stop) = tokio::sync::watch::channel(false);
+        tokio::spawn(door.serve(handler, out, Arc::clone(&opened), stop.clone()));
+
+        // The way in's side: UDP 443 to this address is carried to the door,
+        // and what the client was really going to is written down.
+        let going_to: SocketAddr = "203.0.113.9:443".parse().unwrap();
+        let (packets, mut coming) = tokio::sync::mpsc::channel(256);
+        let (again, _back) = tokio::sync::mpsc::channel(8);
+        let catching = Catching {
+            on: Arc::new(|| true),
+            handed: Arc::clone(&handed),
+            whether: Arc::new(move |datagram: Datagram| {
+                Box::pin(async move {
+                    Some(Caught {
+                        door: at_door,
+                        known: Known {
+                            by: By::Tun,
+                            client: datagram.from,
+                            to: Target::Addr(datagram.to),
+                            app: None,
+                        },
+                    })
+                })
+            }),
+        };
+        let taken = passing(
+            packets,
+            Arc::new(|_v6| {
+                Box::pin(async { Err(std::io::Error::other("nothing is passed on here")) }) as _
+            }),
+            Some(catching),
+            again,
+            stop,
+        );
+
+        // The network: the one socket the client sends to.
+        let wire = Arc::new(tokio::net::UdpSocket::bind("127.0.0.1:0").await.unwrap());
+        let at_wire = wire.local_addr().unwrap();
+        let reading = Arc::clone(&wire);
+        tokio::spawn(async move {
+            let mut buffer = vec![0u8; 2048];
+            while let Ok((len, from)) = reading.recv_from(&mut buffer).await {
+                let datagram = Datagram {
+                    from,
+                    to: going_to,
+                    body: buffer[..len].to_vec(),
+                };
+                if taken.send(datagram).await.is_err() {
+                    return;
+                }
+            }
+        });
+        let writing = Arc::clone(&wire);
+        tokio::spawn(async move {
+            while let Some(packet) = coming.recv().await {
+                let Some(answer) = crate::datagrams::datagram(&packet) else {
+                    continue;
+                };
+                if writing.send_to(&answer.body, answer.to).await.is_err() {
+                    return;
+                }
+            }
+        });
+
+        let url = format!("https://localhost:{}/orders", server.port);
+        let (status, body) = over_http3(at_wire, "localhost", &url, trusting(&ca))
+            .await
+            .expect("an answer, over packets all the way");
+        assert_eq!(status, http::StatusCode::OK);
+        assert_eq!(body, SAID);
+        assert_eq!(
+            server.saw().first().map(|arrived| arrived.path.clone()),
+            Some("/orders".to_owned()),
+            "and the real server is where it arrived"
+        );
+        assert_eq!(
+            arrivals.of(By::Tun).count,
+            1,
+            "the flow came in by the way in that caught it, which only `handed` can say"
+        );
+        assert_eq!(
+            arrivals.of(By::ProxyPort).count,
+            0,
+            "and not by the handler's own, which is what it would be without that entry"
+        );
+        assert_eq!(opened.at(), Some(at_door), "and the door said where it is");
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

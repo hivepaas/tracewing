@@ -182,6 +182,8 @@ impl Harness {
                 sockets: Arc::clone(&sockets),
                 client_certs: Arc::clone(&client_certs),
                 scripts: Arc::clone(&scripts),
+                handed: Default::default(),
+                http3: Default::default(),
             },
             async {
                 let _ = stopped.await;

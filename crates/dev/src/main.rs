@@ -391,6 +391,8 @@ async fn main() -> Result<()> {
                     sockets: Default::default(),
                     client_certs,
                     scripts: Default::default(),
+                    handed: Default::default(),
+                    http3: Default::default(),
                 },
                 async move {
                     match exit_after {

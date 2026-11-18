@@ -51,6 +51,13 @@ pub struct StorageSettings {
     /// the offer goes around tracewing. The flow keeps the header as it came.
     /// Applies at once, through [`Live`].
     pub hide_http3: bool,
+    /// Read a chosen program's HTTP/3 instead of refusing it, in a mode that
+    /// takes this machine's packets by route. The program's UDP 443 goes to a
+    /// QUIC door of tracewing's own rather than to the server, and the flows
+    /// in it are recorded like any others. Off, HTTP/3 is refused and the
+    /// program falls back to HTTP/2, which is how tracewing has always seen
+    /// it. Applies at once, through [`Live`].
+    pub capture_http3: bool,
     /// Trust servers whose certificates come from an authority this computer
     /// trusts, not only from the public ones. Read when the app starts.
     pub os_roots: bool,
@@ -125,6 +132,9 @@ impl Default for StorageSettings {
             sessions_kept: 5,
             other_devices: false,
             hide_http3: true,
+            // Off: it terminates QUIC for the programs somebody chose, which
+            // is a thing to ask for rather than to find already happening.
+            capture_http3: false,
             os_roots: true,
             ai_secrets: false,
             ai_actions: false,
@@ -146,6 +156,7 @@ impl Default for StorageSettings {
 #[derive(Debug, Default)]
 pub struct Live {
     hide_http3: AtomicBool,
+    capture_http3: AtomicBool,
     body_max: AtomicU64,
 }
 
@@ -159,11 +170,36 @@ impl Live {
     pub fn apply(&self, settings: &StorageSettings) {
         self.hide_http3
             .store(settings.hide_http3, Ordering::Relaxed);
+        self.capture_http3
+            .store(settings.capture_http3, Ordering::Relaxed);
         self.body_max.store(settings.body_max(), Ordering::Relaxed);
     }
 
+    /// The setting as it stands, which the Settings page shows and the page
+    /// alone should ask for: what the proxy acts on is
+    /// [`Self::hiding_http3`].
     pub fn hide_http3(&self) -> bool {
         self.hide_http3.load(Ordering::Relaxed)
+    }
+
+    pub fn capture_http3(&self) -> bool {
+        self.capture_http3.load(Ordering::Relaxed)
+    }
+
+    /// Whether servers' offers of HTTP/3 are taken out of what a client
+    /// sees.
+    ///
+    /// Not the setting on its own. **Capturing HTTP/3 and hiding the offers
+    /// of it are opposite things**, and one of them has to give: a program
+    /// whose offers are hidden learns of HTTP/3 from nobody, never speaks
+    /// it, and leaves the door with nothing to read. So while capture is on
+    /// the offers go through, for every program and not only for the chosen
+    /// ones -- a program nobody chose then tries QUIC and is refused, which
+    /// costs it one attempt and is what a client that learns HTTP/3 from a
+    /// DNS record has always done anyway, since hiding the offers never
+    /// reached those.
+    pub fn hiding_http3(&self) -> bool {
+        self.hide_http3() && !self.capture_http3()
     }
 
     /// See [`StorageSettings::body_max`]. A body on its way is held to the
@@ -179,6 +215,7 @@ impl StorageSettings {
     pub fn take_live(&mut self, other: &StorageSettings) {
         self.other_devices = other.other_devices;
         self.hide_http3 = other.hide_http3;
+        self.capture_http3 = other.capture_http3;
         self.ai_secrets = other.ai_secrets;
         self.ai_actions = other.ai_actions;
         self.mark_readings = other.mark_readings;

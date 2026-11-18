@@ -74,7 +74,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | WebSocket: send a message of your own into an open socket, to the server or to the app, from the inspector's Messages; it is listed with the others; a call written out in it — `balanceOf(0xd8dA…)` — sent as the calldata it stands for, as in Compose | Beta | Pro |
 | WebSocket: breakpoints on messages, each way by a rule ("Pause a socket's messages to the server" or "to the app"): each held on the Paused screen, to send on as it came, changed, or not at all | Beta | Pro |
 | gRPC and protobuf: decoded with a `.proto` file or without one, and editable | 1.x | Pro |
-| HTTP/3 | 2.0 | Pro |
+| HTTP/3 on both ends, for a program chosen in the local mode: its QUIC terminated on this machine's own adapter, the HTTP/3 in it recorded as any other flow, and the server asked over HTTP/3 too. Off by default; a program nobody chose is refused and falls back to HTTP/2, as before. [What capturing HTTP/3 takes](design/http3.md) | 2.0 | Pro |
 | Raw TCP and UDP | 2.0 | Pro |
 
 ## The flow list
