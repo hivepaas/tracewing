@@ -129,16 +129,37 @@ impl Handed {
         self.lock().get(&from).cloned()
     }
 
-    fn remember(&self, from: SocketAddr, known: Known) {
+    /// Remembers `known` under `from` until the answer is dropped.
+    ///
+    /// A guard rather than a `remember` and a `forget` to be called in turn,
+    /// because the two callers hold the entry for different lengths of
+    /// time -- a handover for as long as its connection, a captured QUIC
+    /// client for as long as its pair of ends sits in the table -- and
+    /// because a task that panics between the two would leave an entry
+    /// naming a program for an address the operating system will hand out
+    /// again.
+    pub fn keep(self: &Arc<Self>, from: SocketAddr, known: Known) -> Keeping {
         self.lock().insert(from, known);
-    }
-
-    fn forget(&self, from: SocketAddr) {
-        self.lock().remove(&from);
+        Keeping {
+            handed: Arc::clone(self),
+            from,
+        }
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, HashMap<SocketAddr, Known>> {
         self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+/// One entry in [`Handed`], which goes when this does.
+pub struct Keeping {
+    handed: Arc<Handed>,
+    from: SocketAddr,
+}
+
+impl Drop for Keeping {
+    fn drop(&mut self) {
+        self.handed.lock().remove(&self.from);
     }
 }
 
@@ -155,7 +176,7 @@ pub async fn give(
     flow: Flow,
     by: crate::source::By,
     proxy: SocketAddr,
-    handed: &Handed,
+    handed: &Arc<Handed>,
 ) -> Result<()> {
     let Flow {
         mut stream,
@@ -182,7 +203,7 @@ pub async fn give(
         .with_context(|| format!("hand a connection from {client} to the proxy at {proxy}"))?;
     to_proxy.set_nodelay(true)?;
     let from = to_proxy.local_addr()?;
-    handed.remember(
+    let _kept = handed.keep(
         from,
         Known {
             by,
@@ -191,9 +212,9 @@ pub async fn give(
             app: who.map(told),
         },
     );
-    let result = tunnel(&mut stream, &mut to_proxy, &to, &first, silent).await;
-    handed.forget(from);
-    result.with_context(|| format!("a connection from {client} to {}", to.authority()))
+    tunnel(&mut stream, &mut to_proxy, &to, &first, silent)
+        .await
+        .with_context(|| format!("a connection from {client} to {}", to.authority()))
 }
 
 /// Where the flow was going, by name if its first record names it.
@@ -430,7 +451,7 @@ mod tests {
     async fn a_plain_request_is_not_wrapped_in_a_tunnel() {
         let (proxy, served) = fake_proxy(OK).await;
         let (mine, theirs) = tokio::io::duplex(1024);
-        let handed = Handed::default();
+        let handed = Arc::new(Handed::default());
         let (giving, ()) = tokio::join!(
             give(flow(theirs, None), By::Given, proxy, &handed),
             talk(mine, PLAIN_POST)
@@ -451,7 +472,7 @@ mod tests {
     async fn tls_asks_for_a_tunnel_on_the_clients_behalf() {
         let (proxy, served) = fake_proxy(OK).await;
         let (mine, theirs) = tokio::io::duplex(1024);
-        let handed = Handed::default();
+        let handed = Arc::new(Handed::default());
         let (giving, ()) = tokio::join!(
             give(flow(theirs, None), By::Given, proxy, &handed),
             talk(mine, TLS_HELLO)
@@ -545,7 +566,7 @@ mod tests {
             String::from_utf8_lossy(&head).into_owned()
         });
         let (mut mine, theirs) = tokio::io::duplex(1024);
-        let handed = Handed::default();
+        let handed = Arc::new(Handed::default());
         let heard = async {
             let mut said = String::new();
             mine.read_to_string(&mut said).await.unwrap();
@@ -567,7 +588,7 @@ mod tests {
         let (mut mine, theirs) = tokio::io::duplex(1024);
         // It fits the buffer, so this needs nobody at the other end yet.
         mine.write_all(TLS_HELLO).await.unwrap();
-        let handed = Handed::default();
+        let handed = Arc::new(Handed::default());
         let problem = give(flow(theirs, None), By::Given, proxy, &handed)
             .await
             .expect_err("403 is not a tunnel");
@@ -606,7 +627,7 @@ mod tests {
     async fn a_flow_taken_as_an_address_is_asked_for_by_the_name_in_its_hello() {
         let (proxy, served) = fake_proxy(OK).await;
         let (mine, theirs) = tokio::io::duplex(4096);
-        let handed = Handed::default();
+        let handed = Arc::new(Handed::default());
         let hello = name::hello(&[name::sni("github.com")]);
         let to = Target::Addr("140.82.121.4:443".parse().unwrap());
         let (giving, ()) = tokio::join!(
@@ -634,7 +655,7 @@ mod tests {
     async fn a_hello_that_names_nobody_leaves_the_flow_its_address() {
         let (proxy, served) = fake_proxy(OK).await;
         let (mine, theirs) = tokio::io::duplex(4096);
-        let handed = Handed::default();
+        let handed = Arc::new(Handed::default());
         let hello = name::hello(&[]);
         let to = Target::Addr("140.82.121.4:443".parse().unwrap());
         let (giving, ()) = tokio::join!(
@@ -659,7 +680,7 @@ mod tests {
     async fn a_name_the_source_knew_is_not_replaced_by_the_hello() {
         let (proxy, served) = fake_proxy(OK).await;
         let (mine, theirs) = tokio::io::duplex(4096);
-        let handed = Handed::default();
+        let handed = Arc::new(Handed::default());
         let hello = name::hello(&[name::sni("somewhere.else")]);
         let (giving, ()) = tokio::join!(
             give(flow(theirs, None), By::Given, proxy, &handed),
@@ -682,7 +703,7 @@ mod tests {
     async fn a_hello_that_arrives_in_two_pieces_is_still_read() {
         let (proxy, served) = fake_proxy(OK).await;
         let (mut mine, theirs) = tokio::io::duplex(4096);
-        let handed = Handed::default();
+        let handed = Arc::new(Handed::default());
         let hello = name::hello(&[name::sni("github.com"), (0x0033, vec![7; 600])]);
         let (head, tail) = hello.split_at(8);
         let to = Target::Addr("140.82.121.4:443".parse().unwrap());

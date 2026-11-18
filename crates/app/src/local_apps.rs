@@ -441,13 +441,20 @@ impl crate::traffic::Traffic {
         .collect();
         let data_dir = self.data_dir.clone();
         let serving = self.engine.serving.clone();
+        // What reading a chosen program's HTTP/3 takes from the proxy, which
+        // has been running since before this switch was pressed.
+        let http3 = crate::local_source::Http3 {
+            live: std::sync::Arc::clone(&self.engine.live),
+            door: std::sync::Arc::clone(&self.engine.http3),
+            handed: std::sync::Arc::clone(&self.engine.handed),
+        };
         self.local.starting = true;
         self.local.problem = None;
         cx.notify();
         cx.spawn(async move |this, cx| {
             let made = cx
                 .background_executor()
-                .spawn(async move { crate::local_source::start(&wanted, ports, &data_dir) })
+                .spawn(async move { crate::local_source::start(&wanted, ports, &data_dir, &http3) })
                 .await;
             let _ = this.update(cx, |this, cx| {
                 this.local.starting = false;

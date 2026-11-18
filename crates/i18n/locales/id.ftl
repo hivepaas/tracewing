@@ -1984,6 +1984,12 @@ t2b74e518 = Sembunyikan tawaran HTTP/3 dari server
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
 t5e1cd441 = HTTP/3 berjalan di atas UDP, yang tidak dibawa proxy mana pun, jadi aplikasi yang memakainya melewati tracewing. Ini menghapus tawaran HTTP/3 dari respons server, sehingga aplikasi yang tadinya akan tahu HTTP/3 dari tawaran itu tetap di HTTP/2. Aplikasi yang tahu dari catatan DNS tetap mencoba: memblokir port UDP 443, di halaman Siapkan, yang menghentikannya. Flow tetap menampilkan tawaran itu seperti yang dikirim server.
 
+# Read chosen programs' HTTP/3
+tc152d533 = Baca HTTP/3 program yang dipilih
+
+# Rather than refusing it. The HTTP/3 of the programs chosen for taking this computer's own traffic goes to a QUIC port of tracewing's own instead of to the server, and its flows are recorded like any others. A program nobody chose falls back to HTTP/2 as before, and so does every other way in. While this is on, servers' offers of HTTP/3 are left in whatever the setting above says, because a program never offered HTTP/3 never speaks it. Blocking UDP port 443, on the Set up page, stops it too: those datagrams never reach tracewing at all. Applies at once.
+t7b8d772d = Alih-alih menolaknya. HTTP/3 dari program yang dipilih untuk mengambil trafik komputer ini pergi ke port QUIC milik tracewing sendiri, bukan ke server, dan flow-nya direkam seperti yang lain. Program yang tidak dipilih siapa pun tetap kembali ke HTTP/2 seperti sebelumnya, begitu juga setiap jalan masuk yang lain. Selama ini aktif, tawaran HTTP/3 dari server dibiarkan apa pun kata pengaturan di atas, sebab program yang tidak pernah ditawari HTTP/3 tidak akan pernah memakainya. Memblokir port UDP 443, di halaman Siapkan, juga menghentikannya: datagram itu tidak sampai ke tracewing sama sekali. Langsung berlaku.
+
 # Size of a session
 ta20fa102 = Ukuran sesi
 

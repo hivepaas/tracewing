@@ -2109,6 +2109,12 @@ t2b74e518 = Ocultar as ofertas de HTTP/3 dos servidores
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
 t5e1cd441 = O HTTP/3 usa UDP, que nenhum proxy transporta, então um app que o usa contorna o tracewing. Isto tira das respostas as ofertas de HTTP/3 dos servidores, então um app que teria conhecido o HTTP/3 por uma delas fica no HTTP/2. Um app que o conhece por um registro DNS tenta de todo modo: bloquear a porta UDP 443, na página Configurar, é o que impede isso. Os fluxos ainda mostram as ofertas como os servidores as enviaram.
 
+# Read chosen programs' HTTP/3
+tc152d533 = Ler o HTTP/3 dos programas escolhidos
+
+# Rather than refusing it. The HTTP/3 of the programs chosen for taking this computer's own traffic goes to a QUIC port of tracewing's own instead of to the server, and its flows are recorded like any others. A program nobody chose falls back to HTTP/2 as before, and so does every other way in. While this is on, servers' offers of HTTP/3 are left in whatever the setting above says, because a program never offered HTTP/3 never speaks it. Blocking UDP port 443, on the Set up page, stops it too: those datagrams never reach tracewing at all. Applies at once.
+t7b8d772d = Em vez de recusá-lo. O HTTP/3 dos programas escolhidos para pegar o tráfego deste computador vai para uma porta QUIC do próprio tracewing em vez de ir para o servidor, e os seus fluxos são gravados como quaisquer outros. Um programa que ninguém escolheu volta ao HTTP/2 como antes, e toda outra via de entrada também. Enquanto isto está ligado, as ofertas de HTTP/3 dos servidores ficam como vieram, diga o que disser a opção acima, porque um programa a quem o HTTP/3 nunca é oferecido nunca o fala. Bloquear a porta UDP 443, na página Configurar, também o impede: esses datagramas não chegam ao tracewing. Vale na hora.
+
 # Size of a session
 ta20fa102 = Tamanho de uma sessão
 

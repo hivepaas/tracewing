@@ -125,7 +125,9 @@ Five things found by reading, each one shaping the plan below.
    socket of its own and puts the answer back as a packet from the address it
    was sent to, with a table, an idle time and a cap. Pointing a chosen app's
    443 at an endpoint of ours instead of at the server is a change of
-   destination, not a new mechanism.
+   destination, not a new mechanism — true as far as it goes, and step three
+   says what it left out: the asking that decides, and the way back for a
+   datagram the answer refuses.
 4. **`Apps::sent` names the program behind a datagram** (#358). Choosing which
    apps to capture over QUIC needs exactly that, and until #358 the sieve could
    not answer it: it had only the TCP table.
@@ -175,14 +177,63 @@ names over one endpoint — which is what says the minting is per handshake — 
 request sent on to a server, a request that reaches none, and a client that
 trusts nothing, which gets nowhere.
 
-**Three, next.** The packets, and the last thing between this and a browser's
-HTTP/3 being captured. `datagrams.rs` sends a chosen app's UDP 443 to the
-endpoint instead of refusing it, with a table beside it saying where each
-datagram was really going — the UDP twin of `handover.rs`. Unchosen apps keep
-today's behaviour exactly, and refusal stays what happens when HTTP/3 capture
-is off. One setting, off by default, which has to be made coherent with
-hiding the offers and blocking UDP 443: capturing means doing neither.
-The same code serves a phone on the WireGuard tunnel.
+**Three, landed.** The packets. [`datagrams.rs`](../../crates/proxy/src/datagrams.rs)
+sends a chosen program's UDP 443 to the door instead of refusing it, which is
+what makes everything above reachable by a browser rather than only by tests.
+UDP 443 now has three answers, and which one a datagram gets depends on the
+program behind it: passed on, carried to the door, or refused. The setting is
+`capture_http3`, off, and it applies while the session runs.
+
+Four things about it, three of which the plan above had wrong or did not see.
+
+- **There is no table beside it; it is the same table.** The plan called for
+  "the UDP twin of `handover.rs`" and what it needed was `handover.rs`
+  itself. A captured client reaches the door over the loopback from a socket
+  of tracewing's own, so `conn.remote_address()` says nothing about whose
+  connection it is — which is exactly the shape of a connection a way in
+  hands to the proxy port, and `Handed` is the table that answers it, read by
+  `capture.rs` under exactly that address. So the catcher writes a `Known`
+  there and nothing in the recording core changed at all: the way in, the
+  client's real address, and the program are on the flow because that path
+  already existed. An entry lives exactly as long as its pair of ends, held
+  by a guard rather than remembered and forgotten in turn.
+- **The refusal could not move.** Refusing is the stack's own answer and not
+  something `datagrams.rs` could do: `smoltcp` holds no socket for port 443,
+  and the ICMP port unreachable it sends for one is what makes a client give
+  up on QUIC. So a datagram whose program nobody chose goes **back** to the
+  stack, down a channel of its own, and is refused there exactly as it was
+  before any of this — the row saying the attempt happened included. Two
+  refusals in two places would have been two answers to drift apart.
+- **The cost is a wait, and every program's QUIC pays it.** Which program
+  holds a datagram socket is a question for the operating system, so the
+  first datagram of each new pair of ends waits for an answer — one look at a
+  table of the kernel's, a millisecond or two in the ordinary case and half a
+  second at worst. A program nobody chose pays it too, and is then refused:
+  that is the one way an unchosen program's behaviour is not quite what it
+  was, and it is paid only while capture is on. The datagrams that arrive
+  during the wait are **held**, not dropped, because a QUIC client that loses
+  its first flight waits out a timeout of its own before sending it again.
+- **"Capturing means doing neither" came out as: capture wins, for
+  everybody.** While capture is on, servers' offers of HTTP/3 are not hidden
+  from anyone — `Live::hiding_http3` is the setting and `!capture_http3`
+  together — because a program never offered HTTP/3 never speaks it and the
+  door would have nothing to read. Hiding them from unchosen programs alone
+  would need the chosen list in the response path, which is a different
+  change; what this costs is that an unchosen program may now try QUIC and be
+  refused, which is what a program that learns HTTP/3 from DNS has always
+  done anyway. Blocking UDP 443 still defeats capture outright, since those
+  datagrams never reach tracewing, and the setting's own text says so.
+
+Where the two halves meet is `quic_server::Opened` and `ProxyOptions::handed`:
+the door is opened inside the proxy and the way in that feeds it is built
+outside and before it — a local mode's adapter is made when somebody presses
+the switch — so the port is told rather than agreed in advance.
+
+What is **not** done here: the same code would serve a phone on the WireGuard
+tunnel, but nothing points it at one yet; and a real browser's HTTP/3 through
+a real adapter is still unverified — the tests carry a real `h3` client's
+packets through the real catcher, door, core and way out, with only the
+network itself stood in for.
 
 **Four, landed.** [`quic_upstream.rs`](../../crates/proxy/src/quic_upstream.rs):
 the way out over QUIC, so both halves of a captured flow are HTTP/3 rather
@@ -225,8 +276,7 @@ Three things about it are worth knowing before reading the code:
   spelled in one place.
 
 What it does not do is race the families the way hyper's connector races them
-for TCP: addresses are tried in the order the resolver gave them. Nothing opens
-the door yet either, so this is reached only by its own tests and the door's.
+for TCP: addresses are tried in the order the resolver gave them.
 
 **Five.** The rest, each its own decision: 0-RTT (proposed: **off**, and said
 out loud, because early data a proxy replays is a request sent twice),
@@ -254,6 +304,13 @@ DNS-over-QUIC, WebTransport — which keeps the `quic` row it has now,
   store and needs its own run before anything here is claimed of it.
 
 ## Numbers to keep in mind
+
+One more since step three: the read for an answer coming back is **one byte
+longer** than a datagram may carry. A read into exactly `BODY_MAX` truncates
+anything longer and the path would then put 1472 bytes of a longer datagram
+on the wire as though that were all of it, which for QUIC means a packet
+whose authentication fails for a reason nothing anywhere could name. One byte
+makes it a drop with a line in the log instead.
 
 Chrome's transport parameters say `max_udp_payload_size 1472`, and quinn's say
 the same. `datagrams.rs` caps a datagram at `BODY_MAX` 1472 and drops what is

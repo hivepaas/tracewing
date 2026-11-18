@@ -1984,6 +1984,12 @@ t2b74e518 = 隐藏服务器的 HTTP/3 通告
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
 t5e1cd441 = HTTP/3 基于 UDP，而代理无法转发 UDP，因此使用 HTTP/3 的应用会绕过 tracewing。此选项会从服务器响应中移除 HTTP/3 通告，因此本会从通告得知 HTTP/3 的应用会继续使用 HTTP/2。改从 DNS 记录得知的应用仍会尝试：只有在“配置”页面阻止 UDP 443 端口才能阻止它。流量记录中仍会显示服务器发送的原始通告。
 
+# Read chosen programs' HTTP/3
+tc152d533 = 读取所选程序的 HTTP/3
+
+# Rather than refusing it. The HTTP/3 of the programs chosen for taking this computer's own traffic goes to a QUIC port of tracewing's own instead of to the server, and its flows are recorded like any others. A program nobody chose falls back to HTTP/2 as before, and so does every other way in. While this is on, servers' offers of HTTP/3 are left in whatever the setting above says, because a program never offered HTTP/3 never speaks it. Blocking UDP port 443, on the Set up page, stops it too: those datagrams never reach tracewing at all. Applies at once.
+t7b8d772d = 而不是拒绝它。为接管本机流量而选中的程序，其 HTTP/3 会发往 tracewing 自己的一个 QUIC 端口而不是服务器，其流量记录与其他记录一样保存。没有被选中的程序仍像以前那样回退到 HTTP/2，其他所有的路也是如此。此选项开启时，无论上面的设置如何，服务器的 HTTP/3 通告都会原样保留：从未收到 HTTP/3 通告的程序永远不会使用它。在“配置”页面阻止 UDP 443 端口同样会让它失效：那些数据报根本到不了 tracewing。立即生效。
+
 # Size of a session
 ta20fa102 = 会话大小
 

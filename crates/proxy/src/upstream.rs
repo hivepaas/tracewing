@@ -730,7 +730,7 @@ fn pinned_std_datagrams(v6: bool) -> io::Result<std::net::UdpSocket> {
 /// The family's unspecified address with a port of the operating system's
 /// choosing, which is how a socket binds before it is connected: a NAT's
 /// source port is nobody's business.
-fn any_port(v6: bool) -> SocketAddr {
+pub(crate) fn any_port(v6: bool) -> SocketAddr {
     match v6 {
         true => "[::]:0".parse().expect("a literal"),
         false => "0.0.0.0:0".parse().expect("a literal"),

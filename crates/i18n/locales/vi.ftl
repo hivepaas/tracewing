@@ -1984,6 +1984,12 @@ t2b74e518 = Ẩn lời mời dùng HTTP/3 của server
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
 t5e1cd441 = HTTP/3 chạy trên UDP, thứ không proxy nào chuyển được, nên app dùng nó sẽ đi vòng qua tracewing. Tuỳ chọn này bỏ lời mời dùng HTTP/3 khỏi response của server, nên app lẽ ra biết HTTP/3 từ lời mời đó sẽ ở lại HTTP/2. App biết HTTP/3 từ bản ghi DNS thì vẫn thử: chặn cổng UDP 443, ở trang Thiết lập, mới ngăn được. Flow vẫn hiện lời mời đúng như server gửi.
 
+# Read chosen programs' HTTP/3
+tc152d533 = Đọc HTTP/3 của chương trình đã chọn
+
+# Rather than refusing it. The HTTP/3 of the programs chosen for taking this computer's own traffic goes to a QUIC port of tracewing's own instead of to the server, and its flows are recorded like any others. A program nobody chose falls back to HTTP/2 as before, and so does every other way in. While this is on, servers' offers of HTTP/3 are left in whatever the setting above says, because a program never offered HTTP/3 never speaks it. Blocking UDP port 443, on the Set up page, stops it too: those datagrams never reach tracewing at all. Applies at once.
+t7b8d772d = Thay vì từ chối nó. HTTP/3 của những chương trình đã chọn để lấy traffic của máy này sẽ đi tới một cổng QUIC của riêng tracewing thay vì tới server, và flow của nó được ghi lại như mọi flow khác. Chương trình không ai chọn vẫn quay về HTTP/2 như trước, mọi đường vào khác cũng vậy. Khi bật, lời mời dùng HTTP/3 của server được giữ nguyên bất kể tuỳ chọn ở trên nói gì, vì chương trình chưa từng được mời HTTP/3 thì không bao giờ nói HTTP/3. Chặn cổng UDP 443, ở trang Thiết lập, cũng làm nó dừng: những datagram đó không tới được tracewing. Áp dụng ngay.
+
 # Size of a session
 ta20fa102 = Kích thước một phiên
 

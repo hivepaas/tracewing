@@ -2179,6 +2179,12 @@ t2b74e518 = Скрывать предложения HTTP/3 от серверов
 # HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
 t5e1cd441 = HTTP/3 работает поверх UDP, который не передаёт ни один прокси, поэтому приложение, использующее его, идёт в обход tracewing. Эта настройка убирает из ответов серверов предложения HTTP/3, поэтому приложение, которое узнало бы о HTTP/3 из такого предложения, остаётся на HTTP/2. Приложение, которое узнаёт о нём из DNS-записи, всё равно попробует: остановит это только блокировка UDP-порта 443 на странице «Настройка». В потоках предложения по-прежнему видны такими, какими их отправили серверы.
 
+# Read chosen programs' HTTP/3
+tc152d533 = Читать HTTP/3 выбранных программ
+
+# Rather than refusing it. The HTTP/3 of the programs chosen for taking this computer's own traffic goes to a QUIC port of tracewing's own instead of to the server, and its flows are recorded like any others. A program nobody chose falls back to HTTP/2 as before, and so does every other way in. While this is on, servers' offers of HTTP/3 are left in whatever the setting above says, because a program never offered HTTP/3 never speaks it. Blocking UDP port 443, on the Set up page, stops it too: those datagrams never reach tracewing at all. Applies at once.
+t7b8d772d = Вместо того чтобы отклонять его. HTTP/3 программ, выбранных для перехвата трафика этого компьютера, идёт на собственный QUIC-порт tracewing, а не на сервер, и его потоки записываются как любые другие. Программа, которую никто не выбрал, по-прежнему возвращается к HTTP/2, и любой другой путь тоже. Пока это включено, предложения HTTP/3 от серверов остаются на месте, что бы ни говорила настройка выше: программа, которой HTTP/3 никогда не предлагали, никогда на нём и не говорит. Блокировка UDP-порта 443 на странице «Настройка» тоже это останавливает: такие датаграммы вообще не доходят до tracewing. Применяется сразу.
+
 # Size of a session
 ta20fa102 = Размер сессии
 

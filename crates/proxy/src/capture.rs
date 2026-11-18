@@ -603,7 +603,7 @@ impl FlowHandler {
         let set = std::mem::take(&mut self.response_headers);
         // A rule that says what `Alt-Svc` is means it.
         let hide_http3 =
-            self.live.hide_http3() && !set.iter().any(|(name, _)| name == header::ALT_SVC);
+            self.live.hiding_http3() && !set.iter().any(|(name, _)| name == header::ALT_SVC);
         for (name, value) in set {
             match value {
                 Some(value) => res.headers_mut().insert(name, value),
@@ -2569,6 +2569,24 @@ pub(crate) mod harness {
             tracewing_store::spool::SpoolThread,
         ),
     ) {
+        alone_knowing(dir, Default::default(), Default::default())
+    }
+
+    /// The same, with the two tables a way in outside the proxy writes into:
+    /// what it knows about each client it hands over, and what has arrived
+    /// by each way in. A test that feeds the handler the way a way in does
+    /// holds both, and can then ask what the handler made of them.
+    pub(crate) fn alone_knowing(
+        dir: &std::path::Path,
+        handed: Arc<crate::handover::Handed>,
+        arrivals: Arc<crate::source::Arrivals>,
+    ) -> (
+        FlowHandler,
+        (
+            tracewing_store::store::WriterThread,
+            tracewing_store::spool::SpoolThread,
+        ),
+    ) {
         let settings = tracewing_store::settings::StorageSettings::default();
         let live = Arc::new(tracewing_store::settings::Live::new(&settings));
         let shared = Arc::new(tracewing_store::session::Shared::default());
@@ -2606,8 +2624,8 @@ pub(crate) mod harness {
                 check: Default::default(),
                 pauses: Default::default(),
                 apps: None,
-                handed: Default::default(),
-                arrivals: Default::default(),
+                handed,
+                arrivals,
                 live,
                 network: Default::default(),
                 relay: Arc::clone(&relay),

@@ -51,7 +51,7 @@ fn the_local_way_in_comes_up_and_goes_away_again() {
         // empty -- an empty one keeps nothing, which would test less.
         programs: vec![Picked::at(r"C:\Windows\System32\curl.exe".into())],
     };
-    let started = local_source::start(&local, vec![9090], &dir)
+    let started = local_source::start(&local, vec![9090], &dir, &local_source::Http3::off())
         .expect("the way in assembles")
         .expect("the switch is on, so there is a source");
 
