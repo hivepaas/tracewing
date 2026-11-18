@@ -59,8 +59,8 @@ pub const METRIC: u32 = 50;
 /// `run_as_admin` for an adapter in this file is inside its tests.
 ///
 /// `the_step_writes_nothing_that_outlives_the_kernel`, below, is what keeps
-/// that true rather than merely written down: a line that persisted
-/// anything would have to use a verb that is not `ip` or `sysctl`.
+/// that true rather than merely written down: every command in the script,
+/// and not merely the first on each line, has to be `ip` or `sysctl`.
 ///
 /// What a reader is told about it, and the one thing this reading cannot
 /// rule out -- somebody else's software keeping a profile of a device it
@@ -372,9 +372,18 @@ mod tests {
     /// The claim in [`script`]'s own documentation, as something that can
     /// fail. A whitelist rather than a list of forbidden paths, because the
     /// ways to write a file outnumber the ways to ask the kernel for an
-    /// interface: every line that does anything has to be `ip` or `sysctl`,
-    /// so a `tee`, a redirection into `/etc`, an `nmcli` or a `systemctl`
-    /// fails here whatever it is spelled like.
+    /// interface: a `tee`, an `nmcli`, a `systemctl` or a redirection into
+    /// `/etc` fails here whatever it is spelled like.
+    ///
+    /// **Every command, not every line.** Checking the start of the line
+    /// would pass `ip link set tracewing up && nmcli connection add …`,
+    /// which begins with an allowed verb and then does the thing this test
+    /// exists to forbid. Banning the operators instead is not open either:
+    /// the first line of the script carries `||` and a redirection already,
+    /// and has to. So the line is split on them and every piece must stand
+    /// on its own -- which leaves `2>/dev/null` inside the `ip` piece where
+    /// it belongs, and leaves `:` as itself, the one command that is allowed
+    /// because it does nothing.
     #[test]
     fn the_step_writes_nothing_that_outlives_the_kernel() {
         let script = script(1000);
@@ -385,10 +394,22 @@ mod tests {
             .collect();
         assert!(!doing.is_empty(), "the script does nothing:\n{script}");
         for line in &doing {
-            assert!(
-                line.starts_with("ip ") || line.starts_with("sysctl "),
-                "only the kernel may be asked for anything: {line}"
-            );
+            // Every operator is a separator and the empty pieces an `||`
+            // or an `&&` leaves behind are dropped below, so the pair does
+            // not have to be told from the single.
+            let split = line.replace(['|', ';', '&'], "\n");
+            let pieces: Vec<&str> = split
+                .lines()
+                .map(str::trim)
+                .filter(|piece| !piece.is_empty())
+                .collect();
+            assert!(!pieces.is_empty(), "an empty command in: {line}");
+            for piece in pieces {
+                assert!(
+                    piece.starts_with("ip ") || piece.starts_with("sysctl ") || piece == ":",
+                    "only the kernel may be asked for anything: {piece}\n  in: {line}"
+                );
+            }
         }
         assert!(
             !script.contains("/etc"),
