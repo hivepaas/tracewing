@@ -41,6 +41,31 @@ pub const METRIC: u32 = 50;
 ///
 /// `user` is the uid the device belongs to, so that tracewing can open it
 /// afterwards without being root.
+///
+/// **It writes nothing that outlives the kernel**, which is the question
+/// somebody asks about any step that ran as an administrator: is there
+/// something of it left to clean up. These nine lines are an `ip tuntap`,
+/// two `sysctl -qw`, two `ip addr add`, an `ip link set up` and two
+/// `ip route add` -- live kernel state, every one of them. `ip tuntap add`
+/// makes a device persistent across **the process that opened it**, which
+/// is the trick the whole mode rests on, and not across a boot.
+///
+/// What is this file's to answer rather than the kernel's is whether
+/// tracewing puts any of it back, and it does not. Nowhere in the tree is
+/// there a unit, a udev rule, a network profile or anything under
+/// `/etc/network`, and the knobs are set with `sysctl -qw` rather than from
+/// `/etc/sysctl.d`, so the next boot does not set them either. In
+/// production the script is run from one place, [`make_adapter`]; the other
+/// `run_as_admin` for an adapter in this file is inside its tests.
+///
+/// `the_step_writes_nothing_that_outlives_the_kernel`, below, is what keeps
+/// that true rather than merely written down: every command in the script,
+/// and not merely the first on each line, has to be `ip` or `sysctl`.
+///
+/// What a reader is told about it, and the one thing this reading cannot
+/// rule out -- somebody else's software keeping a profile of a device it
+/// saw -- are in `setup_page::local_when_done`, which is where the question
+/// is actually asked.
 pub fn script(user: u32) -> String {
     let (device, metric) = (DEVICE, METRIC);
     format!(
@@ -341,6 +366,94 @@ mod tests {
             [format!(
                 "ip tuntap del dev {DEVICE} mode tun 2>/dev/null || :"
             )]
+        );
+    }
+
+    /// The claim in [`script`]'s own documentation, as something that can
+    /// fail. A whitelist rather than a list of forbidden paths, because the
+    /// ways to write a file outnumber the ways to ask the kernel for an
+    /// interface: a `tee`, an `nmcli` or a `systemctl` fails here whatever
+    /// it is spelled like.
+    ///
+    /// Three questions, because the first two were each found passing
+    /// something the comment above claimed they caught. **Who may be
+    /// commanded**, below. **Whether anything is written beside the
+    /// command** -- a redirection or a substitution needs no forbidden verb
+    /// and no forbidden path, and `ip link set … up > /var/lib/x` was green
+    /// until it was asked. **Whether a path under `/etc` appears** at all,
+    /// which neither of the others would catch in `sysctl -p
+    /// /etc/sysctl.d/…`: an allowed verb, no redirection, a file somebody
+    /// else put there.
+    ///
+    /// **Every command, not every line.** Checking the start of the line
+    /// would pass `ip link set tracewing up && nmcli connection add …`,
+    /// which begins with an allowed verb and then does the thing this test
+    /// exists to forbid. Banning the operators instead is not open either:
+    /// the first line of the script carries `||` and a redirection already,
+    /// and has to. So the line is split on them and every piece must stand
+    /// on its own -- which leaves `2>/dev/null` inside the `ip` piece where
+    /// it belongs, and leaves `:` as itself, the one command that is allowed
+    /// because it does nothing.
+    #[test]
+    fn the_step_writes_nothing_that_outlives_the_kernel() {
+        let script = script(1000);
+        let doing: Vec<&str> = script
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty() && !line.starts_with('#') && *line != "set -e")
+            .collect();
+        assert!(!doing.is_empty(), "the script does nothing:\n{script}");
+        for line in &doing {
+            // Every operator is a separator and the empty pieces an `||`
+            // or an `&&` leaves behind are dropped below, so the pair does
+            // not have to be told from the single.
+            let split = line.replace(['|', ';', '&'], "\n");
+            let pieces: Vec<&str> = split
+                .lines()
+                .map(str::trim)
+                .filter(|piece| !piece.is_empty())
+                .collect();
+            assert!(!pieces.is_empty(), "an empty command in: {line}");
+            for piece in pieces {
+                assert!(
+                    piece.starts_with("ip ") || piece.starts_with("sysctl ") || piece == ":",
+                    "only the kernel may be asked for anything: {piece}\n  in: {line}"
+                );
+            }
+        }
+        // Who may be commanded is only half of it: a line whose every
+        // piece is an `ip` can still write a file beside the command, and
+        // nothing about that file has to be under /etc to outlive a boot.
+        //
+        // A whitelist again, and for the reason the first one was: every
+        // version of this that named the spellings to fear sprang another
+        // leak. `> /var/lib/x` passed the verb check, `$(touch …)` and a
+        // backticked one passed the redirection check, and `< <(touch …)`
+        // passed both of those -- no `>`, no `$(`, no backtick, every piece
+        // beginning with `ip `. So the commands may hold only the
+        // characters this step actually needs, and anything else, named or
+        // not yet thought of, is something happening besides asking the
+        // kernel.
+        //
+        // Asked of the commands rather than of the whole script, because
+        // the comments in it are prose: the one above `sysctl` says
+        // `linkdown` in backticks, and reading the script whole turned this
+        // into a test that failed on the script it was written for.
+        let commands = doing.join("\n").replace("2>/dev/null", "");
+        let odd: Vec<char> = commands
+            .chars()
+            .filter(|c| !c.is_ascii_alphanumeric() && !" \n-._/=:|".contains(*c))
+            .collect();
+        assert!(
+            odd.is_empty(),
+            "the step needs none of these, so something is happening besides \
+             asking the kernel: {odd:?}\n{script}"
+        );
+        // And a path under /etc needs neither: `sysctl -p /etc/sysctl.d/…`
+        // is an allowed verb reading a file somebody put there.
+        assert!(
+            !commands.contains("/etc"),
+            "a path under /etc outlives the kernel:\n{script}"
         );
     }
 
