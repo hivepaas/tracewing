@@ -483,11 +483,12 @@ impl FlowHandler {
     /// the client was sent back to TCP, where the next row is usually its
     /// second attempt at the same thing.
     ///
-    /// **It does not name the program yet.** The one on this machine that
-    /// sent the datagram is found by looking its socket up in the operating
-    /// system's table, and the table [`crate::apps`] reads is the TCP one;
-    /// a UDP socket is not in it. Guessing from the address would be worse
-    /// than leaving it blank.
+    /// It also names the program, where the datagram was sent from this
+    /// machine: the socket it left is looked for in the system's table of UDP
+    /// sockets, which is a different table from the one a connection is found
+    /// in and a narrower one -- see [`crate::apps::Look`]. A client on
+    /// another machine, over WireGuard, has no program here to find, and
+    /// [`Apps`] answers nothing rather than guessing.
     pub(crate) fn quic(&self, attempt: crate::quic::Attempt, by: crate::source::By) {
         if !self.recording.load(Ordering::Relaxed) {
             return;
@@ -496,7 +497,11 @@ impl FlowHandler {
         // would have a tab say nothing had come in while a row of it was on
         // screen.
         self.arrivals.came(by);
-        self.recorder.submit(quic_record(attempt));
+        let app = self
+            .apps
+            .as_ref()
+            .and_then(|apps| apps.sent(attempt.client));
+        self.recorder.submit(quic_record(attempt, app));
     }
 
     /// Who is at the other end: the address to put on the flow, and the
@@ -2440,9 +2445,10 @@ fn unix_micros() -> i64 {
 /// Apart from [`FlowHandler::quic`] so that the three decisions in it are
 /// testable without a recorder: the name where the client sent one, the
 /// address where it did not, and whether HTTP/3 was what it wanted.
-fn quic_record(attempt: crate::quic::Attempt) -> FlowRecord {
+fn quic_record(attempt: crate::quic::Attempt, app: Option<Arc<AppAnswer>>) -> FlowRecord {
     let hello = attempt.hello.unwrap_or_default();
     FlowRecord {
+        app,
         started_us: unix_micros(),
         client: attempt.client.to_string(),
         kind: "quic",
@@ -2496,18 +2502,24 @@ mod tests {
 
         // A hello offering HTTP/3: the name it asked for, and what it meant
         // to speak.
-        let row = quic_record(attempt(Some(crate::quic::Hello {
-            server_name: Some("example.com".to_owned()),
-            alpn: vec!["h3".to_owned()],
-        })));
+        let answer = Arc::new(AppAnswer::default());
+        let row = quic_record(
+            attempt(Some(crate::quic::Hello {
+                server_name: Some("example.com".to_owned()),
+                alpn: vec!["h3".to_owned()],
+            })),
+            Some(Arc::clone(&answer)),
+        );
         assert_eq!(row.kind, "quic");
         assert_eq!(row.method, "QUIC");
         assert_eq!(row.host, "example.com");
         assert_eq!(row.client_version, "HTTP/3");
         assert_eq!(row.status, None, "nothing answered it");
         assert!(
-            row.app.is_none(),
-            "no program: a UDP socket is not in the table that is read"
+            row.app
+                .as_ref()
+                .is_some_and(|app| Arc::ptr_eq(app, &answer)),
+            "the program the look-up is answering about is the row's"
         );
         assert!(
             row.request.complete && row.response.complete,
@@ -2516,16 +2528,19 @@ mod tests {
 
         // QUIC that is not HTTP -- WebTransport, DNS-over-QUIC -- said as
         // what it is rather than as HTTP/3.
-        let row = quic_record(attempt(Some(crate::quic::Hello {
-            server_name: Some("dns.example".to_owned()),
-            alpn: vec!["doq".to_owned()],
-        })));
+        let row = quic_record(
+            attempt(Some(crate::quic::Hello {
+                server_name: Some("dns.example".to_owned()),
+                alpn: vec!["doq".to_owned()],
+            })),
+            None,
+        );
         assert_eq!(row.client_version, "QUIC");
         assert_eq!(row.host, "dns.example");
 
         // And a hello that could not be read: the address, which is all a
         // datagram carries, rather than a row with nowhere on it.
-        let row = quic_record(attempt(None));
+        let row = quic_record(attempt(None), None);
         assert_eq!(row.host, "93.184.216.34");
         assert_eq!(row.client_version, "QUIC");
     }

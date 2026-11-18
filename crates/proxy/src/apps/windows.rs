@@ -1,12 +1,31 @@
-//! Windows: the TCP table says which process holds each connection.
+//! Windows: the system's own tables say which process holds each socket.
 //!
-//! It is read whole and asked twice over, because there are two questions.
-//! A client that asked for the proxy is found by **the end on this machine**,
-//! among the rows whose far end is a port of tracewing's. A connection taken
-//! off an adapter has the real server at its far end, so that narrowing finds
-//! nothing and it is found by **all four addresses** instead -- which is what
-//! identifies a TCP connection anyway, and what a source of packets has in
-//! hand. See [`Look`].
+//! The TCP table is read whole and asked twice over, because there are two
+//! questions. A client that asked for the proxy is found by **the end on this
+//! machine**, among the rows whose far end is a port of tracewing's. A
+//! connection taken off an adapter has the real server at its far end, so
+//! that narrowing finds nothing and it is found by **all four addresses**
+//! instead -- which is what identifies a TCP connection anyway, and what a
+//! source of packets has in hand. See [`Look`].
+//!
+//! A refused QUIC attempt is in the UDP table instead, and that table is only
+//! the end on this machine: `MIB_UDPROW_OWNER_PID` has a local address, a
+//! local port and an owning process, and no far end at all -- not even for a
+//! socket that connected. So the end a datagram left is the whole question
+//! here, which is also what the other two systems can answer, and is why it
+//! is the question everywhere.
+//!
+//! **And less of that end than it looks.** Measured on Windows 11 rather than
+//! assumed, because which rule below does the work turns on it: a socket that
+//! was never bound to an address -- which is what a browser's QUIC socket is,
+//! bound to nothing and then connected -- is in the table as `0.0.0.0`, while
+//! the datagrams it sends carry the interface's address (`10.0.2.15:52951` to
+//! the socket itself, `0.0.0.0:52951` in the table). A socket bound to an
+//! address is in it under that address. So here the port is usually all there
+//! is to go on and the second rule is the common one, where on Linux the same
+//! socket is in `/proc/net/udp` under the address it really used and the first
+//! rule answers. Both are kept, and in this order, because a program that did
+//! bind an interface's address must not lose its row to one that bound none.
 
 use crate::apps::Look;
 use std::{
@@ -16,7 +35,8 @@ use std::{
 use windows_sys::Win32::{
     Foundation::{CloseHandle, ERROR_INSUFFICIENT_BUFFER, NO_ERROR},
     NetworkManagement::IpHelper::{
-        GetExtendedTcpTable, MIB_TCP6ROW_OWNER_PID, MIB_TCPROW_OWNER_PID, TCP_TABLE_OWNER_PID_ALL,
+        GetExtendedTcpTable, GetExtendedUdpTable, MIB_TCP6ROW_OWNER_PID, MIB_TCPROW_OWNER_PID,
+        MIB_UDP6ROW_OWNER_PID, MIB_UDPROW_OWNER_PID, TCP_TABLE_OWNER_PID_ALL, UDP_TABLE_OWNER_PID,
     },
     Networking::WinSock::{AF_INET, AF_INET6},
     System::Threading::{
@@ -33,7 +53,9 @@ pub fn owners(looks: &[Look], ours: &[u16], _recent: &[u32]) -> Vec<Option<u32>>
     // A connection taken on its way, by all four addresses. Only built when
     // something asks for one, because this one is as long as the table.
     let mut whole: HashMap<(SocketAddr, SocketAddr), u32> = HashMap::new();
-    let any_taken = looks.iter().any(|look| look.to.is_some());
+    let any_taken = looks
+        .iter()
+        .any(|look| matches!(look, Look::Connection { to: Some(_), .. }));
     let mut keep = |local: SocketAddr, remote: SocketAddr, pid: u32| {
         if ours.contains(&remote.port()) {
             to_ours.insert(local, pid);
@@ -42,7 +64,7 @@ pub fn owners(looks: &[Look], ours: &[u16], _recent: &[u32]) -> Vec<Option<u32>>
             whole.insert((local, remote), pid);
         }
     };
-    for row in table::<MIB_TCPROW_OWNER_PID>(AF_INET) {
+    for row in table::<MIB_TCPROW_OWNER_PID>(Of::Connections, AF_INET) {
         let at = |addr: u32, p: u32| {
             SocketAddr::new(IpAddr::V4(Ipv4Addr::from(addr.to_ne_bytes())), port(p))
         };
@@ -52,7 +74,7 @@ pub fn owners(looks: &[Look], ours: &[u16], _recent: &[u32]) -> Vec<Option<u32>>
             row.dwOwningPid,
         );
     }
-    for row in table::<MIB_TCP6ROW_OWNER_PID>(AF_INET6) {
+    for row in table::<MIB_TCP6ROW_OWNER_PID>(Of::Connections, AF_INET6) {
         let at =
             |addr: [u8; 16], p: u32| SocketAddr::new(Ipv6Addr::from(addr).to_canonical(), port(p));
         keep(
@@ -61,16 +83,50 @@ pub fn owners(looks: &[Look], ours: &[u16], _recent: &[u32]) -> Vec<Option<u32>>
             row.dwOwningPid,
         );
     }
+    // The datagram sockets, by the end on this machine. Only read when
+    // something asks: nothing else in tracewing has a use for them.
+    let mut sent: Vec<(SocketAddr, u32)> = Vec::new();
+    if looks
+        .iter()
+        .any(|look| matches!(look, Look::Datagram { .. }))
+    {
+        for row in table::<MIB_UDPROW_OWNER_PID>(Of::Datagrams, AF_INET) {
+            let ip = IpAddr::V4(Ipv4Addr::from(row.dwLocalAddr.to_ne_bytes()));
+            sent.push((SocketAddr::new(ip, port(row.dwLocalPort)), row.dwOwningPid));
+        }
+        for row in table::<MIB_UDP6ROW_OWNER_PID>(Of::Datagrams, AF_INET6) {
+            let ip = Ipv6Addr::from(row.ucLocalAddr).to_canonical();
+            sent.push((SocketAddr::new(ip, port(row.dwLocalPort)), row.dwOwningPid));
+        }
+    }
     looks
         .iter()
-        .map(|look| {
-            let look = look.plain();
-            match look.to {
-                Some(to) => whole.get(&(look.client, to)).copied(),
-                None => to_ours.get(&look.client).copied(),
-            }
+        .map(|look| match look.plain() {
+            Look::Connection {
+                client,
+                to: Some(to),
+            } => whole.get(&(client, to)).copied(),
+            Look::Connection { client, to: None } => to_ours.get(&client).copied(),
+            Look::Datagram { client } => which_sent(&sent, client),
         })
         .collect()
+}
+
+/// Which process sent a datagram from `client`: the one holding the socket
+/// bound to that address, or else -- and only else -- one bound to every
+/// address on that port. A program that bound `0.0.0.0:443` and one that
+/// bound an interface's `:443` are different programs, and the packet says
+/// which address it left from.
+fn which_sent(sent: &[(SocketAddr, u32)], client: SocketAddr) -> Option<u32> {
+    let at = |(local, _): &&(SocketAddr, u32)| *local == client;
+    let anywhere = |(local, _): &&(SocketAddr, u32)| {
+        local.port() == client.port() && local.ip().is_unspecified()
+    };
+    let (_, pid) = sent
+        .iter()
+        .find(at)
+        .or_else(|| sent.iter().find(anywhere))?;
+    Some(*pid)
 }
 
 pub fn path_of(pid: u32) -> Option<String> {
@@ -94,22 +150,39 @@ fn port(value: u32) -> u16 {
     u16::from_be(value as u16)
 }
 
-/// The rows of the table for one family. Each table is a count, then its rows.
-fn table<Row: Copy>(family: u16) -> Vec<Row> {
+/// Which of the system's two tables of sockets to read.
+#[derive(Clone, Copy)]
+enum Of {
+    Connections,
+    Datagrams,
+}
+
+/// The rows of one table for one family. Each table is a count, then its rows.
+fn table<Row: Copy>(of: Of, family: u16) -> Vec<Row> {
     let mut size = 0u32;
     let mut buffer: Vec<u64> = Vec::new();
     for _ in 0..4 {
         // SAFETY: the buffer is as long as `size` says, and the call says how
         // long it must be when it is not.
         let result = unsafe {
-            GetExtendedTcpTable(
-                buffer.as_mut_ptr().cast(),
-                &mut size,
-                0,
-                u32::from(family),
-                TCP_TABLE_OWNER_PID_ALL,
-                0,
-            )
+            match of {
+                Of::Connections => GetExtendedTcpTable(
+                    buffer.as_mut_ptr().cast(),
+                    &mut size,
+                    0,
+                    u32::from(family),
+                    TCP_TABLE_OWNER_PID_ALL,
+                    0,
+                ),
+                Of::Datagrams => GetExtendedUdpTable(
+                    buffer.as_mut_ptr().cast(),
+                    &mut size,
+                    0,
+                    u32::from(family),
+                    UDP_TABLE_OWNER_PID,
+                    0,
+                ),
+            }
         };
         if result == ERROR_INSUFFICIENT_BUFFER {
             // Room for connections opened since.

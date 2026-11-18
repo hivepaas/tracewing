@@ -1,14 +1,17 @@
 //! Which program on this machine is behind each connection to the proxy.
 //!
-//! There are two questions here, not one. A client that **asked** for the
+//! There are three questions here, not one. A client that **asked** for the
 //! proxy holds a socket whose far end is a port of tracewing's, and that is
 //! what picks it out of the thousands a machine has open. A connection
 //! **taken on its way** -- off a TUN adapter, where the operating system
 //! routed it to us and the client believes it is talking to the server --
 //! has the real server at its far end, so that rule finds nothing at all;
 //! what names it is all four addresses, which a source of packets has in
-//! hand. [`Look`] is the question, [`Apps::of`] asks the first and
-//! [`Apps::took`] the second.
+//! hand. And a **datagram** -- a QUIC attempt the proxy refused, which no
+//! connection of ours follows -- is in the other table a system keeps, and
+//! is found by the end on this machine alone. [`Look`] is the question,
+//! [`Apps::of`] asks the first, [`Apps::took`] the second and
+//! [`Apps::sent`] the third.
 //!
 //! The OS knows which process holds each socket, but asking takes a look through
 //! every process's open files on Linux and macOS: far too slow for the handler.
@@ -65,36 +68,86 @@ pub struct Apps {
 
 struct Inner {
     asks: Mutex<Sender<Ask>>,
-    by_client: Mutex<HashMap<SocketAddr, (Instant, Arc<AppAnswer>)>>,
+    by_client: Mutex<HashMap<Kept, (Instant, Arc<AppAnswer>)>>,
     /// Whether an address is this machine's: only those have a program to find.
     local: Mutex<HashMap<IpAddr, bool>>,
 }
 
-/// One connection to find the program behind.
+/// One socket to find the program behind.
 ///
 /// A client that asked for the proxy is at one end of a socket whose other
 /// end is a port of tracewing's, and that is what picks its socket out of a
 /// machine's thousands. A connection **taken on its way** has the real server
 /// at its far end, so that rule finds nothing: what identifies it is all four
 /// addresses, which a source that deals in packets has in hand.
+///
+/// A datagram is a narrower question than either. A refused QUIC attempt is
+/// one packet and no connection, so there is nothing whose two ends could be
+/// asked for: what is asked for is the socket the packet left, by the end on
+/// this machine. Not by choice -- Windows's table of UDP sockets has no far
+/// end in it at all, and an unconnected socket has none to have -- but it is
+/// enough, because that end is what the system handed out.
+///
+/// Which it is decides how a backend looks, so it is a variant rather than a
+/// field: a system told about datagrams has to say what it does with them.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub struct Look {
-    /// The end on this machine.
-    pub client: SocketAddr,
-    /// Where it was going, for one taken on its way. `None` says the far end
-    /// is tracewing's own, and `ours` is what to look for.
-    pub to: Option<SocketAddr>,
+pub enum Look {
+    /// A connection, by its ends.
+    Connection {
+        /// The end on this machine.
+        client: SocketAddr,
+        /// Where it was going, for one taken on its way. `None` says the far
+        /// end is tracewing's own, and `ours` is what to look for.
+        to: Option<SocketAddr>,
+    },
+    /// A datagram's socket, by the end it left.
+    Datagram {
+        /// The end on this machine: the address and port the datagram was
+        /// sent from, as the packet carried them.
+        client: SocketAddr,
+    },
 }
 
 impl Look {
-    /// Both ends as a packet carries them, so that one connection is one key
-    /// whichever family the socket holding it was opened for.
-    pub(crate) fn plain(self) -> Self {
-        Self {
-            client: canonical(self.client),
-            to: self.to.map(canonical),
+    /// The end on this machine, which every one of the three questions has.
+    pub(crate) fn client(self) -> SocketAddr {
+        match self {
+            Self::Connection { client, .. } | Self::Datagram { client } => client,
         }
     }
+
+    /// Addresses as a packet carries them, so that one socket is one key
+    /// whichever family the socket holding it was opened for.
+    pub(crate) fn plain(self) -> Self {
+        match self {
+            Self::Connection { client, to } => Self::Connection {
+                client: canonical(client),
+                to: to.map(canonical),
+            },
+            Self::Datagram { client } => Self::Datagram {
+                client: canonical(client),
+            },
+        }
+    }
+
+    /// What the answer is kept by. The two flows of one connection share an
+    /// answer, which is why this is the client's end rather than the whole
+    /// question -- but a machine can hold a connection and a datagram socket
+    /// on one address and port at the same time, and they are two programs'
+    /// as often as one's, so that much is part of the key.
+    fn kept_by(self) -> Kept {
+        Kept {
+            client: self.client(),
+            datagram: matches!(self, Self::Datagram { .. }),
+        }
+    }
+}
+
+/// What an answer is kept by: see [`Look::kept_by`].
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct Kept {
+    client: SocketAddr,
+    datagram: bool,
 }
 
 /// An address as a packet carries it. A socket open for both families reports
@@ -133,7 +186,7 @@ impl Apps {
     /// machine. `opened` says the connection is new, so what was known of the
     /// address and port is someone else's.
     pub fn of(&self, client: SocketAddr, opened: bool) -> Option<Arc<AppAnswer>> {
-        self.looking(Look { client, to: None }, opened)
+        self.looking(Look::Connection { client, to: None }, opened)
     }
 
     /// The program behind a connection **taken on its way**, going to `to`
@@ -144,7 +197,7 @@ impl Apps {
     /// find nothing. See [`Look`].
     pub fn took(&self, client: SocketAddr, to: SocketAddr) -> Option<Arc<AppAnswer>> {
         self.looking(
-            Look {
+            Look::Connection {
                 client,
                 to: Some(to),
             },
@@ -152,15 +205,27 @@ impl Apps {
         )
     }
 
+    /// The program that sent a datagram from `client`, when that is an address
+    /// of this machine. A refused QUIC attempt is the only one asked for.
+    ///
+    /// Always a new socket as far as this is concerned: the attempt is told
+    /// about once and the next one is a question of its own, and a UDP port
+    /// is handed out again sooner than a connection's is.
+    ///
+    /// Why this is not [`Self::of`] or [`Self::took`]: see [`Look`].
+    pub fn sent(&self, client: SocketAddr) -> Option<Arc<AppAnswer>> {
+        self.looking(Look::Datagram { client }, true)
+    }
+
     fn looking(&self, look: Look, opened: bool) -> Option<Arc<AppAnswer>> {
-        let client = look.client;
-        if !self.is_local(client.ip()) {
+        let kept = look.kept_by();
+        if !self.is_local(kept.client.ip()) {
             return None;
         }
         let now = Instant::now();
         let mut by_client = lock(&self.inner.by_client);
         if !opened
-            && let Some((asked, answer)) = by_client.get(&client)
+            && let Some((asked, answer)) = by_client.get(&kept)
             && now.duration_since(*asked) < FRESH_FOR
         {
             return Some(Arc::clone(answer));
@@ -172,7 +237,7 @@ impl Apps {
             }
         }
         let answer = Arc::new(AppAnswer::default());
-        by_client.insert(client, (now, Arc::clone(&answer)));
+        by_client.insert(kept, (now, Arc::clone(&answer)));
         drop(by_client);
         let ask = Ask {
             look,
@@ -276,6 +341,61 @@ mod tests {
         // Flows over the same connection share the answer.
         let again = apps.of(client.local_addr().unwrap(), false).unwrap();
         assert!(Arc::ptr_eq(&answer, &again));
+    }
+
+    /// A datagram's socket is found in the other table the system keeps. The
+    /// test is its own sender, so the program found must be this one.
+    #[test]
+    fn a_datagram_sent_from_here_is_this_program() {
+        let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let mine = socket.local_addr().unwrap();
+        // No port of tracewing's is given: a datagram was refused rather than
+        // taken, so there is no port of ours it ever reached.
+        let apps = Apps::spawn(Vec::new()).unwrap();
+        let answer = apps.sent(mine).unwrap();
+        let app = answer
+            .wait_until(Instant::now() + Duration::from_secs(10))
+            .expect("found");
+        assert_eq!(app.pid, std::process::id());
+
+        // A port nothing holds: answered, and the answer is that there is no
+        // program -- which is not the same as a question still in flight.
+        let nobody = apps.sent("127.0.0.1:9".parse().unwrap()).unwrap();
+        assert_eq!(
+            nobody.wait_until(Instant::now() + Duration::from_secs(10)),
+            None
+        );
+        assert_eq!(nobody.now(), Some(None), "answered, not timed out");
+    }
+
+    /// One machine can hold a connection and a datagram socket on the same
+    /// address and port, and they are two different programs' as often as
+    /// one's. So the two are two questions, with two answers kept.
+    ///
+    /// What makes this assertable is that the address here holds *only* a
+    /// datagram socket: asked as a datagram it is this program, asked as a
+    /// connection it is nobody. A key that left the difference out would hand
+    /// the second ask the first one's answer, and the second line would read
+    /// as this program as well.
+    #[test]
+    fn a_datagram_and_a_connection_on_one_port_are_two_questions() {
+        let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let mine = socket.local_addr().unwrap();
+        let apps = Apps::spawn(Vec::new()).unwrap();
+        let sent = apps.sent(mine).unwrap();
+        let connection = apps.of(mine, false).unwrap();
+        assert!(!Arc::ptr_eq(&sent, &connection), "two asks, not one");
+        let soon = || Instant::now() + Duration::from_secs(10);
+        assert_eq!(
+            sent.wait_until(soon()).map(|app| app.pid),
+            Some(std::process::id())
+        );
+        assert_eq!(
+            connection.wait_until(soon()),
+            None,
+            "nothing on this machine holds a connection with that end"
+        );
+        assert_eq!(connection.now(), Some(None), "answered, not timed out");
     }
 
     /// A connection that came in on another of tracewing's ports, as a SOCKS5

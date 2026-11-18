@@ -4,6 +4,14 @@
 //! `/proc/net/tcp` has the inodes too, but it is read a page at a time while
 //! connections come and go, and a busy machine's can leave some out. So it is
 //! only where the kernel is not asked directly.
+//!
+//! A datagram's socket is the one case where the table is read first. The
+//! kernel answers one exact socket, and an exact socket is both its ends: a
+//! client that connected its UDP socket has both, but one that never did has
+//! only the end it bound, and nothing in the packet says which kind it was.
+//! So `/proc/net/udp` is read instead -- short, where the TCP table is long,
+//! because a machine holds few UDP sockets and thousands of connections --
+//! and a missing row costs a blank name rather than a wrong one.
 
 use crate::apps::{Look, canonical};
 use std::{
@@ -22,17 +30,23 @@ pub fn owners(looks: &[Look], ours: &[u16], recent: &[u32]) -> Vec<Option<u32>> 
     let mine = |uid: u32| uid == me || me == 0;
     let mut inodes: HashMap<u64, usize> = HashMap::new();
     let mut missing: HashMap<Look, usize> = HashMap::new();
+    let mut datagrams: HashMap<SocketAddr, usize> = HashMap::new();
     let diag = Diag::open();
     for (i, look) in looks.iter().enumerate() {
-        let look = look.plain();
-        match diag.as_ref().and_then(|diag| diag.find(look, ours)) {
-            Some((uid, inode)) if mine(uid) => {
-                inodes.insert(inode, i);
+        match look.plain() {
+            // Not asked of the kernel: see the note at the top of this file.
+            Look::Datagram { client } => {
+                datagrams.insert(client, i);
             }
-            Some(_) => {}
-            None => {
-                missing.insert(look, i);
-            }
+            look => match diag.as_ref().and_then(|diag| diag.find(look, ours)) {
+                Some((uid, inode)) if mine(uid) => {
+                    inodes.insert(inode, i);
+                }
+                Some(_) => {}
+                None => {
+                    missing.insert(look, i);
+                }
+            },
         }
     }
     if !missing.is_empty() {
@@ -42,6 +56,18 @@ pub fn owners(looks: &[Look], ours: &[u16], recent: &[u32]) -> Vec<Option<u32>> 
             };
             inodes.extend(in_table(&text, ours, &missing, &mine));
         }
+    }
+    if !datagrams.is_empty() {
+        // Both tables first, then matched: one family's wildcard row must not
+        // win over the other's exact one. See [`which_datagrams`].
+        let mut rows = Vec::new();
+        for table in ["/proc/net/udp", "/proc/net/udp6"] {
+            let Ok(text) = fs::read_to_string(table) else {
+                continue;
+            };
+            rows.extend(sockets_in(&text, &mine));
+        }
+        inodes.extend(which_datagrams(&rows, &datagrams));
     }
     if inodes.is_empty() {
         return found;
@@ -187,16 +213,23 @@ impl Diag {
     /// first costs one and the rest cost one more each: the proxy port is
     /// first because that is where most of them come from.
     fn find(&self, look: Look, ours: &[u16]) -> Option<(u32, u64)> {
-        match look.to {
+        match look {
             // Taken on its way: the four addresses are known, so one ask does.
-            Some(to) => self.find_at(look.client, to),
+            Look::Connection {
+                client,
+                to: Some(to),
+            } => self.find_at(client, to),
             // A client of tracewing's connected to an address of this machine,
             // and the kernel gives such a connection that address as its own,
             // so both ends have the client's -- which port of ours it chose is
             // what is not known, and is asked for one at a time.
-            None => ours.iter().find_map(|&port| {
-                self.find_at(look.client, SocketAddr::new(look.client.ip(), port))
-            }),
+            Look::Connection { client, to: None } => ours
+                .iter()
+                .find_map(|&port| self.find_at(client, SocketAddr::new(client.ip(), port))),
+            // A datagram's socket is not asked for here: an exact ask is both
+            // ends, and a socket that never connected has one. The caller
+            // reads the table instead and does not come through here.
+            Look::Datagram { .. } => None,
         }
     }
 
@@ -380,7 +413,7 @@ fn in_table(
         }
         let client = canonical(socket.local);
         // Taken on its way: all four addresses say which it is.
-        if let Some(&i) = missing.get(&Look {
+        if let Some(&i) = missing.get(&Look::Connection {
             client,
             to: Some(canonical(socket.remote)),
         }) {
@@ -390,12 +423,46 @@ fn in_table(
         // A client of tracewing's: its own end, among the sockets whose far
         // end is one of our ports.
         if ours.contains(&socket.remote.port())
-            && let Some(&i) = missing.get(&Look { client, to: None })
+            && let Some(&i) = missing.get(&Look::Connection { client, to: None })
         {
             found.push((socket.inode, i));
         }
     }
     found
+}
+
+/// This user's sockets in one of the kernel's tables.
+fn sockets_in(text: &str, mine: &impl Fn(u32) -> bool) -> Vec<Socket> {
+    text.lines()
+        .skip(1)
+        .filter_map(Socket::parse)
+        .filter(|socket| mine(socket.uid))
+        .collect()
+}
+
+/// Which ask each datagram socket answers, as `(inode, ask)`.
+///
+/// The end on this machine, and nothing else: the far end is not part of the
+/// question, because a socket that never connected has none. A socket bound
+/// to one address is found by it; one bound to every address is found by its
+/// port, and only where nothing is bound to the address itself -- a program
+/// that bound `0.0.0.0:443` and one that bound an interface's `:443` are
+/// different programs, and the packet says which address it left from.
+fn which_datagrams(rows: &[Socket], wanted: &HashMap<SocketAddr, usize>) -> Vec<(u64, usize)> {
+    wanted
+        .iter()
+        .filter_map(|(&client, &i)| {
+            let at = |socket: &&Socket| canonical(socket.local) == client;
+            let anywhere = |socket: &&Socket| {
+                socket.local.port() == client.port() && socket.local.ip().is_unspecified()
+            };
+            let socket = rows
+                .iter()
+                .find(at)
+                .or_else(|| rows.iter().find(anywhere))?;
+            Some((socket.inode, i))
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -405,7 +472,7 @@ mod tests {
     /// A client of tracewing's, asked for by its own end: which port of ours
     /// it chose is what is not known.
     fn asking(client: SocketAddr) -> Look {
-        Look { client, to: None }
+        Look::Connection { client, to: None }
     }
 
     #[test]
@@ -450,7 +517,7 @@ mod tests {
         let client = std::net::TcpStream::connect(to).unwrap();
         let from = client.local_addr().unwrap();
         let diag = Diag::open().expect("sock_diag");
-        let taken = Look {
+        let taken = Look::Connection {
             client: from,
             to: Some(to),
         };
@@ -460,7 +527,7 @@ mod tests {
         let elsewhere = SocketAddr::new(to.ip(), to.port().wrapping_add(1).max(1));
         assert_eq!(
             diag.find(
-                Look {
+                Look::Connection {
                     client: from,
                     to: Some(elsewhere)
                 },
@@ -493,7 +560,7 @@ mod tests {
              3: 0100007F:D434 097100CB:01BB {rest}   999 0 4245 1\n\
              4: 0100007F:D432 097100CB:01BB {rest}  1000 0 4246 1\n"
         );
-        let taken = |port: u16| Look {
+        let taken = |port: u16| Look::Connection {
             client: SocketAddr::new("127.0.0.1".parse().unwrap(), port),
             to: Some("203.0.113.9:443".parse().unwrap()),
         };
@@ -514,6 +581,46 @@ mod tests {
         // and line 4 has the client of ask 1 at its near end with a server at
         // its far end, so the rule for a client of ours must not take it --
         // which is what `ours` narrowing is for.
+    }
+
+    /// The datagram table, where the end on this machine is the whole
+    /// question: a socket bound to an address answers for it, one bound to
+    /// every address answers only where nothing is bound to the address
+    /// itself, and another user's socket answers for nothing.
+    #[test]
+    #[cfg(target_endian = "little")]
+    fn the_table_answers_for_a_datagram_by_the_end_it_left() {
+        // 0100007F is 127.0.0.1 and 0601A8C0 is 192.168.1.6, each word in
+        // this machine's own byte order, as the kernel writes them.
+        let rest = "07 00000000:00000000 00:00000000 00000000";
+        let text = format!(
+            "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
+             0: 0100007F:D431 00000000:0000 {rest}  1000        0 4242 2 0 0
+             1: 00000000:D432 00000000:0000 {rest}  1000        0 4243 2 0 0
+             2: 0601A8C0:D433 097100CB:01BB {rest}  1000        0 4244 2 0 0
+             3: 00000000:D433 00000000:0000 {rest}  1000        0 4245 2 0 0
+             4: 0100007F:D434 00000000:0000 {rest}   999        0 4246 2 0 0
+"
+        );
+        let rows = sockets_in(&text, &|uid| uid == 1000);
+        assert_eq!(rows.len(), 4, "the other user's is not one of ours to read");
+        let at = |text: &str| -> SocketAddr { text.parse().unwrap() };
+        let wanted = HashMap::from([
+            // Bound to one address: found by it.
+            (at("127.0.0.1:54321"), 0),
+            // Bound to every address: found by its port, because nothing is
+            // bound to this interface's own.
+            (at("192.168.1.9:54322"), 1),
+            // Both kinds hold this port, and the datagram left the interface
+            // address, so the socket bound to it is the answer -- not the one
+            // bound to all of them, which another program holds.
+            (at("192.168.1.6:54323"), 2),
+            // This user cannot look in the socket that holds it.
+            (at("127.0.0.1:54324"), 3),
+        ]);
+        let mut found = which_datagrams(&rows, &wanted);
+        found.sort_unstable();
+        assert_eq!(found, vec![(4242, 0), (4243, 1), (4244, 2)]);
     }
 
     #[test]
