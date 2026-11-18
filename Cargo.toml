@@ -29,6 +29,12 @@ keyring = "4"
 hyper = { version = "1", features = ["server", "http1", "http2"] }
 hyper-util = { version = "0.1", features = ["client-legacy", "http1", "http2", "server-auto", "tokio"] }
 rustls-platform-verifier = "0.7"
+# QUIC, for the HTTP/3 probe in crates/dev: `quinn` because it is TLS through
+# the same rustls the rest of this workspace uses, so one certificate path and
+# one key log serve both. See docs/design/http3.md.
+quinn = { version = "0.11", default-features = false, features = ["runtime-tokio", "rustls-aws-lc-rs", "log"] }
+h3 = "0.0.8"
+h3-quinn = "0.0.10"
 flate2 = "1"
 brotli = "9"
 zstd = "0.14"

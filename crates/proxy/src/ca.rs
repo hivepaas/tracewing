@@ -65,6 +65,31 @@ const CACHE_MAX: usize = 10_000;
 /// connection cut off.
 const STAND_IN_HOST: &str = "unnamed.tracewing.invalid";
 
+/// What the leaf is for. The certificate is the same either way; what differs
+/// is what is offered over it, and QUIC offers less: `h3` alone, because that
+/// is the only thing tracewing could read over QUIC, and TLS 1.3 alone,
+/// because QUIC has no other version. The two are cached apart so that one
+/// does not hand the other a config whose ALPN its client never asked for.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum Over {
+    /// TCP: HTTP/2 or HTTP/1.1, over any version of TLS a client still has.
+    Tcp,
+    /// QUIC: HTTP/3 over TLS 1.3, and nothing else.
+    Quic,
+}
+
+impl Over {
+    fn alpn(self) -> Vec<Vec<u8>> {
+        match self {
+            Self::Tcp => vec![b"h2".to_vec(), b"http/1.1".to_vec()],
+            Self::Quic => vec![b"h3".to_vec()],
+        }
+    }
+}
+
+/// The configs issued so far, by host and by what they are offered over.
+type Issued = HashMap<(Over, String), (Instant, Arc<ServerConfig>)>;
+
 pub struct LocalCa {
     issuer: Issuer<'static, KeyPair>,
     cert_path: PathBuf,
@@ -72,7 +97,7 @@ pub struct LocalCa {
     leaf_key_der: PrivateKeyDer<'static>,
     crl_url: Option<String>,
     provider: Arc<CryptoProvider>,
-    cache: Mutex<HashMap<String, (Instant, Arc<ServerConfig>)>>,
+    cache: Mutex<Issued>,
     key_place: KeyPlace,
     /// Sent after each leaf, for a CA a company signed: itself, then those
     /// that lead to the company's root. Empty for tracewing's own.
@@ -223,10 +248,16 @@ impl LocalCa {
         Ok(params.signed_by(&self.leaf_key, &self.issuer)?.into())
     }
 
-    fn server_config(&self, host: &str) -> Result<Arc<ServerConfig>> {
+    fn server_config(&self, host: &str, over: Over) -> Result<Arc<ServerConfig>> {
         let leaf = self.issue_leaf(host)?;
+        // QUIC is TLS 1.3 and nothing else, and a config that still offers
+        // 1.2 is one `quinn` refuses outright rather than negotiates around.
+        let versions: &[&hudsucker::rustls::SupportedProtocolVersion] = match over {
+            Over::Tcp => hudsucker::rustls::ALL_VERSIONS,
+            Over::Quic => &[&hudsucker::rustls::version::TLS13],
+        };
         let mut config = ServerConfig::builder_with_provider(Arc::clone(&self.provider))
-            .with_safe_default_protocol_versions()?
+            .with_protocol_versions(versions)?
             .with_no_client_auth()
             .with_single_cert(
                 std::iter::once(leaf)
@@ -234,7 +265,7 @@ impl LocalCa {
                     .collect(),
                 self.leaf_key_der.clone_key(),
             )?;
-        config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+        config.alpn_protocols = over.alpn();
         if let Some(key_log) = &self.key_log {
             config.key_log = Arc::clone(key_log);
         }
@@ -260,7 +291,7 @@ impl CertificateAuthority for LocalCa {
             .trim_start_matches('[')
             .trim_end_matches(']');
 
-        self.config_for(host)
+        self.config_for(host, Over::Tcp)
     }
 }
 
@@ -270,15 +301,16 @@ impl LocalCa {
     /// which its client refuses as it would any wrong name; nothing panics.
     /// What reaches here is ASCII already: rustls takes only DNS names from
     /// SNI, and a `CONNECT` whose host is not ASCII is refused before.
-    fn config_for(&self, host: &str) -> Arc<ServerConfig> {
-        if let Some((issued, config)) = self.cache.lock().unwrap().get(host)
+    pub fn config_for(&self, host: &str, over: Over) -> Arc<ServerConfig> {
+        let key = (over, host.to_owned());
+        if let Some((issued, config)) = self.cache.lock().unwrap().get(&key)
             && issued.elapsed() < CACHE_FOR
         {
             return Arc::clone(config);
         }
 
-        debug!(host, "issuing leaf certificate");
-        let config = match self.server_config(host) {
+        debug!(host, ?over, "issuing leaf certificate");
+        let config = match self.server_config(host, over) {
             Ok(config) => config,
             Err(e) => {
                 warn!(
@@ -288,7 +320,7 @@ impl LocalCa {
                 // Not kept: the next try may do better, and the cache holds
                 // only what is right for its host.
                 return self
-                    .server_config(STAND_IN_HOST)
+                    .server_config(STAND_IN_HOST, over)
                     .expect("a certificate for a fixed, valid name is always issued");
             }
         };
@@ -297,7 +329,7 @@ impl LocalCa {
         if cache.len() >= CACHE_MAX {
             cache.clear();
         }
-        cache.insert(host.to_owned(), (Instant::now(), Arc::clone(&config)));
+        cache.insert(key, (Instant::now(), Arc::clone(&config)));
         config
     }
 }
@@ -419,12 +451,51 @@ mod tests {
         // A DNS name in a certificate is ASCII: punycode, for a name that is not.
         assert!(ca.issue_leaf("bücher.example").is_err());
         assert!(ca.issue_leaf("xn--bcher-kva.example").is_ok());
-        let config = ca.config_for("bücher.example");
+        let config = ca.config_for("bücher.example", Over::Tcp);
         assert!(!config.alpn_protocols.is_empty(), "a config all the same");
         assert!(
-            !ca.cache.lock().unwrap().contains_key("bücher.example"),
+            !ca.cache
+                .lock()
+                .unwrap()
+                .contains_key(&(Over::Tcp, "bücher.example".to_owned())),
             "not kept"
         );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// What a leaf is offered over, which is less for QUIC: `h3` alone, and
+    /// TLS 1.3 alone, because QUIC has neither another protocol tracewing
+    /// could read nor another version of TLS. The certificate itself is the
+    /// same one, and the two are kept apart in the cache -- without that, a
+    /// client that asked over TCP could be handed `h3` and refuse it.
+    #[test]
+    fn a_leaf_for_quic_offers_http3_and_tls13_alone() {
+        let dir = std::env::temp_dir().join(format!("tracewing-ca-quic-{}", std::process::id()));
+        let ca = LocalCa::load_or_create(&dir, crate::crypto_provider(), KeyStore::File).unwrap();
+
+        let tcp = ca.config_for("api.example.com", Over::Tcp);
+        assert_eq!(tcp.alpn_protocols, [b"h2".to_vec(), b"http/1.1".to_vec()]);
+        let quic = ca.config_for("api.example.com", Over::Quic);
+        assert_eq!(quic.alpn_protocols, [b"h3".to_vec()]);
+        assert!(
+            !Arc::ptr_eq(&tcp, &quic),
+            "one host, two answers: the TCP config is not handed to QUIC"
+        );
+        // Both are issued by `issue_leaf`, so a host is one certificate
+        // however it is reached; what that leaf says is asserted on its own
+        // in `a_leaf_lasts_thirty_days_and_names_its_host_as_it_is`, because
+        // a `ServerConfig` does not hand its certificate back out.
+
+        // Each from the cache the second time, and each its own entry.
+        assert!(Arc::ptr_eq(
+            &quic,
+            &ca.config_for("api.example.com", Over::Quic)
+        ));
+        assert!(Arc::ptr_eq(
+            &tcp,
+            &ca.config_for("api.example.com", Over::Tcp)
+        ));
+        assert_eq!(ca.cache.lock().unwrap().len(), 2);
         fs::remove_dir_all(&dir).unwrap();
     }
 

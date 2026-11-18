@@ -301,10 +301,15 @@ computer.
 - **Anything that is not HTTP**: DNS, SSH, SMTP, raw TCP and UDP, WebRTC.
 - **A client that insists on HTTP/3.** tracewing takes `Alt-Svc` out of
   responses and can block UDP 443 so that clients fall back to HTTP/2; one
-  that refuses to fall back is out of reach until HTTP/3 is built. Out of
-  reach, not out of sight: each refused attempt is a row that says which
-  server was asked for and — captured on this computer — which program
-  asked, and nothing of it is read past that first packet.
+  that refuses to fall back is out of reach until HTTP/3 is built — see
+  [design/http3.md](design/http3.md) for what that will take. Taking the
+  offers out does not reach a client that learns of HTTP/3 from a DNS record
+  instead, and most of Google's hosts are now that; blocking the port, or
+  refusing the datagrams as the local modes do, is what keeps such a client
+  on TCP. Out of reach, not out of sight either way: each refused attempt is
+  a row that says which server was asked for and — captured on this
+  computer — which program asked, and nothing of it is read past that first
+  packet.
 - **The system's own traffic** — Windows Update, `softwareupdate`, Apple
   push — which tracewing tunnels untouched on purpose: decrypting it breaks
   updates and tells nobody anything.
