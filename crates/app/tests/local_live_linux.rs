@@ -202,24 +202,33 @@ fn the_namespace() {
 /// The whole assembly: it comes up, it is on the machine, and letting go
 /// leaves it harmless.
 ///
-/// **Still `#[ignore]`d, and for a measured reason rather than the old one.**
-/// It no longer wants a password or this machine's network, so running it is
-/// cheap and safe -- but the CI runner refuses the namespace:
+/// **Still `#[ignore]`d, and the reason is measured.** It no longer wants a
+/// password or this machine's network, so running it is cheap and safe --
+/// but on Ubuntu 24.04 and later it runs only where AppArmor lets it:
 ///
 /// ```text
 /// unshare: write failed /proc/self/uid_map: Operation not permitted
 /// ```
 ///
-/// (run 44366937310, `linux-x86_64`, every other test in the job passing.)
-/// That is not `unprivileged_userns_clone` being off, which fails earlier at
-/// the clone, and not the multi-threaded-caller rule, since the same binary
-/// unshares happily on a developer machine. What it is has not been
-/// measured; the newer runner images restrict unprivileged user namespaces
-/// through AppArmor, and that is a candidate and nothing more. So this is
-/// written down rather than diagnosed, and the next person to try does not
-/// start from zero.
+/// `kernel.apparmor_restrict_unprivileged_userns` is the cause, measured
+/// both ways on the CI runner: with it at 1 the line above, with
+/// `sysctl -w …=0` the same command exits 0, and set back to 1 it fails
+/// again. The mechanism is in `/etc/apparmor.d/unprivileged_userns`, the
+/// profile an unconfined process is **transitioned into** when it makes an
+/// unprivileged user namespace: it says `allow userns` and
+/// `audit deny capability`, so the namespace is made and then the uid_map
+/// write is refused. That is exactly what is seen -- `unshare --user` alone
+/// exits 0 and `--map-root-user` does not.
+///
+/// **It is not only CI, which is why this is ignored rather than gated on
+/// the runner.** The same failure reproduces on a developer machine under
+/// `aa-exec -p unconfined`. What made it pass while this was written is that
+/// the shell was VS Code's, and Ubuntu ships `/etc/apparmor.d/code`, whose
+/// profile grants `userns` -- so it runs from an editor and fails from a
+/// terminal on the same machine. Run it under a profile that allows it, or
+/// with the sysctl at 0.
 #[test]
-#[ignore = "the CI runner refuses the namespace: unshare cannot write /proc/self/uid_map"]
+#[ignore = "wants AppArmor to allow an unprivileged user namespace: see this test's doc"]
 fn the_local_way_in_comes_up_and_lets_go_again() {
     if !in_our_own_namespace("the_local_way_in_comes_up_and_lets_go_again") {
         return;
