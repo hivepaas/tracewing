@@ -332,6 +332,15 @@ impl LocalCa {
         config.alpn_protocols = Over::Quic.alpn();
         // 1-RTT only, on purpose: early data a proxy replays is a request
         // sent twice, and nothing here is ready to answer for that.
+        //
+        // **It is the `TryFrom` below that lets this zero stand.** quinn's
+        // own convenience path, `QuicServerConfig::inner` behind
+        // `ServerConfig::with_single_cert`, sets `u32::MAX` instead, and
+        // QUIC allows only those two values -- so a later simplification to
+        // the shorter call turns early data on and nothing here fails.
+        // `quic_server`'s `a_client_that_asks_for_early_data_does_not_get_it`
+        // is what notices: measured, a client holding this door's tickets is
+        // refused, and with this line removed the same client is accepted.
         config.max_early_data_size = 0;
         if let Some(key_log) = &self.key_log {
             config.key_log = Arc::clone(key_log);

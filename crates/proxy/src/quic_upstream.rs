@@ -115,6 +115,17 @@ impl Way {
             .with_custom_certificate_verifier(Arc::clone(&verifier))
             .with_no_client_auth();
         tls.alpn_protocols = vec![ALPN.to_vec()];
+        // **No early data on the way out either, said rather than
+        // inherited.** This is rustls's default, so the line changes
+        // nothing today -- and it is worth writing because quinn's own
+        // convenience constructors set the opposite
+        // (`QuicClientConfig::inner`, behind
+        // `ClientConfig::with_root_certificates`, sets it true), so a later
+        // move to the shorter call would turn it on with nothing failing.
+        // What it would turn on: a request of the client's sent as early
+        // data, which a server may answer twice. The door refuses it in the
+        // other direction for the same reason -- see `LocalCa::quic_config`.
+        tls.enable_early_data = false;
         // The same key log as everything else tracewing agrees, so what went
         // over HTTP/3 can be read in Wireshark like the rest.
         tls.key_log = key_log;
@@ -924,5 +935,22 @@ mod tests {
         assert_eq!(ids.next(), 1);
         assert_eq!(connector.ids().next(), 2, "the same counter, not a copy");
         assert_eq!(ids.next(), 3);
+    }
+
+    /// **The way out asks for no early data.** rustls defaults it off, so
+    /// this asserts a default -- on purpose: quinn's convenience
+    /// constructor sets it on, and the day somebody moves this to that call
+    /// the decision has to come with it. The door's half of the same
+    /// decision is measured from the outside in `quic_server`.
+    #[test]
+    fn the_way_out_does_not_offer_early_data() {
+        let dir = dir("no-early-data");
+        let ca = ca(&dir);
+        let out = testing::way(&ca, TrafficRules::default(), RelaySettings::default());
+        assert!(
+            !out.tls.enable_early_data,
+            "early data on the way out is a request the server may answer twice"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
