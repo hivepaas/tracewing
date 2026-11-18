@@ -53,6 +53,8 @@ p12-keystore = "0.4"
 rusqlite = { version = "0.41.1", features = ["bundled"] }
 md-5 = "0.10"
 md4 = "0.10"
+aes-gcm = "0.11"
+hkdf = "0.12"
 hmac = "0.12"
 sha2 = "0.10"
 sha3 = "0.10"
