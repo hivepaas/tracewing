@@ -252,12 +252,22 @@ real machine's interfaces and reports the device missing while `ip` has just
 made it — hence `--mount` and a fresh `sysfs`; `/proc` needs nothing,
 because the net sysctls and `/proc/net` are resolved against the reading
 task's own namespace. **The same trick made `local_live_linux` runnable
-without polkit** (#368), and it does **not** make either of them runnable
-in CI: the runner refuses the namespace with
-`unshare: write failed /proc/self/uid_map: Operation not permitted`, which
-is measured rather than assumed, and which one test un-ignored was enough to
-find. Both stay a thing somebody runs by hand, with one command and no
-password.
+without polkit** (#368), and it does **not** make either of them runnable in
+CI — but the reason is not CI, which both of us said first and neither had
+measured. **It is AppArmor.** On Ubuntu 24.04 and newer,
+`kernel.apparmor_restrict_unprivileged_userns` is 1 and the profile an
+unconfined process transitions to when it makes a user namespace carries
+`allow userns` with `audit deny capability`, so the namespace is made and
+the capabilities inside it are not:
+`unshare: write failed /proc/self/uid_map: Operation not permitted`. TraceW 2
+measured it on the runner by flipping the sysctl both ways and back (#372),
+and the same refusal is one terminal away on this machine —
+`aa-exec -p unconfined -- unshare --user --map-root-user true` fails here
+while the plain command succeeds, because the editor these sessions run in
+has a profile that grants `userns`. So both tests stay a thing somebody runs
+by hand, and the one command in each file's header now says what to do about
+the profile; un-ignoring either would have broken `cargo test` for a
+developer in a terminal, not only in CI.
 
 Two things are deliberately not in it. **The way out is not pinned**: a
 namespace has one interface — ours — so `roads::out_by` answers nowhere and
