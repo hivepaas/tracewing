@@ -721,6 +721,7 @@ mod tests {
                 flow
             }
             Some(Took::Port(port, _)) => panic!("a flow, not the listener {}", port.name),
+            Some(Took::Quic(attempt, _)) => panic!("a flow, not QUIC to {}", attempt.to),
             None => panic!("the endpoint handed nothing over and then went"),
         };
         assert_eq!(flow.client, tcp.from, "the phone, as the packet said");

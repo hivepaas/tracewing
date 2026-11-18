@@ -34,6 +34,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Hosts not to decrypt, tunneled untouched (Apple and Windows Update to start with) | Beta | Free |
 | Take offers of HTTP/3 (`Alt-Svc`) out of responses, so apps stay on HTTP/2 | Beta | Free |
 | Block UDP 443 so that clients fall back from HTTP/3 to HTTP/2 | Beta | Free |
+| Show a refused HTTP/3 attempt as a flow, with the server name it asked for | Beta | Free |
 | Go through another proxy, as a company's network asks: HTTP (HTTPS through CONNECT, plain HTTP passed on whole) or SOCKS5, with a user name and password (kept in the system's keychain, else in a file only the user can read), and hosts to reach straight as `NO_PROXY` has them; the server's name left to the proxy to look up.; set in Settings, kept in `relay.toml`, applied to the next connection | Beta | Free |
 | Go through a company proxy that asks for NTLM: NTLMv2 on one connection, the password never sent; a proxy that asked once is asked with NTLM straight away, plain HTTP through a tunnel then | Beta | Pro |
 | Go through a company proxy with Kerberos (Negotiate), as the user signed in to Windows or with a ticket | 1.x | Pro |

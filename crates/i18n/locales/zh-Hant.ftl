@@ -622,6 +622,9 @@ te8ce2db0 = JSON 行
 # Not decrypted
 t8090a1ba = 未解密
 
+# Sent back to TCP
+tc509eab4 = 已退回 TCP
+
 # open
 td35ec4c9 = 進行中
 
@@ -666,6 +669,9 @@ t3343999e = 此流量紀錄已不存在。
 
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = 此主機未解密，因此無法檢視其傳送的內容。
+
+# Nothing was read: tracewing refuses QUIC, so the client falls back to TCP.
+tafe81961 = 未讀取任何內容：tracewing 拒絕 QUIC，因此用戶端退回 TCP。
 
 # Still coming: it shows once it ends.
 t42be95fb = 仍在接收：結束後顯示。
@@ -865,6 +871,9 @@ t8c2c37b1 = 無回應
 # Tunnel, not decrypted
 tce693254 = 通道，未解密
 
+# QUIC, refused
+tffd0c561 = QUIC，已拒絕
+
 # GraphQL: {operation}
 t2d65757d = GraphQL：{ $operation }
 
@@ -906,6 +915,9 @@ t1ef5a00a = 此連線的資訊已不再保留：已隨較早的流量紀錄一�
 
 # Not decrypted: tracewing passed it on without looking.
 t0427c9b1 = 未解密：tracewing 未檢視內容便直接轉送。
+
+# None: tracewing refuses QUIC, so the client falls back to TCP, where it can be read.
+tcef63988 = 無：tracewing 拒絕 QUIC，因此用戶端退回 TCP，在那裡可以讀取。
 
 # No connection was made.
 tf348eb92 = 未建立連線。

@@ -104,6 +104,15 @@ pub fn ours_to_pass(port: u16) -> bool {
     port != DNS_PORT && port != QUIC_PORT
 }
 
+/// Whether a datagram going to `port` is refused here so that its client
+/// tries TCP instead. One that is gets looked at first: refusing it silently
+/// is what made a program insisting on HTTP/3 invisible, and
+/// [`crate::quic`] is what makes it a row. Nothing of it is decrypted
+/// beyond the hello the client sent in the clear.
+pub fn ours_to_refuse(port: u16) -> bool {
+    port == QUIC_PORT
+}
+
 /// The datagram an IP packet carries, where it carries one this understands.
 ///
 /// `None` for anything that is not UDP, for an IPv4 fragment that is not the

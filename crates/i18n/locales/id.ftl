@@ -622,6 +622,9 @@ te8ce2db0 = Baris JSON
 # Not decrypted
 t8090a1ba = Tidak didekripsi
 
+# Sent back to TCP
+tc509eab4 = Dikembalikan ke TCP
+
 # open
 td35ec4c9 = terbuka
 
@@ -666,6 +669,9 @@ t3343999e = Flow ini sudah tidak ada.
 
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Host ini tidak didekripsi, jadi isi kirimannya tidak bisa dilihat.
+
+# Nothing was read: tracewing refuses QUIC, so the client falls back to TCP.
+tafe81961 = Tidak ada yang dibaca: tracewing menolak QUIC, jadi klien turun ke TCP.
 
 # Still coming: it shows once it ends.
 t42be95fb = Masih datang: tampil setelah selesai.
@@ -865,6 +871,9 @@ t8c2c37b1 = Tidak ada respons
 # Tunnel, not decrypted
 tce693254 = Tunnel, tidak didekripsi
 
+# QUIC, refused
+tffd0c561 = QUIC, ditolak
+
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
@@ -906,6 +915,9 @@ t1ef5a00a = Info koneksi ini sudah tidak disimpan: ikut terbuang bersama flow ya
 
 # Not decrypted: tracewing passed it on without looking.
 t0427c9b1 = Tidak didekripsi: tracewing meneruskannya tanpa melihat isinya.
+
+# None: tracewing refuses QUIC, so the client falls back to TCP, where it can be read.
+tcef63988 = Tidak ada: tracewing menolak QUIC, jadi klien turun ke TCP, yang bisa dibaca.
 
 # No connection was made.
 tf348eb92 = Tidak ada koneksi yang dibuat.

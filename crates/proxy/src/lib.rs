@@ -473,6 +473,7 @@ async fn serve(mut took: mpsc::Receiver<Took>, serving: Serve, stop: Stop) -> Re
                         Ok(())
                     });
                 }
+                Some(Took::Quic(attempt, by)) => serving.handler.quic(attempt, by),
                 None => taking = false,
             },
             Some(ended) = running.join_next(), if !running.is_empty() => match ended {

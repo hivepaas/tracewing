@@ -570,6 +570,8 @@ impl Traffic {
             *self.inspector.slot(other) = BodyState::Note(
                 if detail.kind == "tunnel" {
                     tr!("This host is not decrypted, so what it sends cannot be seen.")
+                } else if detail.kind == "quic" {
+                    tr!("Nothing was read: tracewing refuses QUIC, so the client falls back to TCP.")
                 } else if detail.open {
                     tr!("Still coming: it shows once it ends.")
                 } else if facts.bytes == 0 {
@@ -1654,7 +1656,7 @@ impl Traffic {
                 },
             )
             .when(
-                !matches!(detail.kind.as_str(), "tunnel" | "websocket"),
+                !matches!(detail.kind.as_str(), "tunnel" | "websocket" | "quic"),
                 |d| {
                     let small = |id: &'static str, label: String| {
                         div()
@@ -3656,6 +3658,15 @@ fn render_chips(
             .gap(ui(6.))
             .child(plain(tr!("Tunnel, not decrypted")));
     }
+    // And a refused QUIC attempt was never opened at all.
+    if detail.kind == "quic" {
+        return div()
+            .flex()
+            .flex_row()
+            .flex_shrink_0()
+            .gap(ui(6.))
+            .child(plain(tr!("QUIC, refused")));
+    }
     let size = size_chip_text(&detail.request, &detail.response);
     div()
         .flex()
@@ -3939,6 +3950,9 @@ fn render_connection(
                 tr!("What this connection was is no longer kept: it went with older flows.")
             }
             (None, "tunnel") => tr!("Not decrypted: tracewing passed it on without looking."),
+            (None, "quic") => tr!(
+                "None: tracewing refuses QUIC, so the client falls back to TCP, where it can be read."
+            ),
             (None, _) if detail.error.is_some() => tr!("No connection was made."),
             (None, _) => tr!("None: it was answered without one."),
         };

@@ -250,6 +250,20 @@ fn taken_on(packet: &[u8]) -> Option<crate::datagrams::Datagram> {
     crate::datagrams::ours_to_pass(datagram.to.port()).then_some(datagram)
 }
 
+/// The QUIC a packet carries, where it carries a client opening a connection
+/// to a port refused here.
+///
+/// Apart from the loop for the same reason as [`taken_on`]: what it decides
+/// is worth testing without a stack around it.
+fn quic_in(packet: &[u8]) -> Option<(crate::datagrams::Datagram, crate::quic::Opening)> {
+    let datagram = crate::datagrams::datagram(packet)?;
+    if !crate::datagrams::ours_to_refuse(datagram.to.port()) {
+        return None;
+    }
+    let opening = crate::quic::opening(&datagram.body)?;
+    Some((datagram, opening))
+}
+
 /// IPv4, IPv6 and TCP only. A packet this does not understand is handed to
 /// the stack anyway, which drops what it does not want: this is only here to
 /// decide whether to make a connection first.
@@ -476,6 +490,10 @@ async fn run(
         waiting: VecDeque::new(),
         out: outgoing,
     };
+    // Which refused QUIC attempts have been said, so that a client's retries
+    // are one row rather than five. It lives with the loop because the loop
+    // is the one thread that sees every packet.
+    let mut attempts = crate::quic::Attempts::default();
     let mut config = Config::new(HardwareAddress::Ip);
     config.random_seed = seed();
     let mut iface = Interface::new(config, &mut device, moment(started));
@@ -594,6 +612,20 @@ async fn run(
                             }
                         }
                         (None, None) => {
+                            // Refused either way -- the stack has no socket
+                            // for it and answers an ICMP port unreachable,
+                            // which is what sends the client back to TCP.
+                            // Saying so is all this adds.
+                            if let Some((datagram, quic)) = quic_in(&packet)
+                                && attempts.fresh(datagram.from, datagram.to, Instant::now())
+                            {
+                                found.quic(crate::quic::Attempt {
+                                    client: datagram.from,
+                                    to: datagram.to,
+                                    version: quic.version,
+                                    hello: quic.hello,
+                                });
+                            }
                             open_for(&packet, most, &mut sockets, &mut conns, &woken);
                             device.waiting.push_back(packet);
                         }
@@ -1165,6 +1197,7 @@ mod tests {
         async fn flow(&mut self) -> Flow {
             match tokio::time::timeout(Duration::from_secs(5), self.took.recv()).await {
                 Ok(Some(Took::Flow(flow, _))) => flow,
+                Ok(Some(Took::Quic(attempt, _))) => panic!("a flow, not QUIC to {}", attempt.to),
                 other => panic!("a flow, not {:?}", other.map(|t| t.is_some())),
             }
         }
@@ -1423,6 +1456,65 @@ mod tests {
         );
         assert_eq!(answer.to, client.parse().unwrap());
         assert_eq!(answer.body, b"an answer");
+    }
+
+    /// A refused attempt is also **said**, which is the half that was
+    /// missing: before this a program insisting on HTTP/3 was not refused
+    /// loudly, it was simply absent from the list, which is the worst way for
+    /// a debugging tool to fail.
+    ///
+    /// The packet is the RFC's own, so what comes out -- `example.com`, and
+    /// `alpn` offered -- is a name nothing here chose.
+    #[tokio::test]
+    async fn a_refused_quic_attempt_is_told_about_as_well() {
+        let mut running = start_passing();
+        let client: SocketAddr = "10.78.0.2:51000".parse().unwrap();
+        let to: SocketAddr = "10.78.0.1:443".parse().unwrap();
+        let initial = crate::quic::vectors::bytes(crate::quic::vectors::RFC_9001_A2);
+        running
+            .into
+            .send(crate::datagrams::packet_for(client, to, &initial).expect("a packet"))
+            .await
+            .unwrap();
+
+        let told = tokio::time::timeout(Duration::from_secs(5), running.took.recv())
+            .await
+            .expect("the attempt is handed over")
+            .expect("the stack is running");
+        let attempt = match told {
+            Took::Quic(attempt, by) => {
+                // The channel's own stamp: this harness hands `Found` to the
+                // stack directly, and replacing it with the source's way in
+                // is `Found::start`'s job, which `tun.rs` covers. What is
+                // checked here is that the attempt carries whatever stamp
+                // the channel has rather than one of its own.
+                assert_eq!(by, By::Given, "stamped by the channel, not by this");
+                attempt
+            }
+            Took::Flow(..) | Took::Port(..) => panic!("QUIC, not a connection"),
+        };
+        assert_eq!(attempt.client, client);
+        assert_eq!(attempt.to, to);
+        assert_eq!(attempt.version, 1);
+        let hello = attempt
+            .hello
+            .expect("the hello the client sent in the clear");
+        assert_eq!(hello.server_name.as_deref(), Some("example.com"));
+        assert_eq!(hello.alpn, ["alpn"]);
+
+        // And sent again, as a client does before giving up on QUIC: one
+        // attempt, not two rows.
+        running
+            .into
+            .send(crate::datagrams::packet_for(client, to, &initial).expect("a packet"))
+            .await
+            .unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(300), running.took.recv())
+                .await
+                .is_err(),
+            "the retry is the same attempt"
+        );
     }
 
     /// And the two ports that do not come through there are unchanged by it.

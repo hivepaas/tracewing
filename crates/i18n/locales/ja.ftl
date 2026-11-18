@@ -622,6 +622,9 @@ te8ce2db0 = JSON 行
 # Not decrypted
 t8090a1ba = 未復号
 
+# Sent back to TCP
+tc509eab4 = TCP に戻しました
+
 # open
 td35ec4c9 = オープン
 
@@ -666,6 +669,9 @@ t3343999e = このフローはもうありません。
 
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = このホストは復号されないため、送信内容は見えません。
+
+# Nothing was read: tracewing refuses QUIC, so the client falls back to TCP.
+tafe81961 = 何も読み取っていません: tracewing は QUIC を拒否するため、クライアントは TCP に切り替えます。
 
 # Still coming: it shows once it ends.
 t42be95fb = まだ届いています。終わると表示されます。
@@ -865,6 +871,9 @@ t8c2c37b1 = レスポンスなし
 # Tunnel, not decrypted
 tce693254 = トンネル、未復号
 
+# QUIC, refused
+tffd0c561 = QUIC、拒否
+
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
@@ -906,6 +915,9 @@ t1ef5a00a = この接続の情報はもう保持されていません: 古いフ
 
 # Not decrypted: tracewing passed it on without looking.
 t0427c9b1 = 未復号: tracewing は中身を見ずにそのまま転送しました。
+
+# None: tracewing refuses QUIC, so the client falls back to TCP, where it can be read.
+tcef63988 = なし: tracewing は QUIC を拒否するため、クライアントは読み取れる TCP に切り替えます。
 
 # No connection was made.
 tf348eb92 = 接続は確立されませんでした。

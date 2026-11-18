@@ -252,8 +252,11 @@ Two things to know before relying on it:
   dropped in silence is retried until it times out, where a refusal arrives
   at once and the app opens a TCP connection instead, which tracewing reads.
   An app that insists on QUIC and will not fall back is one this does not
-  capture, and `Hide HTTP/3` in Settings is the same gap seen from the
-  desktop.
+  capture — but it is no longer one you cannot see: a refused attempt
+  becomes a row of its own, with the server name the client sent in the
+  clear and a note that it was sent back to TCP. Nothing of the attempt is
+  read beyond that opening packet. `Hide HTTP/3` in Settings is the same gap
+  seen from the desktop.
 
 **Names are answered here.** A phone sends its DNS down the tunnel with
 everything else, and DNS is UDP: the queries would be dropped with the rest,
