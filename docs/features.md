@@ -32,7 +32,7 @@ of a million rows that keeps a 120 Hz display at full rate.
 | Serve a WireGuard tunnel a phone can join (userspace, `boringtun`, one peer): the phone installs the WireGuard app and takes the configuration Settings shows, and everything it sends is captured — apps that ignore its proxy setting included; both ends' keys made here and kept in the system's keychain, else in a file only the user can read; shown as a QR code the WireGuard app scans and as text to paste; names asked for down the tunnel answered here, resolved the way this computer resolves them; off by default, switched on in Settings with the port (51820), open to the network by necessity and to that one peer only, read when tracewing starts | Beta | Free |
 | Pause and resume capture | Beta | Free |
 | Hosts not to decrypt, tunneled untouched (Apple and Windows Update to start with) | Beta | Free |
-| Take offers of HTTP/3 (`Alt-Svc`) out of responses, so apps stay on HTTP/2 | Beta | Free |
+| Take offers of HTTP/3 (`Alt-Svc`) out of responses, so an app that learns of HTTP/3 that way stays on HTTP/2 | Beta | Free |
 | Block UDP 443 so that clients fall back from HTTP/3 to HTTP/2 | Beta | Free |
 | Show a refused HTTP/3 attempt as a flow, with the server name it asked for and the program that sent it | Beta | Free |
 | Go through another proxy, as a company's network asks: HTTP (HTTPS through CONNECT, plain HTTP passed on whole) or SOCKS5, with a user name and password (kept in the system's keychain, else in a file only the user can read), and hosts to reach straight as `NO_PROXY` has them; the server's name left to the proxy to look up.; set in Settings, kept in `relay.toml`, applied to the next connection | Beta | Free |

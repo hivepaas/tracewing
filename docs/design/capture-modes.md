@@ -839,8 +839,9 @@ device.
   QUIC-shaped: an app that insists on HTTP/3 with no fallback is not
   captured, and QUIC that is not HTTP — WebTransport, DNS-over-QUIC — is not
   read. Reading QUIC rather than refusing it needs a QUIC endpoint of our
-  own and an HTTP/3 layer above it, and there is no QUIC library in this
-  workspace today.
+  own and an HTTP/3 layer above it, which is designed, measured and not yet
+  built: [http3.md](http3.md), with the probe it was measured by in
+  [`quicprobe.rs`](../../crates/dev/src/bin/quicprobe.rs).
 
   The cheap half **is** built, and it is the difference between a cost and a
   mystery: a refused attempt is **seen**. A QUIC Initial is protected with a
