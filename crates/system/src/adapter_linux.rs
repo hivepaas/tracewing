@@ -372,8 +372,18 @@ mod tests {
     /// The claim in [`script`]'s own documentation, as something that can
     /// fail. A whitelist rather than a list of forbidden paths, because the
     /// ways to write a file outnumber the ways to ask the kernel for an
-    /// interface: a `tee`, an `nmcli`, a `systemctl` or a redirection into
-    /// `/etc` fails here whatever it is spelled like.
+    /// interface: a `tee`, an `nmcli` or a `systemctl` fails here whatever
+    /// it is spelled like.
+    ///
+    /// Three questions, because the first two were each found passing
+    /// something the comment above claimed they caught. **Who may be
+    /// commanded**, below. **Whether anything is written beside the
+    /// command** -- a redirection or a substitution needs no forbidden verb
+    /// and no forbidden path, and `ip link set … up > /var/lib/x` was green
+    /// until it was asked. **Whether a path under `/etc` appears** at all,
+    /// which neither of the others would catch in `sysctl -p
+    /// /etc/sysctl.d/…`: an allowed verb, no redirection, a file somebody
+    /// else put there.
     ///
     /// **Every command, not every line.** Checking the start of the line
     /// would pass `ip link set tracewing up && nmcli connection add …`,
@@ -411,8 +421,29 @@ mod tests {
                 );
             }
         }
+        // Who may be commanded is only half of it: a line whose every
+        // piece is an `ip` can still write a file beside the command, and
+        // nothing about that file has to be under /etc to outlive a boot.
+        // Both of these were green once, with `> /var/lib/…` and with
+        // `$(touch /var/lib/…)`.
+        //
+        // Asked of the commands rather than of the whole script, because
+        // the comments in it are prose: the one above `sysctl` says
+        // `linkdown` in backticks, and reading the script whole turned this
+        // into a test that failed on the script it was written for.
+        let commands = doing.join("\n");
         assert!(
-            !script.contains("/etc"),
+            !commands.replace("2>/dev/null", "").contains('>'),
+            "a redirection writes a file, wherever it points:\n{script}"
+        );
+        assert!(
+            !commands.contains("$(") && !commands.contains('`'),
+            "a substitution runs a command the whitelist never sees:\n{script}"
+        );
+        // And a path under /etc needs neither: `sysctl -p /etc/sysctl.d/…`
+        // is an allowed verb reading a file somebody put there.
+        assert!(
+            !commands.contains("/etc"),
             "a path under /etc outlives the kernel:\n{script}"
         );
     }
