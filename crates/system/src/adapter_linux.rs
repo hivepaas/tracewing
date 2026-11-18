@@ -41,6 +41,31 @@ pub const METRIC: u32 = 50;
 ///
 /// `user` is the uid the device belongs to, so that tracewing can open it
 /// afterwards without being root.
+///
+/// **It writes nothing that outlives the kernel**, which is the question
+/// somebody asks about any step that ran as an administrator: is there
+/// something of it left to clean up. These nine lines are an `ip tuntap`,
+/// two `sysctl -qw`, two `ip addr add`, an `ip link set up` and two
+/// `ip route add` -- live kernel state, every one of them. `ip tuntap add`
+/// makes a device persistent across **the process that opened it**, which
+/// is the trick the whole mode rests on, and not across a boot.
+///
+/// What is this file's to answer rather than the kernel's is whether
+/// tracewing puts any of it back, and it does not. Nowhere in the tree is
+/// there a unit, a udev rule, a network profile or anything under
+/// `/etc/network`, and the knobs are set with `sysctl -qw` rather than from
+/// `/etc/sysctl.d`, so the next boot does not set them either. In
+/// production the script is run from one place, [`make_adapter`]; the other
+/// `run_as_admin` for an adapter in this file is inside its tests.
+///
+/// `the_step_writes_nothing_that_outlives_the_kernel`, below, is what keeps
+/// that true rather than merely written down: a line that persisted
+/// anything would have to use a verb that is not `ip` or `sysctl`.
+///
+/// What a reader is told about it, and the one thing this reading cannot
+/// rule out -- somebody else's software keeping a profile of a device it
+/// saw -- are in `setup_page::local_when_done`, which is where the question
+/// is actually asked.
 pub fn script(user: u32) -> String {
     let (device, metric) = (DEVICE, METRIC);
     format!(
@@ -341,6 +366,33 @@ mod tests {
             [format!(
                 "ip tuntap del dev {DEVICE} mode tun 2>/dev/null || :"
             )]
+        );
+    }
+
+    /// The claim in [`script`]'s own documentation, as something that can
+    /// fail. A whitelist rather than a list of forbidden paths, because the
+    /// ways to write a file outnumber the ways to ask the kernel for an
+    /// interface: every line that does anything has to be `ip` or `sysctl`,
+    /// so a `tee`, a redirection into `/etc`, an `nmcli` or a `systemctl`
+    /// fails here whatever it is spelled like.
+    #[test]
+    fn the_step_writes_nothing_that_outlives_the_kernel() {
+        let script = script(1000);
+        let doing: Vec<&str> = script
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty() && !line.starts_with('#') && *line != "set -e")
+            .collect();
+        assert!(!doing.is_empty(), "the script does nothing:\n{script}");
+        for line in &doing {
+            assert!(
+                line.starts_with("ip ") || line.starts_with("sysctl "),
+                "only the kernel may be asked for anything: {line}"
+            );
+        }
+        assert!(
+            !script.contains("/etc"),
+            "a path under /etc outlives the kernel:\n{script}"
         );
     }
 
