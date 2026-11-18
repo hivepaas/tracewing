@@ -826,12 +826,29 @@ device.
   and all pin. This is the loudest day-one problem and the cheapest to soften:
   the Windows defaults want to be as long as the macOS ones before the mode
   can be switched on.
-- **UDP is refused, and that is wider than QUIC.** The stack turns TCP into
-  flows and answers DNS itself; every other datagram gets an ICMP port
-  unreachable (see the WireGuard section). For QUIC that is deliberate — it
-  sends an app back to HTTP/2. For a user's own VPN, NTP, a game or a voice
-  call it is the connection not working while tracewing is on. ICMP goes the
-  same way, so `ping` and `tracert` stop answering.
+- **UDP that nobody chose is passed straight through**, which is what the
+  `Bind` in [`datagrams.rs`](../../crates/proxy/src/datagrams.rs) is for, so
+  a VPN, NTP, a game or a voice call keeps working while tracewing is on.
+  Two ports are not passed on: DNS, which tracewing answers itself, and
+  **443, which is refused on purpose** so that an app falls back to HTTP/2
+  and can be read. ICMP echo is answered as well
+  ([`icmp.rs`](../../crates/proxy/src/icmp.rs)), so `ping` and `tracert`
+  still answer.
+
+  What that leaves as a cost is narrower than it used to be, and it is
+  QUIC-shaped: an app that insists on HTTP/3 with no fallback is not
+  captured, and QUIC that is not HTTP — WebTransport, DNS-over-QUIC — is not
+  seen at all. Reading QUIC rather than refusing it needs a QUIC endpoint of
+  our own and an HTTP/3 layer above it, and there is no QUIC library in this
+  workspace today. The cheap half, not built either, is to **see** it
+  without reading it: a QUIC Initial is protected with a key derived from
+  the Destination Connection ID under a published salt, so the ClientHello
+  in it — the server name, the ALPN — is readable by anything on the path,
+  unless the client uses Encrypted ClientHello.
+
+  **This is the local mode only.** A phone on the WireGuard tunnel still
+  gets a port unreachable for every datagram, because that way in has no
+  sieve and no bind: see the WireGuard section, which says so and is right.
 - **Every connection whose server greets first pays two seconds.**
   `FIRST_WORD_WITHIN` in [`handover.rs`](../../crates/proxy/src/handover.rs):
   SSH, RDP, SMTP, MySQL, Postgres, IMAP. One app's connections are a handful;
