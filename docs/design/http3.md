@@ -155,11 +155,28 @@ address, and the `HttpHandler` impl becomes a shim. Ships with the first unit
 tests `FlowHandler` has ever had. Nothing else in this list can start before
 it, and it is worth landing even if HTTP/3 is parked again.
 
-**Two.** `quic_server.rs`: a `quinn` endpoint, certificates minted through
-`Over::Quic`, an `h3` accept loop, a body adapter in each direction between
-`h3`'s streams and the `Body` the core already takes. Tested with an `h3`
-client of its own: a GET, a POST, a large body, an upstream that fails, and a
-client whose trust does not include the CA. Not yet wired to any way in.
+**Two, landed.** [`quic_server.rs`](../../crates/proxy/src/quic_server.rs):
+a `quinn` endpoint, an `h3` accept loop, a body carried each way between
+`h3`'s streams and the `Body` the core takes, and the request handed to
+`FlowHandler::request` exactly as hudsucker's door hands one over.
+
+The certificate is **minted per handshake**, not per host in advance, and that
+was the one thing the plan above had wrong. TCP names the host in a `CONNECT`
+before TLS starts, so `config_for(host, Over::Quic)` can hand rustls a config
+that already holds the leaf. QUIC names it inside the ClientHello of the
+Initial, by which time the endpoint is listening and its config is made — so
+the endpoint holds one config whose resolver is `LocalCa::certified_for`, and
+leaves are cached as themselves rather than as whole configs.
+
+What it does not do is reach a server: a request the core says to send on is
+answered with the reason, and the flow is marked failed with the same words
+(`FlowHandler::unreachable`, which is the piece left out when the core was
+taken apart from hudsucker, now that there is a real case for it). So nothing
+opens this door yet: the pages the proxy answers itself are served over
+HTTP/3, and anything else waits for step four. Its tests connect a real `h3`
+client to it: the check page over HTTP/3, two names over one endpoint — which
+is what says the minting is per handshake — the answer for a request that
+cannot be sent on, and a client that trusts nothing, which gets nowhere.
 
 **Three.** The packets. `datagrams.rs` sends a chosen app's UDP 443 to the
 endpoint instead of refusing it, with a table beside it saying where each
@@ -172,7 +189,9 @@ The same code serves a phone on the WireGuard tunnel.
 **Four.** Upstream over QUIC, so both halves of a captured flow are HTTP/3
 rather than one half being HTTP/2 on the client's behalf. The probe already
 does this much; what it does not do is live inside `upstream.rs` with its
-timings, its client certificates and its traffic rules.
+timings, its client certificates and its traffic rules. Until it lands, the
+door answers such a request with the reason rather than sending it anywhere,
+which is also what makes step three safe to leave until after it.
 
 **Five.** The rest, each its own decision: 0-RTT (proposed: **off**, and said
 out loud, because early data a proxy replays is a request sent twice),
