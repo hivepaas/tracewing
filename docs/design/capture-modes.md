@@ -46,7 +46,7 @@ work the source is:
 | Needs our own TCP stack | no | **yes** | **yes** |
 | Privilege | the user approves a system extension | Administrator | root for one script, asked with `pkexec` while it runs; the capture itself is unprivileged |
 | Shipping | Developer ID, notarized, packaged as a system extension | Wintun's signed `wintun.dll` beside our executable, driver inside it; nothing of ours to sign, but its licence is not ours either | nothing of ours to sign and no driver; the floor is `SO_BINDTOIFINDEX`, which the pinning uses and which arrived in early 2019 (musl's header patch says 5.1, systemd's wrapper says 5.0 — take it as 2019 rather than a version), older than any supported distribution |
-| Knows the app by | audit token, so bundle id | the TCP table, by address | its full path, from `/proc/<pid>/exe` |
+| Knows the app by | audit token, so bundle id | the TCP and UDP tables, by address | its full path, from `/proc/<pid>/exe` |
 
 mitmproxy has all three and is worth reading before starting any of them; the
 design here is deliberately close to theirs, and `mitmproxy_rs` is MIT, so its
@@ -855,14 +855,28 @@ device.
   after. Nothing past the Initial is decrypted and nothing can be: those
   keys are the endpoints' alone.
 
+  **The program is named too**, which is what makes the row answer "is this
+  app on QUIC?" rather than "something here is". The socket the datagram
+  left is looked for in the system's table of **UDP** sockets, which is not
+  the table a connection is found in and is a narrower one: Windows's
+  `MIB_UDPROW_OWNER_PID` holds a local address, a local port and an owning
+  process, and no far end at all. So the question everywhere is the end on
+  this machine — `Look::Datagram` in [`apps.rs`](../../crates/proxy/src/apps.rs),
+  a variant rather than a field so that each system has to say what it does
+  with it. A socket bound to one address answers for it; one bound to every
+  address answers only where nothing holds the address itself, because those
+  are two programs as often as one. On Linux `/proc/net/udp` is read rather
+  than the kernel asked, because an exact ask is both of a socket's ends and
+  a socket that never connected has one.
+
   What such a row does not say, each a case rather than a guess: a hello
-  split across two datagrams, a version whose salt is not in the table
-  (reported as QUIC with nothing read), and **which program sent it** — the
-  socket is looked up in the operating system's TCP table and a UDP socket
-  is not in it. Under Encrypted ClientHello the name read is the public one
-  rather than the one being reached, which is the client's intent rather
-  than a fault here; GREASE makes a real ECH indistinguishable from a
-  courtesy one, so no row claims either way.
+  split across two datagrams, and a version whose salt is not in the table
+  (reported as QUIC with nothing read). Under Encrypted ClientHello the name
+  read is the public one rather than the one being reached, which is the
+  client's intent rather than a fault here; GREASE makes a real ECH
+  indistinguishable from a courtesy one, so no row claims either way. And a
+  phone's attempt over the tunnel has no program to name: the socket is on
+  the phone, so the look-up is not attempted rather than answered wrongly.
 
   **This is the local mode only.** A phone on the WireGuard tunnel still
   gets a port unreachable for every datagram, because that way in has no

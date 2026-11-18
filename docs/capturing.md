@@ -255,7 +255,9 @@ Two things to know before relying on it:
   capture — but it is no longer one you cannot see: a refused attempt
   becomes a row of its own, with the server name the client sent in the
   clear and a note that it was sent back to TCP. Nothing of the attempt is
-  read beyond that opening packet. `Hide HTTP/3` in Settings is the same gap
+  read beyond that opening packet. The row carries no app name here, and
+  cannot: the socket is on the phone. Captured on this computer, the same
+  row names the program that sent the datagram. `Hide HTTP/3` in Settings is the same gap
   seen from the desktop.
 
 **Names are answered here.** A phone sends its DNS down the tunnel with
@@ -299,7 +301,10 @@ computer.
 - **Anything that is not HTTP**: DNS, SSH, SMTP, raw TCP and UDP, WebRTC.
 - **A client that insists on HTTP/3.** tracewing takes `Alt-Svc` out of
   responses and can block UDP 443 so that clients fall back to HTTP/2; one
-  that refuses to fall back is out of reach until HTTP/3 is built.
+  that refuses to fall back is out of reach until HTTP/3 is built. Out of
+  reach, not out of sight: each refused attempt is a row that says which
+  server was asked for and — captured on this computer — which program
+  asked, and nothing of it is read past that first packet.
 - **The system's own traffic** — Windows Update, `softwareupdate`, Apple
   push — which tracewing tunnels untouched on purpose: decrypting it breaks
   updates and tells nobody anything.

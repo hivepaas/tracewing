@@ -10,6 +10,10 @@ use std::{
 
 /// `sys/proc_info.h`, which libc does not have.
 const PROC_PIDFDSOCKETINFO: i32 = 3;
+/// A socket of one of the internet families, which a UDP one is: its part of
+/// the union is an `in_sockinfo`, and a TCP socket's starts with one, so both
+/// are read at the same offset.
+const SOCKINFO_IN: i32 = 1;
 const SOCKINFO_TCP: i32 = 2;
 const INI_IPV4: u8 = 0x1;
 const INI_IPV6: u8 = 0x2;
@@ -110,11 +114,23 @@ type Buffer = [u64; 256];
 
 pub fn owners(looks: &[Look], ours: &[u16], recent: &[u32]) -> Vec<Option<u32>> {
     let mut found = vec![None; looks.len()];
-    let mut wanted: HashMap<Look, usize> = looks
-        .iter()
-        .enumerate()
-        .map(|(i, look)| (look.plain(), i))
-        .collect();
+    let mut wanted: HashMap<Look, usize> = HashMap::new();
+    let mut datagrams: HashMap<SocketAddr, usize> = HashMap::new();
+    for (i, look) in looks.iter().enumerate() {
+        match look.plain() {
+            Look::Datagram { client } => {
+                datagrams.insert(client, i);
+            }
+            look => {
+                wanted.insert(look, i);
+            }
+        }
+    }
+    // Every datagram socket passed on the way, because which one answers an
+    // ask is not decided until they have all been seen: a socket bound to one
+    // address wins over a socket bound to all of them, and the second may be
+    // met first. Only gathered when something asks.
+    let mut sent: Vec<(u32, SocketAddr)> = Vec::new();
     let all = all_pids();
     let pids = recent
         .iter()
@@ -123,31 +139,69 @@ pub fn owners(looks: &[Look], ours: &[u16], recent: &[u32]) -> Vec<Option<u32>> 
     let mut buffer: Box<Buffer> = Box::new([0; 256]);
     for pid in pids {
         for fd in socket_fds(pid) {
-            let Some((client, remote)) = tcp_ends(pid, fd, &mut buffer) else {
-                continue;
-            };
-            // Taken on its way: all four addresses say which it is. A client
-            // of tracewing's: its own end, among the sockets whose far end is
-            // one of our ports.
-            let hit = wanted
-                .remove(&Look {
-                    client,
-                    to: Some(remote),
-                })
-                .or_else(|| {
-                    ours.contains(&remote.port())
-                        .then(|| wanted.remove(&Look { client, to: None }))
-                        .flatten()
-                });
-            if let Some(i) = hit {
-                found[i] = Some(pid);
-                if wanted.is_empty() {
-                    return found;
+            match ends(pid, fd, &mut buffer) {
+                // Taken on its way: all four addresses say which it is. A
+                // client of tracewing's: its own end, among the sockets whose
+                // far end is one of our ports.
+                Some(Open::Connection { client, remote }) => {
+                    let hit = wanted
+                        .remove(&Look::Connection {
+                            client,
+                            to: Some(remote),
+                        })
+                        .or_else(|| {
+                            ours.contains(&remote.port())
+                                .then(|| wanted.remove(&Look::Connection { client, to: None }))
+                                .flatten()
+                        });
+                    if let Some(i) = hit {
+                        found[i] = Some(pid);
+                        if wanted.is_empty() && datagrams.is_empty() {
+                            return found;
+                        }
+                    }
                 }
+                Some(Open::Datagram { client }) if !datagrams.is_empty() => {
+                    sent.push((pid, client));
+                }
+                _ => {}
             }
         }
     }
+    for (client, i) in datagrams {
+        found[i] = which_sent(&sent, client);
+    }
     found
+}
+
+/// Which process sent a datagram from `client`: the one holding the socket
+/// bound to that address, or else -- and only else -- one bound to every
+/// address on that port. A program that bound `0.0.0.0:443` and one that
+/// bound an interface's `:443` are different programs, and the packet says
+/// which address it left from.
+fn which_sent(sent: &[(u32, SocketAddr)], client: SocketAddr) -> Option<u32> {
+    let at = |(_, local): &&(u32, SocketAddr)| *local == client;
+    let anywhere = |(_, local): &&(u32, SocketAddr)| {
+        local.port() == client.port() && local.ip().is_unspecified()
+    };
+    let (pid, _) = sent
+        .iter()
+        .find(at)
+        .or_else(|| sent.iter().find(anywhere))?;
+    Some(*pid)
+}
+
+/// What one of a process's sockets is, as much of it as is asked for.
+enum Open {
+    /// A connection, by both its ends.
+    Connection {
+        client: SocketAddr,
+        remote: SocketAddr,
+    },
+    /// A datagram socket, by the end on this machine. Its far end is not
+    /// read: a socket that never connected has none, and nothing in a
+    /// datagram says which kind sent it. See [`Look`].
+    Datagram { client: SocketAddr },
 }
 
 pub fn path_of(pid: u32) -> Option<String> {
@@ -212,8 +266,11 @@ fn socket_fds(pid: u32) -> Vec<i32> {
         .collect()
 }
 
-/// Both ends of a TCP socket, as a packet would carry them.
-fn tcp_ends(pid: u32, fd: i32, buffer: &mut Buffer) -> Option<(SocketAddr, SocketAddr)> {
+/// What a socket of a process is, with its addresses as a packet would carry
+/// them. Anything that is neither a connection nor a datagram socket of one
+/// of the internet families -- a pipe to another program, a kernel control --
+/// is `None`.
+fn ends(pid: u32, fd: i32, buffer: &mut Buffer) -> Option<Open> {
     let size = size_of::<Buffer>() as i32;
     // SAFETY: the buffer is as long as it says.
     let bytes = unsafe {
@@ -230,9 +287,11 @@ fn tcp_ends(pid: u32, fd: i32, buffer: &mut Buffer) -> Option<(SocketAddr, Socke
     }
     // SAFETY: the buffer is aligned for u64 and holds at least this much.
     let info = unsafe { &*buffer.as_ptr().cast::<SocketFdInfo>() };
-    if info.soi_kind != SOCKINFO_TCP {
-        return None;
-    }
+    let datagram = match info.soi_kind {
+        SOCKINFO_TCP => false,
+        SOCKINFO_IN if info.soi_protocol == libc::IPPROTO_UDP => true,
+        _ => return None,
+    };
     let tcp = &info.tcp;
     // Which arm of the sixteen-byte union is live, for both ends: an address
     // is one family or the other, never both, and `insi_vflag` says which. A
@@ -257,17 +316,25 @@ fn tcp_ends(pid: u32, fd: i32, buffer: &mut Buffer) -> Option<(SocketAddr, Socke
             None
         }
     };
-    // Ports are in network order in the low half.
-    Some((
-        canonical(SocketAddr::new(
-            at(&tcp.insi_laddr)?,
-            u16::from_be(tcp.insi_lport as u16),
-        )),
-        canonical(SocketAddr::new(
+    // Ports are in network order in the low half. A socket whose family the
+    // kernel does not name drops out here, which for a datagram socket means
+    // it is left alone rather than taken for one bound to every address:
+    // that rule goes by the port alone, so a guess would hand back whatever
+    // program happens to hold the same port and look exactly like an answer.
+    let client = canonical(SocketAddr::new(
+        at(&tcp.insi_laddr)?,
+        u16::from_be(tcp.insi_lport as u16),
+    ));
+    if datagram {
+        return Some(Open::Datagram { client });
+    }
+    Some(Open::Connection {
+        client,
+        remote: canonical(SocketAddr::new(
             at(&tcp.insi_faddr)?,
             u16::from_be(tcp.insi_fport as u16),
         )),
-    ))
+    })
 }
 
 #[cfg(test)]
