@@ -118,8 +118,10 @@ pub struct Arrivals(Mutex<[Arrival; By::ALL.len()]>);
 /// What has arrived by one way in.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Arrival {
-    /// Requests seen, which is what the proxy counts as it serves them. Zero
-    /// or not zero is the whole of what the window asks.
+    /// What arrived and was kept: requests as the proxy serves them, and
+    /// refused QUIC attempts, which arrived just as much and would otherwise
+    /// have a tab say nothing had come in while a row of one was on screen.
+    /// Zero or not zero is the whole of what the window asks.
     pub count: u64,
     pub last: Option<Instant>,
 }
@@ -201,6 +203,10 @@ pub trait Source: Send + 'static {
 pub enum Took {
     Port(Port, By),
     Flow(Flow, By),
+    /// A client that tried QUIC and was refused, which is no connection at
+    /// all: there is nothing to serve and nothing to read, only something to
+    /// say happened. See [`crate::quic`].
+    Quic(crate::quic::Attempt, By),
 }
 
 /// A listener whose clients say where they are going, with `CONNECT` or an
@@ -302,6 +308,20 @@ impl Found {
     /// Hands over one connection.
     pub async fn flow(&self, flow: Flow) {
         let _ = self.0.send(Took::Flow(flow, self.1)).await;
+    }
+
+    /// Says that a client tried QUIC and was refused.
+    ///
+    /// Does not wait, unlike the two above, and drops the attempt if the
+    /// channel is full. The caller is a packet loop: everything on the
+    /// machine is queued behind it, and holding it up to report a row that
+    /// nothing is waiting for would make a refused attempt cost the traffic
+    /// that is being captured. A row missing is the price, and a flood is
+    /// exactly when there are rows to spare.
+    pub fn quic(&self, attempt: crate::quic::Attempt) {
+        if self.0.try_send(Took::Quic(attempt, self.1)).is_err() {
+            tracing::debug!("a QUIC attempt was not recorded");
+        }
     }
 }
 

@@ -657,6 +657,9 @@ te8ce2db0 = Linhas JSON
 # Not decrypted
 t8090a1ba = Não descriptografado
 
+# Sent back to TCP
+tc509eab4 = Devolvido ao TCP
+
 # open
 td35ec4c9 = aberto
 
@@ -701,6 +704,9 @@ t3343999e = Este fluxo não existe mais.
 
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Este host não é descriptografado, então o que ele envia não pode ser visto.
+
+# Nothing was read: tracewing refuses QUIC, so the client falls back to TCP.
+tafe81961 = Nada foi lido: o tracewing recusa QUIC, então o cliente recua para o TCP.
 
 # Still coming: it shows once it ends.
 t42be95fb = Ainda chegando: aparece quando terminar.
@@ -900,6 +906,9 @@ t8c2c37b1 = Sem resposta
 # Tunnel, not decrypted
 tce693254 = Túnel, não descriptografado
 
+# QUIC, refused
+tffd0c561 = QUIC, recusado
+
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
@@ -941,6 +950,9 @@ t1ef5a00a = O que era esta conexão não está mais guardado: foi junto com flux
 
 # Not decrypted: tracewing passed it on without looking.
 t0427c9b1 = Não descriptografado: o tracewing o repassou sem olhar.
+
+# None: tracewing refuses QUIC, so the client falls back to TCP, where it can be read.
+tcef63988 = Nenhuma: o tracewing recusa QUIC, então o cliente recua para o TCP, onde pode ser lido.
 
 # No connection was made.
 tf348eb92 = Nenhuma conexão foi feita.

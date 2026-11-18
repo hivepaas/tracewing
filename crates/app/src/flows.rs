@@ -173,10 +173,15 @@ impl Flows {
                             "sse" => Some(tr!("Events").into()),
                             "ndjson" => Some(tr!("JSON lines").into()),
                             "tunnel" => Some(tr!("Not decrypted").into()),
+                            // Refused on purpose, and the client's next try
+                            // is usually the TCP row after this one.
+                            "quic" => Some(tr!("Sent back to TCP").into()),
                             _ => None,
                         }),
-                    // What goes through a tunnel is not looked at, nor counted.
-                    size: if kind == "tunnel" {
+                    // What goes through a tunnel is not looked at, nor
+                    // counted, and a refused QUIC attempt carried nothing at
+                    // all. Zero bytes would read as a body that was empty.
+                    size: if matches!(kind.as_str(), "tunnel" | "quic") {
                         "–".into()
                     } else {
                         size_text(r.get::<_, i64>(5)? as u64).into()
@@ -334,6 +339,68 @@ mod tests {
             Some("curl"),
             "and now it says what the row says"
         );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The row a refused QUIC attempt makes, read as a reader would: the
+    /// list's columns are built per kind, and a kind that falls through them
+    /// all gets a row saying `0 B` was transferred successfully.
+    #[test]
+    fn a_refused_quic_attempt_reads_as_what_it_was() {
+        use std::sync::Arc;
+        use tracewing_store::{
+            session,
+            store::{BodyRecord, FlowRecord, Recorder},
+        };
+
+        let dir = std::env::temp_dir().join(format!("tracewing-quic-row-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        session::create(&dir).unwrap();
+        let (recorder, writer) = Recorder::spawn(
+            &dir,
+            &tracewing_store::settings::StorageSettings::default(),
+            Arc::new(session::Shared::default()),
+            None,
+            10_000,
+        )
+        .unwrap();
+        recorder.submit(FlowRecord {
+            started_us: 1_793_000_000_000_000,
+            client: "10.0.0.7:51000".to_owned(),
+            kind: "quic",
+            method: "QUIC".to_owned(),
+            scheme: "https".to_owned(),
+            host: "example.com".to_owned(),
+            client_version: "HTTP/3".to_owned(),
+            request: BodyRecord {
+                complete: true,
+                ..BodyRecord::default()
+            },
+            response: BodyRecord {
+                complete: true,
+                ..BodyRecord::default()
+            },
+            ..Default::default()
+        });
+        drop(recorder);
+        writer.close().unwrap();
+
+        let mut flows = Flows::open(&dir, true).unwrap();
+        let row = flows.rows(&[1])[0].clone().expect("the row is there");
+        assert_eq!(row.method, "QUIC");
+        assert_eq!(row.host, "example.com");
+        assert_eq!(row.status, None, "nothing answered it");
+        assert_eq!(
+            row.note.as_deref(),
+            Some(tr!("Sent back to TCP").as_str()),
+            "why the row is empty, and where to look next"
+        );
+        assert_eq!(
+            row.size, "–",
+            "no size: nothing was carried, and `0 B` would read as an empty body"
+        );
+        assert_eq!(row.time, "", "and no time, because it never finished one");
 
         let _ = std::fs::remove_dir_all(&dir);
     }

@@ -79,7 +79,9 @@ pub fn export(
         let Some(row) = Row::load(&flows, id)? else {
             continue;
         };
-        if row.kind == "tunnel" {
+        // Neither carries a request or a response: a tunnel was not looked
+        // at, and a refused QUIC attempt never became a connection.
+        if matches!(row.kind.as_str(), "tunnel" | "quic") {
             continue;
         }
         let remote = match row.conn_id {

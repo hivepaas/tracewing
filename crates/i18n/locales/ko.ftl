@@ -622,6 +622,9 @@ te8ce2db0 = JSON 줄
 # Not decrypted
 t8090a1ba = 복호화 안 됨
 
+# Sent back to TCP
+tc509eab4 = TCP로 되돌림
+
 # open
 td35ec4c9 = 열림
 
@@ -666,6 +669,9 @@ t3343999e = 이 플로우는 더 이상 없습니다.
 
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = 이 호스트는 복호화되지 않으므로 보내는 내용을 볼 수 없습니다.
+
+# Nothing was read: tracewing refuses QUIC, so the client falls back to TCP.
+tafe81961 = 읽은 내용이 없습니다: tracewing이 QUIC을 거부하므로 클라이언트가 TCP로 전환합니다.
 
 # Still coming: it shows once it ends.
 t42be95fb = 아직 오는 중입니다. 끝나면 보입니다.
@@ -865,6 +871,9 @@ t8c2c37b1 = 응답 없음
 # Tunnel, not decrypted
 tce693254 = 터널, 복호화 안 됨
 
+# QUIC, refused
+tffd0c561 = QUIC, 거부됨
+
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
@@ -906,6 +915,9 @@ t1ef5a00a = 이 연결의 정보는 더 이상 보관되어 있지 않습니다:
 
 # Not decrypted: tracewing passed it on without looking.
 t0427c9b1 = 복호화 안 됨: tracewing이 내용을 보지 않고 그대로 전달했습니다.
+
+# None: tracewing refuses QUIC, so the client falls back to TCP, where it can be read.
+tcef63988 = 없음: tracewing이 QUIC을 거부하므로 클라이언트가 읽을 수 있는 TCP로 전환합니다.
 
 # No connection was made.
 tf348eb92 = 연결이 만들어지지 않았습니다.

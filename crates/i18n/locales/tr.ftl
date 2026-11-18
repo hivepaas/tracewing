@@ -651,6 +651,9 @@ te8ce2db0 = JSON satırları
 # Not decrypted
 t8090a1ba = Şifresi çözülmedi
 
+# Sent back to TCP
+tc509eab4 = TCP'ye geri gönderildi
+
 # open
 td35ec4c9 = açık
 
@@ -695,6 +698,9 @@ t3343999e = Bu akış artık yok.
 
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Bu host'un şifresi çözülmüyor, bu yüzden gönderdikleri görülemez.
+
+# Nothing was read: tracewing refuses QUIC, so the client falls back to TCP.
+tafe81961 = Hiçbir şey okunmadı: tracewing QUIC'i reddediyor, bu yüzden istemci TCP'ye geri düşer.
 
 # Still coming: it shows once it ends.
 t42be95fb = Hâlâ geliyor: bittiğinde görünür.
@@ -894,6 +900,9 @@ t8c2c37b1 = Yanıt yok
 # Tunnel, not decrypted
 tce693254 = Tünel, şifresi çözülmedi
 
+# QUIC, refused
+tffd0c561 = QUIC, reddedildi
+
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
@@ -935,6 +944,9 @@ t1ef5a00a = Bu bağlantının ne olduğu artık saklanmıyor: daha eski akışla
 
 # Not decrypted: tracewing passed it on without looking.
 t0427c9b1 = Şifresi çözülmedi: tracewing bakmadan iletti.
+
+# None: tracewing refuses QUIC, so the client falls back to TCP, where it can be read.
+tcef63988 = Yok: tracewing QUIC'i reddediyor, bu yüzden istemci okunabilen TCP'ye geri düşer.
 
 # No connection was made.
 tf348eb92 = Bağlantı kurulmadı.

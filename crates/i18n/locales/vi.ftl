@@ -622,6 +622,9 @@ te8ce2db0 = Dòng JSON
 # Not decrypted
 t8090a1ba = Không giải mã
 
+# Sent back to TCP
+tc509eab4 = Đã chuyển về TCP
+
 # open
 td35ec4c9 = đang mở
 
@@ -666,6 +669,9 @@ t3343999e = Flow này không còn nữa.
 
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Host này không được giải mã, nên không xem được những gì nó gửi.
+
+# Nothing was read: tracewing refuses QUIC, so the client falls back to TCP.
+tafe81961 = Không đọc gì: tracewing từ chối QUIC, nên client chuyển về TCP.
 
 # Still coming: it shows once it ends.
 t42be95fb = Vẫn đang tới: body hiện khi kết thúc.
@@ -865,6 +871,9 @@ t8c2c37b1 = Không có phản hồi
 # Tunnel, not decrypted
 tce693254 = Tunnel, không giải mã
 
+# QUIC, refused
+tffd0c561 = QUIC, bị từ chối
+
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
@@ -906,6 +915,9 @@ t1ef5a00a = Thông tin về kết nối này không còn được giữ: nó đ�
 
 # Not decrypted: tracewing passed it on without looking.
 t0427c9b1 = Không giải mã: tracewing chuyển tiếp mà không đọc.
+
+# None: tracewing refuses QUIC, so the client falls back to TCP, where it can be read.
+tcef63988 = Không có: tracewing từ chối QUIC, nên client chuyển về TCP, nơi có thể đọc được.
 
 # No connection was made.
 tf348eb92 = Không có kết nối nào được tạo.

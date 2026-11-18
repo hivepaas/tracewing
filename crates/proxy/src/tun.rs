@@ -585,6 +585,9 @@ mod tests {
         match took {
             crate::source::Took::Flow(_, by) => assert_eq!(by, crate::source::By::Tun),
             crate::source::Took::Port(..) => panic!("a TUN takes flows, not ports"),
+            crate::source::Took::Quic(attempt, _) => {
+                panic!("a flow, not QUIC to {}", attempt.to)
+            }
         }
         let (_, to) = timeout(SOON, watching.asked.recv())
             .await

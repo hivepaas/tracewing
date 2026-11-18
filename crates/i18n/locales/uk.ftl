@@ -673,6 +673,9 @@ te8ce2db0 = Рядки JSON
 # Not decrypted
 t8090a1ba = Не розшифровано
 
+# Sent back to TCP
+tc509eab4 = Повернено на TCP
+
 # open
 td35ec4c9 = відкрито
 
@@ -717,6 +720,9 @@ t3343999e = Цього потоку більше немає.
 
 # This host is not decrypted, so what it sends cannot be seen.
 tf85fe84f = Цей хост не розшифровується, тому не видно, що він надсилає.
+
+# Nothing was read: tracewing refuses QUIC, so the client falls back to TCP.
+tafe81961 = Нічого не прочитано: tracewing відхиляє QUIC, тож клієнт переходить на TCP.
 
 # Still coming: it shows once it ends.
 t42be95fb = Ще надходить: з’явиться, коли закінчиться.
@@ -916,6 +922,9 @@ t8c2c37b1 = Немає відповіді
 # Tunnel, not decrypted
 tce693254 = Тунель, не розшифровано
 
+# QUIC, refused
+tffd0c561 = QUIC, відхилено
+
 # GraphQL: {operation}
 t2d65757d = GraphQL: { $operation }
 
@@ -957,6 +966,9 @@ t1ef5a00a = Відомості про це з’єднання більше не
 
 # Not decrypted: tracewing passed it on without looking.
 t0427c9b1 = Не розшифровано: tracewing передав його далі, не переглядаючи.
+
+# None: tracewing refuses QUIC, so the client falls back to TCP, where it can be read.
+tcef63988 = Немає: tracewing відхиляє QUIC, тож клієнт переходить на TCP, де його можна прочитати.
 
 # No connection was made.
 tf348eb92 = З’єднання не встановлено.

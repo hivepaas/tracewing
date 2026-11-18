@@ -838,13 +838,31 @@ device.
   What that leaves as a cost is narrower than it used to be, and it is
   QUIC-shaped: an app that insists on HTTP/3 with no fallback is not
   captured, and QUIC that is not HTTP — WebTransport, DNS-over-QUIC — is not
-  seen at all. Reading QUIC rather than refusing it needs a QUIC endpoint of
-  our own and an HTTP/3 layer above it, and there is no QUIC library in this
-  workspace today. The cheap half, not built either, is to **see** it
-  without reading it: a QUIC Initial is protected with a key derived from
-  the Destination Connection ID under a published salt, so the ClientHello
-  in it — the server name, the ALPN — is readable by anything on the path,
-  unless the client uses Encrypted ClientHello.
+  read. Reading QUIC rather than refusing it needs a QUIC endpoint of our
+  own and an HTTP/3 layer above it, and there is no QUIC library in this
+  workspace today.
+
+  The cheap half **is** built, and it is the difference between a cost and a
+  mystery: a refused attempt is **seen**. A QUIC Initial is protected with a
+  key derived from the Destination Connection ID under a salt RFC 9001 §5.2
+  publishes, so the ClientHello in it — the server name, the ALPN — is
+  readable by anything on the path, and
+  [`quic.rs`](../../crates/proxy/src/quic.rs) reads it for versions 1 and 2,
+  each against that RFC's own sample packet. The stack hands the attempt
+  over as `Took::Quic` and it is kept as a flow of kind `quic`: the host,
+  whether `h3` was offered, and a row that says the client was sent back to
+  TCP — where its second attempt at the same thing usually is, in the row
+  after. Nothing past the Initial is decrypted and nothing can be: those
+  keys are the endpoints' alone.
+
+  What such a row does not say, each a case rather than a guess: a hello
+  split across two datagrams, a version whose salt is not in the table
+  (reported as QUIC with nothing read), and **which program sent it** — the
+  socket is looked up in the operating system's TCP table and a UDP socket
+  is not in it. Under Encrypted ClientHello the name read is the public one
+  rather than the one being reached, which is the client's intent rather
+  than a fault here; GREASE makes a real ECH indistinguishable from a
+  courtesy one, so no row claims either way.
 
   **This is the local mode only.** A phone on the WireGuard tunnel still
   gets a port unreachable for every datagram, because that way in has no
@@ -1702,6 +1720,11 @@ What is left, and what no longer is:
    an app waiting on a timeout looks stuck, where a refusal sends it to TCP
    at once. `quic_is_refused_rather_than_dropped` asserts it, because
    nothing of ours does it and so nothing of ours would notice it stopping.
+   The refusal is also **said**: the stack reads the Initial's ClientHello
+   and hands the attempt over as `Took::Quic`
+   ([above](#what-capturing-the-whole-machine-costs)), so a phone insisting
+   on HTTP/3 is a row that names the host rather than nothing at all. The
+   same code serves both ways in, because both come through this stack.
    But a phone
    sends its **DNS** down the tunnel too, and a dropped query does not look
    like a DNS fault from the phone: it looks like the network has gone,

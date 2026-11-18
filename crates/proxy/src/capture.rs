@@ -475,6 +475,30 @@ impl FlowHandler {
         });
     }
 
+    /// Keeps a refused QUIC attempt as a flow, so that a program insisting
+    /// on HTTP/3 is visible rather than merely absent. See [`crate::quic`].
+    ///
+    /// The row carries no body, no status and no size, because there was
+    /// nothing to read: what it carries is who was being reached and that
+    /// the client was sent back to TCP, where the next row is usually its
+    /// second attempt at the same thing.
+    ///
+    /// **It does not name the program yet.** The one on this machine that
+    /// sent the datagram is found by looking its socket up in the operating
+    /// system's table, and the table [`crate::apps`] reads is the TCP one;
+    /// a UDP socket is not in it. Guessing from the address would be worse
+    /// than leaving it blank.
+    pub(crate) fn quic(&self, attempt: crate::quic::Attempt, by: crate::source::By) {
+        if !self.recording.load(Ordering::Relaxed) {
+            return;
+        }
+        // It arrived, whatever happened to it afterwards. Leaving it out
+        // would have a tab say nothing had come in while a row of it was on
+        // screen.
+        self.arrivals.came(by);
+        self.recorder.submit(quic_record(attempt));
+    }
+
     /// Who is at the other end: the address to put on the flow, and the
     /// program behind it. A connection a source took on its way arrives over
     /// the loopback with what the source was told kept aside, so there is
@@ -2411,9 +2435,100 @@ fn unix_micros() -> i64 {
         .as_micros() as i64
 }
 
+/// What a refused QUIC attempt is kept as.
+///
+/// Apart from [`FlowHandler::quic`] so that the three decisions in it are
+/// testable without a recorder: the name where the client sent one, the
+/// address where it did not, and whether HTTP/3 was what it wanted.
+fn quic_record(attempt: crate::quic::Attempt) -> FlowRecord {
+    let hello = attempt.hello.unwrap_or_default();
+    FlowRecord {
+        started_us: unix_micros(),
+        client: attempt.client.to_string(),
+        kind: "quic",
+        method: "QUIC".to_owned(),
+        scheme: "https".to_owned(),
+        // The name the client sent, where it sent one. Otherwise the
+        // address, which is all a datagram carries. Under Encrypted
+        // ClientHello the name in the hello is the public one rather than
+        // the one being reached, and nothing here can tell a real ECH from
+        // the GREASE one browsers send anyway, so the name is shown as it
+        // was sent and [`crate::quic`] says so.
+        host: hello
+            .server_name
+            .unwrap_or_else(|| attempt.to.ip().to_string()),
+        // What it meant to speak, which is the difference between an app
+        // that lost HTTP/3 and one doing something else over QUIC.
+        client_version: if hello.alpn.iter().any(|name| name == "h3") {
+            "HTTP/3".to_owned()
+        } else {
+            "QUIC".to_owned()
+        },
+        // Both ended, because neither ever started: without this the row
+        // would read as a body still coming.
+        request: BodyRecord {
+            complete: true,
+            ..BodyRecord::default()
+        },
+        response: BodyRecord {
+            complete: true,
+            ..BodyRecord::default()
+        },
+        ..FlowRecord::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// What a refused QUIC attempt is kept as, in the three cases that
+    /// differ. The row has to be readable with no body, no status and no
+    /// size, because that is all there ever was.
+    #[test]
+    fn a_refused_quic_attempt_is_kept_as_a_flow_of_its_own() {
+        let attempt = |hello: Option<crate::quic::Hello>| crate::quic::Attempt {
+            client: "10.0.0.7:51000".parse().unwrap(),
+            to: "93.184.216.34:443".parse().unwrap(),
+            version: 1,
+            hello,
+        };
+
+        // A hello offering HTTP/3: the name it asked for, and what it meant
+        // to speak.
+        let row = quic_record(attempt(Some(crate::quic::Hello {
+            server_name: Some("example.com".to_owned()),
+            alpn: vec!["h3".to_owned()],
+        })));
+        assert_eq!(row.kind, "quic");
+        assert_eq!(row.method, "QUIC");
+        assert_eq!(row.host, "example.com");
+        assert_eq!(row.client_version, "HTTP/3");
+        assert_eq!(row.status, None, "nothing answered it");
+        assert!(
+            row.app.is_none(),
+            "no program: a UDP socket is not in the table that is read"
+        );
+        assert!(
+            row.request.complete && row.response.complete,
+            "neither body is still coming: there was never one"
+        );
+
+        // QUIC that is not HTTP -- WebTransport, DNS-over-QUIC -- said as
+        // what it is rather than as HTTP/3.
+        let row = quic_record(attempt(Some(crate::quic::Hello {
+            server_name: Some("dns.example".to_owned()),
+            alpn: vec!["doq".to_owned()],
+        })));
+        assert_eq!(row.client_version, "QUIC");
+        assert_eq!(row.host, "dns.example");
+
+        // And a hello that could not be read: the address, which is all a
+        // datagram carries, rather than a row with nowhere on it.
+        let row = quic_record(attempt(None));
+        assert_eq!(row.host, "93.184.216.34");
+        assert_eq!(row.client_version, "QUIC");
+    }
 
     fn header_map(pairs: &[(&str, &str)]) -> http::HeaderMap {
         let mut map = http::HeaderMap::new();
