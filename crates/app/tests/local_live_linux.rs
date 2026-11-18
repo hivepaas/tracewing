@@ -20,10 +20,9 @@
 //! # Why it no longer needs a password, or this machine's network
 //!
 //! It used to ask polkit for rights and make its adapter on the machine it
-//! ran on, which meant it was `#[ignore]`d, never ran in CI, and could not
-//! run at all while anybody else was using the network: for as long as it
-//! held the device, this machine's traffic went into a TUN nobody was
-//! pumping.
+//! ran on, which meant it could not run at all while anybody else was using
+//! the network: for as long as it held the device, this machine's traffic
+//! went into a TUN nobody was pumping.
 //!
 //! It re-executes itself under `unshare --user --net --mount
 //! --map-root-user` instead. The kernel grants the capabilities inside a
@@ -74,6 +73,10 @@ use tracewing_system::adapter;
 /// again for ever.
 const IN_OURS: &str = "TRACEWING_LOCAL_LIVE_NS";
 
+/// Where the inner run says it got to the end, which is the only thing that
+/// tells the outer one it ran at all.
+const WITNESS: &str = "TRACEWING_LOCAL_LIVE_WITNESS";
+
 /// The interface standing in for this machine's real way out.
 const WAY_OUT: &str = "wayout";
 
@@ -100,16 +103,32 @@ fn run(program: &str, args: &[&str]) {
 /// a namespace and asserted that it passed, and the caller should stop. The
 /// inner run is asked for by name and `--exact`, so a second test in this
 /// file would get a namespace of its own rather than share this one.
+///
+/// **`--ignored`, and a witness file.** This test is `#[ignore]`d, so
+/// without `--ignored` the inner run skips it -- and a run that executed no
+/// test exits `0`, so the outer one reported a pass having measured
+/// nothing. That is why the status is not trusted on its own: the inner run
+/// writes a file as its last act, and not finding it is a failure here. An
+/// exit code cannot tell "it passed" from "there was nothing to do".
 fn in_our_own_namespace(test: &str) -> bool {
     if std::env::var_os(IN_OURS).is_some() {
         return true;
     }
     let exe = std::env::current_exe().expect("this test binary");
+    let witness = std::env::temp_dir().join(format!("tracewing-live-ns-{}", std::process::id()));
+    let _ = std::fs::remove_file(&witness);
     let status = std::process::Command::new("unshare")
         .args(["--user", "--net", "--mount", "--map-root-user"])
         .arg(&exe)
-        .args([test, "--exact", "--nocapture", "--test-threads=1"])
+        .args([
+            test,
+            "--exact",
+            "--ignored",
+            "--nocapture",
+            "--test-threads=1",
+        ])
         .env(IN_OURS, "1")
+        .env(WITNESS, &witness)
         .status()
         .expect(
             "`unshare` is in util-linux. If this fails on a machine rather than for want of \
@@ -120,7 +139,21 @@ fn in_our_own_namespace(test: &str) -> bool {
         status.success(),
         "the run inside the namespace failed; its output is above"
     );
+    assert!(
+        witness.exists(),
+        "the run inside the namespace exited {status} without reaching the end of the test, \
+         so nothing was measured"
+    );
+    let _ = std::fs::remove_file(&witness);
     false
+}
+
+/// The inner run's last act, read by the outer one. See
+/// [`in_our_own_namespace`].
+fn reached_the_end() {
+    if let Some(path) = std::env::var_os(WITNESS) {
+        std::fs::write(path, "ran").expect("say that this run reached the end");
+    }
 }
 
 /// This namespace's own `/sys`, its loopback, and a way out to be chosen.
@@ -168,7 +201,25 @@ fn the_namespace() {
 
 /// The whole assembly: it comes up, it is on the machine, and letting go
 /// leaves it harmless.
+///
+/// **Still `#[ignore]`d, and for a measured reason rather than the old one.**
+/// It no longer wants a password or this machine's network, so running it is
+/// cheap and safe -- but the CI runner refuses the namespace:
+///
+/// ```text
+/// unshare: write failed /proc/self/uid_map: Operation not permitted
+/// ```
+///
+/// (run 44366937310, `linux-x86_64`, every other test in the job passing.)
+/// That is not `unprivileged_userns_clone` being off, which fails earlier at
+/// the clone, and not the multi-threaded-caller rule, since the same binary
+/// unshares happily on a developer machine. What it is has not been
+/// measured; the newer runner images restrict unprivileged user namespaces
+/// through AppArmor, and that is a candidate and nothing more. So this is
+/// written down rather than diagnosed, and the next person to try does not
+/// start from zero.
 #[test]
+#[ignore = "the CI runner refuses the namespace: unshare cannot write /proc/self/uid_map"]
 fn the_local_way_in_comes_up_and_lets_go_again() {
     if !in_our_own_namespace("the_local_way_in_comes_up_and_lets_go_again") {
         return;
@@ -276,4 +327,5 @@ fn the_local_way_in_comes_up_and_lets_go_again() {
         );
     }
     let _ = std::fs::remove_dir_all(&dir);
+    reached_the_end();
 }
