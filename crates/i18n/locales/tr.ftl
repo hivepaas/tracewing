@@ -2053,11 +2053,11 @@ t46d53486 = MCP sunucusu üzerinden bir yapay zekâ aracı, sizinkiler gibi traf
 # HTTP/3
 tfec0f477 = HTTP/3
 
-# Keep apps off HTTP/3
-te42733a9 = Uygulamaları HTTP/3'ten uzak tut
+# Hide servers' offers of HTTP/3
+t2b74e518 = Sunucuların HTTP/3 tekliflerini gizle
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
-t2ff32f01 = HTTP/3, hiçbir proxy'nin taşımadığı UDP üzerinden gider, bu yüzden onu kullanan bir uygulama tracewing'i atlar. Bu ayar, sunucuların HTTP/3 tekliflerini yanıtlarından çıkarır ve uygulamalar HTTP/2'de kalır. Akışlar teklifleri yine sunucuların gönderdiği gibi gösterir.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
+t5e1cd441 = HTTP/3, hiçbir proxy'nin taşımadığı UDP üzerinden gider, bu yüzden onu kullanan bir uygulama tracewing'i atlar. Bu ayar, sunucuların HTTP/3 tekliflerini yanıtlarından çıkarır, böylece HTTP/3'ü bir teklifle öğrenecek olan uygulama HTTP/2'de kalır. HTTP/3'ü bir DNS kaydından öğrenen uygulama yine dener: bunu ancak Kurulum sayfasında UDP port 443'ü engellemek durdurur. Akışlar teklifleri yine sunucuların gönderdiği gibi gösterir.
 
 # Size of a session
 ta20fa102 = Oturum boyutu

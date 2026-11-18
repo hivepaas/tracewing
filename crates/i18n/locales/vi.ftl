@@ -1978,11 +1978,11 @@ t46d53486 = Qua MCP server, công cụ AI khi đó có thể thêm và xoá rule
 # HTTP/3
 tfec0f477 = HTTP/3
 
-# Keep apps off HTTP/3
-te42733a9 = Giữ app không dùng HTTP/3
+# Hide servers' offers of HTTP/3
+t2b74e518 = Ẩn lời mời dùng HTTP/3 của server
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
-t2ff32f01 = HTTP/3 chạy trên UDP, thứ không proxy nào chuyển được, nên app dùng nó sẽ đi vòng qua tracewing. Tuỳ chọn này bỏ lời mời dùng HTTP/3 khỏi response của server, để app ở lại HTTP/2. Flow vẫn hiện lời mời đúng như server gửi.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
+t5e1cd441 = HTTP/3 chạy trên UDP, thứ không proxy nào chuyển được, nên app dùng nó sẽ đi vòng qua tracewing. Tuỳ chọn này bỏ lời mời dùng HTTP/3 khỏi response của server, nên app lẽ ra biết HTTP/3 từ lời mời đó sẽ ở lại HTTP/2. App biết HTTP/3 từ bản ghi DNS thì vẫn thử: chặn cổng UDP 443, ở trang Thiết lập, mới ngăn được. Flow vẫn hiện lời mời đúng như server gửi.
 
 # Size of a session
 ta20fa102 = Kích thước một phiên

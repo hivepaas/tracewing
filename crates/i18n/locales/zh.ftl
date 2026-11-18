@@ -1978,11 +1978,11 @@ t46d53486 = 通过 MCP 服务器，AI 工具可以添加和删除规则（像你
 # HTTP/3
 tfec0f477 = HTTP/3
 
-# Keep apps off HTTP/3
-te42733a9 = 阻止应用使用 HTTP/3
+# Hide servers' offers of HTTP/3
+t2b74e518 = 隐藏服务器的 HTTP/3 通告
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
-t2ff32f01 = HTTP/3 基于 UDP，而代理无法转发 UDP，因此使用 HTTP/3 的应用会绕过 tracewing。此选项会从服务器响应中移除 HTTP/3 通告，让应用继续使用 HTTP/2。流量记录中仍会显示服务器发送的原始通告。
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
+t5e1cd441 = HTTP/3 基于 UDP，而代理无法转发 UDP，因此使用 HTTP/3 的应用会绕过 tracewing。此选项会从服务器响应中移除 HTTP/3 通告，因此本会从通告得知 HTTP/3 的应用会继续使用 HTTP/2。改从 DNS 记录得知的应用仍会尝试：只有在“配置”页面阻止 UDP 443 端口才能阻止它。流量记录中仍会显示服务器发送的原始通告。
 
 # Size of a session
 ta20fa102 = 会话大小

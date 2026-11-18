@@ -1978,11 +1978,11 @@ t46d53486 = MCP 서버를 통해 AI 도구가 규칙을 추가·삭제하고(사
 # HTTP/3
 tfec0f477 = HTTP/3
 
-# Keep apps off HTTP/3
-te42733a9 = 앱이 HTTP/3를 쓰지 않게 하기
+# Hide servers' offers of HTTP/3
+t2b74e518 = 서버의 HTTP/3 제안 숨기기
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
-t2ff32f01 = HTTP/3는 UDP를 사용하는데 UDP를 전달하는 프록시는 없으므로, HTTP/3를 쓰는 앱은 tracewing을 우회합니다. 이 설정은 서버 응답에서 HTTP/3 제안을 제거하므로 앱은 HTTP/2를 계속 사용합니다. 플로우에는 서버가 보낸 그대로의 제안이 표시됩니다.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
+t5e1cd441 = HTTP/3는 UDP를 사용하는데 UDP를 전달하는 프록시는 없으므로, HTTP/3를 쓰는 앱은 tracewing을 우회합니다. 이 설정은 서버 응답에서 HTTP/3 제안을 제거하므로, 그 제안으로 HTTP/3를 알게 될 앱은 HTTP/2를 계속 사용합니다. DNS 레코드로 아는 앱은 그래도 시도합니다. 그것을 막는 것은 시작하기 페이지에서 UDP 포트 443을 차단하는 것입니다. 플로우에는 서버가 보낸 그대로의 제안이 표시됩니다.
 
 # Size of a session
 ta20fa102 = 세션 크기

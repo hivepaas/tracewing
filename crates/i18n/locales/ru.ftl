@@ -2173,11 +2173,11 @@ t46d53486 = Через MCP-сервер ИИ-инструмент сможет �
 # HTTP/3
 tfec0f477 = HTTP/3
 
-# Keep apps off HTTP/3
-te42733a9 = Не пускать приложения на HTTP/3
+# Hide servers' offers of HTTP/3
+t2b74e518 = Скрывать предложения HTTP/3 от серверов
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
-t2ff32f01 = HTTP/3 работает поверх UDP, который не передаёт ни один прокси, поэтому приложение, использующее его, идёт в обход tracewing. Эта настройка убирает из ответов серверов предложения HTTP/3, и приложения остаются на HTTP/2. В потоках предложения по-прежнему видны такими, какими их отправили серверы.
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
+t5e1cd441 = HTTP/3 работает поверх UDP, который не передаёт ни один прокси, поэтому приложение, использующее его, идёт в обход tracewing. Эта настройка убирает из ответов серверов предложения HTTP/3, поэтому приложение, которое узнало бы о HTTP/3 из такого предложения, остаётся на HTTP/2. Приложение, которое узнаёт о нём из DNS-записи, всё равно попробует: остановит это только блокировка UDP-порта 443 на странице «Настройка». В потоках предложения по-прежнему видны такими, какими их отправили серверы.
 
 # Size of a session
 ta20fa102 = Размер сессии

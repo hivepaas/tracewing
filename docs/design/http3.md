@@ -75,14 +75,14 @@ from a **DNS HTTPS record** rather than from any `Alt-Svc` header:
 
 Two things follow, one a correction and one a design constraint.
 
-- **`Hide HTTP/3` cannot keep an app off QUIC by itself.** Taking `Alt-Svc` out
-  of responses does nothing for a host with an HTTPS record, which is most of
-  Google's and a growing share of everyone's. Only blocking UDP 443 — or
-  refusing the datagrams, which the local modes do — keeps such a client on
-  TCP. The claim in `features.md` has been narrowed to say what the setting
-  does rather than what it was hoped to achieve; the same overclaim is in the
-  settings copy (`t2ff32f01`) and needs the same narrowing in its own change,
-  because a message id is its English and fourteen locales follow it.
+- **Hiding the offers cannot keep an app off QUIC by itself.** Taking
+  `Alt-Svc` out of responses does nothing for a host with an HTTPS record,
+  which is most of Google's and a growing share of everyone's. Only blocking
+  UDP 443 — or refusing the datagrams, which the local modes do — keeps such
+  a client on TCP. `features.md` was narrowed with this document, and the
+  setting itself followed: it is called `Hide servers' offers of HTTP/3`
+  rather than `Keep apps off HTTP/3`, and says which apps it reaches and
+  which it does not.
 - **A captured HTTP/3 flow may have no TCP flow before it.** A client that
   learns `h3` from DNS goes to QUIC on first contact. So the capture path must
   not assume it has already seen a TLS handshake, a `CONNECT`, or anything
@@ -166,7 +166,7 @@ endpoint instead of refusing it, with a table beside it saying where each
 datagram was really going — the UDP twin of `handover.rs`. Unchosen apps keep
 today's behaviour exactly, and refusal stays what happens when HTTP/3 capture
 is off. One setting, off by default, which has to be made coherent with
-`Hide HTTP/3` and `Block UDP 443`: capturing means not hiding and not blocking.
+hiding the offers and blocking UDP 443: capturing means doing neither.
 The same code serves a phone on the WireGuard tunnel.
 
 **Four.** Upstream over QUIC, so both halves of a captured flow are HTTP/3

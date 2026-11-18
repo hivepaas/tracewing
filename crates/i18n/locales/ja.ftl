@@ -1978,11 +1978,11 @@ t46d53486 = MCP サーバーを通じて、AI ツールがルールを追加・�
 # HTTP/3
 tfec0f477 = HTTP/3
 
-# Keep apps off HTTP/3
-te42733a9 = アプリに HTTP/3 を使わせない
+# Hide servers' offers of HTTP/3
+t2b74e518 = サーバーの HTTP/3 の提示を隠す
 
-# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, and apps stay on HTTP/2. Flows still show the offers as servers sent them.
-t2ff32f01 = HTTP/3 は UDP 上で動作し、UDP を中継するプロキシはないため、HTTP/3 を使うアプリは tracewing を迂回します。この設定はサーバーのレスポンスから HTTP/3 の提示を取り除くため、アプリは HTTP/2 のままになります。フローには、サーバーが送ったとおりの提示が表示されます。
+# HTTP/3 goes over UDP, which no proxy carries, so an app that uses it goes around tracewing. This takes servers' offers of it out of their responses, so an app that would have learned of HTTP/3 from one stays on HTTP/2. An app that learns it from a DNS record instead tries anyway: blocking UDP port 443, on the Set up page, is what stops that. Flows still show the offers as servers sent them.
+t5e1cd441 = HTTP/3 は UDP 上で動作し、UDP を中継するプロキシはないため、HTTP/3 を使うアプリは tracewing を迂回します。この設定はサーバーのレスポンスから HTTP/3 の提示を取り除くため、提示から HTTP/3 を知るはずだったアプリは HTTP/2 のままになります。DNS レコードから知るアプリはそれでも試みます。それを止めるのは、セットアップ ページでの UDP ポート 443 のブロックです。フローには、サーバーが送ったとおりの提示が表示されます。
 
 # Size of a session
 ta20fa102 = セッションのサイズ
