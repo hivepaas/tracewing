@@ -229,11 +229,45 @@ the door is opened inside the proxy and the way in that feeds it is built
 outside and before it — a local mode's adapter is made when somebody presses
 the switch — so the port is told rather than agreed in advance.
 
-What is **not** done here: the same code would serve a phone on the WireGuard
-tunnel, but nothing points it at one yet; and a real browser's HTTP/3 through
-a real adapter is still unverified — the tests carry a real `h3` client's
-packets through the real catcher, door, core and way out, with only the
-network itself stood in for.
+### It really does capture, and that was watched
+
+[`local_live_http3`](../../crates/app/tests/local_live_http3.rs) is the join
+no unit test reaches: a real QUIC client whose datagrams leave by a route
+into a real TUN device, the real stack turning them into a flow, the real
+sieve asking the operating system which program sent them, the real catcher,
+the real door, the real core, and the real way out asking a real HTTP/3
+server. It answers 200 with the server's own body, and a second test says a
+program nobody chose gets nowhere and has its attempt said once.
+
+**It needs no password and touches nothing**, which is the part worth
+reusing. The nine lines of `adapter::script` want an administrator on a real
+machine, and while the device holds the default route the machine's traffic
+goes into it — so this test re-executes itself under
+`unshare --user --net --mount --map-root-user`. The kernel grants the
+capabilities inside a user namespace of ours, so nothing asks for rights,
+and the device, the addresses and the routes live in a network namespace
+that goes when the process does. Two things cost a run each to find out:
+`/sys` stays as the old namespace mounted it, so `adapter::look` reads the
+real machine's interfaces and reports the device missing while `ip` has just
+made it — hence `--mount` and a fresh `sysfs`; `/proc` needs nothing,
+because the net sysctls and `/proc/net` are resolved against the reading
+task's own namespace. **The same trick would make `local_live_linux`
+runnable without polkit, and both of them runnable in CI.**
+
+Two things are deliberately not in it. **The way out is not pinned**: a
+namespace has one interface — ours — so `roads::out_by` answers nowhere and
+the way out cannot be made at all, which is the loop prevention doing its
+job and which the first run proved by answering 502 to everything, having
+gone through the adapter, the catcher, the door and the core to get there.
+The pinning is what `local_live_linux` tests. And the server is on the
+loopback rather than across a network, which the way out's own tests cover.
+
+What is still **unverified is a real browser** through a real adapter: its
+own policies, its HTTPS-record path to QUIC, and its own trust store are
+what `quicprobe` asked about in isolation and what nothing has yet asked
+about through the capture path. That wants a machine with a browser and an
+adapter, which is the Windows VM. The same code would also serve a phone on
+the WireGuard tunnel, but nothing points it at one yet.
 
 **Four, landed.** [`quic_upstream.rs`](../../crates/proxy/src/quic_upstream.rs):
 the way out over QUIC, so both halves of a captured flow are HTTP/3 rather

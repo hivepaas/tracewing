@@ -362,8 +362,12 @@ fn sieving(
 /// connection, this asks who holds a datagram socket, and on Windows those
 /// are two tables of the operating system's with nothing in common. See
 /// [`tracewing_proxy::apps::Look`].
+///
+/// Public for `local_live_http3`, which assembles the way in without
+/// [`Pinned`] -- there is nothing to pin to inside a network namespace --
+/// and so cannot go through [`start`] for it.
 #[cfg(any(windows, target_os = "linux"))]
-fn catching(apps: Apps, chosen: Chosen, http3: Http3) -> datagrams::Catching {
+pub fn catching(apps: Apps, chosen: Chosen, http3: Http3) -> datagrams::Catching {
     let live = Arc::clone(&http3.live);
     datagrams::Catching {
         // The one question that is answered without waiting, so that the
