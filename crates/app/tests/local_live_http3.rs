@@ -182,20 +182,25 @@ fn ours_to_run(test: &str) -> Option<()> {
     None
 }
 
-/// The adapter, by the real script, in this namespace.
+/// The adapter, by the real step, in this namespace.
 ///
-/// `0` because `--map-root-user` makes this process root in its own user
-/// namespace, and the device has to belong to whoever opens it. The loopback
-/// comes up here rather than in the script because a real machine's is
-/// already up and a fresh namespace's is not -- and the server this test
-/// reaches is on it.
+/// **`make_adapter` itself, not the nine lines copied out of it.**
+/// `run_as_admin` runs the script with `sh -c` when `id -u` is `0`, which
+/// `--map-root-user` makes true, so the privileged step takes itself and
+/// polkit is never asked -- and the look-before-asking that decides it, and
+/// the uid the device is made for, are the real ones rather than this
+/// test's idea of them. TraceW 2 found that while taking `local_live_linux`
+/// the same way.
+///
+/// The loopback comes up here rather than in the step because a real
+/// machine's is already up and a fresh namespace's is not -- and the server
+/// this test reaches is on it.
 fn the_adapter() {
     // This namespace's own view of its own interfaces: see the note in
     // `ours_to_run`.
     run("mount", &["-t", "sysfs", "sysfs", "/sys"]);
-    let script = tracewing_system::adapter::script(0);
-    run("sh", &["-c", &script]);
     run("ip", &["link", "set", "lo", "up"]);
+    tracewing_system::adapter::make_adapter().expect("the privileged step takes itself here");
     let look = tracewing_system::adapter::look();
     assert!(look.ready(), "the adapter is missing {:?}", look.missing());
 }
