@@ -129,10 +129,12 @@ Five things found by reading, each one shaping the plan below.
 4. **`Apps::sent` names the program behind a datagram** (#358). Choosing which
    apps to capture over QUIC needs exactly that, and until #358 the sieve could
    not answer it: it had only the TCP table.
-5. **The upstream connector is ours and is reusable.** hudsucker builds its
-   client from `serving.connector`; so can we. An HTTP/3 front door can send
-   its requests through the same `upstream.rs` — timings, certificates, traffic
-   rules and all — on the day its own QUIC client is not yet written.
+5. **The upstream connector is ours**, and what it knows is reusable even
+   though the connector itself turned out not to be — see step four, which is
+   the second thing this list had wrong. hudsucker builds its client from
+   `serving.connector`, and `upstream.rs` is where which certificates to
+   trust, which to show, and what a rule says about a host all live. A second
+   way out needs those facts, not that code.
 
 ## The shape: two front doors, one set of rules
 
@@ -168,17 +170,13 @@ Initial, by which time the endpoint is listening and its config is made — so
 the endpoint holds one config whose resolver is `LocalCa::certified_for`, and
 leaves are cached as themselves rather than as whole configs.
 
-What it does not do is reach a server: a request the core says to send on is
-answered with the reason, and the flow is marked failed with the same words
-(`FlowHandler::unreachable`, which is the piece left out when the core was
-taken apart from hudsucker, now that there is a real case for it). So nothing
-opens this door yet: the pages the proxy answers itself are served over
-HTTP/3, and anything else waits for step four. Its tests connect a real `h3`
-client to it: the check page over HTTP/3, two names over one endpoint — which
-is what says the minting is per handshake — the answer for a request that
-cannot be sent on, and a client that trusts nothing, which gets nowhere.
+Its tests connect a real `h3` client to it: the check page over HTTP/3, two
+names over one endpoint — which is what says the minting is per handshake — a
+request sent on to a server, a request that reaches none, and a client that
+trusts nothing, which gets nowhere.
 
-**Three.** The packets. `datagrams.rs` sends a chosen app's UDP 443 to the
+**Three, next.** The packets, and the last thing between this and a browser's
+HTTP/3 being captured. `datagrams.rs` sends a chosen app's UDP 443 to the
 endpoint instead of refusing it, with a table beside it saying where each
 datagram was really going — the UDP twin of `handover.rs`. Unchosen apps keep
 today's behaviour exactly, and refusal stays what happens when HTTP/3 capture
@@ -186,12 +184,49 @@ is off. One setting, off by default, which has to be made coherent with
 hiding the offers and blocking UDP 443: capturing means doing neither.
 The same code serves a phone on the WireGuard tunnel.
 
-**Four.** Upstream over QUIC, so both halves of a captured flow are HTTP/3
-rather than one half being HTTP/2 on the client's behalf. The probe already
-does this much; what it does not do is live inside `upstream.rs` with its
-timings, its client certificates and its traffic rules. Until it lands, the
-door answers such a request with the reason rather than sending it anywhere,
-which is also what makes step three safe to leave until after it.
+**Four, landed.** [`quic_upstream.rs`](../../crates/proxy/src/quic_upstream.rs):
+the way out over QUIC, so both halves of a captured flow are HTTP/3 rather
+than one half being HTTP/2 on the client's behalf. A name looked up, one
+handshake, `h3` over it, and the connection kept for the next request to that
+server — HTTP/3 multiplexes, so a page's requests belong on one connection.
+The facts go in the same `Upstream` the TCP way out fills, so a flow that went
+this way reads in the inspector like any other.
+
+**It is a module of its own, not a branch of `upstream.rs`**, which is where
+the plan above was wrong a second time. There is no `TcpStream` in it to hand
+to hyper and nothing above it wanting one: hyper's client pools connections
+and sends requests over them, and that is exactly what `h3` does instead. What
+the two ways out share is passed in rather than written twice — the verifier
+that carries which roots to trust, the client certificates, the traffic rules,
+and `upstream::Ids`, the counter connections are numbered from. **That counter
+has to be one counter**: a flow row points at its connection by number, so a
+second way out counting from 1 would put two connections under one number in
+the inspector.
+
+Three things about it are worth knowing before reading the code:
+
+- **One handshake, so one timing.** QUIC agrees the connection and its TLS
+  together, so the whole handshake is the flow's connect step and its TLS step
+  is empty. What the TLS was is still on the connection: TLS 1.3 because QUIC
+  has no other, the ALPN, and the certificates the server showed. The cipher
+  suite is the one fact missing — `quinn` hands over the protocol and the name
+  and says nothing about the suite.
+- **Two things are refused in words rather than done differently.** A company
+  proxy cannot carry QUIC (`CONNECT-UDP`, RFC 9298, is not spoken by tracewing
+  or by most such proxies), and a rule that says *ask this host with HTTP/2*
+  cannot be obeyed by a way out that speaks HTTP/3. Quietly ignoring that rule
+  would be worse than refusing the request: the rule is there to make the
+  server answer a certain way.
+- **A socket per connection, not an endpoint held.** While tracewing holds a
+  TUN adapter, which interface a socket must leave by is a live answer that
+  changes as the machine's routing does, and a bound socket cannot be rebound.
+  So each connection asks `upstream::datagrams_out` for a socket and gets one
+  pinned as the rules then say — the same pinning `datagrams.rs` uses, now
+  spelled in one place.
+
+What it does not do is race the families the way hyper's connector races them
+for TCP: addresses are tried in the order the resolver gave them. Nothing opens
+the door yet either, so this is reached only by its own tests and the door's.
 
 **Five.** The rest, each its own decision: 0-RTT (proposed: **off**, and said
 out loud, because early data a proxy replays is a request sent twice),
@@ -209,7 +244,10 @@ DNS-over-QUIC, WebTransport — which keeps the `quic` row it has now,
 - **Proxy settings and SOCKS5 cannot carry QUIC.** A browser told to use an
   HTTP proxy stops offering QUIC, and `CONNECT` does not carry datagrams. QUIC
   capture exists only in the modes that take packets by route: TUN, Wintun,
-  WireGuard, and NetworkExtension once it handles UDP flows.
+  WireGuard, and NetworkExtension once it handles UDP flows. The same holds
+  the other way round: with a company proxy set in tracewing's own settings,
+  the way out over QUIC refuses the request rather than going around the
+  proxy, which is what a machine behind one would notice.
 - **Nothing past the Initial of an attempt that is refused** is readable, now
   or later. That is not a gap to close; those keys belong to the endpoints.
 - **Firefox is unmeasured.** Chrome was asked; Firefox keeps its own trust

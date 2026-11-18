@@ -56,7 +56,9 @@ pub struct Upstream {
     /// The server asked for a client certificate, and tracewing had none for it.
     pub client_cert_missing: bool,
     /// Its facts are written once, with the first flow to come back over it.
-    told: AtomicBool,
+    /// Written here by the way out that made it, [`crate::quic_upstream`]
+    /// included, and read through [`Self::tell_once`] alone.
+    pub(crate) told: AtomicBool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -130,16 +132,46 @@ impl TlsFailure {
     }
 }
 
+/// The numbers connections are known by, counted from 1 in each run.
+///
+/// **One counter for every way out, not one each.** A flow row points at the
+/// connection it went over by this number, so two ways out numbering their
+/// own connections from 1 would be two connections appearing as one in the
+/// inspector. [`crate::quic_upstream`] takes these from the connector with
+/// [`TimedConnector::ids`] rather than starting a count of its own.
+#[derive(Clone, Debug)]
+pub struct Ids(Arc<AtomicI64>);
+
+impl Default for Ids {
+    fn default() -> Self {
+        Self(Arc::new(AtomicI64::new(1)))
+    }
+}
+
+impl Ids {
+    /// The next number, which is nobody else's.
+    pub fn next(&self) -> i64 {
+        self.0.fetch_add(1, Ordering::Relaxed)
+    }
+}
+
 /// Checks a server's certificates as `inner` does, and keeps them, so that
 /// ones refused can still be shown.
 #[derive(Debug)]
-struct Witness {
+pub(crate) struct Witness {
     inner: Arc<dyn ServerCertVerifier>,
     seen: Mutex<Vec<Vec<u8>>>,
 }
 
 impl Witness {
-    fn take(&self) -> Vec<Vec<u8>> {
+    pub(crate) fn watching(inner: Arc<dyn ServerCertVerifier>) -> Self {
+        Self {
+            inner,
+            seen: Mutex::new(Vec::new()),
+        }
+    }
+
+    pub(crate) fn take(&self) -> Vec<Vec<u8>> {
         std::mem::take(&mut self.seen.lock().unwrap_or_else(|e| e.into_inner()))
     }
 }
@@ -189,7 +221,7 @@ impl ServerCertVerifier for Witness {
 pub struct TimedConnector {
     config: Arc<ClientConfig>,
     verifier: Arc<dyn ServerCertVerifier>,
-    next_id: Arc<AtomicI64>,
+    ids: Ids,
     /// Another proxy to go through, as a company's.
     relay: Arc<Relay>,
     /// Certificates for servers that ask the client for one.
@@ -212,7 +244,7 @@ impl TimedConnector {
         Self {
             config: Arc::new(config),
             verifier,
-            next_id: Arc::new(AtomicI64::new(1)),
+            ids: Ids::default(),
             relay,
             client_certs,
             traffic_rules,
@@ -242,6 +274,12 @@ impl TimedConnector {
         }
     }
 
+    /// The numbers this hands its connections, for another way out to go on
+    /// counting rather than start again. See [`Ids`].
+    pub fn ids(&self) -> Ids {
+        self.ids.clone()
+    }
+
     /// The certificate to show the server `uri` points to, if it asks.
     fn client_cert(&self, uri: &Uri) -> Option<Arc<CertifiedKey>> {
         let host = uri.host()?;
@@ -260,7 +298,7 @@ impl TimedConnector {
     pub async fn connect_http1(&self, uri: Uri) -> Result<Stream, BoxError> {
         let mut config = (*self.config).clone();
         config.alpn_protocols = vec![b"http/1.1".to_vec()];
-        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        let id = self.ids.next();
         let route = uri.host().and_then(|host| {
             self.relay
                 .route_for(host.trim_start_matches('[').trim_end_matches(']'))
@@ -290,7 +328,7 @@ impl tower_service::Service<Uri> for TimedConnector {
 
     fn call(&mut self, uri: Uri) -> Self::Future {
         let (config, verifier) = (self.config_for(&uri), Arc::clone(&self.verifier));
-        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        let id = self.ids.next();
         let route = uri.host().and_then(|host| {
             self.relay
                 .route_for(host.trim_start_matches('[').trim_end_matches(']'))
@@ -428,8 +466,16 @@ async fn connect(
 
 /// No client certificate to give: says none, and keeps that one was asked for.
 #[derive(Debug, Default)]
-struct Unanswered {
+pub(crate) struct Unanswered {
     asked: AtomicBool,
+}
+
+impl Unanswered {
+    /// Whether the server asked for a certificate we had none for, which is
+    /// what makes sense of a connection it then simply closed.
+    pub(crate) fn was_asked(&self) -> bool {
+        self.asked.load(Ordering::Relaxed)
+    }
 }
 
 impl ResolvesClientCert for Unanswered {
@@ -660,21 +706,55 @@ fn handle(socket: &impl std::os::fd::AsRawFd) -> std::os::fd::RawFd {
 /// source port is nobody's business.
 #[cfg(any(windows, target_os = "linux"))]
 async fn pinned_datagrams(v6: bool) -> io::Result<tokio::net::UdpSocket> {
+    let socket = pinned_std_datagrams(v6)?;
+    socket.set_nonblocking(true)?;
+    tokio::net::UdpSocket::from_std(socket)
+}
+
+/// The pinning itself, on a socket of `std`'s: the option has to be set
+/// before anything is sent, and `tokio` has no socket of its own to set it
+/// on before binding. Both callers of it want it on the same socket for the
+/// same reason, so it is spelled once.
+#[cfg(any(windows, target_os = "linux"))]
+fn pinned_std_datagrams(v6: bool) -> io::Result<std::net::UdpSocket> {
     let family = match v6 {
         true => "IPv6",
         false => "IPv4",
     };
     let index = out_by(v6, &family)?;
-    let any: SocketAddr = match v6 {
+    let socket = std::net::UdpSocket::bind(any_port(v6))?;
+    leave_socket_by(handle(&socket), v6, index)?;
+    Ok(socket)
+}
+
+/// The family's unspecified address with a port of the operating system's
+/// choosing, which is how a socket binds before it is connected: a NAT's
+/// source port is nobody's business.
+fn any_port(v6: bool) -> SocketAddr {
+    match v6 {
         true => "[::]:0".parse().expect("a literal"),
         false => "0.0.0.0:0".parse().expect("a literal"),
-    };
-    // Through `std`, because the option has to be set before anything is
-    // sent and `tokio` has no socket of its own to set it on before binding.
-    let socket = std::net::UdpSocket::bind(any)?;
-    leave_socket_by(handle(&socket), v6, index)?;
-    socket.set_nonblocking(true)?;
-    tokio::net::UdpSocket::from_std(socket)
+    }
+}
+
+/// A datagram socket for a way out of tracewing's own -- pinned to the
+/// interface the machine's traffic leaves by while tracewing holds a TUN
+/// adapter, and bound as any socket is while it holds none.
+///
+/// This is where [`crate::quic_upstream`] gets the socket its QUIC endpoint
+/// sends from, and the reason it makes an endpoint per connection rather
+/// than holding one: which interface a socket must leave by changes as the
+/// machine's routing does, and a socket already bound cannot be rebound.
+///
+/// Where an adapter is held and the family has no other way out, this is an
+/// error rather than an unpinned socket -- failing, rather than looping
+/// through our own stack. See [`leave_by`].
+pub(crate) fn datagrams_out(v6: bool) -> io::Result<std::net::UdpSocket> {
+    #[cfg(any(windows, target_os = "linux"))]
+    if HOLDING.load(Ordering::Acquire) {
+        return pinned_std_datagrams(v6);
+    }
+    std::net::UdpSocket::bind(any_port(v6))
 }
 
 /// The way out for a connection nobody chose, for [`crate::sieve`].
@@ -1167,11 +1247,11 @@ fn error_text(error: &dyn std::error::Error) -> String {
     text
 }
 
-fn micros(since: Instant) -> i64 {
+pub(crate) fn micros(since: Instant) -> i64 {
     since.elapsed().as_micros() as i64
 }
 
-fn unix_micros() -> i64 {
+pub(crate) fn unix_micros() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_micros() as i64)

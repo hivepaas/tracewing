@@ -1078,23 +1078,38 @@ impl FlowHandler {
         self.slow_request(req).into()
     }
 
-    /// A request that could not be sent on at all: the flow is marked failed
-    /// with `why`, and the client is told the same in words.
+    /// A request that reached no server, from a front door that sends for
+    /// itself: the flow is marked failed, the client is told the same in
+    /// words, and what the server showed before refusing goes on the flow if
+    /// it showed anything.
     ///
-    /// This is the part of [`HttpHandler::handle_error`] that is not about
-    /// hudsucker's client. That method keeps the rest -- a client certificate
-    /// that was never asked for, a TLS failure to put on the flow -- because
-    /// those are read out of its own error type, which a second front door
-    /// does not have. When the core was taken apart from hudsucker this was
-    /// left out on purpose, to be decided with a real case in hand; the case
-    /// is [`crate::quic_server`], which can serve HTTP/3 before it can speak
-    /// it to a server.
-    pub(crate) fn unreachable(&mut self, why: String) -> Response<Body> {
+    /// This is [`HttpHandler::handle_error`] for a way out that is not
+    /// hudsucker's client. What that one keeps to itself is one question --
+    /// whether a server asked for a client certificate it was given none of
+    /// -- which it reads out of its own error type; everything else about a
+    /// failed request is the same, so it is [`Self::ended`] for both.
+    /// [`crate::quic_server`] is what calls this.
+    pub(crate) fn failed(&mut self, error: &(dyn StdError + 'static)) -> Response<Body> {
+        self.ended(error_chain(error), error)
+    }
+
+    /// The flow, and the client, told that the request ended in `message`.
+    /// What the server showed when it refused the TLS is on the flow too,
+    /// wherever in `error` that is written down.
+    fn ended(&mut self, message: String, error: &(dyn StdError + 'static)) -> Response<Body> {
         self.slowed = None;
         if let Some(flow) = self.flow.take() {
-            flow.fail(why.clone());
+            flow.fail(message.clone());
+            let mut source = Some(error);
+            while let Some(error) = source {
+                if let Some(failure) = error.downcast_ref::<TlsFailure>() {
+                    flow.refused_by(failure);
+                    break;
+                }
+                source = error.source();
+            }
         }
-        bad_gateway(&why)
+        bad_gateway(&message)
     }
 
     /// The answer to that request, on its way back to the client: what the
@@ -1240,19 +1255,7 @@ impl HttpHandler for FlowHandler {
         if missing && !message.contains(CLIENT_CERT_HINT) {
             message.push_str(CLIENT_CERT_HINT);
         }
-        self.slowed = None;
-        if let Some(flow) = self.flow.take() {
-            flow.fail(message.clone());
-            let mut source: Option<&(dyn std::error::Error + 'static)> = Some(&err);
-            while let Some(error) = source {
-                if let Some(failure) = error.downcast_ref::<TlsFailure>() {
-                    flow.refused_by(failure);
-                    break;
-                }
-                source = error.source();
-            }
-        }
-        bad_gateway(&message)
+        self.ended(message, &err)
     }
 }
 
