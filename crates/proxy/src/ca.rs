@@ -28,6 +28,8 @@ use hudsucker::{
         ServerConfig,
         crypto::CryptoProvider,
         pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, pem::PemObject},
+        server::{ClientHello, ResolvesServerCert},
+        sign::CertifiedKey,
     },
 };
 use sha2::{Digest, Sha256};
@@ -90,6 +92,13 @@ impl Over {
 /// The configs issued so far, by host and by what they are offered over.
 type Issued = HashMap<(Over, String), (Instant, Arc<ServerConfig>)>;
 
+/// The leaves issued so far, by host. Apart from [`Issued`] because the two
+/// are asked for in different ways and at different moments: a config per
+/// host, before TLS starts, for a `CONNECT`; a leaf in the middle of a
+/// handshake, for QUIC. Both are kept because making either again costs the
+/// key parsing that neither should pay per connection.
+type Leaves = HashMap<String, (Instant, Arc<CertifiedKey>)>;
+
 pub struct LocalCa {
     issuer: Issuer<'static, KeyPair>,
     cert_path: PathBuf,
@@ -98,6 +107,7 @@ pub struct LocalCa {
     crl_url: Option<String>,
     provider: Arc<CryptoProvider>,
     cache: Mutex<Issued>,
+    leaves: Mutex<Leaves>,
     key_place: KeyPlace,
     /// Sent after each leaf, for a CA a company signed: itself, then those
     /// that lead to the company's root. Empty for tracewing's own.
@@ -159,6 +169,7 @@ impl LocalCa {
             crl_url: None,
             provider: Arc::new(provider),
             cache: Mutex::new(HashMap::new()),
+            leaves: Mutex::default(),
             key_place,
             chain,
             key_log: None,
@@ -301,6 +312,73 @@ impl LocalCa {
     /// which its client refuses as it would any wrong name; nothing panics.
     /// What reaches here is ASCII already: rustls takes only DNS names from
     /// SNI, and a `CONNECT` whose host is not ASCII is refused before.
+    /// One config for a QUIC endpoint, whose certificate is chosen as each
+    /// client asks.
+    ///
+    /// TCP tells the proxy where a connection is going before TLS starts --
+    /// a `CONNECT` names the host -- so [`Self::config_for`] can hand rustls
+    /// a config already holding that host's leaf. QUIC says nothing first:
+    /// the name is inside the ClientHello of the Initial packet, by which
+    /// time the endpoint is listening and its config is made. So the
+    /// endpoint holds this one, and [`Self::certified_for`] answers per
+    /// handshake. See `docs/design/http3.md`.
+    pub fn quic_config(self: &Arc<Self>) -> Result<Arc<ServerConfig>> {
+        let mut config = ServerConfig::builder_with_provider(Arc::clone(&self.provider))
+            // QUIC is TLS 1.3 alone, and `quinn` refuses a config that still
+            // offers 1.2 rather than negotiating around it.
+            .with_protocol_versions(&[&hudsucker::rustls::version::TLS13])?
+            .with_no_client_auth()
+            .with_cert_resolver(Arc::new(MintsAsAsked(Arc::clone(self))));
+        config.alpn_protocols = Over::Quic.alpn();
+        // 1-RTT only, on purpose: early data a proxy replays is a request
+        // sent twice, and nothing here is ready to answer for that.
+        config.max_early_data_size = 0;
+        if let Some(key_log) = &self.key_log {
+            config.key_log = Arc::clone(key_log);
+        }
+        Ok(Arc::new(config))
+    }
+
+    /// The leaf for `host` and its key, from the cache while it is fresh.
+    /// A host no certificate can be issued for gets the stand-in, as
+    /// [`Self::config_for`] does and for the same reason: a client refusing a
+    /// certificate for the wrong name is an answer, and a handshake cut off
+    /// without one is not.
+    pub fn certified_for(&self, host: &str) -> Arc<CertifiedKey> {
+        if let Some((issued, leaf)) = self.leaves.lock().unwrap().get(host)
+            && issued.elapsed() < CACHE_FOR
+        {
+            return Arc::clone(leaf);
+        }
+        debug!(host, "issuing leaf certificate for a handshake");
+        let made = self.certified(host).or_else(|e| {
+            warn!(
+                host,
+                "no certificate for this host, a stand-in instead: {e:#}"
+            );
+            self.certified(STAND_IN_HOST)
+        });
+        let leaf = Arc::new(made.expect("a certificate for a fixed, valid name is always issued"));
+        let mut leaves = self.leaves.lock().unwrap();
+        if leaves.len() >= CACHE_MAX {
+            leaves.clear();
+        }
+        leaves.insert(host.to_owned(), (Instant::now(), Arc::clone(&leaf)));
+        leaf
+    }
+
+    fn certified(&self, host: &str) -> Result<CertifiedKey> {
+        let leaf = self.issue_leaf(host)?;
+        let chain = std::iter::once(leaf)
+            .chain(self.chain.iter().cloned())
+            .collect();
+        Ok(CertifiedKey::from_der(
+            chain,
+            self.leaf_key_der.clone_key(),
+            &self.provider,
+        )?)
+    }
+
     pub fn config_for(&self, host: &str, over: Over) -> Arc<ServerConfig> {
         let key = (over, host.to_owned());
         if let Some((issued, config)) = self.cache.lock().unwrap().get(&key)
@@ -331,6 +409,28 @@ impl LocalCa {
         }
         cache.insert(key, (Instant::now(), Arc::clone(&config)));
         config
+    }
+}
+
+/// The certificate for whichever name a client asked for, minted as it asks.
+/// A client that sent no name at all gets the stand-in rather than nothing:
+/// see [`LocalCa::certified_for`].
+struct MintsAsAsked(Arc<LocalCa>);
+
+// `ResolvesServerCert` asks for `Debug`, and a CA prints as itself and no
+// more: its key is in here.
+impl std::fmt::Debug for MintsAsAsked {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("the local CA, minting as asked")
+    }
+}
+
+impl ResolvesServerCert for MintsAsAsked {
+    fn resolve(&self, hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
+        Some(
+            self.0
+                .certified_for(hello.server_name().unwrap_or(STAND_IN_HOST)),
+        )
     }
 }
 

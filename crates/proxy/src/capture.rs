@@ -1078,6 +1078,25 @@ impl FlowHandler {
         self.slow_request(req).into()
     }
 
+    /// A request that could not be sent on at all: the flow is marked failed
+    /// with `why`, and the client is told the same in words.
+    ///
+    /// This is the part of [`HttpHandler::handle_error`] that is not about
+    /// hudsucker's client. That method keeps the rest -- a client certificate
+    /// that was never asked for, a TLS failure to put on the flow -- because
+    /// those are read out of its own error type, which a second front door
+    /// does not have. When the core was taken apart from hudsucker this was
+    /// left out on purpose, to be decided with a real case in hand; the case
+    /// is [`crate::quic_server`], which can serve HTTP/3 before it can speak
+    /// it to a server.
+    pub(crate) fn unreachable(&mut self, why: String) -> Response<Body> {
+        self.slowed = None;
+        if let Some(flow) = self.flow.take() {
+            flow.fail(why.clone());
+        }
+        bad_gateway(&why)
+    }
+
     /// The answer to that request, on its way back to the client: what the
     /// server said, as rules, scripts and a breakpoint leave it.
     ///
@@ -1233,12 +1252,17 @@ impl HttpHandler for FlowHandler {
                 source = error.source();
             }
         }
-        Response::builder()
-            .status(StatusCode::BAD_GATEWAY)
-            .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
-            .body(Body::from(format!("tracewing: {message}\n")))
-            .expect("valid response")
+        bad_gateway(&message)
     }
+}
+
+/// What a client is told when its request reached no server.
+fn bad_gateway(message: &str) -> Response<Body> {
+    Response::builder()
+        .status(StatusCode::BAD_GATEWAY)
+        .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
+        .body(Body::from(format!("tracewing: {message}\n")))
+        .expect("valid response")
 }
 
 impl FlowHandler {
@@ -2517,8 +2541,12 @@ fn quic_record(attempt: crate::quic::Attempt, app: Option<Arc<AppAnswer>>) -> Fl
     }
 }
 
+/// What is behind a handler in a test, and nothing else: `FlowHandler` was
+/// built only by `run_proxy` until the core stopped being hudsucker-shaped,
+/// so this is where anything that wants one on its own gets it --
+/// [`crate::quic_server`]'s tests as well as this file's.
 #[cfg(test)]
-mod tests {
+pub(crate) mod harness {
     use super::*;
 
     /// A handler with nothing behind it: no listener, no proxy, no network.
@@ -2529,7 +2557,7 @@ mod tests {
     /// at it. The three below are the first that ask it a question directly;
     /// each is about an answer the proxy gives itself, with no server behind
     /// it, which is what a handler alone can be asked.
-    fn alone(
+    pub(crate) fn alone(
         dir: &std::path::Path,
     ) -> (
         FlowHandler,
@@ -2593,6 +2621,12 @@ mod tests {
         );
         (handler, (writer, spool_thread))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::harness::alone;
+    use super::*;
 
     /// What the handler answered, as the client would read it.
     async fn said(answer: RequestOrResponse) -> (http::StatusCode, http::HeaderMap, Vec<u8>) {

@@ -18,6 +18,7 @@ pub mod name;
 pub mod ntlm;
 pub mod pause;
 pub mod quic;
+pub mod quic_server;
 pub mod refused;
 pub mod relay;
 pub mod roads;
