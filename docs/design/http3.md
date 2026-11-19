@@ -321,12 +321,35 @@ Three things about it are worth knowing before reading the code:
 What it does not do is race the families the way hyper's connector races them
 for TCP: addresses are tried in the order the resolver gave them.
 
-**Five.** The rest, each its own decision: 0-RTT (proposed: **off**, and said
-out loud, because early data a proxy replays is a request sent twice),
-connection migration against a NAT keyed by both ends, QUIC that is not HTTP —
-DNS-over-QUIC, WebTransport — which keeps the `quic` row it has now,
-`NEAppProxyUDPFlow` so macOS's local mode can do this too, and the Pro gating
-`features.md` already promises.
+**Five.** The rest, each its own decision.
+
+**0-RTT: off at both ends, decided and measured.** Early data a proxy replays
+is a request the server may be sent twice, and nothing here is ready to answer
+for that — so the door sets `max_early_data_size = 0` and the way out leaves
+rustls's `enable_early_data` off, each with the reason beside it.
+
+Asking rather than reading changed what the decision is *about*. Both settings
+were already right, and neither was ever the thing that was going to go wrong:
+**quinn's convenience constructors set the opposite at both ends** —
+`QuicServerConfig::inner` behind `ServerConfig::with_single_cert`, and
+`QuicClientConfig::inner` behind `ClientConfig::with_root_certificates` — and
+it is only the `TryFrom` paths this code happens to use that let our two
+values stand. A later simplification to the shorter call turns early data on,
+at either end, with nothing failing.
+
+So the test asks from the outside, where a reading could not: a client that
+enables early data, keeps whatever tickets it is given, and asks for 0-RTT on
+a second connection. It is refused — and refused **holding two tickets**,
+which is the part worth knowing. The door does issue them, so an ordinary
+resumption works and only the early data is withheld, which is the narrow
+thing that was wanted rather than "no resumption". Taking the door's zero out
+turns the same client's early data **accepted**, measured, so the test is
+about the setting and not about the client.
+
+What is left, each still its own decision: connection migration against a NAT
+keyed by both ends, QUIC that is not HTTP — DNS-over-QUIC, WebTransport —
+which keeps the `quic` row it has now, `NEAppProxyUDPFlow` so macOS's local
+mode can do this too, and the Pro gating `features.md` already promises.
 
 ## What this will not do, and why it is said now
 

@@ -528,4 +528,177 @@ mod tests {
         assert_eq!(opened.at(), Some(at_door), "and the door said where it is");
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    /// Counts the session tickets a server sends, so that a refusal of
+    /// 0-RTT can say **which** refusal it is: a client that was never given
+    /// a ticket is refused by having nothing to resume, which is a
+    /// different fact about the door than one whose ticket forbids early
+    /// data. Two refusals are not one refusal.
+    #[derive(Debug)]
+    struct CountingTickets {
+        kept: Arc<std::sync::atomic::AtomicUsize>,
+        inner: rustls::client::ClientSessionMemoryCache,
+    }
+
+    impl CountingTickets {
+        fn new(kept: Arc<std::sync::atomic::AtomicUsize>) -> Self {
+            Self {
+                kept,
+                inner: rustls::client::ClientSessionMemoryCache::new(8),
+            }
+        }
+    }
+
+    impl rustls::client::ClientSessionStore for CountingTickets {
+        fn set_kx_hint(
+            &self,
+            server_name: rustls::pki_types::ServerName<'static>,
+            group: rustls::NamedGroup,
+        ) {
+            self.inner.set_kx_hint(server_name, group);
+        }
+
+        fn kx_hint(
+            &self,
+            server_name: &rustls::pki_types::ServerName<'_>,
+        ) -> Option<rustls::NamedGroup> {
+            self.inner.kx_hint(server_name)
+        }
+
+        fn set_tls12_session(
+            &self,
+            server_name: rustls::pki_types::ServerName<'static>,
+            value: rustls::client::Tls12ClientSessionValue,
+        ) {
+            self.inner.set_tls12_session(server_name, value);
+        }
+
+        fn tls12_session(
+            &self,
+            server_name: &rustls::pki_types::ServerName<'_>,
+        ) -> Option<rustls::client::Tls12ClientSessionValue> {
+            self.inner.tls12_session(server_name)
+        }
+
+        fn remove_tls12_session(&self, server_name: &rustls::pki_types::ServerName<'static>) {
+            self.inner.remove_tls12_session(server_name);
+        }
+
+        fn insert_tls13_ticket(
+            &self,
+            server_name: rustls::pki_types::ServerName<'static>,
+            value: rustls::client::Tls13ClientSessionValue,
+        ) {
+            self.kept.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            self.inner.insert_tls13_ticket(server_name, value);
+        }
+
+        fn take_tls13_ticket(
+            &self,
+            server_name: &rustls::pki_types::ServerName<'static>,
+        ) -> Option<rustls::client::Tls13ClientSessionValue> {
+            self.inner.take_tls13_ticket(server_name)
+        }
+    }
+
+    /// **No early data, measured from the outside.** A client that wants
+    /// 0-RTT, keeps whatever tickets it is given, and asks for it on a
+    /// second connection gets nowhere.
+    ///
+    /// Why a client's own refusal would not do, and why the ticket count is
+    /// here: `into_0rtt` answers `Err` both for a client that cannot try and
+    /// for a client with nothing to try with, and the door's position is
+    /// only one of those. The count says which this run measured.
+    ///
+    /// Why it is worth a test at all when `ca.rs` already sets
+    /// `max_early_data_size = 0`: **quinn's convenience constructors set the
+    /// opposite.** `QuicServerConfig::inner`, the path behind
+    /// `ServerConfig::with_single_cert`, sets `u32::MAX`, and the `TryFrom`
+    /// this door uses is the only reason our zero survives. A later
+    /// simplification to the shorter call would turn early data on with
+    /// nothing failing, which is the whole shape this test exists to catch.
+    #[tokio::test]
+    async fn a_client_that_asks_for_early_data_does_not_get_it() {
+        let _ = crate::crypto_provider().install_default();
+        let dir = dir("no-early-data");
+        let ca = ca(&dir);
+        let (at, _held) = open(&dir, &ca);
+
+        let kept = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let mut tls =
+            rustls::ClientConfig::builder_with_provider(Arc::new(crate::crypto_provider()))
+                .with_protocol_versions(&[&rustls::version::TLS13])
+                .unwrap()
+                .with_root_certificates(trusting(&ca))
+                .with_no_client_auth();
+        tls.alpn_protocols = vec![b"h3".to_vec()];
+        // The client asks for everything 0-RTT needs: early data enabled,
+        // and somewhere to keep a ticket.
+        tls.enable_early_data = true;
+        tls.resumption =
+            rustls::client::Resumption::store(Arc::new(CountingTickets::new(Arc::clone(&kept))));
+        let mut endpoint = quinn::Endpoint::client(SocketAddr::from(([127, 0, 0, 1], 0))).unwrap();
+        endpoint.set_default_client_config(quinn::ClientConfig::new(Arc::new(
+            quinn::crypto::rustls::QuicClientConfig::try_from(tls).unwrap(),
+        )));
+
+        // One ordinary connection, carried as far as an answer, so that any
+        // ticket the door means to send has been sent and kept.
+        let first = endpoint
+            .connect(at, CHECK_HOST)
+            .unwrap()
+            .await
+            .expect("an ordinary connection");
+        let (mut driver, mut sender) = h3::client::new(h3_quinn::Connection::new(first))
+            .await
+            .expect("HTTP/3 over it");
+        let driving = tokio::spawn(async move { driver.wait_idle().await });
+        let mut stream = sender
+            .send_request(
+                http::Request::get(format!("https://{CHECK_HOST}{CA_PATH}"))
+                    .body(())
+                    .unwrap(),
+            )
+            .await
+            .expect("a request");
+        stream.finish().await.expect("the request ends");
+        stream.recv_response().await.expect("an answer");
+        while stream.recv_data().await.expect("a body").is_some() {}
+        drop(sender);
+        let _ = driving.await;
+
+        // And now the one that asks for 0-RTT.
+        let asking = endpoint.connect(at, CHECK_HOST).unwrap();
+        let tickets = kept.load(std::sync::atomic::Ordering::Relaxed);
+        match asking.into_0rtt() {
+            // The client could not even try. Which of the two reasons it is
+            // depends on whether it holds a ticket, and that is what the
+            // count is for.
+            Err(connecting) => {
+                let whole = connecting.await;
+                assert!(
+                    whole.is_ok(),
+                    "the second connection has to work, just not with early data: {whole:?}"
+                );
+                println!(
+                    "refused before trying, with {tickets} ticket(s) kept: {}",
+                    match tickets {
+                        0 => "the door sent none, so there was nothing to resume",
+                        _ => "the ticket it holds does not allow early data",
+                    }
+                );
+            }
+            // The client tried. Then the door is what must say no, and this
+            // is the arm that would catch a door whose `max_early_data_size`
+            // had been turned back on.
+            Ok((_conn, accepted)) => {
+                assert!(
+                    !accepted.await,
+                    "the door accepted early data, which a proxy must not: a request in it is a \
+                     request the server may be sent twice"
+                );
+            }
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
