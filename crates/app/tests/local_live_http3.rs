@@ -68,7 +68,29 @@
 //! sysctl both ways and back (#372), and the same refusal is one terminal
 //! away here. `cat /proc/self/attr/current` says which profile you are in.
 //!
-//! To run it from a terminal, be in a profile that grants `userns` or
+//! **Where the restriction exists at all is narrower than it sounds**, and
+//! worth knowing before reading the paragraph above as "this test does not
+//! run on Linux". It is an Ubuntu-originated control, on by default since
+//! 23.10; Debian's apparmor packaging sets the same sysctl; a kernel
+//! without that patch has no such file at all, so a Fedora or Arch machine
+//! runs this test from an ordinary terminal. One file is the whole
+//! question:
+//!
+//! ```text
+//! $ cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+//! 1          # the caller's profile decides -- this machine
+//! 0          # off, nothing mediates it
+//! (missing)  # the kernel has no such restriction
+//! ```
+//!
+//! Where it is `1`, which profile you are in decides, and the profiles that
+//! grant `userns` are the reason this is easy to misread as working: 93 of
+//! the 390 in `/etc/apparmor.d` here carry a `userns` rule -- every
+//! browser, every Electron app, `podman`, `runc`, `steam` -- because
+//! sandboxing needs one. A `cargo test` from a terminal is none of them.
+//!
+//! To run it from a terminal under that restriction, be in a profile that
+//! grants `userns` or
 //! `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` first.
 //! Which is also why un-ignoring it would have been worse than the red CI
 //! run showed: it would have broken `cargo test` for anybody in a terminal,

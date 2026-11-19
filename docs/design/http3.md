@@ -269,6 +269,20 @@ by hand, and the one command in each file's header now says what to do about
 the profile; un-ignoring either would have broken `cargo test` for a
 developer in a terminal, not only in CI.
 
+How far that reaches is narrower than it sounds, which matters for anybody
+reading this as "the live tests do not run on Linux". The control is
+Ubuntu's, on by default since 23.10, and Debian's apparmor packaging sets
+the same sysctl; a kernel without the patch has no such file, so a Fedora or
+Arch machine runs both tests from an ordinary terminal.
+`cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns` is the whole
+question — missing, `0`, or `1` and then the caller's profile decides. Where
+it is `1`, the profiles that grant `userns` are what makes this easy to
+misread: 93 of the 390 in `/etc/apparmor.d` on this machine carry the rule,
+every browser and Electron app among them, because sandboxing needs it.
+**None of this reaches tracewing itself**: no code outside these two tests
+creates a namespace, and the local mode's one privileged step goes through
+polkit.
+
 Two things are deliberately not in it. **The way out is not pinned**: a
 namespace has one interface — ours — so `roads::out_by` answers nowhere and
 the way out cannot be made at all, which is the loop prevention doing its
