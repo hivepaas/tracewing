@@ -44,12 +44,35 @@
 //! neither of us. What covers which part of the pinning, and what is left,
 //! is written down on `local_source::Pinned`.
 //!
-//! `#[ignore]`d because it wants `unshare` and a few seconds -- **and
-//! because CI cannot run it**, which is measured rather than assumed: the
-//! runner refuses the namespace with
-//! `unshare: write failed /proc/self/uid_map: Operation not permitted`,
-//! found by TraceW 2 on #368 when the sibling test was un-ignored. So this
-//! is a test somebody runs, by hand, with one command and no password:
+//! `#[ignore]`d because it wants `unshare` and a few seconds -- and
+//! because **it is refused wherever AppArmor confines the caller**, which
+//! is not what this file said first. On Ubuntu 24.04 and newer,
+//! `kernel.apparmor_restrict_unprivileged_userns` is 1 and
+//! `/etc/apparmor.d/unprivileged_userns` -- the profile an unconfined
+//! process transitions to when it makes a user namespace -- carries
+//! `allow userns` together with `audit deny capability`. So the namespace
+//! is made and the capabilities inside it are not, which is why
+//! `unshare --user` alone succeeds and `--map-root-user` does not:
+//!
+//! ```text
+//! $ aa-exec -p unconfined -- unshare --user --map-root-user true
+//! unshare: write failed /proc/self/uid_map: Operation not permitted    exit 1
+//! $ unshare --user --map-root-user true                                exit 0
+//! ```
+//!
+//! Both of those are this machine, minutes apart. The second works because
+//! the session that wrote this runs under Ubuntu's `code` profile, which
+//! grants `userns` because Electron needs it. So **"it works on a
+//! developer's machine and the runner refuses it" was wrong**, and this
+//! file said it: TraceW 2 measured the cause on the runner by flipping the
+//! sysctl both ways and back (#372), and the same refusal is one terminal
+//! away here. `cat /proc/self/attr/current` says which profile you are in.
+//!
+//! To run it from a terminal, be in a profile that grants `userns` or
+//! `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` first.
+//! Which is also why un-ignoring it would have been worse than the red CI
+//! run showed: it would have broken `cargo test` for anybody in a terminal,
+//! not only in CI.
 //!
 //! ```sh
 //! cargo test -p tracewing --release --test local_live_http3 -- --ignored --nocapture
