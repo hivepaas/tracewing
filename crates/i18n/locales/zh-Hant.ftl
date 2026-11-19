@@ -1027,8 +1027,8 @@ t114f9980 = 標頭
 # Payload
 ta0639745 = 酬載
 
-# The simulator did not take it: {why}
-t7f8fa9c0 = 模擬器未接受：{ $why }
+# {name} did not take the certificate: {why}
+t9c0af8eb = { $name } 未接受憑證：{ $why }
 
 # General
 t5561fd0b = 一般
@@ -2581,8 +2581,8 @@ t13f68b64 = 仍在啟動中。請稍後重新尋找。
 # adb says it is {state}.
 t2b7d71da = adb 回報其狀態為 { $state }。
 
-# Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-tc28e5d10 = 為 Android 模擬器或已開啟 USB 偵錯並連接的手機設定代理伺服器，並安裝憑證。流量透過 ADB 傳輸，因此兩者都不必連上此網路。
+# Sets the proxy on every Android emulator running, and every phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t7ba5700b = 為每個正在執行的 Android 模擬器，以及每支已開啟 USB 偵錯並連接的手機設定代理伺服器，並安裝憑證。流量透過 ADB 傳輸，因此都不必連上此網路。
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
 t4af01006 = 找不到 adb。請安裝 Android Studio 或 Android 平台工具，然後重新尋找。
@@ -2596,11 +2596,14 @@ t9144d1fc = 設定裝置，將其流量傳送到這裡。按一下「復原」�
 # Android emulators and USB devices
 t379e433c = Android 模擬器和 USB 裝置
 
-# Find devices
-t54d4af39 = 尋找裝置
+# Set up every device
+t559d9d13 = 設定所有裝置
 
-# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
-t01863e29 = 讓此 Mac 上正在執行的 iOS 模擬器信任憑證。模擬器使用此 Mac 的代理伺服器，只需這一步。
+# Set up all
+t566e5a8f = 全部設定
+
+# Trusts the certificate in every iOS simulator running on this Mac, and turns the system proxy on, since that is what a simulator goes through.
+t00c84b49 = 讓此 Mac 上每個正在執行的 iOS 模擬器信任憑證，並開啟系統代理伺服器，因為模擬器經由它連網。
 
 # xcrun was not found. Install Xcode, or its command line tools, then look again.
 t2bd95662 = 找不到 xcrun。請安裝 Xcode 或其命令列工具，然後再找一次。
@@ -2608,8 +2611,8 @@ t2bd95662 = 找不到 xcrun。請安裝 Xcode 或其命令列工具，然後再�
 # No simulator is running. Start one from Xcode, then look again.
 tbd7bf840 = 沒有正在執行的模擬器。請從 Xcode 啟動一個，然後再找一次。
 
-# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
-tc88c5c9b = 讓模擬器信任憑證。在清除模擬器之前一直有效；已開啟的 App 可能需要重新開啟。
+# The certificate stays until a simulator is erased; an app already open may need opening again. Set up again for a simulator started since.
+ted5fe7f2 = 在清除模擬器之前憑證一直有效；已開啟的 App 可能需要重新開啟。之後啟動的模擬器請按「重新設定」。
 
 # The certificate is trusted.
 tdbe3bd38 = 憑證已受信任。
@@ -2620,8 +2623,14 @@ ta1c67066 = 執行中。
 # iOS simulators
 tb198618d = iOS 模擬器
 
-# Find simulators
-ta969b661 = 尋找模擬器
+# Set up again
+t4ace72e8 = 重新設定
+
+# Set up the simulators
+t98667d7a = 設定模擬器
+
+# The system proxy is off, so the simulators send nothing here.
+t4effce55 = 系統代理伺服器已關閉，因此模擬器不會傳送任何內容到這裡。
 
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = 這條入口不會在這台電腦留下任何東西：tracewing 的介面卡隨它一同消失，路由也隨之消失，無論是正常關閉還是被強制結束。

@@ -1064,8 +1064,8 @@ t114f9980 = En-tête
 # Payload
 ta0639745 = Charge utile
 
-# The simulator did not take it: {why}
-t7f8fa9c0 = Le simulateur ne l'a pas accepté : { $why }
+# {name} did not take the certificate: {why}
+t9c0af8eb = { $name } n'a pas accepté le certificat : { $why }
 
 # General
 t5561fd0b = Général
@@ -2721,8 +2721,8 @@ t13f68b64 = Démarrage en cours. Recherchez à nouveau dans un instant.
 # adb says it is {state}.
 t2b7d71da = adb indique l'état { $state }.
 
-# Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-tc28e5d10 = Configure le proxy sur un émulateur Android, ou sur un téléphone branché en USB avec le débogage USB activé, et installe le certificat. Le trafic passe par ADB, donc aucun des deux n'a besoin d'être sur ce réseau.
+# Sets the proxy on every Android emulator running, and every phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t7ba5700b = Configure le proxy sur chaque émulateur Android en cours, et sur chaque téléphone branché en USB avec le débogage USB activé, et installe le certificat. Le trafic passe par ADB, donc aucun n'a besoin d'être sur ce réseau.
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
 t4af01006 = adb est introuvable. Installez Android Studio, ou les outils de plate-forme Android, puis recherchez à nouveau.
@@ -2736,11 +2736,14 @@ t9144d1fc = Configurez un appareil pour qu'il envoie son trafic ici. Défaire, o
 # Android emulators and USB devices
 t379e433c = Émulateurs Android et appareils USB
 
-# Find devices
-t54d4af39 = Rechercher des appareils
+# Set up every device
+t559d9d13 = Configurer tous les appareils
 
-# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
-t01863e29 = Fait confiance au certificat dans les simulateurs iOS en cours sur ce Mac. Ils passent par le proxy de ce Mac, il ne leur faut rien d'autre.
+# Set up all
+t566e5a8f = Tout configurer
+
+# Trusts the certificate in every iOS simulator running on this Mac, and turns the system proxy on, since that is what a simulator goes through.
+t00c84b49 = Fait confiance au certificat dans chaque simulateur iOS en cours sur ce Mac, et active le proxy système, puisque c'est par lui que passe un simulateur.
 
 # xcrun was not found. Install Xcode, or its command line tools, then look again.
 t2bd95662 = xcrun est introuvable. Installez Xcode ou ses outils en ligne de commande, puis cherchez à nouveau.
@@ -2748,8 +2751,8 @@ t2bd95662 = xcrun est introuvable. Installez Xcode ou ses outils en ligne de com
 # No simulator is running. Start one from Xcode, then look again.
 tbd7bf840 = Aucun simulateur n'est lancé. Lancez-en un depuis Xcode, puis cherchez à nouveau.
 
-# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
-tc88c5c9b = Faites confiance au certificat dans un simulateur. Il reste jusqu'à ce que le simulateur soit effacé ; une app déjà ouverte devra peut-être être rouverte.
+# The certificate stays until a simulator is erased; an app already open may need opening again. Set up again for a simulator started since.
+ted5fe7f2 = Le certificat reste jusqu'à ce qu'un simulateur soit effacé ; une app déjà ouverte devra peut-être être rouverte. Reconfigurer pour un simulateur lancé depuis.
 
 # The certificate is trusted.
 tdbe3bd38 = Le certificat est approuvé.
@@ -2760,8 +2763,14 @@ ta1c67066 = En cours.
 # iOS simulators
 tb198618d = Simulateurs iOS
 
-# Find simulators
-ta969b661 = Chercher des simulateurs
+# Set up again
+t4ace72e8 = Reconfigurer
+
+# Set up the simulators
+t98667d7a = Configurer les simulateurs
+
+# The system proxy is off, so the simulators send nothing here.
+t4effce55 = Le proxy système est désactivé, donc les simulateurs n'envoient rien ici.
 
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = Rien de cette voie d'entrée ne reste sur cet ordinateur : l'adaptateur de tracewing s'en va avec lui, et ses routes avec, qu'il soit fermé ou tué.

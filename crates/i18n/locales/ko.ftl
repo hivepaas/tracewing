@@ -1027,8 +1027,8 @@ t114f9980 = 헤더
 # Payload
 ta0639745 = 페이로드
 
-# The simulator did not take it: {why}
-t7f8fa9c0 = 시뮬레이터가 받아들이지 않았습니다: { $why }
+# {name} did not take the certificate: {why}
+t9c0af8eb = { $name }이(가) 인증서를 받아들이지 않았습니다: { $why }
 
 # General
 t5561fd0b = 일반
@@ -2581,8 +2581,8 @@ t13f68b64 = 아직 시작 중입니다. 잠시 후 다시 찾아보세요.
 # adb says it is {state}.
 t2b7d71da = adb에 따르면 상태가 { $state }입니다.
 
-# Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-tc28e5d10 = Android 에뮬레이터 또는 USB 디버깅이 켜진 상태로 USB에 연결된 휴대폰에 프록시를 설정하고 인증서를 설치합니다. 트래픽은 ADB를 통해 전달되므로 둘 다 이 네트워크에 있을 필요가 없습니다.
+# Sets the proxy on every Android emulator running, and every phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t7ba5700b = 실행 중인 모든 Android 에뮬레이터와 USB 디버깅이 켜진 상태로 USB에 연결된 모든 휴대폰에 프록시를 설정하고 인증서를 설치합니다. 트래픽은 ADB를 통해 전달되므로 이 네트워크에 있을 필요가 없습니다.
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
 t4af01006 = adb를 찾을 수 없습니다. Android Studio 또는 Android 플랫폼 도구를 설치한 다음 다시 찾아보세요.
@@ -2596,11 +2596,14 @@ t9144d1fc = 기기가 트래픽을 여기로 보내도록 설정합니다. 실�
 # Android emulators and USB devices
 t379e433c = Android 에뮬레이터 및 USB 기기
 
-# Find devices
-t54d4af39 = 기기 찾기
+# Set up every device
+t559d9d13 = 모든 기기 설정
 
-# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
-t01863e29 = 이 Mac에서 실행 중인 iOS 시뮬레이터가 인증서를 신뢰하게 합니다. 시뮬레이터는 Mac의 프록시를 사용하므로 이것만 있으면 됩니다.
+# Set up all
+t566e5a8f = 모두 설정
+
+# Trusts the certificate in every iOS simulator running on this Mac, and turns the system proxy on, since that is what a simulator goes through.
+t00c84b49 = 이 Mac에서 실행 중인 모든 iOS 시뮬레이터가 인증서를 신뢰하게 하고, 시뮬레이터가 거치는 시스템 프록시를 켭니다.
 
 # xcrun was not found. Install Xcode, or its command line tools, then look again.
 t2bd95662 = xcrun을 찾을 수 없습니다. Xcode나 명령줄 도구를 설치한 뒤 다시 찾아보세요.
@@ -2608,8 +2611,8 @@ t2bd95662 = xcrun을 찾을 수 없습니다. Xcode나 명령줄 도구를 설�
 # No simulator is running. Start one from Xcode, then look again.
 tbd7bf840 = 실행 중인 시뮬레이터가 없습니다. Xcode에서 하나 실행한 뒤 다시 찾아보세요.
 
-# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
-tc88c5c9b = 시뮬레이터에서 인증서를 신뢰합니다. 시뮬레이터를 지울 때까지 유지되며, 이미 열린 앱은 다시 열어야 할 수 있습니다.
+# The certificate stays until a simulator is erased; an app already open may need opening again. Set up again for a simulator started since.
+ted5fe7f2 = 인증서는 시뮬레이터를 지울 때까지 유지되며, 이미 열린 앱은 다시 열어야 할 수 있습니다. 그 뒤에 시작한 시뮬레이터는 다시 설정을 누르세요.
 
 # The certificate is trusted.
 tdbe3bd38 = 인증서를 신뢰합니다.
@@ -2620,8 +2623,14 @@ ta1c67066 = 실행 중.
 # iOS simulators
 tb198618d = iOS 시뮬레이터
 
-# Find simulators
-ta969b661 = 시뮬레이터 찾기
+# Set up again
+t4ace72e8 = 다시 설정
+
+# Set up the simulators
+t98667d7a = 시뮬레이터 설정
+
+# The system proxy is off, so the simulators send nothing here.
+t4effce55 = 시스템 프록시가 꺼져 있어 시뮬레이터가 여기로 아무것도 보내지 않습니다.
 
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = 이 경로의 것은 컴퓨터에 남지 않습니다: tracewing의 어댑터는 본체와 함께 사라지고 경로도 함께 사라집니다. 닫든 강제 종료되든 같습니다.

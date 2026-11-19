@@ -1064,8 +1064,8 @@ t114f9980 = Cabeçalho
 # Payload
 ta0639745 = Payload
 
-# The simulator did not take it: {why}
-t7f8fa9c0 = O simulador não o aceitou: { $why }
+# {name} did not take the certificate: {why}
+t9c0af8eb = { $name } não aceitou o certificado: { $why }
 
 # General
 t5561fd0b = Geral
@@ -2721,8 +2721,8 @@ t13f68b64 = Ainda iniciando. Procure de novo em instantes.
 # adb says it is {state}.
 t2b7d71da = O adb diz que está { $state }.
 
-# Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-tc28e5d10 = Define o proxy em um emulador Android, ou em um celular conectado com a depuração USB ativada, e instala o certificado. O tráfego vem pelo ADB, então nenhum dos dois precisa estar nesta rede.
+# Sets the proxy on every Android emulator running, and every phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t7ba5700b = Define o proxy em cada emulador Android em execução, e em cada celular conectado com a depuração USB ativada, e instala o certificado. O tráfego vem pelo ADB, então nenhum precisa estar nesta rede.
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
 t4af01006 = O adb não foi encontrado. Instale o Android Studio, ou as platform tools do Android, e procure de novo.
@@ -2736,11 +2736,14 @@ t9144d1fc = Configure um dispositivo para enviar o tráfego dele para cá. Desfa
 # Android emulators and USB devices
 t379e433c = Emuladores Android e dispositivos USB
 
-# Find devices
-t54d4af39 = Encontrar dispositivos
+# Set up every device
+t559d9d13 = Configurar todos os dispositivos
 
-# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
-t01863e29 = Faz os simuladores de iOS em execução neste Mac confiarem no certificado. Eles usam o proxy deste Mac, então é só isso que precisam.
+# Set up all
+t566e5a8f = Configurar todos
+
+# Trusts the certificate in every iOS simulator running on this Mac, and turns the system proxy on, since that is what a simulator goes through.
+t00c84b49 = Faz cada simulador de iOS em execução neste Mac confiar no certificado e liga o proxy do sistema, que é por onde um simulador passa.
 
 # xcrun was not found. Install Xcode, or its command line tools, then look again.
 t2bd95662 = xcrun não foi encontrado. Instale o Xcode ou suas ferramentas de linha de comando e procure de novo.
@@ -2748,8 +2751,8 @@ t2bd95662 = xcrun não foi encontrado. Instale o Xcode ou suas ferramentas de li
 # No simulator is running. Start one from Xcode, then look again.
 tbd7bf840 = Nenhum simulador está em execução. Abra um pelo Xcode e procure de novo.
 
-# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
-tc88c5c9b = Confie no certificado em um simulador. Ele fica até o simulador ser apagado; um app já aberto pode precisar ser reaberto.
+# The certificate stays until a simulator is erased; an app already open may need opening again. Set up again for a simulator started since.
+ted5fe7f2 = O certificado fica até um simulador ser apagado; um app já aberto pode precisar ser reaberto. Configurar de novo para um simulador iniciado depois.
 
 # The certificate is trusted.
 tdbe3bd38 = O certificado é confiável.
@@ -2760,8 +2763,14 @@ ta1c67066 = Em execução.
 # iOS simulators
 tb198618d = Simuladores de iOS
 
-# Find simulators
-ta969b661 = Procurar simuladores
+# Set up again
+t4ace72e8 = Configurar de novo
+
+# Set up the simulators
+t98667d7a = Configurar os simuladores
+
+# The system proxy is off, so the simulators send nothing here.
+t4effce55 = O proxy do sistema está desligado, então os simuladores não enviam nada para cá.
 
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = Nada desta entrada fica neste computador: o adaptador do tracewing vai-se com ele, e as suas rotas também, quer seja fechado quer seja morto.

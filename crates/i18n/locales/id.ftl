@@ -1027,8 +1027,8 @@ t114f9980 = Header
 # Payload
 ta0639745 = Payload
 
-# The simulator did not take it: {why}
-t7f8fa9c0 = Simulator tidak menerimanya: { $why }
+# {name} did not take the certificate: {why}
+t9c0af8eb = { $name } tidak menerima sertifikat: { $why }
 
 # General
 t5561fd0b = Umum
@@ -2581,8 +2581,8 @@ t13f68b64 = Masih memulai. Cari lagi sebentar lagi.
 # adb says it is {state}.
 t2b7d71da = adb melaporkan statusnya { $state }.
 
-# Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-tc28e5d10 = Mengatur proxy di emulator Android, atau ponsel yang tersambung dengan debug USB aktif, dan memasang sertifikat. Lalu lintas datang lewat ADB, jadi keduanya tidak perlu berada di jaringan ini.
+# Sets the proxy on every Android emulator running, and every phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t7ba5700b = Mengatur proxy di setiap emulator Android yang berjalan, dan setiap ponsel yang tersambung dengan debug USB aktif, lalu memasang sertifikat. Lalu lintas datang lewat ADB, jadi semuanya tidak perlu berada di jaringan ini.
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
 t4af01006 = adb tidak ditemukan. Instal Android Studio, atau platform tools Android, lalu cari lagi.
@@ -2596,11 +2596,14 @@ t9144d1fc = Siapkan perangkat agar mengirim lalu lintasnya ke sini. Urungkan, at
 # Android emulators and USB devices
 t379e433c = Emulator Android dan perangkat USB
 
-# Find devices
-t54d4af39 = Temukan perangkat
+# Set up every device
+t559d9d13 = Siapkan semua perangkat
 
-# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
-t01863e29 = Memercayakan sertifikat di simulator iOS yang berjalan di Mac ini. Simulator memakai proxy Mac ini, jadi hanya itu yang dibutuhkan.
+# Set up all
+t566e5a8f = Siapkan semua
+
+# Trusts the certificate in every iOS simulator running on this Mac, and turns the system proxy on, since that is what a simulator goes through.
+t00c84b49 = Memercayakan sertifikat di setiap simulator iOS yang berjalan di Mac ini, dan menyalakan proxy sistem, karena lewat situlah simulator berjalan.
 
 # xcrun was not found. Install Xcode, or its command line tools, then look again.
 t2bd95662 = xcrun tidak ditemukan. Pasang Xcode atau command line tools-nya, lalu cari lagi.
@@ -2608,8 +2611,8 @@ t2bd95662 = xcrun tidak ditemukan. Pasang Xcode atau command line tools-nya, lal
 # No simulator is running. Start one from Xcode, then look again.
 tbd7bf840 = Tidak ada simulator yang berjalan. Jalankan satu dari Xcode, lalu cari lagi.
 
-# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
-tc88c5c9b = Percayakan sertifikat di sebuah simulator. Ia tetap ada sampai simulator dihapus; aplikasi yang sudah terbuka mungkin perlu dibuka ulang.
+# The certificate stays until a simulator is erased; an app already open may need opening again. Set up again for a simulator started since.
+ted5fe7f2 = Sertifikat tetap ada sampai simulator dihapus; aplikasi yang sudah terbuka mungkin perlu dibuka ulang. Siapkan lagi untuk simulator yang dijalankan sesudahnya.
 
 # The certificate is trusted.
 tdbe3bd38 = Sertifikat sudah dipercaya.
@@ -2620,8 +2623,14 @@ ta1c67066 = Berjalan.
 # iOS simulators
 tb198618d = Simulator iOS
 
-# Find simulators
-ta969b661 = Cari simulator
+# Set up again
+t4ace72e8 = Siapkan lagi
+
+# Set up the simulators
+t98667d7a = Siapkan simulator
+
+# The system proxy is off, so the simulators send nothing here.
+t4effce55 = Proxy sistem mati, jadi simulator tidak mengirim apa pun ke sini.
 
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = Tidak ada apa pun dari jalan masuk ini yang tertinggal di komputer: adapter tracewing ikut pergi bersamanya, begitu pula rutenya, baik ditutup maupun dimatikan paksa.

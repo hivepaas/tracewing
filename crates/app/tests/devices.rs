@@ -21,6 +21,7 @@ use tracewing::{
     inspector::Part,
     setup_page::Guide,
     traffic::{Screen, Traffic},
+    wizard::Target,
 };
 use tracewing_dev::benchkit;
 use tracewing_store::settings::StorageSettings;
@@ -244,9 +245,12 @@ fn other_devices_are_counted_found_and_named() {
         .unwrap();
 
     // The Set up page has a code for a phone to scan, and how to trust the
-    // certificate on each kind.
+    // certificate on each kind, once it is told a phone is what to capture.
     window
-        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Setup, cx))
+        .update(&mut cx, |view, _, cx| {
+            view.set_screen(Screen::Setup, cx);
+            view.choose_target(Some(Target::Phone), cx);
+        })
         .unwrap();
     cx.run_until_parked();
     shot(&mut cx, window.into(), "61-setup-phones");
@@ -273,8 +277,77 @@ fn other_devices_are_counted_found_and_named() {
     scroll(&mut cx, 820.);
     shot(&mut cx, window.into(), "95-setup-devices-to-undo");
 
+    // Android, every device at once: here an `adb` that answers as two
+    // emulators and a phone not yet allowed would, and writes down what it
+    // was asked. The emulators are production builds, so `root` is refused
+    // and the certificate goes to Downloads.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let asked = dir.join("asked-adb");
+        let fake = dir.join("adb");
+        std::fs::write(
+            &fake,
+            format!(
+                "#!/bin/sh\necho \"$@\" >> {asked}\n\
+                 case \"$1\" in\n\
+                 devices) printf 'List of devices attached\\n\
+                 emulator-5554 device product:sdk_gphone64 model:sdk_gphone64_x86_64\\n\
+                 emulator-5556 device product:panther model:Pixel_7\\n\
+                 R58M unauthorized usb:1-1\\n'; exit 0 ;;\n\
+                 -s) shift 2 ;;\n\
+                 esac\n\
+                 case \"$1\" in\n\
+                 root) echo 'adbd cannot run as root in production builds' >&2; exit 1 ;;\n\
+                 shell) case \"$2\" in\n\
+                 'getprop ro.build.version.sdk') echo 34 ;;\n\
+                 'id -u') echo 2000 ;;\n\
+                 'settings get global http_proxy') echo null ;;\n\
+                 esac ;;\n\
+                 esac\n",
+                asked = asked.display()
+            ),
+        )
+        .unwrap();
+        std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let port = window
+            .update(&mut cx, |view, _, cx| {
+                view.system.android.adb = Some(Some(fake.clone()));
+                view.set_up_android_all(cx);
+                view.engine.addr.port()
+            })
+            .unwrap();
+        wait_for(&mut cx, window, "every device set up", |view| {
+            !view.system.android.looking && view.system.android.set.len() == 2
+        });
+        window
+            .update(&mut cx, |view, _, _| {
+                let state = &view.system.android;
+                assert_eq!(state.devices.len(), 3);
+                assert_eq!(state.problem, None);
+                assert!(!state.set.contains_key("R58M"), "not allowed yet");
+                assert!(view.android_to_set_up().is_empty());
+            })
+            .unwrap();
+        let said = std::fs::read_to_string(&asked).unwrap();
+        for serial in ["emulator-5554", "emulator-5556"] {
+            for line in [
+                format!("-s {serial} reverse tcp:{port} tcp:{port}"),
+                format!("-s {serial} shell settings put global http_proxy 127.0.0.1:{port}"),
+            ] {
+                assert!(said.lines().any(|l| l == line), "{line} in\n{said}");
+            }
+        }
+        assert!(!said.contains("-s R58M"), "{said}");
+        scroll(&mut cx, 300.);
+        shot(&mut cx, window.into(), "137-setup-android-every-device");
+        scroll(&mut cx, -300.);
+    }
+
     // iOS simulators, as on a Mac: here an `xcrun` that answers as simctl does
-    // and writes down what it was asked.
+    // and writes down what it was asked. Every one running is given the
+    // certificate in one go; the proxy is this machine's own, so it is left
+    // off, and the page says what that means.
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -295,25 +368,36 @@ fn other_devices_are_counted_found_and_named() {
         window
             .update(&mut cx, |view, _, cx| {
                 view.system.ios.xcrun = Some(Some(fake.clone()));
-                view.find_simulators(cx);
+                view.set_up_simulators(cx);
             })
             .unwrap();
-        wait_for(&mut cx, window, "the simulators", |view| {
-            view.system.ios.simulators.len() == 2
-        });
+        wait_for(
+            &mut cx,
+            window,
+            "every simulator trusting the certificate",
+            |view| {
+                let ios = &view.system.ios;
+                !ios.looking && ios.trusted.contains("A1") && ios.trusted.contains("A2")
+            },
+        );
         window
-            .update(&mut cx, |view, _, cx| view.trust_simulator("A1".into(), cx))
+            .update(&mut cx, |view, _, _| {
+                assert_eq!(view.system.ios.problem, None);
+                assert!(
+                    matches!(view.system.proxy, tracewing::system::ProxySwitch::Off),
+                    "only a Mac's own proxy is turned on"
+                );
+            })
             .unwrap();
-        wait_for(&mut cx, window, "the certificate trusted", |view| {
-            view.system.ios.trusted.contains("A1") && view.system.ios.working.is_none()
-        });
         let said = std::fs::read_to_string(&asked).unwrap();
-        assert!(
-            said.ends_with(&format!(
-                "simctl keychain A1 add-root-cert {}\n",
-                dir.join("ca.pem").display()
-            )),
-            "{said}"
+        let pem = dir.join("ca.pem");
+        let mut said: Vec<&str> = said.lines().collect();
+        said.sort_unstable();
+        let trust = |udid: &str| format!("simctl keychain {udid} add-root-cert {}", pem.display());
+        assert_eq!(
+            said,
+            [&trust("A1"), &trust("A2"), "simctl list devices booted -j"],
+            "looked once, and each given the certificate once"
         );
         scroll(&mut cx, 500.);
         shot(&mut cx, window.into(), "106-setup-simulators");

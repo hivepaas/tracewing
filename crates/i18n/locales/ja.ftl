@@ -1027,8 +1027,8 @@ t114f9980 = ヘッダー
 # Payload
 ta0639745 = ペイロード
 
-# The simulator did not take it: {why}
-t7f8fa9c0 = シミュレーターが受け付けませんでした：{ $why }
+# {name} did not take the certificate: {why}
+t9c0af8eb = { $name } が証明書を受け付けませんでした：{ $why }
 
 # General
 t5561fd0b = 一般
@@ -2581,8 +2581,8 @@ t13f68b64 = まだ起動中です。少し待ってから再検索してくだ�
 # adb says it is {state}.
 t2b7d71da = adb によると、状態は { $state } です。
 
-# Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-tc28e5d10 = Android エミュレータ、または USB デバッグをオンにして USB 接続したスマートフォンにプロキシを設定し、証明書をインストールします。トラフィックは ADB 経由で届くため、どちらもこのネットワークに接続している必要はありません。
+# Sets the proxy on every Android emulator running, and every phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t7ba5700b = 動作中のすべての Android エミュレータと、USB デバッグをオンにして USB 接続したすべてのスマートフォンにプロキシを設定し、証明書をインストールします。トラフィックは ADB 経由で届くため、このネットワークに接続している必要はありません。
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
 t4af01006 = adb が見つかりません。Android Studio または Android の Platform Tools をインストールしてから、再検索してください。
@@ -2596,11 +2596,14 @@ t9144d1fc = デバイスを設定して、トラフィックをここに送ら�
 # Android emulators and USB devices
 t379e433c = Android エミュレータと USB デバイス
 
-# Find devices
-t54d4af39 = デバイスを探す
+# Set up every device
+t559d9d13 = すべてのデバイスをセットアップ
 
-# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
-t01863e29 = この Mac で動作中の iOS シミュレーターに証明書を信頼させます。シミュレーターは Mac のプロキシを使うので、これだけで十分です。
+# Set up all
+t566e5a8f = すべてセットアップ
+
+# Trusts the certificate in every iOS simulator running on this Mac, and turns the system proxy on, since that is what a simulator goes through.
+t00c84b49 = この Mac で動作中のすべての iOS シミュレーターに証明書を信頼させ、システムプロキシをオンにします。シミュレーターはこれを経由するためです。
 
 # xcrun was not found. Install Xcode, or its command line tools, then look again.
 t2bd95662 = xcrun が見つかりません。Xcode かそのコマンドラインツールをインストールして、もう一度探してください。
@@ -2608,8 +2611,8 @@ t2bd95662 = xcrun が見つかりません。Xcode かそのコマンドライ�
 # No simulator is running. Start one from Xcode, then look again.
 tbd7bf840 = 動作中のシミュレーターがありません。Xcode から起動して、もう一度探してください。
 
-# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
-tc88c5c9b = シミュレーターで証明書を信頼させます。シミュレーターを消去するまで残ります。開いているアプリは開き直す必要があるかもしれません。
+# The certificate stays until a simulator is erased; an app already open may need opening again. Set up again for a simulator started since.
+ted5fe7f2 = 証明書はシミュレーターを消去するまで残ります。開いているアプリは開き直す必要があるかもしれません。その後に起動したシミュレーターには「もう一度セットアップ」を押してください。
 
 # The certificate is trusted.
 tdbe3bd38 = 証明書は信頼されています。
@@ -2620,8 +2623,14 @@ ta1c67066 = 動作中。
 # iOS simulators
 tb198618d = iOS シミュレーター
 
-# Find simulators
-ta969b661 = シミュレーターを探す
+# Set up again
+t4ace72e8 = もう一度セットアップ
+
+# Set up the simulators
+t98667d7a = シミュレーターをセットアップ
+
+# The system proxy is off, so the simulators send nothing here.
+t4effce55 = システムプロキシがオフのため、シミュレーターからは何も届きません。
 
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = この経路のものはコンピュータに残りません: tracewing のアダプターは本体とともに消え、そのルートも一緒です。閉じた場合も強制終了された場合も同じです。

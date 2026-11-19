@@ -1084,8 +1084,8 @@ t114f9980 = Заголовок
 # Payload
 ta0639745 = Payload
 
-# The simulator did not take it: {why}
-t7f8fa9c0 = Симулятор не принял его: { $why }
+# {name} did not take the certificate: {why}
+t9c0af8eb = { $name } не принял сертификат: { $why }
 
 # General
 t5561fd0b = Общие
@@ -2794,8 +2794,8 @@ t13f68b64 = Ещё запускается. Поищите снова чуть п
 # adb says it is {state}.
 t2b7d71da = adb сообщает состояние: { $state }.
 
-# Sets the proxy on an Android emulator, or a phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
-tc28e5d10 = Настраивает прокси на эмуляторе Android или телефоне, подключённом по USB с включённой отладкой по USB, и устанавливает сертификат. Трафик идёт через ADB, поэтому им не нужно быть в этой сети.
+# Sets the proxy on every Android emulator running, and every phone plugged in with USB debugging on, and installs the certificate. The traffic comes over ADB, so neither has to be on this network.
+t7ba5700b = Настраивает прокси на каждом запущенном эмуляторе Android и каждом телефоне, подключённом по USB с включённой отладкой по USB, и устанавливает сертификат. Трафик идёт через ADB, поэтому им не нужно быть в этой сети.
 
 # adb was not found. Install Android Studio, or Android's platform tools, then look again.
 t4af01006 = adb не найден. Установите Android Studio или Android platform tools, затем поищите снова.
@@ -2809,11 +2809,14 @@ t9144d1fc = Настройте устройство, чтобы оно отпр�
 # Android emulators and USB devices
 t379e433c = Эмуляторы Android и USB-устройства
 
-# Find devices
-t54d4af39 = Найти устройства
+# Set up every device
+t559d9d13 = Настроить все устройства
 
-# Trusts the certificate in the iOS simulators running on this Mac. They go through this Mac's proxy, so that is all they need.
-t01863e29 = Добавляет сертификат в доверенные в запущенных на этом Mac симуляторах iOS. Они ходят через прокси этого Mac, больше ничего не нужно.
+# Set up all
+t566e5a8f = Настроить все
+
+# Trusts the certificate in every iOS simulator running on this Mac, and turns the system proxy on, since that is what a simulator goes through.
+t00c84b49 = Добавляет сертификат в доверенные во всех запущенных на этом Mac симуляторах iOS и включает системный прокси, ведь симуляторы ходят через него.
 
 # xcrun was not found. Install Xcode, or its command line tools, then look again.
 t2bd95662 = xcrun не найден. Установите Xcode или его инструменты командной строки и поищите снова.
@@ -2821,8 +2824,8 @@ t2bd95662 = xcrun не найден. Установите Xcode или его и
 # No simulator is running. Start one from Xcode, then look again.
 tbd7bf840 = Ни один симулятор не запущен. Запустите его из Xcode и поищите снова.
 
-# Trust the certificate in a simulator. It stays until the simulator is erased; an app already open may need opening again.
-tc88c5c9b = Сделайте сертификат доверенным в симуляторе. Он останется, пока симулятор не стёрт; уже открытое приложение может понадобиться открыть заново.
+# The certificate stays until a simulator is erased; an app already open may need opening again. Set up again for a simulator started since.
+ted5fe7f2 = Сертификат останется, пока симулятор не стёрт; уже открытое приложение может понадобиться открыть заново. «Настроить снова» — для симулятора, запущенного позже.
 
 # The certificate is trusted.
 tdbe3bd38 = Сертификат доверенный.
@@ -2833,8 +2836,14 @@ ta1c67066 = Запущен.
 # iOS simulators
 tb198618d = Симуляторы iOS
 
-# Find simulators
-ta969b661 = Найти симуляторы
+# Set up again
+t4ace72e8 = Настроить снова
+
+# Set up the simulators
+t98667d7a = Настроить симуляторы
+
+# The system proxy is off, so the simulators send nothing here.
+t4effce55 = Системный прокси выключен, поэтому симуляторы ничего сюда не отправляют.
 
 # Nothing of the way in stays on this computer: tracewing's adapter goes when it does, and its routes with it, whether it is closed or killed.
 tbc409e23 = От этого входа на компьютере не остаётся ничего: адаптер tracewing уходит вместе с ним, и его маршруты тоже, закрыт он или убит.
