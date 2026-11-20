@@ -274,13 +274,18 @@ pub fn window_chrome(
     let (mac, windows) = (cfg!(target_os = "macos"), cfg!(target_os = "windows"));
     let row = || div().flex().items_center().h_full();
     let mut switch = Some(switch);
+    // On Windows the bar is no drag area itself: what is marked inside it is,
+    // and the caption buttons come after, outside any. GPUI answers Windows
+    // with the first control area painted under the pointer, and a parent
+    // paints before its children, so buttons inside a drag area are the
+    // caption to Windows and a press on them does nothing. That is what was
+    // wrong here, and what packwing and shellwing had already found.
+    //
+    // Full screen has no caption: Windows ignores the control areas then.
+    let caption = (windows && !fullscreen).then(|| windows_buttons(window));
+    let drag = || row().window_control_area(WindowControlArea::Drag);
     let (left, right) = if windows {
-        // Full screen has no caption: Windows ignores the control areas then.
-        let buttons = (!fullscreen).then(|| windows_buttons(window));
-        (
-            row(),
-            row().pl(ui(6.)).children(switch.take()).children(buttons),
-        )
+        (drag(), drag().pl(ui(6.)).children(switch.take()))
     } else if mac {
         // The system draws the traffic lights over the left end.
         let after = TRAFFIC_LIGHTS.x + px(TRAFFIC_LIGHTS_W + 10.);
@@ -318,9 +323,9 @@ pub fn window_chrome(
             .rounded_tl(inner(round.top_left))
             .rounded_tr(inner(round.top_right))
             // On Windows the system moves the window from the drag areas
-            // itself (see `windows_buttons`); handling the press here would
-            // stop it.
-            .when(windows, |d| d.window_control_area(WindowControlArea::Drag))
+            // marked inside the bar, and this must not be one of them: it
+            // holds the caption buttons, which a drag area over them would
+            // swallow. Handling the press here would stop the move as well.
             .when(!windows, |d| {
                 d.on_mouse_down(MouseButton::Left, move |e, window, _| {
                     if e.click_count != 2 {
@@ -347,9 +352,11 @@ pub fn window_chrome(
                     .text_size(ui(13.))
                     .font_weight(FontWeight::BOLD)
                     .text_color(rgb(colors().muted))
+                    .when(windows, |d| d.window_control_area(WindowControlArea::Drag))
                     .child("tracewing"),
             )
             .child(right)
+            .children(caption)
     });
     let (inset, border) = (px(INSET), px(BORDER));
     let floating = !(t.top && t.bottom && t.left && t.right);
