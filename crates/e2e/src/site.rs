@@ -336,11 +336,23 @@ fn page(tls: &str) -> String {
 const said = {{}};
 const within = (ms, what) => Promise.race([what, new Promise((_, no) => setTimeout(() => no(new Error("timed out")), ms))]);
 (async () => {{
-  try {{
-    const answer = await within(10000, fetch("{tls}/json"));
-    said.json = (await answer.json()).answered;
-    said.alt_svc = answer.headers.get("alt-svc") || "";
-  }} catch (e) {{ said.json = "error: " + e; }}
+  // The first HTTPS request through the proxy once failed at once ("Failed
+  // to fetch"), in Chrome's own profile, whose proxy is on its command
+  // line, while every later one in the same page went through: tried a few
+  // times, half a second apart, before it counts. Why it lost is not known;
+  // `json_attempts` says how many tries it took, which a failure shows.
+  for (let attempt = 1; attempt <= 5; attempt++) {{
+    try {{
+      const answer = await within(10000, fetch("{tls}/json"));
+      said.json = (await answer.json()).answered;
+      said.alt_svc = answer.headers.get("alt-svc") || "";
+      said.json_attempts = String(attempt);
+      break;
+    }} catch (e) {{
+      said.json = "error: " + e;
+      await new Promise((yes) => setTimeout(yes, 500));
+    }}
+  }}
   try {{
     said.ws = await within(10000, new Promise((yes, no) => {{
       const ws = new WebSocket("{wss}/ws");
