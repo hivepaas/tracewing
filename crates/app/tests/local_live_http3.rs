@@ -294,7 +294,10 @@ fn chromes_http3_goes_through_tracewing_on_a_real_adapter() {
         .args(["--dump-dom", "https://h3.test/orders"])
         .env("HOME", &home)
         .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::null())
+        // Where Chrome says why a page did not load: `--dump-dom` writes
+        // nothing and exits 0 when it does not, so stdout cannot tell a
+        // refused certificate from a lost handshake.
+        .stderr(std::process::Stdio::piped())
         .spawn()
         .expect("start Chrome");
     let deadline = std::time::Instant::now() + Duration::from_secs(60);
@@ -307,10 +310,17 @@ fn chromes_http3_goes_through_tracewing_on_a_real_adapter() {
     }
     let mut page = String::new();
     std::io::Read::read_to_string(&mut browser.stdout.take().unwrap(), &mut page).unwrap();
+    let mut said = String::new();
+    std::io::Read::read_to_string(&mut browser.stderr.take().unwrap(), &mut said).unwrap();
+    // Chrome's reason, without the lines of dbus it says on every start.
+    let why: Vec<&str> = said
+        .lines()
+        .filter(|line| line.contains("Page load failed") || line.contains("net::ERR_"))
+        .collect();
 
     assert!(
         page.contains(std::str::from_utf8(SAID).unwrap()),
-        "Chrome did not get the server's own body: {page}"
+        "Chrome did not get the server's own body. Its page: {page:?}. Why: {why:?}"
     );
     assert_eq!(
         server.saw().first().map(|arrived| arrived.path.clone()),
