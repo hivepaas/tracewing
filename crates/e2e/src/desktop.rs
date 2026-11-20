@@ -1,6 +1,8 @@
 //! A Linux desktop's proxy setting, read and written with the desktop's own
 //! tools rather than tracewing's, so that what tracewing reads is checked too.
-//! GNOME keeps it in dconf (`gsettings`), KDE in `kioslaverc` (kconfig).
+//! GNOME keeps it in dconf (`gsettings`), KDE in `kioslaverc` (kconfig). On
+//! KDE, GNOME's is part of it too where it can be read: Firefox reads that one
+//! alone, so tracewing sets both.
 
 use std::process::Command;
 
@@ -54,47 +56,59 @@ fn kde_args(key: &str) -> [&str; 6] {
     ]
 }
 
-/// The whole setting, by key.
+/// The whole setting, by key: KDE's by its name, GNOME's as `schema key`.
 pub type Setting = Vec<(String, String)>;
 
+/// Whether GNOME's settings can be read here.
+fn gnome() -> bool {
+    let path = std::env::var_os("PATH").unwrap_or_default();
+    std::env::split_paths(&path).any(|dir| dir.join("gsettings").is_file())
+}
+
 pub fn setting() -> Setting {
+    let mut setting = Setting::new();
     if kde() {
         let tool = kde_tool("read");
-        KDE.iter()
-            .map(|key| (key.to_string(), run(&tool, &kde_args(key))))
-            .collect()
-    } else {
-        GNOME
-            .iter()
-            .map(|(schema, key)| {
-                (
-                    format!("{schema} {key}"),
-                    run("gsettings", &["get", schema, key]),
-                )
-            })
-            .collect()
+        setting.extend(
+            KDE.iter()
+                .map(|key| (key.to_string(), run(&tool, &kde_args(key)))),
+        );
     }
+    if !kde() || gnome() {
+        setting.extend(GNOME.iter().map(|(schema, key)| {
+            (
+                format!("{schema} {key}"),
+                run("gsettings", &["get", schema, key]),
+            )
+        }));
+    }
+    setting
 }
 
 pub fn get<'a>(setting: &'a Setting, key: &str) -> &'a str {
     &setting.iter().find(|(k, _)| k == key).unwrap().1
 }
 
-/// Whether the setting sends both HTTP and HTTPS to tracewing on `port`.
+/// Whether the setting sends both HTTP and HTTPS to tracewing on `port`:
+/// KDE's and GNOME's both, where both are here.
 pub fn names_tracewing(setting: &Setting, port: u16) -> bool {
-    if kde() {
+    let has = |key: &str| setting.iter().any(|(k, _)| k == key);
+    let kde_names_it = || {
         let url = format!("http://127.0.0.1 {port}");
         get(setting, "ProxyType") == "1"
             && get(setting, "httpProxy") == url
             && get(setting, "httpsProxy") == url
-    } else {
+    };
+    let gnome_names_it = || {
         get(setting, "org.gnome.system.proxy mode") == "'manual'"
             && ["http", "https"].iter().all(|scheme| {
                 let schema = format!("org.gnome.system.proxy.{scheme}");
                 get(setting, &format!("{schema} host")) == "'127.0.0.1'"
                     && get(setting, &format!("{schema} port")) == port.to_string()
             })
-    }
+    };
+    (!has("ProxyType") || kde_names_it())
+        && (!has("org.gnome.system.proxy mode") || gnome_names_it())
 }
 
 /// What the setting was before a test changed it, written back when the
@@ -103,23 +117,19 @@ pub struct PutBack(Setting);
 
 impl Drop for PutBack {
     fn drop(&mut self) {
-        if kde() {
-            let tool = kde_tool("write");
-            for (key, value) in &self.0 {
-                let mut args = kde_args(key).to_vec();
+        for (name, value) in &self.0 {
+            if let Some((schema, key)) = name.split_once(' ') {
+                let _ = Command::new("gsettings")
+                    .args(["set", schema, key, value])
+                    .status();
+            } else {
+                let mut args = kde_args(name).to_vec();
                 if value.is_empty() {
                     args.push("--delete");
                 } else {
                     args.push(value);
                 }
-                let _ = Command::new(&tool).args(&args).status();
-            }
-        } else {
-            for (name, value) in &self.0 {
-                let (schema, key) = name.split_once(' ').unwrap();
-                let _ = Command::new("gsettings")
-                    .args(["set", schema, key, value])
-                    .status();
+                let _ = Command::new(kde_tool("write")).args(&args).status();
             }
         }
     }
@@ -142,7 +152,8 @@ pub fn the_users_own() -> PutBack {
             args.push(value);
             run(&tool, &args);
         }
-    } else {
+    }
+    if !kde() || gnome() {
         for (schema, key, value) in [
             ("org.gnome.system.proxy.http", "host", "'corp.example'"),
             ("org.gnome.system.proxy.http", "port", "3128"),
