@@ -974,6 +974,98 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
+    /// A WebSocket as the proxy records one: its row, then its messages
+    /// both ways, of each kind a HAR has an opcode for.
+    fn a_websocket(dir: &std::path::Path) {
+        // As the proxy starts one: its folders first.
+        session::create(dir).unwrap();
+        let shared = std::sync::Arc::new(crate::session::Shared::default());
+        let (recorder, writer) =
+            crate::store::Recorder::spawn(dir, &StorageSettings::default(), shared, None, 100_000)
+                .unwrap();
+        let record = || FlowRecord {
+            kind: "websocket",
+            method: "GET".to_owned(),
+            scheme: "https".to_owned(),
+            host: "ws.test".to_owned(),
+            path: "/live".to_owned(),
+            client_version: "HTTP/1.1".to_owned(),
+            status: Some(101),
+            ..FlowRecord::default()
+        };
+        let stream = recorder.open_stream(record());
+        stream.message(true, "text", br#"{"op":"login","token":"SECRET-T1"}"#);
+        stream.message(false, "text", br#"{"ok":true}"#);
+        stream.message(false, "binary", &[0x00, 0x9f, 0x92, 0x96]);
+        stream.message(true, "ping", b"");
+        stream.message(false, "close", b"");
+        stream.finish(record());
+        drop(recorder);
+        writer.close().unwrap();
+    }
+
+    fn exported(dir: &std::path::Path, without_secrets: bool) -> (String, Value) {
+        let mut out = Vec::new();
+        export(dir, None, ExportOptions { without_secrets }, &mut out).unwrap();
+        let text = String::from_utf8(out).unwrap();
+        let har: Value = serde_json::from_str(&text).unwrap();
+        (text, har)
+    }
+
+    #[test]
+    fn a_websockets_messages_go_out_both_ways_and_their_secrets_can_be_left_out() {
+        let dir = temp("websocket");
+        a_websocket(&dir);
+
+        let (_, har) = exported(&dir, false);
+        let entry = &har["log"]["entries"][0];
+        assert_eq!(entry["request"]["url"], "wss://ws.test/live");
+        let messages = entry["_webSocketMessages"].as_array().unwrap();
+        let said: Vec<(&str, i64, &str)> = messages
+            .iter()
+            .map(|m| {
+                (
+                    m["type"].as_str().unwrap(),
+                    m["opcode"].as_i64().unwrap(),
+                    m["data"].as_str().unwrap(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            said,
+            [
+                ("send", 1, r#"{"op":"login","token":"SECRET-T1"}"#),
+                ("receive", 1, r#"{"ok":true}"#),
+                // Bytes that are not text go as base64, as Chrome writes them.
+                ("receive", 2, "AJ+Slg=="),
+                ("send", 9, ""),
+                ("receive", 8, ""),
+            ]
+        );
+        assert!(
+            messages
+                .windows(2)
+                .all(|pair| pair[0]["time"].as_f64() <= pair[1]["time"].as_f64()),
+            "in the order they went: {messages:?}"
+        );
+
+        // Without secrets: the token is out of the message that carried it,
+        // and nothing else changes.
+        let (text, har) = exported(&dir, true);
+        assert!(!text.contains("SECRET-T1"), "{text}");
+        let messages = har["log"]["entries"][0]["_webSocketMessages"]
+            .as_array()
+            .unwrap()
+            .clone();
+        assert_eq!(messages.len(), 5);
+        let login: Value = serde_json::from_str(messages[0]["data"].as_str().unwrap()).unwrap();
+        assert_eq!(login["op"], "login");
+        assert_eq!(login["token"], REMOVED);
+        assert_eq!(messages[1]["data"], r#"{"ok":true}"#);
+        assert_eq!(messages[2]["data"], "AJ+Slg==");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     #[test]
     fn secrets_go_wherever_they_are() {
         const JWT: &str = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0MiJ9.c2lnbmF0dXJl";
