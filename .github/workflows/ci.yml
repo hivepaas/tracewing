@@ -199,3 +199,23 @@ jobs:
 
       - name: Tests that change the computer
         run: scripts/e2e_linux.sh
+
+      # S8 (docs/design/e2e.md): capture with no proxy settings, through a
+      # real TUN device. The live tests make theirs in a network namespace of
+      # their own, under `unshare --user --map-root-user`, which this
+      # runner's AppArmor refuses until it is told not to; the runner is
+      # thrown away after. Each test checks that its inner run reached the
+      # end, so a refused namespace fails rather than passing empty.
+      # A filter that matches nothing runs nothing and exits 0, so the run
+      # picked by name is asked whether it ran one.
+      - name: Capture without proxy settings
+        shell: bash
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          sudo ip tuntap add dev tracewing-test mode tun user "$(id -u)"
+          cargo test --release --locked -p tracewing \
+            --test local_live_linux --test local_live_http3 -- --ignored --test-threads=1
+          cargo test --release --locked -p tracewing-proxy --lib -- --ignored --exact \
+            tun_linux::tests::a_real_device_opens_once_and_its_read_can_be_stopped \
+            2>&1 | tee tun.log
+          grep -q '^test result: ok. 1 passed' tun.log

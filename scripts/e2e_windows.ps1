@@ -12,6 +12,9 @@
 # -Packages builds the installer and the zip (scripts/package_windows.sh, in
 # Git Bash, with NSIS and cargo-about) for the tests that install them.
 # -Browsers names the browsers installed here for the tests that open them.
+# -Wintun is the path to wintun.dll: with it, the live tests of capture with
+# no proxy settings run too (S8), which put an adapter on this machine for
+# as long as each runs. They need an administrator, and not the desktop.
 #
 # Run it as an administrator: the machine's certificate store and the
 # firewall take one. And in a desktop session, as a user runs tracewing: a
@@ -27,7 +30,8 @@ param(
     [switch]$SkipBuild,
     [switch]$ConfirmTrustDialogs,
     [switch]$Packages,
-    [string]$Browsers = ''
+    [string]$Browsers = '',
+    [string]$Wintun = ''
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -133,6 +137,17 @@ foreach ($test in $tests) {
     Write-Output "== $(Split-Path -Leaf $test)"
     & $test --test-threads=1
     if ($LASTEXITCODE -ne 0) { $status = 1 }
+}
+if ($Wintun) {
+    # One at a time: they share one adapter, by a fixed GUID.
+    $env:WINTUN_DLL = (Resolve-Path $Wintun).Path
+    foreach ($live in @(
+            @('-p', 'tracewing-proxy', '--test', 'wintun_live'),
+            @('-p', 'tracewing', '--test', 'local_live'))) {
+        Write-Output "== $($live -join ' ')"
+        cargo test --release --locked @live -- --ignored --test-threads=1
+        if ($LASTEXITCODE -ne 0) { $status = 1 }
+    }
 }
 if ($confirmer) {
     Stop-Job $confirmer
