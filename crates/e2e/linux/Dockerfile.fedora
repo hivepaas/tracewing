@@ -1,0 +1,25 @@
+# The same as Dockerfile, on Fedora: another family of Linux, which keeps
+# what it trusts elsewhere (update-ca-trust) and installs the .rpm. The
+# binaries built on Ubuntu run here as they are, the glibc being as new.
+FROM fedora:44
+
+RUN dnf install -y --setopt=install_weak_deps=False \
+        ca-certificates curl \
+        dbus-daemon dbus-tools \
+        glib2 gsettings-desktop-schemas dconf \
+        kf6-kconfig \
+        nss-tools \
+        gnome-keyring libsecret \
+        nftables \
+        polkit \
+        libxkbcommon \
+        util-linux shadow-utils \
+    && dnf clean all
+
+RUN useradd --create-home --shell /bin/bash tester
+COPY 49-tracewing-e2e.rules /etc/polkit-1/rules.d/49-tracewing-e2e.rules
+RUN touch /etc/tracewing-e2e-throwaway
+
+COPY run.sh /usr/local/bin/tracewing-e2e-run
+COPY session.sh /usr/local/bin/tracewing-e2e-session
+ENTRYPOINT ["/usr/local/bin/tracewing-e2e-run"]

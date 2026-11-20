@@ -32,12 +32,11 @@ const GNOME: &[(&str, &str)] = &[
 const KDE: &[&str] = &["ProxyType", "httpProxy", "httpsProxy", "NoProxyFor"];
 
 fn kde_tool(verb: &str) -> String {
+    // Looked for on the PATH as tracewing looks: not every system has
+    // `which` (Fedora's container has none).
+    let path = std::env::var_os("PATH").unwrap_or_default();
     for tool in [format!("k{verb}config6"), format!("k{verb}config5")] {
-        if Command::new("which")
-            .arg(&tool)
-            .output()
-            .is_ok_and(|o| o.status.success())
-        {
+        if std::env::split_paths(&path).any(|dir| dir.join(&tool).is_file()) {
             return tool;
         }
     }
