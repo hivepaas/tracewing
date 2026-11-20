@@ -147,11 +147,15 @@ try {
     $to = $r.Right - 1
     # The bar's own top is not the window's when the window carries an
     # invisible resize frame, so try a few rows down from it and take the first
-    # that answers like a title bar.
-    $rows = foreach ($down in 10, 22, 30, 42) { [int]($r.Top + [Math]::Round($down * $scale)) }
+    # that answers like a whole title bar: the three buttons *and* somewhere to
+    # drag by. Measured: the topmost rows give the buttons but answer HTCLIENT
+    # beside them, so a row chosen on the buttons alone fails the drag check
+    # for a reason of its own.
+    $rows = foreach ($down in 10, 18, 22, 26, 30, 34, 42) { [int]($r.Top + [Math]::Round($down * $scale)) }
 
     $wanted = @(8, 9, 20)
     $found = $null
+    $buttonsOnly = $null
     foreach ($y in $rows) {
         $bands = Sweep $h $y $from $to $step
         Write-Host ''
@@ -160,12 +164,17 @@ try {
             Write-Host ("  x {0,6}..{1,6}  {2,-12} ({3})" -f $b.first, $b.last, (NameOf $b.code), $b.code)
         }
         $controls = @($bands | Where-Object { $wanted -contains $_.code })
-        if ($controls.Count -eq 3 -and ($controls | ForEach-Object { $_.code }) -join ',' -eq '8,9,20') {
-            $found = @{ y = $y; bands = $bands; controls = $controls }
-            break
-        }
+        $ordered = $controls.Count -eq 3 -and (($controls | ForEach-Object { $_.code }) -join ',') -eq '8,9,20'
+        if (-not $ordered) { continue }
+        $row = @{ y = $y; bands = $bands; controls = $controls }
+        if (@($bands | Where-Object { $_.code -eq 2 }).Count) { $found = $row; break }
+        if ($null -eq $buttonsOnly) { $buttonsOnly = $row }
     }
 
+    if ($null -eq $found -and $null -ne $buttonsOnly) {
+        Fail ('the three buttons answer, but no row that gives them has an HTCAPTION band beside them: ' +
+            'the bar has its buttons and nothing to drag the window by')
+    }
     if ($null -eq $found) {
         Fail ('no row of the title bar answers HTMINBUTTON, HTMAXBUTTON and HTCLOSE in that order: ' +
             'the caption buttons are inside a drag area, so Windows takes the whole bar for the caption ' +
@@ -182,10 +191,6 @@ try {
             Fail ("the $(NameOf $b.code) band is $wide px wide, under ${least}: not a whole caption button")
         }
     }
-    if (-not @($found.bands | Where-Object { $_.code -eq 2 }).Count) {
-        Fail 'nothing in the bar answers HTCAPTION, so the window cannot be dragged by it'
-    }
-
     # And the press itself, which goes through Windows rather than through any
     # reading of the answers above.
     $min = $found.controls[0]
