@@ -167,13 +167,17 @@ try {
         $ordered = $controls.Count -eq 3 -and (($controls | ForEach-Object { $_.code }) -join ',') -eq '8,9,20'
         if (-not $ordered) { continue }
         $row = @{ y = $y; bands = $bands; controls = $controls }
-        if (@($bands | Where-Object { $_.code -eq 2 }).Count) { $found = $row; break }
+        # A band of HTCAPTION at least a button wide, not a stray point of it:
+        # the claim is that the window can still be dragged by the bar.
+        $drag = $bands | Where-Object { $_.code -eq 2 } |
+            ForEach-Object { $_.last - $_.first + $step } | Sort-Object -Descending | Select-Object -First 1
+        if ($drag -ge [Math]::Round($CaptionW * $scale)) { $found = $row; break }
         if ($null -eq $buttonsOnly) { $buttonsOnly = $row }
     }
 
     if ($null -eq $found -and $null -ne $buttonsOnly) {
-        Fail ('the three buttons answer, but no row that gives them has an HTCAPTION band beside them: ' +
-            'the bar has its buttons and nothing to drag the window by')
+        Fail ('the three buttons answer, but no row that gives them has an HTCAPTION band a button ' +
+            'wide beside them: the bar has its buttons and nothing to drag the window by')
     }
     if ($null -eq $found) {
         Fail ('no row of the title bar answers HTMINBUTTON, HTMAXBUTTON and HTCLOSE in that order: ' +
