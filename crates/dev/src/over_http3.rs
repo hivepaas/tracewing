@@ -43,13 +43,19 @@ impl Server {
     /// for `localhost` may go to `::1` first, and an endpoint on `0.0.0.0`
     /// never hears it -- the trap `docs/design/http3.md` records an hour to.
     pub fn start(ca: &Arc<LocalCa>, host: &str) -> Result<Self> {
+        Self::start_at(ca, host, 0)
+    }
+
+    /// The same on `port`: 443, for a client that is asked for a name and
+    /// not a port, as a browser is.
+    pub fn start_at(ca: &Arc<LocalCa>, host: &str, port: u16) -> Result<Self> {
         let config = ca.config_for(host, Over::Quic);
         let quic = quinn::crypto::rustls::QuicServerConfig::try_from(config)
             .context("the certificate for QUIC")?;
         let server = quinn::ServerConfig::with_crypto(Arc::new(quic));
         // Bound to the unspecified address of both families at once, so one
         // port answers `127.0.0.1` and `[::1]` alike.
-        let endpoint = quinn::Endpoint::server(server, SocketAddr::from(([0u16; 8], 0)))
+        let endpoint = quinn::Endpoint::server(server, SocketAddr::from(([0u16; 8], port)))
             .context("listen for QUIC")?;
         let port = endpoint.local_addr()?.port();
         let saw = Arc::new(Mutex::new(Vec::new()));

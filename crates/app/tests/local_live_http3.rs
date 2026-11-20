@@ -204,6 +204,128 @@ fn a_program_nobody_chose_gets_nowhere_over_quic() {
     reached(&witness);
 }
 
+/// Chrome's own HTTP/3, through the adapter: a real browser, told to speak
+/// QUIC to a name that resolves where the default route goes, reaches the
+/// server through tracewing. docs/design/e2e.md, S8.
+///
+/// What is not the browser's own: the name. `h3.test` is mapped by Chrome's
+/// resolver to the same documentation address as above, so its datagrams go
+/// into the adapter; the proxy's way out finds it on this namespace's
+/// loopback, by an `/etc/hosts` mounted over the real one in the mount
+/// namespace this test already has. And Chrome trusts tracewing's CA from an
+/// NSS database in a home of the test's own, as Set up's Install puts it in a
+/// user's.
+#[test]
+#[ignore = "wants `unshare` and Chrome, and makes an adapter in a namespace of its own"]
+fn chromes_http3_goes_through_tracewing_on_a_real_adapter() {
+    // The program, not the script that starts it: what the sieve sees send.
+    let Some(chrome) = ["/opt/google/chrome/chrome", "/usr/lib/chromium/chromium"]
+        .into_iter()
+        .map(PathBuf::from)
+        .find(|path| path.exists())
+    else {
+        eprintln!("skipped: no Chrome here");
+        return;
+    };
+    let Some(witness) = ours_to_run("chromes_http3_goes_through_tracewing_on_a_real_adapter")
+    else {
+        return;
+    };
+    let dir = made();
+    the_adapter();
+    let hosts = dir.join("hosts");
+    std::fs::write(
+        &hosts,
+        "127.0.0.1 localhost h3.test\n::1 localhost h3.test\n",
+    )
+    .expect("a hosts file of our own");
+    run("mount", &["--bind", hosts.to_str().unwrap(), "/etc/hosts"]);
+
+    let runtime = runtime();
+    let Assembled {
+        stop,
+        ca,
+        http3,
+        arrivals,
+    } = runtime.block_on(assembled(&dir, chrome.clone()));
+    let server = runtime
+        .block_on(async { over_http3::Server::start_at(&ca, "h3.test", 443) })
+        .expect("an HTTP/3 server on 443");
+    let door = runtime.block_on(waited_for_the_door(&http3));
+    println!("the door is at {door}, the server on 443");
+
+    // tracewing's CA, where Chrome on Linux reads what to trust.
+    let home = dir.join("home");
+    let nss = home.join(".pki/nssdb");
+    std::fs::create_dir_all(&nss).unwrap();
+    let db = format!("sql:{}", nss.display());
+    run("certutil", &["-N", "--empty-password", "-d", &db]);
+    run(
+        "certutil",
+        &[
+            "-A",
+            "-d",
+            &db,
+            "-n",
+            "tracewing",
+            "-t",
+            "C,,",
+            "-i",
+            ca.cert_path().to_str().unwrap(),
+        ],
+    );
+
+    let mut browser = std::process::Command::new(&chrome)
+        .args([
+            "--headless=new",
+            // Root in a namespace of its own, which Chrome's sandbox refuses.
+            "--no-sandbox",
+            "--disable-gpu",
+            "--disable-dev-shm-usage",
+            "--no-first-run",
+            "--enable-quic",
+            "--origin-to-force-quic-on=h3.test:443",
+        ])
+        .arg(format!(
+            "--host-resolver-rules=MAP h3.test {}",
+            AS_IF_THE_SERVER.trim_end_matches(":443")
+        ))
+        .arg(format!("--user-data-dir={}", dir.join("profile").display()))
+        .args(["--dump-dom", "https://h3.test/orders"])
+        .env("HOME", &home)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .expect("start Chrome");
+    let deadline = std::time::Instant::now() + Duration::from_secs(60);
+    while browser.try_wait().expect("Chrome").is_none() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "Chrome did not finish in 60 s"
+        );
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    let mut page = String::new();
+    std::io::Read::read_to_string(&mut browser.stdout.take().unwrap(), &mut page).unwrap();
+
+    assert!(
+        page.contains(std::str::from_utf8(SAID).unwrap()),
+        "Chrome did not get the server's own body: {page}"
+    );
+    assert_eq!(
+        server.saw().first().map(|arrived| arrived.path.clone()),
+        Some("/orders".to_owned()),
+        "the real server is where it arrived"
+    );
+    assert!(
+        arrivals.of(By::Tun).count >= 1,
+        "by the way in that caught it"
+    );
+    let _ = stop.send(());
+    let _ = std::fs::remove_dir_all(&dir);
+    reached(&witness);
+}
+
 /// Whether this process is the one that does the work, and where it is to
 /// leave word that it finished.
 ///
@@ -315,18 +437,16 @@ fn runtime() -> tokio::runtime::Runtime {
         .expect("a runtime")
 }
 
-/// The whole assembly, and one HTTP/3 question through it.
-///
-/// `kept` is the program the sieve and the catcher are to keep, which is the
-/// one thing the two tests above differ by.
-async fn asked(
-    dir: &std::path::Path,
-    kept: PathBuf,
-) -> (
-    anyhow::Result<(http::StatusCode, Vec<u8>)>,
-    Arc<tracewing_proxy::source::Arrivals>,
-    Vec<over_http3::Arrived>,
-) {
+/// tracewing's local way in, assembled on the device the real script made,
+/// keeping `kept`'s traffic: what both clients below go through.
+struct Assembled {
+    stop: tokio::sync::oneshot::Sender<()>,
+    ca: Arc<LocalCa>,
+    http3: Http3,
+    arrivals: Arc<tracewing_proxy::source::Arrivals>,
+}
+
+async fn assembled(dir: &std::path::Path, kept: PathBuf) -> Assembled {
     let _ = crypto_provider().install_default();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
@@ -417,6 +537,32 @@ async fn asked(
             let _ = stopped.await;
         },
     ));
+    Assembled {
+        stop,
+        ca,
+        http3,
+        arrivals,
+    }
+}
+
+/// The whole assembly, and one HTTP/3 question through it.
+///
+/// `kept` is the program the sieve and the catcher are to keep, which is the
+/// one thing the two tests above differ by.
+async fn asked(
+    dir: &std::path::Path,
+    kept: PathBuf,
+) -> (
+    anyhow::Result<(http::StatusCode, Vec<u8>)>,
+    Arc<tracewing_proxy::source::Arrivals>,
+    Vec<over_http3::Arrived>,
+) {
+    let Assembled {
+        stop,
+        ca,
+        http3,
+        arrivals,
+    } = assembled(dir, kept).await;
 
     let server = over_http3::Server::start(&ca, "localhost").expect("an HTTP/3 server");
     let door = waited_for_the_door(&http3).await;
