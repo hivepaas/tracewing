@@ -28,6 +28,15 @@
 #
 # Exits 0 when the buttons work, 1 when they do not, and 2 when it could not be
 # run here -- which is not a pass, and must not be read as one.
+#
+# **A verdict about the app always carries a marker**: `::error::` for a
+# failure, and "the title bar answers for its three buttons" for a pass.
+# PowerShell exits 1 for its own errors too, so an exit of 1 with neither
+# marker is this script being broken rather than an answer about the app. The
+# first run of it exited 1 on a parse error, which read exactly like the bug it
+# was written to find. Parse it before trusting a verdict:
+#
+#   [System.Management.Automation.Language.Parser]::ParseFile($p, [ref]$null, [ref]$errs)
 
 param([Parameter(Mandatory)][string]$Exe)
 
@@ -170,7 +179,7 @@ try {
     foreach ($b in $found.controls) {
         $wide = $b.last - $b.first + $step
         if ($wide -lt $least) {
-            Fail ("the $(NameOf $b.code) band is $wide px wide, under $least: it is not a whole caption button")
+            Fail ("the $(NameOf $b.code) band is $wide px wide, under ${least}: not a whole caption button")
         }
     }
     if (-not @($found.bands | Where-Object { $_.code -eq 2 }).Count) {
