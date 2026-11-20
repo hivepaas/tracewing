@@ -134,7 +134,7 @@ fails.
 | S10 | **The window.** It opens, draws Set up, takes a key, opens the save dialog and the clipboard, and closes. The system proxy is back afterwards. | headless, as today | the VM (its adapter is accepted) | the user's Mac |
 
 S10 on Windows needs a display adapter that GPUI's DirectX renderer accepts.
-The VM's does: tracewing's window opened there, 2055 by 1233 at 96 dpi, while
+The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
 #381 was checked. So everything in the table runs in the VM.
 
 ## Order of work
