@@ -278,3 +278,66 @@ fn a_tracewing_ca_of_another_data_directory_is_not_this_one_and_is_left_alone() 
 
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// The same on Windows, where each store is asked for this CA by its bytes,
+/// and another data directory's is found by the subject every tracewing CA
+/// has: both in this user's store, the other in the machine's too.
+#[cfg(windows)]
+#[test]
+fn a_tracewing_ca_of_another_data_directory_is_left_alone_and_said() {
+    only_where_allowed!();
+    let dir = scratch("trust-older");
+    let theirs = LocalCa::load_or_create(&dir.join("theirs"), crypto_provider(), KeyStore::File)
+        .expect("another data directory's CA");
+    let mine = LocalCa::load_or_create(&dir.join("mine"), crypto_provider(), KeyStore::File)
+        .expect("this data directory's CA");
+    let pem_theirs = theirs.cert_path().to_path_buf();
+    let pem_mine = mine.cert_path().to_path_buf();
+    let _untrust_theirs = Untrust(pem_theirs.clone());
+    let _untrust_mine = Untrust(pem_mine.clone());
+    let uninstall = |data: &str| {
+        let out = tracewing()
+            .arg("uninstall")
+            .arg("--data-dir")
+            .arg(dir.join(data))
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "{}", said(&out));
+        String::from_utf8_lossy(&out.stdout).into_owned()
+    };
+    let scopes = |pem: &std::path::Path| -> Vec<Scope> {
+        ca_locations(pem)
+            .unwrap()
+            .into_iter()
+            .map(|place| place.scope)
+            .collect()
+    };
+
+    tracewing_system::ca_install(&pem_theirs, Scope::User).unwrap();
+    tracewing_system::ca_install(&pem_theirs, Scope::Machine).unwrap();
+    tracewing_system::ca_install(&pem_mine, Scope::User).unwrap();
+    assert_eq!(scopes(&pem_mine), vec![Scope::User]);
+
+    // This one out, theirs left in both stores, and said to be there.
+    let said_it = uninstall("mine");
+    assert_eq!(scopes(&pem_mine), vec![], "{said_it}");
+    assert_eq!(
+        scopes(&pem_theirs),
+        vec![Scope::Machine, Scope::User],
+        "uninstalling this CA took another data directory's out: {said_it}"
+    );
+    assert!(
+        said_it.contains("from another data directory is still trusted"),
+        "uninstall said nothing about the CA it left trusted: {said_it}"
+    );
+
+    // Theirs out by its own data directory: nothing of tracewing's is left,
+    // and nothing is said about an older one.
+    let said_it = uninstall("theirs");
+    assert_eq!(scopes(&pem_theirs), vec![], "{said_it}");
+    assert!(
+        !said_it.contains("another data directory"),
+        "uninstall spoke of an older CA with none there: {said_it}"
+    );
+    std::fs::remove_dir_all(&dir).ok();
+}

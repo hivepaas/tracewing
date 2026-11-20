@@ -184,6 +184,13 @@ else in the table runs in the VM.
      started as `current_exe()`. So the app in S2, S3 and S7 is
      `tracewing e2e-hold`, a hidden command that holds what the window
      holds, and not the test program.
+   - **Another data directory's CA.** This user's physical store
+     `ROOT\.Default` lists this user's roots alone, none of the machine's.
+     The CAs of two data directories on one computer have the same subject,
+     `O=tracewing, CN=tracewing CA (HOST)`. So `tracewing uninstall` takes
+     this CA out by its bytes and leaves any other. It says another is
+     still trusted, found by that subject, and does not remove it, as on
+     Linux.
    - **The machine is left as it was found.** Each test that sets a proxy of
      the user's own puts the original back when it ends, however it ends.
 4. S4 and S5 on Linux. **Done**, under GNOME and KDE:
