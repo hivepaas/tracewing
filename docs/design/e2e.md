@@ -65,8 +65,8 @@ Smaller gaps that need no real system, only a test:
 
 - ~~HAR export of WebSocket messages, with and without secrets.~~ Done:
   `har.rs`'s `a_websockets_messages_go_out_both_ways_and_their_secrets_can_be_left_out`.
-- Solana and Bitcoin answers in a window. They are covered only by unit
-  tests.
+- ~~Solana and Bitcoin answers in a window.~~ Done: `rpc.rs`'s
+  `solana_and_bitcoin_calls_are_read_in_the_inspector`, shots 96 and 97.
 - ~~Block answers in `rpc_view.rs` (`block_lines`).~~ Done:
   `a_block_reads_as_which_one_and_how_full`, on a real mainnet block.
 - Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
