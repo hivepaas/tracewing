@@ -9,10 +9,18 @@
 #   pwsh scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -SkipBuild
 #
 # Run it as an administrator: the machine's certificate store and the
-# firewall take one.
+# firewall take one. And in a desktop session, as a user runs tracewing: a
+# session with no desktop, as ssh gives, can keep nothing in the Credential
+# Manager ("Credentials cannot be saved from this logon session") and add
+# nothing to this user's root store.
+#
+# Putting a root in this user's store, or taking it out, makes Windows ask
+# the user. -ConfirmTrustDialogs answers Yes to those two questions and no
+# other, as the user would, so that the step can be seen through.
 param(
     [switch]$ThisMachineMayBeChanged,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$ConfirmTrustDialogs
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -37,6 +45,28 @@ $tests = cargo test --release --locked -p tracewing-e2e --no-run --message-forma
     ForEach-Object { $_.executable }
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+$confirmer = $null
+if ($ConfirmTrustDialogs) {
+    $confirmer = Start-Job -ScriptBlock {
+        Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+        $A = [System.Windows.Automation.AutomationElement]
+        $named = { param($name) New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, $name) }
+        while ($true) {
+            foreach ($title in 'Security Warning', 'Root Certificate Store') {
+                $dialog = $A::RootElement.FindFirst('Children', (& $named $title))
+                if ($dialog) {
+                    $yes = $dialog.FindFirst('Descendants', (& $named 'Yes'))
+                    if ($yes) {
+                        $yes.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+                        Write-Output "answered Yes to $title"
+                    }
+                }
+            }
+            Start-Sleep -Milliseconds 200
+        }
+    }
+}
+
 $env:TRACEWING_E2E = '1'
 $env:TRACEWING_E2E_BIN = (Resolve-Path "$target\release\tracewing.exe").Path
 $status = 0
@@ -44,5 +74,10 @@ foreach ($test in $tests) {
     Write-Output "== $(Split-Path -Leaf $test)"
     & $test --test-threads=1
     if ($LASTEXITCODE -ne 0) { $status = 1 }
+}
+if ($confirmer) {
+    Stop-Job $confirmer
+    Receive-Job $confirmer | ForEach-Object { Write-Output "dialogs: $_" }
+    Remove-Job $confirmer
 }
 exit $status

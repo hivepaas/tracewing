@@ -54,10 +54,10 @@ fn the_watchdog_puts_it_back_when_the_app_is_killed() {
 
     app(&dir, free_port(), true).kill();
     back(&before, Duration::from_secs(10));
-    assert!(
-        !dir.join("sysproxy.journal").exists(),
-        "the journal outlived the setting it kept"
-    );
+    // The setting first, then the journal that kept it: a moment apart.
+    wait_for("the journal to go", Duration::from_secs(5), || {
+        !dir.join("sysproxy.journal").exists()
+    });
     std::fs::remove_dir_all(&dir).ok();
 }
 
