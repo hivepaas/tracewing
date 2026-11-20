@@ -72,7 +72,9 @@ Smaller gaps that need no real system, only a test:
 - Dragging the dividers and dropping the inspector handle. Hiding the
   inspector.
 - Activating the items of a context menu. Copy as cURL from the window.
-- The Settings part last open being kept.
+- ~~The Settings part last open being kept.~~ Saved on a change
+  (`text_size.rs`) and read back by `layout.rs`'s round trip, which now
+  holds the part and the way in.
 
 Rows in features.md with no code behind them, so nothing to test yet:
 
