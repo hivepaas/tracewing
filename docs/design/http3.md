@@ -302,6 +302,26 @@ about through the capture path. That wants a machine with a browser and an
 adapter, which is the Windows VM. The same code would also serve a phone on
 the WireGuard tunnel, but nothing points it at one yet.
 
+**And Windows has seen this code compile and nothing else**, which is worth
+separating because for two days it had not even done that. `ci.yml` builds
+Linux alone on a push — its `platforms` input defaults to `linux-x86_64` —
+so when the catcher landed on 18 November, `local_source::windows::start`'s
+new argument and the `#[cfg(any(windows, …))]` catcher beside it went into
+`main` without a Windows compiler ever reading them; the first thing a
+`v0.1.0` tag would have done is find that out, since `release.yml` packages
+five targets. TraceW 2 then ran it in the VM at `main` f0c0fe8 on
+2026-11-20: `cargo check --locked --workspace --all-targets --release` and
+`cargo build --release -p tracewing` on `x86_64-pc-windows-msvc`, both exit
+0, with no warning from either file. So it compiles there.
+
+**It has still never run there.** The Windows arm is a Wintun adapter rather
+than a TUN device, and `Apps::sent` reads a different table of the operating
+system's — the one with no far end in it, which is why
+[`crate::apps::Look`] has a `Datagram` variant at all. A compile says the
+types line up across a `cfg`, which is the cheap half; the live test that
+measures the rest is Linux-only by construction, because it rests on a
+network namespace.
+
 **Four, landed.** [`quic_upstream.rs`](../../crates/proxy/src/quic_upstream.rs):
 the way out over QUIC, so both halves of a captured flow are HTTP/3 rather
 than one half being HTTP/2 on the client's behalf. A name looked up, one
