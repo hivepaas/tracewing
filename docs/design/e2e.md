@@ -109,10 +109,10 @@ of these, and does nothing without them:
 
 **Runners.**
 
-| System | Where, while developing | Where, on a tag |
+| System | Where, while developing | Where, in CI |
 |---|---|---|
-| Linux | A container made from `crates/e2e/linux/Dockerfile`: Ubuntu 22.04 with dbus, dconf and GNOME's schemas, KDE's `kwriteconfig`, gnome-keyring, `libnss3-tools`, `nftables`, Chrome and Firefox. Started by `scripts/e2e_linux.sh`, with `NET_ADMIN` for `nft`. | The same image, on `ubuntu-22.04` |
-| Windows | The `windows-11` VM, over ssh, by `scripts/e2e_windows.ps1` | `windows-latest`, by the same script |
+| Linux | A container made from `crates/e2e/linux/Dockerfile`: Ubuntu 26.04, the release the binaries are built on, with dbus, dconf and GNOME's schemas, KDE's kconfig tools, `libnss3-tools`, `nftables` and polkitd; gnome-keyring, Chrome and Firefox as the scenarios that need them arrive. Started by `scripts/e2e_linux.sh`, with `NET_ADMIN` for `nft`. | The same, on every pull request: `ci.yml`'s `linux-e2e` job |
+| Windows | The `windows-11` VM, over ssh, by `scripts/e2e_windows.ps1` | `windows-latest`, by the same script, on a tag |
 | macOS | The user's own Mac, by `scripts/e2e_macos.sh` | The same script, run by hand before the draft is published |
 
 ## Scenarios
