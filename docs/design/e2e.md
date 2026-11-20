@@ -1,0 +1,153 @@
+# End-to-end tests on real systems
+
+tracewing is tested a great deal. As of `ab34bb0` there are about 965 unit
+tests, 41 integration and window test files in `crates/app/tests`, and an
+in-process suite in `crates/dev/tests/e2e.rs` that sends a client through the
+proxy to a TLS origin. That suite covers almost every protocol, rule and
+inspector part.
+
+All of it runs on Linux, and almost none of it touches the computer it runs
+on. The system proxy is a fake `gsettings` script. The CA is installed into a
+fake `certutil`. The keychain is `MemoryKeychain` or `KeyStore::File`. The
+browsers are shell scripts that write down their arguments. `adb` and `xcrun`
+are fakes too. This is deliberate: a test that changed the developer's own
+proxy or trust store would be dangerous to run. It does mean that
+the parts of tracewing which exist *to change the computer* have never been
+seen doing it.
+
+This page records what is covered, and what is not. It then describes the
+suite that closes the gap: tests that change a real system on purpose, and
+run only where that is safe.
+
+## What CI runs
+
+- `ci.yml` runs `cargo test --workspace --release` on `linux-x86_64` on every
+  push and pull request, plus the headless window tests on Ubuntu. macOS and
+  Windows run only when the workflow is started by hand, which has not
+  happened. So every `#[cfg(windows)]` and `#[cfg(target_os = "macos")]`
+  test, including those in `crates/system/src/windows.rs` and `macos.rs`, is
+  compiled and run nowhere.
+- `release.yml` runs on pull requests that touch packaging, and on tags. It
+  builds and installs the packages on five runners, then runs:
+  - Linux: `--version`, a one-second `capture` with no traffic, `sessions`
+    and `recover`.
+  - macOS: `codesign --verify` and a one-second `capture`.
+  - Windows: `--version`, with installs and uninstalls both ways.
+
+  It has never run on a tag.
+- `#[ignore]`d live tests are never run in CI: `local_live.rs`,
+  `local_live_linux.rs`, `local_live_http3.rs` and `wintun_live.rs`. Neither is
+  `crates/system/tests/android_device.rs`, which needs
+  `TRACEWING_ANDROID_SERIAL`.
+
+## What nothing reaches
+
+The rows of [features.md](../features.md) whose real behaviour no test sees,
+ordered by how much a release depends on them. Each row was checked against
+the code: "fake" names the stand-in the test uses.
+
+| Feature | Covered today by | Never exercised for real |
+|---|---|---|
+| System proxy on and off | `connect.rs::the_system_proxy_and_the_settings_from_the_window`, with a fake `gsettings` | Real dconf/GNOME. KDE has no test. WinINet on Windows and macOS `networksetup` have no test at all. |
+| System proxy put back after a kill: watchdog, systemd timer, Windows scheduled task, launchd agent, `tracewing recover` | `cli.rs::the_watchdog_puts_the_setting_back_when_the_app_goes`, `recover_says_what_it_did_and_leaves_a_stranger_alone`; unit tests of the unit-file, task XML and plist text | On a runner with no desktop these take the "cannot read the setting" branch and still pass. No test arms or fires the timer, task or agent. |
+| CA installed and trusted, checked, removed | `connect.rs` (user scope, fake `certutil`); `cli.rs::uninstall_undoes_what_it_did_and_keeps_what_was_recorded` | The Linux system store (pkexec, `update-ca-certificates`), the Windows ROOT store and the macOS keychain trust are never written. `verify_ca` has no test. The uninstall test accepts "no longer trusts it" or "never did", and since its CA was never trusted, `ca_remove` is never reached. |
+| The CA's key and other secrets in the OS keychain | `ca_key.rs::a_new_key_goes_to_the_keychain_and_no_file`, with `MemoryKeychain` | `OsKeychain` (Secret Service, DPAPI/Credential Manager, Keychain) is called by no test: CA key, relay passwords, WireGuard keys, company CA. |
+| A real browser through tracewing | `launch.rs::the_browser_gets_its_own_profile_and_the_proxy`, with fake `google-chrome`/`firefox` scripts | No Chrome or Firefox ever loads a page through the proxy, trusts the CA, reaches the Set up test page, or stays on HTTP/2 because Alt-Svc was taken out. |
+| Blocking UDP 443 | `quic_linux.rs::failures_say_why` (text only) | Nothing calls `block_quic`: real `nft`, `pf` and the Windows firewall never run. `quic_windows.rs` has no tests. |
+| The installed package records HTTPS | `check_linux_package.sh --install`, `check_macos_app.sh`, `check_windows_installer.ps1` | The packages capture one second with no traffic. The Windows check reaches `--version` only, and the installer's `tracewing uninstall` hook is run but its effect is never checked. |
+| Android over ADB: Set up, Undo, put back at close and at the next start | `devices.rs` with a fake `adb`; `android_device.rs` (env-gated) | `undo_android` and `android::recover` have no test. Real root and the Conscrypt APEX run only in the env-gated test. |
+| iOS Simulator | `devices.rs` with a fake `xcrun` | Never run on a Mac. Turning the proxy on is macOS-only and untested. |
+| Capture without proxy settings: TUN on Linux, Wintun on Windows, HTTP/3 through it | `stack.rs`, `tun.rs` with a fake device; `local_live*.rs` `#[ignore]` | The adapter join runs only by hand, under `unshare`, in an editor's shell (AppArmor refuses it elsewhere). Wintun and the Windows catcher have never run. |
+| Platform UI: Cmd keys, the native save dialog, the clipboard, more than one window and display, DPI, window restore | window tests on Linux only | Everything outside Linux headless. |
+| Performance claims: a million flows at display rate, bodies of 50 MB and more | `screen.rs::a_million_flows_while_traffic_keeps_coming` (env-gated, prints timings, asserts none) | No frame-time or responsiveness assertion; the largest body opened in a window is about 1 MB. |
+
+Smaller gaps that need no real system, only a test:
+
+- HAR export of WebSocket messages, with and without secrets.
+- Solana and Bitcoin answers in a window. They are covered only by unit
+  tests.
+- Block answers in `rpc_view.rs` (`block_lines`).
+- Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
+  10,000 cap.
+- Dragging the dividers and dropping the inspector handle. Hiding the
+  inspector.
+- Activating the items of a context menu. Copy as cURL from the window.
+- The Settings part last open being kept.
+
+Rows in features.md with no code behind them, so nothing to test yet:
+
+- The macOS privileged helper for standard accounts.
+- Kerberos/Negotiate.
+- Docker and Kubernetes helpers.
+- The headless agent with a remote window.
+- Raw TCP and UDP.
+- Rule sets shared by a team.
+- Signed updates.
+- Licences, and so any Free/Pro limit, such as "3 rules on at once".
+
+## The suite
+
+**Where it lives.** A crate of its own, `crates/e2e`, whose tests change the
+real system on purpose. Each test calls the same functions the window calls:
+
+- `tracewing_system::take_over`, `ca_install`, `block_quic` and the keychain.
+- The installed `tracewing` program, for everything the command line does.
+- A real browser.
+
+**Where it runs.** Nowhere by accident. Every test starts by asking for both
+of these, and does nothing without them:
+
+- `TRACEWING_E2E=1` in the environment;
+- a marker file that says the machine may be changed:
+  `/etc/tracewing-e2e-throwaway` on Linux, `C:\tracewing-e2e-throwaway` on
+  Windows, `/Library/Application Support/tracewing-e2e-throwaway` on a Mac.
+
+  A developer's own machine has no marker. A container, a VM or a CI runner
+  is given one by the script that starts it.
+
+`cargo test --workspace` still runs this crate, and its tests return at once.
+
+**Runners.**
+
+| System | Where, while developing | Where, in CI |
+|---|---|---|
+| Linux | A container made from `crates/e2e/linux/Dockerfile`: Ubuntu 26.04, the release the binaries are built on, with dbus, dconf and GNOME's schemas, KDE's kconfig tools, `libnss3-tools`, `nftables` and polkitd; gnome-keyring, Chrome and Firefox as the scenarios that need them arrive. Started by `scripts/e2e_linux.sh`, with `NET_ADMIN` for `nft`. | The same, on every pull request: `ci.yml`'s `linux-e2e` job |
+| Windows | The `windows-11` VM, over ssh, by `scripts/e2e_windows.ps1` | `windows-latest`, by the same script, on a tag |
+| macOS | The user's own Mac, by `scripts/e2e_macos.sh` | The same script, run by hand before the draft is published |
+
+## Scenarios
+
+Each scenario is one test. Each one puts back what it changed, even when it
+fails.
+
+| # | What | Linux | Windows | macOS |
+|---|---|---|---|---|
+| S1 | **Trust.** Install the CA for the user and for the system. `verify_ca` says trusted. A client that reads only the system's roots reaches an HTTPS origin through the proxy. Then `tracewing uninstall`: no store holds it, and `verify_ca` says so. | NSS + `/usr/local/share/ca-certificates` | CurrentUser and LocalMachine ROOT | keychain trust |
+| S2 | **System proxy.** Turn it on: the real setting, read with the desktop's own tools, names the proxy. Turn it off: the setting is exactly what it was, including a proxy of the user's own that was there before. (A program that follows the setting is S5's.) | GNOME, KDE | WinINet (per-connection options) | `networksetup` |
+| S3 | **Put back after a kill.** Turn it on, then `kill -9` tracewing. The watchdog restores the setting. Then kill the watchdog too: the timer, task or agent restores it within its period. `tracewing recover` restores it at once. | systemd user timer | scheduled task | launchd agent |
+| S4 | **The installed package.** Install the package built for the release. Record HTTPS with `tracewing capture` from it: the HAR holds the decrypted body. Uninstall, and nothing is left behind (S1's stores, S2's setting, the timer, task or agent, PATH). | `.deb`, `.rpm` | `setup.exe` both ways, `.zip` | `.dmg` |
+| S5 | **Browsers.** Headless Chrome and Firefox, through the system proxy and through Set up's own profile. HTTP/1.1, HTTP/2, a WebSocket and SSE are all recorded. The Set up test page says it was reached. With Alt-Svc taken out, nothing tries HTTP/3. | Chrome, Firefox | Edge, Chrome, Firefox | Safari by hand; Chrome, Firefox |
+| S6 | **The keychain.** The CA's key, a relay password and the WireGuard key go into the real keychain and come back. | Secret Service | Credential Manager | Keychain |
+| S7 | **Blocking UDP 443.** While it is on, a QUIC client is refused, and the attempt is a row that names the program. Released, it gets through. | `nft` | Windows Firewall | `pf` |
+| S8 | **Capture without proxy settings.** The live tests run here unignored, with HTTP/3 from Chrome. | TUN in a namespace | Wintun | network extension, by hand (a signed build) |
+| S9 | **Android.** Run against the `tracewing-test` emulator, not in the container: Set up every device, Undo, then kill tracewing and start it again so it puts the device back. | host + AVD | — | — |
+| S10 | **The window.** It opens, draws Set up, takes a key, opens the save dialog and the clipboard, and closes. The system proxy is back afterwards. | headless, as today | needs a GPU | the user's Mac |
+
+S10 on Windows needs a display adapter that GPUI's DirectX renderer accepts.
+If the VM's does not, that scenario needs a real Windows machine; everything
+else in the table runs in the VM.
+
+## Order of work
+
+1. `crates/e2e` with its guard, the Linux container and its script, and S1
+   and S2 on Linux. **Done**: both pass under GNOME and KDE, as an ordinary
+   user who reaches root through `pkexec`.
+2. S3, S6 and S7 on Linux. S3 needs systemd running in the container: in
+   the one step 1 made, `systemctl --user` fails, so tracewing arms no timer
+   and says so in its log.
+3. S1–S3, S6 and S7 on Windows in the VM, which compiles and runs the
+   Windows path for the first time since 16 Nov.
+4. S4 and S5 on both systems.
+5. S8 and S9.
+6. Run `release.yml` on a tag, with the suite as a job before the draft.
+7. The smaller in-process gaps above, one pull request each.

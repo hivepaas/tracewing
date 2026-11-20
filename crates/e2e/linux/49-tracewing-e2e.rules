@@ -1,0 +1,7 @@
+// The tests' user is let through pkexec without a password, as a user who
+// answered the dialog would be. Nobody else is.
+polkit.addRule(function (action, subject) {
+    if (action.id == "org.freedesktop.policykit.exec" && subject.user == "tester") {
+        return polkit.Result.YES;
+    }
+});

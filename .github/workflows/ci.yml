@@ -155,3 +155,40 @@ jobs:
           path: target/shots/
           if-no-files-found: ignore
           retention-days: 7
+
+  # The tests that change the computer they run on (crates/e2e,
+  # docs/design/e2e.md): the system proxy, the trust stores. They run in a
+  # container made for it, as an ordinary user who reaches root through
+  # pkexec, once as GNOME and once as KDE. The container is the same Ubuntu as
+  # this runner, so the binaries built here run in it as they are.
+  e2e:
+    name: linux-e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Linux packages (GPUI: Wayland, X11, Vulkan, fonts)"
+        timeout-minutes: 10
+        env:
+          APT: -o Acquire::Retries=3 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
+        run: |
+          for try in 1 2 3; do
+            sudo apt-get $APT update && sudo apt-get $APT install -y --no-install-recommends \
+              build-essential pkg-config libfontconfig-dev libfreetype-dev \
+              libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev \
+              libx11-xcb-dev libxcb1-dev libxcb-xkb-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+              libvulkan-dev libdbus-1-dev libzstd-dev && exit 0
+            echo "apt failed ($try of 3)"
+            sleep 10
+          done
+          exit 1
+
+      - name: Rust
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: linux-e2e
+
+      - name: Tests that change the computer
+        run: scripts/e2e_linux.sh

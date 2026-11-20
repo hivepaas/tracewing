@@ -8928,6 +8928,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracewing-e2e"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "tokio",
+ "tracewing-dev",
+ "tracewing-proxy",
+ "tracewing-system",
+]
+
+[[package]]
 name = "tracewing-handoff"
 version = "0.1.0"
 dependencies = [
