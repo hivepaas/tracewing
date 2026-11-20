@@ -216,11 +216,11 @@ else in the table runs in the VM.
      arrives. Chrome shows the test page saying it works and that the CA is
      trusted. The server is on the container's own address, not loopback,
      which a browser sends past any proxy.
-   - **A gap, found.** Firefox on KDE does not follow the system proxy. It
-     reads GNOME's settings only, and tracewing writes KDE's `kioslaverc`
-     alone, so Firefox goes straight to the server. Set up's own profile
-     works. The test asserts the gap, so it fails once Firefox goes
-     through.
+   - **A gap, found and closed.** Firefox on KDE did not follow the system
+     proxy. It reads GNOME's settings alone, and tracewing wrote KDE's
+     `kioslaverc` alone, so Firefox went straight to the server. On KDE,
+     tracewing now sets GNOME's settings too where they can be read, and
+     writes them down to put back. S2 checks both on KDE.
    - Chrome on KDE reads `kioslaverc` only with `KDE_SESSION_VERSION` set,
      as a Plasma session sets it. Without it, Chrome looks for KDE 4's
      settings, finds none and goes straight. The container sets it.

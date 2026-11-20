@@ -394,27 +394,14 @@ fn firefox_records_everything_in_its_own_profile_and_through_the_system_proxy() 
         let running = start(command);
         let report = report_of(&site, "Firefox");
         drop(running);
-        if kde() {
-            // A gap, measured: Firefox reads the system proxy from GNOME's
-            // settings only, which tracewing leaves alone on KDE, so it goes
-            // straight to the server and cannot check its certificate.
-            // Set up's own profile, above, is the way through. Once this
-            // fails, Firefox goes through: check it as on GNOME.
-            assert!(
-                report
-                    .get("json")
-                    .is_some_and(|json| json.starts_with("error")),
-                "Firefox follows KDE's proxy setting now: check it as on GNOME. It said {report:?}"
-            );
-            eprintln!("known gap: Firefox on KDE does not follow the system proxy");
-        } else {
-            check(
-                &site,
-                &capture,
-                "Firefox, through the system proxy",
-                &report,
-            );
-        }
+        // On KDE too: Firefox reads GNOME's settings alone, which tracewing
+        // sets beside KDE's where they can be read.
+        check(
+            &site,
+            &capture,
+            "Firefox, through the system proxy",
+            &report,
+        );
         assert!(holder.let_go().success());
     }
     std::fs::remove_dir_all(&dir).ok();
@@ -428,13 +415,6 @@ fn user_profile(dir: &Path) -> PathBuf {
     } else {
         dir.join("firefox-user")
     }
-}
-
-fn kde() -> bool {
-    #[cfg(target_os = "linux")]
-    return desktop::kde();
-    #[cfg(not(target_os = "linux"))]
-    false
 }
 
 /// A folder of the test's in the user's home, gone when the test ends.

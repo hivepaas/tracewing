@@ -155,17 +155,61 @@ fn kde_notify() {
     );
 }
 
+/// Whether GNOME's proxy settings can be read here besides KDE's. Firefox
+/// reads the system proxy from GNOME's settings alone, on KDE too, so on a
+/// KDE that has them they are set as well: without them, Firefox through the
+/// system proxy went straight past tracewing (crates/e2e, S5).
+fn gnome_beside_kde() -> bool {
+    on_path("gsettings")
+        && Command::new("gsettings")
+            .args(["get", "org.gnome.system.proxy", "mode"])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success())
+}
+
+fn gnome_read(saved: &mut Saved) -> Result<()> {
+    for (name, schema, key) in GNOME_KEYS {
+        saved.set(name, run("gsettings", &["get", schema, key])?);
+    }
+    Ok(())
+}
+
+fn gnome_set(host: &str, port: &str) -> Result<()> {
+    let quoted = format!("'{host}'");
+    for (schema, key, value) in [
+        ("org.gnome.system.proxy.http", "host", quoted.as_str()),
+        ("org.gnome.system.proxy.http", "port", port),
+        ("org.gnome.system.proxy.https", "host", quoted.as_str()),
+        ("org.gnome.system.proxy.https", "port", port),
+        ("org.gnome.system.proxy", "ignore-hosts", GNOME_BYPASS),
+        // Last, so that nothing uses the proxy half set.
+        ("org.gnome.system.proxy", "mode", "'manual'"),
+    ] {
+        run("gsettings", &["set", schema, key, value])?;
+    }
+    Ok(())
+}
+
+fn gnome_restore(saved: &Saved) -> Result<()> {
+    // The mode first, so that nothing uses the proxy half restored.
+    for (name, schema, key) in GNOME_KEYS {
+        run("gsettings", &["set", schema, key, saved.get(name)])?;
+    }
+    Ok(())
+}
+
 pub fn read_proxy() -> Result<Saved> {
     let mut saved = Saved::default();
     match desktop()? {
-        Desktop::Gnome => {
-            for (name, schema, key) in GNOME_KEYS {
-                saved.set(name, run("gsettings", &["get", schema, key])?);
-            }
-        }
+        Desktop::Gnome => gnome_read(&mut saved)?,
         Desktop::Kde(tool) => {
             for key in KDE_KEYS {
                 saved.set(key, kde_get(tool, key)?);
+            }
+            if gnome_beside_kde() {
+                gnome_read(&mut saved)?;
             }
         }
     }
@@ -175,20 +219,7 @@ pub fn read_proxy() -> Result<Saved> {
 pub fn set_proxy(addr: SocketAddr) -> Result<()> {
     let (host, port) = (addr.ip().to_string(), addr.port().to_string());
     match desktop()? {
-        Desktop::Gnome => {
-            let quoted = format!("'{host}'");
-            for (schema, key, value) in [
-                ("org.gnome.system.proxy.http", "host", quoted.as_str()),
-                ("org.gnome.system.proxy.http", "port", port.as_str()),
-                ("org.gnome.system.proxy.https", "host", quoted.as_str()),
-                ("org.gnome.system.proxy.https", "port", port.as_str()),
-                ("org.gnome.system.proxy", "ignore-hosts", GNOME_BYPASS),
-                // Last, so that nothing uses the proxy half set.
-                ("org.gnome.system.proxy", "mode", "'manual'"),
-            ] {
-                run("gsettings", &["set", schema, key, value])?;
-            }
-        }
+        Desktop::Gnome => gnome_set(&host, &port)?,
         Desktop::Kde(tool) => {
             let url = format!("http://{host} {port}");
             kde_set(tool, "httpProxy", &url)?;
@@ -196,6 +227,9 @@ pub fn set_proxy(addr: SocketAddr) -> Result<()> {
             kde_set(tool, "NoProxyFor", KDE_BYPASS)?;
             kde_set(tool, "ProxyType", "1")?;
             kde_notify();
+            if gnome_beside_kde() {
+                gnome_set(&host, &port)?;
+            }
         }
     }
     Ok(())
@@ -219,17 +253,17 @@ pub fn proxy_is(addr: SocketAddr) -> Result<bool> {
 
 pub fn restore_proxy(saved: &Saved, _addr: SocketAddr) -> Result<()> {
     match desktop()? {
-        Desktop::Gnome => {
-            // The mode first, so that nothing uses the proxy half restored.
-            for (name, schema, key) in GNOME_KEYS {
-                run("gsettings", &["set", schema, key, saved.get(name)])?;
-            }
-        }
+        Desktop::Gnome => gnome_restore(saved)?,
         Desktop::Kde(tool) => {
             for key in KDE_KEYS {
                 kde_set(tool, key, saved.get(key))?;
             }
             kde_notify();
+            // Only what was written down: settings taken by a tracewing
+            // that set KDE's alone are KDE's alone to put back.
+            if saved.0.iter().any(|(name, _)| name == "mode") {
+                gnome_restore(saved)?;
+            }
         }
     }
     Ok(())
