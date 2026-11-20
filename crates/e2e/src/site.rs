@@ -336,9 +336,11 @@ fn page(tls: &str) -> String {
 const said = {{}};
 const within = (ms, what) => Promise.race([what, new Promise((_, no) => setTimeout(() => no(new Error("timed out")), ms))]);
 (async () => {{
-  // The first request a new browser sends can go before it has read the
-  // proxy it is to use, and fail at once: tried a few times, half a second
-  // apart, before it counts. Every request after it already has the proxy.
+  // The first HTTPS request through the proxy once failed at once ("Failed
+  // to fetch"), in Chrome's own profile, whose proxy is on its command
+  // line, while every later one in the same page went through: tried a few
+  // times, half a second apart, before it counts. Why it lost is not known;
+  // `json_attempts` says how many tries it took, which a failure shows.
   for (let attempt = 1; attempt <= 5; attempt++) {{
     try {{
       const answer = await within(10000, fetch("{tls}/json"));
