@@ -112,7 +112,7 @@ of these, and does nothing without them:
 | System | Where, while developing | Where, in CI |
 |---|---|---|
 | Linux | A container made from `crates/e2e/linux/Dockerfile`: Ubuntu 26.04, the release the binaries are built on, with dbus, dconf and GNOME's schemas, KDE's kconfig tools, `libnss3-tools`, `nftables` and polkitd; gnome-keyring, Chrome and Firefox as the scenarios that need them arrive. Started by `scripts/e2e_linux.sh`, with `NET_ADMIN` for `nft`. | The same, on every pull request: `ci.yml`'s `linux-e2e` job |
-| Windows | The `windows-11` VM, over ssh, by `scripts/e2e_windows.ps1` | `windows-latest`, by the same script, on a tag |
+| Windows | The `windows-11` VM, by `scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -ConfirmTrustDialogs`, in its desktop session (a scheduled task with `/IT`), not over ssh: see below | `windows-latest`, by the same script, on a tag |
 | macOS | The user's own Mac, by `scripts/e2e_macos.sh` | The same script, run by hand before the draft is published |
 
 ## Scenarios
@@ -128,7 +128,7 @@ fails.
 | S4 | **The installed package.** Install the package built for the release. Record HTTPS with `tracewing capture` from it: the HAR holds the decrypted body. Uninstall, and nothing is left behind (S1's stores, S2's setting, the timer, task or agent, PATH). | `.deb`, `.rpm` | `setup.exe` both ways, `.zip` | `.dmg` |
 | S5 | **Browsers.** Headless Chrome and Firefox, through the system proxy and through Set up's own profile. HTTP/1.1, HTTP/2, a WebSocket and SSE are all recorded. The Set up test page says it was reached. With Alt-Svc taken out, nothing tries HTTP/3. | Chrome, Firefox | Edge, Chrome, Firefox | Safari by hand; Chrome, Firefox |
 | S6 | **The keychain.** The CA's key, a relay password and the WireGuard key go into the real keychain and come back. | Secret Service | Credential Manager | Keychain |
-| S7 | **Blocking UDP 443.** While it is on, a QUIC client is refused, and the attempt is a row that names the program. Released, it gets through. | `nft` | Windows Firewall | `pf` |
+| S7 | **Blocking UDP 443.** While it is on, a datagram to port 443 is refused. Released, or its holder killed outright, it gets through again. (The refused attempt as a row naming its program belongs to S8, which has the adapter that sees it.) | `nft` | Windows Firewall | `pf` |
 | S8 | **Capture without proxy settings.** The live tests run here unignored, with HTTP/3 from Chrome. | TUN in a namespace | Wintun | network extension, by hand (a signed build) |
 | S9 | **Android.** Run against the `tracewing-test` emulator, not in the container: Set up every device, Undo, then kill tracewing and start it again so it puts the device back. | host + AVD | — | — |
 | S10 | **The window.** It opens, draws Set up, takes a key, opens the save dialog and the clipboard, and closes. The system proxy is back afterwards. | headless, as today | needs a GPU | the user's Mac |
@@ -142,11 +142,50 @@ else in the table runs in the VM.
 1. `crates/e2e` with its guard, the Linux container and its script, and S1
    and S2 on Linux. **Done**: both pass under GNOME and KDE, as an ordinary
    user who reaches root through `pkexec`.
-2. S3, S6 and S7 on Linux. S3 needs systemd running in the container: in
-   the one step 1 made, `systemctl --user` fails, so tracewing arms no timer
-   and says so in its log.
-3. S1–S3, S6 and S7 on Windows in the VM, which compiles and runs the
-   Windows path for the first time since 16 Nov.
+2. S3, S6 and S7 on Linux. **Done**, under GNOME and KDE:
+   - S3: the app is killed outright. The real watchdog puts the setting back.
+     `tracewing recover --only-if-gone`, which is what the timer runs, leaves
+     a running app alone, then puts the setting back once the app has gone.
+   - S6: the CA's key, the WireGuard keys and a relay's password go into the
+     Secret Service, where `secret-tool` sees them. `tracewing capture`, in
+     another process, finds the key there.
+   - S7: `nft` really refuses UDP 443 to an echo server on loopback. It is
+     free again on release, and when its holder is killed.
+
+   Still to come: the systemd timer firing by itself, which needs systemd
+   running in the container. In this one `systemctl --user` fails, so
+   tracewing arms no timer and says so in its log.
+3. S1–S3, S6 and S7 on Windows in the VM. **Done**: all pass. The
+   workspace compiles there clean with `-D warnings`, the first Windows build
+   since 16 Nov. Notes:
+   - **A bug, found and fixed.** A CA put in both this user's root store and
+     the machine's was said to be in the machine's alone, because the
+     user's system store `ROOT` is a view that also holds the machine's
+     roots. Remove in Settings and `tracewing uninstall` then took it out of
+     the machine's store only, and the user's store went on trusting it.
+     Each store is now asked alone: the user's is its physical store
+     `ROOT\.Default`.
+   - **The scheduled task fires.** With the watchdog killed first and then
+     the app, the task the app armed puts the setting back within its
+     minute.
+   - **Not over ssh.** An ssh session is a network logon. Windows saves
+     nothing in the Credential Manager from it ("Credentials cannot be
+     saved from this logon session") and refuses to add to this user's root
+     store ("The request is not supported"). A user runs tracewing in a
+     desktop session, so the tests do too.
+   - **The trust dialogs.** Putting a root in this user's store asks
+     "Security Warning", and taking one out asks "Root Certificate Store".
+     `-ConfirmTrustDialogs` answers Yes, and only to a dialog that names
+     tracewing's CA. These are plain Win32 dialogs: UI Automation sees their
+     buttons as panes with nothing to invoke, so the button with the id
+     IDYES is pressed with `BM_CLICK`.
+   - **What the app arms runs as itself.** The watchdog, the scheduled task,
+     the systemd timer and the elevated helper of the Windows block are all
+     started as `current_exe()`. So the app in S2, S3 and S7 is
+     `tracewing e2e-hold`, a hidden command that holds what the window
+     holds, and not the test program.
+   - **The machine is left as it was found.** Each test that sets a proxy of
+     the user's own puts the original back when it ends, however it ends.
 4. S4 and S5 on both systems.
 5. S8 and S9.
 6. Run `release.yml` on a tag, with the suite as a job before the draft.

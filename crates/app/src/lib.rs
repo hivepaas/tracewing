@@ -19,6 +19,7 @@ pub mod connection;
 pub mod cookies;
 pub mod detail;
 pub mod devices;
+pub mod e2e_hold;
 pub mod engine;
 pub mod fields;
 pub mod files;

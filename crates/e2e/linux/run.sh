@@ -23,7 +23,7 @@ for desktop in GNOME KDE; do
     # settings in the user's home, and kioslaverc is there too.
     if ! su tester -c "env TRACEWING_E2E=1 TRACEWING_E2E_BIN=/e2e/bin/tracewing \
         XDG_CURRENT_DESKTOP=$desktop GSETTINGS_BACKEND=dconf \
-        dbus-run-session -- sh -c 'for t in /e2e/tests/*; do \"\$t\" --test-threads=1 || exit 1; done'"; then
+        dbus-run-session -- /usr/local/bin/tracewing-e2e-session"; then
         status=1
     fi
 done

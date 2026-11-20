@@ -11,6 +11,15 @@
 //! `cargo test --workspace` stays harmless. docs/design/e2e.md says what each
 //! scenario covers and why.
 
+#[cfg(target_os = "linux")]
+pub mod desktop;
+#[cfg(windows)]
+#[path = "desktop_windows.rs"]
+pub mod desktop;
+pub mod helper;
+
+use tracewing_proxy::ca_key::KeyStore;
+
 use std::{
     net::{SocketAddr, TcpListener, TcpStream},
     path::{Path, PathBuf},
@@ -149,18 +158,23 @@ impl Capture {
     /// Starts it in `data_dir`, its CA's key in a file there, trusting
     /// `origin`'s authority as a user does: in the `trusted-servers` folder.
     pub fn start(data_dir: &Path, origin: &Origin) -> Self {
+        Self::start_keeping_the_key_in(data_dir, origin, KeyStore::File)
+    }
+
+    /// The same, its CA's key where `store` says: `System` is the keychain,
+    /// as the window keeps it.
+    pub fn start_keeping_the_key_in(data_dir: &Path, origin: &Origin, store: KeyStore) -> Self {
         let trusted = data_dir.join("trusted-servers");
         std::fs::create_dir_all(&trusted).unwrap();
         std::fs::copy(&origin.ca, trusted.join("origin.pem")).unwrap();
         let port = free_port();
-        let child = tracewing()
-            .args([
-                "capture",
-                "--ca-key-in-file",
-                "--port",
-                &port.to_string(),
-                "--data-dir",
-            ])
+        let mut command = tracewing();
+        command.arg("capture");
+        if store == KeyStore::File {
+            command.arg("--ca-key-in-file");
+        }
+        let child = command
+            .args(["--port", &port.to_string(), "--data-dir"])
             .arg(data_dir)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -196,8 +210,14 @@ impl Drop for Capture {
 /// `curl` through the proxy on `port`, trusting what the system trusts and
 /// nothing else.
 pub fn curl_through(port: u16, url: &str) -> Output {
-    Command::new("curl")
-        .args(["--silent", "--show-error", "--max-time", "10", "--proxy"])
+    let mut curl = Command::new("curl");
+    // Windows' own curl asks Schannel, which by default refuses a certificate
+    // whose revocation it cannot check, and a CA made on this computer
+    // publishes no list of revoked ones. Browsers do not fail on that.
+    if cfg!(windows) {
+        curl.arg("--ssl-no-revoke");
+    }
+    curl.args(["--silent", "--show-error", "--max-time", "10", "--proxy"])
         .arg(format!("http://127.0.0.1:{port}"))
         .arg(url)
         .env_remove("CURL_CA_BUNDLE")

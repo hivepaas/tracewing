@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libglib2.0-bin gsettings-desktop-schemas dconf-gsettings-backend \
         libkf6config-bin \
         libnss3-tools \
+        gnome-keyring libsecret-tools \
         nftables \
         polkitd pkexec \
         libxkbcommon0 \
@@ -29,4 +30,5 @@ COPY 49-tracewing-e2e.rules /etc/polkit-1/rules.d/49-tracewing-e2e.rules
 RUN touch /etc/tracewing-e2e-throwaway
 
 COPY run.sh /usr/local/bin/tracewing-e2e-run
+COPY session.sh /usr/local/bin/tracewing-e2e-session
 ENTRYPOINT ["/usr/local/bin/tracewing-e2e-run"]
