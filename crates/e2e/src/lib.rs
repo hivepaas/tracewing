@@ -11,6 +11,12 @@
 //! `cargo test --workspace` stays harmless. docs/design/e2e.md says what each
 //! scenario covers and why.
 
+#[cfg(target_os = "linux")]
+pub mod desktop;
+pub mod helper;
+
+use tracewing_proxy::ca_key::KeyStore;
+
 use std::{
     net::{SocketAddr, TcpListener, TcpStream},
     path::{Path, PathBuf},
@@ -149,18 +155,23 @@ impl Capture {
     /// Starts it in `data_dir`, its CA's key in a file there, trusting
     /// `origin`'s authority as a user does: in the `trusted-servers` folder.
     pub fn start(data_dir: &Path, origin: &Origin) -> Self {
+        Self::start_keeping_the_key_in(data_dir, origin, KeyStore::File)
+    }
+
+    /// The same, its CA's key where `store` says: `System` is the keychain,
+    /// as the window keeps it.
+    pub fn start_keeping_the_key_in(data_dir: &Path, origin: &Origin, store: KeyStore) -> Self {
         let trusted = data_dir.join("trusted-servers");
         std::fs::create_dir_all(&trusted).unwrap();
         std::fs::copy(&origin.ca, trusted.join("origin.pem")).unwrap();
         let port = free_port();
-        let child = tracewing()
-            .args([
-                "capture",
-                "--ca-key-in-file",
-                "--port",
-                &port.to_string(),
-                "--data-dir",
-            ])
+        let mut command = tracewing();
+        command.arg("capture");
+        if store == KeyStore::File {
+            command.arg("--ca-key-in-file");
+        }
+        let child = command
+            .args(["--port", &port.to_string(), "--data-dir"])
             .arg(data_dir)
             .stdin(Stdio::null())
             .stdout(Stdio::null())

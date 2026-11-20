@@ -128,7 +128,7 @@ fails.
 | S4 | **The installed package.** Install the package built for the release. Record HTTPS with `tracewing capture` from it: the HAR holds the decrypted body. Uninstall, and nothing is left behind (S1's stores, S2's setting, the timer, task or agent, PATH). | `.deb`, `.rpm` | `setup.exe` both ways, `.zip` | `.dmg` |
 | S5 | **Browsers.** Headless Chrome and Firefox, through the system proxy and through Set up's own profile. HTTP/1.1, HTTP/2, a WebSocket and SSE are all recorded. The Set up test page says it was reached. With Alt-Svc taken out, nothing tries HTTP/3. | Chrome, Firefox | Edge, Chrome, Firefox | Safari by hand; Chrome, Firefox |
 | S6 | **The keychain.** The CA's key, a relay password and the WireGuard key go into the real keychain and come back. | Secret Service | Credential Manager | Keychain |
-| S7 | **Blocking UDP 443.** While it is on, a QUIC client is refused, and the attempt is a row that names the program. Released, it gets through. | `nft` | Windows Firewall | `pf` |
+| S7 | **Blocking UDP 443.** While it is on, a datagram to port 443 is refused. Released, or its holder killed outright, it gets through again. (The refused attempt as a row naming its program belongs to S8, which has the adapter that sees it.) | `nft` | Windows Firewall | `pf` |
 | S8 | **Capture without proxy settings.** The live tests run here unignored, with HTTP/3 from Chrome. | TUN in a namespace | Wintun | network extension, by hand (a signed build) |
 | S9 | **Android.** Run against the `tracewing-test` emulator, not in the container: Set up every device, Undo, then kill tracewing and start it again so it puts the device back. | host + AVD | — | — |
 | S10 | **The window.** It opens, draws Set up, takes a key, opens the save dialog and the clipboard, and closes. The system proxy is back afterwards. | headless, as today | needs a GPU | the user's Mac |
@@ -142,9 +142,19 @@ else in the table runs in the VM.
 1. `crates/e2e` with its guard, the Linux container and its script, and S1
    and S2 on Linux. **Done**: both pass under GNOME and KDE, as an ordinary
    user who reaches root through `pkexec`.
-2. S3, S6 and S7 on Linux. S3 needs systemd running in the container: in
-   the one step 1 made, `systemctl --user` fails, so tracewing arms no timer
-   and says so in its log.
+2. S3, S6 and S7 on Linux. **Done**, under GNOME and KDE:
+   - S3: the app is killed outright. The real watchdog puts the setting back.
+     `tracewing recover --only-if-gone`, which is what the timer runs, leaves
+     a running app alone, then puts the setting back once the app has gone.
+   - S6: the CA's key, the WireGuard keys and a relay's password go into the
+     Secret Service, where `secret-tool` sees them. `tracewing capture`, in
+     another process, finds the key there.
+   - S7: `nft` really refuses UDP 443 to an echo server on loopback. It is
+     free again on release, and when its holder is killed.
+
+   Still to come: the systemd timer firing by itself, which needs systemd
+   running in the container. In this one `systemctl --user` fails, so
+   tracewing arms no timer and says so in its log.
 3. S1–S3, S6 and S7 on Windows in the VM, which compiles and runs the
    Windows path for the first time since 16 Nov.
 4. S4 and S5 on both systems.
