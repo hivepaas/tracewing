@@ -69,8 +69,10 @@ Smaller gaps that need no real system, only a test:
   `solana_and_bitcoin_calls_are_read_in_the_inspector`, shots 96 and 97.
 - ~~Block answers in `rpc_view.rs` (`block_lines`).~~ Done:
   `a_block_reads_as_which_one_and_how_full`, on a real mainnet block.
-- Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
-  10,000 cap.
+- ~~Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
+  10,000 cap.~~ Done in `find.rs`, by keys: Shift+Enter, Shift+F3 and the
+  wrap at both ends. The bar's arrow buttons call the same step and are
+  not clicked.
 - Dragging the dividers and dropping the inspector handle. Hiding the
   inspector.
 - Activating the items of a context menu. Copy as cURL from the window.

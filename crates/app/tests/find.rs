@@ -201,6 +201,44 @@ fn find_in_the_body_and_in_a_table() {
     assert_eq!(count.now, Some(1));
     shot(&mut cx, window.into(), "121-find-body");
 
+    // Shift+Enter steps back, and round to the last from the first; Enter
+    // round to the first from the last. Shift+F3 is Shift+Enter. The arrow
+    // buttons in the bar call the same step and are not clicked here.
+    let now = |cx: &mut HeadlessAppContext| find_count(cx, window).unwrap().now;
+    common::key(&mut cx, window, "shift-enter");
+    assert_eq!(now(&mut cx), Some(0));
+    common::key(&mut cx, window, "shift-enter");
+    assert_eq!(now(&mut cx), Some(plain - 1), "round to the last");
+    common::key(&mut cx, window, "enter");
+    assert_eq!(now(&mut cx), Some(0), "round to the first");
+    common::key(&mut cx, window, "f3");
+    common::key(&mut cx, window, "shift-f3");
+    assert_eq!(now(&mut cx), Some(0));
+
+    // A hit inside what is folded opens the fold when it is stepped to.
+    let view = body(&mut cx, window);
+    window
+        .update(&mut cx, |_, _, cx| {
+            view.update(cx, |b, cx| b.toggle_fold(0, cx))
+        })
+        .unwrap();
+    let folded = |cx: &mut HeadlessAppContext| {
+        window
+            .update(cx, |_, _, cx| view.read(cx).folds().end_of(0).is_some())
+            .unwrap()
+    };
+    assert!(folded(&mut cx), "the whole body folded away");
+    common::key(&mut cx, window, "enter");
+    assert_eq!(now(&mut cx), Some(1));
+    assert!(!folded(&mut cx), "stepping to a hit inside opened it");
+
+    // A megabyte of JSON has more quotes than Find keeps: it stops at
+    // 10,000 and says there are more.
+    assert_eq!(find(&mut cx, window, "\""), 10_000);
+    let count = find_count(&mut cx, window).unwrap();
+    assert!(count.capped && count.done, "{count:?}");
+    shot(&mut cx, window.into(), "121-find-capped");
+
     // Case: LYON is not Lyon.
     assert_eq!(find(&mut cx, window, "LYON"), plain, "any case by default");
     window
