@@ -1629,6 +1629,13 @@ impl Traffic {
         }
     }
 
+    /// Where the sidebar, the list and the inspector were last laid out:
+    /// the box the dividers and the inspector's drop zones are measured in,
+    /// for a test to find them as a hand would.
+    pub fn content_bounds(&self) -> Bounds<Pixels> {
+        self.content.get()
+    }
+
     pub fn cancel_drag(&mut self, cx: &mut Context<Self>) {
         self.drag = None;
         cx.notify();

@@ -82,10 +82,21 @@ fn titles(shown: &Shown) -> Vec<&str> {
         .collect()
 }
 
-#[test]
-fn json_rpc_calls_are_read_in_the_inspector() {
+/// What each test here starts with: an HTTPS origin and a WebSocket one,
+/// tracewing trusting both, and its window.
+struct Started {
+    dir: PathBuf,
+    runtime: tokio::runtime::Runtime,
+    cx: HeadlessAppContext,
+    window: WindowHandle<Traffic>,
+    proxy: std::net::SocketAddr,
+    origin: u16,
+    ws_port: u16,
+}
+
+fn start(name: &str, ports: std::ops::Range<u16>) -> Started {
     let _ = tracewing_proxy::crypto_provider().install_default();
-    let dir = std::env::temp_dir().join(format!("tracewing-rpc-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("tracewing-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
 
@@ -121,7 +132,7 @@ fn json_rpc_calls_are_read_in_the_inspector() {
         },
         rules: Default::default(),
         traffic_rules: Default::default(),
-        ports: 20_270..20_280,
+        ports,
         extra_roots: vec![origin_ca, ws_ca],
         key_store: Default::default(),
         find_apps: true,
@@ -145,6 +156,28 @@ fn json_rpc_calls_are_read_in_the_inspector() {
     let proxy = window
         .update(&mut cx, |view, _, _| view.proxy_addr())
         .unwrap();
+    Started {
+        dir,
+        runtime,
+        cx,
+        window,
+        proxy,
+        origin,
+        ws_port,
+    }
+}
+
+#[test]
+fn json_rpc_calls_are_read_in_the_inspector() {
+    let Started {
+        dir,
+        runtime,
+        mut cx,
+        window,
+        proxy,
+        origin,
+        ws_port,
+    } = start("rpc", 20_270..20_280);
 
     let send = |path: &str, body: &str| {
         let out = Command::new("curl")
@@ -353,6 +386,115 @@ fn json_rpc_calls_are_read_in_the_inspector() {
         .unwrap();
     shot(&mut cx, window.into(), "95-rpc-socket");
     runtime.block_on(async { ws.close(None).await }).ok();
+
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// Solana and Bitcoin speak the same JSON-RPC, and the part reads each as
+/// itself: a Solana address and its lamports, a Bitcoin transaction out of
+/// its bytes. The rpc_view tests read the same samples without a window;
+/// this is the window finding them in recorded traffic.
+#[test]
+fn solana_and_bitcoin_calls_are_read_in_the_inspector() {
+    let Started {
+        dir,
+        runtime: _runtime,
+        mut cx,
+        window,
+        proxy,
+        origin,
+        ..
+    } = start("rpc-chains", 20_280..20_290);
+    let send = |body: &[u8]| {
+        let out = Command::new("curl")
+            .args(["-sS", "-o", "/dev/null", "--proxy"])
+            .arg(format!("http://{proxy}"))
+            .arg("--cacert")
+            .arg(dir.join("ca.pem"))
+            .args([
+                "-H",
+                "content-type: application/json",
+                "--data-binary",
+                "@-",
+            ])
+            .arg(format!("https://localhost:{origin}/rpc"))
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .and_then(|mut curl| {
+                use std::io::Write as _;
+                curl.stdin.take().unwrap().write_all(body)?;
+                curl.wait_with_output()
+            })
+            .expect("curl");
+        assert!(out.status.success(), "{out:?}");
+    };
+    // Real samples: see crates/store/testdata/{solana,bitcoin}/README.md.
+    send(include_bytes!("../../store/testdata/solana/balance.req.json").trim_ascii());
+    send(include_bytes!("../../store/testdata/bitcoin/segwit.req.json").trim_ascii());
+    window
+        .update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "two flows", |view| view.count() == 2);
+
+    window
+        .update(&mut cx, |view, _, cx| {
+            view.select_place(0, cx);
+            view.set_part(Part::Rpc, cx);
+        })
+        .unwrap();
+    wait_for(&mut cx, window, "the Solana call read", |view| {
+        view.inspector
+            .rpc
+            .as_ref()
+            .is_some_and(|shown| titles(shown).first() == Some(&"getBalance"))
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let detail = view.inspector.detail.as_ref().unwrap();
+            assert_eq!(detail.rpc.as_deref(), Some("getBalance"));
+            let shown = view.inspector.rpc.as_ref().unwrap();
+            assert!(
+                lines(shown).contains(&("address", "So11111111111111111111111111111111111111112")),
+                "{:?}",
+                lines(shown)
+            );
+        })
+        .unwrap();
+    shot(&mut cx, window.into(), "96-rpc-solana");
+
+    window
+        .update(&mut cx, |view, _, cx| view.select_place(1, cx))
+        .unwrap();
+    wait_for(&mut cx, window, "the Bitcoin transaction read", |view| {
+        view.inspector
+            .rpc
+            .as_ref()
+            .is_some_and(|shown| titles(shown).first() == Some(&"sendrawtransaction"))
+    });
+    window
+        .update(&mut cx, |view, _, _| {
+            let shown = view.inspector.rpc.as_ref().unwrap();
+            let lines = lines(shown);
+            for said in [
+                (
+                    "txid",
+                    "ae1e6ca447b1abb8d898b05dfb8e02e9c8826800474ad4db20f7b0535c3a238b",
+                ),
+                ("inputs", "1 item"),
+            ] {
+                assert!(lines.contains(&said), "{said:?} in {lines:?}");
+            }
+            assert!(
+                lines
+                    .iter()
+                    .any(|(label, value)| *label == "output" && value.contains(", bc1q")),
+                "an output paid to a segwit address: {lines:?}"
+            );
+        })
+        .unwrap();
+    shot(&mut cx, window.into(), "97-rpc-bitcoin");
 
     std::fs::remove_dir_all(&dir).ok();
 }
