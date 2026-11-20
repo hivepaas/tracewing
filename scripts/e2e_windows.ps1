@@ -7,6 +7,11 @@
 #
 #   pwsh scripts/e2e_windows.ps1 -ThisMachineMayBeChanged
 #   pwsh scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -SkipBuild
+#   pwsh scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -Packages -Browsers 'chrome edge firefox'
+#
+# -Packages builds the installer and the zip (scripts/package_windows.sh, in
+# Git Bash, with NSIS and cargo-about) for the tests that install them.
+# -Browsers names the browsers installed here for the tests that open them.
 #
 # Run it as an administrator: the machine's certificate store and the
 # firewall take one. And in a desktop session, as a user runs tracewing: a
@@ -20,7 +25,9 @@
 param(
     [switch]$ThisMachineMayBeChanged,
     [switch]$SkipBuild,
-    [switch]$ConfirmTrustDialogs
+    [switch]$ConfirmTrustDialogs,
+    [switch]$Packages,
+    [string]$Browsers = ''
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -39,6 +46,21 @@ if (-not $SkipBuild) {
     cargo build --release --locked -p tracewing
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
+$dist = "$target\e2e-dist"
+if ($Packages) {
+    $bash = 'C:\Program Files\Git\bin\bash.exe'
+    if (-not (Test-Path $bash)) { Write-Output "-Packages needs Git Bash at $bash"; exit 1 }
+    Remove-Item -Recurse -Force $dist -ErrorAction SilentlyContinue
+    $env:EXE = "$target\release\tracewing.exe"
+    $env:DIST = $dist
+    & $bash scripts/package_windows.sh
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    $env:TRACEWING_E2E_SETUP = (Get-Item "$dist\tracewing_*-setup.exe").FullName
+    $env:TRACEWING_E2E_ZIP = (Get-Item "$dist\tracewing_*.zip").FullName
+    Write-Output "packages: $env:TRACEWING_E2E_SETUP $env:TRACEWING_E2E_ZIP"
+}
+if ($Browsers) { $env:TRACEWING_E2E_BROWSERS = $Browsers }
+
 $tests = cargo test --release --locked -p tracewing-e2e --no-run --message-format=json |
     ForEach-Object { $_ | ConvertFrom-Json } |
     Where-Object { $_.reason -eq 'compiler-artifact' -and $_.executable -and ($_.target.kind -contains 'test') } |
