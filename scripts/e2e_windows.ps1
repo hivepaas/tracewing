@@ -149,6 +149,19 @@ if ($Wintun) {
         if ($LASTEXITCODE -ne 0) { $status = 1 }
     }
 }
+# S11, the title bar's three caption buttons. Nothing else in this suite can
+# see them: they are painted by tracewing and exist to Windows only as the
+# answer to a hit test, so no test on any platform presses them. It moves the
+# real pointer, so exit 2 means "no input desktop here" -- an ssh logon has
+# none -- and is not a failure of tracewing's.
+Write-Output '== the title bar'
+& powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\check_windows_titlebar.ps1" $env:TRACEWING_E2E_BIN
+switch ($LASTEXITCODE) {
+    0 { }
+    2 { Write-Output 'the title bar is unchecked: this session has no input desktop' }
+    default { $status = 1 }
+}
+
 if ($confirmer) {
     Stop-Job $confirmer
     Receive-Job $confirmer | ForEach-Object { Write-Output "dialogs: $_" }

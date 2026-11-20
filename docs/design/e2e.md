@@ -141,10 +141,21 @@ fails.
 | S8 | **Capture without proxy settings.** The live tests run here unignored, with HTTP/3 from Chrome. | TUN in a namespace | Wintun | network extension, by hand (a signed build) |
 | S9 | **Android.** Run against the `tracewing-test` emulator, not in the container: Set up every device, Undo, then kill tracewing and start it again so it puts the device back. | host + AVD | — | — |
 | S10 | **The window.** It opens, draws Set up, takes a key, opens the save dialog and the clipboard, and closes. The system proxy is back afterwards. | headless, as today | the VM (its adapter is accepted) | the user's Mac |
+| S11 | **The title bar's caption buttons (Windows only).** Sweeping the bar, the window answers `HTMINBUTTON`, `HTMAXBUTTON` and `HTCLOSE` in that order, each a band about `CAPTION_W` wide, with an `HTCAPTION` band a button wide beside them; then a real click on minimise leaves `IsIconic` true. `scripts/check_windows_titlebar.ps1`, run from `e2e_windows.ps1`. | — | the VM's desktop session | — |
 
 S10 on Windows needs a display adapter that GPUI's DirectX renderer accepts.
 The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
 #381 was checked. So everything in the table runs in the VM.
+
+S11 is Windows alone because the thing it checks exists only there: the three
+buttons are painted by tracewing and are a *hit test* to Windows, not windows
+of their own, so no test on Linux or the Mac can press them and `windows` is
+`cfg!(target_os = "windows")` in any case. It needs the **interactive desktop
+session**, because the pointer has to move and GPUI answers for where the
+pointer really is; an ssh logon has no input desktop, and there the check says
+so and exits **2**, which is not a pass. It is measured both ways: it passes a
+build with #381's fix and fails the same build with the bar's drag area put
+back.
 
 ## Order of work
 

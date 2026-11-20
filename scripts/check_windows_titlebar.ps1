@@ -37,6 +37,12 @@
 # was written to find. Parse it before trusting a verdict:
 #
 #   [System.Management.Automation.Language.Parser]::ParseFile($p, [ref]$null, [ref]$errs)
+#
+# From Linux, where most of this is written and where there is no PowerShell,
+# the same parse in a container -- no Windows and no VM needed:
+#
+#   docker run --rm -v "$PWD/scripts:/s:ro" mcr.microsoft.com/powershell:latest `
+#     pwsh -NoProfile -Command '$e=$null; [void][System.Management.Automation.Language.Parser]::ParseFile("/s/check_windows_titlebar.ps1",[ref]$null,[ref]$e); $e'
 
 param([Parameter(Mandatory)][string]$Exe)
 
