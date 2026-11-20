@@ -49,7 +49,7 @@ fn back(before: &Setting, within: Duration) {
 fn the_watchdog_puts_it_back_when_the_app_is_killed() {
     only_where_allowed!();
     let dir = scratch("watchdog");
-    the_users_own();
+    let _put_back = the_users_own();
     let before = setting();
 
     app(&dir, free_port(), true).kill();
@@ -65,7 +65,7 @@ fn the_watchdog_puts_it_back_when_the_app_is_killed() {
 fn recover_leaves_a_running_app_alone_and_puts_it_back_once_it_is_gone() {
     only_where_allowed!();
     let dir = scratch("recover");
-    the_users_own();
+    let _put_back = the_users_own();
     let before = setting();
     let port = free_port();
 
@@ -103,7 +103,7 @@ fn recover_leaves_a_running_app_alone_and_puts_it_back_once_it_is_gone() {
 fn the_scheduled_task_puts_it_back_when_the_app_and_its_watchdog_are_killed() {
     only_where_allowed!();
     let dir = scratch("task");
-    the_users_own();
+    let _put_back = the_users_own();
     let before = setting();
     let port = free_port();
 

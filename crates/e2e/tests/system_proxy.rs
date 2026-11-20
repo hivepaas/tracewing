@@ -18,7 +18,7 @@ use tracewing_e2e::{
 fn the_system_proxy_names_tracewing_and_comes_back_as_it_was() {
     only_where_allowed!();
     let dir = scratch("system-proxy");
-    the_users_own();
+    let _put_back = the_users_own();
     let before = setting();
     let port = free_port();
 

@@ -62,16 +62,43 @@ fn wide(text: &str) -> Vec<u16> {
     text.encode_utf16().chain(Some(0)).collect()
 }
 
+/// What the setting was before a test changed it, written back when the
+/// test ends however it ends: the machine is left as the test found it.
+pub struct PutBack(Setting);
+
+impl Drop for PutBack {
+    fn drop(&mut self) {
+        let on = get(&self.0, "ProxyEnable") == "0x1";
+        write(
+            on,
+            get(&self.0, "ProxyServer"),
+            get(&self.0, "ProxyOverride"),
+        );
+    }
+}
+
 /// A proxy of the user's own, so that "as it was" is more than the defaults.
-pub fn the_users_own() {
-    let mut server = wide("corp.example:3128");
-    let mut bypass = wide("intranet.example");
+/// Keep what it gives until the test ends.
+#[must_use = "the setting is put back when this is dropped"]
+pub fn the_users_own() -> PutBack {
+    let before = PutBack(setting());
+    write(true, "corp.example:3128", "intranet.example");
+    before
+}
+
+/// Writes the setting as the Settings app does, through WinINet's option.
+fn write(on: bool, server: &str, bypass: &str) {
+    let mut server = wide(server);
+    let mut bypass = wide(bypass);
+    let flags = if on {
+        PROXY_TYPE_DIRECT | PROXY_TYPE_PROXY
+    } else {
+        PROXY_TYPE_DIRECT
+    };
     let mut options = [
         INTERNET_PER_CONN_OPTIONW {
             dwOption: INTERNET_PER_CONN_FLAGS,
-            Value: INTERNET_PER_CONN_OPTIONW_0 {
-                dwValue: PROXY_TYPE_DIRECT | PROXY_TYPE_PROXY,
-            },
+            Value: INTERNET_PER_CONN_OPTIONW_0 { dwValue: flags },
         },
         INTERNET_PER_CONN_OPTIONW {
             dwOption: INTERNET_PER_CONN_PROXY_SERVER,
@@ -102,7 +129,7 @@ pub fn the_users_own() {
                 &list as *const _ as *const _,
                 size_of::<INTERNET_PER_CONN_OPTION_LISTW>() as u32,
             ) != 0,
-            "WinINet refused the user's own proxy"
+            "WinINet refused the setting"
         );
         InternetSetOptionW(
             ptr::null(),

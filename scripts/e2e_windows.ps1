@@ -47,19 +47,44 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $confirmer = $null
 if ($ConfirmTrustDialogs) {
+    # The two dialogs are plain ones, whose buttons UI Automation sees only as
+    # panes with nothing to invoke, so they are answered as Windows' own
+    # controls: Yes is the button with the dialog id IDYES, pressed with
+    # BM_CLICK, and only in a dialog that names tracewing's CA.
     $confirmer = Start-Job -ScriptBlock {
-        Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
-        $A = [System.Windows.Automation.AutomationElement]
-        $named = { param($name) New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, $name) }
+        Add-Type -Namespace E2E -Name Answer -MemberDefinition @'
+delegate bool EnumProc(System.IntPtr h, System.IntPtr l);
+[System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+static extern System.IntPtr FindWindow(string c, string n);
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+static extern bool EnumChildWindows(System.IntPtr p, EnumProc f, System.IntPtr l);
+[System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+static extern int GetWindowText(System.IntPtr h, System.Text.StringBuilder s, int n);
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+static extern System.IntPtr GetDlgItem(System.IntPtr d, int id);
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+static extern System.IntPtr SendMessage(System.IntPtr h, int m, System.IntPtr w, System.IntPtr l);
+public static bool Yes(string title, string mention) {
+    System.IntPtr dialog = FindWindow("#32770", title);
+    if (dialog == System.IntPtr.Zero) return false;
+    var said = new System.Text.StringBuilder();
+    EnumChildWindows(dialog, (h, l) => {
+        var text = new System.Text.StringBuilder(4096);
+        GetWindowText(h, text, 4096);
+        said.Append(text).Append('\n');
+        return true;
+    }, System.IntPtr.Zero);
+    if (!said.ToString().Contains(mention)) return false;
+    System.IntPtr yes = GetDlgItem(dialog, 6);
+    if (yes == System.IntPtr.Zero) return false;
+    SendMessage(yes, 0x00F5, System.IntPtr.Zero, System.IntPtr.Zero);
+    return true;
+}
+'@
         while ($true) {
             foreach ($title in 'Security Warning', 'Root Certificate Store') {
-                $dialog = $A::RootElement.FindFirst('Children', (& $named $title))
-                if ($dialog) {
-                    $yes = $dialog.FindFirst('Descendants', (& $named 'Yes'))
-                    if ($yes) {
-                        $yes.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
-                        Write-Output "answered Yes to $title"
-                    }
+                if ([E2E.Answer]::Yes($title, 'tracewing CA')) {
+                    Write-Output "answered Yes to $title"
                 }
             }
             Start-Sleep -Milliseconds 200
