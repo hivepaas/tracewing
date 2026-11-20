@@ -63,7 +63,8 @@ the code: "fake" names the stand-in the test uses.
 
 Smaller gaps that need no real system, only a test:
 
-- HAR export of WebSocket messages, with and without secrets.
+- ~~HAR export of WebSocket messages, with and without secrets.~~ Done:
+  `har.rs`'s `a_websockets_messages_go_out_both_ways_and_their_secrets_can_be_left_out`.
 - Solana and Bitcoin answers in a window. They are covered only by unit
   tests.
 - Block answers in `rpc_view.rs` (`block_lines`).
