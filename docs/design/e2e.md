@@ -65,17 +65,21 @@ Smaller gaps that need no real system, only a test:
 
 - ~~HAR export of WebSocket messages, with and without secrets.~~ Done:
   `har.rs`'s `a_websockets_messages_go_out_both_ways_and_their_secrets_can_be_left_out`.
-- Solana and Bitcoin answers in a window. They are covered only by unit
-  tests.
+- ~~Solana and Bitcoin answers in a window.~~ Done: `rpc.rs`'s
+  `solana_and_bitcoin_calls_are_read_in_the_inspector`, shots 96 and 97.
 - ~~Block answers in `rpc_view.rs` (`block_lines`).~~ Done:
   `a_block_reads_as_which_one_and_how_full`, on a real mainnet block.
-- Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
-  10,000 cap.
+- ~~Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
+  10,000 cap.~~ Done in `find.rs`, by keys: Shift+Enter, Shift+F3 and the
+  wrap at both ends. The bar's arrow buttons call the same step and are
+  not clicked.
 - ~~Dragging the dividers and dropping the inspector handle. Hiding the
   inspector.~~ Done: `dividers.rs`, by mouse and shortcut, read back from
   the layout file.
 - Activating the items of a context menu. Copy as cURL from the window.
-- The Settings part last open being kept.
+- ~~The Settings part last open being kept.~~ Saved on a change
+  (`text_size.rs`) and read back by `layout.rs`'s round trip, which now
+  holds the part and the way in.
 
 Rows in features.md with no code behind them, so nothing to test yet:
 
@@ -260,6 +264,14 @@ The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
      Wintun adapter and no `/1` route are left, and the default route is
      the VM's own. `scripts/e2e_windows.ps1 -Wintun <wintun.dll>` runs them
      one test at a time, as they need.
+   - S9, **done** against the `tracewing-test` emulator (API 36), by
+     `crates/app/tests/android_live.rs`, which runs only with
+     `TRACEWING_ANDROID_SERIAL` set, so not in CI. The device first has a
+     proxy of its own. Set up every device points it at tracewing, with
+     that proxy written down. Undo puts that proxy back. A device left set
+     up by a tracewing that was killed is put back when tracewing starts
+     again on that data folder. With `recover_android` doing nothing, it
+     fails waiting for that.
    - Still to come: HTTP/3 from Chrome through the adapter. The QUIC client
      in `local_live_http3.rs` is quinn, not a browser.
 7. Run `release.yml` on a tag, with the suite as a job before the draft.

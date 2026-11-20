@@ -31,18 +31,22 @@
 ## Why tracewing
 
 - 🔍 **See every request.** HTTP/1.1 and HTTP/2, WebSocket, server-sent events, gRPC and GraphQL, over HTTPS through a certificate authority made for your computer alone.
+- 🛰️ **No proxy settings needed.** Pick an app and tracewing takes its connections as they are — nothing told to the app, nothing else on the computer changed. macOS hands them over through a network extension; Windows and Linux through an adapter of tracewing's own. Everything you did not pick goes straight through untouched, its TLS never opened. For apps that have no proxy setting, or ignore the one they have.
+- 📡 **HTTP/3 and QUIC are not a blind spot.** Servers' offers of HTTP/3 can be hidden so an app stays on HTTP/2, UDP 443 can be blocked so a client falls back, and an attempt that was refused still arrives as a flow — with the server it asked for and the program that sent it. For a program you picked, tracewing speaks HTTP/3 at **both** ends: its QUIC ends on a port of tracewing's own, the HTTP/3 inside is recorded as any other flow, and the server is asked over HTTP/3 too — off by default, under Settings › HTTP/3.
 - ⚡ **Big sessions stay smooth.** A million requests scroll at your display's pace, and large bodies stream through instead of piling up in memory.
 - 🔬 **Read what is inside.** JSON, XML, Protobuf, MessagePack and CBOR laid out; tokens, cookies and timings explained; two requests compared side by side.
 - ✋ **Pause and edit.** Breakpoints hold a request or a response, and WebSocket messages too, until you send it on, changed or not.
 - 🔀 **Change traffic on the way.** Rules block, answer from a file, send to another host, rewrite headers and bodies, or slow the network down. For the rest, a few lines of JavaScript.
 - 🤖 **Made for AI work.** LLM API streams put back together, tokens and tool calls, and an MCP server so your AI tools can search and read what tracewing recorded.
 - ⛓️ **Web3 too.** JSON-RPC calls and their calldata read by your contracts' ABIs, and a warning when an edit breaks a signed transaction.
-- 📱 **Phones and emulators.** Set up from a QR code, with Android emulators (14 and later too) and the iOS Simulator trusted in one click.
+- 📱 **Phones and emulators.** Set up from a QR code, with Android emulators (14 and later too) and the iOS Simulator trusted in one click. For an app that ignores the phone's proxy setting, a WireGuard tunnel the phone joins instead.
 - 🏢 **Works at work.** Through your company's proxy, NTLM included, with your company's own CA, client certificates and TLS keys for Wireshark.
 - ⌨️ **No window needed.** `tracewing capture` records on a server or in CI, and writes HAR.
 - 🌍 **Made for every day.** 15 languages, light and dark, a text size of your choice, and layouts you can name. It runs on your computer and sends nothing anywhere.
 
-Every feature in detail: [docs/features.md](docs/features.md).
+**Seven ways in**, each a tab in Settings › Capture: this computer's proxy setting · a browser tracewing starts · a terminal it sets up · other devices on your network · a SOCKS5 port · a WireGuard tunnel a phone joins · apps taken as they are, with no proxy settings at all. Which way takes which programs: [docs/capturing.md](docs/capturing.md).
+
+Every feature in detail: [docs/features.md](docs/features.md) — written as a plan, so it says which milestone each thing belongs to rather than what today's build has.
 
 <table>
   <tr>
@@ -63,6 +67,8 @@ tracewing's first release, 0.1, is on its way: it will be at **[tracewing.app](h
 
 ```sh
 tracewing capture --seconds 60 --har api.har
+tracewing capture --app com.apple.curl --seconds 60   # macOS: one app, as it is
+tracewing extension status        # macOS: is that network extension installed and allowed
 tracewing sessions
 tracewing export --har today.har --filter "host:api.example.com"
 eval "$(tracewing env)"           # this shell's programs through tracewing
