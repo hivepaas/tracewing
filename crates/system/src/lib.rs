@@ -147,8 +147,30 @@ pub enum BrowserTrust {
     Own { holding: usize, of: usize },
 }
 
-pub fn browser_trust(browser: &launch::Browser) -> BrowserTrust {
-    os::browser_trust(browser)
+/// Whether `browser` trusts the CA whose certificate is `der`.
+///
+/// By its bytes, like [`ca_locations`]: a store holding a tracewing CA that is
+/// not this one does not make this one's leaves acceptable, and said it did
+/// while NSS was asked by nickname alone.
+pub fn browser_trust(browser: &launch::Browser, der: &[u8]) -> BrowserTrust {
+    os::browser_trust(browser, der)
+}
+
+/// Whether a store of tracewing's own holds a tracewing CA that is not the one
+/// in hand: another data directory's, which [`ca_locations`] cannot report
+/// because it reports one certificate's places.
+///
+/// **This is to say so with, never to remove by.** It was wired into
+/// [`ca_remove`] first, and the cost was measured at once: `tracewing
+/// uninstall --data-dir <a throwaway folder>` took this computer's shared
+/// anchor file out from under the real install, because the only thing the
+/// two had in common was tracewing's name for the store. A store of ours by
+/// name is not a certificate of ours to delete: the other data directory may
+/// be in use, and nothing here can tell.
+pub fn an_older_ca_is_trusted() -> bool {
+    [Scope::User, Scope::Machine]
+        .iter()
+        .any(|scope| os::ours_by_name(*scope))
 }
 
 pub fn ca_install(cert_pem: &Path, scope: Scope) -> Result<()> {
@@ -161,6 +183,11 @@ pub fn ca_uninstall(cert_pem: &Path, scope: Scope) -> Result<()> {
 
 /// Takes the CA out of every store that holds it: this user's first, which
 /// needs no rights, then the machine's. One failing does not keep the other.
+///
+/// **This certificate's places and no others.** A store of tracewing's own
+/// may hold a tracewing CA that is not this one -- another data directory's --
+/// and clearing that from here would be wrong: see [`an_older_ca_is_trusted`],
+/// which says so instead.
 pub fn ca_remove(cert_pem: &Path) -> Result<()> {
     let places = ca_locations(cert_pem)?;
     let mut failed = Vec::new();

@@ -17,12 +17,17 @@ use std::{
     process::Command,
 };
 
+use hudsucker::rustls::pki_types::{CertificateDer, pem::PemObject};
+
 use super::{
     BrowserTrust, Environment, Place, Saved, Scope,
     launch::{self, Browser, Engine},
 };
 
 const NICKNAME: &str = "tracewing CA";
+/// More certificates under `NICKNAME` than `nss_forget` will take out of one
+/// database before it says the database is not making progress.
+const MOST_UNDER_NICKNAME: usize = 32;
 const ANCHOR_NAME: &str = "tracewing-ca";
 const AUTOSTART_FILE: &str = "tracewing-proxy-recovery.desktop";
 const TIMER_SERVICE: &str = "tracewing-proxy-recovery.service";
@@ -657,12 +662,7 @@ pub fn trust_in_profile(profile: &Path, cert_pem: &Path) -> Result<()> {
     if !profile.join("cert9.db").exists() {
         run("certutil", &["-N", "--empty-password", "-d", &db])?;
     }
-    let pem = cert_pem.display().to_string();
-    run(
-        "certutil",
-        &["-A", "-d", &db, "-t", "C,,", "-n", NICKNAME, "-i", &pem],
-    )
-    .map(drop)
+    nss_add(profile, cert_pem)
 }
 
 /// Does `job` to every database, then fails if any failed: one broken profile
@@ -679,12 +679,92 @@ fn each_database(dbs: Vec<PathBuf>, mut job: impl FnMut(&Path) -> Result<()>) ->
     }
 }
 
-fn nss_holds(db: &Path) -> bool {
+fn sql(db: &Path) -> String {
+    format!("sql:{}", db.display())
+}
+
+/// Whether `db` has anything at all under tracewing's nickname, whichever
+/// certificate it is. Install and uninstall act on this, because the nickname
+/// is tracewing's own: whatever answers to it is ours to replace or take out.
+fn nss_has_nickname(db: &Path) -> bool {
+    run("certutil", &["-L", "-d", &sql(db), "-n", NICKNAME]).is_ok()
+}
+
+/// Whether `db` holds *this* CA, by its bytes.
+///
+/// **The nickname cannot answer this.** Every tracewing CA is named the same,
+/// so a database left holding the CA of another data directory, or of a build
+/// of your own, answers to the nickname and is not this one. Asked by name,
+/// the Trusted page said the browsers trusted this CA while they were
+/// rejecting the leaves it signs, and nothing said why.
+///
+/// `-a` prints one certificate: the one the nickname resolves to. A database
+/// an older tracewing left holding two can therefore hide this CA behind the
+/// other, and this says no. That under-reports in the one direction that
+/// mends itself, since trusting the CA again goes through `nss_add`, which
+/// leaves exactly one.
+fn nss_holds(db: &Path, der: &[u8]) -> bool {
+    run("certutil", &["-L", "-d", &sql(db), "-n", NICKNAME, "-a"])
+        .ok()
+        .and_then(|pem| CertificateDer::from_pem_slice(pem.as_bytes()).ok())
+        .is_some_and(|held| held.as_ref() == der)
+}
+
+/// Takes out whichever certificate tracewing's nickname in `db` names, so
+/// that `-A` can put this CA there alone, and says how many went.
+///
+/// **`certutil -A` does not replace.** Adding under a nickname a certificate
+/// of other content leaves both, and the nickname then names whichever went
+/// in last. So installing again left two, and the one the nickname did not
+/// name was reachable by nothing certutil offers. The loop is why: two
+/// certificates of different content accumulate, and clearing the nickname
+/// means clearing it until it names nothing.
+///
+/// Measured with certutil: both adds exit 0, one `-D` leaves one behind, a
+/// second takes it, and with none left `-D` fails with
+/// `SEC_ERROR_INVALID_ARGS`. The loop asks before each `-D` rather than
+/// reading that failure, so it ends because nothing is left, and a certutil
+/// that refuses a certificate still there says so in its own words.
+///
+/// **This clears by name, which only install may do**: it is putting a CA in
+/// the one slot the nickname is, at somebody's asking. Uninstall must not --
+/// see [`ca_uninstall`].
+fn nss_clear(db: &Path) -> Result<usize> {
+    let mut gone = 0;
+    while nss_has_nickname(db) {
+        if gone == MOST_UNDER_NICKNAME {
+            bail!(
+                "{} still has a certificate named {NICKNAME} after taking out {gone}",
+                db.display()
+            );
+        }
+        run("certutil", &["-D", "-d", &sql(db), "-n", NICKNAME])
+            .with_context(|| format!("take tracewing's certificate out of {}", db.display()))?;
+        gone += 1;
+    }
+    Ok(gone)
+}
+
+/// Makes `db` trust the CA, and only it: whatever the nickname names goes
+/// first, since `-A` on its own would leave both ([`nss_clear`]).
+fn nss_add(db: &Path, cert_pem: &Path) -> Result<()> {
+    nss_clear(db)?;
+    let pem = cert_pem.display().to_string();
     run(
         "certutil",
-        &["-L", "-d", &format!("sql:{}", db.display()), "-n", NICKNAME],
+        &[
+            "-A",
+            "-d",
+            &sql(db),
+            "-t",
+            "C,,",
+            "-n",
+            NICKNAME,
+            "-i",
+            &pem,
+        ],
     )
-    .is_ok()
+    .map(drop)
 }
 
 pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
@@ -701,7 +781,7 @@ pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
     }
     if on_path("certutil") {
         for db in nss_databases(false)? {
-            if nss_holds(&db) {
+            if nss_holds(&db, der) {
                 places.push(Place {
                     name: format!("NSS: {}", db.display()),
                     browsers: true,
@@ -711,6 +791,26 @@ pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
         }
     }
     Ok(places)
+}
+
+/// Whether a store for `scope` holds something of tracewing's that
+/// [`ca_locations`](crate::ca_locations) does not report, because what it
+/// holds is a tracewing CA other than this one: another data directory's,
+/// left where only the name says whose it is.
+///
+/// Both stores here are tracewing's by name: the anchor file is at a path of
+/// ours -- which `ca_locations` already says may hold an older CA -- and in
+/// NSS the nickname is ours. That is enough to say something of tracewing's is
+/// trusted, and not enough to take it out: see
+/// [`an_older_ca_is_trusted`](crate::an_older_ca_is_trusted).
+pub fn ours_by_name(scope: Scope) -> bool {
+    match scope {
+        Scope::Machine => system_store().is_ok_and(|(dir, _)| anchor_path(dir).exists()),
+        Scope::User => {
+            on_path("certutil")
+                && nss_databases(false).is_ok_and(|dbs| dbs.iter().any(|db| nss_has_nickname(db)))
+        }
+    }
 }
 
 pub fn ca_install(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
@@ -731,29 +831,12 @@ pub fn ca_install(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
             if !on_path("certutil") {
                 bail!("browsers need certutil (libnss3-tools or nss-tools) to trust the CA");
             }
-            let pem = cert_pem.display().to_string();
-            each_database(nss_databases(true)?, |db| {
-                run(
-                    "certutil",
-                    &[
-                        "-A",
-                        "-d",
-                        &format!("sql:{}", db.display()),
-                        "-t",
-                        "C,,",
-                        "-n",
-                        NICKNAME,
-                        "-i",
-                        &pem,
-                    ],
-                )
-                .map(drop)
-            })
+            each_database(nss_databases(true)?, |db| nss_add(db, cert_pem))
         }
     }
 }
 
-pub fn ca_uninstall(_cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
+pub fn ca_uninstall(_cert_pem: &Path, der: &[u8], scope: Scope) -> Result<()> {
     match scope {
         Scope::Machine => {
             let (dir, apply) = system_store()?;
@@ -763,13 +846,28 @@ pub fn ca_uninstall(_cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
             )
         }
         Scope::User => {
-            let holding = nss_databases(false)?.into_iter().filter(|db| nss_holds(db));
+            // The databases holding *this* CA, and one `-D` in each.
+            //
+            // **One, not a loop.** NSS keeps one copy of a given certificate:
+            // measured, adding the same bytes again under the same nickname
+            // leaves one, and only certificates of different content
+            // accumulate. `-D` takes out the one the nickname names, which is
+            // the one `nss_holds` just read and compared.
+            //
+            // **And by the bytes, not by the name.** The nickname may also
+            // name another data directory's CA, and that one is not ours to
+            // take out: the directory may still be in use, and nothing here
+            // can tell. `tracewing uninstall` says it is still trusted
+            // instead -- see `crate::an_older_ca_is_trusted`.
+            let holding = nss_databases(false)?
+                .into_iter()
+                .filter(|db| nss_holds(db, der));
             each_database(holding.collect(), |db| {
-                run(
-                    "certutil",
-                    &["-D", "-d", &format!("sql:{}", db.display()), "-n", NICKNAME],
-                )
-                .map(drop)
+                run("certutil", &["-D", "-d", &sql(db), "-n", NICKNAME])
+                    .with_context(|| {
+                        format!("take tracewing's certificate out of {}", db.display())
+                    })
+                    .map(drop)
             })
         }
     }
@@ -994,7 +1092,7 @@ fn on_the_path(
     }
 }
 
-pub fn browser_trust(browser: &Browser) -> BrowserTrust {
+pub fn browser_trust(browser: &Browser, der: &[u8]) -> BrowserTrust {
     let dbs: Vec<PathBuf> = match browser.engine {
         Engine::Firefox => firefox_profiles(&browser.nss),
         // A snap or a Flatpak never started has no home to put one in yet.
@@ -1009,7 +1107,7 @@ pub fn browser_trust(browser: &Browser) -> BrowserTrust {
     let tool = on_path("certutil");
     let holding = dbs
         .iter()
-        .filter(|db| tool && db.join("cert9.db").exists() && nss_holds(db))
+        .filter(|db| tool && db.join("cert9.db").exists() && nss_holds(db, der))
         .count();
     BrowserTrust::Own {
         holding,

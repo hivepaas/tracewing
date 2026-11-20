@@ -344,6 +344,18 @@ pub fn run(args: &[String]) -> Result<()> {
                     }
                     Err(e) => failed = Some(e),
                 }
+                // Said, not undone: a store of tracewing's by name may hold
+                // the CA of a data directory that is still in use, and
+                // nothing here can tell. Taking it out on the strength of
+                // the name alone was tried, and `uninstall --data-dir <a
+                // throwaway folder>` took this computer's shared anchor out
+                // from under the real install.
+                if failed.is_none() && tracewing_system::an_older_ca_is_trusted() {
+                    println!(
+                        "an authority of tracewing's from another data directory is still \
+                         trusted here: uninstall from that data directory to take it out"
+                    );
+                }
             } else {
                 println!(
                     "no certificate authority of tracewing's in {}",
