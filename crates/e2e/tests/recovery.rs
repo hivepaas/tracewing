@@ -1,8 +1,7 @@
-//! S3, after a kill: the app holding the system proxy is killed outright, and
-//! the setting still comes back, by tracewing's own programs — its watchdog,
-//! and `tracewing recover`, which the minute timer runs as `--only-if-gone`.
-//! The app is a process of this test's (see `helper`), so that killing it
-//! kills nothing else; the watchdog and `recover` are the real `tracewing`.
+//! S3, after a kill: tracewing holding the system proxy (`e2e-hold`, as the
+//! window does) is killed outright, and the setting still comes back, by what
+//! it armed behind it — its watchdog — and by `tracewing recover`, which the
+//! minute timer runs as `--only-if-gone`.
 //!
 //! The systemd timer firing by itself needs a systemd, which the container
 //! does not run; that part is not here yet (docs/design/e2e.md).
@@ -11,61 +10,20 @@
 
 #![cfg(target_os = "linux")]
 
-use std::{
-    net::SocketAddr,
-    path::{Path, PathBuf},
-    process::{Child, Stdio},
-    time::Duration,
-};
+use std::{path::Path, time::Duration};
 use tracewing_e2e::{
     desktop::{Setting, names_tracewing, setting, the_users_own},
     free_port,
-    helper::{Helper, asked, hold_until_killed},
+    helper::Helper,
     only_where_allowed, said, scratch, tracewing, wait_for,
 };
 
-const APP: &str = "an_app_that_holds_the_system_proxy";
-
-/// Not a test: the app, run by the tests below as a process of its own.
-/// Asked `<data dir>|<port>|watchdog` or `<data dir>|<port>|alone`.
-#[test]
-#[ignore = "run by the other tests here, as the app they kill"]
-fn an_app_that_holds_the_system_proxy() {
-    let Some(what) = asked() else { return };
-    let mut parts = what.split('|');
-    let dir = PathBuf::from(parts.next().unwrap());
-    let port: u16 = parts.next().unwrap().parse().unwrap();
-    let with_watchdog = parts.next() == Some("watchdog");
-    let taken =
-        tracewing_system::take_over(&dir, SocketAddr::from(([127, 0, 0, 1], port)), false).unwrap();
-    // The window starts its watchdog as itself; this app is not tracewing,
-    // so it starts tracewing's. Its end of the pipe goes when it does.
-    let _watchdog: Option<Child> = with_watchdog.then(|| {
-        tracewing()
-            .args(["watchdog", "--data-dir"])
-            .arg(&dir)
-            .stdin(Stdio::piped())
-            .spawn()
-            .unwrap()
-    });
-    std::mem::forget(taken);
-    hold_until_killed();
-}
-
-/// The app, holding the setting, for `port`.
+/// tracewing, holding the setting for `port`.
 fn app(dir: &Path, port: u16, watchdog: bool) -> Helper {
-    let what = format!(
-        "{}|{port}|{}",
-        dir.display(),
-        if watchdog { "watchdog" } else { "alone" }
-    );
-    let helper = Helper::start(APP, &what);
+    let app = Helper::system_proxy(dir, port, watchdog);
     let now = setting();
-    assert!(
-        names_tracewing(&now, port),
-        "the app did not take it: {now:?}"
-    );
-    helper
+    assert!(names_tracewing(&now, port), "it did not take it: {now:?}");
+    app
 }
 
 fn recover(dir: &Path, only_if_gone: bool) -> String {
@@ -91,10 +49,8 @@ fn the_watchdog_puts_it_back_when_the_app_is_killed() {
     let dir = scratch("watchdog");
     the_users_own();
     let before = setting();
-    let port = free_port();
 
-    let app = app(&dir, port, true);
-    app.kill();
+    app(&dir, free_port(), true).kill();
     back(&before, Duration::from_secs(10));
     assert!(
         !dir.join("sysproxy.journal").exists(),
@@ -111,8 +67,8 @@ fn recover_leaves_a_running_app_alone_and_puts_it_back_once_it_is_gone() {
     let before = setting();
     let port = free_port();
 
-    // What the minute timer runs, while the app is still there: nothing.
-    let app = app(&dir, port, false);
+    // What the minute timer runs, while tracewing is still there: nothing.
+    let running = app(&dir, port, false);
     let said = recover(&dir, true);
     assert!(
         names_tracewing(&setting(), port),
@@ -121,7 +77,7 @@ fn recover_leaves_a_running_app_alone_and_puts_it_back_once_it_is_gone() {
 
     // Killed with no watchdog: the setting stays pointing at a dead port
     // until the timer's next run.
-    app.kill();
+    running.kill();
     std::thread::sleep(Duration::from_secs(1));
     assert!(
         names_tracewing(&setting(), port),
@@ -131,8 +87,7 @@ fn recover_leaves_a_running_app_alone_and_puts_it_back_once_it_is_gone() {
     assert_eq!(setting(), before, "{said}");
 
     // And `recover` alone, as a user runs it, does the same at once.
-    let app = self::app(&dir, port, false);
-    app.kill();
+    app(&dir, port, false).kill();
     let said = recover(&dir, false);
     assert_eq!(setting(), before, "{said}");
     std::fs::remove_dir_all(&dir).ok();

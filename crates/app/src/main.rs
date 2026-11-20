@@ -18,6 +18,7 @@ use tracewing_system as system;
 /// app has gone, `sysproxy recover --data-dir D` at the next login (the timer and
 /// the macOS agent run the public `recover`), and on
 /// Windows `block-quic --parent P --name N --data-dir D`, as administrator.
+/// And `e2e-hold`, which crates/e2e's tests run in place of the window.
 fn helper_command(args: &[String]) -> Option<Result<()>> {
     let data_dir =
         |flag: &String, value: &String| (flag == "--data-dir").then(|| PathBuf::from(value));
@@ -28,6 +29,7 @@ fn helper_command(args: &[String]) -> Option<Result<()>> {
         [_, sysproxy, recover, flag, value] if sysproxy == "sysproxy" && recover == "recover" => {
             Some(system::recover(&data_dir(flag, value)?).map(|_| ()))
         }
+        [_, hold, rest @ ..] if hold == "e2e-hold" => Some(tracewing::e2e_hold::run(rest)),
         [_, command, ..] if tracewing::cli::is_command(command) => Some(tracewing::cli::run(args)),
         [_, mcp] if mcp == "mcp" => Some(tracewing::mcp::serve(&default_data_dir())),
         [_, mcp, flag, value] if mcp == "mcp" => {

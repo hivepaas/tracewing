@@ -4,7 +4,9 @@
 //!
 //! Changes this computer's keychain. See `tracewing_e2e`.
 
-use std::{path::Path, process::Command};
+use std::path::Path;
+#[cfg(target_os = "linux")]
+use std::process::Command;
 use tracewing_e2e::{Capture, Origin, only_where_allowed, scratch};
 use tracewing_proxy::{
     ca::LocalCa,

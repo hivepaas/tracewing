@@ -5,24 +5,8 @@
 //!
 //! Changes this computer's firewall. See `tracewing_e2e`.
 
-use std::{net::UdpSocket, path::PathBuf, time::Duration};
-use tracewing_e2e::{
-    helper::{Helper, asked, hold_until_killed},
-    only_where_allowed, scratch, wait_for,
-};
-
-const HOLDER: &str = "a_program_that_holds_the_block";
-
-/// Not a test: what holds the block, run by the test below as a process of
-/// its own. Asked its data folder.
-#[test]
-#[ignore = "run by the other tests here, as the holder they kill"]
-fn a_program_that_holds_the_block() {
-    let Some(dir) = asked() else { return };
-    let block = tracewing_system::block_quic(&PathBuf::from(dir)).unwrap();
-    std::mem::forget(block);
-    hold_until_killed();
-}
+use std::{net::UdpSocket, time::Duration};
+use tracewing_e2e::{helper::Helper, only_where_allowed, scratch, wait_for};
 
 /// Answers whatever comes to 127.0.0.1:443, until the test ends.
 fn echo_on_443() {
@@ -57,21 +41,23 @@ fn udp_443_is_refused_while_blocked_and_free_again_after() {
         "the echo does not answer even with nothing blocked"
     );
 
-    let block = tracewing_system::block_quic(&dir).unwrap();
+    // tracewing holds it, as the window does, and lets it go.
+    let block = Helper::quic_block(&dir);
     assert!(!answered(), "a datagram to 443 got through the block");
-    block.release().unwrap();
+    let ended = block.let_go();
+    assert!(ended.success(), "letting go failed: {ended:?}");
     assert!(answered(), "still refused after the block was let go");
 
-    // Its holder killed outright: the kernel takes the table away with it.
-    let holder = Helper::start(HOLDER, &dir.display().to_string());
+    // Killed outright instead: what holds the rule goes with it.
+    let block = Helper::quic_block(&dir);
     assert!(
         !answered(),
-        "a datagram to 443 got through the helper's block"
+        "a datagram to 443 got through the second block"
     );
-    holder.kill();
+    block.kill();
     wait_for(
         "the block to go with its holder",
-        Duration::from_secs(5),
+        Duration::from_secs(10),
         answered,
     );
     std::fs::remove_dir_all(&dir).ok();

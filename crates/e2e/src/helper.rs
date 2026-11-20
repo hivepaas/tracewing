@@ -1,90 +1,105 @@
-//! A test that runs part of itself as a process of its own, for the test to
-//! kill: the app holding the system proxy, or the block on UDP 443, when what
-//! is being checked is what happens after the holder dies however it dies.
+//! tracewing holding the system proxy or the block on UDP 443 in a process of
+//! its own, as the window would, for a test to let go of cleanly or to kill
+//! outright: `tracewing e2e-hold` (crates/app/src/e2e_hold.rs).
 //!
-//! The process is the test program itself, asked for one `#[ignore]`d test by
-//! name, with what it should do in [`HELPER`]. The helper says [`READY`] on a
-//! line of its own once it holds what it holds, then waits to be killed.
+//! It is the real program rather than the test's own, because what stands
+//! behind what it holds — the watchdog, the scheduled task or timer, the
+//! elevated helper of the Windows block — is started as whichever program
+//! took it.
 
+use crate::tracewing;
 use std::{
-    io::{BufRead, BufReader, Write},
-    process::{Child, Command, Stdio},
+    ffi::OsStr,
+    io::{BufRead, BufReader},
+    path::Path,
+    process::{Child, ChildStdin, ExitStatus, Stdio},
     sync::mpsc,
     time::Duration,
 };
 
-/// What the helper is asked to do, as the helper test reads it.
-pub const HELPER: &str = "TRACEWING_E2E_HELPER";
+/// What `e2e-hold` says once it holds what it was asked to hold.
+pub const HELD: &str = "tracewing-e2e: held";
 
-/// What the helper says once it holds what it was asked to hold. It ends
-/// a line rather than making one: libtest, told `--nocapture`, writes the
-/// test's name and ` ... ` first, on the same line.
-pub const READY: &str = "tracewing-e2e: held";
-
-/// The helper's own side: what it was asked to do, if it was started as one.
-pub fn asked() -> Option<String> {
-    std::env::var(HELPER).ok()
+/// `tracewing e2e-hold` running.
+pub struct Helper {
+    child: Child,
+    input: Option<ChildStdin>,
 }
-
-/// The helper's own side: says it holds what it holds, then waits for its end.
-pub fn hold_until_killed() -> ! {
-    println!("{READY}");
-    std::io::stdout().flush().unwrap();
-    loop {
-        std::thread::sleep(Duration::from_secs(3600));
-    }
-}
-
-/// A helper running.
-pub struct Helper(Child);
 
 impl Helper {
-    /// Runs the test named `test` of this program as a helper, asked `what`,
-    /// and waits until it says it is ready.
-    pub fn start(test: &str, what: &str) -> Self {
-        let mut child = Command::new(std::env::current_exe().unwrap())
-            .args([
-                "--ignored",
-                "--exact",
-                test,
-                "--nocapture",
-                "--test-threads=1",
-            ])
-            .env(HELPER, what)
-            .stdin(Stdio::null())
+    /// Runs `tracewing e2e-hold` with `args` and waits until it holds.
+    pub fn start<S: AsRef<OsStr>>(args: &[S]) -> Self {
+        let mut child = tracewing()
+            .arg("e2e-hold")
+            .args(args)
+            .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .spawn()
-            .unwrap();
+            .expect("start tracewing e2e-hold");
+        let input = child.stdin.take();
         let stdout = child.stdout.take().unwrap();
         let (tx, rx) = mpsc::channel();
         std::thread::spawn(move || {
-            let ready = BufReader::new(stdout)
+            let held = BufReader::new(stdout)
                 .lines()
                 .map_while(Result::ok)
-                .any(|line| line.ends_with(READY));
-            let _ = tx.send(ready);
+                .any(|line| line.ends_with(HELD));
+            let _ = tx.send(held);
         });
-        match rx.recv_timeout(Duration::from_secs(30)) {
-            Ok(true) => Helper(child),
+        match rx.recv_timeout(Duration::from_secs(60)) {
+            Ok(true) => Helper { child, input },
             other => {
                 let _ = child.kill();
-                panic!("the helper {test} never said it was ready: {other:?}");
+                let ended = child.wait();
+                panic!("tracewing e2e-hold never held: {other:?}, {ended:?}");
             }
         }
+    }
+
+    /// The system proxy, for 127.0.0.1:`port`, with the watchdog the window
+    /// starts or without one.
+    pub fn system_proxy(data_dir: &Path, port: u16, watchdog: bool) -> Self {
+        let port = port.to_string();
+        let mut args = vec![
+            OsStr::new("system-proxy"),
+            OsStr::new("--data-dir"),
+            data_dir.as_os_str(),
+            OsStr::new("--port"),
+            OsStr::new(&port),
+        ];
+        if !watchdog {
+            args.push(OsStr::new("--no-watchdog"));
+        }
+        Self::start(&args)
+    }
+
+    /// The block on UDP 443.
+    pub fn quic_block(data_dir: &Path) -> Self {
+        Self::start(&[
+            OsStr::new("quic-block"),
+            OsStr::new("--data-dir"),
+            data_dir.as_os_str(),
+        ])
+    }
+
+    /// Lets go of what it holds, as the window does when it closes.
+    pub fn let_go(mut self) -> ExitStatus {
+        drop(self.input.take());
+        self.child.wait().unwrap()
     }
 
     /// Kills it outright, as a crash or `kill -9` would: nothing of it runs
     /// after.
     pub fn kill(mut self) {
-        self.0.kill().unwrap();
-        self.0.wait().unwrap();
+        self.child.kill().unwrap();
+        self.child.wait().unwrap();
     }
 }
 
 impl Drop for Helper {
     fn drop(&mut self) {
-        let _ = self.0.kill();
-        let _ = self.0.wait();
+        drop(self.input.take());
+        let _ = self.child.wait();
     }
 }

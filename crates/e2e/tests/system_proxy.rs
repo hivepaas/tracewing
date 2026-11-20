@@ -7,10 +7,11 @@
 
 #![cfg(target_os = "linux")]
 
-use std::net::SocketAddr;
 use tracewing_e2e::{
     desktop::{names_tracewing, setting, the_users_own},
-    free_port, only_where_allowed, scratch,
+    free_port,
+    helper::Helper,
+    only_where_allowed, scratch,
 };
 
 #[test]
@@ -19,13 +20,16 @@ fn the_system_proxy_names_tracewing_and_comes_back_as_it_was() {
     let dir = scratch("system-proxy");
     the_users_own();
     let before = setting();
-    let addr = SocketAddr::from(([127, 0, 0, 1], free_port()));
+    let port = free_port();
 
-    let taken = tracewing_system::take_over(&dir, addr, false).unwrap();
+    // tracewing takes it, as the window does when the switch goes on.
+    let app = Helper::system_proxy(&dir, port, true);
     let during = setting();
-    assert!(names_tracewing(&during, addr.port()), "{during:?}");
+    assert!(names_tracewing(&during, port), "{during:?}");
 
-    taken.release().unwrap();
+    // And lets it go, as the window does when it closes.
+    let ended = app.let_go();
+    assert!(ended.success(), "letting go failed: {ended:?}");
     assert_eq!(setting(), before, "not put back as it was");
     std::fs::remove_dir_all(&dir).ok();
 }
