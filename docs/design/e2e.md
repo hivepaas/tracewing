@@ -71,7 +71,9 @@ Smaller gaps that need no real system, only a test:
   10,000 cap.
 - Dragging the dividers and dropping the inspector handle. Hiding the
   inspector.
-- Activating the items of a context menu. Copy as cURL from the window.
+- ~~Activating the items of a context menu. Copy as cURL from the window.~~
+  Done in `inspect.rs`: the copy menu's first item pressed, and Copy as
+  cURL by its shortcut.
 - The Settings part last open being kept.
 
 Rows in features.md with no code behind them, so nothing to test yet:
