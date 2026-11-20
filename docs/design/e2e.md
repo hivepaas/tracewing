@@ -73,8 +73,9 @@ Smaller gaps that need no real system, only a test:
   10,000 cap.~~ Done in `find.rs`, by keys: Shift+Enter, Shift+F3 and the
   wrap at both ends. The bar's arrow buttons call the same step and are
   not clicked.
-- Dragging the dividers and dropping the inspector handle. Hiding the
-  inspector.
+- ~~Dragging the dividers and dropping the inspector handle. Hiding the
+  inspector.~~ Done: `dividers.rs`, by mouse and shortcut, read back from
+  the layout file.
 - Activating the items of a context menu. Copy as cURL from the window.
 - ~~The Settings part last open being kept.~~ Saved on a change
   (`text_size.rs`) and read back by `layout.rs`'s round trip, which now
