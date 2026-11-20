@@ -123,7 +123,7 @@ fails.
 | # | What | Linux | Windows | macOS |
 |---|---|---|---|---|
 | S1 | **Trust.** Install the CA for the user and for the system. `verify_ca` says trusted. A client that reads only the system's roots reaches an HTTPS origin through the proxy. Then `tracewing uninstall`: no store holds it, and `verify_ca` says so. | NSS + `/usr/local/share/ca-certificates` | CurrentUser and LocalMachine ROOT | keychain trust |
-| S2 | **System proxy.** Turn it on: the real setting names the proxy. A program that follows the system proxy is recorded. Turn it off: the setting is exactly what it was, including a proxy of the user's own that was there before. | GNOME, KDE | WinINet (per-connection options) | `networksetup` |
+| S2 | **System proxy.** Turn it on: the real setting, read with the desktop's own tools, names the proxy. Turn it off: the setting is exactly what it was, including a proxy of the user's own that was there before. (A program that follows the setting is S5's.) | GNOME, KDE | WinINet (per-connection options) | `networksetup` |
 | S3 | **Put back after a kill.** Turn it on, then `kill -9` tracewing. The watchdog restores the setting. Then kill the watchdog too: the timer, task or agent restores it within its period. `tracewing recover` restores it at once. | systemd user timer | scheduled task | launchd agent |
 | S4 | **The installed package.** Install the package built for the release. Record HTTPS with `tracewing capture` from it: the HAR holds the decrypted body. Uninstall, and nothing is left behind (S1's stores, S2's setting, the timer, task or agent, PATH). | `.deb`, `.rpm` | `setup.exe` both ways, `.zip` | `.dmg` |
 | S5 | **Browsers.** Headless Chrome and Firefox, through the system proxy and through Set up's own profile. HTTP/1.1, HTTP/2, a WebSocket and SSE are all recorded. The Set up test page says it was reached. With Alt-Svc taken out, nothing tries HTTP/3. | Chrome, Firefox | Edge, Chrome, Firefox | Safari by hand; Chrome, Firefox |
@@ -140,8 +140,11 @@ else in the table runs in the VM.
 ## Order of work
 
 1. `crates/e2e` with its guard, the Linux container and its script, and S1
-   and S2 on Linux.
-2. S3, S6 and S7 on Linux.
+   and S2 on Linux. **Done**: both pass under GNOME and KDE, as an ordinary
+   user who reaches root through `pkexec`.
+2. S3, S6 and S7 on Linux. S3 needs systemd running in the container: in
+   the one step 1 made, `systemctl --user` fails, so tracewing arms no timer
+   and says so in its log.
 3. S1–S3, S6 and S7 on Windows in the VM, which compiles and runs the
    Windows path for the first time since 16 Nov.
 4. S4 and S5 on both systems.

@@ -1,0 +1,15 @@
+[package]
+name = "tracewing-e2e"
+description = "Tests that change the computer they run on, on purpose: only on a machine marked as one that may be changed"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tracewing-proxy.workspace = true
+tracewing-system.workspace = true
+tracewing-dev = { path = "../dev" }
+anyhow.workspace = true
+tokio.workspace = true
