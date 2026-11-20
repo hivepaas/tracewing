@@ -258,4 +258,12 @@ The VM's does: tracewing's window opened there, 2055 by 1233 at 96 dpi, while
    - Still to come: HTTP/3 from Chrome through the adapter. The QUIC client
      in `local_live_http3.rs` is quinn, not a browser.
 7. Run `release.yml` on a tag, with the suite as a job before the draft.
+   **Written, not yet run.** `release.yml`'s `windows-e2e` job runs
+   `e2e_windows.ps1 -ConfirmTrustDialogs -Packages -Browsers 'chrome edge
+   firefox'` on `windows-latest`, on a tag and when the workflow is run by
+   hand, and the draft waits for it. Not on the pull requests that rehearse
+   the packaging: they would wait for it for nothing they change. The VM
+   showed that the Credential Manager and the user's root store need a
+   desktop logon, not a network one. Whether a hosted runner's logon is one
+   is only known once the job runs.
 8. The smaller in-process gaps above, one pull request each.

@@ -218,9 +218,41 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  # The tests that change the computer they run on (crates/e2e,
+  # docs/design/e2e.md), on Windows, before anything is drafted: the trust
+  # stores, the system proxy and what puts it back, the Credential Manager,
+  # the firewall, the installer both ways and the zip, and Chrome, Edge and
+  # Firefox. Linux's run on every pull request (ci.yml). On a tag, and when
+  # this is run by hand (Actions > Release > Run workflow): not on the pull
+  # requests that rehearse the packaging, which would wait for it for
+  # nothing they change.
+  e2e-windows:
+    name: windows-e2e
+    needs: version
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust
+        run: rustup toolchain install
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about@0.9.3
+
+      - name: NSIS
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
+
+      - name: Tests that change the computer
+        shell: pwsh
+        run: scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -ConfirmTrustDialogs -Packages -Browsers 'chrome edge firefox'
+
   release:
     name: Draft release
-    needs: [version, package]
+    needs: [version, package, e2e-windows]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
