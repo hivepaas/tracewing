@@ -63,16 +63,20 @@ the code: "fake" names the stand-in the test uses.
 
 Smaller gaps that need no real system, only a test:
 
-- HAR export of WebSocket messages, with and without secrets.
+- ~~HAR export of WebSocket messages, with and without secrets.~~ Done:
+  `har.rs`'s `a_websockets_messages_go_out_both_ways_and_their_secrets_can_be_left_out`.
 - ~~Solana and Bitcoin answers in a window.~~ Done: `rpc.rs`'s
   `solana_and_bitcoin_calls_are_read_in_the_inspector`, shots 96 and 97.
-- Block answers in `rpc_view.rs` (`block_lines`).
+- ~~Block answers in `rpc_view.rs` (`block_lines`).~~ Done:
+  `a_block_reads_as_which_one_and_how_full`, on a real mainnet block.
 - Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
   10,000 cap.
 - Dragging the dividers and dropping the inspector handle. Hiding the
   inspector.
 - Activating the items of a context menu. Copy as cURL from the window.
-- The Settings part last open being kept.
+- ~~The Settings part last open being kept.~~ Saved on a change
+  (`text_size.rs`) and read back by `layout.rs`'s round trip, which now
+  holds the part and the way in.
 
 Rows in features.md with no code behind them, so nothing to test yet:
 
@@ -131,11 +135,11 @@ fails.
 | S7 | **Blocking UDP 443.** While it is on, a datagram to port 443 is refused. Released, or its holder killed outright, it gets through again. (The refused attempt as a row naming its program belongs to S8, which has the adapter that sees it.) | `nft` | Windows Firewall | `pf` |
 | S8 | **Capture without proxy settings.** The live tests run here unignored, with HTTP/3 from Chrome. | TUN in a namespace | Wintun | network extension, by hand (a signed build) |
 | S9 | **Android.** Run against the `tracewing-test` emulator, not in the container: Set up every device, Undo, then kill tracewing and start it again so it puts the device back. | host + AVD | — | — |
-| S10 | **The window.** It opens, draws Set up, takes a key, opens the save dialog and the clipboard, and closes. The system proxy is back afterwards. | headless, as today | needs a GPU | the user's Mac |
+| S10 | **The window.** It opens, draws Set up, takes a key, opens the save dialog and the clipboard, and closes. The system proxy is back afterwards. | headless, as today | the VM (its adapter is accepted) | the user's Mac |
 
 S10 on Windows needs a display adapter that GPUI's DirectX renderer accepts.
-If the VM's does not, that scenario needs a real Windows machine; everything
-else in the table runs in the VM.
+The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
+#381 was checked. So everything in the table runs in the VM.
 
 ## Order of work
 
@@ -243,5 +247,21 @@ else in the table runs in the VM.
      with `scripts/package_windows.sh`, in Git Bash, with NSIS, cargo-about
      and 7-Zip. `-Browsers 'chrome edge firefox'` names what is installed.
 6. S8 and S9.
+   - S8 on Linux, **done**. The live tests (`local_live_linux.rs`,
+     `local_live_http3.rs`, and `tun_linux.rs`'s real device) run on every
+     pull request in `linux-e2e`, still `#[ignore]`d for `cargo test`. Each
+     makes its adapter in a network namespace of its own, under
+     `unshare --user --map-root-user`. The runner's AppArmor refuses that
+     until `kernel.apparmor_restrict_unprivileged_userns` is 0, which the
+     job sets on a runner that is thrown away after. They pass from an
+     editor's shell here too: VS Code's AppArmor profile allows user
+     namespaces.
+   - S8 on Windows, **done** in the VM, over ssh, as an administrator:
+     `wintun_live.rs`'s seven and `local_live.rs`'s one pass. Afterwards no
+     Wintun adapter and no `/1` route are left, and the default route is
+     the VM's own. `scripts/e2e_windows.ps1 -Wintun <wintun.dll>` runs them
+     one test at a time, as they need.
+   - Still to come: HTTP/3 from Chrome through the adapter. The QUIC client
+     in `local_live_http3.rs` is quinn, not a browser.
 7. Run `release.yml` on a tag, with the suite as a job before the draft.
 8. The smaller in-process gaps above, one pull request each.
