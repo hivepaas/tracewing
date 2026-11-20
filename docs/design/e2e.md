@@ -67,8 +67,10 @@ Smaller gaps that need no real system, only a test:
 - Solana and Bitcoin answers in a window. They are covered only by unit
   tests.
 - Block answers in `rpc_view.rs` (`block_lines`).
-- Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
-  10,000 cap.
+- ~~Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
+  10,000 cap.~~ Done in `find.rs`, by keys: Shift+Enter, Shift+F3 and the
+  wrap at both ends. The bar's arrow buttons call the same step and are
+  not clicked.
 - Dragging the dividers and dropping the inspector handle. Hiding the
   inspector.
 - Activating the items of a context menu. Copy as cURL from the window.
