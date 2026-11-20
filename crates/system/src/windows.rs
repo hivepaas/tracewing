@@ -19,12 +19,13 @@ use windows_sys::{
             PROXY_TYPE_DIRECT, PROXY_TYPE_PROXY,
         },
         Security::Cryptography::{
-            CERT_FIND_EXISTING, CERT_STORE_ADD_REPLACE_EXISTING, CERT_STORE_PROV_PHYSICAL_W,
-            CERT_STORE_PROV_SYSTEM_W, CERT_STORE_READONLY_FLAG, CERT_SYSTEM_STORE_CURRENT_USER,
-            CERT_SYSTEM_STORE_LOCAL_MACHINE, CertAddEncodedCertificateToStore, CertCloseStore,
-            CertCreateCertificateContext, CertDeleteCertificateFromStore,
-            CertFindCertificateInStore, CertFreeCertificateContext, CertOpenStore, HCERTSTORE,
-            X509_ASN_ENCODING,
+            CERT_CONTEXT, CERT_FIND_EXISTING, CERT_STORE_ADD_REPLACE_EXISTING,
+            CERT_STORE_PROV_PHYSICAL_W, CERT_STORE_PROV_SYSTEM_W, CERT_STORE_READONLY_FLAG,
+            CERT_SYSTEM_STORE_CURRENT_USER, CERT_SYSTEM_STORE_LOCAL_MACHINE, CERT_X500_NAME_STR,
+            CertAddEncodedCertificateToStore, CertCloseStore, CertCreateCertificateContext,
+            CertDeleteCertificateFromStore, CertEnumCertificatesInStore,
+            CertFindCertificateInStore, CertFreeCertificateContext, CertNameToStrW, CertOpenStore,
+            HCERTSTORE, X509_ASN_ENCODING,
         },
         System::Registry::{
             HKEY, HKEY_CURRENT_USER, KEY_SET_VALUE, REG_OPTION_NON_VOLATILE, REG_SZ, RegCloseKey,
@@ -476,6 +477,47 @@ impl Store {
     }
 }
 
+impl Store {
+    /// The subject of every certificate in this store, as Windows writes a
+    /// name out: `O=tracewing, CN=tracewing CA (HOST)`.
+    fn subjects(&self) -> Vec<String> {
+        let mut subjects = Vec::new();
+        let mut cert: *const CERT_CONTEXT = ptr::null();
+        loop {
+            // Each call frees the one before it.
+            cert = unsafe { CertEnumCertificatesInStore(self.0, cert) };
+            if cert.is_null() {
+                return subjects;
+            }
+            let info = unsafe { &*(*cert).pCertInfo };
+            let mut text = vec![0u16; 1024];
+            let written = unsafe {
+                CertNameToStrW(
+                    X509_ASN_ENCODING,
+                    &info.Subject,
+                    CERT_X500_NAME_STR,
+                    text.as_mut_ptr(),
+                    text.len() as u32,
+                )
+            };
+            // The count includes the closing zero.
+            let len = (written as usize).saturating_sub(1).min(text.len());
+            subjects.push(String::from_utf16_lossy(&text[..len]));
+        }
+    }
+}
+
+/// Whether a subject is the one every tracewing CA has, whichever data
+/// directory made it: `O=tracewing` and a common name `tracewing CA (HOST)`
+/// (`ca.rs`).
+fn is_tracewing_subject(subject: &str) -> bool {
+    let parts: Vec<&str> = subject.split(", ").map(str::trim).collect();
+    parts.contains(&"O=tracewing")
+        && parts
+            .iter()
+            .any(|part| part.starts_with("CN=tracewing CA ("))
+}
+
 impl Drop for Store {
     fn drop(&mut self) {
         unsafe { CertCloseStore(self.0, 0) };
@@ -507,13 +549,17 @@ pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
     Ok(places)
 }
 
-/// Nothing here: this OS's stores are asked by the certificate's own bytes, so
-/// a tracewing CA of another data directory is invisible to tracewing rather
-/// than merely unremovable. Saying it is trusted means finding certificates by
-/// their subject and deciding which of them are ours, which nothing has
-/// measured yet, so uninstall says nothing about the root store either way.
-pub fn ours_by_name(_scope: Scope) -> bool {
-    false
+/// Whether this scope's root store holds a certificate with the subject every
+/// tracewing CA has. Measured on Windows (crates/e2e, S1): this user's
+/// physical store lists this user's roots alone, none of the machine's, and
+/// the CAs of two data directories on one computer have the same subject. So
+/// this finds a tracewing CA but cannot tell whose it is, or whether the data
+/// directory that made it is still in use: it is to say so with, never to
+/// remove by (`crate::an_older_ca_is_trusted`).
+pub fn ours_by_name(scope: Scope) -> bool {
+    Store::open_root(scope, true)
+        .map(|store| store.subjects().iter().any(|s| is_tracewing_subject(s)))
+        .unwrap_or(false)
 }
 
 pub fn ca_install(_cert_pem: &Path, der: &[u8], scope: Scope) -> Result<()> {
@@ -661,6 +707,25 @@ pub fn environment() -> Environment {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// As Windows wrote out the subject of a CA tracewing made, and others
+    /// that are not one.
+    #[test]
+    fn a_tracewing_subject_is_known_by_its_organisation_and_its_name() {
+        assert!(is_tracewing_subject(
+            "O=tracewing, CN=tracewing CA (WIN-H7NGHRQMLQK)"
+        ));
+        assert!(is_tracewing_subject(
+            "CN=tracewing CA (laptop), O=tracewing"
+        ));
+        assert!(!is_tracewing_subject("CN=tracewing CA (laptop)"));
+        assert!(!is_tracewing_subject(
+            "O=tracewing, CN=tracewing bench origin CA"
+        ));
+        assert!(!is_tracewing_subject(
+            "CN=Microsoft Root Certificate Authority 2011, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+        ));
+    }
 
     /// The two things the XML is there for, which `schtasks` arguments cannot
     /// say: that it runs without the user's password, and that it repeats for
