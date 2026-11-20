@@ -219,3 +219,30 @@ jobs:
             tun_linux::tests::a_real_device_opens_once_and_its_read_can_be_stopped \
             2>&1 | tee tun.log
           grep -q '^test result: ok. 1 passed' tun.log
+
+      # S3's last part: the systemd user timer putting the setting back by
+      # itself once the app and its watchdog are both killed. The container
+      # runs no systemd, so this runs on the runner, as its own user, with a
+      # user manager kept up by linger and GNOME's setting in dconf. A skip
+      # (no user manager) would pass empty, so the log is asked too.
+      - name: The systemd timer
+        shell: bash
+        timeout-minutes: 10
+        env:
+          APT: -o Acquire::Retries=3 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
+        run: |
+          sudo apt-get $APT install -y --no-install-recommends \
+            dconf-gsettings-backend gsettings-desktop-schemas dbus-user-session
+          sudo touch /etc/tracewing-e2e-throwaway
+          sudo loginctl enable-linger "$USER"
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          for _ in $(seq 30); do [ -S "$XDG_RUNTIME_DIR/bus" ] && break; sleep 1; done
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+          export XDG_CURRENT_DESKTOP=GNOME GSETTINGS_BACKEND=dconf
+          export TRACEWING_E2E=1 TRACEWING_E2E_BIN="$PWD/target/release/tracewing"
+          systemctl --user is-system-running || true
+          cargo test --release --locked -p tracewing-e2e --test recovery -- --exact \
+            the_systemd_timer_puts_it_back_when_the_app_and_its_watchdog_are_killed \
+            --nocapture 2>&1 | tee timer.log
+          grep -q '^test result: ok. 1 passed' timer.log
+          ! grep -q 'skipped:' timer.log

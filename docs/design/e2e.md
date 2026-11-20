@@ -161,9 +161,11 @@ The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
    - S7: `nft` really refuses UDP 443 to an echo server on loopback. It is
      free again on release, and when its holder is killed.
 
-   Still to come: the systemd timer firing by itself, which needs systemd
-   running in the container. In this one `systemctl --user` fails, so
-   tracewing arms no timer and says so in its log.
+   The systemd timer firing by itself is checked too, on the CI runner
+   rather than in the container, which runs no systemd: `linux-e2e`'s
+   "systemd timer" step keeps the runner user's manager up with linger and
+   GNOME's setting in dconf. With the watchdog and then the app killed, the
+   timer puts the setting back within its minute and then disarms itself.
 3. S1–S3, S6 and S7 on Windows in the VM. **Done**: all pass. The
    workspace compiles there clean with `-D warnings`, the first Windows build
    since 16 Nov. Notes:
