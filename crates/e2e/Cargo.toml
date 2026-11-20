@@ -12,7 +12,15 @@ tracewing-proxy.workspace = true
 tracewing-system.workspace = true
 tracewing-dev = { path = "../dev" }
 anyhow.workspace = true
+bytes.workspace = true
+http.workspace = true
+http-body-util.workspace = true
+hudsucker.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+serde_json.workspace = true
 tokio.workspace = true
+tokio-rustls.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows-sys.workspace = true

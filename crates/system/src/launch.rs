@@ -468,6 +468,19 @@ pub fn open_browser(
     url: &str,
     level: Level,
 ) -> Result<()> {
+    let command = browser_command(browser, addr, spki, ca_pem, url)?;
+    spawn(command, level).with_context(|| format!("open {}", browser.program.display()))
+}
+
+/// What [`open_browser`] starts, its profile made ready: for a test to start
+/// it as it is, headless.
+pub fn browser_command(
+    browser: &Browser,
+    addr: SocketAddr,
+    spki: Option<&str>,
+    ca_pem: &Path,
+    url: &str,
+) -> Result<Command> {
     let profile = &browser.profile;
     fs::create_dir_all(profile).with_context(|| format!("create {}", profile.display()))?;
     let mut command = Command::new(&browser.program);
@@ -484,7 +497,7 @@ pub fn open_browser(
         }
         Engine::Safari => bail!("Safari has no profile of its own to open"),
     }
-    spawn(command, level).with_context(|| format!("open {}", browser.program.display()))
+    Ok(command)
 }
 
 /// What a Firefox profile for tracewing holds: the proxy, the system's roots

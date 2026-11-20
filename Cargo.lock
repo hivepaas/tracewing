@@ -8932,7 +8932,15 @@ name = "tracewing-e2e"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
+ "http",
+ "http-body-util",
+ "hudsucker",
+ "hyper",
+ "hyper-util",
+ "serde_json",
  "tokio",
+ "tokio-rustls",
  "tracewing-dev",
  "tracewing-proxy",
  "tracewing-system",

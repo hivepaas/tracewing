@@ -52,9 +52,9 @@ the code: "fake" names the stand-in the test uses.
 | System proxy put back after a kill: watchdog, systemd timer, Windows scheduled task, launchd agent, `tracewing recover` | `cli.rs::the_watchdog_puts_the_setting_back_when_the_app_goes`, `recover_says_what_it_did_and_leaves_a_stranger_alone`; unit tests of the unit-file, task XML and plist text | On a runner with no desktop these take the "cannot read the setting" branch and still pass. No test arms or fires the timer, task or agent. |
 | CA installed and trusted, checked, removed | `connect.rs` (user scope, fake `certutil`); `cli.rs::uninstall_undoes_what_it_did_and_keeps_what_was_recorded` | The Linux system store (pkexec, `update-ca-certificates`), the Windows ROOT store and the macOS keychain trust are never written. `verify_ca` has no test. The uninstall test accepts "no longer trusts it" or "never did", and since its CA was never trusted, `ca_remove` is never reached. |
 | The CA's key and other secrets in the OS keychain | `ca_key.rs::a_new_key_goes_to_the_keychain_and_no_file`, with `MemoryKeychain` | `OsKeychain` (Secret Service, DPAPI/Credential Manager, Keychain) is called by no test: CA key, relay passwords, WireGuard keys, company CA. |
-| A real browser through tracewing | `launch.rs::the_browser_gets_its_own_profile_and_the_proxy`, with fake `google-chrome`/`firefox` scripts | No Chrome or Firefox ever loads a page through the proxy, trusts the CA, reaches the Set up test page, or stays on HTTP/2 because Alt-Svc was taken out. |
+| A real browser through tracewing | `launch.rs::the_browser_gets_its_own_profile_and_the_proxy`, with fake `google-chrome`/`firefox` scripts | No Chrome or Firefox ever loads a page through the proxy, trusts the CA, reaches the Set up test page, or stays on HTTP/2 because Alt-Svc was taken out. S5 now does all of this on Linux; Windows still has none. |
 | Blocking UDP 443 | `quic_linux.rs::failures_say_why` (text only) | Nothing calls `block_quic`: real `nft`, `pf` and the Windows firewall never run. `quic_windows.rs` has no tests. |
-| The installed package records HTTPS | `check_linux_package.sh --install`, `check_macos_app.sh`, `check_windows_installer.ps1` | The packages capture one second with no traffic. The Windows check reaches `--version` only, and the installer's `tracewing uninstall` hook is run but its effect is never checked. |
+| The installed package records HTTPS | `check_linux_package.sh --install`, `check_macos_app.sh`, `check_windows_installer.ps1` | The packages capture one second with no traffic. The Windows check reaches `--version` only, and the installer's `tracewing uninstall` hook is run but its effect is never checked. S4 now covers the .deb and the .rpm; Windows is still as described. |
 | Android over ADB: Set up, Undo, put back at close and at the next start | `devices.rs` with a fake `adb`; `android_device.rs` (env-gated) | `undo_android` and `android::recover` have no test. Real root and the Conscrypt APEX run only in the env-gated test. |
 | iOS Simulator | `devices.rs` with a fake `xcrun` | Never run on a Mac. Turning the proxy on is macOS-only and untested. |
 | Capture without proxy settings: TUN on Linux, Wintun on Windows, HTTP/3 through it | `stack.rs`, `tun.rs` with a fake device; `local_live*.rs` `#[ignore]` | The adapter join runs only by hand, under `unshare`, in an editor's shell (AppArmor refuses it elsewhere). Wintun and the Windows catcher have never run. |
@@ -111,7 +111,7 @@ of these, and does nothing without them:
 
 | System | Where, while developing | Where, in CI |
 |---|---|---|
-| Linux | A container made from `crates/e2e/linux/Dockerfile`: Ubuntu 26.04, the release the binaries are built on, with dbus, dconf and GNOME's schemas, KDE's kconfig tools, `libnss3-tools`, `nftables` and polkitd; gnome-keyring, Chrome and Firefox as the scenarios that need them arrive. Started by `scripts/e2e_linux.sh`, with `NET_ADMIN` for `nft`. | The same, on every pull request: `ci.yml`'s `linux-e2e` job |
+| Linux | Two containers, from `crates/e2e/linux`. `Dockerfile` is Ubuntu 26.04, the release the binaries are built on, with dbus, dconf and GNOME's schemas, KDE's kconfig tools, `libnss3-tools`, `nftables`, polkitd, gnome-keyring, Chrome's .deb and Firefox from Mozilla's repository. `Dockerfile.fedora` is Fedora 44 with the same machinery and no browsers. Ubuntu installs the .deb, Fedora the .rpm. Started by `scripts/e2e_linux.sh`, which builds the packages first, with `NET_ADMIN` for `nft`. | The same, on every pull request: `ci.yml`'s `linux-e2e` job |
 | Windows | The `windows-11` VM, by `scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -ConfirmTrustDialogs`, in its desktop session (a scheduled task with `/IT`), not over ssh: see below | `windows-latest`, by the same script, on a tag |
 | macOS | The user's own Mac, by `scripts/e2e_macos.sh` | The same script, run by hand before the draft is published |
 
@@ -186,7 +186,40 @@ else in the table runs in the VM.
      holds, and not the test program.
    - **The machine is left as it was found.** Each test that sets a proxy of
      the user's own puts the original back when it ends, however it ends.
-4. S4 and S5 on both systems.
+4. S4 and S5 on Linux. **Done**, under GNOME and KDE:
+   - S4: the .deb in Ubuntu and the .rpm in Fedora, installed from the file
+     through pkexec. `/usr/bin/tracewing` from the package records HTTPS: the
+     HAR it exports holds the body sent and the body answered. It takes the
+     system proxy and arms the login autostart, which runs
+     `/usr/bin/tracewing`. Killed, it leaves the setting for `tracewing
+     uninstall`, which puts it back, takes the CA out of every store and
+     disarms the autostart, and keeps what was recorded. The package
+     removed, none of its files is left, the package database does not
+     know it, and nothing called `tracewing` is on the PATH. Fedora also
+     runs S1–S3, S6 and S7, so S1 covers `update-ca-trust` there.
+   - S5: Chrome and Firefox, headless, found as Set up finds them. Each
+     opens a page over HTTP/1.1 whose script fetches JSON over HTTP/2,
+     echoes a WebSocket message, reads three server-sent events and reaches
+     `https://tracewing.test/`. Each does this twice: once in Set up's own
+     profile, started with the very command Set up starts
+     (`launch::browser_command`), and once in a plain profile through the
+     system proxy. The HAR holds every one of these, decrypted, with the
+     WebSocket's messages both ways. The server offers HTTP/3 in `Alt-Svc`
+     and listens on UDP: the browser is never offered it, and no datagram
+     arrives. Chrome shows the test page saying it works and that the CA is
+     trusted. The server is on the container's own address, not loopback,
+     which a browser sends past any proxy.
+   - **A gap, found.** Firefox on KDE does not follow the system proxy. It
+     reads GNOME's settings only, and tracewing writes KDE's `kioslaverc`
+     alone, so Firefox goes straight to the server. Set up's own profile
+     works. The test asserts the gap, so it fails once Firefox goes
+     through.
+   - Chrome on KDE reads `kioslaverc` only with `KDE_SESSION_VERSION` set,
+     as a Plasma session sets it. Without it, Chrome looks for KDE 4's
+     settings, finds none and goes straight. The container sets it.
+
+   Still to come: S4 and S5 on Windows (`setup.exe` both ways, the `.zip`;
+   Edge, Chrome, Firefox).
 5. S8 and S9.
 6. Run `release.yml` on a tag, with the suite as a job before the draft.
 7. The smaller in-process gaps above, one pull request each.

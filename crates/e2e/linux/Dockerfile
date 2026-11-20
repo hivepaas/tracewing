@@ -20,6 +20,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxkbcommon0 \
     && rm -rf /var/lib/apt/lists/*
 
+# The browsers S5 opens, as their makers ship them for Ubuntu: Chrome's .deb,
+# and Firefox from Mozilla's own repository (Ubuntu's is a snap, which a
+# container cannot run).
+RUN curl -fsSL --retry 5 -o /tmp/chrome.deb \
+        https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && install -d -m 0755 /etc/apt/keyrings \
+    && curl -fsSL --retry 5 -o /etc/apt/keyrings/packages.mozilla.org.asc \
+        https://packages.mozilla.org/apt/repo-signing-key.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" \
+        > /etc/apt/sources.list.d/mozilla.list \
+    && printf 'Package: *\nPin: origin packages.mozilla.org\nPin-Priority: 1000\n' \
+        > /etc/apt/preferences.d/mozilla \
+    && apt-get update && apt-get install -y --no-install-recommends /tmp/chrome.deb firefox \
+    && rm -rf /var/lib/apt/lists/* /tmp/chrome.deb
+ENV TRACEWING_E2E_BROWSERS="chromium firefox"
+
 # The user the tests run as, and what lets it through pkexec without the
 # password dialog a desktop would show: the rule says yes to it alone.
 RUN useradd --create-home --shell /bin/bash tester

@@ -7,7 +7,7 @@
 //! elevated helper of the Windows block — is started as whichever program
 //! took it.
 
-use crate::tracewing;
+use crate::{program, tracewing_at};
 use std::{
     ffi::OsStr,
     io::{BufRead, BufReader},
@@ -29,7 +29,12 @@ pub struct Helper {
 impl Helper {
     /// Runs `tracewing e2e-hold` with `args` and waits until it holds.
     pub fn start<S: AsRef<OsStr>>(args: &[S]) -> Self {
-        let mut child = tracewing()
+        Self::start_from(&program(), args)
+    }
+
+    /// The same, from `program`.
+    pub fn start_from<S: AsRef<OsStr>>(program: &Path, args: &[S]) -> Self {
+        let mut child = tracewing_at(program)
             .arg("e2e-hold")
             .args(args)
             .stdin(Stdio::piped())
@@ -60,6 +65,11 @@ impl Helper {
     /// The system proxy, for 127.0.0.1:`port`, with the watchdog the window
     /// starts or without one.
     pub fn system_proxy(data_dir: &Path, port: u16, watchdog: bool) -> Self {
+        Self::system_proxy_from(&program(), data_dir, port, watchdog)
+    }
+
+    /// The same, from `program`.
+    pub fn system_proxy_from(program: &Path, data_dir: &Path, port: u16, watchdog: bool) -> Self {
         let port = port.to_string();
         let mut args = vec![
             OsStr::new("system-proxy"),
@@ -71,7 +81,7 @@ impl Helper {
         if !watchdog {
             args.push(OsStr::new("--no-watchdog"));
         }
-        Self::start(&args)
+        Self::start_from(program, &args)
     }
 
     /// The block on UDP 443.

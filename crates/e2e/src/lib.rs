@@ -17,6 +17,7 @@ pub mod desktop;
 #[path = "desktop_windows.rs"]
 pub mod desktop;
 pub mod helper;
+pub mod site;
 
 use tracewing_proxy::ca_key::KeyStore;
 
@@ -61,9 +62,9 @@ macro_rules! only_where_allowed {
 }
 
 /// The `tracewing` program under test: `TRACEWING_E2E_BIN`, or the one on
-/// the PATH, which is the installed package's when one is installed.
-pub fn tracewing() -> Command {
-    let program = std::env::var_os("TRACEWING_E2E_BIN")
+/// the PATH.
+pub fn program() -> PathBuf {
+    std::env::var_os("TRACEWING_E2E_BIN")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             PathBuf::from(if cfg!(windows) {
@@ -71,7 +72,16 @@ pub fn tracewing() -> Command {
             } else {
                 "tracewing"
             })
-        });
+        })
+}
+
+/// The program under test, [`program`].
+pub fn tracewing() -> Command {
+    tracewing_at(&program())
+}
+
+/// `program`, as a test runs it: an installed package's, say.
+pub fn tracewing_at(program: &Path) -> Command {
     let mut command = Command::new(program);
     // Whatever the machine says about proxies is not this test's.
     for name in [
@@ -164,11 +174,26 @@ impl Capture {
     /// The same, its CA's key where `store` says: `System` is the keychain,
     /// as the window keeps it.
     pub fn start_keeping_the_key_in(data_dir: &Path, origin: &Origin, store: KeyStore) -> Self {
+        Self::start_from(&program(), data_dir, origin, store)
+    }
+
+    /// The same, from `program`.
+    pub fn start_from(program: &Path, data_dir: &Path, origin: &Origin, store: KeyStore) -> Self {
+        Self::start_trusting(program, data_dir, &origin.ca, store)
+    }
+
+    /// The same, trusting the servers whose authority is `server_ca`.
+    pub fn start_trusting(
+        program: &Path,
+        data_dir: &Path,
+        server_ca: &Path,
+        store: KeyStore,
+    ) -> Self {
         let trusted = data_dir.join("trusted-servers");
         std::fs::create_dir_all(&trusted).unwrap();
-        std::fs::copy(&origin.ca, trusted.join("origin.pem")).unwrap();
+        std::fs::copy(server_ca, trusted.join("origin.pem")).unwrap();
         let port = free_port();
-        let mut command = tracewing();
+        let mut command = tracewing_at(program);
         command.arg("capture");
         if store == KeyStore::File {
             command.arg("--ca-key-in-file");
@@ -180,7 +205,12 @@ impl Capture {
             .stdout(Stdio::null())
             .stderr(Stdio::inherit())
             .spawn()
-            .expect("start tracewing capture: set TRACEWING_E2E_BIN or put tracewing on the PATH");
+            .unwrap_or_else(|e| {
+                panic!(
+                    "start {} capture: set TRACEWING_E2E_BIN or put tracewing on the PATH: {e}",
+                    program.display()
+                )
+            });
         let addr = SocketAddr::from(([127, 0, 0, 1], port));
         wait_for("tracewing to listen", Duration::from_secs(30), || {
             TcpStream::connect(addr).is_ok()
@@ -210,6 +240,11 @@ impl Drop for Capture {
 /// `curl` through the proxy on `port`, trusting what the system trusts and
 /// nothing else.
 pub fn curl_through(port: u16, url: &str) -> Output {
+    curl_through_with(port, &[url])
+}
+
+/// The same, with more of curl's arguments: the URL is among them.
+pub fn curl_through_with(port: u16, args: &[&str]) -> Output {
     let mut curl = Command::new("curl");
     // Windows' own curl asks Schannel, which by default refuses a certificate
     // whose revocation it cannot check, and a CA made on this computer
@@ -219,12 +254,28 @@ pub fn curl_through(port: u16, url: &str) -> Output {
     }
     curl.args(["--silent", "--show-error", "--max-time", "10", "--proxy"])
         .arg(format!("http://127.0.0.1:{port}"))
-        .arg(url)
+        .args(args)
         .env_remove("CURL_CA_BUNDLE")
         .env_remove("SSL_CERT_FILE")
         .env_remove("SSL_CERT_DIR")
         .output()
         .expect("run curl")
+}
+
+/// What `program` has recorded in `data_dir` so far, as a HAR: written with
+/// `tracewing export`, as a user writes one.
+pub fn har_of(program: &Path, data_dir: &Path) -> String {
+    let file = data_dir.with_extension("har");
+    let out = tracewing_at(program)
+        .arg("export")
+        .arg("--har")
+        .arg(&file)
+        .arg("--data-dir")
+        .arg(data_dir)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "export a HAR: {}", said(&out));
+    std::fs::read_to_string(&file).unwrap()
 }
 
 /// What a command said, for a failed assertion.
