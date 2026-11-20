@@ -336,11 +336,21 @@ fn page(tls: &str) -> String {
 const said = {{}};
 const within = (ms, what) => Promise.race([what, new Promise((_, no) => setTimeout(() => no(new Error("timed out")), ms))]);
 (async () => {{
-  try {{
-    const answer = await within(10000, fetch("{tls}/json"));
-    said.json = (await answer.json()).answered;
-    said.alt_svc = answer.headers.get("alt-svc") || "";
-  }} catch (e) {{ said.json = "error: " + e; }}
+  // The first request a new browser sends can go before it has read the
+  // proxy it is to use, and fail at once: tried a few times, half a second
+  // apart, before it counts. Every request after it already has the proxy.
+  for (let attempt = 1; attempt <= 5; attempt++) {{
+    try {{
+      const answer = await within(10000, fetch("{tls}/json"));
+      said.json = (await answer.json()).answered;
+      said.alt_svc = answer.headers.get("alt-svc") || "";
+      said.json_attempts = String(attempt);
+      break;
+    }} catch (e) {{
+      said.json = "error: " + e;
+      await new Promise((yes) => setTimeout(yes, 500));
+    }}
+  }}
   try {{
     said.ws = await within(10000, new Promise((yes, no) => {{
       const ws = new WebSocket("{wss}/ws");
