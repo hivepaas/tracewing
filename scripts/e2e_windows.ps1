@@ -92,6 +92,18 @@ public static bool Yes(string title, string mention) {
     }
 }
 
+# Roots of tracewing's left by an earlier run that failed before it could
+# take them out: on a machine marked for these tests, they are the tests'.
+# Taking one out of this user's store asks, which the confirmer answers.
+if ($ConfirmTrustDialogs) {
+    foreach ($store in 'Cert:\CurrentUser\Root', 'Cert:\LocalMachine\Root') {
+        Get-ChildItem $store | Where-Object { $_.Subject -like '*tracewing CA*' } | ForEach-Object {
+            Write-Output "left by an earlier run, taken out: $store $($_.Thumbprint)"
+            Remove-Item $_.PSPath
+        }
+    }
+}
+
 $env:TRACEWING_E2E = '1'
 $env:TRACEWING_E2E_BIN = (Resolve-Path "$target\release\tracewing.exe").Path
 $status = 0
