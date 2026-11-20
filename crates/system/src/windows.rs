@@ -19,8 +19,8 @@ use windows_sys::{
             PROXY_TYPE_DIRECT, PROXY_TYPE_PROXY,
         },
         Security::Cryptography::{
-            CERT_FIND_EXISTING, CERT_STORE_ADD_REPLACE_EXISTING, CERT_STORE_PROV_SYSTEM_W,
-            CERT_STORE_READONLY_FLAG, CERT_SYSTEM_STORE_CURRENT_USER,
+            CERT_FIND_EXISTING, CERT_STORE_ADD_REPLACE_EXISTING, CERT_STORE_PROV_PHYSICAL_W,
+            CERT_STORE_PROV_SYSTEM_W, CERT_STORE_READONLY_FLAG, CERT_SYSTEM_STORE_CURRENT_USER,
             CERT_SYSTEM_STORE_LOCAL_MACHINE, CertAddEncodedCertificateToStore, CertCloseStore,
             CertCreateCertificateContext, CertDeleteCertificateFromStore,
             CertFindCertificateInStore, CertFreeCertificateContext, CertOpenStore, HCERTSTORE,
@@ -416,10 +416,24 @@ pub fn disarm_timer(_journal: &Path) -> Result<()> {
 struct Store(HCERTSTORE);
 
 impl Store {
+    /// The root store of `scope` alone. This user's is its physical store,
+    /// `ROOT\.Default`: the system store of that name is a view that also
+    /// holds every root of the machine, so asked whether it has the CA it says
+    /// yes when only the machine does, and a CA in both looked like the
+    /// machine's alone. Taking it out then left it trusted for this user,
+    /// which an end-to-end test on Windows found (crates/e2e, S1).
     fn open_root(scope: Scope, read_only: bool) -> Result<Self> {
-        let location = match scope {
-            Scope::User => CERT_SYSTEM_STORE_CURRENT_USER,
-            Scope::Machine => CERT_SYSTEM_STORE_LOCAL_MACHINE,
+        let (provider, location, name) = match scope {
+            Scope::User => (
+                CERT_STORE_PROV_PHYSICAL_W,
+                CERT_SYSTEM_STORE_CURRENT_USER,
+                "ROOT\\.Default",
+            ),
+            Scope::Machine => (
+                CERT_STORE_PROV_SYSTEM_W,
+                CERT_SYSTEM_STORE_LOCAL_MACHINE,
+                "ROOT",
+            ),
         };
         let flags = location
             | if read_only {
@@ -427,16 +441,8 @@ impl Store {
             } else {
                 0
             };
-        let name = wide("ROOT");
-        let store = unsafe {
-            CertOpenStore(
-                CERT_STORE_PROV_SYSTEM_W,
-                0,
-                0,
-                flags,
-                name.as_ptr() as *const c_void,
-            )
-        };
+        let name = wide(name);
+        let store = unsafe { CertOpenStore(provider, 0, 0, flags, name.as_ptr() as *const c_void) };
         if store.is_null() {
             return Err(os_error("open the root store"));
         }
@@ -478,7 +484,8 @@ impl Drop for Store {
 
 pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
     let mut places = Vec::new();
-    // The user's root store also shows the machine's, so ask the machine first.
+    // Each store alone (`Store::open_root`), so a CA in both is said to be
+    // in both, and taking it out takes it out of both.
     let machine = Store::open_root(Scope::Machine, true)?;
     if let Some(found) = machine.find(der)? {
         unsafe { CertFreeCertificateContext(found) };
@@ -491,13 +498,11 @@ pub fn ca_locations(_cert_pem: &Path, der: &[u8]) -> Result<Vec<Place>> {
     let user = Store::open_root(Scope::User, true)?;
     if let Some(found) = user.find(der)? {
         unsafe { CertFreeCertificateContext(found) };
-        if places.is_empty() {
-            places.push(Place {
-                name: "Windows: this user".to_owned(),
-                browsers: true,
-                scope: Scope::User,
-            });
-        }
+        places.push(Place {
+            name: "Windows: this user".to_owned(),
+            browsers: true,
+            scope: Scope::User,
+        });
     }
     Ok(places)
 }

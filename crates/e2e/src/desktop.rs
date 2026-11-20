@@ -98,8 +98,39 @@ pub fn names_tracewing(setting: &Setting, port: u16) -> bool {
     }
 }
 
+/// What the setting was before a test changed it, written back when the
+/// test ends however it ends: the machine is left as the test found it.
+pub struct PutBack(Setting);
+
+impl Drop for PutBack {
+    fn drop(&mut self) {
+        if kde() {
+            let tool = kde_tool("write");
+            for (key, value) in &self.0 {
+                let mut args = kde_args(key).to_vec();
+                if value.is_empty() {
+                    args.push("--delete");
+                } else {
+                    args.push(value);
+                }
+                let _ = Command::new(&tool).args(&args).status();
+            }
+        } else {
+            for (name, value) in &self.0 {
+                let (schema, key) = name.split_once(' ').unwrap();
+                let _ = Command::new("gsettings")
+                    .args(["set", schema, key, value])
+                    .status();
+            }
+        }
+    }
+}
+
 /// A proxy of the user's own, so that "as it was" is more than the defaults.
-pub fn the_users_own() {
+/// Keep what it gives until the test ends.
+#[must_use = "the setting is put back when this is dropped"]
+pub fn the_users_own() -> PutBack {
+    let before = PutBack(setting());
     if kde() {
         let tool = kde_tool("write");
         for (key, value) in [
@@ -128,4 +159,5 @@ pub fn the_users_own() {
             run("gsettings", &["set", schema, key, value]);
         }
     }
+    before
 }

@@ -13,3 +13,6 @@ tracewing-system.workspace = true
 tracewing-dev = { path = "../dev" }
 anyhow.workspace = true
 tokio.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true
