@@ -1,7 +1,7 @@
 //! S6, the keychain: the CA's key, the WireGuard keys and a relay's password
 //! go into the system's keychain — the Secret Service on Linux, the
-//! Credential Manager on Windows — rather than a file, and come back, in this
-//! process and in another.
+//! Credential Manager on Windows, the login keychain on macOS — rather than a
+//! file, and come back, in this process and in another.
 //!
 //! Changes this computer's keychain. See `tracewing_e2e`.
 
@@ -42,11 +42,60 @@ fn listed() -> String {
     String::from_utf8_lossy(&out.stdout).into_owned()
 }
 
-/// Takes everything of tracewing's out of the keychain, however the test ends.
-struct Forget;
+/// What the login keychain holds under tracewing's name: the accounts of its
+/// generic passwords, as `security` lists them, which never shows a secret.
+#[cfg(target_os = "macos")]
+fn listed() -> String {
+    let out = Command::new("/usr/bin/security")
+        .arg("dump-keychain")
+        .output()
+        .expect("run security");
+    let text = String::from_utf8_lossy(&out.stdout);
+    // An item's attributes, one a line: `"acct"<blob>="…"`, `"svce"<blob>="…"`.
+    let mut accounts = Vec::new();
+    for item in text.split("keychain: ") {
+        if !item.contains("\"svce\"<blob>=\"tracewing\"") {
+            continue;
+        }
+        if let Some(account) = item.lines().find_map(|line| {
+            line.trim()
+                .strip_prefix("\"acct\"<blob>=\"")?
+                .strip_suffix('"')
+        }) {
+            accounts.push(account.to_owned());
+        }
+    }
+    accounts.join("\n")
+}
+
+/// Takes everything of tracewing's out of the keychain, however the test ends:
+/// all of it in a container or a VM; on a Mac, which may be somebody's own,
+/// only what this test put there, found against what was there before.
+struct Forget {
+    #[cfg(target_os = "macos")]
+    before: Vec<String>,
+}
+
+impl Forget {
+    fn start() -> Self {
+        Forget {
+            #[cfg(target_os = "macos")]
+            before: listed().lines().map(str::to_owned).collect(),
+        }
+    }
+}
 
 impl Drop for Forget {
     fn drop(&mut self) {
+        #[cfg(target_os = "macos")]
+        for account in listed()
+            .lines()
+            .filter(|a| !self.before.iter().any(|b| b == a))
+        {
+            let _ = Command::new("/usr/bin/security")
+                .args(["delete-generic-password", "-s", "tracewing", "-a", account])
+                .output();
+        }
         #[cfg(target_os = "linux")]
         let _ = Command::new("secret-tool")
             .args(["clear", "service", "tracewing"])
@@ -72,7 +121,7 @@ fn ca_key_name(dir: &Path) -> String {
 #[test]
 fn secrets_go_into_the_keychain_and_come_back() {
     only_where_allowed!();
-    let _forget = Forget;
+    let _forget = Forget::start();
     let dir = scratch("keychain");
 
     // The CA's key, as the window keeps it.
@@ -90,7 +139,7 @@ fn secrets_go_into_the_keychain_and_come_back() {
     );
     assert!(
         listed().contains(&name),
-        "secret-tool does not see {name}: {}",
+        "the keychain's own tool does not see {name}: {}",
         listed()
     );
     drop(ca);

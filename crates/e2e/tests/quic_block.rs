@@ -6,7 +6,9 @@
 //! Changes this computer's firewall. See `tracewing_e2e`.
 
 use std::{net::UdpSocket, time::Duration};
-use tracewing_e2e::{helper::Helper, only_where_allowed, scratch, wait_for};
+use tracewing_e2e::{
+    helper::Helper, only_where_allowed, only_where_someone_answers, scratch, wait_for,
+};
 
 /// Answers whatever comes to 127.0.0.1:443, until the test ends.
 fn echo_on_443() {
@@ -34,6 +36,8 @@ fn answered() -> bool {
 #[test]
 fn udp_443_is_refused_while_blocked_and_free_again_after() {
     only_where_allowed!();
+    // macOS's pf takes an administrator, which it asks for.
+    only_where_someone_answers!();
     let dir = scratch("quic-block");
     echo_on_443();
     assert!(

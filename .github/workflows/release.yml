@@ -250,9 +250,27 @@ jobs:
         shell: pwsh
         run: scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -ConfirmTrustDialogs -Packages -Browsers 'chrome edge firefox'
 
+  # The same on macOS, for what macOS asks nobody about: the system proxy
+  # and the agent that puts it back, the keychain, and the firewall as root.
+  # The trust settings ask for a password, which only somebody at a Mac can
+  # give: scripts/e2e_macos.sh --attended, on the user's own (docs/design/e2e.md).
+  e2e-macos:
+    name: macos-e2e
+    needs: version
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust
+        run: rustup toolchain install
+
+      - name: Tests that change the computer
+        run: scripts/e2e_macos.sh --this-machine-may-be-changed
+
   release:
     name: Draft release
-    needs: [version, package, e2e-windows]
+    needs: [version, package, e2e-windows, e2e-macos]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
