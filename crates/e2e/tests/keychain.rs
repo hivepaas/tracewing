@@ -1,12 +1,11 @@
 //! S6, the keychain: the CA's key, the WireGuard keys and a relay's password
-//! go into the system's keychain — on Linux the Secret Service — rather than
-//! a file, and come back, in this process and in another.
+//! go into the system's keychain — the Secret Service on Linux, the
+//! Credential Manager on Windows — rather than a file, and come back, in this
+//! process and in another.
 //!
 //! Changes this computer's keychain. See `tracewing_e2e`.
 
-use std::path::Path;
-#[cfg(target_os = "linux")]
-use std::process::Command;
+use std::{path::Path, process::Command};
 use tracewing_e2e::{Capture, Origin, only_where_allowed, scratch};
 use tracewing_proxy::{
     ca::LocalCa,
@@ -32,6 +31,17 @@ fn listed() -> String {
     )
 }
 
+/// What the Credential Manager holds, as `cmdkey` lists it. tracewing's are
+/// named `<entry>.tracewing`.
+#[cfg(windows)]
+fn listed() -> String {
+    let out = Command::new("cmdkey")
+        .arg("/list")
+        .output()
+        .expect("run cmdkey");
+    String::from_utf8_lossy(&out.stdout).into_owned()
+}
+
 /// Takes everything of tracewing's out of the keychain, however the test ends.
 struct Forget;
 
@@ -41,6 +51,16 @@ impl Drop for Forget {
         let _ = Command::new("secret-tool")
             .args(["clear", "service", "tracewing"])
             .status();
+        #[cfg(windows)]
+        for target in listed()
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix("Target: LegacyGeneric:target="))
+            .filter(|target| target.ends_with(".tracewing"))
+        {
+            let _ = Command::new("cmdkey")
+                .arg(format!("/delete:{target}"))
+                .status();
+        }
     }
 }
 
@@ -68,7 +88,6 @@ fn secrets_go_into_the_keychain_and_come_back() {
         OsKeychain.get(&name).unwrap().is_some(),
         "{name} is not in the keychain"
     );
-    #[cfg(target_os = "linux")]
     assert!(
         listed().contains(&name),
         "secret-tool does not see {name}: {}",

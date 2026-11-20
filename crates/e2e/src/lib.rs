@@ -13,6 +13,9 @@
 
 #[cfg(target_os = "linux")]
 pub mod desktop;
+#[cfg(windows)]
+#[path = "desktop_windows.rs"]
+pub mod desktop;
 pub mod helper;
 
 use tracewing_proxy::ca_key::KeyStore;
@@ -207,8 +210,14 @@ impl Drop for Capture {
 /// `curl` through the proxy on `port`, trusting what the system trusts and
 /// nothing else.
 pub fn curl_through(port: u16, url: &str) -> Output {
-    Command::new("curl")
-        .args(["--silent", "--show-error", "--max-time", "10", "--proxy"])
+    let mut curl = Command::new("curl");
+    // Windows' own curl asks Schannel, which by default refuses a certificate
+    // whose revocation it cannot check, and a CA made on this computer
+    // publishes no list of revoked ones. Browsers do not fail on that.
+    if cfg!(windows) {
+        curl.arg("--ssl-no-revoke");
+    }
+    curl.args(["--silent", "--show-error", "--max-time", "10", "--proxy"])
         .arg(format!("http://127.0.0.1:{port}"))
         .arg(url)
         .env_remove("CURL_CA_BUNDLE")

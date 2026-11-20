@@ -5,7 +5,7 @@
 //!
 //! Changes this computer's proxy setting. See `tracewing_e2e`.
 
-#![cfg(target_os = "linux")]
+#![cfg(any(target_os = "linux", windows))]
 
 use tracewing_e2e::{
     desktop::{names_tracewing, setting, the_users_own},
