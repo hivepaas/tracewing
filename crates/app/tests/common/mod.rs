@@ -64,6 +64,30 @@ pub fn drag(
     );
 }
 
+pub fn left_click(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>, at: Point<Pixels>) {
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseDown(MouseDownEvent {
+            button: MouseButton::Left,
+            position: at,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            first_mouse: false,
+        }),
+    );
+    mouse(
+        cx,
+        window,
+        PlatformInput::MouseUp(MouseUpEvent {
+            button: MouseButton::Left,
+            position: at,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+        }),
+    );
+}
+
 pub fn right_click(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>, at: Point<Pixels>) {
     mouse(
         cx,

@@ -7,7 +7,7 @@
 
 mod common;
 
-use common::{clipboard, drag, key, right_click};
+use common::{clipboard, drag, key, left_click, right_click};
 
 use gpui::{AppContext as _, Entity, HeadlessAppContext, WindowHandle, px, size};
 use std::{
@@ -321,6 +321,38 @@ fn graphql_cookies_and_tokens_are_read() {
             .update(&mut cx, |view, _, _| view.inspector.select.menu().is_none())
             .unwrap()
     );
+
+    // The menu's first item, Copy, pressed: what is selected, which is all
+    // of it here, goes to the clipboard, and the menu closes.
+    right_click(&mut cx, window, value_at.center());
+    cx.update(|cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string("before".into())));
+    // So near the right edge it opens to the left of the click, its top at
+    // it: the first item, a row as wide as the menu, is a padding and half a
+    // line below, just left of where it was opened.
+    left_click(
+        &mut cx,
+        window,
+        value_at.center() + gpui::point(px(-20.), px(18.)),
+    );
+    assert_eq!(
+        clipboard(&mut cx),
+        all,
+        "the menu's Copy took the selection"
+    );
+    assert!(
+        window
+            .update(&mut cx, |view, _, _| view.inspector.select.menu().is_none())
+            .unwrap(),
+        "an item pressed closes the menu"
+    );
+
+    // Copy as cURL, by its shortcut: the request as a command that sends it
+    // again, its token with it.
+    key(&mut cx, window, "ctrl-shift-c");
+    let curl = clipboard(&mut cx);
+    assert!(curl.starts_with("curl "), "{curl}");
+    assert!(curl.contains(&format!("Bearer {EXPIRED_JWT}")), "{curl}");
+    assert!(curl.contains(&format!("{name}: {value}")), "{curl}");
 
     window
         .update(&mut cx, |view, _, cx| view.set_part(Part::Cookies, cx))

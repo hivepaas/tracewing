@@ -76,7 +76,9 @@ Smaller gaps that need no real system, only a test:
 - ~~Dragging the dividers and dropping the inspector handle. Hiding the
   inspector.~~ Done: `dividers.rs`, by mouse and shortcut, read back from
   the layout file.
-- Activating the items of a context menu. Copy as cURL from the window.
+- ~~Activating the items of a context menu. Copy as cURL from the window.~~
+  Done in `inspect.rs`: the copy menu's first item pressed, and Copy as
+  cURL by its shortcut.
 - ~~The Settings part last open being kept.~~ Saved on a change
   (`text_size.rs`) and read back by `layout.rs`'s round trip, which now
   holds the part and the way in.
