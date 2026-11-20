@@ -263,6 +263,14 @@ The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
      Wintun adapter and no `/1` route are left, and the default route is
      the VM's own. `scripts/e2e_windows.ps1 -Wintun <wintun.dll>` runs them
      one test at a time, as they need.
+   - S9, **done** against the `tracewing-test` emulator (API 36), by
+     `crates/app/tests/android_live.rs`, which runs only with
+     `TRACEWING_ANDROID_SERIAL` set, so not in CI. The device first has a
+     proxy of its own. Set up every device points it at tracewing, with
+     that proxy written down. Undo puts that proxy back. A device left set
+     up by a tracewing that was killed is put back when tracewing starts
+     again on that data folder. With `recover_android` doing nothing, it
+     fails waiting for that.
    - Still to come: HTTP/3 from Chrome through the adapter. The QUIC client
      in `local_live_http3.rs` is quinn, not a browser.
 7. Run `release.yml` on a tag, with the suite as a job before the draft.
