@@ -71,8 +71,9 @@ Smaller gaps that need no real system, only a test:
   `a_block_reads_as_which_one_and_how_full`, on a real mainnet block.
 - Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
   10,000 cap.
-- Dragging the dividers and dropping the inspector handle. Hiding the
-  inspector.
+- ~~Dragging the dividers and dropping the inspector handle. Hiding the
+  inspector.~~ Done: `dividers.rs`, by mouse and shortcut, read back from
+  the layout file.
 - Activating the items of a context menu. Copy as cURL from the window.
 - The Settings part last open being kept.
 
