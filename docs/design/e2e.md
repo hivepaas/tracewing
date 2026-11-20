@@ -65,15 +65,20 @@ Smaller gaps that need no real system, only a test:
 
 - ~~HAR export of WebSocket messages, with and without secrets.~~ Done:
   `har.rs`'s `a_websockets_messages_go_out_both_ways_and_their_secrets_can_be_left_out`.
-- Solana and Bitcoin answers in a window. They are covered only by unit
-  tests.
+- ~~Solana and Bitcoin answers in a window.~~ Done: `rpc.rs`'s
+  `solana_and_bitcoin_calls_are_read_in_the_inspector`, shots 96 and 97.
 - ~~Block answers in `rpc_view.rs` (`block_lines`).~~ Done:
   `a_block_reads_as_which_one_and_how_full`, on a real mainnet block.
-- Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
-  10,000 cap.
-- Dragging the dividers and dropping the inspector handle. Hiding the
-  inspector.
-- Activating the items of a context menu. Copy as cURL from the window.
+- ~~Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
+  10,000 cap.~~ Done in `find.rs`, by keys: Shift+Enter, Shift+F3 and the
+  wrap at both ends. The bar's arrow buttons call the same step and are
+  not clicked.
+- ~~Dragging the dividers and dropping the inspector handle. Hiding the
+  inspector.~~ Done: `dividers.rs`, by mouse and shortcut, read back from
+  the layout file.
+- ~~Activating the items of a context menu. Copy as cURL from the window.~~
+  Done in `inspect.rs`: the copy menu's first item pressed, and Copy as
+  cURL by its shortcut.
 - ~~The Settings part last open being kept.~~ Saved on a change
   (`text_size.rs`) and read back by `layout.rs`'s round trip, which now
   holds the part and the way in.
@@ -136,10 +141,21 @@ fails.
 | S8 | **Capture without proxy settings.** The live tests run here unignored, with HTTP/3 from Chrome. | TUN in a namespace | Wintun | network extension, by hand (a signed build) |
 | S9 | **Android.** Run against the `tracewing-test` emulator, not in the container: Set up every device, Undo, then kill tracewing and start it again so it puts the device back. | host + AVD | — | — |
 | S10 | **The window.** It opens, draws Set up, takes a key, opens the save dialog and the clipboard, and closes. The system proxy is back afterwards. | headless, as today | the VM (its adapter is accepted) | the user's Mac |
+| S11 | **The title bar's caption buttons (Windows only).** Sweeping the bar, the window answers `HTMINBUTTON`, `HTMAXBUTTON` and `HTCLOSE` in that order, each a band about `CAPTION_W` wide, with an `HTCAPTION` band a button wide beside them; then a real click on minimise leaves `IsIconic` true. `scripts/check_windows_titlebar.ps1`, run from `e2e_windows.ps1`. | — | the VM's desktop session | — |
 
 S10 on Windows needs a display adapter that GPUI's DirectX renderer accepts.
 The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
 #381 was checked. So everything in the table runs in the VM.
+
+S11 is Windows alone because the thing it checks exists only there: the three
+buttons are painted by tracewing and are a *hit test* to Windows, not windows
+of their own, so no test on Linux or the Mac can press them and `windows` is
+`cfg!(target_os = "windows")` in any case. It needs the **interactive desktop
+session**, because the pointer has to move and GPUI answers for where the
+pointer really is; an ssh logon has no input desktop, and there the check says
+so and exits **2**, which is not a pass. It is measured both ways: it passes a
+build with #381's fix and fails the same build with the bar's drag area put
+back.
 
 ## Order of work
 
@@ -156,9 +172,11 @@ The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
    - S7: `nft` really refuses UDP 443 to an echo server on loopback. It is
      free again on release, and when its holder is killed.
 
-   Still to come: the systemd timer firing by itself, which needs systemd
-   running in the container. In this one `systemctl --user` fails, so
-   tracewing arms no timer and says so in its log.
+   The systemd timer firing by itself is checked too, on the CI runner
+   rather than in the container, which runs no systemd: `linux-e2e`'s
+   "systemd timer" step keeps the runner user's manager up with linger and
+   GNOME's setting in dconf. With the watchdog and then the app killed, the
+   timer puts the setting back within its minute and then disarms itself.
 3. S1–S3, S6 and S7 on Windows in the VM. **Done**: all pass. The
    workspace compiles there clean with `-D warnings`, the first Windows build
    since 16 Nov. Notes:
@@ -261,6 +279,14 @@ The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
      Wintun adapter and no `/1` route are left, and the default route is
      the VM's own. `scripts/e2e_windows.ps1 -Wintun <wintun.dll>` runs them
      one test at a time, as they need.
+   - S9, **done** against the `tracewing-test` emulator (API 36), by
+     `crates/app/tests/android_live.rs`, which runs only with
+     `TRACEWING_ANDROID_SERIAL` set, so not in CI. The device first has a
+     proxy of its own. Set up every device points it at tracewing, with
+     that proxy written down. Undo puts that proxy back. A device left set
+     up by a tracewing that was killed is put back when tracewing starts
+     again on that data folder. With `recover_android` doing nothing, it
+     fails waiting for that.
    - Still to come: HTTP/3 from Chrome through the adapter. The QUIC client
      in `local_live_http3.rs` is quinn, not a browser.
 7. Run `release.yml` on a tag, with the suite as a job before the draft.
