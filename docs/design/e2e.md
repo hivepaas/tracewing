@@ -64,8 +64,8 @@ the code: "fake" names the stand-in the test uses.
 Smaller gaps that need no real system, only a test:
 
 - HAR export of WebSocket messages, with and without secrets.
-- Solana and Bitcoin answers in a window. They are covered only by unit
-  tests.
+- ~~Solana and Bitcoin answers in a window.~~ Done: `rpc.rs`'s
+  `solana_and_bitcoin_calls_are_read_in_the_inspector`, shots 96 and 97.
 - Block answers in `rpc_view.rs` (`block_lines`).
 - Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
   10,000 cap.
