@@ -34,7 +34,7 @@ RUN curl -fsSL --retry 5 -o /tmp/chrome.deb \
         > /etc/apt/preferences.d/mozilla \
     && apt-get update && apt-get install -y --no-install-recommends /tmp/chrome.deb firefox \
     && rm -rf /var/lib/apt/lists/* /tmp/chrome.deb
-ENV TRACEWING_E2E_BROWSERS="chromium firefox"
+ENV TRACEWING_E2E_BROWSERS="chrome firefox"
 
 # The user the tests run as, and what lets it through pkexec without the
 # password dialog a desktop would show: the rule says yes to it alone.

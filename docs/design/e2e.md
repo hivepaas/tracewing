@@ -52,9 +52,9 @@ the code: "fake" names the stand-in the test uses.
 | System proxy put back after a kill: watchdog, systemd timer, Windows scheduled task, launchd agent, `tracewing recover` | `cli.rs::the_watchdog_puts_the_setting_back_when_the_app_goes`, `recover_says_what_it_did_and_leaves_a_stranger_alone`; unit tests of the unit-file, task XML and plist text | On a runner with no desktop these take the "cannot read the setting" branch and still pass. No test arms or fires the timer, task or agent. |
 | CA installed and trusted, checked, removed | `connect.rs` (user scope, fake `certutil`); `cli.rs::uninstall_undoes_what_it_did_and_keeps_what_was_recorded` | The Linux system store (pkexec, `update-ca-certificates`), the Windows ROOT store and the macOS keychain trust are never written. `verify_ca` has no test. The uninstall test accepts "no longer trusts it" or "never did", and since its CA was never trusted, `ca_remove` is never reached. |
 | The CA's key and other secrets in the OS keychain | `ca_key.rs::a_new_key_goes_to_the_keychain_and_no_file`, with `MemoryKeychain` | `OsKeychain` (Secret Service, DPAPI/Credential Manager, Keychain) is called by no test: CA key, relay passwords, WireGuard keys, company CA. |
-| A real browser through tracewing | `launch.rs::the_browser_gets_its_own_profile_and_the_proxy`, with fake `google-chrome`/`firefox` scripts | No Chrome or Firefox ever loads a page through the proxy, trusts the CA, reaches the Set up test page, or stays on HTTP/2 because Alt-Svc was taken out. S5 now does all of this on Linux; Windows still has none. |
+| A real browser through tracewing | `launch.rs::the_browser_gets_its_own_profile_and_the_proxy`, with fake `google-chrome`/`firefox` scripts | No Chrome or Firefox ever loads a page through the proxy, trusts the CA, reaches the Set up test page, or stays on HTTP/2 because Alt-Svc was taken out. S5 now does all of this on Linux and Windows. |
 | Blocking UDP 443 | `quic_linux.rs::failures_say_why` (text only) | Nothing calls `block_quic`: real `nft`, `pf` and the Windows firewall never run. `quic_windows.rs` has no tests. |
-| The installed package records HTTPS | `check_linux_package.sh --install`, `check_macos_app.sh`, `check_windows_installer.ps1` | The packages capture one second with no traffic. The Windows check reaches `--version` only, and the installer's `tracewing uninstall` hook is run but its effect is never checked. S4 now covers the .deb and the .rpm; Windows is still as described. |
+| The installed package records HTTPS | `check_linux_package.sh --install`, `check_macos_app.sh`, `check_windows_installer.ps1` | The packages capture one second with no traffic. The Windows check reaches `--version` only, and the installer's `tracewing uninstall` hook is run but its effect is never checked. S4 now covers the .deb, the .rpm, `setup.exe` both ways and the `.zip`. |
 | Android over ADB: Set up, Undo, put back at close and at the next start | `devices.rs` with a fake `adb`; `android_device.rs` (env-gated) | `undo_android` and `android::recover` have no test. Real root and the Conscrypt APEX run only in the env-gated test. |
 | iOS Simulator | `devices.rs` with a fake `xcrun` | Never run on a Mac. Turning the proxy on is macOS-only and untested. |
 | Capture without proxy settings: TUN on Linux, Wintun on Windows, HTTP/3 through it | `stack.rs`, `tun.rs` with a fake device; `local_live*.rs` `#[ignore]` | The adapter join runs only by hand, under `unshare`, in an editor's shell (AppArmor refuses it elsewhere). Wintun and the Windows catcher have never run. |
@@ -112,7 +112,7 @@ of these, and does nothing without them:
 | System | Where, while developing | Where, in CI |
 |---|---|---|
 | Linux | Two containers, from `crates/e2e/linux`. `Dockerfile` is Ubuntu 26.04, the release the binaries are built on, with dbus, dconf and GNOME's schemas, KDE's kconfig tools, `libnss3-tools`, `nftables`, polkitd, gnome-keyring, Chrome's .deb and Firefox from Mozilla's repository. `Dockerfile.fedora` is Fedora 44 with the same machinery and no browsers. Ubuntu installs the .deb, Fedora the .rpm. Started by `scripts/e2e_linux.sh`, which builds the packages first, with `NET_ADMIN` for `nft`. | The same, on every pull request: `ci.yml`'s `linux-e2e` job |
-| Windows | The `windows-11` VM, by `scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -ConfirmTrustDialogs`, in its desktop session (a scheduled task with `/IT`), not over ssh: see below | `windows-latest`, by the same script, on a tag |
+| Windows | The `windows-11` VM, by `scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -ConfirmTrustDialogs -Packages -Browsers 'chrome edge firefox'`, in its desktop session (a scheduled task with `/IT`), not over ssh: see below | `windows-latest`, by the same script, on a tag |
 | macOS | The user's own Mac, by `scripts/e2e_macos.sh` | The same script, run by hand before the draft is published |
 
 ## Scenarios
@@ -218,8 +218,23 @@ else in the table runs in the VM.
      as a Plasma session sets it. Without it, Chrome looks for KDE 4's
      settings, finds none and goes straight. The container sets it.
 
-   Still to come: S4 and S5 on Windows (`setup.exe` both ways, the `.zip`;
-   Edge, Chrome, Firefox).
-5. S8 and S9.
-6. Run `release.yml` on a tag, with the suite as a job before the draft.
-7. The smaller in-process gaps above, one pull request each.
+5. S4 and S5 on Windows, in the VM's desktop session. **Done**, all
+   passing the first time they ran:
+   - S4: `setup.exe /S`, both `/CURRENTUSER` and `/ALLUSERS`. The installed
+     `tracewing.exe` records HTTPS into the window's data folder, which the
+     test sets aside first and puts back after. It takes the system proxy
+     and arms the scheduled task, which runs the installed program, and is
+     killed. Then `uninstall.exe /S`, which runs `tracewing uninstall`
+     itself, puts the setting back, takes the CA out of both stores and
+     removes the task. The folder, the uninstall key, the Start menu
+     shortcut and the PATH entry are gone, and what was recorded stays. The
+     `.zip` runs from a folder, records HTTPS, and leaves the PATH alone.
+   - S5: Chrome, Edge and Firefox, each in Set up's own profile and through
+     WinINet's setting. Firefox reads the system's roots on Windows, so its
+     user profile needs nothing of tracewing's.
+   - `scripts/e2e_windows.ps1 -Packages` builds the installer and the zip
+     with `scripts/package_windows.sh`, in Git Bash, with NSIS, cargo-about
+     and 7-Zip. `-Browsers 'chrome edge firefox'` names what is installed.
+6. S8 and S9.
+7. Run `release.yml` on a tag, with the suite as a job before the draft.
+8. The smaller in-process gaps above, one pull request each.

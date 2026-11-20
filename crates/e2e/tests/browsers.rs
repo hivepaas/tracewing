@@ -1,4 +1,4 @@
-//! S5, browsers: Chrome and Firefox, headless, open a page whose script
+//! S5, browsers: Chrome, Edge and Firefox, headless, open a page whose script
 //! speaks HTTP/1.1, HTTP/2, a WebSocket and server-sent events, and reaches
 //! the Set up test page; once through the profile of tracewing's own that
 //! Set up opens them in, once through the system proxy. Each time the
@@ -7,12 +7,13 @@
 //! tries it.
 //!
 //! The browsers are found the way Set up finds them. Which must be there is
-//! `TRACEWING_E2E_BROWSERS` (`chromium firefox`), which the container that has
-//! them sets; without it, this says so and does nothing.
+//! `TRACEWING_E2E_BROWSERS` (`chrome firefox`, `chrome edge firefox`), which
+//! the container or the script that has them sets; without it, this says so
+//! and does nothing.
 //!
 //! Changes this computer's trust stores and proxy setting. See
 //! `tracewing_e2e`.
-#![cfg(target_os = "linux")]
+#![cfg(any(target_os = "linux", windows))]
 
 use serde_json::Value;
 use std::{
@@ -32,7 +33,7 @@ use tracewing_e2e::{
 use tracewing_proxy::ca_key::KeyStore;
 use tracewing_system::{
     Scope, ca_install, ca_remove,
-    launch::{Browser, Engine, browser_command, find_browsers},
+    launch::{Browser, browser_command, find_browsers},
 };
 
 /// Takes the CA out of every store, however the test ends.
@@ -50,20 +51,29 @@ struct Running(Child);
 
 impl Drop for Running {
     fn drop(&mut self) {
-        // Its own process group, which its helpers are in too.
+        // Its process group on Unix, which its helpers are in too; its tree
+        // of processes on Windows.
+        #[cfg(unix)]
         let _ = Command::new("kill")
             .args(["-KILL", "--", &format!("-{}", self.0.id())])
             .status();
+        #[cfg(windows)]
+        let _ = Command::new("taskkill")
+            .args(["/T", "/F", "/PID", &self.0.id().to_string()])
+            .output();
         let _ = self.0.wait();
     }
 }
 
 fn start(mut command: Command) -> Running {
-    use std::os::unix::process::CommandExt as _;
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt as _;
+        command.process_group(0);
+    }
     let program = command.get_program().to_owned();
     Running(
         command
-            .process_group(0)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -72,28 +82,25 @@ fn start(mut command: Command) -> Running {
     )
 }
 
-/// What a headless browser needs besides what Set up gives it. In the
-/// container: no sandbox of Chrome's own, which needs what a container is
-/// not given, and no `/dev/shm` to speak of.
+/// What a headless Chromium needs besides what Set up gives it. In the
+/// Linux container: no sandbox of Chrome's own, which needs what a container
+/// is not given, and no `/dev/shm` to speak of.
 fn chrome_headless() -> Vec<String> {
-    [
-        "--headless=new",
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-    ]
-    .map(String::from)
-    .to_vec()
+    let mut flags = vec!["--headless=new", "--disable-gpu"];
+    if cfg!(target_os = "linux") {
+        flags.extend(["--no-sandbox", "--disable-dev-shm-usage"]);
+    }
+    flags.into_iter().map(String::from).collect()
 }
 
-/// The browser of `engine` Set up finds, which must be there.
-fn found(engine: Engine, data: &Path) -> Browser {
+/// The browser called `name` that Set up finds, which must be there.
+fn found(name: &str, data: &Path) -> Browser {
     let browsers = find_browsers(data);
     browsers
         .iter()
-        .find(|browser| browser.engine == engine)
+        .find(|browser| browser.name == name)
         .cloned()
-        .unwrap_or_else(|| panic!("no {engine:?} among the browsers found: {browsers:?}"))
+        .unwrap_or_else(|| panic!("no {name} among the browsers found: {browsers:?}"))
 }
 
 /// Whether this machine is to have `engine`: if not, the test says so and
@@ -223,19 +230,15 @@ fn addr(capture: &Capture) -> SocketAddr {
     SocketAddr::from(([127, 0, 0, 1], capture.port))
 }
 
-#[test]
-fn chrome_records_everything_in_its_own_profile_and_through_the_system_proxy() {
-    only_where_allowed!();
-    if !wanted("chromium") {
-        return;
-    }
-    let dir = scratch("chrome");
+/// A browser of Chromium's family, `name` as Set up lists it.
+fn chromium(name: &str) {
+    let dir = scratch(&name.to_lowercase());
     let site = Site::start(&dir);
 
     // Set up's own profile.
     {
         let (capture, _untrust) = capture_for(&dir, "own", &site);
-        let chrome = found(Engine::Chromium, &capture.data_dir);
+        let chrome = found(name, &capture.data_dir);
         let mut command = browser_command(
             &chrome,
             addr(&capture),
@@ -246,9 +249,14 @@ fn chrome_records_everything_in_its_own_profile_and_through_the_system_proxy() {
         .unwrap();
         command.args(chrome_headless());
         let running = start(command);
-        let report = report_of(&site, "Chrome");
+        let report = report_of(&site, name);
         drop(running);
-        check(&site, &capture, "Chrome, in its own profile", &report);
+        check(
+            &site,
+            &capture,
+            &format!("{name}, in its own profile"),
+            &report,
+        );
 
         // The test page itself, as the browser shows it.
         let dump = Browser {
@@ -275,11 +283,11 @@ fn chrome_records_everything_in_its_own_profile_and_through_the_system_proxy() {
         );
     }
 
-    // The system proxy, which Chrome reads from the desktop's settings.
+    // The system proxy, which it reads from the desktop's settings.
     {
         let _put_back = desktop::the_users_own();
         let (capture, _untrust) = capture_for(&dir, "system", &site);
-        let chrome = found(Engine::Chromium, &capture.data_dir);
+        let chrome = found(name, &capture.data_dir);
         let holder = Helper::system_proxy(&capture.data_dir, capture.port, true);
         let mut command = Command::new(&chrome.program);
         command
@@ -288,12 +296,33 @@ fn chrome_records_everything_in_its_own_profile_and_through_the_system_proxy() {
             .args(chrome_headless())
             .arg(site.page());
         let running = start(command);
-        let report = report_of(&site, "Chrome");
+        let report = report_of(&site, name);
         drop(running);
-        check(&site, &capture, "Chrome, through the system proxy", &report);
+        check(
+            &site,
+            &capture,
+            &format!("{name}, through the system proxy"),
+            &report,
+        );
         assert!(holder.let_go().success());
     }
     std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn chrome_records_everything_in_its_own_profile_and_through_the_system_proxy() {
+    only_where_allowed!();
+    if wanted("chrome") {
+        chromium("Chrome");
+    }
+}
+
+#[test]
+fn edge_records_everything_in_its_own_profile_and_through_the_system_proxy() {
+    only_where_allowed!();
+    if wanted("edge") {
+        chromium("Edge");
+    }
 }
 
 #[test]
@@ -308,7 +337,7 @@ fn firefox_records_everything_in_its_own_profile_and_through_the_system_proxy() 
     // Set up's own profile, which is told to trust the CA itself.
     {
         let (capture, _untrust) = capture_for(&dir, "own", &site);
-        let firefox = found(Engine::Firefox, &capture.data_dir);
+        let firefox = found("Firefox", &capture.data_dir);
         let mut command = browser_command(
             &firefox,
             addr(&capture),
@@ -324,20 +353,23 @@ fn firefox_records_everything_in_its_own_profile_and_through_the_system_proxy() 
         check(&site, &capture, "Firefox, in its own profile", &report);
     }
 
-    // The system proxy. A profile of the user's, which Firefox has made
-    // before tracewing's CA is installed, as a user's is: Install puts the
-    // CA in it.
+    // The system proxy. A profile of the user's. On Linux Firefox has made
+    // its database before tracewing's CA is installed, as a user's has, and
+    // Install puts the CA in it; on Windows Firefox reads the system's
+    // roots.
     {
-        let home = PathBuf::from(std::env::var_os("HOME").unwrap());
-        let profile = home.join(".mozilla/firefox/e2e.default");
+        let profile = user_profile(&dir);
         let _gone = RemoveDir(profile.clone());
         std::fs::create_dir_all(&profile).unwrap();
-        let out = Command::new("certutil")
-            .args(["-N", "--empty-password", "-d"])
-            .arg(format!("sql:{}", profile.display()))
-            .output()
-            .unwrap();
-        assert!(out.status.success(), "{}", said(&out));
+        #[cfg(target_os = "linux")]
+        {
+            let out = Command::new("certutil")
+                .args(["-N", "--empty-password", "-d"])
+                .arg(format!("sql:{}", profile.display()))
+                .output()
+                .unwrap();
+            assert!(out.status.success(), "{}", said(&out));
+        }
         // Only what keeps a first run quiet; the proxy is the system's, as
         // Firefox's is by default.
         std::fs::write(
@@ -350,7 +382,7 @@ fn firefox_records_everything_in_its_own_profile_and_through_the_system_proxy() 
 
         let _put_back = desktop::the_users_own();
         let (capture, _untrust) = capture_for(&dir, "system", &site);
-        let firefox = found(Engine::Firefox, &capture.data_dir);
+        let firefox = found("Firefox", &capture.data_dir);
         let holder = Helper::system_proxy(&capture.data_dir, capture.port, true);
         let mut command = Command::new(&firefox.program);
         command
@@ -362,7 +394,7 @@ fn firefox_records_everything_in_its_own_profile_and_through_the_system_proxy() 
         let running = start(command);
         let report = report_of(&site, "Firefox");
         drop(running);
-        if desktop::kde() {
+        if kde() {
             // A gap, measured: Firefox reads the system proxy from GNOME's
             // settings only, which tracewing leaves alone on KDE, so it goes
             // straight to the server and cannot check its certificate.
@@ -386,6 +418,23 @@ fn firefox_records_everything_in_its_own_profile_and_through_the_system_proxy() 
         assert!(holder.let_go().success());
     }
     std::fs::remove_dir_all(&dir).ok();
+}
+
+/// Where a profile of the user's own is: where Firefox looks for them on
+/// Linux, anywhere on Windows.
+fn user_profile(dir: &Path) -> PathBuf {
+    if cfg!(target_os = "linux") {
+        PathBuf::from(std::env::var_os("HOME").unwrap()).join(".mozilla/firefox/e2e.default")
+    } else {
+        dir.join("firefox-user")
+    }
+}
+
+fn kde() -> bool {
+    #[cfg(target_os = "linux")]
+    return desktop::kde();
+    #[cfg(not(target_os = "linux"))]
+    false
 }
 
 /// A folder of the test's in the user's home, gone when the test ends.
