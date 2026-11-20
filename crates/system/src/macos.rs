@@ -429,6 +429,15 @@ fn security_as_admin(args: &[&str]) -> Result<String> {
     run("/usr/bin/osascript", &["-e", &script])
 }
 
+/// Nothing here: this OS's stores are asked by the certificate's own bytes, so
+/// a tracewing CA of another data directory is invisible to tracewing rather
+/// than merely unremovable. Saying it is trusted means finding certificates by
+/// their subject and deciding which of them are ours, which nothing has
+/// measured yet, so uninstall says nothing about the keychain either way.
+pub fn ours_by_name(_scope: Scope) -> bool {
+    false
+}
+
 pub fn ca_install(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
     let pem = cert_pem.display().to_string();
     match scope {
@@ -545,7 +554,7 @@ pub fn find_browsers(profiles: &Path) -> Vec<Browser> {
 
 /// Safari and Chromium's family read the keychains, and so does Firefox
 /// since version 120.
-pub fn browser_trust(_browser: &Browser) -> BrowserTrust {
+pub fn browser_trust(_browser: &Browser, _der: &[u8]) -> BrowserTrust {
     BrowserTrust::System
 }
 

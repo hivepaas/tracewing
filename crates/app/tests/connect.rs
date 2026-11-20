@@ -28,13 +28,30 @@ use tracewing_system::{BrowserTrust, Environment, Scope};
 /// A `gsettings` that keeps its values in files in a folder.
 /// A `certutil` that keeps the certificate as a file in each database, and says
 /// in the store that it added one. `-N` makes a database.
+///
+/// **It keeps the certificate itself, not a marker**, and `-L -a` prints it
+/// back, because that is what tracewing asks: whether a database holds *this*
+/// CA is answered by reading the certificate out and comparing its bytes, the
+/// nickname being the same for every tracewing CA ever made. A stand-in that
+/// only said yes to the name would make the window call a CA trusted that the
+/// browsers reject.
 const FAKE_CERTUTIL: &str = r#"#!/bin/sh
 store="$FAKE_GSETTINGS_DIR"
+db=$(echo "$3" | sed 's/^sql://')
 case "$1" in
 -N) db=$(echo "$4" | sed 's/^sql://'); touch "$db/cert9.db" ;;
--A) db=$(echo "$3" | sed 's/^sql://'); touch "$db/tracewing-ca" "$store/certutil-added" ;;
--L) db=$(echo "$3" | sed 's/^sql://'); test -e "$db/tracewing-ca" ;;
--D) db=$(echo "$3" | sed 's/^sql://'); rm "$db/tracewing-ca" ;;
+-A) pem=""
+    while [ $# -gt 1 ]; do
+        shift
+        [ "$1" = "-i" ] && pem=$2
+    done
+    cp "$pem" "$db/tracewing-ca" && touch "$store/certutil-added" ;;
+-L) test -e "$db/tracewing-ca" || exit 1
+    for arg in "$@"; do
+        [ "$arg" = "-a" ] && cat "$db/tracewing-ca"
+    done
+    exit 0 ;;
+-D) rm "$db/tracewing-ca" ;;
 esac
 "#;
 

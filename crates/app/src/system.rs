@@ -159,6 +159,10 @@ impl CaFound {
 }
 
 fn look_for_ca(ca: &LocalCa, data_dir: &Path) -> anyhow::Result<CaFound> {
+    // Every store is asked for this CA by its bytes, browsers' included: one
+    // holding a tracewing CA of another data directory answers to the name
+    // and does not accept this one's certificates.
+    let der = system::ca_der(ca.cert_path())?;
     Ok(CaFound {
         verified: system::verify_ca(ca, crypto_provider()).is_ok(),
         places: system::ca_locations(ca.cert_path())?,
@@ -167,7 +171,7 @@ fn look_for_ca(ca: &LocalCa, data_dir: &Path) -> anyhow::Result<CaFound> {
         browsers: system::launch::find_browsers(data_dir)
             .into_iter()
             .map(|browser| {
-                let trust = system::browser_trust(&browser);
+                let trust = system::browser_trust(&browser, &der);
                 (browser, trust)
             })
             .collect(),
