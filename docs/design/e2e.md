@@ -63,16 +63,20 @@ the code: "fake" names the stand-in the test uses.
 
 Smaller gaps that need no real system, only a test:
 
-- HAR export of WebSocket messages, with and without secrets.
+- ~~HAR export of WebSocket messages, with and without secrets.~~ Done:
+  `har.rs`'s `a_websockets_messages_go_out_both_ways_and_their_secrets_can_be_left_out`.
 - Solana and Bitcoin answers in a window. They are covered only by unit
   tests.
-- Block answers in `rpc_view.rs` (`block_lines`).
+- ~~Block answers in `rpc_view.rs` (`block_lines`).~~ Done:
+  `a_block_reads_as_which_one_and_how_full`, on a real mainnet block.
 - Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
   10,000 cap.
 - Dragging the dividers and dropping the inspector handle. Hiding the
   inspector.
 - Activating the items of a context menu. Copy as cURL from the window.
-- The Settings part last open being kept.
+- ~~The Settings part last open being kept.~~ Saved on a change
+  (`text_size.rs`) and read back by `layout.rs`'s round trip, which now
+  holds the part and the way in.
 
 Rows in features.md with no code behind them, so nothing to test yet:
 
@@ -134,7 +138,7 @@ fails.
 | S10 | **The window.** It opens, draws Set up, takes a key, opens the save dialog and the clipboard, and closes. The system proxy is back afterwards. | headless, as today | the VM (its adapter is accepted) | the user's Mac |
 
 S10 on Windows needs a display adapter that GPUI's DirectX renderer accepts.
-The VM's does: tracewing's window opened there, 2055 by 1233 at 96 dpi, while
+The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
 #381 was checked. So everything in the table runs in the VM.
 
 ## Order of work
@@ -252,9 +256,11 @@ The VM's does: tracewing's window opened there, 2055 by 1233 at 96 dpi, while
      job sets on a runner that is thrown away after. They pass from an
      editor's shell here too: VS Code's AppArmor profile allows user
      namespaces.
-   - S8 on Windows: `scripts/e2e_windows.ps1 -Wintun <wintun.dll>` runs
-     `wintun_live.rs` and `local_live.rs`, one test at a time, as an
-     administrator.
+   - S8 on Windows, **done** in the VM, over ssh, as an administrator:
+     `wintun_live.rs`'s seven and `local_live.rs`'s one pass. Afterwards no
+     Wintun adapter and no `/1` route are left, and the default route is
+     the VM's own. `scripts/e2e_windows.ps1 -Wintun <wintun.dll>` runs them
+     one test at a time, as they need.
    - Still to come: HTTP/3 from Chrome through the adapter. The QUIC client
      in `local_live_http3.rs` is quinn, not a browser.
 7. Run `release.yml` on a tag, with the suite as a job before the draft.

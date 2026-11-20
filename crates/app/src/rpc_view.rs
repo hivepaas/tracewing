@@ -1691,6 +1691,40 @@ mod tests {
             .collect()
     }
 
+    /// A block from mainnet as a node answers `eth_getBlockByNumber`: which
+    /// one, when it was full, its fee, and how many transactions.
+    #[test]
+    fn a_block_reads_as_which_one_and_how_full() {
+        let shown = of(sample!("block.req.json"), sample!("block.res.json"));
+        let answer = shown.sections.last().unwrap();
+        assert_eq!(
+            lines(answer),
+            [
+                // 0x192bbde, 0x1d888f7 and 0xa25a722 wei, by hand.
+                ("number", "26,393,566"),
+                (
+                    "hash",
+                    "0x7dded073c97474ced7e600795a8a03e928b44de8e0bb056b1d65032871691e1d"
+                ),
+                ("gasUsed", "30,968,055"),
+                ("baseFeePerGas", "0.170239778 gwei"),
+                // The sample keeps 3 of the block's 375.
+                ("transactions", "3 items"),
+            ]
+        );
+        let hash = answer
+            .lines
+            .iter()
+            .find(|line| line.label == "hash")
+            .unwrap();
+        assert!(hash.code, "a hash reads in the mono font");
+        assert!(
+            !answer.lines.iter().any(|line| line.label == "logsBloom"),
+            "what nobody reads is left out: {:?}",
+            lines(answer)
+        );
+    }
+
     #[test]
     fn an_eth_call_reads_as_the_function_it_calls() {
         let shown = of(
