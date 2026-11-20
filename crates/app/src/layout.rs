@@ -468,6 +468,10 @@ mod tests {
             place: Place::Below,
             sidebar_shown: false,
             inspector_h: 300.,
+            // The part of Settings last open, and the way in whose tab was:
+            // where Settings opens next time.
+            settings_section: SettingsSection::Certificates,
+            capture_way: Way::Browser,
             window: Some(WindowState {
                 x: 10.,
                 y: 20.,
