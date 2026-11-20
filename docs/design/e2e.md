@@ -67,7 +67,8 @@ Smaller gaps that need no real system, only a test:
   `har.rs`'s `a_websockets_messages_go_out_both_ways_and_their_secrets_can_be_left_out`.
 - Solana and Bitcoin answers in a window. They are covered only by unit
   tests.
-- Block answers in `rpc_view.rs` (`block_lines`).
+- ~~Block answers in `rpc_view.rs` (`block_lines`).~~ Done:
+  `a_block_reads_as_which_one_and_how_full`, on a real mainnet block.
 - Find: Shift+Enter and the arrow keys, a fold opened on a hit, and the
   10,000 cap.
 - Dragging the dividers and dropping the inspector handle. Hiding the
