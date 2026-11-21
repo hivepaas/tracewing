@@ -341,7 +341,18 @@ back.
      tracewing, and opens S5's page in the simulator's Safari. HTTPS, the
      WebSocket, the events and the Set up test page all go through
      tracewing. Then it deletes the simulator. It runs wherever Xcode has
-     an iOS runtime, the macOS runners included, and asks nobody anything.
+     an iOS runtime, the macOS runners included. It asks nobody anything
+     but `sudo` for one line in `/etc/hosts`, which a runner gives without
+     asking.
+   - **Found, and still open:** asked for by its address
+     (`https://192.168.64.x:port`), the site's HTTPS from Safari in the
+     simulator never reached tracewing at all. There was no flow for it,
+     while the page over plain HTTP, Apple's own HTTPS and
+     `https://tracewing.test/` all went through, decrypted. Asked for by a
+     name for the same address and port (`e2e-site.test`, from
+     `/etc/hosts`), all of it goes through. Chrome and Firefox reach the
+     same address through tracewing (S5). So Safari through a proxy will
+     not do HTTPS to an IP literal here; why is not known yet.
    - Not yet on macOS: S4 (the `.dmg`, which `check_macos_app.sh` opens and
      runs), S5 (the browsers trust the CA through the keychain, which asks),
      S8 (the network extension, which wants a signed build) and S10.
