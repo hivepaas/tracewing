@@ -59,7 +59,7 @@ the code: "fake" names the stand-in the test uses.
 | iOS Simulator | `devices.rs` with a fake `xcrun` | Never run on a Mac. Turning the proxy on is macOS-only and untested. |
 | Capture without proxy settings: TUN on Linux, Wintun on Windows, HTTP/3 through it | `stack.rs`, `tun.rs` with a fake device; `local_live*.rs` `#[ignore]` | The adapter join runs only by hand, under `unshare`, in an editor's shell (AppArmor refuses it elsewhere). Wintun and the Windows catcher have never run. |
 | Platform UI: Cmd keys, the native save dialog, the clipboard, more than one window and display, DPI, window restore | window tests on Linux only | Everything outside Linux headless. |
-| Performance claims: a million flows at display rate, bodies of 50 MB and more | `screen.rs::a_million_flows_while_traffic_keeps_coming` (env-gated, prints timings, asserts none) | No frame-time or responsiveness assertion; the largest body opened in a window is about 1 MB. |
+| Performance claims: a million flows at display rate, bodies of 50 MB and more | `screen.rs::a_million_flows_while_traffic_keeps_coming` (env-gated, prints timings, asserts none) | No frame-time or responsiveness assertion. `big_body.rs` now opens 60 MB of JSON in the window (5.3 million lines): shown, scanned, laid out pretty, found in, and shown at its last line, with loose time bounds. It found the line numbers' first digit cut off past a million lines. |
 
 Smaller gaps that need no real system, only a test:
 
@@ -146,6 +146,24 @@ fails.
 S10 on Windows needs a display adapter that GPUI's DirectX renderer accepts.
 The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
 #381 was checked. So everything in the table runs in the VM.
+
+S10 on Windows is `scripts/check_windows_window.ps1`, which `e2e_windows.ps1`
+runs after S11. It works as a hand does, in the desktop session:
+- It opens the window on the window's own data folder, set aside first and
+  put back after.
+- It checks that the window draws (more than a few colours, taken with
+  `PrintWindow`).
+- It presses Ctrl+2 and Ctrl+B, and the hidden sidebar is written to
+  `layout.toml`.
+- It sends a request through the window's proxy (its port from `tracewing
+  env`), chooses the row with Home and copies it with Ctrl+Shift+C. The
+  clipboard, read as another program reads it, holds the `curl` command.
+- Ctrl+S opens Windows' own save dialog, which is closed again.
+- The window is closed, its process ends, and the proxy setting is what it
+  was.
+
+It exits 2, not 0, where there is no input desktop. Its first run, on the
+hosted runner, passed.
 
 S11 is Windows alone because the thing it checks exists only there: the three
 buttons are painted by tracewing and are a *hit test* to Windows, not windows
@@ -287,8 +305,14 @@ back.
      up by a tracewing that was killed is put back when tracewing starts
      again on that data folder. With `recover_android` doing nothing, it
      fails waiting for that.
-   - Still to come: HTTP/3 from Chrome through the adapter. The QUIC client
-     in `local_live_http3.rs` is quinn, not a browser.
+   - HTTP/3 from Chrome through the adapter, **done**:
+     `local_live_http3.rs`'s `chromes_http3_goes_through_tracewing_on_a_real_adapter`.
+     Chrome, headless in the test's namespace, is told to speak QUIC to
+     `h3.test`, which its resolver maps to the address the default route
+     sends into the adapter. It trusts tracewing's CA from an NSS database
+     in a home of the test's own. The page it gets is the server's own body,
+     the server saw `/orders`, and the way in counted it. With another
+     program kept instead of Chrome, it fails: Chrome gets nothing.
 7. Run `release.yml` on a tag, with the suite as a job before the draft.
    **Done.** `release.yml`'s `windows-e2e` job runs `e2e_windows.ps1
    -ConfirmTrustDialogs -Packages -Browsers 'chrome edge firefox'` on
