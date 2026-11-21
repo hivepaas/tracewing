@@ -131,8 +131,13 @@ fn a_certificate_turned_down_is_a_row_and_the_host_can_be_left_alone() {
         .unwrap();
 
     // curl does not trust tracewing's authority. On OpenSSL it lets the
-    // handshake finish, checks the certificate after, and resets the
-    // connection without asking anything, which is what is seen.
+    // handshake finish, checks the certificate after, sends its alert and
+    // closes. What the proxy sees of that is either: the hosted runner reads
+    // the connection as hung up, an arm64 Ubuntu container on a Mac reads the
+    // alert, each every time, with the same curl 8.5.0 and OpenSSL 3.0.13.
+    // The likely reason is that curl closes with the session tickets unread,
+    // so the close is a reset, and a reset on Linux drops what the proxy had
+    // not read yet, the alert among it.
     assert!(
         !curl(proxy, &origin_ca, origin),
         "the proxy's certificate was taken"
@@ -147,11 +152,13 @@ fn a_certificate_turned_down_is_a_row_and_the_host_can_be_left_alone() {
             let detail = view.inspector.detail.as_ref().unwrap();
             assert_eq!(detail.method, "CONNECT");
             let error = detail.error.as_deref().unwrap();
-            assert_eq!(said(error), Some(Said::HungUp), "{error}");
-            assert_eq!(
-                handshake_note(error).as_deref(),
-                Some("Hung up before a request")
-            );
+            // Either reading is right, as the comment above says.
+            let note = match said(error) {
+                Some(Said::TurnedDown) => "Certificate not trusted",
+                Some(Said::HungUp) => "Hung up before a request",
+                other => panic!("{other:?}: {error}"),
+            };
+            assert_eq!(handshake_note(error).as_deref(), Some(note));
             detail.host.clone()
         })
         .unwrap();
