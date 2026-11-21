@@ -328,19 +328,23 @@ fn chromes_http3_goes_through_tracewing_on_a_real_adapter() {
         })
         .collect();
 
+    // Read before the assertion below, so that a failure says *where* the
+    // chain broke rather than only that it did: nothing caught means the
+    // datagrams never reached tracewing (routing, or the sieve), caught but
+    // unseen by the server means the door or its way out, and seen by the
+    // server with an empty page means the way back.
+    let caught = arrivals.of(By::Tun).count;
+    let seen: Vec<String> = server.saw().iter().map(|a| a.path.clone()).collect();
     assert!(
         page.contains(std::str::from_utf8(SAID).unwrap()),
-        "Chrome did not get the server's own body. Its page: {page:?}. Why: {why:?}"
+        "Chrome did not get the server's own body.\n  its page: {page:?}\n           its reasons: {why:?}\n  caught by the way in: {caught}\n           reached the real server: {seen:?}"
     );
     assert_eq!(
-        server.saw().first().map(|arrived| arrived.path.clone()),
-        Some("/orders".to_owned()),
+        seen.first().map(String::as_str),
+        Some("/orders"),
         "the real server is where it arrived"
     );
-    assert!(
-        arrivals.of(By::Tun).count >= 1,
-        "by the way in that caught it"
-    );
+    assert!(caught >= 1, "by the way in that caught it");
     let _ = stop.send(());
     let _ = std::fs::remove_dir_all(&dir);
     reached(&witness);
