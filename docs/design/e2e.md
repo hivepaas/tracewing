@@ -335,6 +335,15 @@ back.
      for the trust settings, and for an administrator's for `pf`. They run
      only with `TRACEWING_E2E_ATTENDED=1` (`--attended`) or as root, which
      macOS does not ask; on a runner the script runs S7 with `sudo`.
+   - **Found by S1's first attended run, and fixed:** trusting the CA for
+     the machine was one `security add-trusted-cert -d` run as root from the
+     password dialog, which macOS 27 refuses: "The authorization was denied
+     since no user interaction was possible". The certificate was in the
+     System keychain by then, untrusted, and uninstall stopped at removing
+     a trust that was not there, so it stayed. Now the certificate goes in
+     as root and the trust is set as the user, each asking once; a failed
+     trust takes the certificate out again, and uninstall takes out
+     whichever of the two is there.
    - S4 on macOS: `dmg.rs`, with `e2e_macos.sh --packages`, which builds the
      image. It copies tracewing.app out of the image into /Applications, as
      dragging it does, but not over one already there. The installed

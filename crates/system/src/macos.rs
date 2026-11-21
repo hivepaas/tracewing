@@ -438,7 +438,7 @@ pub fn ours_by_name(_scope: Scope) -> bool {
     false
 }
 
-pub fn ca_install(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
+pub fn ca_install(cert_pem: &Path, der: &[u8], scope: Scope) -> Result<()> {
     let pem = cert_pem.display().to_string();
     match scope {
         Scope::User => {
@@ -448,16 +448,29 @@ pub fn ca_install(cert_pem: &Path, _der: &[u8], scope: Scope) -> Result<()> {
                 &["add-trusted-cert", "-r", "trustRoot", "-k", &keychain, &pem],
             )?;
         }
+        // Two steps, as two people: the certificate into the System keychain
+        // as root, which only root may write; the trust for every user as
+        // this one. Root's `add-trusted-cert -d` from the password dialog is
+        // refused ("no user interaction was possible"), and this user's in
+        // one go cannot write the keychain. Each step asks once.
         Scope::Machine => {
-            security_as_admin(&[
-                "add-trusted-cert",
-                "-d",
-                "-r",
-                "trustRoot",
-                "-k",
-                SYSTEM_KEYCHAIN,
-                &pem,
-            ])?;
+            security_as_admin(&["add-certificates", "-k", SYSTEM_KEYCHAIN, &pem])?;
+            if let Err(e) = run(
+                "/usr/bin/security",
+                &["add-trusted-cert", "-d", "-r", "trustRoot", &pem],
+            ) {
+                // Not left behind untrusted, where uninstall would have to
+                // find it.
+                let hash = fingerprint(der);
+                return Err(
+                    match security_as_admin(&["delete-certificate", "-Z", &hash, SYSTEM_KEYCHAIN]) {
+                        Ok(_) => e,
+                        Err(left) => {
+                            e.context(format!("and it is still in the System keychain: {left:#}"))
+                        }
+                    },
+                );
+            }
         }
     }
     Ok(())
@@ -479,9 +492,18 @@ pub fn ca_uninstall(cert_pem: &Path, der: &[u8], scope: Scope) -> Result<()> {
                 &["delete-certificate", "-Z", &hash, &keychain],
             )?;
         }
+        // The trust as this user, as it was given; the certificate as root.
+        // Each is taken out though the other is not there: an install that
+        // failed halfway, or an older tracewing's, left one without the other.
         Scope::Machine => {
-            security_as_admin(&["remove-trusted-cert", "-d", &pem])?;
-            security_as_admin(&["delete-certificate", "-Z", &hash, SYSTEM_KEYCHAIN])?;
+            let untrusted = run("/usr/bin/security", &["remove-trusted-cert", "-d", &pem]);
+            if holds(SYSTEM_KEYCHAIN, cert_pem)? {
+                security_as_admin(&["delete-certificate", "-Z", &hash, SYSTEM_KEYCHAIN])?;
+            }
+            match untrusted {
+                Err(e) if !format!("{e:#}").contains("could not be found") => return Err(e),
+                _ => {}
+            }
         }
     }
     Ok(())

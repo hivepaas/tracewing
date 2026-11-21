@@ -127,7 +127,7 @@ apart "in the keychain" from "trusted" when an install was left half done.
 |---|---|---|
 | Windows, user | "Security Warning" dialog, **No** is the default; removal has its own | No rights needed. No gives error 1223, to handle as "cancelled". Firefox 159 trusts it on a new profile |
 | Windows, machine | Nothing beyond UAC | Over SSH as admin it needs no dialog at all |
-| macOS | Password dialog titled "security" | Over SSH it fails, even with `sudo`. A failed install leaves the certificate in the keychain, untrusted. Firefox 159 trusts it on a new profile |
+| macOS | Password dialog titled "security"; for the machine, an administrator's password, then the trust settings' own | Over SSH it fails, even with `sudo`. A failed install leaves the certificate in the keychain, untrusted. Firefox 159 trusts it on a new profile. For the machine on macOS 27: root from the password dialog may write the System keychain but not the trust settings ("no user interaction was possible"), and the user may set the trust but not write the keychain, so it takes both, one after the other |
 | Linux, machine | polkit | Debian 12, Ubuntu 24.04, Fedora 42, openSUSE Tumbleweed, Arch: curl and Python accept it, reject it again after removal |
 | Linux, user | Nothing, needs `certutil` | Chromium and Firefox refuse with only the system store, and need NSS (`~/.pki/nssdb`, each Firefox profile) |
 
