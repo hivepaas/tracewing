@@ -30,7 +30,6 @@ fn app(dir: &Path, port: u16, watchdog: bool) -> Helper {
     app
 }
 
-#[cfg(not(target_os = "macos"))]
 fn recover(dir: &Path, only_if_gone: bool) -> String {
     let mut command = tracewing_e2e::tracewing();
     command.args(["recover", "--data-dir"]).arg(dir);
@@ -142,6 +141,11 @@ fn the_agent_puts_it_back_when_the_app_is_killed() {
 
     app(&dir, free_port(), false).kill();
     back(&before, Duration::from_secs(10));
+    // The waiter stays an entry in launchd, with no process, until tracewing
+    // next starts on this data directory and finds nothing to recover. Nothing
+    // will start on a scratch one again, so that start is made here: without
+    // it each run leaves one more entry behind on the Mac it ran on.
+    recover(&dir, false);
     std::fs::remove_dir_all(&dir).ok();
 }
 
