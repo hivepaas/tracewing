@@ -58,6 +58,46 @@ fn an_iphone(xcrun: &Path) -> Option<(String, String)> {
     ))
 }
 
+/// The name the site is asked for by.
+const NAME: &str = "e2e-site.test";
+
+/// The name in /etc/hosts, taken out again however the test ends. With
+/// sudo, which a runner gives without asking and a Mac asks for in the
+/// terminal the test runs in.
+struct Hosts;
+
+impl Hosts {
+    fn add(ip: std::net::IpAddr) -> Self {
+        let line = format!("{ip} {NAME}");
+        let status = Command::new("sudo")
+            .args(["sh", "-c", &format!("echo '{line}' >> /etc/hosts")])
+            .status()
+            .unwrap();
+        assert!(status.success(), "add {NAME} to /etc/hosts");
+        flush();
+        Hosts
+    }
+}
+
+impl Drop for Hosts {
+    fn drop(&mut self) {
+        let _ = Command::new("sudo")
+            .args(["sed", "-i", "", &format!("/ {NAME}$/d"), "/etc/hosts"])
+            .status();
+        flush();
+    }
+}
+
+/// What macOS has cached of names, forgotten, so /etc/hosts is read again.
+fn flush() {
+    let _ = Command::new("sudo")
+        .args(["dscacheutil", "-flushcache"])
+        .status();
+    let _ = Command::new("sudo")
+        .args(["killall", "-HUP", "mDNSResponder"])
+        .status();
+}
+
 /// The test's simulator, shut down and deleted however the test ends.
 struct Simulator<'a> {
     xcrun: &'a Path,
@@ -95,7 +135,12 @@ fn a_simulator_set_up_reaches_everything_through_tracewing() {
     simctl(&xcrun, &["bootstatus", &sim.udid, "-b"]);
 
     let dir = scratch("ios-simulator");
-    let site = Site::start(&dir);
+    // Asked for by a name, which the proxy resolves from /etc/hosts. By its
+    // address alone, Safari's HTTPS to the site never reached tracewing at
+    // all, while Chrome and Firefox's do (S5): which of the two -- the
+    // address or the port -- it minds is what this run says.
+    let site = Site::start_named(&dir, Some(NAME));
+    let _hosts = Hosts::add(site.ip);
     let capture = Capture::start_trusting(&program(), &dir.join("data"), &site.ca, KeyStore::File);
     // What "Set up the simulators" does: the CA among its roots, and the
     // Mac's proxy, which it goes through, pointed at tracewing.

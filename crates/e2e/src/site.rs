@@ -70,6 +70,8 @@ struct Seen {
 /// The page's server and the HTTPS one, until dropped.
 pub struct Site {
     pub ip: IpAddr,
+    /// What the pages are asked for by: the address, or a name for it.
+    host: String,
     /// The page's, plain HTTP.
     pub plain: u16,
     /// The HTTPS server's, TCP and UDP.
@@ -82,14 +84,28 @@ pub struct Site {
 
 impl Site {
     pub fn start(dir: &Path) -> Self {
+        Self::start_named(dir, None)
+    }
+
+    /// The same, asked for by `name` rather than by its address, where the
+    /// client needs a name: a name the proxy resolves to that address, which
+    /// the certificate holds besides it.
+    pub fn start_named(dir: &Path, name: Option<&str>) -> Self {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .enable_all()
             .build()
             .unwrap();
         let ip = this_computers_address();
+        let host = name.map_or_else(
+            || match ip {
+                IpAddr::V4(ip) => ip.to_string(),
+                IpAddr::V6(ip) => format!("[{ip}]"),
+            },
+            str::to_owned,
+        );
         let ca = dir.join("site-ca.pem");
-        let config = Arc::new(tls_config(ip, &ca));
+        let config = Arc::new(tls_config(ip, name, &ca));
         let seen = Arc::new(Seen::default());
         let (plain_listener, tls_listener) = runtime.block_on(async {
             let plain = TcpListener::bind((ip, 0)).await.unwrap();
@@ -103,7 +119,7 @@ impl Site {
             .unwrap();
         let routes = Arc::new(Routes {
             seen: seen.clone(),
-            tls_origin: format!("https://{}", host_port(ip, tls)),
+            tls_origin: format!("https://{host}:{tls}"),
             tls_port: tls,
         });
 
@@ -160,6 +176,7 @@ impl Site {
         });
         Site {
             ip,
+            host,
             plain,
             tls,
             ca,
@@ -170,11 +187,11 @@ impl Site {
 
     /// The page, which does the rest itself.
     pub fn page(&self) -> String {
-        format!("http://{}/", host_port(self.ip, self.plain))
+        format!("http://{}:{}/", self.host, self.plain)
     }
 
     pub fn tls_origin(&self) -> String {
-        format!("https://{}", host_port(self.ip, self.tls))
+        format!("https://{}:{}", self.host, self.tls)
     }
 
     /// What the page said last, by name, once it has; and forgets it.
@@ -185,13 +202,6 @@ impl Site {
     /// How many datagrams reached the HTTPS server's port.
     pub fn datagrams(&self) -> u64 {
         self.seen.datagrams.load(Ordering::Relaxed)
-    }
-}
-
-fn host_port(ip: IpAddr, port: u16) -> String {
-    match ip {
-        IpAddr::V4(ip) => format!("{ip}:{port}"),
-        IpAddr::V6(ip) => format!("[{ip}]:{port}"),
     }
 }
 
@@ -386,7 +396,7 @@ const within = (ms, what) => Promise.race([what, new Promise((_, no) => setTimeo
 }
 
 /// A certificate for `ip`, from an authority of its own written to `ca_out`.
-fn tls_config(ip: IpAddr, ca_out: &Path) -> ServerConfig {
+fn tls_config(ip: IpAddr, name: Option<&str>, ca_out: &Path) -> ServerConfig {
     let ca_key = KeyPair::generate().unwrap();
     let mut ca_params = CertificateParams::default();
     ca_params
@@ -398,10 +408,14 @@ fn tls_config(ip: IpAddr, ca_out: &Path) -> ServerConfig {
     std::fs::write(ca_out, ca_cert.pem()).unwrap();
     let issuer = Issuer::new(ca_params, ca_key);
     let leaf_key = KeyPair::generate().unwrap();
-    let leaf = CertificateParams::new(vec![ip.to_string()])
-        .unwrap()
-        .signed_by(&leaf_key, &issuer)
-        .unwrap();
+    let leaf = CertificateParams::new(
+        std::iter::once(ip.to_string())
+            .chain(name.map(str::to_owned))
+            .collect::<Vec<_>>(),
+    )
+    .unwrap()
+    .signed_by(&leaf_key, &issuer)
+    .unwrap();
     let mut config =
         ServerConfig::builder_with_provider(Arc::new(tracewing_proxy::crypto_provider()))
             .with_safe_default_protocol_versions()
