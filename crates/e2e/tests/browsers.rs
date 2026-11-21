@@ -459,9 +459,9 @@ impl Drop for RemoveDir {
 
 /// Safari, which has no profile of tracewing's: through the system proxy
 /// alone, with the CA trusted by the machine. The site is asked for by a
-/// name: by its address, Safari in the iOS Simulator never sent its HTTPS
-/// into tracewing at all (docs/design/e2e.md), and here it is tried by its
-/// address afterwards too, and what it did said rather than asserted.
+/// name. By its address, which is this Mac's own, CFNetwork sends HTTPS past
+/// the proxy (docs/design/e2e.md), so there Safari reaches the site directly
+/// and turns its certificate down, as docs/capturing.md says.
 #[cfg(target_os = "macos")]
 #[test]
 fn safari_records_everything_through_the_system_proxy() {
@@ -502,7 +502,14 @@ fn safari_records_everything_through_the_system_proxy() {
         let holder = Helper::system_proxy(&capture.data_dir, capture.port, true);
         open(&site.page());
         let report = report_of(&site, "Safari");
-        eprintln!("Safari, asked for the site by its address: {report:?}");
+        let get = |name: &str| report.get(name).map(String::as_str).unwrap_or("");
+        // The page is plain HTTP, which goes through; its HTTPS does not.
+        assert_eq!(get("check"), "reached", "Safari said {report:?}");
+        assert!(
+            get("json").starts_with("error"),
+            "Safari's HTTPS to this Mac's own address went through, which \
+             docs/capturing.md says it does not: {report:?}"
+        );
         assert!(holder.let_go().success());
     }
     let _ = Command::new("/usr/bin/pkill")
