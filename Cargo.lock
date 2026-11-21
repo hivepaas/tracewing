@@ -8867,6 +8867,8 @@ dependencies = [
  "tracewing-proxy",
  "tracewing-store",
  "tracewing-system",
+ "tracing",
+ "tracing-subscriber",
  "unicode-segmentation",
  "unicode-width 0.2.3",
  "x509-parser",

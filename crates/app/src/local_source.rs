@@ -403,26 +403,74 @@ pub fn catching(apps: Apps, chosen: Chosen, http3: Http3) -> datagrams::Catching
                 // was asked as the datagram arrived and this is asked once
                 // the answer has come, and somebody may have turned the
                 // setting off in between. Cheap either way.
+                // Each way of saying no says why, once per pair of ends: a
+                // refused client falls back to TCP and is seen there, so a
+                // refusal that should not have been is otherwise silent.
+                let from = datagram.from;
                 if !http3.live.capture_http3() || chosen.none() {
+                    tracing::debug!(
+                        "QUIC from {from} refused: HTTP/3 capture is off or nothing is chosen"
+                    );
                     return None;
                 }
                 // No door, nothing to send it to. The proxy opens one at
                 // every start, so this is a door that could not be opened
                 // and said so, or a proxy that is stopping.
-                let door = http3.door.at()?;
+                let Some(door) = http3.door.at() else {
+                    tracing::warn!("QUIC from {from} refused: tracewing's HTTP/3 door is not open");
+                    return None;
+                };
                 // `None` is an address that is not this machine's, which is
                 // no program of ours to find.
-                let answer = apps.sent(datagram.from)?;
+                let Some(answer) = apps.sent(from) else {
+                    tracing::debug!("QUIC from {from} refused: not this machine's address");
+                    return None;
+                };
                 let waiting = Arc::clone(&answer);
                 let deadline = std::time::Instant::now() + NAMED_WITHIN;
                 // `wait_until` waits on a condition variable, and nothing on
                 // the runtime may: one of these would hold a worker thread
                 // for as long as the look-up takes.
                 let named = tokio::task::spawn_blocking(move || waiting.wait_until(deadline)).await;
-                let path = named.ok().flatten().and_then(|app| app.path)?;
+                let path = match (named.ok().flatten(), answer.now()) {
+                    (
+                        Some(tracewing_store::app::App {
+                            path: Some(path), ..
+                        }),
+                        _,
+                    ) => path,
+                    (Some(app), _) => {
+                        tracing::info!(
+                            "QUIC from {from} refused: {} (pid {}) sent it, and its file could not be read",
+                            app.name,
+                            app.pid
+                        );
+                        return None;
+                    }
+                    (None, None) => {
+                        tracing::warn!(
+                            "QUIC from {from} refused: which program sent it was not known within {NAMED_WITHIN:?}"
+                        );
+                        return None;
+                    }
+                    (None, Some(Some(app))) => {
+                        tracing::warn!(
+                            "QUIC from {from} refused: {} (pid {}) was named only after {NAMED_WITHIN:?}",
+                            app.name,
+                            app.pid
+                        );
+                        return None;
+                    }
+                    (None, Some(None)) => {
+                        tracing::info!("QUIC from {from} refused: no program holds its socket");
+                        return None;
+                    }
+                };
                 if !chosen.holds(&path) {
+                    tracing::debug!("QUIC from {from} refused: {path} is not chosen");
                     return None;
                 }
+                tracing::debug!("QUIC from {from} goes to the HTTP/3 door: {path}");
                 Some(Caught {
                     door,
                     known: Known {
