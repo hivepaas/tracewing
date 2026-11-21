@@ -284,6 +284,9 @@ fn chromes_http3_goes_through_tracewing_on_a_real_adapter() {
             "--disable-dev-shm-usage",
             "--no-first-run",
             "--enable-quic",
+            // What QUIC says when it gives up, on stderr with the rest.
+            "--enable-logging=stderr",
+            "--vmodule=*quic*=1",
             "--origin-to-force-quic-on=h3.test:443",
         ])
         .arg(format!(
@@ -315,7 +318,14 @@ fn chromes_http3_goes_through_tracewing_on_a_real_adapter() {
     // Chrome's reason, without the lines of dbus it says on every start.
     let why: Vec<&str> = said
         .lines()
-        .filter(|line| line.contains("Page load failed") || line.contains("net::ERR_"))
+        .filter(|line| {
+            line.contains("Page load failed")
+                || line.contains("net::ERR_")
+                || (line.to_ascii_lowercase().contains("quic")
+                    && ["error", "close", "fail"]
+                        .iter()
+                        .any(|word| line.to_ascii_lowercase().contains(word)))
+        })
         .collect();
 
     assert!(
