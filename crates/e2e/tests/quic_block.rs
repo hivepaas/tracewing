@@ -12,8 +12,16 @@ use tracewing_e2e::{
 
 /// Answers whatever comes to 127.0.0.1:443, until the test ends.
 fn echo_on_443() {
-    let server = UdpSocket::bind("127.0.0.1:443")
-        .expect("bind UDP 443: a container lets an ordinary user, by ip_unprivileged_port_start");
+    // macOS lets an ordinary user, which `--attended` runs this as, have a
+    // port under 1024 only on the wildcard address: 127.0.0.1:443 is refused
+    // (EACCES), 0.0.0.0:443 is not. A container lets one have either, by
+    // ip_unprivileged_port_start.
+    let at = if cfg!(target_os = "macos") {
+        "0.0.0.0:443"
+    } else {
+        "127.0.0.1:443"
+    };
+    let server = UdpSocket::bind(at).unwrap_or_else(|e| panic!("bind UDP {at}: {e}"));
     std::thread::spawn(move || {
         let mut buf = [0u8; 64];
         while let Ok((n, from)) = server.recv_from(&mut buf) {
