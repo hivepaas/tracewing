@@ -311,6 +311,13 @@ back.
      for the trust settings, and for an administrator's for `pf`. They run
      only with `TRACEWING_E2E_ATTENDED=1` (`--attended`) or as root, which
      macOS does not ask; on a runner the script runs S7 with `sudo`.
+   - The iOS Simulator, as Set up sets it up: `ios_simulator.rs` makes a
+     simulator of its own, trusts tracewing's CA in it with `ios_sim::trust`
+     (what "Set up the simulators" runs), points the Mac's proxy at
+     tracewing, and opens S5's page in the simulator's Safari. HTTPS, the
+     WebSocket, the events and the Set up test page all go through
+     tracewing. Then it deletes the simulator. It runs wherever Xcode has
+     an iOS runtime, the macOS runners included, and asks nobody anything.
    - Not yet on macOS: S4 (the `.dmg`, which `check_macos_app.sh` opens and
      runs), S5 (the browsers trust the CA through the keychain, which asks),
      S8 (the network extension, which wants a signed build) and S10.
