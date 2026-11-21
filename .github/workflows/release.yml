@@ -259,14 +259,22 @@ jobs:
     needs: version
     if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
     runs-on: macos-15
+    # A hang ends here, not at GitHub's six hours: each test program has its
+    # own limit too (e2e_macos.sh), so the log says where.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
       - name: Rust
         run: rustup toolchain install
 
+      # The licenses the disk image holds, as the package job installs them.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about@0.9.3
+
       - name: Tests that change the computer
-        run: scripts/e2e_macos.sh --this-machine-may-be-changed
+        run: scripts/e2e_macos.sh --this-machine-may-be-changed --packages
 
   release:
     name: Draft release

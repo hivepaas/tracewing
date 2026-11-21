@@ -8,6 +8,11 @@
 #   scripts/e2e_macos.sh --this-machine-may-be-changed
 #   scripts/e2e_macos.sh --attended          # somebody here answers dialogs
 #   scripts/e2e_macos.sh --skip-build
+#   scripts/e2e_macos.sh --packages          # S4: the .dmg, built and installed
+#
+# --packages builds the disk image (scripts/package_macos.sh, which needs
+# cargo-about) for the test that installs it into /Applications. A Mac that
+# has a tracewing.app there already keeps it, and that test says so.
 #
 # macOS asks before tracewing trusts its CA (a user's password for their own
 # trust settings, an administrator's for the machine's) and before it turns
@@ -25,6 +30,7 @@ target=${CARGO_TARGET_DIR:-target}
 marker="/Library/Application Support/tracewing-e2e-throwaway"
 
 attended=""
+packages=""
 build=yes
 mark=""
 for arg in "$@"; do
@@ -32,6 +38,7 @@ for arg in "$@"; do
     --this-machine-may-be-changed) mark=yes ;;
     --attended) attended=1 ;;
     --skip-build) build="" ;;
+    --packages) packages=yes ;;
     *) echo "unknown: $arg" >&2; exit 2 ;;
     esac
 done
@@ -57,12 +64,30 @@ for line in sys.stdin:
         print(msg["executable"])
 ')
 
+if [ -n "$packages" ]; then
+    dist="$target/e2e-dist"
+    rm -rf "$dist"
+    BIN="$target/release/tracewing" DIST="$dist" scripts/package_macos.sh
+    TRACEWING_E2E_DMG="$(pwd)/$(ls "$dist"/tracewing_*.dmg)"
+    export TRACEWING_E2E_DMG
+    echo "packages: $TRACEWING_E2E_DMG"
+fi
+
 export TRACEWING_E2E=1
 TRACEWING_E2E_BIN="$(pwd)/$target/release/tracewing"
 export TRACEWING_E2E_BIN
 if [ -n "$attended" ]; then
     export TRACEWING_E2E_ATTENDED=1
 fi
+
+# Each test program, with what it says as it goes, and a time it may take:
+# one that hangs is ended, and what it said up to there is in the log,
+# rather than the whole job waiting for its own limit and saying nothing.
+# macOS has no timeout(1); perl's alarm ends the program it execs.
+limit=${E2E_LIMIT:-900}
+limited() {
+    perl -e 'alarm shift; exec @ARGV' "$limit" "$1" --test-threads=1 --nocapture
+}
 
 status=0
 for test in $tests; do
@@ -72,12 +97,12 @@ for test in $tests; do
     # pf takes an administrator: as root when nobody is here to be asked.
     quic_block-*)
         if [ -n "$attended" ]; then
-            "$test" --test-threads=1 || status=1
+            limited "$test" || status=1
         else
-            sudo -E "$test" --test-threads=1 || status=1
+            sudo -E perl -e 'alarm shift; exec @ARGV' "$limit" "$test" --test-threads=1 --nocapture || status=1
         fi
         ;;
-    *) "$test" --test-threads=1 || status=1 ;;
+    *) limited "$test" || status=1 ;;
     esac
 done
 exit $status
