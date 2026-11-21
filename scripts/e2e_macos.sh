@@ -11,10 +11,12 @@
 #   scripts/e2e_macos.sh --packages          # S4: the .dmg, built and installed
 #   scripts/e2e_macos.sh --browsers 'chrome firefox safari'
 #
-# S5 opens the browsers named. Without --browsers, a run with nobody at the
-# Mac (a runner) opens every one of them found in /Applications; a run with
-# --attended opens none unless told, since Safari has no profile of
-# tracewing's and would open in the person's own.
+# S5 opens the browsers named, and only with --attended: they trust the
+# capture's CA through the machine's trust settings, which macOS changes only
+# after a person confirms it -- measured on macos-15, even `sudo security
+# add-trusted-cert -d` waits for the dialog for ever, and granting the right
+# beforehand is refused to root too (`authorizationdb write`: -60005). Safari
+# has no profile of tracewing's, so it opens in the person's own.
 #
 # --packages builds the disk image (scripts/package_macos.sh, which needs
 # cargo-about) for the test that installs it into /Applications. A Mac that
@@ -88,19 +90,6 @@ TRACEWING_E2E_BIN="$(pwd)/$target/release/tracewing"
 export TRACEWING_E2E_BIN
 if [ -n "$attended" ]; then
     export TRACEWING_E2E_ATTENDED=1
-fi
-# On a runner, nobody answers the dialog macOS shows before the machine's
-# trust settings change -- not even for `sudo security add-trusted-cert -d`,
-# which waits for it for ever. A runner is thrown away after, so there the
-# right is granted outright first. Never on a Mac somebody runs this at:
-# there the dialog is answered, and the authorization database stays theirs.
-if [ -z "$attended" ]; then
-    sudo security authorizationdb write com.apple.trust-settings.admin allow
-fi
-if [ -z "$browsers" ] && [ -z "$attended" ]; then
-    for app in "Google Chrome:chrome" "Microsoft Edge:edge" "Firefox:firefox" "Safari:safari"; do
-        [ -d "/Applications/${app%%:*}.app" ] && browsers="$browsers ${app##*:}"
-    done
 fi
 if [ -n "$browsers" ]; then
     TRACEWING_E2E_BROWSERS=$browsers

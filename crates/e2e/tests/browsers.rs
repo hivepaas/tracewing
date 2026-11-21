@@ -131,6 +131,13 @@ fn found(name: &str, data: &Path) -> Browser {
 /// Whether this machine is to have `engine`: if not, the test says so and
 /// ends.
 fn wanted(engine: &str) -> bool {
+    // On a Mac the CA is trusted through the machine's trust settings, which
+    // macOS changes only after a person confirms it.
+    if cfg!(target_os = "macos") && !std::env::var(tracewing_e2e::ATTENDED).is_ok_and(|v| v == "1")
+    {
+        eprintln!("skipped: on macOS the browsers need somebody to confirm the CA (--attended)");
+        return false;
+    }
     let Ok(list) = std::env::var("TRACEWING_E2E_BROWSERS") else {
         eprintln!("skipped: TRACEWING_E2E_BROWSERS names no browser to run here");
         return false;

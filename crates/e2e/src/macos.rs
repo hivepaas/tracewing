@@ -51,8 +51,9 @@ fn flush() {
 
 /// A certificate trusted as a root by this Mac, for every user, until
 /// dropped: what an administrator's "Always Trust" does, by `security` with
-/// sudo. macOS still asks before it changes, even under sudo: a person at
-/// the Mac answers, and on a runner `e2e_macos.sh` grants the right first.
+/// sudo. macOS still asks a person before it changes, even under sudo, and
+/// nothing lets a runner skip that: so only a test somebody answers for
+/// (`only_where_someone_answers!`, with --attended) may use it.
 /// Taken out by its own SHA-1, never by name, so another CA of tracewing's
 /// stays.
 pub struct Trusted {

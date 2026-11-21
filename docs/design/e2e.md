@@ -362,12 +362,17 @@ back.
      not do HTTPS to an IP literal here; why is not known yet.
    - S5 on macOS: Chrome, Edge and Firefox as on the other two, and Safari,
      which has no profile of tracewing's, through the system proxy alone.
-     The browsers trust the capture's CA as the machine's, set with
-     `security` by `sudo` (`tracewing_e2e::macos::Trusted`), which asks
-     nobody on a runner. It is taken out again by its own SHA-1, never by
-     name. Safari asks for the site by a name. It is then tried by its
-     address too, and what it did is printed rather than asserted, for the
-     finding above. A run with `--attended` opens no browser unless
-     `--browsers` names it, since Safari would open in the person's own.
+     Safari asks for the site by a name, then is tried by its address too,
+     and what it did is printed rather than asserted, for the finding above.
+     The browsers trust the capture's CA as the machine's, with `security`
+     by `sudo` (`tracewing_e2e::macos::Trusted`), taken out again by its own
+     SHA-1, never by name. **That runs only with `--attended`**, at a Mac
+     somebody answers at: macOS confirms a change to its trust settings
+     with a person even under sudo. Measured on `macos-15`: `sudo security
+     add-trusted-cert -d` waits for the dialog for ever, and granting the
+     right beforehand (`security authorizationdb write
+     com.apple.trust-settings.admin allow`) is refused to root (-60005). So
+     on a runner S5 says it skipped. `--browsers` names which browsers to
+     open, since Safari opens in the person's own.
    - Not yet on macOS: S8 (the network extension, which wants a signed
      build) and S10.
