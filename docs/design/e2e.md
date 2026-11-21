@@ -59,7 +59,7 @@ the code: "fake" names the stand-in the test uses.
 | iOS Simulator | `devices.rs` with a fake `xcrun` | Never run on a Mac. Turning the proxy on is macOS-only and untested. |
 | Capture without proxy settings: TUN on Linux, Wintun on Windows, HTTP/3 through it | `stack.rs`, `tun.rs` with a fake device; `local_live*.rs` `#[ignore]` | The adapter join runs only by hand, under `unshare`, in an editor's shell (AppArmor refuses it elsewhere). Wintun and the Windows catcher have never run. |
 | Platform UI: Cmd keys, the native save dialog, the clipboard, more than one window and display, DPI, window restore | window tests on Linux only | Everything outside Linux headless. |
-| Performance claims: a million flows at display rate, bodies of 50 MB and more | `screen.rs::a_million_flows_while_traffic_keeps_coming` (env-gated, prints timings, asserts none) | No frame-time or responsiveness assertion; the largest body opened in a window is about 1 MB. |
+| Performance claims: a million flows at display rate, bodies of 50 MB and more | `screen.rs::a_million_flows_while_traffic_keeps_coming` (env-gated, prints timings, asserts none) | No frame-time or responsiveness assertion. `big_body.rs` now opens 60 MB of JSON in the window (5.3 million lines): shown, scanned, laid out pretty, found in, and shown at its last line, with loose time bounds. It found the line numbers' first digit cut off past a million lines. |
 
 Smaller gaps that need no real system, only a test:
 

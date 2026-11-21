@@ -1119,9 +1119,19 @@ impl BodyView {
         cx.notify();
     }
 
+    /// How wide the line numbers' column is, at the design's size: the
+    /// design's own up to six digits, and as wide as the last line's number
+    /// past them. A body of a million lines has numbers of seven, and in the
+    /// design's column the first of them was cut off at its left.
+    fn gutter_w(&self) -> f32 {
+        let digits = self.lines().max(1).ilog10() as f32 + 1.;
+        // The number's own width, and the padding at its right.
+        GUTTER_W.max(digits * self.char_w / self.scale + 8.)
+    }
+
     /// How wide the lines' text shows, between the gutter and the bar.
     fn text_w(&self) -> f32 {
-        f32::from(self.bounds.get().size.width) - BAR_W - (GUTTER_W + FOLD_W) * self.scale
+        f32::from(self.bounds.get().size.width) - BAR_W - (self.gutter_w() + FOLD_W) * self.scale
     }
 
     /// How far the lines scroll sideways: past the widest, a little room.
@@ -1176,8 +1186,9 @@ impl BodyView {
     /// on its line when the width changes.
     fn fit_cols(&mut self, window: &mut Window) {
         let char_w = mono_char_w(window, 12. * self.scale);
-        let width =
-            f32::from(self.bounds.get().size.width) - BAR_W - (GUTTER_W + FOLD_W + 8.) * self.scale;
+        let width = f32::from(self.bounds.get().size.width)
+            - BAR_W
+            - (self.gutter_w() + FOLD_W + 8.) * self.scale;
         let cols = ((width / char_w).floor() as usize).max(8);
         if cols != self.cols {
             self.cols = cols;
@@ -1256,7 +1267,7 @@ impl BodyView {
             .child(
                 div()
                     .id(("number", key))
-                    .w(ui(GUTTER_W))
+                    .w(ui(self.gutter_w()))
                     .flex_shrink_0()
                     .pr_1()
                     .flex()
