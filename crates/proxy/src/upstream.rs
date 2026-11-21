@@ -23,6 +23,7 @@ use hyper_util::{
     rt::TokioIo,
 };
 use std::{
+    collections::HashMap,
     future::Future,
     io,
     net::{IpAddr, SocketAddr},
@@ -32,7 +33,7 @@ use std::{
         atomic::{AtomicBool, AtomicI64, AtomicU32, Ordering},
     },
     task::{Context, Poll},
-    time::Instant,
+    time::{Duration, Instant},
 };
 use tokio::net::TcpStream;
 use tokio_rustls::{TlsConnector, client::TlsStream};
@@ -59,6 +60,10 @@ pub struct Upstream {
     /// Written here by the way out that made it, [`crate::quic_upstream`]
     /// included, and read through [`Self::tell_once`] alone.
     pub(crate) told: AtomicBool,
+    /// Made by [`TimedConnector::reach`] for the request that comes next,
+    /// which waited for it even though it was ready before that request
+    /// began. Taken by the first flow over it, through [`Self::made_for_next`].
+    pub(crate) ahead: AtomicBool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -74,6 +79,11 @@ impl Upstream {
     /// The first to ask gets what to write; the rest refer to it by `id`.
     pub fn tell_once(&self) -> Option<Vec<u8>> {
         (!self.told.swap(true, Ordering::Relaxed)).then(|| self.describe())
+    }
+
+    /// Whether it was made ahead for the flow asking, which is the first to.
+    pub fn made_for_next(&self) -> bool {
+        self.ahead.swap(false, Ordering::Relaxed)
     }
 
     /// As JSON, which the inspector reads back.
@@ -104,6 +114,11 @@ pub struct TlsFailure {
     pub message: String,
     /// In DER, the server's own first. Empty if it showed none.
     pub certificates: Vec<Vec<u8>>,
+    /// The server answered the hello with something that is not TLS, or hung
+    /// up on it: a port that speaks plain HTTP, most often. A client that
+    /// tried HTTPS on its own initiative falls back from this, given the
+    /// chance. See [`TimedConnector::reach`].
+    pub not_tls: bool,
 }
 
 impl std::fmt::Display for TlsFailure {
@@ -229,6 +244,49 @@ pub struct TimedConnector {
     /// Looked at as a connection is made, for a rule that says which
     /// version to ask that host with.
     traffic_rules: Arc<RwLock<TrafficRules>>,
+    /// Connections made ahead of a client's handshake, and the servers lately
+    /// reached. See [`Self::reach`].
+    ahead: Arc<Mutex<Ahead>>,
+}
+
+/// How long a connection made by [`TimedConnector::reach`] waits for the
+/// request it was made for. The client's handshake and its first request
+/// come within milliseconds of it; this is only so that one that never comes
+/// does not hold a server's connection for good.
+const PARKED_FOR: Duration = Duration::from_secs(10);
+
+/// How long after a server was reached a new tunnel to it is taken on trust,
+/// without reaching it again first. Most connections to a server come in a
+/// burst, and the client's pool most likely holds one to it already: making
+/// another ahead of each would be a connection the server never sees used.
+const REACHED_FOR: Duration = Duration::from_secs(60);
+
+/// What [`TimedConnector::reach`] keeps, by `host:port`.
+#[derive(Default)]
+struct Ahead {
+    parked: HashMap<String, (Instant, Stream)>,
+    reached: HashMap<String, Instant>,
+}
+
+impl Ahead {
+    fn forget_old(&mut self) {
+        self.parked.retain(|_, (at, _)| at.elapsed() < PARKED_FOR);
+        self.reached.retain(|_, at| at.elapsed() < REACHED_FOR);
+    }
+}
+
+/// Where `uri` points, as [`Ahead`] files it: a connection over TLS only,
+/// since that is all `reach` makes.
+fn ahead_key(uri: &Uri) -> Option<String> {
+    if uri.scheme_str() != Some("https") {
+        return None;
+    }
+    let host = uri.host()?.trim_start_matches('[').trim_end_matches(']');
+    Some(format!(
+        "{}:{}",
+        host.to_ascii_lowercase(),
+        uri.port_u16().unwrap_or(443)
+    ))
 }
 
 impl TimedConnector {
@@ -248,7 +306,51 @@ impl TimedConnector {
             relay,
             client_certs,
             traffic_rules,
+            ahead: Arc::default(),
         }
+    }
+
+    /// Reaches the server a client asked for a tunnel to, over TLS, before the
+    /// client's own handshake is answered, and keeps the connection for the
+    /// first request that goes there.
+    ///
+    /// The order is what a client that tries HTTPS first needs. Safari asks
+    /// for `https://` where it was given `http://`, on the same port, and
+    /// goes back to `http://` when the server will not do TLS -- but only if
+    /// that is what it sees. Answered by tracewing first and the server asked
+    /// afterwards, what it saw was a handshake that worked and then a 502,
+    /// which is an answer, so it stopped there and the page never opened.
+    /// Asked first, the server's refusal can still be the client's.
+    ///
+    /// A server reached in the last [`REACHED_FOR`] is not reached again:
+    /// it speaks TLS, and a connection to it is most likely pooled already.
+    ///
+    /// `http1` is for a client that did not offer HTTP/2 in its hello: a
+    /// WebSocket's, most often, whose upgrade is HTTP/1.1's and goes by
+    /// [`Self::connect_http1`]. The connection is made for that, so that
+    /// either way can take it.
+    pub async fn reach(&self, authority: &str, http1: bool) -> Result<(), BoxError> {
+        let uri: Uri = format!("https://{authority}/").parse()?;
+        let key = ahead_key(&uri).ok_or("no host to reach")?;
+        {
+            let mut ahead = self.ahead.lock().unwrap_or_else(|e| e.into_inner());
+            ahead.forget_old();
+            if ahead.reached.contains_key(&key) {
+                return Ok(());
+            }
+        }
+        let stream = if http1 {
+            self.connect_http1(uri).await?
+        } else {
+            self.clone().call(uri).await?
+        };
+        stream.upstream.ahead.store(true, Ordering::Relaxed);
+        self.ahead
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .parked
+            .insert(key, (Instant::now(), stream));
+        Ok(())
     }
 
     /// The TLS to agree with where `uri` points: what a rule says to ask
@@ -296,6 +398,20 @@ impl TimedConnector {
     /// HTTP relay it is always a tunnel, as browsers have it: a relay passes
     /// requests on, not upgrades.
     pub async fn connect_http1(&self, uri: Uri) -> Result<Stream, BoxError> {
+        let key = ahead_key(&uri);
+        if let Some(key) = &key {
+            let mut ahead = self.ahead.lock().unwrap_or_else(|e| e.into_inner());
+            ahead.forget_old();
+            // One that agreed on HTTP/2 is left for `call`: an upgrade cannot
+            // go over it.
+            let h2 = ahead
+                .parked
+                .get(key)
+                .is_some_and(|(_, stream)| stream.is_h2());
+            if !h2 && let Some((_, stream)) = ahead.parked.remove(key) {
+                return Ok(stream);
+            }
+        }
         let mut config = (*self.config).clone();
         config.alpn_protocols = vec![b"http/1.1".to_vec()];
         let id = self.ids.next();
@@ -304,7 +420,7 @@ impl TimedConnector {
                 .route_for(host.trim_start_matches('[').trim_end_matches(']'))
         });
         let client_cert = self.client_cert(&uri);
-        connect(
+        let stream = connect(
             uri,
             Arc::new(config),
             Arc::clone(&self.verifier),
@@ -313,7 +429,15 @@ impl TimedConnector {
             true,
             client_cert,
         )
-        .await
+        .await?;
+        if let Some(key) = key {
+            self.ahead
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .reached
+                .insert(key, Instant::now());
+        }
+        Ok(stream)
     }
 }
 
@@ -327,6 +451,15 @@ impl tower_service::Service<Uri> for TimedConnector {
     }
 
     fn call(&mut self, uri: Uri) -> Self::Future {
+        let key = ahead_key(&uri);
+        if let Some(key) = &key {
+            let mut ahead = self.ahead.lock().unwrap_or_else(|e| e.into_inner());
+            ahead.forget_old();
+            if let Some((_, stream)) = ahead.parked.remove(key) {
+                return Box::pin(std::future::ready(Ok(stream)));
+            }
+        }
+        let ahead = Arc::clone(&self.ahead);
         let (config, verifier) = (self.config_for(&uri), Arc::clone(&self.verifier));
         let id = self.ids.next();
         let route = uri.host().and_then(|host| {
@@ -334,7 +467,17 @@ impl tower_service::Service<Uri> for TimedConnector {
                 .route_for(host.trim_start_matches('[').trim_end_matches(']'))
         });
         let client_cert = self.client_cert(&uri);
-        Box::pin(async move { connect(uri, config, verifier, id, route, false, client_cert).await })
+        Box::pin(async move {
+            let stream = connect(uri, config, verifier, id, route, false, client_cert).await?;
+            if let Some(key) = key {
+                ahead
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .reached
+                    .insert(key, Instant::now());
+            }
+            Ok(stream)
+        })
     }
 }
 
@@ -411,6 +554,7 @@ async fn connect(
                 remote,
                 message: e.to_string(),
                 certificates: witness.take(),
+                not_tls: not_tls(&e),
             })?;
         let tls_us = micros(shaking);
         let (_, session) = stream.get_ref();
@@ -460,6 +604,7 @@ async fn connect(
             tls: facts,
             client_cert_missing,
             told: AtomicBool::new(false),
+            ahead: AtomicBool::new(false),
         }),
     })
 }
@@ -631,7 +776,7 @@ async fn connect_straight(
     if HOLDING.load(Ordering::Acquire) {
         let tcp = picking::first_to_answer(addresses.clone(), pinned)
             .await
-            .map_err(|e| format!("connect to {host}:{port}: {e}"))?;
+            .map_err(|e| cannot_connect(format!("connect to {host}:{port}: {e}"), &e))?;
         return Ok((tcp, dns_us, micros(connecting)));
     }
     let mut http = HttpConnector::new_with_resolver(Resolved(addresses));
@@ -640,7 +785,7 @@ async fn connect_straight(
     let tcp = http
         .call(uri.clone())
         .await
-        .map_err(|e| format!("connect to {host}:{port}: {}", error_text(&e)))?
+        .map_err(|e| cannot_connect(format!("connect to {host}:{port}: {}", error_text(&e)), &e))?
         .into_inner();
     Ok((tcp, dns_us, micros(connecting)))
 }
@@ -1240,6 +1385,56 @@ impl tower_service::Service<Name> for Resolved {
     }
 }
 
+/// A server that could not be connected to, saying so as before, and whether
+/// it was turned down outright: nothing listening on the port, which is the
+/// answer a client trying HTTPS first falls back from.
+#[derive(Debug)]
+pub struct Unreachable {
+    text: String,
+    pub refused: bool,
+}
+
+impl std::fmt::Display for Unreachable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.text)
+    }
+}
+
+impl std::error::Error for Unreachable {}
+
+fn cannot_connect(text: String, error: &(dyn std::error::Error + 'static)) -> BoxError {
+    let mut refused = false;
+    let mut at = Some(error);
+    while let Some(error) = at {
+        if error
+            .downcast_ref::<io::Error>()
+            .is_some_and(|e| e.kind() == io::ErrorKind::ConnectionRefused)
+        {
+            refused = true;
+            break;
+        }
+        at = error.source();
+    }
+    Box::new(Unreachable { text, refused })
+}
+
+/// Whether a handshake failed because the server does not speak TLS there:
+/// it answered with something else, or hung up on the hello.
+fn not_tls(error: &io::Error) -> bool {
+    if matches!(
+        error.kind(),
+        io::ErrorKind::UnexpectedEof
+            | io::ErrorKind::ConnectionReset
+            | io::ErrorKind::ConnectionAborted
+    ) {
+        return true;
+    }
+    error
+        .get_ref()
+        .and_then(|inner| inner.downcast_ref::<rustls::Error>())
+        .is_some_and(|e| matches!(e, rustls::Error::InvalidMessage(_)))
+}
+
 /// An error and what caused it, on one line.
 fn error_text(error: &dyn std::error::Error) -> String {
     let mut text = error.to_string();
@@ -1279,6 +1474,14 @@ impl Stream {
     pub fn upstream(&self) -> &Arc<Upstream> {
         &self.upstream
     }
+
+    /// Whether the server agreed on HTTP/2 over it.
+    fn is_h2(&self) -> bool {
+        self.upstream
+            .tls
+            .as_ref()
+            .is_some_and(|tls| tls.alpn.as_deref() == Some("h2"))
+    }
 }
 
 impl Connection for Stream {
@@ -1286,12 +1489,7 @@ impl Connection for Stream {
         let connected = Connected::new()
             .extra(Arc::clone(&self.upstream))
             .proxy(self.forwarded);
-        let h2 = self
-            .upstream
-            .tls
-            .as_ref()
-            .is_some_and(|tls| tls.alpn.as_deref() == Some("h2"));
-        if h2 {
+        if self.is_h2() {
             connected.negotiated_h2()
         } else {
             connected

@@ -649,14 +649,11 @@ async fn streams_without_buffering() {
 #[tokio::test(flavor = "multi_thread")]
 async fn reports_upstream_errors() {
     let h = Harness::start("error").await;
-    // Nothing listens on this port.
-    let port = {
-        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        l.local_addr().unwrap().port()
-    };
+    // A name nothing answers to: told in the 502, which says more than the
+    // client would find out by itself. `.invalid` is never looked up for real.
     let res = h
         .client(false)
-        .get(format!("https://localhost:{port}/"))
+        .get("https://nowhere.invalid/")
         .send()
         .await
         .unwrap();
@@ -669,7 +666,113 @@ async fn reports_upstream_errors() {
         })
         .unwrap();
     assert_eq!(status, None);
-    assert!(error.is_some_and(|e| e.contains("onnect")));
+    assert!(
+        error
+            .as_deref()
+            .is_some_and(|e| e.contains("nowhere.invalid")),
+        "{error:?}"
+    );
+    clean_up(conn, dir);
+}
+
+/// The one row an HTTPS request left that the proxy passed on unread.
+fn passed_on_row(conn: &Connection) -> String {
+    let (kind, error): (String, String) = conn
+        .query_row("SELECT kind, error FROM flows", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .unwrap();
+    assert_eq!(kind, "tunnel", "{error}");
+    assert!(
+        error.starts_with(tracewing_proxy::capture::PASSED_ON),
+        "{error}"
+    );
+    error
+}
+
+/// HTTPS to a port nothing listens on is refused to the client, as it would
+/// be without tracewing, rather than answered with a 502: Safari, which asks
+/// for `https://` where it was given `http://`, falls back to HTTP from the
+/// one and not from the other. The row says what happened.
+#[tokio::test(flavor = "multi_thread")]
+async fn https_to_a_closed_port_is_refused_to_the_client() {
+    let h = Harness::start("closed-port").await;
+    let port = {
+        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        l.local_addr().unwrap().port()
+    };
+    let res = h
+        .client(false)
+        .get(format!("https://localhost:{port}/"))
+        .send()
+        .await;
+    assert!(res.is_err(), "{res:?}");
+
+    let (_, conn, dir) = h.finish(1).await;
+    let error = passed_on_row(&conn);
+    assert!(error.contains("onnect"), "{error}");
+    clean_up(conn, dir);
+}
+
+/// HTTPS to a port that speaks plain HTTP: the client's hello reaches that
+/// server as it is, and the client finds it is not TLS, as Safari's upgrade
+/// to HTTPS on the same port needs it to.
+#[tokio::test(flavor = "multi_thread")]
+async fn https_to_a_plain_http_port_is_refused_to_the_client() {
+    let h = Harness::start("plain-port").await;
+    let res = h
+        .client(false)
+        .get(format!("https://localhost:{}/", h.playground_port))
+        .send()
+        .await;
+    assert!(res.is_err(), "{res:?}");
+
+    let (_, conn, dir) = h.finish(1).await;
+    passed_on_row(&conn);
+    clean_up(conn, dir);
+}
+
+/// The server is reached before the client's handshake is answered, and that
+/// connection is the one the request then goes over: the server sees one
+/// connection, not one to check and another to use.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_server_reached_first_is_the_connection_used() {
+    let h = Harness::start("reached-first").await;
+    // The playground's TLS port, behind a door that counts who comes in.
+    let door = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = door.local_addr().unwrap().port();
+    let came = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let counted = Arc::clone(&came);
+    let behind = h.playground_tls_port;
+    tokio::spawn(async move {
+        while let Ok((mut tcp, _)) = door.accept().await {
+            counted.fetch_add(1, Ordering::SeqCst);
+            tokio::spawn(async move {
+                let mut server = tokio::net::TcpStream::connect(("127.0.0.1", behind))
+                    .await
+                    .unwrap();
+                let _ = tokio::io::copy_bidirectional(&mut tcp, &mut server).await;
+            });
+        }
+    });
+    let res = h
+        .client(false)
+        .get(format!("https://localhost:{port}/"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    res.bytes().await.unwrap();
+    assert_eq!(came.load(Ordering::SeqCst), 1, "connections the server saw");
+
+    // Made before the request began, and still the request's to wait for.
+    let (_, conn, dir) = h.finish(1).await;
+    let (connect_us, tls_us): (Option<i64>, Option<i64>) = conn
+        .query_row("SELECT connect_us, tls_us FROM flows", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .unwrap();
+    assert!(connect_us.is_some() && tls_us.is_some(), "its timing");
     clean_up(conn, dir);
 }
 

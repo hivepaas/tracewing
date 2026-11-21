@@ -374,5 +374,14 @@ back.
      com.apple.trust-settings.admin allow`) is refused to root (-60005). So
      on a runner S5 says it skipped. `--browsers` names which browsers to
      open, since Safari opens in the person's own.
+   - **Found by S5's first attended run, and fixed:** Safari on macOS 27
+     asks for `https://` where it was given `http://`, on the same port,
+     and falls back to HTTP when the server will not do TLS. tracewing
+     answered the handshake itself and the server only afterwards, so
+     Safari saw a working handshake and then a 502, did not fall back, and
+     the page never opened. The server is now reached over TLS while the
+     client's hello waits (`TimedConnector::reach`): nothing listening, or
+     something other than TLS answering, passes the hello on to the server
+     unread, and the connection made is the one the first request takes.
    - Not yet on macOS: S8 (the network extension, which wants a signed
      build) and S10.
