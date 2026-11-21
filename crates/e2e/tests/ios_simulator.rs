@@ -103,7 +103,26 @@ fn a_simulator_set_up_reaches_everything_through_tracewing() {
     let _put_back = desktop::the_users_own();
     let holder = Helper::system_proxy(&capture.data_dir, capture.port, true);
 
-    simctl(&xcrun, &["openurl", &sim.udid, &site.page()]);
+    // A simulator just booted can take longer to start Safari than
+    // `openurl` waits ("Operation timed out"), and Safari may open the page
+    // all the same: tried again, and what the page says is what counts.
+    for attempt in 1..=3 {
+        let out = Command::new(&xcrun)
+            .args(["simctl", "openurl", &sim.udid, &site.page()])
+            .output()
+            .unwrap();
+        if out.status.success() {
+            break;
+        }
+        eprintln!(
+            "openurl, try {attempt}: {}",
+            String::from_utf8_lossy(&out.stderr)
+                .lines()
+                .next()
+                .unwrap_or("")
+        );
+        std::thread::sleep(Duration::from_secs(10));
+    }
     let mut report: Option<BTreeMap<String, String>> = None;
     wait_for(
         "Safari in the simulator to say how the page went",
