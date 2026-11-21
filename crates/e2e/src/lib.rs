@@ -20,6 +20,8 @@ pub mod desktop;
 #[path = "desktop_macos.rs"]
 pub mod desktop;
 pub mod helper;
+#[cfg(target_os = "macos")]
+pub mod macos;
 pub mod site;
 
 use tracewing_proxy::ca_key::KeyStore;

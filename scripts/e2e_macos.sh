@@ -9,6 +9,14 @@
 #   scripts/e2e_macos.sh --attended          # somebody here answers dialogs
 #   scripts/e2e_macos.sh --skip-build
 #   scripts/e2e_macos.sh --packages          # S4: the .dmg, built and installed
+#   scripts/e2e_macos.sh --browsers 'chrome firefox safari'
+#
+# S5 opens the browsers named, and only with --attended: they trust the
+# capture's CA through the machine's trust settings, which macOS changes only
+# after a person confirms it -- measured on macos-15, even `sudo security
+# add-trusted-cert -d` waits for the dialog for ever, and granting the right
+# beforehand is refused to root too (`authorizationdb write`: -60005). Safari
+# has no profile of tracewing's, so it opens in the person's own.
 #
 # --packages builds the disk image (scripts/package_macos.sh, which needs
 # cargo-about) for the test that installs it into /Applications. A Mac that
@@ -31,10 +39,14 @@ marker="/Library/Application Support/tracewing-e2e-throwaway"
 
 attended=""
 packages=""
+browsers=""
 build=yes
 mark=""
-for arg in "$@"; do
+while [ $# -gt 0 ]; do
+    arg=$1
+    shift
     case "$arg" in
+    --browsers) browsers=$1; shift ;;
     --this-machine-may-be-changed) mark=yes ;;
     --attended) attended=1 ;;
     --skip-build) build="" ;;
@@ -78,6 +90,11 @@ TRACEWING_E2E_BIN="$(pwd)/$target/release/tracewing"
 export TRACEWING_E2E_BIN
 if [ -n "$attended" ]; then
     export TRACEWING_E2E_ATTENDED=1
+fi
+if [ -n "$browsers" ]; then
+    TRACEWING_E2E_BROWSERS=$browsers
+    export TRACEWING_E2E_BROWSERS
+    echo "browsers:$browsers"
 fi
 
 # Each test program, with what it says as it goes, and a time it may take:
