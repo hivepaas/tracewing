@@ -74,6 +74,7 @@ fn the_disk_image_installs_records_https_and_leaves_nothing_behind() {
     }
     let dir = scratch("dmg");
 
+    eprintln!("dmg: opening {}", Path::new(&dmg).display());
     // Opened as a person opens it, and the app copied out, as dragging it
     // onto /Applications does.
     let mount = dir.join("mount");
@@ -100,10 +101,12 @@ fn the_disk_image_installs_records_https_and_leaves_nothing_behind() {
         &[mount.join("tracewing.app").to_str().unwrap(), INSTALLED],
     );
     drop(mounted);
+    eprintln!("dmg: installed in {INSTALLED}");
     let program = Path::new(INSTALLED).join("Contents/MacOS/tracewing");
     let out = tracewing_at(&program).arg("--version").output().unwrap();
     assert!(out.status.success(), "{}", said(&out));
 
+    eprintln!("dmg: recording HTTPS");
     // HTTPS through it, both bodies in the HAR it writes.
     let _put_back = desktop::the_users_own();
     let before = desktop::setting();
@@ -136,6 +139,7 @@ fn the_disk_image_installs_records_https_and_leaves_nothing_behind() {
         "the HAR has not got what was sent and answered: {har}"
     );
 
+    eprintln!("dmg: taking the system proxy");
     // The system proxy, taken by the installed app, which arms the login
     // agent as itself; let go, the agent goes and the setting is back.
     let holder = Helper::system_proxy_from(&program, &data, capture.port, true);
@@ -150,6 +154,7 @@ fn the_disk_image_installs_records_https_and_leaves_nothing_behind() {
     assert!(!agent().exists(), "the login agent stayed");
     drop(capture);
 
+    eprintln!("dmg: uninstalling");
     // Then as before removing it: uninstall, and the app to the bin.
     let out = tracewing_at(&program)
         .arg("uninstall")

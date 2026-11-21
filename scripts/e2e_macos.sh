@@ -80,6 +80,15 @@ if [ -n "$attended" ]; then
     export TRACEWING_E2E_ATTENDED=1
 fi
 
+# Each test program, with what it says as it goes, and a time it may take:
+# one that hangs is ended, and what it said up to there is in the log,
+# rather than the whole job waiting for its own limit and saying nothing.
+# macOS has no timeout(1); perl's alarm ends the program it execs.
+limit=${E2E_LIMIT:-900}
+limited() {
+    perl -e 'alarm shift; exec @ARGV' "$limit" "$1" --test-threads=1 --nocapture
+}
+
 status=0
 for test in $tests; do
     name=$(basename "$test")
@@ -88,12 +97,12 @@ for test in $tests; do
     # pf takes an administrator: as root when nobody is here to be asked.
     quic_block-*)
         if [ -n "$attended" ]; then
-            "$test" --test-threads=1 || status=1
+            limited "$test" || status=1
         else
-            sudo -E "$test" --test-threads=1 || status=1
+            sudo -E perl -e 'alarm shift; exec @ARGV' "$limit" "$test" --test-threads=1 --nocapture || status=1
         fi
         ;;
-    *) "$test" --test-threads=1 || status=1 ;;
+    *) limited "$test" || status=1 ;;
     esac
 done
 exit $status
