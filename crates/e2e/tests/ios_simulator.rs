@@ -14,7 +14,7 @@
 
 use std::{collections::BTreeMap, path::Path, process::Command, time::Duration};
 use tracewing_e2e::{
-    Capture, desktop,
+    Capture, desktop, har_of,
     helper::Helper,
     only_where_allowed, program, scratch,
     site::{EVENTS, PING, Site},
@@ -115,7 +115,20 @@ fn a_simulator_set_up_reaches_everything_through_tracewing() {
     );
     let report = report.unwrap();
     let get = |name: &str| report.get(name).map(String::as_str).unwrap_or("");
-    let said = format!("Safari in the simulator said {report:?}");
+    // What reached tracewing, by URL and status: whether a request that
+    // failed in Safari got as far as the proxy at all.
+    let har: serde_json::Value =
+        serde_json::from_str(&har_of(&program(), &capture.data_dir)).unwrap();
+    let reached: Vec<String> = har["log"]["entries"]
+        .as_array()
+        .map(|entries| {
+            entries
+                .iter()
+                .map(|e| format!("{} {}", e["response"]["status"], e["request"]["url"]))
+                .collect()
+        })
+        .unwrap_or_default();
+    let said = format!("Safari in the simulator said {report:?}; tracewing recorded {reached:?}");
     assert!(
         get("json").starts_with("answered") || get("json").starts_with("over"),
         "HTTPS through tracewing, with its CA trusted: {said}"
