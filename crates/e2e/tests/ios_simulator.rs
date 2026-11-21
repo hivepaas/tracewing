@@ -14,7 +14,9 @@
 
 use std::{collections::BTreeMap, path::Path, process::Command, time::Duration};
 use tracewing_e2e::{
-    Capture, desktop, helper::Helper, only_where_allowed, program, scratch,
+    Capture, desktop,
+    helper::Helper,
+    only_where_allowed, program, scratch,
     site::{EVENTS, PING, Site},
     wait_for,
 };
@@ -94,8 +96,7 @@ fn a_simulator_set_up_reaches_everything_through_tracewing() {
 
     let dir = scratch("ios-simulator");
     let site = Site::start(&dir);
-    let capture =
-        Capture::start_trusting(&program(), &dir.join("data"), &site.ca, KeyStore::File);
+    let capture = Capture::start_trusting(&program(), &dir.join("data"), &site.ca, KeyStore::File);
     // What "Set up the simulators" does: the CA among its roots, and the
     // Mac's proxy, which it goes through, pointed at tracewing.
     ios_sim::trust(&xcrun, &sim.udid, &capture.ca_pem()).unwrap();
