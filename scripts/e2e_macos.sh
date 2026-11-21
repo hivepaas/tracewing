@@ -9,6 +9,12 @@
 #   scripts/e2e_macos.sh --attended          # somebody here answers dialogs
 #   scripts/e2e_macos.sh --skip-build
 #   scripts/e2e_macos.sh --packages          # S4: the .dmg, built and installed
+#   scripts/e2e_macos.sh --browsers 'chrome firefox safari'
+#
+# S5 opens the browsers named. Without --browsers, a run with nobody at the
+# Mac (a runner) opens every one of them found in /Applications; a run with
+# --attended opens none unless told, since Safari has no profile of
+# tracewing's and would open in the person's own.
 #
 # --packages builds the disk image (scripts/package_macos.sh, which needs
 # cargo-about) for the test that installs it into /Applications. A Mac that
@@ -31,10 +37,14 @@ marker="/Library/Application Support/tracewing-e2e-throwaway"
 
 attended=""
 packages=""
+browsers=""
 build=yes
 mark=""
-for arg in "$@"; do
+while [ $# -gt 0 ]; do
+    arg=$1
+    shift
     case "$arg" in
+    --browsers) browsers=$1; shift ;;
     --this-machine-may-be-changed) mark=yes ;;
     --attended) attended=1 ;;
     --skip-build) build="" ;;
@@ -78,6 +88,16 @@ TRACEWING_E2E_BIN="$(pwd)/$target/release/tracewing"
 export TRACEWING_E2E_BIN
 if [ -n "$attended" ]; then
     export TRACEWING_E2E_ATTENDED=1
+fi
+if [ -z "$browsers" ] && [ -z "$attended" ]; then
+    for app in "Google Chrome:chrome" "Microsoft Edge:edge" "Firefox:firefox" "Safari:safari"; do
+        [ -d "/Applications/${app%%:*}.app" ] && browsers="$browsers ${app##*:}"
+    done
+fi
+if [ -n "$browsers" ]; then
+    TRACEWING_E2E_BROWSERS=$browsers
+    export TRACEWING_E2E_BROWSERS
+    echo "browsers:$browsers"
 fi
 
 # Each test program, with what it says as it goes, and a time it may take:

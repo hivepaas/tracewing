@@ -13,7 +13,7 @@
 //!
 //! Changes this computer's trust stores and proxy setting. See
 //! `tracewing_e2e`.
-#![cfg(any(target_os = "linux", windows))]
+#![cfg(any(target_os = "linux", windows, target_os = "macos"))]
 
 use serde_json::Value;
 use std::{
@@ -32,16 +32,41 @@ use tracewing_e2e::{
 };
 use tracewing_proxy::ca_key::KeyStore;
 use tracewing_system::{
-    Scope, ca_install, ca_remove,
+    ca_remove,
     launch::{Browser, browser_command, find_browsers},
 };
 
-/// Takes the CA out of every store, however the test ends.
-struct Untrust(PathBuf);
+/// The capture's CA, trusted where this computer's browsers look, and taken
+/// out again however the test ends: as Set up's Install does it for this
+/// user, or on macOS, whose Install asks for a password, for the machine by
+/// `sudo` (`tracewing_e2e::macos::Trusted`).
+struct Untrust {
+    pem: PathBuf,
+    #[cfg(target_os = "macos")]
+    _trusted: tracewing_e2e::macos::Trusted,
+}
+
+impl Untrust {
+    fn trust(pem: PathBuf) -> Self {
+        #[cfg(target_os = "macos")]
+        return Untrust {
+            _trusted: tracewing_e2e::macos::Trusted::root(&pem),
+            pem,
+        };
+        #[cfg(not(target_os = "macos"))]
+        {
+            let untrust = Untrust { pem };
+            tracewing_system::ca_install(&untrust.pem, tracewing_system::Scope::User).unwrap();
+            untrust
+        }
+    }
+}
 
 impl Drop for Untrust {
     fn drop(&mut self) {
-        let _ = ca_remove(&self.0);
+        if !cfg!(target_os = "macos") {
+            let _ = ca_remove(&self.pem);
+        }
     }
 }
 
@@ -221,8 +246,7 @@ fn check(site: &Site, capture: &Capture, browser: &str, report: &BTreeMap<String
 /// as Set up's Install does, which is what Chromium reads.
 fn capture_for(dir: &Path, name: &str, site: &Site) -> (Capture, Untrust) {
     let capture = Capture::start_trusting(&program(), &dir.join(name), &site.ca, KeyStore::File);
-    let untrust = Untrust(capture.ca_pem());
-    ca_install(&capture.ca_pem(), Scope::User).unwrap();
+    let untrust = Untrust::trust(capture.ca_pem());
     (capture, untrust)
 }
 
@@ -408,7 +432,7 @@ fn firefox_records_everything_in_its_own_profile_and_through_the_system_proxy() 
 }
 
 /// Where a profile of the user's own is: where Firefox looks for them on
-/// Linux, anywhere on Windows.
+/// Linux, anywhere on Windows and macOS.
 fn user_profile(dir: &Path) -> PathBuf {
     if cfg!(target_os = "linux") {
         PathBuf::from(std::env::var_os("HOME").unwrap()).join(".mozilla/firefox/e2e.default")
@@ -424,4 +448,58 @@ impl Drop for RemoveDir {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.0);
     }
+}
+
+/// Safari, which has no profile of tracewing's: through the system proxy
+/// alone, with the CA trusted by the machine. The site is asked for by a
+/// name: by its address, Safari in the iOS Simulator never sent its HTTPS
+/// into tracewing at all (docs/design/e2e.md), and here it is tried by its
+/// address afterwards too, and what it did said rather than asserted.
+#[cfg(target_os = "macos")]
+#[test]
+fn safari_records_everything_through_the_system_proxy() {
+    use tracewing_e2e::macos::{Hosts, SITE_NAME};
+    only_where_allowed!();
+    if !wanted("safari") {
+        return;
+    }
+    let dir = scratch("safari");
+    let _put_back = desktop::the_users_own();
+    let open = |url: &str| {
+        let status = Command::new("/usr/bin/open")
+            .args(["-a", "Safari", url])
+            .status()
+            .unwrap();
+        assert!(status.success(), "open {url} in Safari");
+    };
+
+    {
+        let site_dir = dir.join("site-named");
+        std::fs::create_dir_all(&site_dir).unwrap();
+        let site = Site::start_named(&site_dir, Some(SITE_NAME));
+        let _hosts = Hosts::add(site.ip, SITE_NAME);
+        let (capture, _untrust) = capture_for(&dir, "named", &site);
+        found("Safari", &capture.data_dir);
+        let holder = Helper::system_proxy(&capture.data_dir, capture.port, true);
+        open(&site.page());
+        let report = report_of(&site, "Safari");
+        check(&site, &capture, "Safari, through the system proxy", &report);
+        assert!(holder.let_go().success());
+    }
+
+    {
+        let site_dir = dir.join("site-by-address");
+        std::fs::create_dir_all(&site_dir).unwrap();
+        let site = Site::start(&site_dir);
+        let (capture, _untrust) = capture_for(&dir, "by-address", &site);
+        let holder = Helper::system_proxy(&capture.data_dir, capture.port, true);
+        open(&site.page());
+        let report = report_of(&site, "Safari");
+        eprintln!("Safari, asked for the site by its address: {report:?}");
+        assert!(holder.let_go().success());
+    }
+    let _ = Command::new("/usr/bin/pkill")
+        .args(["-x", "Safari"])
+        .status();
+    std::fs::remove_dir_all(&dir).ok();
 }

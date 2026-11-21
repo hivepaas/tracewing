@@ -360,6 +360,14 @@ back.
      `/etc/hosts`), all of it goes through. Chrome and Firefox reach the
      same address through tracewing (S5). So Safari through a proxy will
      not do HTTPS to an IP literal here; why is not known yet.
-   - Not yet on macOS: S5 (the browsers trust the CA through the keychain,
-     which asks), S8 (the network extension, which wants a signed build)
-     and S10.
+   - S5 on macOS: Chrome, Edge and Firefox as on the other two, and Safari,
+     which has no profile of tracewing's, through the system proxy alone.
+     The browsers trust the capture's CA as the machine's, set with
+     `security` by `sudo` (`tracewing_e2e::macos::Trusted`), which asks
+     nobody on a runner. It is taken out again by its own SHA-1, never by
+     name. Safari asks for the site by a name. It is then tried by its
+     address too, and what it did is printed rather than asserted, for the
+     finding above. A run with `--attended` opens no browser unless
+     `--browsers` names it, since Safari would open in the person's own.
+   - Not yet on macOS: S8 (the network extension, which wants a signed
+     build) and S10.
