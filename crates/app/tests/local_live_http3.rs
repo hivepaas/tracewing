@@ -368,6 +368,14 @@ fn chromes_http3_goes_through_tracewing_on_a_real_adapter() {
 /// that measured nothing now says so.
 fn ours_to_run(test: &str) -> Option<PathBuf> {
     if let Some(witness) = std::env::var_os(IN_OURS) {
+        // Why each client's QUIC went where it did, on stderr above the
+        // failure: the catcher's refusals are otherwise silent, and the one
+        // flaky run Chrome had (`ERR_QUIC_PROTOCOL_ERROR`, nothing caught)
+        // could say no more than that.
+        let _ = tracing_subscriber::fmt()
+            .with_writer(std::io::stderr)
+            .with_env_filter("warn,tracewing::local_source=debug")
+            .try_init();
         return Some(PathBuf::from(witness));
     }
     let witness = std::env::temp_dir().join(format!(

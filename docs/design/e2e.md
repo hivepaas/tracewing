@@ -411,19 +411,23 @@ back.
      an iOS runtime, the macOS runners included. It asks nobody anything
      but `sudo` for one line in `/etc/hosts`, which a runner gives without
      asking.
-   - **Found, and still open:** asked for by its address
+   - **Found, and explained:** asked for by its address
      (`https://192.168.64.x:port`), the site's HTTPS from Safari in the
-     simulator never reached tracewing at all. There was no flow for it,
-     while the page over plain HTTP, Apple's own HTTPS and
-     `https://tracewing.test/` all went through, decrypted. Asked for by a
-     name for the same address and port (`e2e-site.test`, from
-     `/etc/hosts`), all of it goes through. Chrome and Firefox reach the
-     same address through tracewing (S5). So Safari through a proxy will
-     not do HTTPS to an IP literal here; why is not known yet.
+     simulator never reached tracewing at all, while the page over plain
+     HTTP, Apple's own HTTPS and `https://tracewing.test/` went through.
+     Measured with `URLSession` given a proxy of its own, so no exception
+     list: CFNetwork sends HTTPS to an address of this Mac's own (loopback,
+     the Wi-Fi address, a bridge's) straight to it, past the proxy, with no
+     `CONNECT`. Plain HTTP to the same addresses goes to the proxy, and so
+     does HTTPS to any other address, the same LAN's, `10.x`, IPv6, and to
+     any name, `.localhost` and `/etc/hosts` names included. The site runs
+     on the Mac, so by its address Safari reached it directly and refused
+     its certificate. Asked for by a name, all of it goes through.
    - S5 on macOS: Chrome, Edge and Firefox as on the other two, and Safari,
      which has no profile of tracewing's, through the system proxy alone.
-     Safari asks for the site by a name, then is tried by its address too,
-     and what it did is printed rather than asserted, for the finding above.
+     Safari asks for the site by a name, then by its address, where its
+     HTTPS must fail as the finding above says: should it go through one
+     day, the test says so, for `docs/capturing.md` to be put right.
      The browsers trust the capture's CA as the machine's, with `security`
      by `sudo` (`tracewing_e2e::macos::Trusted`), taken out again by its own
      SHA-1, never by name. **That runs only with `--attended`**, at a Mac
