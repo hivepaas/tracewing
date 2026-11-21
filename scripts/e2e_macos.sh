@@ -89,6 +89,14 @@ export TRACEWING_E2E_BIN
 if [ -n "$attended" ]; then
     export TRACEWING_E2E_ATTENDED=1
 fi
+# On a runner, nobody answers the dialog macOS shows before the machine's
+# trust settings change -- not even for `sudo security add-trusted-cert -d`,
+# which waits for it for ever. A runner is thrown away after, so there the
+# right is granted outright first. Never on a Mac somebody runs this at:
+# there the dialog is answered, and the authorization database stays theirs.
+if [ -z "$attended" ]; then
+    sudo security authorizationdb write com.apple.trust-settings.admin allow
+fi
 if [ -z "$browsers" ] && [ -z "$attended" ]; then
     for app in "Google Chrome:chrome" "Microsoft Edge:edge" "Firefox:firefox" "Safari:safari"; do
         [ -d "/Applications/${app%%:*}.app" ] && browsers="$browsers ${app##*:}"
