@@ -344,6 +344,15 @@ back.
      as root and the trust is set as the user, each asking once; a failed
      trust takes the certificate out again, and uninstall takes out
      whichever of the two is there.
+   - **Found by the second attended run, and fixed:** the tests' own
+     `PutBack` wrote a proxy server back only when there had been one, and
+     did not look at what `networksetup` said. On a Mac with no server set,
+     every service was left with the tests' `corp.example:3128`, and on the
+     WireGuard service the web proxy was left on. Now every part is written
+     back, an empty server too (`networksetup -setwebproxy <service> "" ""`
+     clears it, measured by hand), each step is checked, and the test fails
+     unless the setting reads back as it was. `system_proxy.rs` has a case
+     for a Mac with no proxy at all, which `the_users_own` never was.
    - S4 on macOS: `dmg.rs`, with `e2e_macos.sh --packages`, which builds the
      image. It copies tracewing.app out of the image into /Applications, as
      dragging it does, but not over one already there. The installed

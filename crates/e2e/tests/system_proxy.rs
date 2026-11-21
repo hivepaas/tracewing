@@ -33,3 +33,25 @@ fn the_system_proxy_names_tracewing_and_comes_back_as_it_was() {
     assert_eq!(setting(), before, "not put back as it was");
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// A Mac where nobody ever set a proxy: no server on any service. Letting go,
+/// tracewing clears the server it wrote rather than leaving itself there,
+/// turned off. The other two write their whole setting back either way.
+#[cfg(target_os = "macos")]
+#[test]
+fn a_mac_without_a_proxy_has_none_after() {
+    only_where_allowed!();
+    let dir = scratch("system-proxy-none");
+    let _put_back = tracewing_e2e::desktop::none_set();
+    let before = setting();
+    let port = free_port();
+
+    let app = Helper::system_proxy(&dir, port, true);
+    let during = setting();
+    assert!(names_tracewing(&during, port), "{during:?}");
+
+    let ended = app.let_go();
+    assert!(ended.success(), "letting go failed: {ended:?}");
+    assert_eq!(setting(), before, "not put back as it was");
+    std::fs::remove_dir_all(&dir).ok();
+}
