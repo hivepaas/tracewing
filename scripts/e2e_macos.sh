@@ -8,6 +8,11 @@
 #   scripts/e2e_macos.sh --this-machine-may-be-changed
 #   scripts/e2e_macos.sh --attended          # somebody here answers dialogs
 #   scripts/e2e_macos.sh --skip-build
+#   scripts/e2e_macos.sh --packages          # S4: the .dmg, built and installed
+#
+# --packages builds the disk image (scripts/package_macos.sh, which needs
+# cargo-about) for the test that installs it into /Applications. A Mac that
+# has a tracewing.app there already keeps it, and that test says so.
 #
 # macOS asks before tracewing trusts its CA (a user's password for their own
 # trust settings, an administrator's for the machine's) and before it turns
@@ -25,6 +30,7 @@ target=${CARGO_TARGET_DIR:-target}
 marker="/Library/Application Support/tracewing-e2e-throwaway"
 
 attended=""
+packages=""
 build=yes
 mark=""
 for arg in "$@"; do
@@ -32,6 +38,7 @@ for arg in "$@"; do
     --this-machine-may-be-changed) mark=yes ;;
     --attended) attended=1 ;;
     --skip-build) build="" ;;
+    --packages) packages=yes ;;
     *) echo "unknown: $arg" >&2; exit 2 ;;
     esac
 done
@@ -56,6 +63,15 @@ for line in sys.stdin:
             and "test" in msg["target"]["kind"]:
         print(msg["executable"])
 ')
+
+if [ -n "$packages" ]; then
+    dist="$target/e2e-dist"
+    rm -rf "$dist"
+    BIN="$target/release/tracewing" DIST="$dist" scripts/package_macos.sh
+    TRACEWING_E2E_DMG="$(pwd)/$(ls "$dist"/tracewing_*.dmg)"
+    export TRACEWING_E2E_DMG
+    echo "packages: $TRACEWING_E2E_DMG"
+fi
 
 export TRACEWING_E2E=1
 TRACEWING_E2E_BIN="$(pwd)/$target/release/tracewing"

@@ -335,6 +335,13 @@ back.
      for the trust settings, and for an administrator's for `pf`. They run
      only with `TRACEWING_E2E_ATTENDED=1` (`--attended`) or as root, which
      macOS does not ask; on a runner the script runs S7 with `sudo`.
-   - Not yet on macOS: S4 (the `.dmg`, which `check_macos_app.sh` opens and
-     runs), S5 (the browsers trust the CA through the keychain, which asks),
-     S8 (the network extension, which wants a signed build) and S10.
+   - S4 on macOS: `dmg.rs`, with `e2e_macos.sh --packages`, which builds the
+     image. It copies tracewing.app out of the image into /Applications, as
+     dragging it does, but not over one already there. The installed
+     program records HTTPS (the client trusts the CA by `--cacert`, since
+     the keychain asks) and takes the system proxy, arming the login agent
+     as itself. Then `tracewing uninstall` runs, the app is taken out, and
+     no agent, process or setting of it is left.
+   - Not yet on macOS: S5 (the browsers trust the CA through the keychain,
+     which asks), S8 (the network extension, which wants a signed build)
+     and S10.
