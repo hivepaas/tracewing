@@ -16,7 +16,7 @@ use crate::script::{OnRequest, Scripts};
 use crate::sockets::{Inbox, Registered, Sockets};
 use crate::throttle::{Conditions, Direction, Network};
 use crate::traffic_rules::{End, Plan, TrafficRules, content_type_of, edit_body, edit_query};
-use crate::upstream::{BoxError, TimedConnector, TlsFailure, Upstream};
+use crate::upstream::{BoxError, TimedConnector, TlsFailure, Unreachable, Upstream};
 use bytes::Bytes;
 use http::{HeaderName, HeaderValue, Method, Request, Response, StatusCode, header};
 use http_body::{Frame, SizeHint};
@@ -276,7 +276,16 @@ pub struct FlowHandler {
     /// The flow of the request this clone is handling. hudsucker clones the
     /// handler per request, so request and response see the same value.
     flow: Option<Arc<Flow>>,
+    /// Where the tunnel this clone was asked for goes, and in which version
+    /// it was asked, from the `CONNECT` until the client's hello: hudsucker
+    /// asks about both on the one clone it gave the connection.
+    tunnel_to: Option<(String, http::Version)>,
 }
+
+/// What a tunnel's row says when the server would not take TLS and the
+/// connection was passed on unread, so that the client meets the refusal
+/// itself. See [`TimedConnector::reach`].
+pub const PASSED_ON: &str = "The server would not take TLS, so the connection was passed on unread for the client to see why";
 
 /// What can be changed, or seen, while the proxy runs.
 pub struct Controls {
@@ -344,6 +353,7 @@ impl FlowHandler {
             response_body: Vec::new(),
             pause_response: None,
             flow: None,
+            tunnel_to: None,
         }
     }
 }
@@ -1221,20 +1231,73 @@ impl HttpHandler for FlowHandler {
         }
         if !leave {
             self.expect_handshake(ctx.client_addr, host, req.version());
+            self.tunnel_to = Some((host.to_owned(), req.version()));
         }
         !leave
     }
 
-    /// Decrypted, always, once the host is not left alone; what is noted is
-    /// that the client started TLS, which a connection that goes without a
-    /// request soon after is then kept for. See [`crate::refused`].
+    /// Decrypted once the host is not left alone, and the server has been
+    /// reached over TLS first, while the client's hello waits for an answer.
+    /// What is noted is that the client started TLS, which a connection that
+    /// goes without a request soon after is then kept for. See
+    /// [`crate::refused`].
+    ///
+    /// A server that would not take TLS -- nothing listening on the port, or
+    /// something else than TLS answering -- gets the client's hello as it is,
+    /// and the client its refusal: a browser that asked for HTTPS on its own
+    /// initiative falls back to HTTP from that, and from a 502 it does not.
+    /// Every other failure is decrypted as before and told in the 502 with
+    /// what the server showed, which is more than the client would see.
     async fn should_intercept_tls(
         &mut self,
-        _ctx: &HttpContext,
-        _hello: hudsucker::rustls::server::ClientHello<'_>,
+        ctx: &HttpContext,
+        hello: hudsucker::rustls::server::ClientHello<'_>,
     ) -> bool {
         crate::refused::hello();
-        true
+        let Some((to, version)) = self.tunnel_to.take() else {
+            return true;
+        };
+        let http1 = !hello
+            .alpn()
+            .is_some_and(|mut offered| offered.any(|protocol| protocol == b"h2"));
+        let host = without_default_port(&to, "https");
+        let host = host
+            .parse::<http::uri::Authority>()
+            .map_or_else(|_| host.to_owned(), |a| a.host().to_owned());
+        if host == CHECK_HOST || host == self.crl.host {
+            return true;
+        }
+        let Err(error) = self.connector.reach(&to, http1).await else {
+            return true;
+        };
+        if !passed_on(&*error) {
+            return true;
+        }
+        crate::refused::served(ctx.client_addr);
+        if self.recording.load(Ordering::Relaxed) {
+            let (client, app) = self.client_of(ctx.client_addr);
+            self.recorder.submit(FlowRecord {
+                started_us: unix_micros(),
+                client: client.to_string(),
+                kind: "tunnel",
+                method: "CONNECT".to_owned(),
+                scheme: "https".to_owned(),
+                host: without_default_port(&to, "https").to_owned(),
+                client_version: format!("{version:?}"),
+                app,
+                error: Some(format!("{PASSED_ON}: {}", error_chain(&*error))),
+                request: BodyRecord {
+                    complete: true,
+                    ..BodyRecord::default()
+                },
+                response: BodyRecord {
+                    complete: true,
+                    ..BodyRecord::default()
+                },
+                ..FlowRecord::default()
+            });
+        }
+        false
     }
 
     async fn handle_error(
@@ -1257,6 +1320,23 @@ impl HttpHandler for FlowHandler {
         }
         self.ended(message, &err)
     }
+}
+
+/// Whether a server that could not be reached over TLS is one to pass the
+/// client's hello on to unread: nothing listened on the port, or what
+/// answered was not TLS. See [`FlowHandler::should_intercept_tls`].
+fn passed_on(error: &(dyn StdError + 'static)) -> bool {
+    let mut at = Some(error);
+    while let Some(error) = at {
+        if let Some(failure) = error.downcast_ref::<TlsFailure>() {
+            return failure.not_tls;
+        }
+        if let Some(unreachable) = error.downcast_ref::<Unreachable>() {
+            return unreachable.refused;
+        }
+        at = error.source();
+    }
+    false
 }
 
 /// What a client is told when its request reached no server.
@@ -2151,8 +2231,10 @@ impl Flow {
     fn went_over(&self, upstream: &Upstream) {
         let mut record = self.lock();
         record.conn_id = Some(upstream.id);
-        // Made for this flow, or for others at the same time: it waited for it.
-        if upstream.ready_us > record.started_us {
+        // Made for this flow, or for others at the same time: it waited for
+        // it. One made ahead of the client's handshake was made for it too,
+        // though it was ready before the request began.
+        if upstream.made_for_next() || upstream.ready_us > record.started_us {
             record.blocked_us = Some((upstream.started_us - record.started_us).max(0));
             record.dns_us = upstream.dns_us;
             record.connect_us = Some(upstream.connect_us);

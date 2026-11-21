@@ -356,6 +356,7 @@ impl Way {
                             tls: Some(facts_of(&conn)),
                             client_cert_missing: unanswered.was_asked(),
                             told: AtomicBool::new(false),
+                            ahead: AtomicBool::new(false),
                         }),
                         quic: conn,
                         sender,
@@ -390,6 +391,7 @@ fn refusal(
         remote: addr,
         message: e.to_string(),
         certificates,
+        not_tls: false,
     })
 }
 
