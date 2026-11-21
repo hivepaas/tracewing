@@ -819,8 +819,22 @@ fn out_by(v6: bool, about: &dyn std::fmt::Display) -> io::Result<u32> {
 
 /// Connects to `addr` on a socket pinned to the interface the machine's own
 /// traffic leaves by.
+///
+/// **Except the loopback**, which is connected to as always. Nothing for the
+/// loopback is routed into the adapter, so there is no loop to keep it out
+/// of, and pinned to the machine's interface it cannot be reached at all:
+/// Windows refuses the connect with 10049, "the requested address is not
+/// valid in its context". Measured in the VM by `local_live`'s S8 test, and
+/// it was not the test's alone: with the local way in on, every request
+/// through the proxy to a server on this machine -- a developer's
+/// `http://localhost:3000` -- failed the same way.
 #[cfg(any(windows, target_os = "linux"))]
 async fn pinned(addr: SocketAddr) -> io::Result<TcpStream> {
+    if addr.ip().is_loopback() {
+        let stream = TcpStream::connect(addr).await?;
+        stream.set_nodelay(true)?;
+        return Ok(stream);
+    }
     let index = out_by(addr.is_ipv6(), &addr)?;
     let socket = match addr {
         SocketAddr::V4(_) => tokio::net::TcpSocket::new_v4()?,
@@ -899,9 +913,13 @@ pub(crate) fn any_port(v6: bool) -> SocketAddr {
 /// Where an adapter is held and the family has no other way out, this is an
 /// error rather than an unpinned socket -- failing, rather than looping
 /// through our own stack. See [`leave_by`].
-pub(crate) fn datagrams_out(v6: bool) -> io::Result<std::net::UdpSocket> {
+///
+/// A socket for `to` on the loopback is never pinned, for the reason
+/// [`pinned`] gives.
+pub(crate) fn datagrams_out(to: SocketAddr) -> io::Result<std::net::UdpSocket> {
+    let v6 = to.is_ipv6();
     #[cfg(any(windows, target_os = "linux"))]
-    if HOLDING.load(Ordering::Acquire) {
+    if HOLDING.load(Ordering::Acquire) && !to.ip().is_loopback() {
         return pinned_std_datagrams(v6);
     }
     std::net::UdpSocket::bind(any_port(v6))

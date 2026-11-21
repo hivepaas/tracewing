@@ -200,6 +200,28 @@ pub struct Caught {
     pub known: Known,
 }
 
+/// Whether a datagram is for the link it was sent on rather than for
+/// anywhere beyond it: a multicast group, or a broadcast. Those are dropped,
+/// not passed on.
+///
+/// **Passed on, they came straight back, and without end.** The machine
+/// announces itself on every link it has, ours included -- LLMNR, mDNS,
+/// SSDP -- and the link behind the adapter has nobody on it but us. A socket
+/// of ours sending one on was pinned for unicast alone (`IP_UNICAST_IF`), so
+/// the group's datagram left by the adapter again, from that socket's new
+/// port, which made a new pair of ends to pass, which made another socket.
+/// Measured in the VM by `local_live`'s S8 tests: 512 pairs, the table's
+/// whole room, 70 ms after the adapter came up, and from then on every new
+/// pair was refused room -- a chosen program's QUIC among them. The machine
+/// sends the same announcements on its real interfaces itself, so nothing is
+/// lost by leaving ours unanswered.
+fn for_this_link(to: IpAddr) -> bool {
+    match to {
+        IpAddr::V4(v4) => v4.is_multicast() || v4.is_broadcast(),
+        IpAddr::V6(v6) => v6.is_multicast(),
+    }
+}
+
 /// Whether a datagram going to `port` is refused so that its client tries
 /// TCP instead. One that is gets looked at first: refusing it silently is
 /// what made a program insisting on HTTP/3 invisible, and [`crate::quic`] is
@@ -463,6 +485,9 @@ async fn send(
     asked: &mpsc::Sender<(Ends, Option<Caught>)>,
     idle_for: Duration,
 ) {
+    if for_this_link(datagram.to.ip()) {
+        return;
+    }
     let ends = (datagram.from, datagram.to);
     if let Some(doing) = by.get_mut(&ends) {
         doing.last = Instant::now();
@@ -980,6 +1005,66 @@ mod tests {
                 late.as_deref().map(datagram)
             ),
         }
+    }
+
+    /// A datagram for a group or for everyone on the link is the link's
+    /// own, and is not passed on: no socket is made for it. Passed on, it
+    /// came back into the adapter from the new socket and filled the table
+    /// (see `for_this_link`). The unicast one after them shows the way out
+    /// is asked for at all, so that silence means something.
+    #[tokio::test]
+    async fn what_is_for_this_link_alone_is_not_passed_on() {
+        let far = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let server = far.local_addr().unwrap();
+        let (out, _coming) = mpsc::channel(8);
+        let (_stop_tx, stop) = tokio::sync::watch::channel(false);
+        let (again, _back) = mpsc::channel(8);
+        let binds = Arc::new(AtomicUsize::new(0));
+        let counted = Arc::clone(&binds);
+        let bind: Bind = Arc::new(move |_v6| {
+            counted.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async { UdpSocket::bind("127.0.0.1:0").await })
+        });
+        let taken = passing(out, bind, None, again, stop);
+        for to in [
+            "224.0.0.252:5355",
+            "239.255.255.250:1900",
+            "255.255.255.255:67",
+            "[ff02::1:3]:5355",
+            "[ff02::fb]:5353",
+        ] {
+            let from = match to.starts_with('[') {
+                true => "[fe80::1]:51000".parse().unwrap(),
+                false => client(),
+            };
+            taken
+                .send(Datagram {
+                    from,
+                    to: to.parse().unwrap(),
+                    body: b"who is there".to_vec(),
+                })
+                .await
+                .unwrap();
+        }
+        taken
+            .send(Datagram {
+                from: client(),
+                to: server,
+                body: b"to somewhere".to_vec(),
+            })
+            .await
+            .unwrap();
+        let mut buffer = [0u8; 64];
+        let (len, _) = tokio::time::timeout(Duration::from_secs(5), far.recv_from(&mut buffer))
+            .await
+            .expect("the unicast one goes")
+            .unwrap();
+        assert_eq!(&buffer[..len], b"to somewhere");
+        assert_eq!(
+            binds.load(Ordering::SeqCst),
+            1,
+            "a socket for the unicast datagram and for nothing else"
+        );
     }
 
     /// A socket that cannot be had is said and nothing else: no panic, and

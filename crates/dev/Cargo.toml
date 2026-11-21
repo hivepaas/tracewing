@@ -33,6 +33,7 @@ hyper-util.workspace = true
 reqwest.workspace = true
 rustls-native-certs.workspace = true
 rmpv.workspace = true
+socket2.workspace = true
 rusqlite.workspace = true
 serde_json.workspace = true
 time.workspace = true

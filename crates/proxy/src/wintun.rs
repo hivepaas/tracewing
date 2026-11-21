@@ -187,14 +187,24 @@ impl WintunAdapter {
                 MIB_UNICASTIPADDRESS_ROW,
             },
             NetworkManagement::Ndis::NET_LUID_LH,
+            Networking::WinSock::IpDadStatePreferred,
         };
         let mut row = MIB_UNICASTIPADDRESS_ROW::default();
         // Defaults first, and not for tidiness: this is what sets the
-        // lifetimes to infinite and the duplicate-address state to
-        // preferred. A zeroed row means a lifetime of zero, which is an
-        // address that expires as soon as it is made.
+        // lifetimes to infinite. A zeroed row means a lifetime of zero, which
+        // is an address that expires as soon as it is made.
         // SAFETY: a row of ours for the call to fill in.
         unsafe { InitializeUnicastIpAddressEntry(&mut row) };
+        // **Preferred at once, which the defaults above do not make it**,
+        // though this comment once said they did. Left to them, the address
+        // starts `Tentative` while Windows checks nobody else has it, and
+        // for as long as it is, nothing routes into the adapter: measured in
+        // the VM, `Find-NetRoute` found no way to 203.0.113.9 for the two
+        // seconds after the adapter came up, and curl's connect failed in
+        // 0 ms (`local_live`'s S8 test): what the `/1` routes take went
+        // nowhere for at least that long, chosen or not. There is nobody else
+        // on this link to ask: the adapter is ours alone.
+        row.DadState = IpDadStatePreferred;
         // By LUID rather than by index, for the reason `luid` gives: an
         // index belongs to one family and this address has its own.
         row.InterfaceLuid = NET_LUID_LH {

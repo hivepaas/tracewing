@@ -113,6 +113,11 @@ fn the_scheduled_task_puts_it_back_when_the_app_and_its_watchdog_are_killed() {
     let port = free_port();
 
     let running = app(&dir, port, true);
+    // The task fires on every whole minute (its trigger starts at
+    // 2000-01-01T00:00:00 and repeats each minute), so a kill a moment before
+    // one is put back within the two seconds below, by the task, and reads
+    // as something else. That happened once on a runner: killed at :00.3.
+    away_from_the_minute();
     // Its own name, so that it is the one killed (crates/system: WATCHDOG_EXE).
     let out = std::process::Command::new("taskkill")
         .args(["/F", "/IM", "trw-watchdog.exe"])
@@ -127,6 +132,24 @@ fn the_scheduled_task_puts_it_back_when_the_app_and_its_watchdog_are_killed() {
     );
     back(&before, Duration::from_secs(150));
     std::fs::remove_dir_all(&dir).ok();
+}
+
+/// Waits until the clock is well inside a minute, from its 5th second to its
+/// 45th, where neither the kill nor the check after it meets the task's run.
+/// Local time is UTC moved by whole minutes, so UTC's seconds are the task's.
+#[cfg(windows)]
+fn away_from_the_minute() {
+    loop {
+        let second = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            % 60;
+        if (5..=45).contains(&second) {
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(250));
+    }
 }
 
 /// macOS: with no watchdog, the launchd agent the app armed, which waits for

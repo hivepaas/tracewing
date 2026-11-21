@@ -58,3 +58,4 @@ rmpv.workspace = true
 tracewing-dev = { path = "../dev" }
 hudsucker.workspace = true
 reqwest.workspace = true
+tracing-subscriber.workspace = true
