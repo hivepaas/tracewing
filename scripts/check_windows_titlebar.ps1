@@ -76,10 +76,20 @@ public class TitleBar {
   [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint dx, uint dy, uint d, IntPtr e);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr c);
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
   [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
 }
 '@
+
+# In the window's own pixels. PowerShell is not DPI-aware, so above 96 dpi
+# Windows hands it every coordinate scaled down and scales its pointer moves
+# back up, while the sweep below already scales by the window's own DPI: the
+# two together measured the bar at 150% in the wrong place. Per-monitor aware
+# (-4), this thread sees what the window sees.
+if ([TitleBar]::SetThreadDpiAwarenessContext([IntPtr]-4) -eq [IntPtr]::Zero) {
+    Cannot 'this thread cannot be made DPI-aware, so its coordinates would not be the window''s'
+}
 
 $named = @{
     0 = 'HTNOWHERE'; 1 = 'HTCLIENT'; 2 = 'HTCAPTION'; 3 = 'HTSYSMENU'; 8 = 'HTMINBUTTON'
