@@ -213,8 +213,18 @@ jobs:
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           sudo ip tuntap add dev tracewing-test mode tun user "$(id -u)"
+          # Chrome's HTTP/3 through the adapter trusts the CA from an NSS
+          # database the test makes; the runner has Chrome, not certutil.
+          sudo apt-get install -y --no-install-recommends libnss3-tools
           cargo test --release --locked -p tracewing \
-            --test local_live_linux --test local_live_http3 -- --ignored --test-threads=1
+            --test local_live_linux --test local_live_http3 -- --ignored --test-threads=1 \
+            2>&1 | tee live.log
+          # That it *ran*. libtest writes `test <name> ... ` and then the
+          # test's own stdout, so the `ok` lands on a line of its own and the
+          # obvious `... ok$` can never match a test that prints anything --
+          # this one prints the door's address. Whether it **passed** is
+          # cargo's own exit status, which `pipefail` carries through `tee`.
+          grep -q '^test chromes_http3_goes_through_tracewing_on_a_real_adapter \.\.\.' live.log
           cargo test --release --locked -p tracewing-proxy --lib -- --ignored --exact \
             tun_linux::tests::a_real_device_opens_once_and_its_read_can_be_stopped \
             2>&1 | tee tun.log

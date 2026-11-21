@@ -287,8 +287,14 @@ back.
      up by a tracewing that was killed is put back when tracewing starts
      again on that data folder. With `recover_android` doing nothing, it
      fails waiting for that.
-   - Still to come: HTTP/3 from Chrome through the adapter. The QUIC client
-     in `local_live_http3.rs` is quinn, not a browser.
+   - HTTP/3 from Chrome through the adapter, **done**:
+     `local_live_http3.rs`'s `chromes_http3_goes_through_tracewing_on_a_real_adapter`.
+     Chrome, headless in the test's namespace, is told to speak QUIC to
+     `h3.test`, which its resolver maps to the address the default route
+     sends into the adapter. It trusts tracewing's CA from an NSS database
+     in a home of the test's own. The page it gets is the server's own body,
+     the server saw `/orders`, and the way in counted it. With another
+     program kept instead of Chrome, it fails: Chrome gets nothing.
 7. Run `release.yml` on a tag, with the suite as a job before the draft.
    **Done.** `release.yml`'s `windows-e2e` job runs `e2e_windows.ps1
    -ConfirmTrustDialogs -Packages -Browsers 'chrome edge firefox'` on
