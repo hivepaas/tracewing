@@ -147,6 +147,24 @@ S10 on Windows needs a display adapter that GPUI's DirectX renderer accepts.
 The VM's does: tracewing's window opened there, maximized, at 96 dpi, while
 #381 was checked. So everything in the table runs in the VM.
 
+S10 on Windows is `scripts/check_windows_window.ps1`, which `e2e_windows.ps1`
+runs after S11. It works as a hand does, in the desktop session:
+- It opens the window on the window's own data folder, set aside first and
+  put back after.
+- It checks that the window draws (more than a few colours, taken with
+  `PrintWindow`).
+- It presses Ctrl+2 and Ctrl+B, and the hidden sidebar is written to
+  `layout.toml`.
+- It sends a request through the window's proxy (its port from `tracewing
+  env`), chooses the row with Home and copies it with Ctrl+Shift+C. The
+  clipboard, read as another program reads it, holds the `curl` command.
+- Ctrl+S opens Windows' own save dialog, which is closed again.
+- The window is closed, its process ends, and the proxy setting is what it
+  was.
+
+It exits 2, not 0, where there is no input desktop. Its first run, on the
+hosted runner, passed.
+
 S11 is Windows alone because the thing it checks exists only there: the three
 buttons are painted by tracewing and are a *hit test* to Windows, not windows
 of their own, so no test on Linux or the Mac can press them and `windows` is

@@ -162,6 +162,18 @@ switch ($LASTEXITCODE) {
     default { $status = 1 }
 }
 
+# S10, the window: it opens and draws, takes a key, puts a request on the
+# clipboard, opens the save dialog, and closes with the system proxy as it
+# was. Keys go to the window in front, so it wants the input desktop too, and
+# exit 2 is "not here", as above.
+Write-Output '== the window'
+& powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\check_windows_window.ps1" $env:TRACEWING_E2E_BIN
+switch ($LASTEXITCODE) {
+    0 { }
+    2 { Write-Output 'the window is unchecked: this session has no input desktop' }
+    default { $status = 1 }
+}
+
 if ($confirmer) {
     Stop-Job $confirmer
     Receive-Job $confirmer | ForEach-Object { Write-Output "dialogs: $_" }
