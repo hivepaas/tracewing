@@ -110,10 +110,14 @@ fn the_local_way_in_comes_up_and_goes_away_again() {
             road.interface, road.bits, road.metric, road.v6, road.connected
         );
     }
+    // Both halves of each address space, which is what makes the machine
+    // route into it -- IPv6's only where it has a way out for IPv6 already.
+    let v6 = roads::out_by(&before, 0, true).is_some();
+    println!("this machine has a way out for IPv6: {v6}");
     assert_eq!(
         ours_at(&ours, 1),
-        4,
-        "both halves of each address space: that is what makes the machine route into it"
+        if v6 { 4 } else { 2 },
+        "both halves of each family that has a way out"
     );
     // And it is never the way out, which is the loop this mode has to avoid.
     let luid = ours.first().expect("rows of our own").luid;

@@ -316,7 +316,7 @@ back.
        recorded as HTTP/3. Chrome trusts the leaves by their key, as Set up
        starts it; `h3.test` is a line of the hosts file for as long as the
        test runs, on a marked machine only.
-   - **Three faults, found by those tests and fixed.** None could be seen by
+   - **Four faults, found by those tests and fixed.** None could be seen by
      the assembly test, which only looks at the routing table:
      - The adapter's address started `Tentative`. Windows checked nobody else
        on the link had it, and until then nothing routed into the adapter:
@@ -336,6 +336,15 @@ back.
        adapter came up, and every new UDP flow after that was dropped, a
        chosen program's QUIC among them. Multicast and broadcast are the
        link's own and are not passed on now.
+     - On a machine with no IPv6 (the GitHub runner), the adapter's IPv6
+       halves were the only IPv6 routes there were. curl tried IPv6 first,
+       the stack accepted the connection, the sieve had nowhere to pass it
+       on to, and curl did not fall back to IPv4: HTTPS from a program
+       nobody chose worked with the mode off and failed with it on. IPv6 is
+       routed into the adapter now only where the machine has a way out for
+       it. **Linux is not fixed**: `adapter_linux.rs` adds an IPv6 default
+       route through the device whatever the machine has, and its live tests
+       run in a namespace with no other route, so they cannot see this.
    - And one in the test's HTTP/3 server: bound to `[::]` for both families,
      it heard only IPv6 on Windows, where a socket is IPv6-only unless told.
      It says so now.
