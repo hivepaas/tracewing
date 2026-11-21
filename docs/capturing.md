@@ -32,7 +32,7 @@ it:
 
 | | What tracewing sets | What follows it |
 |---|---|---|
-| **macOS** | SystemConfiguration, per network service | CFNetwork and URLSession, so Safari and Mac apps. `localhost` and `127.0.0.1` go straight out whatever it says |
+| **macOS** | SystemConfiguration, per network service | CFNetwork and URLSession, so Safari and Mac apps. `localhost` and `127.0.0.1` go straight out whatever it says, and so does HTTPS to any of this Mac's own addresses |
 | **Windows** | WinInet, **per user** | WinInet as it comes: Chromium, Office, and .NET's `HttpClient` where it reads that configuration. **WinHTTP does not follow it** — it has a setting of its own (`netsh winhttp set proxy`) unless the program asks for the user's, which is also why a service running as SYSTEM comes through nothing. Local addresses are left out by default |
 | **Linux** | GSettings for GNOME, the config file for KDE | only what reads them: Chromium, Electron, GNOME's own apps. **Linux has no proxy setting at the level of the system**, and a terminal knows nothing of this one |
 
@@ -51,6 +51,14 @@ proxy. Like every program on macOS's own networking, it then still sends
 say. A name under `.localhost` goes to this computer as well and does go
 through the proxy: `http://playground.localhost:10000` instead of
 `http://localhost:10000`.
+
+HTTPS to any address of this Mac's own goes straight to it too: not only
+`127.0.0.1`, but its Wi-Fi or Ethernet address (`https://192.168.1.12:8443`)
+and a bridge's, such as the iOS Simulator's. Plain HTTP to those addresses
+does go through, so a page can show up while its HTTPS calls do not: they
+reach the server directly, working or failing on its own certificate, and
+tracewing never sees them. Ask for a server on this Mac by a name: one under
+`.localhost`, or a line in `/etc/hosts`.
 
 ## Command-line tools
 
