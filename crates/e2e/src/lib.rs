@@ -16,6 +16,9 @@ pub mod desktop;
 #[cfg(windows)]
 #[path = "desktop_windows.rs"]
 pub mod desktop;
+#[cfg(target_os = "macos")]
+#[path = "desktop_macos.rs"]
+pub mod desktop;
 pub mod helper;
 pub mod site;
 
@@ -55,6 +58,41 @@ macro_rules! only_where_allowed {
                 "skipped: changes this computer; runs only with {}=1 and {} present",
                 $crate::ENV,
                 $crate::MARKER
+            );
+            return;
+        }
+    };
+}
+
+/// What says somebody is at this Mac to answer its dialogs: an
+/// administrator's password for the machine's trust store and the firewall,
+/// a user's for their own trust settings. `scripts/e2e_macos.sh --attended`
+/// sets it; a CI runner has nobody to answer, so the tests that need it say
+/// so and end, unless they run as root, which macOS does not ask.
+pub const ATTENDED: &str = "TRACEWING_E2E_ATTENDED";
+
+/// Whether a test that makes macOS ask may run here: anywhere but a Mac, and
+/// on a Mac with somebody to answer or as root.
+pub fn may_ask() -> bool {
+    if !cfg!(target_os = "macos") {
+        return true;
+    }
+    std::env::var(ATTENDED).is_ok_and(|v| v == "1")
+        || Command::new("id")
+            .arg("-u")
+            .output()
+            .is_ok_and(|out| String::from_utf8_lossy(&out.stdout).trim() == "0")
+}
+
+/// Returns from the test, saying so, where macOS would ask and nobody is
+/// there to answer.
+#[macro_export]
+macro_rules! only_where_someone_answers {
+    () => {
+        if !$crate::may_ask() {
+            eprintln!(
+                "skipped: macOS asks for a password here; runs with {}=1 or as root",
+                $crate::ATTENDED
             );
             return;
         }

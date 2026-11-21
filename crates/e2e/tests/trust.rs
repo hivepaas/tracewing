@@ -4,7 +4,10 @@
 //!
 //! Changes this computer's trust stores. See `tracewing_e2e`.
 
-use tracewing_e2e::{Capture, Origin, curl_through, only_where_allowed, said, scratch, tracewing};
+use tracewing_e2e::{
+    Capture, Origin, curl_through, only_where_allowed, only_where_someone_answers, said, scratch,
+    tracewing,
+};
 use tracewing_proxy::{ca::LocalCa, ca_key::KeyStore, crypto_provider};
 use tracewing_system::{Scope, ca_locations, ca_remove, verify_ca};
 
@@ -20,6 +23,7 @@ impl Drop for Untrust {
 #[test]
 fn the_authority_is_trusted_where_the_system_looks_and_taken_out_again() {
     only_where_allowed!();
+    only_where_someone_answers!();
     let dir = scratch("trust");
     let origin = Origin::start(&dir);
     let data = dir.join("data");

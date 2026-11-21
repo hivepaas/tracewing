@@ -122,7 +122,7 @@ of these, and does nothing without them:
 |---|---|---|
 | Linux | Two containers, from `crates/e2e/linux`. `Dockerfile` is Ubuntu 26.04, the release the binaries are built on, with dbus, dconf and GNOME's schemas, KDE's kconfig tools, `libnss3-tools`, `nftables`, polkitd, gnome-keyring, Chrome's .deb and Firefox from Mozilla's repository. `Dockerfile.fedora` is Fedora 44 with the same machinery and no browsers. Ubuntu installs the .deb, Fedora the .rpm. Started by `scripts/e2e_linux.sh`, which builds the packages first, with `NET_ADMIN` for `nft`. | The same, on every pull request: `ci.yml`'s `linux-e2e` job |
 | Windows | The `windows-11` VM, by `scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -ConfirmTrustDialogs -Packages -Browsers 'chrome edge firefox'`, in its desktop session (a scheduled task with `/IT`), not over ssh: see below | `windows-latest`, by the same script, on a tag |
-| macOS | The user's own Mac, by `scripts/e2e_macos.sh` | The same script, run by hand before the draft is published |
+| macOS | The user's own Mac, by `scripts/e2e_macos.sh --this-machine-may-be-changed --attended`: somebody there answers each password dialog, and every scenario that has one on macOS runs | `macos-15`, by the same script without `--attended`, on a tag or by hand: what macOS asks nobody about (S2, S3, S6, and S7 as root) |
 
 ## Scenarios
 
@@ -299,3 +299,18 @@ back.
    a desktop one, which the Credential Manager and the user's root store
    need.
 8. The smaller in-process gaps above, one pull request each.
+9. macOS. `crates/e2e` builds there, and `scripts/e2e_macos.sh` runs it.
+   - `desktop_macos.rs` reads and writes the setting with `networksetup`, for
+     every service that is on, so S2 and S3 run.
+   - S3 on macOS is the launchd agent putting the setting back the moment
+     the app has gone. The minute-timer test is Linux's and Windows'.
+   - S6 uses the login keychain. On a Mac it takes out only what it put
+     there, found against what was there before: a Mac may be somebody's
+     own, with tracewing's real key in it.
+   - S1 and S7 make macOS ask: for a user's or an administrator's password
+     for the trust settings, and for an administrator's for `pf`. They run
+     only with `TRACEWING_E2E_ATTENDED=1` (`--attended`) or as root, which
+     macOS does not ask; on a runner the script runs S7 with `sudo`.
+   - Not yet on macOS: S4 (the `.dmg`, which `check_macos_app.sh` opens and
+     runs), S5 (the browsers trust the CA through the keychain, which asks),
+     S8 (the network extension, which wants a signed build) and S10.

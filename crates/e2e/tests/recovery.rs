@@ -4,20 +4,22 @@
 //! minute timer runs as `--only-if-gone`.
 //!
 //! On Windows the scheduled task behind it is seen firing too, with the app
-//! and its watchdog both killed. The systemd timer firing by itself needs a
-//! user's systemd, which the Linux container does not run: CI runs that one
-//! on the runner (docs/design/e2e.md).
+//! and its watchdog both killed. On macOS the launchd agent behind it puts
+//! the setting back the moment the app has gone, so it is that which is seen
+//! there, rather than a timer's minute. The systemd timer firing by itself
+//! needs a user's systemd, which the Linux container does not run: CI runs
+//! that one on the runner (docs/design/e2e.md).
 //!
 //! Changes this computer's proxy setting. See `tracewing_e2e`.
 
-#![cfg(any(target_os = "linux", windows))]
+#![cfg(any(target_os = "linux", windows, target_os = "macos"))]
 
 use std::{path::Path, time::Duration};
 use tracewing_e2e::{
     desktop::{Setting, names_tracewing, setting, the_users_own},
     free_port,
     helper::Helper,
-    only_where_allowed, said, scratch, tracewing, wait_for,
+    only_where_allowed, scratch, wait_for,
 };
 
 /// tracewing, holding the setting for `port`.
@@ -28,15 +30,16 @@ fn app(dir: &Path, port: u16, watchdog: bool) -> Helper {
     app
 }
 
+#[cfg(not(target_os = "macos"))]
 fn recover(dir: &Path, only_if_gone: bool) -> String {
-    let mut command = tracewing();
+    let mut command = tracewing_e2e::tracewing();
     command.args(["recover", "--data-dir"]).arg(dir);
     if only_if_gone {
         command.arg("--only-if-gone");
     }
     let out = command.output().unwrap();
-    assert!(out.status.success(), "{}", said(&out));
-    said(&out)
+    assert!(out.status.success(), "{}", tracewing_e2e::said(&out));
+    tracewing_e2e::said(&out)
 }
 
 fn back(before: &Setting, within: Duration) {
@@ -61,6 +64,9 @@ fn the_watchdog_puts_it_back_when_the_app_is_killed() {
     std::fs::remove_dir_all(&dir).ok();
 }
 
+/// Not on macOS, where the agent does at once what this waits for a timer to
+/// do: there, `the_agent_puts_it_back_when_the_app_is_killed`.
+#[cfg(not(target_os = "macos"))]
 #[test]
 fn recover_leaves_a_running_app_alone_and_puts_it_back_once_it_is_gone() {
     only_where_allowed!();
@@ -113,7 +119,7 @@ fn the_scheduled_task_puts_it_back_when_the_app_and_its_watchdog_are_killed() {
         .args(["/F", "/IM", "trw-watchdog.exe"])
         .output()
         .unwrap();
-    assert!(out.status.success(), "{}", said(&out));
+    assert!(out.status.success(), "{}", tracewing_e2e::said(&out));
     running.kill();
     std::thread::sleep(Duration::from_secs(2));
     assert!(
@@ -121,6 +127,21 @@ fn the_scheduled_task_puts_it_back_when_the_app_and_its_watchdog_are_killed() {
         "put back at once, so not by the task"
     );
     back(&before, Duration::from_secs(150));
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// macOS: with no watchdog, the launchd agent the app armed, which waits for
+/// the app to go (`recover --wait`), puts the setting back as soon as it has.
+#[cfg(target_os = "macos")]
+#[test]
+fn the_agent_puts_it_back_when_the_app_is_killed() {
+    only_where_allowed!();
+    let dir = scratch("agent");
+    let _put_back = the_users_own();
+    let before = setting();
+
+    app(&dir, free_port(), false).kill();
+    back(&before, Duration::from_secs(10));
     std::fs::remove_dir_all(&dir).ok();
 }
 
