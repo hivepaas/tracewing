@@ -371,6 +371,39 @@ pass, and getting there found two things:
    - And one in the test's HTTP/3 server: bound to `[::]` for both families,
      it heard only IPv6 on Windows, where a socket is IPv6-only unless told.
      It says so now.
+   - **The packages carry Wintun now.** `scripts/package_windows.sh` fetches
+     Wintun 0.14.1 from wintun.net, checks the SHA-256 it publishes, and puts
+     the DLL for the package's architecture beside `tracewing.exe` in both
+     `setup.exe` and the `.zip`, with Wintun's own licence as
+     `WINTUN-LICENSE.txt` (`cargo about` cannot see a DLL; see
+     capture-modes.md). The uninstaller takes both out. Until then an
+     installed tracewing could not capture without proxy settings at all: it
+     looks for the library beside itself, and nothing was there, which no
+     test saw because every live test handed one in by `WINTUN_DLL`.
+   - **Through the window**, `crates/e2e/src/local_window.rs`: the switch left
+     on in the window's own file, with curl chosen, and the window started on
+     a data folder of the test's (its `LOCALAPPDATA`). The window brings the
+     adapter up as it does at every start, the chosen curl's HTTPS is
+     answered and in the HAR, and closed as a user closes it (`taskkill`
+     without `/F`, the close message) the adapter's routes are gone. Run
+     twice: `local_window.rs` with the build and `WINTUN_DLL`, and
+     `installer.rs` with the installed package and **without** `WINTUN_DLL`,
+     so that the library tried is the one it shipped. Not covered: the
+     relaunch as an administrator when the switch is pressed in a window that
+     is not one. The VM's task and a runner are both elevated already, and
+     UAC's own dialog is on the secure desktop, where nothing can press it.
+   - **The machine moving to another network while the mode is on**,
+     `local_live.rs`'s `the_way_out_follows_the_machine_onto_another_network`:
+     in the VM given a second NAT adapter, the interface the way out was
+     pinned to is turned off (`Disable-NetAdapter`, put back however the test
+     ends), the routing table names the other, and after two looks of the
+     watch a program nobody chose still reaches HTTPS and the chosen curl is
+     still recorded. With the watch made to look once an hour instead, it
+     fails. A connection made in the moment between the network going and
+     the watch's next look (two seconds at most) is lost: one was, to an
+     Azure address of Windows' own, refused with 10022 because its socket was
+     still pinned to the interface that had gone. It needs two networks, so a
+     runner, with one, says it skipped.
    - S9, **done** against the `tracewing-test` emulator (API 36), by
      `crates/app/tests/android_live.rs`, which runs only with
      `TRACEWING_ANDROID_SERIAL` set, so not in CI. The device first has a

@@ -223,6 +223,161 @@ fn a_chosen_program_is_recorded_and_the_rest_go_on_as_before() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// The machine moves to another network while the mode is on: the interface
+/// its traffic left by goes away, and the way out follows it to the one that
+/// is left (`roads::watch`, every two seconds). A program nobody chose still
+/// reaches HTTPS, and a chosen one is still recorded, before and after.
+///
+/// It takes the interface away for real (`Disable-NetAdapter`) and puts it
+/// back however it ends, so it runs only on a machine marked for these tests
+/// that has two networks to move between: the VM, given a second NAT adapter
+/// for it. A runner has one, and is said to have skipped.
+#[test]
+#[ignore = "needs Administrator, wintun.dll and two networks, and turns one of them off"]
+fn the_way_out_follows_the_machine_onto_another_network() {
+    if !Path::new(r"C:\tracewing-e2e-throwaway").exists() {
+        eprintln!("skipped: not a machine marked for tests that change it");
+        return;
+    }
+    let before = roads::roads_now().expect("this machine's routes");
+    let mut networks: Vec<u32> = before
+        .iter()
+        .filter(|road| road.bits == 0 && !road.v6 && !road.loopback && road.connected)
+        .map(|road| road.interface)
+        .collect();
+    networks.sort_unstable();
+    networks.dedup();
+    if networks.len() < 2 {
+        eprintln!("skipped: one network here ({networks:?}), so there is nowhere to move to");
+        return;
+    }
+    let dir = made("moved");
+    let other = dir.join("elsewhere").join("curl.exe");
+    std::fs::create_dir_all(other.parent().unwrap()).unwrap();
+    std::fs::copy(CURL, &other).expect("a copy of curl");
+    let on = On::start(&dir, vec![PathBuf::from(CURL)], &[]);
+    let ours = new_rows(&before, &roads::roads_now().expect("this machine's routes"))
+        .first()
+        .expect("the adapter's rows")
+        .luid;
+    let way_out = || {
+        roads::out_by(
+            &roads::roads_now().expect("this machine's routes"),
+            ours,
+            false,
+        )
+    };
+    let first = way_out().expect("a way out for IPv4");
+    println!("networks {networks:?}; the way out is {first}");
+
+    // Before: both kinds of program reach the site.
+    let pid = std::process::id();
+    let reaches = |when: &str| {
+        let out = Command::new(&other)
+            .args([
+                "--silent",
+                "--show-error",
+                "--max-time",
+                "15",
+                "--ssl-no-revoke",
+            ])
+            .args(["-o", "NUL", "https://example.com/"])
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{when}: a program nobody chose does not reach HTTPS: {}",
+            said(&out)
+        );
+        let url = format!("https://example.com/?{when}={pid}");
+        let out = Command::new(CURL)
+            .args([
+                "--silent",
+                "--show-error",
+                "--max-time",
+                "15",
+                "--ssl-no-revoke",
+            ])
+            .arg("--cacert")
+            .arg(on.ca.cert_path())
+            .args(["-o", "NUL", &url])
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{when}: the chosen curl does not reach HTTPS through tracewing: {}",
+            said(&out)
+        );
+        on.har_with(&format!("{when}={pid}"), Duration::from_secs(15));
+    };
+    reaches("before");
+
+    // The network it was on goes away.
+    let off = Disabled::take(first);
+    let mut moved = None;
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while Instant::now() < deadline {
+        moved = way_out().filter(|out| *out != first);
+        if moved.is_some() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(500));
+    }
+    let moved =
+        moved.unwrap_or_else(|| panic!("the table never named a way out other than {first}"));
+    println!("{first} is off; the table's way out is {moved}");
+    // Two looks of the watch, so that what is asked next is pinned anew.
+    std::thread::sleep(Duration::from_secs(5));
+    reaches("after");
+
+    drop(off);
+    on.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A network interface turned off until dropped, then on again.
+struct Disabled(u32);
+
+impl Disabled {
+    fn take(interface: u32) -> Self {
+        let out = Command::new("powershell")
+            .args(["-NoProfile", "-Command"])
+            .arg(format!(
+                "Get-NetAdapter -InterfaceIndex {interface} | Disable-NetAdapter -Confirm:$false"
+            ))
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "turn {interface} off: {}", said(&out));
+        Self(interface)
+    }
+}
+
+impl Drop for Disabled {
+    fn drop(&mut self) {
+        let _ = Command::new("powershell")
+            .args(["-NoProfile", "-Command"])
+            .arg(format!(
+                "Get-NetAdapter -InterfaceIndex {} | Enable-NetAdapter -Confirm:$false",
+                self.0
+            ))
+            .output();
+        // Until it has its way out back, so that what runs next finds the
+        // machine as it was.
+        let deadline = Instant::now() + Duration::from_secs(60);
+        while Instant::now() < deadline {
+            let back = roads::roads_now().is_ok_and(|roads| {
+                roads
+                    .iter()
+                    .any(|road| road.interface == self.0 && road.bits == 0 && !road.v6)
+            });
+            if back {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(500));
+        }
+    }
+}
+
 /// A chosen program's HTTP/3, caught at the adapter and read: this test's
 /// own QUIC client, chosen, reaches an HTTP/3 server through tracewing, and
 /// the request is recorded.

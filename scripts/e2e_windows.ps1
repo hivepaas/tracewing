@@ -131,6 +131,9 @@ if ($ConfirmTrustDialogs) {
 }
 
 $env:TRACEWING_E2E = '1'
+# The window's local way in (local_window.rs) finds Wintun's library by this
+# where the build has none beside it, as the live tests below do.
+if ($Wintun) { $env:WINTUN_DLL = (Resolve-Path $Wintun).Path }
 $env:TRACEWING_E2E_BIN = (Resolve-Path "$target\release\tracewing.exe").Path
 $status = 0
 foreach ($test in $tests) {

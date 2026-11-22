@@ -15,13 +15,21 @@
 # server are all tracewing.exe. The installer puts its folder in the PATH, so a
 # terminal opened after runs `tracewing capture` (installer.nsi).
 #
+# Beside it goes Wintun's own wintun.dll, which the local way in (capture
+# with no proxy settings) loads from the program's folder: WireGuard LLC's
+# signed build, unchanged, from wintun.net, checked against the SHA-256 it
+# publishes, with its licence as WINTUN-LICENSE.txt. Its licence lets it go
+# alongside a program that uses it through wintun.h alone, which tracewing
+# does (docs/design/capture-modes.md).
+#
 # Neither is signed (no Authenticode certificate yet): SmartScreen asks the
 # first time the installer runs (More info > Run anyway).
 #
 # Environment: EXE (default target/release/tracewing.exe), ARCH (default
 # x86_64), DIST (default dist), MAKENSIS (default: on PATH, else where NSIS
 # installs itself), LICENSES (the third-party licenses; default: made by
-# cargo-about).
+# cargo-about), WINTUN_ZIP (wintun-0.14.1.zip; default: downloaded once into
+# target/).
 
 set -euo pipefail
 
@@ -58,6 +66,32 @@ if [ -z "${LICENSES:-}" ]; then
 fi
 LICENSES="$(realpath "$LICENSES")"
 
+## Wintun: the release's zip, checked, and from it the DLL for this ARCH and
+## the licence that goes with it.
+WINTUN_VERSION=0.14.1
+WINTUN_SHA256=07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51
+if [ -z "${WINTUN_ZIP:-}" ]; then
+	WINTUN_ZIP="target/wintun-$WINTUN_VERSION.zip"
+	[ -f "$WINTUN_ZIP" ] || curl -sSfL -o "$WINTUN_ZIP" "https://www.wintun.net/builds/wintun-$WINTUN_VERSION.zip"
+fi
+echo "$WINTUN_SHA256  $WINTUN_ZIP" | sha256sum -c --quiet - ||
+	{ echo "$WINTUN_ZIP is not Wintun $WINTUN_VERSION as wintun.net publishes it" >&2; exit 1; }
+case "$ARCH" in
+x86_64) WINTUN_ARCH=amd64 ;;
+aarch64) WINTUN_ARCH=arm64 ;;
+*) echo "no Wintun for $ARCH" >&2; exit 1 ;;
+esac
+mkdir -p "$WORK/wintun"
+if command -v unzip >/dev/null; then
+	unzip -q -o "$WINTUN_ZIP" -d "$WORK/wintun"
+elif command -v 7z >/dev/null; then
+	7z x -y -bso0 "-o$(native "$WORK/wintun")" "$(native "$WINTUN_ZIP")"
+else
+	powershell.exe -NoProfile -Command "Expand-Archive -Force '$(native "$WINTUN_ZIP")' '$(native "$WORK/wintun")'"
+fi
+WINTUN_DLL="$(realpath "$WORK/wintun/wintun/bin/$WINTUN_ARCH/wintun.dll")"
+WINTUN_LICENSE="$(realpath "$WORK/wintun/wintun/LICENSE.txt")"
+
 ## The installer
 # The version as Windows writes a file's: four numbers, no beta.
 FILEVERSION="${VERSION%%-*}.0"
@@ -66,10 +100,11 @@ SETUP="$DIST/tracewing_${VERSION}_windows_${ARCH}-setup.exe"
 MSYS2_ARG_CONV_EXCL='*' "$MAKENSIS" -V3 \
 	"-DVERSION=$VERSION" "-DFILEVERSION=$FILEVERSION" \
 	"-DEXE=$(native "$EXE")" "-DLICENSES=$(native "$LICENSES")" \
+	"-DWINTUN=$(native "$WINTUN_DLL")" "-DWINTUN_LICENSE=$(native "$WINTUN_LICENSE")" \
 	"-DOUT=$(native "$SETUP")" \
 	"$(native "$ROOT/packaging/windows/installer.nsi")"
 
-## The zip: the program and its licenses, in a folder of their own. Run from
+## The zip: the program, Wintun's DLL and the licenses, in a folder of their own. Run from
 ## there, tracewing keeps everything it records under %LOCALAPPDATA%, as the
 ## installed one does.
 NAME="tracewing-${VERSION}-windows-${ARCH}"
@@ -77,6 +112,8 @@ mkdir -p "$WORK/$NAME"
 cp "$EXE" "$WORK/$NAME/tracewing.exe"
 cp LICENSE "$WORK/$NAME/LICENSE.txt"
 cp "$LICENSES" "$WORK/$NAME/THIRD-PARTY-LICENSES.txt"
+cp "$WINTUN_DLL" "$WORK/$NAME/wintun.dll"
+cp "$WINTUN_LICENSE" "$WORK/$NAME/WINTUN-LICENSE.txt"
 ZIP="$DIST/tracewing_${VERSION}_windows_${ARCH}.zip"
 rm -f "$ZIP"
 if command -v 7z >/dev/null; then

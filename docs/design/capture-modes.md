@@ -327,6 +327,8 @@ different sum, not an absent one:
   not one, so its licence has to go into the Windows package's third-party
   notices by hand. Clause 3(c) forbids removing proprietary notices, so
   shipping it with none is the one mistake here that is plainly a breach.
+  Done: `scripts/package_windows.sh` ships the release's own `LICENSE.txt`
+  beside the DLL as `WINTUN-LICENSE.txt`, in the installer and the zip.
 - WinDivert's risk was that nobody would re-sign the driver. This one's is
   that the owner may change the terms (clause 8), and that the grant ends on
   non-compliance (clause 6). Smaller, and of a different kind — but not the

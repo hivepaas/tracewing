@@ -20,6 +20,8 @@ pub mod desktop;
 #[path = "desktop_macos.rs"]
 pub mod desktop;
 pub mod helper;
+#[cfg(windows)]
+pub mod local_window;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod site;
