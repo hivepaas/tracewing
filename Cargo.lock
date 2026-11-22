@@ -8917,6 +8917,7 @@ dependencies = [
  "rusqlite",
  "rustls-native-certs",
  "serde_json",
+ "socket2",
  "time",
  "tokio",
  "tokio-rustls",

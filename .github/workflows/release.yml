@@ -246,9 +246,20 @@ jobs:
         run: |
           if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
 
+      # Wintun's own release, for S8 (capture with no proxy settings), checked
+      # against the hash wintun.net publishes for it.
+      - name: Wintun
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\wintun-0.14.1.zip"
+          Invoke-WebRequest https://www.wintun.net/builds/wintun-0.14.1.zip -OutFile $zip
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash
+          if ($hash -ne '07C256185D6EE3652E09FA55C0B673E2624B565E02C4B9091C79CA7D2F24EF51') { throw "wintun-0.14.1.zip is not the release: $hash" }
+          Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP\wintun-dist"
+
       - name: Tests that change the computer
         shell: pwsh
-        run: scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -ConfirmTrustDialogs -Packages -Browsers 'chrome edge firefox'
+        run: scripts/e2e_windows.ps1 -ThisMachineMayBeChanged -ConfirmTrustDialogs -Packages -Browsers 'chrome edge firefox' -Wintun "$env:RUNNER_TEMP\wintun-dist\wintun\bin\amd64\wintun.dll"
 
   # The same on macOS, for what macOS asks nobody about: the system proxy
   # and the agent that puts it back, the keychain, and the firewall as root.

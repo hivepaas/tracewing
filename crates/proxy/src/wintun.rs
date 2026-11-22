@@ -187,14 +187,24 @@ impl WintunAdapter {
                 MIB_UNICASTIPADDRESS_ROW,
             },
             NetworkManagement::Ndis::NET_LUID_LH,
+            Networking::WinSock::IpDadStatePreferred,
         };
         let mut row = MIB_UNICASTIPADDRESS_ROW::default();
         // Defaults first, and not for tidiness: this is what sets the
-        // lifetimes to infinite and the duplicate-address state to
-        // preferred. A zeroed row means a lifetime of zero, which is an
-        // address that expires as soon as it is made.
+        // lifetimes to infinite. A zeroed row means a lifetime of zero, which
+        // is an address that expires as soon as it is made.
         // SAFETY: a row of ours for the call to fill in.
         unsafe { InitializeUnicastIpAddressEntry(&mut row) };
+        // **Preferred at once, which the defaults above do not make it**,
+        // though this comment once said they did. Left to them, the address
+        // starts `Tentative` while Windows checks nobody else has it, and
+        // for as long as it is, nothing routes into the adapter: measured in
+        // the VM, `Find-NetRoute` found no way to 203.0.113.9 for the two
+        // seconds after the adapter came up, and curl's connect failed in
+        // 0 ms (`local_live`'s S8 test): what the `/1` routes take went
+        // nowhere for at least that long, chosen or not. There is nobody else
+        // on this link to ask: the adapter is ours alone.
+        row.DadState = IpDadStatePreferred;
         // By LUID rather than by index, for the reason `luid` gives: an
         // index belongs to one family and this address has its own.
         row.InterfaceLuid = NET_LUID_LH {
@@ -396,19 +406,42 @@ impl Held {
     ///
     /// The addresses go on before the routes, which is the order Windows
     /// wants: a route into an interface that holds no address of that family
-    /// is one it has nothing to send from.
+    /// is one it has nothing to send from. IPv6's routes go on only where
+    /// the machine has a way out for IPv6 of its own.
+    ///
+    /// Whether it has is asked once, here: a machine that gains IPv6 while
+    /// the mode is on has its IPv6 captured from the next time it is turned
+    /// on.
     pub fn up(dll: &Path) -> Result<Self> {
         use std::net::{Ipv4Addr, Ipv6Addr};
         const V4: IpAddr = IpAddr::V4(Ipv4Addr::new(198, 18, 0, 1));
         const V6: IpAddr = IpAddr::V6(Ipv6Addr::new(0xfd77, 0x7472, 0x6163, 0, 0, 0, 0, 1));
         let adapter = Arc::new(WintunAdapter::open(dll)?);
         let addresses = vec![adapter.address(V4, 32)?, adapter.address(V6, 128)?];
-        let routes = vec![
+        let mut routes = vec![
             adapter.route(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 1)?,
             adapter.route(IpAddr::V4(Ipv4Addr::new(128, 0, 0, 0)), 1)?,
-            adapter.route(IpAddr::V6(Ipv6Addr::UNSPECIFIED), 1)?,
-            adapter.route(IpAddr::V6(Ipv6Addr::new(0x8000, 0, 0, 0, 0, 0, 0, 0)), 1)?,
         ];
+        // **IPv6 only where the machine has a way out for it.** Without one,
+        // our halves were the only IPv6 routes there were: a program that
+        // tries IPv6 first (curl, browsers) had its connection accepted by
+        // the stack and then dropped, since a connection nobody chose has
+        // nowhere to be passed on to, and it did not fall back to IPv4 as it
+        // does when IPv6 fails at once. Measured on a GitHub runner, which
+        // has no IPv6: HTTPS to example.com from a program nobody chose
+        // worked with the mode off and failed with it on. Left alone, IPv6
+        // fails at once as it did before.
+        let ours = adapter.luid()?;
+        let v6_out = crate::roads::roads_now()
+            .ok()
+            .and_then(|roads| crate::roads::out_by(&roads, ours, true))
+            .is_some();
+        if v6_out {
+            routes.push(adapter.route(IpAddr::V6(Ipv6Addr::UNSPECIFIED), 1)?);
+            routes.push(adapter.route(IpAddr::V6(Ipv6Addr::new(0x8000, 0, 0, 0, 0, 0, 0, 0)), 1)?);
+        } else {
+            tracing::info!("no way out for IPv6 here, so IPv6 is not routed into the adapter");
+        }
         Ok(Self {
             adapter,
             _addresses: addresses,

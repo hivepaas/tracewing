@@ -313,7 +313,7 @@ impl Way {
         // the families; this has none to borrow, and inventing one here is
         // not what this change is about.
         for addr in addresses {
-            let endpoint = match sending_from(addr.is_ipv6()) {
+            let endpoint = match sending_from(addr) {
                 Ok(endpoint) => endpoint,
                 Err(e) => {
                     trouble = Some(format!("a socket to reach {addr} from: {e}").into());
@@ -427,8 +427,8 @@ fn facts_of(conn: &quinn::Connection) -> TlsFacts {
 /// An endpoint to send from: a socket of its own per connection, because the
 /// interface it must leave by can change between one connection and the
 /// next. See [`datagrams_out`].
-fn sending_from(v6: bool) -> Result<quinn::Endpoint, BoxError> {
-    let socket = datagrams_out(v6)?;
+fn sending_from(to: SocketAddr) -> Result<quinn::Endpoint, BoxError> {
+    let socket = datagrams_out(to)?;
     Ok(quinn::Endpoint::new(
         quinn::EndpointConfig::default(),
         None,

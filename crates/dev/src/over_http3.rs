@@ -54,9 +54,27 @@ impl Server {
             .context("the certificate for QUIC")?;
         let server = quinn::ServerConfig::with_crypto(Arc::new(quic));
         // Bound to the unspecified address of both families at once, so one
-        // port answers `127.0.0.1` and `[::1]` alike.
-        let endpoint = quinn::Endpoint::server(server, SocketAddr::from(([0u16; 8], port)))
+        // port answers `127.0.0.1` and `[::1]` alike. **Said, not left to the
+        // system**: Windows makes an IPv6 socket IPv6-only unless told, and
+        // there the server heard nothing at `127.0.0.1` -- Chrome's request
+        // through the adapter went to the door and no further (`local_live`).
+        let socket = socket2::Socket::new(
+            socket2::Domain::IPV6,
+            socket2::Type::DGRAM,
+            Some(socket2::Protocol::UDP),
+        )
+        .context("a socket for QUIC")?;
+        socket.set_only_v6(false).context("both families on it")?;
+        socket
+            .bind(&SocketAddr::from(([0u16; 8], port)).into())
             .context("listen for QUIC")?;
+        let endpoint = quinn::Endpoint::new(
+            quinn::EndpointConfig::default(),
+            Some(server),
+            socket.into(),
+            Arc::new(quinn::TokioRuntime),
+        )
+        .context("listen for QUIC")?;
         let port = endpoint.local_addr()?.port();
         let saw = Arc::new(Mutex::new(Vec::new()));
         tokio::spawn(accepting(endpoint.clone(), Arc::clone(&saw)));

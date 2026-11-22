@@ -145,7 +145,7 @@ if ($Wintun) {
             @('-p', 'tracewing-proxy', '--test', 'wintun_live'),
             @('-p', 'tracewing', '--test', 'local_live'))) {
         Write-Output "== $($live -join ' ')"
-        cargo test --release --locked @live -- --ignored --test-threads=1
+        cargo test --release --locked @live -- --ignored --test-threads=1 --nocapture
         if ($LASTEXITCODE -ne 0) { $status = 1 }
     }
 }

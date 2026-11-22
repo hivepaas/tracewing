@@ -57,7 +57,7 @@ the code: "fake" names the stand-in the test uses.
 | The installed package records HTTPS | `check_linux_package.sh --install`, `check_macos_app.sh`, `check_windows_installer.ps1` | The packages capture one second with no traffic. The Windows check reaches `--version` only, and the installer's `tracewing uninstall` hook is run but its effect is never checked. S4 now covers the .deb, the .rpm, `setup.exe` both ways and the `.zip`. |
 | Android over ADB: Set up, Undo, put back at close and at the next start | `devices.rs` with a fake `adb`; `android_device.rs` (env-gated) | `undo_android` and `android::recover` have no test. Real root and the Conscrypt APEX run only in the env-gated test. |
 | iOS Simulator | `devices.rs` with a fake `xcrun` | Never run on a Mac. Turning the proxy on is macOS-only and untested. |
-| Capture without proxy settings: TUN on Linux, Wintun on Windows, HTTP/3 through it | `stack.rs`, `tun.rs` with a fake device; `local_live*.rs` `#[ignore]` | The adapter join runs only by hand, under `unshare`, in an editor's shell (AppArmor refuses it elsewhere). Wintun and the Windows catcher have never run. |
+| Capture without proxy settings: TUN on Linux, Wintun on Windows, HTTP/3 through it | `stack.rs`, `tun.rs` with a fake device; `local_live*.rs` `#[ignore]` | The adapter join runs only by hand, under `unshare`, in an editor's shell (AppArmor refuses it elsewhere). Wintun and the Windows catcher have never run. S8 now carries traffic through both, on every pull request on Linux and on a tag on Windows. |
 | Platform UI: Cmd keys, the native save dialog, the clipboard, more than one window and display, DPI, window restore | window tests on Linux only | Everything outside Linux headless. |
 | Performance claims: a million flows at display rate, bodies of 50 MB and more | `screen.rs::a_million_flows_while_traffic_keeps_coming` (env-gated, prints timings, asserts none) | No frame-time or responsiveness assertion. `big_body.rs` now opens 60 MB of JSON in the window (5.3 million lines): shown, scanned, laid out pretty, found in, and shown at its last line, with loose time bounds. It found the line numbers' first digit cut off past a million lines. |
 
@@ -297,6 +297,57 @@ back.
      Wintun adapter and no `/1` route are left, and the default route is
      the VM's own. `scripts/e2e_windows.ps1 -Wintun <wintun.dll>` runs them
      one test at a time, as they need.
+   - S8 on Windows **with traffic**, done in the VM and run by `release.yml`'s
+     `windows-e2e`, which fetches Wintun 0.14.1 from wintun.net and checks
+     its SHA-256. `local_live.rs` turns the mode on as the window does (an
+     `Engine`, `local_source::start`, the source handed to `serving`), with
+     the way out pinned as it is for anybody, and then:
+     - the chosen `curl.exe` sends HTTPS to `203.0.113.9`, which the `/1`
+       routes take, under the name of an origin on the loopback: it is
+       answered, and the HAR holds both bodies. The same curl copied
+       elsewhere, which the sieve does not keep, gets nowhere and nothing of
+       it is recorded;
+     - what nobody chose goes on as before: HTTPS to a public site with its
+       own certificate, DNS over UDP to a public resolver, `ping`. Each is
+       asked with the mode off first, and only what worked then is required
+       with it on (a runner refuses ICMP);
+     - a chosen program's QUIC (the test's own client) and Chrome's, told to
+       speak QUIC to `h3.test`, are caught, read through the door, and
+       recorded as HTTP/3. Chrome trusts the leaves by their key, as Set up
+       starts it; `h3.test` is a line of the hosts file for as long as the
+       test runs, on a marked machine only.
+   - **Four faults, found by those tests and fixed.** None could be seen by
+     the assembly test, which only looks at the routing table:
+     - The adapter's address started `Tentative`. Windows checked nobody else
+       on the link had it, and until then nothing routed into the adapter:
+       for the first seconds every connection the `/1` routes took failed at
+       once ("host unreachable"). `InitializeUnicastIpAddressEntry` does not
+       make it preferred, which `wintun.rs` said it did; it now sets
+       `DadState` itself.
+     - With the mode on, every connection the proxy made was pinned to the
+       machine's interface, the loopback's too, and Windows refuses those
+       (10049). So any request through the proxy to a server on this machine
+       -- `http://localhost:3000` -- failed while the mode was on. The
+       loopback is not pinned now: nothing for it goes into the adapter.
+     - The machine announces itself on every link, ours included (LLMNR,
+       mDNS, SSDP). Passed on from a socket pinned for unicast only, each
+       announcement left by the adapter again, from a new port, and was
+       passed on again: the table of 512 pairs was full 70 ms after the
+       adapter came up, and every new UDP flow after that was dropped, a
+       chosen program's QUIC among them. Multicast and broadcast are the
+       link's own and are not passed on now.
+     - On a machine with no IPv6 (the GitHub runner), the adapter's IPv6
+       halves were the only IPv6 routes there were. curl tried IPv6 first,
+       the stack accepted the connection, the sieve had nowhere to pass it
+       on to, and curl did not fall back to IPv4: HTTPS from a program
+       nobody chose worked with the mode off and failed with it on. IPv6 is
+       routed into the adapter now only where the machine has a way out for
+       it. **Linux is not fixed**: `adapter_linux.rs` adds an IPv6 default
+       route through the device whatever the machine has, and its live tests
+       run in a namespace with no other route, so they cannot see this.
+   - And one in the test's HTTP/3 server: bound to `[::]` for both families,
+     it heard only IPv6 on Windows, where a socket is IPv6-only unless told.
+     It says so now.
    - S9, **done** against the `tracewing-test` emulator (API 36), by
      `crates/app/tests/android_live.rs`, which runs only with
      `TRACEWING_ANDROID_SERIAL` set, so not in CI. The device first has a
@@ -315,7 +366,7 @@ back.
      program kept instead of Chrome, it fails: Chrome gets nothing.
 7. Run `release.yml` on a tag, with the suite as a job before the draft.
    **Done.** `release.yml`'s `windows-e2e` job runs `e2e_windows.ps1
-   -ConfirmTrustDialogs -Packages -Browsers 'chrome edge firefox'` on
+   -ConfirmTrustDialogs -Packages -Browsers 'chrome edge firefox' -Wintun …` on
    `windows-latest`, on a tag and when the workflow is run by hand, and the
    draft waits for it. Not on the pull requests that rehearse the packaging:
    they would wait for it for nothing they change. Its first run, by hand,
