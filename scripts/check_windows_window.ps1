@@ -186,12 +186,24 @@ try {
     if ($said -ne 's10-answered') { Fail "the request through the window's proxy came back as '$said'" }
 
     # It puts the request on the clipboard: the first row chosen with Home,
-    # then Copy as cURL, read back as any other program reads it.
+    # then Copy as cURL, read back as any other program reads it. Pressed
+    # again until it is there: the row may not be in the list yet when the
+    # request has just come back, and the window may not have the keyboard,
+    # and pressed once, the runner waited out ten seconds for it (run
+    # 44986850580). Both keys do the same each time they are pressed.
     Set-Clipboard -Value 'before'
-    [void][Hand]::SetForegroundWindow($h)
-    Press @(0x24)
-    Press @($CTRL, $SHIFT, 0x43)
-    WaitFor 'Copy as cURL on the clipboard' 10 { (Get-Clipboard -Raw) -match [regex]::Escape($url) }
+    $deadline = (Get-Date).AddSeconds(15)
+    $pressed = 0
+    while (-not ((Get-Clipboard -Raw) -match [regex]::Escape($url))) {
+        if ((Get-Date) -gt $deadline) {
+            Fail "waited 15 s for Copy as cURL on the clipboard, pressed $pressed times; it holds '$(Get-Clipboard -Raw)'"
+        }
+        [void][Hand]::SetForegroundWindow($h)
+        Press @(0x24)
+        Press @($CTRL, $SHIFT, 0x43)
+        $pressed++
+        Start-Sleep -Milliseconds 500
+    }
     Write-Host "clipboard: $((Get-Clipboard -Raw).Split("`n")[0])"
 
     # It opens the save dialog, Windows' own, for the body.
