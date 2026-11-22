@@ -162,8 +162,8 @@ fn the_adapter_has_a_luid_and_is_never_the_way_out() {
 }
 
 /// The adapter **up**, which is what the capture mode holds: an address of
-/// each family and the two halves of each address space, and all of it gone
-/// when it is dropped.
+/// each family and the two halves of each address space (IPv6's only where
+/// the machine has a way out for it), and all of it gone when it is dropped.
 ///
 /// This is the case the comment on
 /// `the_adapter_has_a_luid_and_is_never_the_way_out` says will bite later: at
@@ -184,7 +184,24 @@ fn the_adapter_comes_up_with_both_halves_and_goes_down_again() {
             2,
             "both halves of the IPv4 address space"
         );
-        assert_eq!(rows_become(luid, 1, true, 2), 2, "and both of IPv6's");
+        // IPv6's halves only where the machine has a way out for it, which
+        // `Held::up` decides as this does: by the table, leaving our own
+        // adapter out. A GitHub runner has none, so it gets none; this went on
+        // asserting two there after #414 made it so. Should the exclusion
+        // fail and name our adapter, the loop below says so.
+        let v6_out = roads::out_by(
+            &roads::roads_now().expect("this machine's routes"),
+            luid,
+            true,
+        )
+        .is_some();
+        let v6_halves = if v6_out { 2 } else { 0 };
+        println!("this machine has a way out for IPv6: {v6_out}");
+        assert_eq!(
+            rows_become(luid, 1, true, v6_halves),
+            v6_halves,
+            "IPv6's halves, where there is a way out for it"
+        );
 
         let roads = roads::roads_now().expect("this machine's routes");
         let mine: Vec<u32> = roads
