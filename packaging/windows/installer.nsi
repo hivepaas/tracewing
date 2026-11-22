@@ -2,7 +2,8 @@
 ; scripts/package_windows.sh, as packwing's is:
 ;
 ;   makensis /DVERSION=0.1.0 /DFILEVERSION=0.1.0.0 /DEXE=path\to\tracewing.exe
-;            /DLICENSES=path\to\THIRD-PARTY-LICENSES /DOUT=setup.exe installer.nsi
+;            /DLICENSES=path\to\THIRD-PARTY-LICENSES /DWINTUN=path\to\wintun.dll
+;            /DWINTUN_LICENSE=path\to\Wintun's\LICENSE.txt /DOUT=setup.exe installer.nsi
 ;
 ; FILEVERSION is VERSION as Windows writes a file's version: four numbers, no
 ; beta (0.3.0-beta2 is 0.3.0.0).
@@ -19,7 +20,8 @@
 ; starts at the end is the user's, never the administrator's.
 ;
 ; One file is the program: the window, the proxy, the command line and the MCP
-; server are all tracewing.exe. Its folder goes in the PATH (path.ps1), the
+; server are all tracewing.exe. Beside it, Wintun's wintun.dll, which the local
+; way in (capture with no proxy settings) loads from there, with its licence. Its folder goes in the PATH (path.ps1), the
 ; user's or, for everyone, the computer's, so a terminal opened after runs
 ; `tracewing capture`; uninstalling takes it out again.
 ;
@@ -53,6 +55,12 @@ SetCompressor /SOLID lzma
 !endif
 !ifndef OUT
   !error "OUT is not given"
+!endif
+!ifndef WINTUN
+  !error "WINTUN is not given"
+!endif
+!ifndef WINTUN_LICENSE
+  !error "WINTUN_LICENSE is not given"
 !endif
 
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\tracewing"
@@ -267,8 +275,12 @@ Section "tracewing"
     Abort
   copied:
 
+  ; Once the program has been replaced, nothing of tracewing's is running to
+  ; hold the library either.
+  File "/oname=wintun.dll" "${WINTUN}"
   File "/oname=LICENSE.txt" "..\..\LICENSE"
   File "/oname=THIRD-PARTY-LICENSES.txt" "${LICENSES}"
+  File "/oname=WINTUN-LICENSE.txt" "${WINTUN_LICENSE}"
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
   CreateShortcut "$SMPROGRAMS\tracewing.lnk" "$INSTDIR\tracewing.exe"
@@ -358,8 +370,10 @@ Section "Uninstall"
   SetOutPath "$TEMP"
 
   Delete "$INSTDIR\tracewing.exe"
+  Delete /REBOOTOK "$INSTDIR\wintun.dll"
   Delete "$INSTDIR\LICENSE.txt"
   Delete "$INSTDIR\THIRD-PARTY-LICENSES.txt"
+  Delete "$INSTDIR\WINTUN-LICENSE.txt"
   Delete "$INSTDIR\uninstall.exe"
   RMDir /REBOOTOK "$INSTDIR"
   Delete "$SMPROGRAMS\tracewing.lnk"

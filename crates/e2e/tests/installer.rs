@@ -6,6 +6,11 @@
 //! no scheduled task is armed, and the folder, the uninstall key, the
 //! shortcut and the PATH entry are gone. And the `.zip`, run from a folder.
 //!
+//! Both carry Wintun's `wintun.dll` and its licence beside the program; the
+//! installed one, left with the local way in switched on, brings the adapter
+//! up with that library and records a chosen program's HTTPS through it
+//! (`tracewing_e2e::local_window`).
+//!
 //! The installer is `TRACEWING_E2E_SETUP` and the zip `TRACEWING_E2E_ZIP`,
 //! which `scripts/e2e_windows.ps1 -Packages` builds and hands in.
 //!
@@ -23,8 +28,8 @@ use std::{
     time::Duration,
 };
 use tracewing_e2e::{
-    Capture, Origin, curl_through_with, desktop, har_of, helper::Helper, only_where_allowed, said,
-    scratch, tracewing_at, wait_for,
+    Capture, Origin, curl_through_with, desktop, har_of, helper::Helper, local_window,
+    only_where_allowed, said, scratch, tracewing_at, wait_for,
 };
 use tracewing_proxy::ca_key::KeyStore;
 use tracewing_system::{Scope, ca_install, ca_locations, ca_remove};
@@ -284,6 +289,11 @@ fn the_installer(how: For) {
         "{how:?}: not in the PATH"
     );
     assert!(how.shortcut().exists(), "{how:?}: no shortcut");
+    // Wintun's library beside the program, for the local way in, with its
+    // licence.
+    for file in ["wintun.dll", "WINTUN-LICENSE.txt"] {
+        assert!(how.folder().join(file).exists(), "{how:?}: no {file}");
+    }
 
     let _put_back = desktop::the_users_own();
     let before = desktop::setting();
@@ -295,6 +305,13 @@ fn the_installer(how: For) {
     ca_install(&pem, Scope::User).unwrap();
     ca_install(&pem, Scope::Machine).unwrap();
     records_https(&program, &data, &origin, &capture);
+    // And with no proxy settings: the window, left switched on for curl,
+    // brings the adapter up with the wintun.dll it was installed with.
+    if matches!(how, For::User) {
+        let local = dir.join("local");
+        std::fs::create_dir_all(&local).unwrap();
+        local_window::a_chosen_program_is_recorded_through_the_window(&program, &local);
+    }
 
     // The system proxy, taken by the installed program, which arms the task
     // that puts it back as itself; then killed, so that it is left for the
@@ -371,6 +388,12 @@ fn the_zip_runs_from_its_folder_and_leaves_nothing_behind() {
         .map(|entry| entry.path().join("tracewing.exe"))
         .find(|exe| exe.exists())
         .expect("no tracewing.exe in a folder of the zip");
+    for file in ["wintun.dll", "WINTUN-LICENSE.txt"] {
+        assert!(
+            program.with_file_name(file).exists(),
+            "the zip has no {file}"
+        );
+    }
     let user_path = For::User.path();
 
     let data = dir.join("data");
