@@ -14,7 +14,10 @@
 
 #![cfg(any(target_os = "linux", windows, target_os = "macos"))]
 
-use std::{path::Path, time::Duration};
+use std::{
+    path::Path,
+    time::{Duration, Instant},
+};
 use tracewing_e2e::{
     desktop::{Setting, names_tracewing, setting, the_users_own},
     free_port,
@@ -41,10 +44,38 @@ fn recover(dir: &Path, only_if_gone: bool) -> String {
     tracewing_e2e::said(&out)
 }
 
-fn back(before: &Setting, within: Duration) {
-    wait_for("the setting to come back as it was", within, || {
-        &setting() == before
-    });
+/// Waits for the setting to be `before` again, and when it is not by then,
+/// says what is not and what the watchdog wrote: the macOS runner once waited
+/// out the ten seconds with nothing more to say (run 44984525576).
+fn back(dir: &Path, before: &Setting, within: Duration) {
+    let until = Instant::now() + within;
+    loop {
+        let now = setting();
+        if &now == before {
+            return;
+        }
+        if Instant::now() > until {
+            let differs: Vec<String> = if now.len() == before.len() {
+                now.iter()
+                    .zip(before)
+                    .filter(|(now, was)| now != was)
+                    .map(|((k, now), (_, was))| format!("{k}: {now:?}, was {was:?}"))
+                    .collect()
+            } else {
+                vec![format!("now {now:?}, was {before:?}")]
+            };
+            let log = std::fs::read_to_string(dir.join("watchdog.log"))
+                .unwrap_or_else(|e| format!("none ({e})"));
+            panic!(
+                "waited {within:?} for the setting to come back as it was\n  \
+                 not as it was: {differs:?}\n  the watchdog's log: {}\n  \
+                 the journal is still there: {}",
+                log.trim(),
+                dir.join("sysproxy.journal").exists()
+            );
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
 }
 
 #[test]
@@ -55,7 +86,7 @@ fn the_watchdog_puts_it_back_when_the_app_is_killed() {
     let before = setting();
 
     app(&dir, free_port(), true).kill();
-    back(&before, Duration::from_secs(10));
+    back(&dir, &before, Duration::from_secs(10));
     // The setting first, then the journal that kept it: a moment apart.
     wait_for("the journal to go", Duration::from_secs(5), || {
         !dir.join("sysproxy.journal").exists()
@@ -130,7 +161,7 @@ fn the_scheduled_task_puts_it_back_when_the_app_and_its_watchdog_are_killed() {
         names_tracewing(&setting(), port),
         "put back at once, so not by the task"
     );
-    back(&before, Duration::from_secs(150));
+    back(&dir, &before, Duration::from_secs(150));
     std::fs::remove_dir_all(&dir).ok();
 }
 
@@ -163,7 +194,7 @@ fn the_agent_puts_it_back_when_the_app_is_killed() {
     let before = setting();
 
     app(&dir, free_port(), false).kill();
-    back(&before, Duration::from_secs(10));
+    back(&dir, &before, Duration::from_secs(10));
     // The waiter stays an entry in launchd, with no process, until tracewing
     // next starts on this data directory and finds nothing to recover. Nothing
     // will start on a scratch one again, so that start is made here: without
@@ -221,7 +252,7 @@ fn the_systemd_timer_puts_it_back_when_the_app_and_its_watchdog_are_killed() {
         names_tracewing(&setting(), port),
         "put back at once, so not by the timer"
     );
-    back(&before, Duration::from_secs(150));
+    back(&dir, &before, Duration::from_secs(150));
     // Its work done, it disarms itself.
     wait_for("the timer to stop", Duration::from_secs(10), || {
         let out = std::process::Command::new("systemctl")
