@@ -72,7 +72,7 @@ use tokio::{net::UdpSocket, sync::mpsc};
 
 /// What carries UDP, in the `protocol` of an IPv4 header and the
 /// `next_header` of an IPv6 one.
-const UDP: u8 = 17;
+pub(crate) const UDP: u8 = 17;
 
 /// A UDP header is always these eight bytes: two ports, a length, a checksum.
 const UDP_HEAD: usize = 8;
