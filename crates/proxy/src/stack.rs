@@ -656,6 +656,10 @@ async fn run(
                             }
                         }
                         (None, None) => {
+                            if passing.is_some() {
+                                let catching = catches.as_ref().is_some_and(|on| on());
+                                said_why_not_taken(&packet, catching);
+                            }
                             open_for(&packet, most, &mut sockets, &mut conns, &woken);
                             refused(packet, &found, &mut attempts, &mut device);
                         }
@@ -680,6 +684,40 @@ async fn run(
             _ = woken.notified() => {}
             _ = tokio::time::sleep(sleep) => {}
             _ = stopped(stop.clone()) => break,
+        }
+    }
+}
+
+/// Why UDP that [`taken_on`] left for the stack is refused here rather than
+/// passed on or caught, at debug: each is a client sent back to TCP, which
+/// says nothing of itself. The QUIC a client insisting on it sends --
+/// Chrome told to, in `local_live_http3` -- fails on this refusal, and
+/// without this its one flaky run could not say whether its datagrams got
+/// here at all.
+fn said_why_not_taken(packet: &[u8], catching: bool) {
+    match crate::datagrams::datagram(packet) {
+        Some(datagram) if crate::datagrams::ours_to_refuse(datagram.to.port()) => {
+            tracing::debug!(
+                "UDP from {} to {} refused here: HTTP/3 capture is {}",
+                datagram.from,
+                datagram.to,
+                if catching { "on" } else { "off" }
+            );
+        }
+        Some(_) => {}
+        None => {
+            let udp = match packet.first().map(|b| b >> 4) {
+                Some(4) => packet.get(9) == Some(&crate::datagrams::UDP),
+                Some(6) => packet.get(6) == Some(&crate::datagrams::UDP),
+                _ => false,
+            };
+            if udp {
+                tracing::debug!(
+                    "a UDP packet of {} bytes refused here: not read as a datagram \
+                     (an IPv4 fragment, or an IPv6 extension header)",
+                    packet.len()
+                );
+            }
         }
     }
 }

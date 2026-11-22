@@ -333,11 +333,20 @@ fn chromes_http3_goes_through_tracewing_on_a_real_adapter() {
     // datagrams never reached tracewing (routing, or the sieve), caught but
     // unseen by the server means the door or its way out, and seen by the
     // server with an empty page means the way back.
+    // All Chrome said about QUIC, the last of it: the reasons above are
+    // only its errors, and the one flaky run's said no more than that the
+    // page failed. What it sent, and what came back, is in here.
+    let quic: Vec<&str> = said
+        .lines()
+        .filter(|line| line.to_ascii_lowercase().contains("quic"))
+        .collect();
+    let quic = &quic[quic.len().saturating_sub(40)..];
     let caught = arrivals.of(By::Tun).count;
     let seen: Vec<String> = server.saw().iter().map(|a| a.path.clone()).collect();
     assert!(
         page.contains(std::str::from_utf8(SAID).unwrap()),
-        "Chrome did not get the server's own body.\n  its page: {page:?}\n           its reasons: {why:?}\n  caught by the way in: {caught}\n           reached the real server: {seen:?}"
+        "Chrome did not get the server's own body.\n  its page: {page:?}\n           its reasons: {why:?}\n  caught by the way in: {caught}\n           reached the real server: {seen:?}\n  its QUIC said:\n{}",
+        quic.join("\n")
     );
     assert_eq!(
         seen.first().map(String::as_str),
@@ -371,10 +380,16 @@ fn ours_to_run(test: &str) -> Option<PathBuf> {
         // Why each client's QUIC went where it did, on stderr above the
         // failure: the catcher's refusals are otherwise silent, and the one
         // flaky run Chrome had (`ERR_QUIC_PROTOCOL_ERROR`, nothing caught)
-        // could say no more than that.
+        // could say no more than that. Its second, with the catcher's
+        // reasons logged, logged none for Chrome: its datagrams never
+        // reached the catcher. So the stack says why it refuses UDP too,
+        // and the datagram table what it drops.
         let _ = tracing_subscriber::fmt()
             .with_writer(std::io::stderr)
-            .with_env_filter("warn,tracewing::local_source=debug")
+            .with_env_filter(
+                "warn,tracewing::local_source=debug,tracewing_proxy::stack=debug,\
+                 tracewing_proxy::datagrams=debug",
+            )
             .try_init();
         return Some(PathBuf::from(witness));
     }
