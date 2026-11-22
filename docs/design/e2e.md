@@ -175,6 +175,29 @@ so and exits **2**, which is not a pass. It is measured both ways: it passes a
 build with #381's fix and fails the same build with the bar's drag area put
 back.
 
+**S10 and S11 at 150%**, in the VM, by hand: a runner cannot change its scale,
+which takes a new sign-in. `HKCU\Control Panel\Desktop`'s `LogPixels` set to
+144 and its `PerMonitorSettings` taken out (exported first, imported again
+after), then a restart, since the VM signs itself in only as it boots. Both
+pass, and getting there found two things:
+
+- **The window opened larger than its screen.** `placement::initial` kept a
+  saved size as long as 120x40 of it was on a display, and opened the default
+  1440x900 whatever the display was. At 150% the VM's 1377x861 from 96 dpi
+  became 2065 pixels on a screen of 2039, with the maximize and close buttons
+  past its edge: no pointer reaches them, which S11 reported as one
+  `HTMINBUTTON` band across all three. A 1920x1080 laptop at 150% has a work
+  area of 1280x672, smaller than the default. The window is now made to fit
+  the work area of the display it opens on, and moved in as far as that
+  takes; at 150% the restored window answers min, max and close in order.
+- **The two scripts were not DPI-aware.** PowerShell is not, so above 96 dpi
+  Windows handed them every coordinate scaled down, while S11 scaled its
+  sweep by the window's own DPI on top: the two together looked in the wrong
+  place. Both now make their thread per-monitor aware, and S10's picture of
+  the window is the whole of it. And S10 presses Alt before asking for the
+  front again, since a hidden task's first ask after a fresh sign-in was
+  turned down.
+
 ## Order of work
 
 1. `crates/e2e` with its guard, the Linux container and its script, and S1

@@ -55,6 +55,7 @@ public class Hand {
   [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, IntPtr extra);
   [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint flags);
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr c);
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
 
   // The visible top-level windows of a process whose class is `cls`.
@@ -72,6 +73,12 @@ public class Hand {
   }
 }
 '@
+
+# In the window's own pixels, so that the picture taken of it is the whole
+# window: unaware, PowerShell is handed its size scaled down above 96 dpi.
+if ([Hand]::SetThreadDpiAwarenessContext([IntPtr]-4) -eq [IntPtr]::Zero) {
+    Cannot 'this thread cannot be made DPI-aware, so the window would be measured scaled'
+}
 
 # A key, or a chord, pressed and let go: modifiers down, the key, all up.
 function Press([byte[]]$keys) {
@@ -115,6 +122,17 @@ try {
     if ($h -eq [IntPtr]::Zero) { Cannot 'no window after 30 seconds' }
     [void][Hand]::SetForegroundWindow($h)
     Start-Sleep -Milliseconds 2500
+    # Windows lets a process take the front only just after input of its own,
+    # and this one is a hidden task: after a fresh sign-in its first ask was
+    # turned down (seen in the VM at 150%). An Alt pressed and let go is that
+    # input, and nothing in the window answers a lone Alt but its menu bar,
+    # which tracewing does not have.
+    for ($try = 0; $try -lt 3 -and [Hand]::GetForegroundWindow() -ne $h; $try++) {
+        [Hand]::keybd_event(0x12, 0, 0, [IntPtr]::Zero)
+        [Hand]::keybd_event(0x12, 0, 2, [IntPtr]::Zero)
+        [void][Hand]::SetForegroundWindow($h)
+        Start-Sleep -Milliseconds 1000
+    }
     if ([Hand]::GetForegroundWindow() -ne $h) {
         Cannot 'the window cannot be brought to the front, so keys would go elsewhere (over ssh, use a task with /IT)'
     }
