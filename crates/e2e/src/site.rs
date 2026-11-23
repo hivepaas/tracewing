@@ -60,6 +60,25 @@ pub fn this_computers_address() -> IpAddr {
     ip
 }
 
+/// A TCP listener and a UDP socket on one port, as an HTTPS server that
+/// offers HTTP/3 has. The port TCP is given may still be refused to UDP: a
+/// GitHub runner refused one with 10013 (`WSAEACCES`) to two of S5's
+/// browsers in one run, most likely a range Windows keeps for itself
+/// (`netsh int ipv4 show excludedportrange protocol=udp`) or a socket of
+/// another program's holding it exclusively. So another port is tried.
+async fn tcp_and_udp_on_one_port(ip: IpAddr) -> (TcpListener, tokio::net::UdpSocket) {
+    let mut refused = Vec::new();
+    for _ in 0..20 {
+        let tcp = TcpListener::bind((ip, 0)).await.unwrap();
+        let port = tcp.local_addr().unwrap().port();
+        match tokio::net::UdpSocket::bind((ip, port)).await {
+            Ok(udp) => return (tcp, udp),
+            Err(e) => refused.push(format!("{port}: {e}")),
+        }
+    }
+    panic!("no port on {ip} takes both TCP and UDP: {refused:?}");
+}
+
 #[derive(Default)]
 struct Seen {
     /// The last `/done`'s query, by name.
@@ -107,16 +126,13 @@ impl Site {
         let ca = dir.join("site-ca.pem");
         let config = Arc::new(tls_config(ip, name, &ca));
         let seen = Arc::new(Seen::default());
-        let (plain_listener, tls_listener) = runtime.block_on(async {
+        let (plain_listener, tls_listener, udp) = runtime.block_on(async {
             let plain = TcpListener::bind((ip, 0)).await.unwrap();
-            let tls = TcpListener::bind((ip, 0)).await.unwrap();
-            (plain, tls)
+            let (tls, udp) = tcp_and_udp_on_one_port(ip).await;
+            (plain, tls, udp)
         });
         let plain = plain_listener.local_addr().unwrap().port();
         let tls = tls_listener.local_addr().unwrap().port();
-        let udp = runtime
-            .block_on(tokio::net::UdpSocket::bind((ip, tls)))
-            .unwrap();
         let routes = Arc::new(Routes {
             seen: seen.clone(),
             tls_origin: format!("https://{host}:{tls}"),
