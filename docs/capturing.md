@@ -13,9 +13,10 @@ programs, and none of them takes all.
 | **A terminal** — Set up › Open a terminal, or `tracewing env` | What is started in it: curl, git, Python, Go, Deno, Bun, and AI agents such as Claude Code, Codex and Gemini CLI | Node.js before 22.21, and 23 to 24.4; Java |
 | **A SOCKS5 port** — Settings › SOCKS5 | What speaks SOCKS: anything reading `ALL_PROXY`, `git` with a `socks5h://` proxy, Firefox's own SOCKS setting, proxychains | Programs that read only `HTTP_PROXY` and `HTTPS_PROXY`, and anything with no SOCKS setting of its own |
 | **One app, as it is** — Settings › Capture › Apps, or `tracewing capture --app`, macOS | Whatever the app chosen sends over TCP, whether or not it reads any proxy setting: a browser, an Electron app, Node of any version, Java, Python from Apple | Connections to this computer itself (`localhost`), which macOS does not hand over; programs that carry no signing id of their own (below); UDP, so HTTP/3 |
+| **Chosen programs, as they are** — Settings › Capture › Programs on Windows, Apps on Linux | The connections of the programs chosen, whether or not they read any proxy setting; their HTTP/3 too, with Settings › HTTP/3 on | Every program not chosen, which goes straight through unrecorded with its TLS never opened. Windows needs an administrator, and tracewing starts again as one; Linux asks once, to make tracewing's adapter |
 | **A phone over WireGuard** — Settings › WireGuard | Everything the phone sends once it joins the tunnel, apps that ignore its proxy setting included | Apps that pin their own certificates; anything on the phone before tracewing's authority is installed there |
 
-The two last leave the system proxy and every other app alone, which is what
+The last three leave the system proxy and every other app alone, which is what
 to use when only one program is being looked at.
 
 **Set up asks what you want to capture**, and then shows the steps for the one
@@ -307,24 +308,26 @@ computer.
 - **A program that pins a server's certificate.** tracewing can tunnel it
   untouched and show the connection, and that is all anyone can honestly do.
 - **Anything that is not HTTP**: DNS, SSH, SMTP, raw TCP and UDP, WebRTC.
-- **A client that insists on HTTP/3.** tracewing takes `Alt-Svc` out of
-  responses and can block UDP 443 so that clients fall back to HTTP/2; one
-  that refuses to fall back is out of reach until HTTP/3 is built — see
-  [design/http3.md](design/http3.md) for what that will take. Taking the
-  offers out does not reach a client that learns of HTTP/3 from a DNS record
-  instead, and most of Google's hosts are now that; blocking the port, or
-  refusing the datagrams as the local modes do, is what keeps such a client
-  on TCP. Out of reach, not out of sight either way: each refused attempt is
-  a row that says which server was asked for and — captured on this
-  computer — which program asked, and nothing of it is read past that first
-  packet.
+- **A client that insists on HTTP/3**, except a program chosen on Windows or
+  Linux. tracewing reads that program's HTTP/3 at both ends when Settings ›
+  HTTP/3 is on (off by default); see [design/http3.md](design/http3.md).
+  Everywhere else, tracewing takes `Alt-Svc` out of responses and can block
+  UDP 443 so that clients fall back to HTTP/2, and a client that refuses to
+  fall back is out of reach. Taking the offers out does not reach a client
+  that learns of HTTP/3 from a DNS record instead, and most of Google's hosts
+  are now that. Blocking the port, or refusing the datagrams as the local
+  modes do, is what keeps such a client on TCP. Out of reach is not out of
+  sight: each refused attempt is a row that says which server was asked for
+  and, captured on this computer, which program asked. Nothing of it is read
+  past that first packet.
 - **The system's own traffic** — Windows Update, `softwareupdate`, Apple
   push — which tracewing tunnels untouched on purpose: decrypting it breaks
   updates and tells nobody anything.
 
-Every "does not" on this page has the same root: tracewing waits to be told
-about. Taking traffic without any of that, from apps that were never told, is
-designed in [design/capture-modes.md](design/capture-modes.md).
+Most of the "does not" entries on this page have the same root: tracewing
+waits for a program to be told to use it. The two ways in that take programs
+as they are, with nothing told to them, avoid that. How they work is in
+[design/capture-modes.md](design/capture-modes.md).
 
 ## AI agents
 
