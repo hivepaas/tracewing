@@ -46,7 +46,7 @@
 
 **Seven ways in**, each a tab in Settings › Capture: this computer's proxy setting · a browser tracewing starts · a terminal it sets up · other devices on your network · a SOCKS5 port · a WireGuard tunnel a phone joins · apps taken as they are, with no proxy settings at all. Which way takes which programs: [docs/capturing.md](docs/capturing.md).
 
-Every feature in detail: [docs/features.md](docs/features.md) — written as a plan, so it says which milestone each thing belongs to rather than what today's build has.
+Every feature in detail: [docs/features.md](docs/features.md) — what 0.1.0 has, and what is planned.
 
 <table>
   <tr>
