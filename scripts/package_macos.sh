@@ -186,7 +186,19 @@ mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 DMG="$DIST/tracewing_${VERSION}_macos_${ARCH}.dmg"
-hdiutil create -volname "tracewing $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG"
+# hdiutil on a CI Mac now and then says "Resource busy" and makes nothing
+# (Release run 45421480372, macos-aarch64): a disk image service still busy
+# with something else. Asked again a few times, a few seconds apart.
+made=""
+for try in 1 2 3 4 5; do
+	if hdiutil create -volname "tracewing $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG"; then
+		made=1
+		break
+	fi
+	echo "hdiutil create failed (try $try of 5)" >&2
+	sleep $((try * 5))
+done
+[ -n "$made" ] || { echo "hdiutil create failed five times" >&2; exit 1; }
 
 ## The disk image signed, and notarized too.
 if [ -n "$IDENTITY" ]; then
