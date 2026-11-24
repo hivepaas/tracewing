@@ -51,3 +51,6 @@ accepted = ["GPL-3.0-or-later"]
 
 [tracewing-system]
 accepted = ["GPL-3.0-or-later"]
+
+[tracewing-update]
+accepted = ["GPL-3.0-or-later"]
