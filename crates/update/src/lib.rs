@@ -1,0 +1,347 @@
+//! Telling that a newer tracewing is out: a signed list of releases
+//! (`release.signed.json`, on the repository's `release` branch, made by
+//! `tools/releasesign`) says each channel's newest; the app on
+//! stable is offered stable releases only, the app on beta the newer of the
+//! betas and stable (a release supersedes the betas before it). The list is
+//! believed only when its signatures verify against the keys built in.
+//!
+//! A copy the app can replace (an AppImage, an `.app`, one its installer put
+//! on Windows) downloads the release's file for its platform, checks it
+//! against the list's SHA-256, and installs it as it quits (`apply`). A copy
+//! from the release's `.deb` or `.rpm` is given the commands that install the
+//! next one. Any other copy is told where the release is, or what updates it.
+
+pub mod apply;
+pub mod download;
+pub mod envelope;
+pub mod install;
+pub mod manifest;
+pub mod platform;
+pub mod version;
+
+use std::time::Duration;
+
+pub use envelope::{PublicKeys, SignatureError};
+pub use install::{Install, PackageTool, install_of};
+pub use manifest::{Manifest, ManifestError};
+pub use version::{Channel, Version};
+
+/// What the list is signed for: a signature made with the keys for another
+/// purpose is never taken for this one.
+pub const CONTEXT: &str = "tracewing-release-v1";
+
+/// Where the signed list is read: the release branch, which moves to a
+/// release once it is checked. A build that tries the updater on a list of
+/// its own names that one, as it is built (docs/updates.md).
+pub const LIST_URL: &str = match option_env!("TRACEWING_UPDATE_LIST") {
+    Some(url) => url,
+    None => "https://raw.githubusercontent.com/hivepaas/tracewing/release/release.signed.json",
+};
+
+/// The list is small; anything bigger is not it.
+const MOST_LIST: usize = 1 << 20;
+const FETCH_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// The page a release is downloaded from.
+pub fn release_page(v: &Version) -> String {
+    format!("https://github.com/hivepaas/tracewing/releases/tag/{v}")
+}
+
+/// The version running.
+pub fn current() -> Version {
+    Version::parse(env!("CARGO_PKG_VERSION")).unwrap_or(Version {
+        major: 0,
+        minor: 0,
+        patch: 0,
+        pre: None,
+    })
+}
+
+// KEYS: every keys/<id>.pub.pem, by id (build.rs).
+include!(concat!(env!("OUT_DIR"), "/keys.rs"));
+
+/// This build has release keys: it can tell of updates. One without (a
+/// build before the keys were made) does not look.
+pub fn has_keys() -> bool {
+    !KEYS.is_empty()
+}
+
+/// The release keys this app trusts (keys/README.md), or the test's.
+pub fn trusted_keys() -> Result<PublicKeys, SignatureError> {
+    #[cfg(feature = "test-source")]
+    if let Some((_, keys)) = test_source() {
+        let pems: Vec<(&str, &str)> = keys.iter().map(|(i, p)| (i.as_str(), p.as_str())).collect();
+        return envelope::parse_keys(&pems);
+    }
+    envelope::parse_keys(KEYS)
+}
+
+/// Where the signed list is read: [`LIST_URL`], or the test's.
+pub fn list_url() -> String {
+    #[cfg(feature = "test-source")]
+    if let Some((url, _)) = test_source() {
+        return url;
+    }
+    LIST_URL.to_string()
+}
+
+/// How this copy was installed, in place of what its path says: for the app's
+/// UI tests.
+#[cfg(feature = "test-source")]
+static TEST_INSTALL: std::sync::Mutex<Option<Install>> = std::sync::Mutex::new(None);
+
+#[cfg(feature = "test-source")]
+pub fn set_test_install(install: Install) {
+    if let Ok(mut i) = TEST_INSTALL.lock() {
+        *i = Some(install);
+    }
+}
+
+#[cfg(feature = "test-source")]
+pub fn test_install() -> Option<Install> {
+    TEST_INSTALL.lock().ok()?.clone()
+}
+
+/// A list and keys of a test's own: the url, and each key's id and PEM.
+#[cfg(feature = "test-source")]
+type Source = (String, Vec<(String, String)>);
+
+#[cfg(feature = "test-source")]
+static TEST_SOURCE: std::sync::Mutex<Option<Source>> = std::sync::Mutex::new(None);
+
+#[cfg(feature = "test-source")]
+fn test_source() -> Option<Source> {
+    TEST_SOURCE.lock().ok()?.clone()
+}
+
+/// Where a test's release files are, in place of GitHub's.
+#[cfg(feature = "test-source")]
+static TEST_FILES: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Downloads a release's files from `url` (`<url>/<version>/<file>`), in
+/// place of GitHub: for the window tests.
+#[cfg(feature = "test-source")]
+pub fn set_test_files(url: &str) {
+    if let Ok(mut f) = TEST_FILES.lock() {
+        *f = Some(url.to_string());
+    }
+}
+
+#[cfg(feature = "test-source")]
+pub(crate) fn test_files() -> Option<String> {
+    TEST_FILES.lock().ok()?.clone()
+}
+
+/// A test has named a list of its own. A build for the window tests looks
+/// for updates only then: a test that let the clock run must never reach
+/// GitHub.
+#[cfg(feature = "test-source")]
+pub fn has_test_source() -> bool {
+    test_source().is_some()
+}
+
+/// Reads the signed list at `url` and checks it with `keys` (id, PEM), in
+/// place of the release's: for the app's UI tests.
+#[cfg(feature = "test-source")]
+pub fn set_test_source(url: &str, keys: &[(&str, &str)]) {
+    if let Ok(mut s) = TEST_SOURCE.lock() {
+        *s = Some((
+            url.to_string(),
+            keys.iter()
+                .map(|(i, p)| (i.to_string(), p.to_string()))
+                .collect(),
+        ));
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CheckError {
+    #[error("{0}")]
+    Fetch(String),
+    /// No list is published yet (before the first release): nothing to offer.
+    #[error("no release is published yet")]
+    NoList,
+    #[error(transparent)]
+    Signature(#[from] SignatureError),
+    #[error(transparent)]
+    Manifest(#[from] ManifestError),
+    #[error("the download is not the file the list of releases names: its SHA-256 differs")]
+    Checksum,
+    #[error("{0}")]
+    Io(String),
+    #[error("the release has no file for this platform")]
+    NoFile,
+}
+
+/// A release's file for this platform, as the signed list names it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReleaseFile {
+    pub version: Version,
+    pub file: String,
+    pub sha256: String,
+    pub url: String,
+}
+
+/// The file `version` has for this platform, from a signed list.
+pub fn release_file(envelope: &[u8], version: &Version) -> Result<ReleaseFile, CheckError> {
+    let data = envelope::open(&trusted_keys()?, envelope, CONTEXT)?;
+    let m = Manifest::parse(&data)?;
+    let release = m
+        .releases
+        .get(&version.to_string())
+        .ok_or(CheckError::NoFile)?;
+    let a = platform::current()
+        .and_then(|p| release.archives.get(p))
+        .ok_or(CheckError::NoFile)?;
+    Ok(ReleaseFile {
+        version: version.clone(),
+        url: platform::download_url(version, &a.file),
+        file: a.file.clone(),
+        sha256: a.sha256.clone(),
+    })
+}
+
+/// The system package `version` has for `tool` on this computer, from a
+/// signed list: its file and SHA-256. `None` when the list has none.
+pub fn package_file(
+    envelope: &[u8],
+    version: &Version,
+    tool: PackageTool,
+) -> Result<Option<(String, String)>, CheckError> {
+    let data = envelope::open(&trusted_keys()?, envelope, CONTEXT)?;
+    Ok(Manifest::parse(&data)?
+        .releases
+        .get(&version.to_string())
+        .and_then(|r| r.packages.get(&platform::package_key(tool)))
+        .map(|a| (a.file.clone(), a.sha256.clone())))
+}
+
+/// The commands that download a release's package, check it against the
+/// signed list's SHA-256 and install it, each to follow the one before with
+/// `&&`. They run the same in bash, zsh and fish.
+///
+/// `file` and `sha256` are what the list holds: [`Manifest::parse`] takes only
+/// a file named as the release's and a SHA-256 in hex, so nothing in them means
+/// anything to a shell.
+pub fn package_steps(
+    version: &Version,
+    tool: PackageTool,
+    file: &str,
+    sha256: &str,
+) -> Vec<String> {
+    let install = match tool {
+        PackageTool::Apt => format!("sudo apt install ./{file}"),
+        PackageTool::Dnf => format!("sudo dnf install ./{file}"),
+        // Not signed: the SHA-256 is what vouches for it, and zypper stops without this.
+        PackageTool::Zypper => format!("sudo zypper --no-gpg-checks install ./{file}"),
+    };
+    vec![
+        "cd \"$(mktemp -d)\"".to_string(),
+        format!("curl -fLO {}", platform::download_url(version, file)),
+        format!("echo '{sha256}  {file}' | sha256sum -c"),
+        install,
+    ]
+}
+
+/// What a signed list offers the app at `current`: None when it is the
+/// newest of its channel.
+pub fn offer(envelope: &[u8], current: &Version) -> Result<Option<Version>, CheckError> {
+    let data = envelope::open(&trusted_keys()?, envelope, CONTEXT)?;
+    Ok(Manifest::parse(&data)?.offer(current))
+}
+
+/// A client for the list and the files, going **straight** to GitHub.
+///
+/// Not through a proxy, the system's or `HTTPS_PROXY`: either may be this
+/// very tracewing (a terminal it set up starts it with `HTTPS_PROXY` naming
+/// itself), and then the look would be recorded as a flow of the user's,
+/// and refused, since tracewing does not trust its own authority on the way
+/// out.
+pub(crate) fn client_builder() -> reqwest::ClientBuilder {
+    reqwest::Client::builder()
+        .no_proxy()
+        .user_agent(concat!("tracewing/", env!("CARGO_PKG_VERSION")))
+}
+
+/// Reads the signed list from `url`.
+pub async fn fetch(url: &str) -> Result<Vec<u8>, CheckError> {
+    let fail = |e: &dyn std::fmt::Display| CheckError::Fetch(e.to_string());
+    let client = client_builder()
+        .timeout(FETCH_TIMEOUT)
+        .build()
+        .map_err(|e| fail(&e))?;
+    let res = client.get(url).send().await.map_err(|e| fail(&e))?;
+    if res.status() == reqwest::StatusCode::NOT_FOUND {
+        return Err(CheckError::NoList);
+    }
+    if !res.status().is_success() {
+        return Err(CheckError::Fetch(format!(
+            "the list of releases: {}",
+            res.status()
+        )));
+    }
+    if res.content_length().is_some_and(|n| n as usize > MOST_LIST) {
+        return Err(CheckError::Fetch(
+            "the list of releases is too large".into(),
+        ));
+    }
+    let body = res.bytes().await.map_err(|e| fail(&e))?;
+    if body.len() > MOST_LIST {
+        return Err(CheckError::Fetch(
+            "the list of releases is too large".into(),
+        ));
+    }
+    Ok(body.to_vec())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The repository's signed list (published on the `release` branch,
+    /// docs/releasing.md) opens with the keys built into the app, under its
+    /// context, and carries release.json byte for byte: a list changed and
+    /// not signed again fails here. Before the first list is signed there is
+    /// none, and this says so rather than failing.
+    #[test]
+    fn the_signed_list_opens_with_the_apps_keys() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let Ok(signed) = std::fs::read(root.join("release.signed.json")) else {
+            eprintln!("no release.signed.json yet: nothing signed to check");
+            return;
+        };
+        let keys = envelope::parse_keys(KEYS).expect("the app's keys");
+        let opened = envelope::open(&keys, &signed, CONTEXT).expect("signed by the app's keys");
+        let list = std::fs::read(root.join("release.json")).expect("release.json beside it");
+        assert_eq!(
+            opened, list,
+            "release.signed.json is not release.json signed"
+        );
+        manifest::Manifest::parse(&opened).expect("a list the app takes");
+    }
+
+    #[test]
+    fn the_steps_name_the_release_its_hash_and_the_tool() {
+        let v = Version::parse("v0.2.1").expect("version");
+        let steps = package_steps(&v, PackageTool::Apt, "tracewing_0.2.1_amd64.deb", "abc");
+        assert_eq!(
+            steps,
+            [
+                "cd \"$(mktemp -d)\"",
+                "curl -fLO https://github.com/hivepaas/tracewing/releases/download/v0.2.1/tracewing_0.2.1_amd64.deb",
+                "echo 'abc  tracewing_0.2.1_amd64.deb' | sha256sum -c",
+                "sudo apt install ./tracewing_0.2.1_amd64.deb",
+            ]
+        );
+        let last = |tool| {
+            package_steps(&v, tool, "x.rpm", "abc")
+                .pop()
+                .expect("a step")
+        };
+        assert_eq!(last(PackageTool::Dnf), "sudo dnf install ./x.rpm");
+        assert_eq!(
+            last(PackageTool::Zypper),
+            "sudo zypper --no-gpg-checks install ./x.rpm"
+        );
+    }
+}

@@ -1,12 +1,14 @@
 #!/bin/bash
 #
 # Packages a release build of tracewing for macOS into dist/: tracewing.app in
-# a disk image (docs/releasing.md).
+# a disk image (docs/releasing.md), and the same app tarred, which is what the
+# updater of an installed copy downloads (docs/updates.md).
 #
 #   cargo build --release --locked -p tracewing
 #   scripts/package_macos.sh
 #
 #   dist/tracewing_0.1.0_macos_aarch64.dmg
+#   dist/tracewing_0.1.0_macos_aarch64.app.tar.gz
 #
 # One file is the program: the window, the proxy, the command line and the MCP
 # server are all tracewing, in the bundle's MacOS folder. A terminal can run it
@@ -194,5 +196,11 @@ if [ -n "$NOTARIZE" ]; then
 	notarize "$DMG"
 	staple "$DMG"
 fi
+
+## For the updater: the .app as the disk image has it (signed, notarized and
+## stapled), tarred. COPYFILE_DISABLE keeps macOS's tar from adding ._ files
+## of extended attributes, which would be files of the bundle's that its
+## signature does not cover.
+COPYFILE_DISABLE=1 tar -C "$(dirname "$APP")" -czf "$DIST/tracewing_${VERSION}_macos_${ARCH}.app.tar.gz" "$(basename "$APP")"
 
 ls -l "$DIST"

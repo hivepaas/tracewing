@@ -378,6 +378,8 @@ pub struct Traffic {
     pub settings_page: Option<SettingsPage>,
     /// Why the settings file was not used, if it was not.
     pub settings_problem: Option<String>,
+    /// Looking for a newer tracewing, and getting it in.
+    pub updates: crate::updates::Updates,
     /// Why the filter found nothing, where that is worth saying rather than
     /// leaving somebody to wonder whether to wait. Set with the ids it
     /// explains, so the two cannot disagree.
@@ -574,6 +576,7 @@ impl Traffic {
         .detach();
         cx.observe_window_bounds(window, Self::bounds_changed)
             .detach();
+        Self::start_update_checks(cx);
         cx.defer_in(window, Self::bounds_changed);
         // The way in the switch was left on for, started now that there is a
         // window to ask in front of. Deferred rather than done here: this is
@@ -595,6 +598,9 @@ impl Traffic {
             this.release_system_proxy();
             this.release_mac_apps();
             this.engine.stop();
+            // Last, once everything tracewing changed has been put back: the
+            // update downloaded, in place of this copy.
+            this.install_staged();
             async {}
         })
         .detach();
@@ -653,6 +659,7 @@ impl Traffic {
             system: SystemState::default(),
             settings_page: None,
             settings_problem: None,
+            updates: crate::updates::Updates::new(data_dir),
             behind: None,
             settings_left: None,
             layout,
@@ -3195,6 +3202,9 @@ impl Render for Traffic {
         let banner = self
             .render_viewing_banner(cx)
             .map(IntoElement::into_any_element);
+        let update_row = self
+            .render_update_row(cx)
+            .map(IntoElement::into_any_element);
         let rules =
             (self.screen == Screen::Rules).then(|| self.render_rules(cx).into_any_element());
         let paused =
@@ -3319,6 +3329,7 @@ impl Render for Traffic {
                     .when_some(settings, |d, settings| d.child(settings))
                     .when(self.screen == Screen::Traffic, |d| {
                         d.child(self.render_toolbar(cx))
+                            .children(update_row)
                             .children(banner)
                             .children(picking)
                             .child(

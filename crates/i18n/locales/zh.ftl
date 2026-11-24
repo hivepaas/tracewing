@@ -2077,6 +2077,15 @@ t07b9de08 = 待写入大正文的内存上限
 # Past this, large bodies stop being kept.
 tfe61a4f3 = 超过此值时，将不再保留大正文。
 
+# Updates
+t483075a5 = 更新
+
+# Look for a new version once a day
+tf6f91c98 = 每天检查一次新版本
+
+# tracewing reads its signed list of releases from GitHub, which sees this computer's address and nothing else. Nothing is downloaded until you say so. Off, it looks only when you press Check now.
+t83502f0f = tracewing 会从 GitHub 读取它已签名的版本列表，GitHub 只能看到这台电脑的地址，其他一概不知。在你同意之前不会下载任何内容。关闭时，只有点击“立即检查”才会检查。
+
 # Level
 t4155597d = 权限级别
 
@@ -2953,6 +2962,81 @@ t4ab0ecb4 = 快捷键 { $keys }
 
 # Columns
 tea156fdc = 列
+
+# the system's package manager
+t11465c20 = 系统的软件包管理器
+
+# the App Store
+ta8cbd72e = App Store
+
+# the Microsoft Store
+t1df799a1 = Microsoft Store
+
+# Downloading… {got} of {total}
+taee668c2 = 正在下载… { $got } / { $total }
+
+# Downloading… {got}
+t4873b921 = 正在下载… { $got }
+
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } 已就绪
+
+# tracewing {version} is out
+tee561919 = tracewing { $version } 已发布
+
+# Restart now
+t54001a7c = 立即重启
+
+# Update
+t6e230e94 = 更新
+
+# Skip this version
+t2c33d756 = 跳过此版本
+
+# This build cannot tell of updates: it was built without the release keys.
+t5ae24518 = 此构建无法提示更新：它在构建时没有发布密钥。
+
+# tracewing {version} is ready: it is installed when you quit, or now with Restart now.
+t0dcfc991 = tracewing { $version } 已就绪：会在你退出时安装，或点击“立即重启”马上安装。
+
+# tracewing {version} is out.
+t6889b195 = tracewing { $version } 已发布。
+
+# The download failed: {problem}
+t9e574eee = 下载失败：{ $problem }
+
+# Download and install
+t1a99173f = 下载并安装
+
+# {by} updates this copy: {command}
+tcccbad48 = 此副本由 { $by } 更新：{ $command }
+
+# {by} updates this copy.
+t3974b449 = 此副本由 { $by } 更新。
+
+# Install it with {tool}, in a terminal:
+t1ffa3279 = 请在终端中用 { $tool } 安装：
+
+# Copy the commands
+t09e7cd5b = 复制命令
+
+# Could not look for a new version: {problem}
+t356c9a25 = 无法检查新版本：{ $problem }
+
+# Looking for a new version…
+t7b20f640 = 正在检查新版本…
+
+# Up to date. Last looked {when}.
+tbfc43b3f = 已是最新版本。上次检查：{ $when }。
+
+# Not looked for a new version yet.
+tb37f8ab2 = 尚未检查过新版本。
+
+# Check now
+t4f0e0677 = 立即检查
+
+# Open the release page
+ta4810e92 = 打开版本页面
 
 # A website in my browser
 td5d24782 = 浏览器里的一个网站

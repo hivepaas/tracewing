@@ -11,6 +11,10 @@
 //! up with that library and records a chosen program's HTTPS through it
 //! (`tracewing_e2e::local_window`).
 //!
+//! And the updater's way of installing the next one (docs/updates.md): the
+//! script a quitting tracewing leaves behind waits for that tracewing to be
+//! gone, then runs the installer quietly over it.
+//!
 //! The installer is `TRACEWING_E2E_SETUP` and the zip `TRACEWING_E2E_ZIP`,
 //! which `scripts/e2e_windows.ps1 -Packages` builds and hands in.
 //!
@@ -24,7 +28,7 @@
 
 use std::{
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     time::Duration,
 };
 use tracewing_e2e::{
@@ -269,6 +273,74 @@ fn handed_in(name: &str) -> Option<PathBuf> {
     file.map(PathBuf::from)
 }
 
+/// What `tracewing_update::apply` does on Windows as tracewing quits with an
+/// update downloaded: PowerShell, started detached, waits for tracewing's own
+/// process to be gone, then runs the installer quietly. The installer copies
+/// tracewing.exe over the old one and, quiet, gives up after five seconds of
+/// trying while it is still running: so the wait is the whole point, and is
+/// what this sees.
+///
+/// The installed tracewing is kept running (`tracewing mcp`, which lives
+/// until its stdin closes), a file of the install is taken away, and the
+/// script started. While tracewing runs, nothing is installed; once it has
+/// gone, the installer runs over the same folder and the file is back.
+///
+/// **Run once nothing else of that program is running.** Its first run on a
+/// runner came here while the test's own `tracewing capture` from the same
+/// folder was still up: the installer could not replace the program, gave up
+/// as it does when quiet, and the script, which cannot see the installer's
+/// exit code through `Start-Process`, ended as if it had worked. The same is
+/// true of a user's copy: docs/updates.md says so.
+fn the_updater_installs_over_it_once_it_has_gone(setup: &Path, program: &Path, how: For) {
+    let mut running = Command::new(program)
+        .arg("mcp")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let licence = how.folder().join("WINTUN-LICENSE.txt");
+    std::fs::remove_file(&licence).unwrap();
+    let script = tracewing_update::apply::installer_script(
+        running.id(),
+        setup,
+        program,
+        matches!(how, For::Everyone),
+        false,
+    );
+    let mut updater = Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command"])
+        .arg(&script)
+        .spawn()
+        .unwrap();
+    std::thread::sleep(Duration::from_secs(5));
+    assert!(
+        updater.try_wait().unwrap().is_none(),
+        "the updater did not wait for tracewing: {script}"
+    );
+    assert!(
+        !licence.exists(),
+        "installed while tracewing was still running"
+    );
+    // tracewing goes, as it does when it quits.
+    drop(running.stdin.take());
+    let gone = running.wait().unwrap();
+    println!("tracewing went: {gone}");
+    let status = updater.wait().unwrap();
+    assert!(status.success(), "the updater's script: {status}");
+    assert!(
+        licence.exists(),
+        "the installer did not run over {}",
+        how.folder().display()
+    );
+    assert!(program.exists());
+    assert_eq!(
+        reg_value(&how.uninstall_key(), "InstallLocation").map(PathBuf::from),
+        Some(how.folder()),
+        "{how:?}: the update went somewhere else"
+    );
+}
+
 fn the_installer(how: For) {
     let Some(setup) = handed_in("TRACEWING_E2E_SETUP") else {
         return;
@@ -328,6 +400,10 @@ fn the_installer(how: For) {
     holder.kill();
     assert!(desktop::names_tracewing(&desktop::setting(), capture.port));
     drop(capture);
+
+    // Nothing else of the installed program runs now, which the installer
+    // needs: see the updater's step for why.
+    the_updater_installs_over_it_once_it_has_gone(&setup, &program, how);
 
     installed.uninstall();
     assert_eq!(desktop::setting(), before, "{how:?}: the proxy setting");

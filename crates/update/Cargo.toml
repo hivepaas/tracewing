@@ -1,0 +1,33 @@
+[package]
+name = "tracewing-update"
+description = "Telling that a newer tracewing is out, from a signed list, and installing it"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# The window tests point the updater at a list and keys of their own
+# (set_test_source); a build without it reads only LIST_URL and the keys
+# built in.
+test-source = []
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+base64.workspace = true
+sha2.workspace = true
+# Ed25519ctx, verified by hand on the curve (ed25519-dalek has Ed25519ph only).
+curve25519-dalek = "4"
+# ML-DSA-65 (FIPS 204), with its context string.
+fips204 = "0.4"
+thiserror = "2"
+# Reading the list, on the rustls the rest of tracewing uses.
+reqwest.workspace = true
+# A macOS release is tracewing.app, tarred and gzipped.
+flate2.workspace = true
+tar = { version = "0.4", default-features = false }
+
+[dev-dependencies]
+tokio.workspace = true

@@ -2077,6 +2077,15 @@ t07b9de08 = 待寫入大型本文的記憶體上限
 # Past this, large bodies stop being kept.
 tfe61a4f3 = 超過此值時，將不再保留大型本文。
 
+# Updates
+t483075a5 = 更新
+
+# Look for a new version once a day
+tf6f91c98 = 每天檢查一次新版本
+
+# tracewing reads its signed list of releases from GitHub, which sees this computer's address and nothing else. Nothing is downloaded until you say so. Off, it looks only when you press Check now.
+t83502f0f = tracewing 會從 GitHub 讀取它已簽署的版本清單，GitHub 只會看到這台電腦的位址，其他一概不知。在你同意之前不會下載任何東西。關閉時，只有按下「立即檢查」才會檢查。
+
 # Level
 t4155597d = 權限等級
 
@@ -2953,6 +2962,81 @@ t4ab0ecb4 = 快速鍵 { $keys }
 
 # Columns
 tea156fdc = 欄位
+
+# the system's package manager
+t11465c20 = 系統的套件管理員
+
+# the App Store
+ta8cbd72e = App Store
+
+# the Microsoft Store
+t1df799a1 = Microsoft Store
+
+# Downloading… {got} of {total}
+taee668c2 = 下載中… { $got } / { $total }
+
+# Downloading… {got}
+t4873b921 = 下載中… { $got }
+
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } 已就緒
+
+# tracewing {version} is out
+tee561919 = tracewing { $version } 已推出
+
+# Restart now
+t54001a7c = 立即重新啟動
+
+# Update
+t6e230e94 = 更新
+
+# Skip this version
+t2c33d756 = 略過此版本
+
+# This build cannot tell of updates: it was built without the release keys.
+t5ae24518 = 此組建無法通知更新：它在建置時沒有版本金鑰。
+
+# tracewing {version} is ready: it is installed when you quit, or now with Restart now.
+t0dcfc991 = tracewing { $version } 已就緒：會在你結束時安裝，或按「立即重新啟動」馬上安裝。
+
+# tracewing {version} is out.
+t6889b195 = tracewing { $version } 已推出。
+
+# The download failed: {problem}
+t9e574eee = 下載失敗：{ $problem }
+
+# Download and install
+t1a99173f = 下載並安裝
+
+# {by} updates this copy: {command}
+tcccbad48 = 此副本由 { $by } 更新：{ $command }
+
+# {by} updates this copy.
+t3974b449 = 此副本由 { $by } 更新。
+
+# Install it with {tool}, in a terminal:
+t1ffa3279 = 請在終端機中用 { $tool } 安裝：
+
+# Copy the commands
+t09e7cd5b = 複製指令
+
+# Could not look for a new version: {problem}
+t356c9a25 = 無法檢查新版本：{ $problem }
+
+# Looking for a new version…
+t7b20f640 = 正在檢查新版本…
+
+# Up to date. Last looked {when}.
+tbfc43b3f = 已是最新版本。上次檢查：{ $when }。
+
+# Not looked for a new version yet.
+tb37f8ab2 = 尚未檢查過新版本。
+
+# Check now
+t4f0e0677 = 立即檢查
+
+# Open the release page
+ta4810e92 = 開啟版本頁面
 
 # A website in my browser
 td5d24782 = 瀏覽器裡的一個網站

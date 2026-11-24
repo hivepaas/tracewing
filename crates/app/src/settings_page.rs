@@ -456,6 +456,21 @@ fn groups() -> Vec<Group> {
                 ),
             ],
         ),
+        group(
+            SettingsSection::About,
+            None,
+            tr!("Updates"),
+            vec![row(
+                "check_updates",
+                tr!("Look for a new version once a day"),
+                tr!(
+                    "tracewing reads its signed list of releases from GitHub, which sees this \
+                     computer's address and nothing else. Nothing is downloaded until you say so. \
+                     Off, it looks only when you press Check now."
+                ),
+                "",
+            )],
+        ),
     ];
     // Windows only, where a program's level and the person's can differ and
     // where tracewing has a way to ask for the other one. Nothing to choose
@@ -1585,7 +1600,12 @@ impl Traffic {
             ),
             SettingsSection::Storage => (Vec::new(), Vec::new()),
             SettingsSection::Ai => (Vec::new(), vec![self.render_ai_tools().into_any_element()]),
-            SettingsSection::About => (vec![self.render_about(cx).into_any_element()], Vec::new()),
+            // Who this is and whether a newer one is out, then the switch
+            // that says whether to look, then the rest.
+            SettingsSection::About => (
+                vec![self.render_identity(cx).into_any_element()],
+                vec![self.render_about().into_any_element()],
+            ),
         };
         let page = self.settings_page.as_ref().expect("just made");
         let waiting = page.waiting(&self.engine.settings);

@@ -8,10 +8,15 @@ until the draft the tag makes is published by hand.
 | Platform | Files | Made by |
 | --- | --- | --- |
 | Linux x86_64, aarch64 | `tracewing_<v>_<amd64\|arm64>.deb`, `tracewing_<v>_<x86_64\|aarch64>.rpm` | `scripts/package_linux.sh` |
-| macOS aarch64, x86_64 | `tracewing_<v>_macos_<aarch64\|x86_64>.dmg` | `scripts/package_macos.sh` |
+| macOS aarch64, x86_64 | `tracewing_<v>_macos_<aarch64\|x86_64>.dmg`, and `tracewing_<v>_macos_<aarch64\|x86_64>.app.tar.gz` for the updater | `scripts/package_macos.sh` |
 | Windows x86_64 | `tracewing_<v>_windows_x86_64-setup.exe`, `tracewing_<v>_windows_x86_64.zip` | `scripts/package_windows.sh` |
 
 and `SHA256SUMS`.
+
+An installed copy learns of a release from the signed list on the `release`
+branch, not from the release itself ([updates.md](updates.md)): the `.app.tar.gz`
+is what a Mac's copy downloads, the installer what a Windows copy runs, and the
+list names each with its SHA-256.
 
 One binary holds everything — the window, the proxy, the command line and the
 MCP server — so a package is the program, its launcher and icon, and the
@@ -122,7 +127,27 @@ extension running is still the old one, and nothing says so.
 
 5. CI builds every platform, checks each package and installs it, and leaves a
    **draft** release with the files and their SHA-256.
-6. Read the draft, download one package and open it, then publish it by hand.
+6. Read the draft, download one package and open it.
+7. The list of releases, from the draft's `SHA256SUMS`, in a pull request of
+   its own:
+
+   ```sh
+   gh release download vX.Y.Z --pattern SHA256SUMS --dir /tmp/sums
+   scripts/release_json.py vX.Y.Z /tmp/sums/SHA256SUMS
+   ```
+
+   `cargo test -p tracewing-update` checks that it holds together.
+8. **Signed, on the signing machine**, with the offline keys shellwing's
+   releases are signed with ([updates.md](updates.md#signing)):
+
+   ```sh
+   scripts/release_sign.sh /offline/2026-ed.key /offline/2026-ml.key
+   ```
+
+   and `release.signed.json` committed beside `release.json`.
+9. Publish the draft by hand, then move the `release` branch to the commit that
+   holds the signed list: from then on installed copies see it. Publishing
+   first means the files the list names are there when a copy reads it.
 
 The tag and `Cargo.toml` must agree: the workflow's first job fails if they do
 not, before anything is built.

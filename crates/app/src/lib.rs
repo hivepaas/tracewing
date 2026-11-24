@@ -71,6 +71,7 @@ pub mod table;
 pub mod text_size;
 pub mod traffic;
 pub mod trusted;
+pub mod updates;
 pub mod widgets;
 pub mod wizard;
 pub mod wrap;

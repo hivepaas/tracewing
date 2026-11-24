@@ -175,7 +175,7 @@ keyboard.
 | 15 languages: English, German, Spanish, French, Indonesian, Italian, Brazilian Portuguese, Turkish, Vietnamese, Russian, Ukrainian, Japanese, Korean, simplified and traditional Chinese | 0.1.0 |
 | Signed and notarized builds for macOS | 0.1.0 |
 | Signed builds for Windows (the Microsoft Store too) and Linux, and an AppImage | Planned |
-| Signed automatic updates | Planned |
+| Updates: a signed list of releases read once a day (on by default, Settings › About turns it off) or by Check now, signed twice (Ed25519 and ML-DSA-65) with offline keys; a copy from the Windows installer runs the next installer as it quits, a macOS app swaps itself for the next one, a `.deb` or `.rpm` is given the commands that install it, any other copy the release's page. [Updates](updates.md) | 0.1.0 |
 | Licenses: Pro and Team keys, an offline license file, prices by region | Planned |
 | Team: seats, invoices, packages set up in advance for IT, SSO later | Planned |
-| No telemetry; nothing leaves the machine unless asked | 0.1.0 |
+| No telemetry. Nothing leaves the machine but the traffic sent through tracewing and the daily look for a new version, which can be turned off | 0.1.0 |

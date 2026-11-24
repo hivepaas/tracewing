@@ -264,3 +264,26 @@ jobs:
             --nocapture 2>&1 | tee timer.log
           grep -q '^test result: ok. 1 passed' timer.log
           ! grep -q 'skipped:' timer.log
+
+  releasesign:
+    name: releasesign (Go)
+    # The release signing tool (tools/releasesign, docs/updates.md): what it
+    # signs verifies, and it builds from its one file with nothing fetched,
+    # as scripts/release_sign.sh builds it on the signing machine.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/releasesign
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/releasesign/go.mod
+
+      - name: Vet and test
+        run: |
+          go vet .
+          go test .
+          cp main.go "$RUNNER_TEMP/main.go"
+          cd "$RUNNER_TEMP" && env GOFLAGS= GOWORK=off GOPROXY=off go build -o releasesign main.go

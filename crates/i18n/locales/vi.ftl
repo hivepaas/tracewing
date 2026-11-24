@@ -2077,6 +2077,15 @@ t07b9de08 = Bộ nhớ cho body lớn đang chờ ghi
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Vượt quá mức này, body lớn không còn được giữ.
 
+# Updates
+t483075a5 = Cập nhật
+
+# Look for a new version once a day
+tf6f91c98 = Tìm phiên bản mới mỗi ngày một lần
+
+# tracewing reads its signed list of releases from GitHub, which sees this computer's address and nothing else. Nothing is downloaded until you say so. Off, it looks only when you press Check now.
+t83502f0f = tracewing đọc danh sách phát hành có chữ ký của mình từ GitHub; GitHub chỉ thấy địa chỉ của máy tính này, không gì khác. Không tải gì về cho đến khi bạn bảo. Khi tắt, nó chỉ tìm lúc bạn bấm Kiểm tra ngay.
+
 # Level
 t4155597d = Cấp quyền
 
@@ -2953,6 +2962,81 @@ t4ab0ecb4 = Phím tắt { $keys }
 
 # Columns
 tea156fdc = Cột
+
+# the system's package manager
+t11465c20 = trình quản lý gói của hệ thống
+
+# the App Store
+ta8cbd72e = App Store
+
+# the Microsoft Store
+t1df799a1 = Microsoft Store
+
+# Downloading… {got} of {total}
+taee668c2 = Đang tải về… { $got } trên { $total }
+
+# Downloading… {got}
+t4873b921 = Đang tải về… { $got }
+
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } đã sẵn sàng
+
+# tracewing {version} is out
+tee561919 = Đã có tracewing { $version }
+
+# Restart now
+t54001a7c = Khởi động lại ngay
+
+# Update
+t6e230e94 = Cập nhật
+
+# Skip this version
+t2c33d756 = Bỏ qua phiên bản này
+
+# This build cannot tell of updates: it was built without the release keys.
+t5ae24518 = Bản dựng này không báo được bản cập nhật: nó được dựng mà không có khóa phát hành.
+
+# tracewing {version} is ready: it is installed when you quit, or now with Restart now.
+t0dcfc991 = tracewing { $version } đã sẵn sàng: được cài khi bạn thoát, hoặc ngay bằng Khởi động lại ngay.
+
+# tracewing {version} is out.
+t6889b195 = Đã có tracewing { $version }.
+
+# The download failed: {problem}
+t9e574eee = Tải về không thành công: { $problem }
+
+# Download and install
+t1a99173f = Tải về và cài đặt
+
+# {by} updates this copy: {command}
+tcccbad48 = Bản này được cập nhật qua { $by }: { $command }
+
+# {by} updates this copy.
+t3974b449 = Bản này được cập nhật qua { $by }.
+
+# Install it with {tool}, in a terminal:
+t1ffa3279 = Cài bằng { $tool }, trong một terminal:
+
+# Copy the commands
+t09e7cd5b = Sao chép các lệnh
+
+# Could not look for a new version: {problem}
+t356c9a25 = Không tìm được phiên bản mới: { $problem }
+
+# Looking for a new version…
+t7b20f640 = Đang tìm phiên bản mới…
+
+# Up to date. Last looked {when}.
+tbfc43b3f = Đã là bản mới nhất. Lần tìm gần nhất: { $when }.
+
+# Not looked for a new version yet.
+tb37f8ab2 = Chưa tìm phiên bản mới lần nào.
+
+# Check now
+t4f0e0677 = Kiểm tra ngay
+
+# Open the release page
+ta4810e92 = Mở trang phát hành
 
 # A website in my browser
 td5d24782 = Một website trong trình duyệt
