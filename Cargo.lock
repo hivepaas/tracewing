@@ -8980,6 +8980,7 @@ dependencies = [
  "tracewing-dev",
  "tracewing-proxy",
  "tracewing-system",
+ "tracewing-update",
  "windows-sys 0.61.2",
 ]
 

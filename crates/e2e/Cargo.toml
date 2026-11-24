@@ -10,6 +10,7 @@ publish.workspace = true
 [dependencies]
 tracewing-proxy.workspace = true
 tracewing-system.workspace = true
+tracewing-update.workspace = true
 tracewing-dev = { path = "../dev" }
 anyhow.workspace = true
 bytes.workspace = true
