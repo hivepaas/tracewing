@@ -157,12 +157,19 @@ fn run_installer(setup: &Path, relaunch: bool) -> io::Result<()> {
         let exe = std::env::current_exe()?;
         let system = std::env::var_os("SystemRoot").unwrap_or_else(|| r"C:\Windows".into());
         let powershell = Path::new(&system).join(r"System32\WindowsPowerShell\v1.0\powershell.exe");
+        let program_files: Vec<PathBuf> = ["ProgramW6432", "ProgramFiles"]
+            .into_iter()
+            .filter_map(|v| std::env::var_os(v).map(PathBuf::from))
+            .collect();
+        let everyone = for_everyone(&exe, &program_files);
         Command::new(powershell)
             .args(["-NoProfile", "-NonInteractive", "-Command"])
             .arg(installer_script(
                 std::process::id(),
                 setup,
-                relaunch.then_some(exe.as_path()),
+                &exe,
+                everyone,
+                relaunch,
             ))
             .creation_flags(DETACHED_PROCESS | CREATE_NO_WINDOW)
             .spawn()?;
@@ -187,19 +194,57 @@ fn run_installer(setup: &Path, relaunch: bool) -> io::Result<()> {
 /// (`Wait-Process`, for a minute at most). For everyone, the installer asks
 /// Windows for an administrator's rights itself, and the user is asked.
 ///
+/// **Over this copy, said rather than looked up.** Told nothing, the
+/// installer goes where the registry says tracewing is, and looks for an
+/// install for everyone first: on a computer with both, the user's own copy
+/// would update the other one. So it is told the mode this copy was
+/// installed in and its folder (`/D=`, last, as NSIS reads it), and `exe`
+/// is the program in that folder, started again after when `relaunch`.
+///
 /// Paths are put in single quotes, where PowerShell reads nothing but a
 /// doubled quote: a name with `$` or a backtick in it stays a name.
-pub fn installer_script(pid: u32, setup: &Path, relaunch: Option<&Path>) -> String {
-    let quoted = |p: &Path| format!("'{}'", p.display().to_string().replace('\'', "''"));
+pub fn installer_script(
+    pid: u32,
+    setup: &Path,
+    exe: &Path,
+    everyone: bool,
+    relaunch: bool,
+) -> String {
+    let quoted = |s: &str| format!("'{}'", s.replace('\'', "''"));
+    // By the string, not `Path::parent`: the same on Windows, where it
+    // runs, as on Linux, where it is tested.
+    let exe_said = exe.display().to_string();
+    let folder = exe_said
+        .rsplit_once(['\\', '/'])
+        .map_or(exe_said.as_str(), |(dir, _)| dir);
+    let mode = if everyone {
+        "/ALLUSERS"
+    } else {
+        "/CURRENTUSER"
+    };
     let mut script = format!(
         "Wait-Process -Id {pid} -Timeout 60 -ErrorAction SilentlyContinue; \
-         Start-Process -FilePath {} -ArgumentList '/S' -Wait",
-        quoted(setup)
+         Start-Process -FilePath {} -ArgumentList {} -Wait",
+        quoted(&setup.display().to_string()),
+        quoted(&format!("/S {mode} /D={folder}"))
     );
-    if let Some(exe) = relaunch {
-        script.push_str(&format!("; Start-Process -FilePath {}", quoted(exe)));
+    if relaunch {
+        script.push_str(&format!("; Start-Process -FilePath {}", quoted(&exe_said)));
     }
     script
+}
+
+/// Whether the copy at `exe` was installed for everyone: it is under one of
+/// `program_files` (`%ProgramW6432%`, `%ProgramFiles%`), where the installer
+/// puts it then, and nowhere else.
+pub fn for_everyone(exe: &Path, program_files: &[PathBuf]) -> bool {
+    let lower = |p: &Path| p.display().to_string().replace('/', "\\").to_lowercase();
+    let exe = lower(exe);
+    program_files.iter().any(|dir| {
+        let dir = lower(dir);
+        let dir = dir.trim_end_matches('\\');
+        !dir.is_empty() && exe.starts_with(&format!("{dir}\\"))
+    })
 }
 
 #[cfg(test)]
@@ -207,20 +252,66 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_installer_waits_for_the_app_and_its_paths_stay_paths() {
+    fn the_installer_waits_for_the_app_goes_over_it_and_its_paths_stay_paths() {
         let script = installer_script(
             4242,
             Path::new(r"C:\Users\o'neil\AppData\Local\tracewing\updates\setup.exe"),
-            Some(Path::new(r"C:\Program Files\tracewing\tracewing.exe")),
+            Path::new(r"C:\Program Files\tracewing\tracewing.exe"),
+            true,
+            true,
         );
         assert_eq!(
             script,
             "Wait-Process -Id 4242 -Timeout 60 -ErrorAction SilentlyContinue; \
              Start-Process -FilePath 'C:\\Users\\o''neil\\AppData\\Local\\tracewing\\updates\\setup.exe' \
-             -ArgumentList '/S' -Wait; \
+             -ArgumentList '/S /ALLUSERS /D=C:\\Program Files\\tracewing' -Wait; \
              Start-Process -FilePath 'C:\\Program Files\\tracewing\\tracewing.exe'"
         );
-        assert!(!installer_script(1, Path::new("s.exe"), None).contains("tracewing.exe"));
+        let mine = installer_script(
+            1,
+            Path::new("s.exe"),
+            Path::new(r"C:\Users\me\AppData\Local\Programs\tracewing\tracewing.exe"),
+            false,
+            false,
+        );
+        assert!(
+            mine.contains(r"'/S /CURRENTUSER /D=C:\Users\me\AppData\Local\Programs\tracewing'"),
+            "{mine}"
+        );
+        assert_eq!(
+            mine.matches("Start-Process").count(),
+            1,
+            "started again unasked: {mine}"
+        );
+    }
+
+    #[test]
+    fn a_copy_for_everyone_is_one_under_program_files() {
+        let pf = [
+            PathBuf::from(r"C:\Program Files"),
+            PathBuf::from(r"C:\Program Files (x86)"),
+        ];
+        assert!(for_everyone(
+            Path::new(r"C:\Program Files\tracewing\tracewing.exe"),
+            &pf
+        ));
+        assert!(for_everyone(
+            Path::new(r"c:\program files\tracewing\tracewing.exe"),
+            &pf
+        ));
+        assert!(!for_everyone(
+            Path::new(r"C:\Users\me\AppData\Local\Programs\tracewing\tracewing.exe"),
+            &pf
+        ));
+        // A folder whose name only starts the same is not under it.
+        assert!(!for_everyone(
+            Path::new(r"C:\Program Files Mine\tracewing.exe"),
+            &pf
+        ));
+        assert!(!for_everyone(
+            Path::new(r"C:\Program Files\tracewing\tracewing.exe"),
+            &[]
+        ));
     }
 
     fn temp(name: &str) -> PathBuf {

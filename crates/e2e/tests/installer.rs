@@ -284,6 +284,13 @@ fn handed_in(name: &str) -> Option<PathBuf> {
 /// until its stdin closes), a file of the install is taken away, and the
 /// script started. While tracewing runs, nothing is installed; once it has
 /// gone, the installer runs over the same folder and the file is back.
+///
+/// **Run once nothing else of that program is running.** Its first run on a
+/// runner came here while the test's own `tracewing capture` from the same
+/// folder was still up: the installer could not replace the program, gave up
+/// as it does when quiet, and the script, which cannot see the installer's
+/// exit code through `Start-Process`, ended as if it had worked. The same is
+/// true of a user's copy: docs/updates.md says so.
 fn the_updater_installs_over_it_once_it_has_gone(setup: &Path, program: &Path, how: For) {
     let mut running = Command::new(program)
         .arg("mcp")
@@ -294,7 +301,13 @@ fn the_updater_installs_over_it_once_it_has_gone(setup: &Path, program: &Path, h
         .unwrap();
     let licence = how.folder().join("WINTUN-LICENSE.txt");
     std::fs::remove_file(&licence).unwrap();
-    let script = tracewing_update::apply::installer_script(running.id(), setup, None);
+    let script = tracewing_update::apply::installer_script(
+        running.id(),
+        setup,
+        program,
+        matches!(how, For::Everyone),
+        false,
+    );
     let mut updater = Command::new("powershell")
         .args(["-NoProfile", "-NonInteractive", "-Command"])
         .arg(&script)
@@ -370,7 +383,6 @@ fn the_installer(how: For) {
         let local = dir.join("local");
         std::fs::create_dir_all(&local).unwrap();
         local_window::a_chosen_program_is_recorded_through_the_window(&program, &local);
-        the_updater_installs_over_it_once_it_has_gone(&setup, &program, how);
     }
 
     // The system proxy, taken by the installed program, which arms the task
@@ -388,6 +400,10 @@ fn the_installer(how: For) {
     holder.kill();
     assert!(desktop::names_tracewing(&desktop::setting(), capture.port));
     drop(capture);
+
+    // Nothing else of the installed program runs now, which the installer
+    // needs: see the updater's step for why.
+    the_updater_installs_over_it_once_it_has_gone(&setup, &program, how);
 
     installed.uninstall();
     assert_eq!(desktop::setting(), before, "{how:?}: the proxy setting");

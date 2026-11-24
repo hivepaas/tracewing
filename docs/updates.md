@@ -114,10 +114,20 @@ version or newer, its file goes.
 **On Windows** the installer runs once tracewing's own process has gone
 (`Wait-Process` on its id, a minute at most): it copies `tracewing.exe` over the
 old one and gives up after five seconds of trying when quiet, and quitting takes
-as long as the proxy takes to stop. An install for everyone asks Windows for an
-administrator's rights, so the user is asked. Installing over a copy never runs
-the old uninstaller, so the certificate authority and the settings stay as they
-are.
+as long as the proxy takes to stop. It is told this copy's mode and folder
+(`/CURRENTUSER` or `/ALLUSERS`, and `/D=`), since left to itself it goes where
+the registry names an install for everyone first, and on a computer with both
+the user's copy would update the other. An install for everyone asks Windows
+for an administrator's rights, so the user is asked. Installing over a copy
+never runs the old uninstaller, so the certificate authority and the settings
+stay as they are.
+
+**Another tracewing from the same folder still running stops it**: a
+`tracewing mcp` an AI tool started, a `tracewing capture` in a terminal. The
+installer cannot replace the program, gives up as it does when quiet, and
+`Start-Process` does not pass its exit code on. tracewing starts again as it
+was; the downloaded installer is still there, so the next start says the
+update is ready again, and *Restart now* tries once more.
 
 **On macOS** the network extension the old app installed keeps running until
 the new app asks for it again, which it does when its way in is switched on:
