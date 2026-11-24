@@ -744,6 +744,28 @@ fn out_for(v6: bool) -> Out {
     out_from(holding, index)
 }
 
+/// Whether a connection of this family must not be made at all, because an
+/// adapter is held and the family has no way out that is not it.
+///
+/// The question a route-capturing way in asks before it accepts a client's
+/// `SYN`: see [`crate::stack::Stack::turning_away`]. On a machine with no
+/// IPv6 of its own the adapter's IPv6 route is the only one there is, and a
+/// connection accepted into it has nowhere to go on to. Turned away
+/// instead, the client is refused as it would be with no tracewing, and goes
+/// on to the IPv4 address it also has. Never true where nothing is pinned,
+/// which is every platform but these two.
+pub fn nowhere(v6: bool) -> bool {
+    #[cfg(any(windows, target_os = "linux"))]
+    {
+        out_for(v6) == Out::Nowhere
+    }
+    #[cfg(not(any(windows, target_os = "linux")))]
+    {
+        let _ = v6;
+        false
+    }
+}
+
 /// A connection to the server itself: the name looked up, then TCP.
 async fn connect_straight(
     uri: &Uri,

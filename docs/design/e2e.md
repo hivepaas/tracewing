@@ -365,9 +365,16 @@ pass, and getting there found two things:
        on to, and curl did not fall back to IPv4: HTTPS from a program
        nobody chose worked with the mode off and failed with it on. IPv6 is
        routed into the adapter now only where the machine has a way out for
-       it. **Linux is not fixed**: `adapter_linux.rs` adds an IPv6 default
-       route through the device whatever the machine has, and its live tests
-       run in a namespace with no other route, so they cannot see this.
+       it. Linux could not be fixed the same way: `adapter_linux.rs` adds an
+       IPv6 default route once, through polkit, and the kernel keeps it. So
+       on both systems the stack now turns away a `SYN` in a family with no
+       way out (`Stack::turning_away`). It answers with a reset, as with no
+       tracewing, and the client goes on to IPv4 at once. This also covers
+       Windows after a move to a network with no IPv6, where the halves are
+       still there. `local_live_http3.rs`'s
+       `with_no_way_out_for_ipv6_a_connection_is_refused_at_once` shows it
+       on a real adapter. It was accepted (`Ok`) without the fix and refused
+       (`ECONNREFUSED`) within 60 µs with it.
    - And one in the test's HTTP/3 server: bound to `[::]` for both families,
      it heard only IPv6 on Windows, where a socket is IPv6-only unless told.
      It says so now.

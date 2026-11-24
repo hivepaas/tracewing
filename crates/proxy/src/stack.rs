@@ -143,7 +143,15 @@ pub struct Stack {
     /// is how it ships and what a tunnel a phone joined gets -- see
     /// [`crate::datagrams::Catching`].
     catching: Option<Catching>,
+    /// Which families have nowhere to go on to, asked of each `SYN`. `None`
+    /// accepts every connection, as a tunnel a phone joined should: what
+    /// comes down it is not routed here by a table of this machine's.
+    turning_away: Option<Nowhere>,
 }
+
+/// Whether a family has no way out, IPv6 when the argument is `true`:
+/// [`crate::upstream::nowhere`], for a way in that captures by route.
+pub type Nowhere = Arc<dyn Fn(bool) -> bool + Send + Sync>;
 
 impl Stack {
     pub fn new(wire: Wire) -> Self {
@@ -154,6 +162,35 @@ impl Stack {
             passing: None,
             echoing: None,
             catching: None,
+            turning_away: None,
+        }
+    }
+
+    /// The same, refusing a connection in a family `nowhere` says has no
+    /// way out, rather than accepting it.
+    ///
+    /// **Accepted, it is lost.** The stack answers a `SYN` before anything
+    /// is decided about the connection, so the client is connected by then;
+    /// with no way out for its family the connection dies after, and a
+    /// client that was connected does not try its next address. Seen on
+    /// Windows: on a machine with no IPv6 of its own, the adapter's IPv6
+    /// routes were the only ones, curl connected over IPv6, and HTTPS from a
+    /// program nobody chose failed with the mode on (docs/design/e2e.md,
+    /// S8). Linux routes IPv6 into its adapter whatever the machine has.
+    /// Refused, the client hears what it would have heard with no tracewing
+    /// -- that it cannot get there -- and goes on to the IPv4 address.
+    ///
+    /// Refused with a reset, which is the stack's own answer to a `SYN`
+    /// nothing listens for: no socket is made for it. A reset is the answer
+    /// every TCP gives up on at once, where an ICMP unreachable is a soft
+    /// error to some, which send the `SYN` again until they time out.
+    ///
+    /// Asked for each `SYN`, because the answer changes as the machine moves
+    /// between networks.
+    pub fn turning_away(self, nowhere: Nowhere) -> Self {
+        Self {
+            turning_away: Some(nowhere),
+            ..self
         }
     }
 
@@ -202,12 +239,8 @@ impl Stack {
     #[cfg(test)]
     fn holding_at_most(wire: Wire, most: usize) -> Self {
         Self {
-            wire,
             most,
-            sieve: None,
-            passing: None,
-            echoing: None,
-            catching: None,
+            ..Self::new(wire)
         }
     }
 }
@@ -233,6 +266,7 @@ impl Source for Stack {
             self.passing,
             self.echoing,
             self.catching,
+            self.turning_away,
             found,
             stop,
         ));
@@ -499,6 +533,7 @@ async fn run(
     passing: Option<Bind>,
     echoing: Option<Echo>,
     catching: Option<Catching>,
+    turning_away: Option<Nowhere>,
     found: Found,
     stop: Stop,
 ) {
@@ -660,7 +695,9 @@ async fn run(
                                 let catching = catches.as_ref().is_some_and(|on| on());
                                 said_why_not_taken(&packet, catching);
                             }
-                            open_for(&packet, most, &mut sockets, &mut conns, &woken);
+                            if !turned_away(&packet, turning_away.as_ref()) {
+                                open_for(&packet, most, &mut sockets, &mut conns, &woken);
+                            }
                             refused(packet, &found, &mut attempts, &mut device);
                         }
                     }
@@ -822,6 +859,28 @@ fn seed() -> u64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos() as u64)
         .unwrap_or(0x5eed)
+}
+
+/// A `SYN` in a family with nowhere to go on to, which is not given a socket
+/// and so is answered with a reset: see [`Stack::turning_away`]. Said at
+/// debug, since a client that is refused says nothing of why.
+fn turned_away(packet: &[u8], nowhere: Option<&Nowhere>) -> bool {
+    let Some(nowhere) = nowhere else {
+        return false;
+    };
+    let Some(seen) = peek(packet) else {
+        return false;
+    };
+    let away = seen.opening && nowhere(seen.to.is_ipv6());
+    if away {
+        tracing::debug!(
+            "a connection from {} to {} refused: {} has no way out here",
+            seen.from,
+            seen.to,
+            if seen.to.is_ipv6() { "IPv6" } else { "IPv4" }
+        );
+    }
+    away
 }
 
 /// A `SYN` for a connection nothing is listening for yet: make one, listening
@@ -1431,6 +1490,41 @@ mod tests {
             .running
             .nothing_taken(Duration::from_millis(500))
             .await;
+    }
+
+    /// The test above is what a client sees when its family has nowhere to
+    /// go on to and the stack accepts it anyway: connected, then nothing.
+    /// Turned away, a `SYN` in that family is answered with a reset, which
+    /// sends a client on to its next address -- and the other family's is
+    /// answered as always, so it is the family that decides and not the
+    /// stack refusing everything.
+    #[tokio::test]
+    async fn a_family_with_nowhere_to_go_is_refused_at_once_and_the_other_is_not() {
+        let (wire, into, out) = Wire::channels();
+        let (found, took) = Found::channel();
+        let (stop_tx, stop) = tokio::sync::watch::channel(false);
+        // IPv6 has no way out, as on a machine with none of its own.
+        Box::new(Stack::new(wire).turning_away(Arc::new(|v6| v6)))
+            .start("127.0.0.1:9090".parse().unwrap(), found, stop)
+            .unwrap();
+        let mut running = Running {
+            into,
+            out,
+            took,
+            _stop: stop_tx,
+        };
+
+        let mut six = Client::new("[fd00:77::1]:51201", "[2001:db8::9]:443");
+        let syn = six.send(TcpControl::Syn, &[]);
+        running.into.send(syn).await.unwrap();
+        let (control, _) = six.heard(&running.next().await);
+        assert_eq!(control, TcpControl::Rst, "an IPv6 SYN with nowhere to go");
+        running.nothing_taken(Duration::from_millis(300)).await;
+
+        let mut four = Client::new("10.77.0.1:51202", "203.0.113.9:443");
+        running.handshake(&mut four).await;
+        let flow = running.flow().await;
+        assert_eq!(flow.to, Target::Addr(four.to), "IPv4 is accepted as always");
     }
 
     /// An ICMP echo request, as `ping` sends. Measured rather than assumed:

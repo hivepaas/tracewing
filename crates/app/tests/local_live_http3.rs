@@ -165,6 +165,74 @@ fn a_chosen_program_s_http3_goes_through_tracewing_on_a_real_adapter() {
     reached(&witness);
 }
 
+/// A machine with no IPv6 of its own: the adapter's IPv6 route is the only
+/// one, and a connection into it is refused at once, so a client goes on to
+/// its IPv4 address instead of sitting connected to nothing.
+///
+/// The bug this is for was seen on Windows (docs/design/e2e.md, S8): curl
+/// tried IPv6 first, the stack accepted it, there was nowhere to go on to,
+/// and curl did not fall back. Linux puts an IPv6 default route into its
+/// adapter whatever the machine has, so the same thing happens here unless
+/// the stack turns the connection away.
+///
+/// The way out is said here as `roads::watch` says it on a real machine --
+/// an interface for one family and none for the other -- because a namespace
+/// has none of its own to pin to (see the top of this file). The same
+/// harness with a way out for IPv6 accepts the same connection, which is
+/// what makes the refusal the family's doing and not the adapter's.
+#[test]
+#[ignore = "wants `unshare`, and makes an adapter in a namespace of its own"]
+fn with_no_way_out_for_ipv6_a_connection_is_refused_at_once() {
+    let Some(witness) = ours_to_run("with_no_way_out_for_ipv6_a_connection_is_refused_at_once")
+    else {
+        return;
+    };
+    let dir = made();
+    the_adapter();
+    let runtime = runtime();
+    let Assembled { stop, .. } = runtime.block_on(assembled(&dir, PathBuf::from("/usr/bin/true")));
+    // Any interface but ours will do: nothing here is to reach the far end,
+    // only to be accepted or not.
+    let lo = tracewing_proxy::roads::index_of("lo").expect("the loopback is numbered");
+    let six: SocketAddr = "[2001:db8::9]:443".parse().expect("a literal");
+    let four: SocketAddr = AS_IF_THE_SERVER.parse().expect("a literal");
+    let connect = |to: SocketAddr| {
+        let began = std::time::Instant::now();
+        let made = std::net::TcpStream::connect_timeout(&to, Duration::from_secs(5));
+        (made, began.elapsed())
+    };
+
+    upstream::leave_by(Some(upstream::OutBy {
+        v4: Some(lo),
+        v6: Some(lo),
+    }));
+    let (made, _) = connect(six);
+    assert!(
+        made.is_ok(),
+        "with a way out for IPv6 the adapter accepts it: {made:?}"
+    );
+
+    upstream::leave_by(Some(upstream::OutBy {
+        v4: Some(lo),
+        v6: None,
+    }));
+    let (made, took) = connect(six);
+    println!("IPv6 with no way out: {made:?} after {took:?}");
+    assert_eq!(
+        made.as_ref().map_err(std::io::Error::kind).err(),
+        Some(std::io::ErrorKind::ConnectionRefused),
+        "refused, which sends a client on to its next address: {made:?}"
+    );
+    assert!(took < Duration::from_secs(1), "and at once: {took:?}");
+    let (made, _) = connect(four);
+    assert!(made.is_ok(), "while IPv4 is accepted as always: {made:?}");
+
+    upstream::leave_by(None);
+    let _ = stop.send(());
+    let _ = std::fs::remove_dir_all(&dir);
+    reached(&witness);
+}
+
 /// A program nobody chose keeps what it had: its QUIC is refused and it gets
 /// nowhere, although capture is on for somebody else.
 ///

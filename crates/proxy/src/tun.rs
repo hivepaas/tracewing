@@ -195,7 +195,14 @@ impl<D: Device> Source for Tun<D> {
             catching,
         } = *self;
         let (wire, into_stack, from_stack) = Wire::channels();
-        let mut stack = Stack::new(wire).sifting(sieve).passing(datagrams);
+        // A way in that captures by route always asks whether a family has
+        // anywhere to go on to before it accepts a connection: a machine's
+        // own table sends here what it has no other route for, IPv6 on a
+        // machine with none of its own above all (`Stack::turning_away`).
+        let mut stack = Stack::new(wire)
+            .sifting(sieve)
+            .passing(datagrams)
+            .turning_away(Arc::new(crate::upstream::nowhere));
         if let Some(echo) = echo {
             stack = stack.answering(echo);
         }
