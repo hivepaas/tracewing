@@ -2202,6 +2202,15 @@ t07b9de08 = Memoria per i body grandi in attesa di scrittura
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Oltre questo limite, i body grandi non vengono più conservati.
 
+# Updates
+t483075a5 = Aggiornamenti
+
+# Look for a new version once a day
+tf6f91c98 = Cerca una nuova versione una volta al giorno
+
+# tracewing reads its signed list of releases from GitHub, which sees this computer's address and nothing else. Nothing is downloaded until you say so. Off, it looks only when you press Check now.
+t83502f0f = tracewing legge da GitHub il suo elenco firmato delle release, e GitHub vede l'indirizzo di questo computer e nient'altro. Non viene scaricato nulla finché non lo dici tu. Disattivato, cerca solo quando premi Controlla ora.
+
 # Level
 t4155597d = Livello di permessi
 
@@ -3098,6 +3107,81 @@ t4ab0ecb4 = Scorciatoie { $keys }
 
 # Columns
 tea156fdc = Colonne
+
+# the system's package manager
+t11465c20 = il gestore di pacchetti del sistema
+
+# the App Store
+ta8cbd72e = l'App Store
+
+# the Microsoft Store
+t1df799a1 = il Microsoft Store
+
+# Downloading… {got} of {total}
+taee668c2 = Download in corso… { $got } di { $total }
+
+# Downloading… {got}
+t4873b921 = Download in corso… { $got }
+
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } è pronto
+
+# tracewing {version} is out
+tee561919 = È uscito tracewing { $version }
+
+# Restart now
+t54001a7c = Riavvia ora
+
+# Update
+t6e230e94 = Aggiorna
+
+# Skip this version
+t2c33d756 = Salta questa versione
+
+# This build cannot tell of updates: it was built without the release keys.
+t5ae24518 = Questa build non può segnalare aggiornamenti: è stata compilata senza le chiavi delle release.
+
+# tracewing {version} is ready: it is installed when you quit, or now with Restart now.
+t0dcfc991 = tracewing { $version } è pronto: viene installato quando esci, o subito con Riavvia ora.
+
+# tracewing {version} is out.
+t6889b195 = È uscito tracewing { $version }.
+
+# The download failed: {problem}
+t9e574eee = Il download non è riuscito: { $problem }
+
+# Download and install
+t1a99173f = Scarica e installa
+
+# {by} updates this copy: {command}
+tcccbad48 = Questa copia si aggiorna con { $by }: { $command }
+
+# {by} updates this copy.
+t3974b449 = Questa copia si aggiorna con { $by }.
+
+# Install it with {tool}, in a terminal:
+t1ffa3279 = Installalo con { $tool }, in un terminale:
+
+# Copy the commands
+t09e7cd5b = Copia i comandi
+
+# Could not look for a new version: {problem}
+t356c9a25 = Impossibile cercare una nuova versione: { $problem }
+
+# Looking for a new version…
+t7b20f640 = Ricerca di una nuova versione…
+
+# Up to date. Last looked {when}.
+tbfc43b3f = Aggiornato. Ultima ricerca: { $when }.
+
+# Not looked for a new version yet.
+tb37f8ab2 = Nessuna ricerca di una nuova versione finora.
+
+# Check now
+t4f0e0677 = Controlla ora
+
+# Open the release page
+ta4810e92 = Apri la pagina della release
 
 # A website in my browser
 td5d24782 = Un sito nel mio browser

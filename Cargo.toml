@@ -17,6 +17,7 @@ tracewing-proxy = { path = "crates/proxy" }
 tracewing-system = { path = "crates/system" }
 tracewing-i18n = { path = "crates/i18n" }
 tracewing-handoff = { path = "crates/handoff" }
+tracewing-update = { path = "crates/update" }
 anyhow = "1.0.104"
 base64 = "0.22"
 bytes = "1.12.1"

@@ -2077,6 +2077,15 @@ t07b9de08 = Memori untuk body besar yang menunggu ditulis
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Lewat dari ini, body besar tidak lagi disimpan.
 
+# Updates
+t483075a5 = Pembaruan
+
+# Look for a new version once a day
+tf6f91c98 = Cari versi baru sekali sehari
+
+# tracewing reads its signed list of releases from GitHub, which sees this computer's address and nothing else. Nothing is downloaded until you say so. Off, it looks only when you press Check now.
+t83502f0f = tracewing membaca daftar rilisnya yang bertanda tangan dari GitHub, yang melihat alamat komputer ini dan tidak ada yang lain. Tidak ada yang diunduh sampai Anda memintanya. Jika mati, ia hanya mencari saat Anda menekan Periksa sekarang.
+
 # Level
 t4155597d = Tingkat izin
 
@@ -2953,6 +2962,81 @@ t4ab0ecb4 = Pintasan { $keys }
 
 # Columns
 tea156fdc = Kolom
+
+# the system's package manager
+t11465c20 = pengelola paket sistem
+
+# the App Store
+ta8cbd72e = App Store
+
+# the Microsoft Store
+t1df799a1 = Microsoft Store
+
+# Downloading… {got} of {total}
+taee668c2 = Mengunduh… { $got } dari { $total }
+
+# Downloading… {got}
+t4873b921 = Mengunduh… { $got }
+
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } siap
+
+# tracewing {version} is out
+tee561919 = tracewing { $version } sudah keluar
+
+# Restart now
+t54001a7c = Mulai ulang sekarang
+
+# Update
+t6e230e94 = Perbarui
+
+# Skip this version
+t2c33d756 = Lewati versi ini
+
+# This build cannot tell of updates: it was built without the release keys.
+t5ae24518 = Build ini tidak dapat memberi tahu pembaruan: build ini dibuat tanpa kunci rilis.
+
+# tracewing {version} is ready: it is installed when you quit, or now with Restart now.
+t0dcfc991 = tracewing { $version } siap: dipasang saat Anda keluar, atau sekarang dengan Mulai ulang sekarang.
+
+# tracewing {version} is out.
+t6889b195 = tracewing { $version } sudah keluar.
+
+# The download failed: {problem}
+t9e574eee = Unduhan gagal: { $problem }
+
+# Download and install
+t1a99173f = Unduh dan pasang
+
+# {by} updates this copy: {command}
+tcccbad48 = Salinan ini diperbarui oleh { $by }: { $command }
+
+# {by} updates this copy.
+t3974b449 = Salinan ini diperbarui oleh { $by }.
+
+# Install it with {tool}, in a terminal:
+t1ffa3279 = Pasang dengan { $tool }, di terminal:
+
+# Copy the commands
+t09e7cd5b = Salin perintahnya
+
+# Could not look for a new version: {problem}
+t356c9a25 = Tidak dapat mencari versi baru: { $problem }
+
+# Looking for a new version…
+t7b20f640 = Mencari versi baru…
+
+# Up to date. Last looked {when}.
+tbfc43b3f = Sudah terbaru. Terakhir dicari { $when }.
+
+# Not looked for a new version yet.
+tb37f8ab2 = Belum pernah mencari versi baru.
+
+# Check now
+t4f0e0677 = Periksa sekarang
+
+# Open the release page
+ta4810e92 = Buka halaman rilis
 
 # A website in my browser
 td5d24782 = Sebuah situs di browser saya

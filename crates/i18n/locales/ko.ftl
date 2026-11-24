@@ -2077,6 +2077,15 @@ t07b9de08 = 기록 대기 중인 큰 본문용 메모리
 # Past this, large bodies stop being kept.
 tfe61a4f3 = 이를 넘으면 큰 본문은 보관되지 않습니다.
 
+# Updates
+t483075a5 = 업데이트
+
+# Look for a new version once a day
+tf6f91c98 = 하루에 한 번 새 버전 확인
+
+# tracewing reads its signed list of releases from GitHub, which sees this computer's address and nothing else. Nothing is downloaded until you say so. Off, it looks only when you press Check now.
+t83502f0f = tracewing은 서명된 릴리스 목록을 GitHub에서 읽습니다. GitHub는 이 컴퓨터의 주소만 볼 수 있습니다. 직접 지시하기 전에는 아무것도 다운로드하지 않습니다. 끄면 지금 확인을 누를 때만 확인합니다.
+
 # Level
 t4155597d = 권한 수준
 
@@ -2953,6 +2962,81 @@ t4ab0ecb4 = 단축키 { $keys }
 
 # Columns
 tea156fdc = 열
+
+# the system's package manager
+t11465c20 = 시스템 패키지 관리자
+
+# the App Store
+ta8cbd72e = App Store
+
+# the Microsoft Store
+t1df799a1 = Microsoft Store
+
+# Downloading… {got} of {total}
+taee668c2 = 다운로드 중… { $got } / { $total }
+
+# Downloading… {got}
+t4873b921 = 다운로드 중… { $got }
+
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } 준비됨
+
+# tracewing {version} is out
+tee561919 = tracewing { $version } 출시됨
+
+# Restart now
+t54001a7c = 지금 다시 시작
+
+# Update
+t6e230e94 = 업데이트
+
+# Skip this version
+t2c33d756 = 이 버전 건너뛰기
+
+# This build cannot tell of updates: it was built without the release keys.
+t5ae24518 = 이 빌드는 업데이트를 알릴 수 없습니다. 릴리스 키 없이 빌드되었습니다.
+
+# tracewing {version} is ready: it is installed when you quit, or now with Restart now.
+t0dcfc991 = tracewing { $version } 준비가 끝났습니다. 종료할 때 설치되며, 지금 다시 시작을 누르면 바로 설치됩니다.
+
+# tracewing {version} is out.
+t6889b195 = tracewing { $version }이(가) 출시되었습니다.
+
+# The download failed: {problem}
+t9e574eee = 다운로드 실패: { $problem }
+
+# Download and install
+t1a99173f = 다운로드 및 설치
+
+# {by} updates this copy: {command}
+tcccbad48 = 이 사본은 { $by }(으)로 업데이트합니다: { $command }
+
+# {by} updates this copy.
+t3974b449 = 이 사본은 { $by }(으)로 업데이트합니다.
+
+# Install it with {tool}, in a terminal:
+t1ffa3279 = 터미널에서 { $tool }(으)로 설치하세요:
+
+# Copy the commands
+t09e7cd5b = 명령 복사
+
+# Could not look for a new version: {problem}
+t356c9a25 = 새 버전을 확인할 수 없습니다: { $problem }
+
+# Looking for a new version…
+t7b20f640 = 새 버전 확인 중…
+
+# Up to date. Last looked {when}.
+tbfc43b3f = 최신 버전입니다. 마지막 확인: { $when }.
+
+# Not looked for a new version yet.
+tb37f8ab2 = 아직 새 버전을 확인하지 않았습니다.
+
+# Check now
+t4f0e0677 = 지금 확인
+
+# Open the release page
+ta4810e92 = 릴리스 페이지 열기
 
 # A website in my browser
 td5d24782 = 브라우저로 보는 웹사이트

@@ -2272,6 +2272,15 @@ t07b9de08 = Пам’ять для великих тіл, що чекають н
 # Past this, large bodies stop being kept.
 tfe61a4f3 = Понад цей обсяг великі тіла більше не зберігаються.
 
+# Updates
+t483075a5 = Оновлення
+
+# Look for a new version once a day
+tf6f91c98 = Перевіряти нову версію раз на день
+
+# tracewing reads its signed list of releases from GitHub, which sees this computer's address and nothing else. Nothing is downloaded until you say so. Off, it looks only when you press Check now.
+t83502f0f = tracewing читає підписаний список випусків з GitHub, який бачить адресу цього комп'ютера і більше нічого. Нічого не завантажується, доки ви не скажете. Якщо вимкнено, перевірка йде лише кнопкою «Перевірити зараз».
+
 # Level
 t4155597d = Рівень прав
 
@@ -3183,6 +3192,81 @@ t4ab0ecb4 = Комбінації клавіш { $keys }
 
 # Columns
 tea156fdc = Стовпці
+
+# the system's package manager
+t11465c20 = системний менеджер пакетів
+
+# the App Store
+ta8cbd72e = App Store
+
+# the Microsoft Store
+t1df799a1 = Microsoft Store
+
+# Downloading… {got} of {total}
+taee668c2 = Завантаження… { $got } з { $total }
+
+# Downloading… {got}
+t4873b921 = Завантаження… { $got }
+
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } готовий
+
+# tracewing {version} is out
+tee561919 = Вийшов tracewing { $version }
+
+# Restart now
+t54001a7c = Перезапустити
+
+# Update
+t6e230e94 = Оновити
+
+# Skip this version
+t2c33d756 = Пропустити цю версію
+
+# This build cannot tell of updates: it was built without the release keys.
+t5ae24518 = Ця збірка не може повідомляти про оновлення: її зібрано без ключів випусків.
+
+# tracewing {version} is ready: it is installed when you quit, or now with Restart now.
+t0dcfc991 = tracewing { $version } готовий: його буде встановлено під час виходу або одразу кнопкою «Перезапустити».
+
+# tracewing {version} is out.
+t6889b195 = Вийшов tracewing { $version }.
+
+# The download failed: {problem}
+t9e574eee = Завантаження не вдалося: { $problem }
+
+# Download and install
+t1a99173f = Завантажити й установити
+
+# {by} updates this copy: {command}
+tcccbad48 = Цю копію оновлює { $by }: { $command }
+
+# {by} updates this copy.
+t3974b449 = Цю копію оновлює { $by }.
+
+# Install it with {tool}, in a terminal:
+t1ffa3279 = Установіть його за допомогою { $tool } у терміналі:
+
+# Copy the commands
+t09e7cd5b = Копіювати команди
+
+# Could not look for a new version: {problem}
+t356c9a25 = Не вдалося перевірити нову версію: { $problem }
+
+# Looking for a new version…
+t7b20f640 = Перевірка нової версії…
+
+# Up to date. Last looked {when}.
+tbfc43b3f = Остання версія. Перевірено { $when }.
+
+# Not looked for a new version yet.
+tb37f8ab2 = Нову версію ще не перевіряли.
+
+# Check now
+t4f0e0677 = Перевірити зараз
+
+# Open the release page
+ta4810e92 = Відкрити сторінку випуску
 
 # A website in my browser
 td5d24782 = Сайт у моєму браузері

@@ -112,6 +112,11 @@ pub struct StorageSettings {
     /// one, and the terminal way in exists to put the proxy's variables in
     /// front of a program.
     pub terminal_as_administrator: bool,
+    /// Look once a day whether a newer tracewing is out: the window reads the
+    /// signed list of releases from GitHub (docs/updates.md), which sees this
+    /// computer's address and nothing else. Off, it looks only when *Check
+    /// now* is pressed in Settings › About. Applies at once.
+    pub check_updates: bool,
 }
 
 impl Default for StorageSettings {
@@ -147,6 +152,9 @@ impl Default for StorageSettings {
             // level they have, until they say otherwise.
             browser_as_administrator: false,
             terminal_as_administrator: false,
+            // On, as shellwing's is: an update that nobody hears of is one
+            // nobody installs.
+            check_updates: true,
         }
     }
 }
@@ -221,6 +229,7 @@ impl StorageSettings {
         self.mark_readings = other.mark_readings;
         self.body_max_mib = other.body_max_mib;
         self.view_max_mib = other.view_max_mib;
+        self.check_updates = other.check_updates;
     }
 
     pub fn load(path: &Path) -> Result<Self> {

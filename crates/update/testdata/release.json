@@ -1,0 +1,39 @@
+{
+  "channels": {
+    "stable": "v99.0.0",
+    "beta": "v99.1.0-beta2"
+  },
+  "releases": {
+    "v99.0.0": {
+      "releaseDate": "2026-11-24",
+      "archives": {
+        "linux_x86_64": {
+          "file": "tracewing_99.0.0_linux_x86_64.AppImage",
+          "sha256": "3aa2b0e31e3a42a94ae42336925cad48460df7e5bc52c1f95318600450becd65"
+        },
+        "macos_aarch64": {
+          "file": "tracewing_99.0.0_macos_aarch64.app.tar.gz",
+          "sha256": "fd8f7bed4f39906801f70b89c1c859a28f4b8aa9cf7f4ae07a1ccb39b66236bd"
+        },
+        "windows_x86_64": {
+          "file": "tracewing_99.0.0_windows_x86_64-setup.exe",
+          "sha256": "4a1b0c3f5e2d9b8a7c6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b"
+        }
+      },
+      "packages": {
+        "deb_x86_64": {
+          "file": "tracewing_99.0.0_amd64.deb",
+          "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae"
+        },
+        "rpm_x86_64": {
+          "file": "tracewing_99.0.0_x86_64.rpm",
+          "sha256": "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
+        }
+      }
+    },
+    "v99.1.0-beta2": {
+      "releaseDate": "2026-11-24",
+      "archives": {}
+    }
+  }
+}

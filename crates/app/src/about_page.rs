@@ -60,12 +60,11 @@ impl Traffic {
         .detach();
     }
 
-    pub(crate) fn render_about(&self, cx: &mut Context<Self>) -> Div {
+    pub(crate) fn render_about(&self) -> Div {
         div()
             .flex()
             .flex_col()
             .gap(ui(10.))
-            .child(self.render_identity(cx))
             .child(
                 group()
                     .gap(ui(2.))
@@ -104,15 +103,30 @@ impl Traffic {
             )
     }
 
+    /// The logo, the name, what it is and which build this is, and whether a
+    /// newer one is out.
+    pub(crate) fn render_identity(&self, cx: &mut Context<Self>) -> Div {
+        group().p(ui(0.)).child(self.render_build(cx)).child(
+            div()
+                .mx(ui(20.))
+                .mb(ui(16.))
+                .pt(ui(14.))
+                .border_t_1()
+                .border_color(rgb(colors().page))
+                .child(self.render_update_status(cx)),
+        )
+    }
+
     /// The logo, the name, what it is and which build this is.
-    fn render_identity(&self, cx: &mut Context<Self>) -> Div {
+    fn render_build(&self, cx: &mut Context<Self>) -> Div {
         let c = colors();
         let copy = if self.about_copied {
             tr!("Copied")
         } else {
             tr!("Copy version info")
         };
-        group()
+        div()
+            .flex()
             .flex_row()
             .flex_wrap()
             .items_center()
@@ -189,7 +203,7 @@ fn row(label: String, help: String, action: Stateful<Div>) -> Div {
 }
 
 /// A button, loud or quiet, as Settings draws them.
-fn button(id: &'static str, label: String, loud: bool) -> Stateful<Div> {
+pub(crate) fn button(id: &'static str, label: String, loud: bool) -> Stateful<Div> {
     let c = colors();
     div()
         .id(id)

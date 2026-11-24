@@ -13,7 +13,8 @@ default = ["wayland"]
 wayland = ["gpui_platform/wayland"]
 x11 = ["gpui_platform/x11"]
 # Drawing with no display, for the UI tests and their pictures (Linux only).
-headless = ["gpui_platform/test-support", "dep:gpui_wgpu", "dep:image"]
+# And the updater pointed at a list of the test's own, never at GitHub.
+headless = ["gpui_platform/test-support", "dep:gpui_wgpu", "dep:image", "tracewing-update/test-source"]
 
 [dependencies]
 tracewing-convert.workspace = true
@@ -21,6 +22,7 @@ tracewing-proxy.workspace = true
 tracewing-store.workspace = true
 tracewing-system.workspace = true
 tracewing-i18n.workspace = true
+tracewing-update.workspace = true
 # The same GPUI snapshot as packwing and shellwing.
 gpui = { package = "gpui-pre", version = "=0.3.9" }
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.9", default-features = false, features = ["font-kit", "runtime_shaders"] }

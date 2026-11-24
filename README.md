@@ -42,7 +42,7 @@
 - 📱 **Phones and emulators.** Set up from a QR code, with Android emulators (14 and later too) and the iOS Simulator trusted in one click. For an app that ignores the phone's proxy setting, a WireGuard tunnel the phone joins instead.
 - 🏢 **Works at work.** Through your company's proxy, NTLM included, with your company's own CA, client certificates and TLS keys for Wireshark.
 - ⌨️ **No window needed.** `tracewing capture` records on a server or in CI, and writes HAR.
-- 🌍 **Made for every day.** 15 languages, light and dark, a text size of your choice, and layouts you can name. It runs on your computer and sends nothing anywhere.
+- 🌍 **Made for every day.** 15 languages, light and dark, a text size of your choice, and layouts you can name. It runs on your computer and sends nothing anywhere, except a daily look at GitHub for a new version, which Settings › About turns off. On Windows and macOS a new version installs in one click, as tracewing quits.
 
 **Seven ways in**, each a tab in Settings › Capture: this computer's proxy setting · a browser tracewing starts · a terminal it sets up · other devices on your network · a SOCKS5 port · a WireGuard tunnel a phone joins · apps taken as they are, with no proxy settings at all. Which way takes which programs: [docs/capturing.md](docs/capturing.md).
 

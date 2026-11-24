@@ -2272,6 +2272,15 @@ t07b9de08 = Память для больших тел, ожидающих зап
 # Past this, large bodies stop being kept.
 tfe61a4f3 = При превышении большие тела перестают сохраняться.
 
+# Updates
+t483075a5 = Обновления
+
+# Look for a new version once a day
+tf6f91c98 = Проверять новую версию раз в день
+
+# tracewing reads its signed list of releases from GitHub, which sees this computer's address and nothing else. Nothing is downloaded until you say so. Off, it looks only when you press Check now.
+t83502f0f = tracewing читает подписанный список выпусков с GitHub, который видит адрес этого компьютера и ничего больше. Ничего не скачивается, пока вы не скажете. Если выключено, проверка идёт только по кнопке «Проверить сейчас».
+
 # Level
 t4155597d = Уровень прав
 
@@ -3183,6 +3192,81 @@ t4ab0ecb4 = Сочетания клавиш { $keys }
 
 # Columns
 tea156fdc = Столбцы
+
+# the system's package manager
+t11465c20 = системный менеджер пакетов
+
+# the App Store
+ta8cbd72e = App Store
+
+# the Microsoft Store
+t1df799a1 = Microsoft Store
+
+# Downloading… {got} of {total}
+taee668c2 = Загрузка… { $got } из { $total }
+
+# Downloading… {got}
+t4873b921 = Загрузка… { $got }
+
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } готов
+
+# tracewing {version} is out
+tee561919 = Вышел tracewing { $version }
+
+# Restart now
+t54001a7c = Перезапустить
+
+# Update
+t6e230e94 = Обновить
+
+# Skip this version
+t2c33d756 = Пропустить эту версию
+
+# This build cannot tell of updates: it was built without the release keys.
+t5ae24518 = Эта сборка не может сообщать об обновлениях: она собрана без ключей выпусков.
+
+# tracewing {version} is ready: it is installed when you quit, or now with Restart now.
+t0dcfc991 = tracewing { $version } готов: он установится при выходе или сразу по кнопке «Перезапустить».
+
+# tracewing {version} is out.
+t6889b195 = Вышел tracewing { $version }.
+
+# The download failed: {problem}
+t9e574eee = Загрузка не удалась: { $problem }
+
+# Download and install
+t1a99173f = Скачать и установить
+
+# {by} updates this copy: {command}
+tcccbad48 = Эту копию обновляет { $by }: { $command }
+
+# {by} updates this copy.
+t3974b449 = Эту копию обновляет { $by }.
+
+# Install it with {tool}, in a terminal:
+t1ffa3279 = Установите его с помощью { $tool } в терминале:
+
+# Copy the commands
+t09e7cd5b = Скопировать команды
+
+# Could not look for a new version: {problem}
+t356c9a25 = Не удалось проверить новую версию: { $problem }
+
+# Looking for a new version…
+t7b20f640 = Проверка новой версии…
+
+# Up to date. Last looked {when}.
+tbfc43b3f = Последняя версия. Проверено { $when }.
+
+# Not looked for a new version yet.
+tb37f8ab2 = Новая версия ещё не проверялась.
+
+# Check now
+t4f0e0677 = Проверить сейчас
+
+# Open the release page
+ta4810e92 = Открыть страницу выпуска
 
 # A website in my browser
 td5d24782 = Сайт в моём браузере

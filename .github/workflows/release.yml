@@ -204,6 +204,28 @@ jobs:
         if: runner.os == 'macOS'
         run: scripts/check_macos_app.sh dist/tracewing_*.dmg
 
+      # What an installed copy's updater downloads: one tracewing.app, which
+      # verifies as the updater checks it (crates/update/src/apply.rs), and is
+      # the disk image's app, signed by the same team.
+      - name: The updater's app (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          tgz=(dist/tracewing_*_macos_*.app.tar.gz)
+          [ "${#tgz[@]}" -eq 1 ] && [ -f "${tgz[0]}" ] || { echo "::error::no single .app.tar.gz"; exit 1; }
+          out="$(mktemp -d)"
+          tar -xzf "${tgz[0]}" -C "$out"
+          [ "$(ls "$out")" = "tracewing.app" ] || { echo "::error::the archive holds $(ls "$out")"; exit 1; }
+          ! find "$out" -name '._*' | grep -q . || { echo "::error::AppleDouble files in the archive"; exit 1; }
+          codesign --verify --deep --strict "$out/tracewing.app"
+          team() { codesign -dv --verbose=2 "$1" 2>&1 | sed -n 's/^TeamIdentifier=//p'; }
+          echo "team: $(team "$out/tracewing.app")"
+          [ "$(team "$out/tracewing.app")" = "$(team target/package-macos/tracewing.app)" ]
+          if [ "$MACOS_SIGNING" = true ]; then
+            xcrun stapler validate "$out/tracewing.app"
+            spctl --assess --type execute --verbose=2 "$out/tracewing.app"
+          fi
+
       # The installer, quiet: for the user and for everyone, again over itself,
       # and uninstalled.
       - name: Install and uninstall (Windows)
