@@ -2274,6 +2274,12 @@ t30f507c6 = Tudo o que um app escolhido envia por TCP, lendo ou não uma configu
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, portanto HTTP/3; conexões para este próprio computador, que o macOS não repassa; e go run, que gera seu programa em um lugar novo a cada vez: adicione em vez disso a pasta onde o go build -o grava.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = Tudo o que um programa escolhido envia por TCP, leia ou não alguma definição de proxy, e também o seu HTTP/3: o tráfego deste computador passa pelo adaptador do próprio tracewing, e o que fica guardado são os programas que escolheu.
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = O HTTP/3 de um programa que ninguém escolheu, que é recusado e por isso volta ao HTTP/2; o restante do UDP, que passa direto; ligações ao próprio computador, que nunca o deixam; e go run, que compila o programa num sítio novo de cada vez: adicione antes a pasta onde o go build -o escreve.
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = Tudo o que um programa escolhido envia por TCP, leia ou não alguma definição de proxy: o tráfego deste computador passa pelo adaptador do próprio tracewing, e o que fica guardado são os programas que escolheu.
 

@@ -2224,6 +2224,12 @@ t30f507c6 = Seçilen bir uygulamanın TCP ile gönderdiği her şey, proxy ayar�
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, yani HTTP/3; macOS'un devretmediği, bu bilgisayarın kendisine giden bağlantılar; ve programını her seferinde yeni bir yerde derleyen go run: onun yerine go build -o'nun yazdığı klasörü ekleyin.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = Seçilen bir programın TCP üzerinden gönderdiği her şey ve onunla birlikte HTTP/3'ü, proxy ayarını okusun ya da okumasın: bu bilgisayarın trafiği tracewing'in kendi bağdaştırıcısından geçer ve tutulan şey, seçtiğiniz programlardır.
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = Kimsenin seçmediği bir programın HTTP/3'ü: reddedilir ve program HTTP/2'ye düşer; doğrudan geçirilen diğer UDP; bu bilgisayarın kendisine giden ve onu hiç terk etmeyen bağlantılar; ve her seferinde programını başka bir yere derleyen go run: onun yerine go build -o'nun yazdığı klasörü ekleyin.
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = Seçilen bir programın TCP üzerinden gönderdiği her şey, proxy ayarını okusun ya da okumasın: bu bilgisayarın trafiği tracewing'in kendi bağdaştırıcısından geçer ve tutulan şey, seçtiğiniz programlardır.
 

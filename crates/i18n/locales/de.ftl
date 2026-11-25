@@ -2260,6 +2260,12 @@ t30f507c6 = Alles, was eine gewählte App über TCP sendet, ob sie Proxy-Einstel
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, also HTTP/3; Verbindungen zu diesem Computer selbst, die macOS nicht übergibt; und go run, das sein Programm jedes Mal woanders baut: füge stattdessen den Ordner hinzu, in den go build -o schreibt.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = Alles, was ein gewähltes Programm über TCP sendet, ob es eine Proxy-Einstellung liest oder nicht, und sein HTTP/3 dazu: Der Verkehr dieses Computers läuft durch tracewings eigenen Adapter, und behalten werden die Programme, die Sie gewählt haben.
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = Das HTTP/3 eines Programms, das niemand gewählt hat: Es wird abgewiesen, sodass das Programm auf HTTP/2 zurückfällt; übriges UDP, das unverändert durchläuft; Verbindungen zu diesem Computer selbst, die ihn nie verlassen; und go run, das sein Programm jedes Mal woandershin baut: Fügen Sie stattdessen den Ordner hinzu, in den go build -o schreibt.
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = Alles, was ein gewähltes Programm über TCP sendet, ob es eine Proxy-Einstellung liest oder nicht: Der Verkehr dieses Computers läuft durch tracewings eigenen Adapter, und behalten werden die Programme, die Sie gewählt haben.
 

@@ -2149,6 +2149,12 @@ t30f507c6 = Apa pun yang dikirim aplikasi terpilih lewat TCP, membaca pengaturan
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, jadi HTTP/3; koneksi ke komputer ini sendiri, yang tidak diserahkan macOS; dan go run, yang membuat programnya di tempat baru setiap kali: tambahkan folder tujuan go build -o sebagai gantinya.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = Apa pun yang dikirim program pilihan lewat TCP, baik ia membaca pengaturan proxy atau tidak, berikut HTTP/3-nya: trafik komputer ini lewat adapter milik tracewing sendiri, dan yang disimpan adalah program yang Anda pilih.
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = HTTP/3 dari program yang tidak dipilih siapa pun, yang ditolak sehingga program itu turun ke HTTP/2; UDP lainnya, yang diteruskan apa adanya; koneksi ke komputer ini sendiri, yang tidak pernah keluar; dan go run, yang membangun programnya di tempat baru setiap kali: tambahkan saja folder tujuan go build -o.
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = Apa pun yang dikirim program pilihan lewat TCP, baik ia membaca pengaturan proxy atau tidak: trafik komputer ini lewat adapter milik tracewing sendiri, dan yang disimpan adalah program yang Anda pilih.
 

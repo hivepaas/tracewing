@@ -2149,6 +2149,12 @@ t30f507c6 = 選んだアプリが TCP で送るものすべて。プロキシ設
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP、つまり HTTP/3。このコンピュータ自身への接続 (macOS が渡さないため)。go run (毎回別の場所にプログラムをビルドするため): 代わりに go build -o の出力先フォルダを追加してください。
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = 選んだプログラムが TCP で送るものすべてと、その HTTP/3 も。プロキシ設定を読むかどうかは関係ありません。このコンピュータの通信は tracewing 自身のアダプターを通り、保持されるのは選んだプログラムです。
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = 誰も選んでいないプログラムの HTTP/3 は拒否され、そのプログラムは HTTP/2 に戻ります。それ以外の UDP はそのまま通過します。このコンピュータ自身への接続も外に出ません。また go run は毎回別の場所にプログラムを作るので、代わりに go build -o の書き込み先フォルダーを追加してください。
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = 選んだプログラムが TCP で送るものすべて。プロキシ設定を読むかどうかは関係ありません。このコンピュータの通信は tracewing 自身のアダプターを通り、保持されるのは選んだプログラムです。
 

@@ -2149,6 +2149,12 @@ t30f507c6 = Mọi thứ một app được chọn gửi qua TCP, dù nó có đ�
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, tức HTTP/3; kết nối tới chính máy này, vì macOS không chuyển chúng; và go run, vì mỗi lần nó build chương trình ở một chỗ mới: hãy thêm thư mục mà go build -o ghi ra.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = Mọi thứ một chương trình đã chọn gửi qua TCP, dù nó có đọc cài đặt proxy hay không, và cả HTTP/3 của nó: traffic của máy này đi qua adapter của chính tracewing, và thứ được giữ là những chương trình bạn chọn.
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = HTTP/3 của chương trình không ai chọn, vốn bị từ chối nên chương trình quay về HTTP/2; các UDP còn lại, vốn được cho đi thẳng; các kết nối tới chính máy này, vốn không ra khỏi máy; và go run, vốn build chương trình ở chỗ mới mỗi lần: hãy thêm thư mục mà go build -o ghi vào.
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = Mọi thứ một chương trình đã chọn gửi qua TCP, dù nó có đọc cài đặt proxy hay không: traffic của máy này đi qua adapter của chính tracewing, và thứ được giữ là những chương trình bạn chọn.
 

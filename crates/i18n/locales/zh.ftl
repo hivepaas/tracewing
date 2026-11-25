@@ -2149,6 +2149,12 @@ t30f507c6 = 所选应用通过 TCP 发送的一切，不管它是否读取代理
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP，也就是 HTTP/3；连向本机自身的连接，macOS 不会转交；以及 go run，它每次都在新位置构建程序：请改为添加 go build -o 写入的文件夹。
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = 所选程序通过 TCP 发送的一切，连同它的 HTTP/3，无论它是否读取代理设置：本机流量会经过 tracewing 自己的适配器，而被保留的是你选择的程序。
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = 没有被选中的程序的 HTTP/3 会被拒绝，该程序回退到 HTTP/2；其余 UDP 会直接通过；发往本机自身的连接从不离开本机；还有 go run，它每次都把程序编译到新位置：请改为添加 go build -o 写入的文件夹。
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = 所选程序通过 TCP 发送的一切，无论它是否读取代理设置：本机流量会经过 tracewing 自己的适配器，而被保留的是你选择的程序。
 

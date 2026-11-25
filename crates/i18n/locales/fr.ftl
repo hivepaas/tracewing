@@ -2274,6 +2274,12 @@ t30f507c6 = Tout ce qu'une app choisie envoie en TCP, qu'elle lise ou non un ré
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = L'UDP, donc HTTP/3 ; les connexions vers cet ordinateur lui-même, que macOS ne transmet pas ; et go run, qui construit son programme à un nouvel endroit à chaque fois : ajoutez plutôt le dossier où écrit go build -o.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = Tout ce qu'un programme choisi envoie en TCP, qu'il lise ou non un réglage de proxy, et son HTTP/3 avec : le trafic de cet ordinateur passe par l'adaptateur de tracewing, et ce qui est gardé, ce sont les programmes que vous avez choisis.
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = Le HTTP/3 d'un programme que personne n'a choisi, qui est refusé, de sorte qu'il revient à HTTP/2 ; le reste de l'UDP, qui passe tel quel ; les connexions vers cet ordinateur lui-même, qui ne le quittent jamais ; et go run, qui construit son programme ailleurs à chaque fois : ajoutez plutôt le dossier où écrit go build -o.
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = Tout ce qu'un programme choisi envoie en TCP, qu'il lise ou non un réglage de proxy : le trafic de cet ordinateur passe par l'adaptateur de tracewing, et ce qui est gardé, ce sont les programmes que vous avez choisis.
 

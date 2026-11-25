@@ -2149,6 +2149,12 @@ t30f507c6 = 선택한 앱이 TCP로 보내는 모든 것, 프록시 설정을 �
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, 즉 HTTP/3; macOS가 넘겨주지 않는 이 컴퓨터 자신으로의 연결; 그리고 매번 새 위치에 프로그램을 빌드하는 go run: 대신 go build -o가 쓰는 폴더를 추가하세요.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = 선택한 프로그램이 TCP로 보내는 모든 것과 그 HTTP/3까지. 프록시 설정을 읽는지와 무관합니다. 이 컴퓨터의 트래픽은 tracewing 자신의 어댑터를 지나며, 보관되는 것은 선택한 프로그램입니다.
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = 아무도 선택하지 않은 프로그램의 HTTP/3는 거절되어 그 프로그램은 HTTP/2로 돌아갑니다. 그 밖의 UDP는 그대로 지나갑니다. 이 컴퓨터 자신으로 가는 연결은 밖으로 나가지 않습니다. 그리고 go run은 매번 다른 곳에 프로그램을 만드니, go build -o가 쓰는 폴더를 대신 추가하세요.
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = 선택한 프로그램이 TCP로 보내는 모든 것. 프록시 설정을 읽는지와 무관합니다. 이 컴퓨터의 트래픽은 tracewing 자신의 어댑터를 지나며, 보관되는 것은 선택한 프로그램입니다.
 
