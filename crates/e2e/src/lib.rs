@@ -240,7 +240,7 @@ impl Capture {
         if store == KeyStore::File {
             command.arg("--ca-key-in-file");
         }
-        let child = command
+        let mut child = command
             .args(["--port", &port.to_string(), "--data-dir"])
             .arg(data_dir)
             .stdin(Stdio::null())
@@ -254,7 +254,14 @@ impl Capture {
                 )
             });
         let addr = SocketAddr::from(([127, 0, 0, 1], port));
-        wait_for("tracewing to listen", Duration::from_secs(30), || {
+        // Two minutes, not thirty seconds: on a CI Mac that had just booted
+        // a simulator (ios_simulator.rs), tracewing took longer than thirty
+        // to start listening, and listened all the same. A tracewing that
+        // ended instead says so at once rather than at the limit.
+        wait_for("tracewing to listen", Duration::from_secs(120), || {
+            if let Ok(Some(status)) = child.try_wait() {
+                panic!("tracewing capture ended before it listened: {status}");
+            }
             TcpStream::connect(addr).is_ok()
         });
         wait_for("its CA", Duration::from_secs(10), || {
