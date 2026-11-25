@@ -105,29 +105,14 @@ struct Lines {
     /// The text's height and the field's, as last drawn.
     content_h: Pixels,
     view_h: Pixels,
-    /// The scroll bar's thumb, dragged: where the drag started, and the
-    /// scroll then.
-    thumb_drag: Option<(Pixels, Pixels)>,
+    /// The scroll bar's thumb, while it is held.
+    bar_drag: crate::scrollbar::Drag,
 }
-
-/// The scroll bar: its width, and the least its thumb is.
-const BAR_W: f32 = 6.;
-const THUMB_MIN: f32 = 24.;
 
 impl Lines {
     /// How far the text scrolls at most.
     fn most(&self) -> Pixels {
         (self.content_h - self.view_h).max(px(0.))
-    }
-
-    /// The thumb's top and height in a field `view_h` high.
-    fn thumb(&self) -> Option<(Pixels, Pixels)> {
-        if self.content_h <= self.view_h || self.view_h <= px(0.) {
-            return None;
-        }
-        let h = (self.view_h * (self.view_h / self.content_h)).max(px(THUMB_MIN));
-        let top = (self.view_h - h) * (self.scroll_y / self.most());
-        Some((top, h))
     }
 }
 
@@ -203,66 +188,40 @@ fn follow_drag(input: &Entity<TextInput>, window: &mut Window, cx: &App) {
     });
 }
 
-/// The scroll bar's thumb dragged (a press on the bar's strip starts it),
-/// anywhere in the window while the button is held.
-fn drag_thumb(input: &Entity<TextInput>, bounds: Bounds<Pixels>, window: &mut Window) {
-    // A strip wider than the thumb, easy to hit.
-    let strip = Bounds::new(
-        point(bounds.right() - px(BAR_W + 6.), bounds.top()),
-        size(px(BAR_W + 6.), bounds.size.height),
-    );
-    let down = input.clone();
-    window.on_mouse_event(move |e: &MouseDownEvent, phase, _, cx| {
-        if phase == gpui::DispatchPhase::Capture
-            && e.button == MouseButton::Left
-            && strip.contains(&e.position)
-        {
-            cx.stop_propagation();
-            down.update(cx, |i, cx| {
-                if let Some(l) = i.lines.as_mut() {
-                    // A press off the thumb pages the text there first.
-                    if let Some((top, h)) = l.thumb() {
-                        let y = e.position.y - strip.top();
-                        if y < top || y > top + h {
-                            let to = (y - h / 2.).max(px(0.)) / (l.view_h - h).max(px(1.));
-                            l.scroll_y = (l.most() * to).min(l.most());
-                        }
-                    }
-                    l.thumb_drag = Some((e.position.y, l.scroll_y));
+/// A field of several lines, as its bar sees it: by the pixels its text is
+/// scrolled. It drew a bar of its own, thinner than every other and with a
+/// shorter least thumb; the drawing is now the one bar.
+struct FieldScroll(gpui::WeakEntity<TextInput>);
+
+impl crate::scrollbar::Scrolls for FieldScroll {
+    fn reach(&self, _: crate::scrollbar::Axis, cx: &App) -> (f32, f32) {
+        self.0
+            .upgrade()
+            .and_then(|input| {
+                let l = input.read(cx).lines.as_ref()?;
+                Some((f32::from(l.most()), f32::from(l.scroll_y)))
+            })
+            .unwrap_or((0., 0.))
+    }
+
+    fn scroll_to(&self, _: crate::scrollbar::Axis, to: f32, cx: &mut App) {
+        if let Some(input) = self.0.upgrade() {
+            input.update(cx, |input, cx| {
+                if let Some(l) = input.lines.as_mut() {
+                    l.scroll_y = px(to).clamp(px(0.), l.most());
                 }
                 cx.notify();
             });
         }
-    });
-    let moved = input.clone();
-    window.on_mouse_event(move |e: &MouseMoveEvent, phase, _, cx| {
-        if phase != gpui::DispatchPhase::Capture {
-            return;
-        }
-        moved.update(cx, |i, cx| {
-            let Some(l) = i.lines.as_mut() else {
-                return;
-            };
-            let (Some((y0, s0)), Some((_, h))) = (l.thumb_drag, l.thumb()) else {
-                return;
-            };
-            let per = l.most() / (l.view_h - h).max(px(1.));
-            l.scroll_y = (s0 + (e.position.y - y0) * per).clamp(px(0.), l.most());
-            cx.notify();
-        });
-    });
-    let up = input.clone();
-    window.on_mouse_event(move |_: &MouseUpEvent, phase, _, cx| {
-        if phase == gpui::DispatchPhase::Capture {
-            up.update(cx, |i, cx| {
-                if let Some(l) = i.lines.as_mut()
-                    && l.thumb_drag.take().is_some()
-                {
-                    cx.notify();
-                }
-            });
-        }
-    });
+    }
+}
+
+/// Where a field's bar goes: its right edge, the field's full height.
+fn bar_strip(field: Bounds<Pixels>) -> Bounds<Pixels> {
+    Bounds::new(
+        point(field.right() - px(crate::scrollbar::BAR_W), field.top()),
+        size(px(crate::scrollbar::BAR_W), field.size.height),
+    )
 }
 
 /// What a masked field shows for each character.
@@ -314,7 +273,7 @@ impl TextInput {
             caret_seen: None,
             content_h: px(0.),
             view_h: px(0.),
-            thumb_drag: None,
+            bar_drag: Default::default(),
         });
         self
     }
@@ -1320,6 +1279,8 @@ struct Area {
     scroll_y: Pixels,
     content_h: Pixels,
     caret: (usize, usize),
+    /// The bar's strip, so that the pointer over it is not the I-beam.
+    bar: gpui::Hitbox,
 }
 
 /// The runs a field's text is drawn with: code's parts in their colors,
@@ -1482,6 +1443,9 @@ impl Element for AreaElement {
         // Code: its lines' numbers in a gutter on the left, the scroll bar
         // clear of the text on the right.
         let mut numbers = vec![];
+        // The whole field, which the bar runs the height of; `bounds` is the
+        // text in it from here on.
+        let field = bounds;
         let bounds = if input.code.is_some() {
             let count = input.content.split('\n').count();
             let number = |n: usize, color: u32| {
@@ -1512,7 +1476,7 @@ impl Element for AreaElement {
             Bounds::new(
                 point(bounds.left() + gutter, bounds.top()),
                 size(
-                    (bounds.size.width - gutter - px(BAR_W + 6.)).max(px(20.)),
+                    (bounds.size.width - gutter - px(crate::scrollbar::BAR_W)).max(px(20.)),
                     bounds.size.height,
                 ),
             )
@@ -1583,6 +1547,7 @@ impl Element for AreaElement {
             scroll_y,
             content_h: top,
             caret: caret_now,
+            bar: window.insert_hitbox(bar_strip(field), gpui::HitboxBehavior::Normal),
         }
     }
 
@@ -1643,7 +1608,7 @@ impl Element for AreaElement {
         });
         let drawn = std::mem::take(&mut area.drawn);
         let (content_h, caret) = (area.content_h, area.caret);
-        let thumb = self.input.update(cx, |input, _| {
+        let drag = self.input.update(cx, |input, _| {
             input.last_bounds = Some(bounds);
             let lines = input.lines.as_mut()?;
             lines.drawn = drawn;
@@ -1652,31 +1617,22 @@ impl Element for AreaElement {
             lines.caret_seen = Some(caret);
             lines.content_h = content_h;
             lines.view_h = bounds.size.height;
-            lines.thumb()
+            Some(std::rc::Rc::clone(&lines.bar_drag))
         });
-        let bounds = field;
-        // The scroll bar, when the text is longer than the field.
-        if let Some((top, h)) = thumb {
-            let dragging = self
-                .input
-                .read(cx)
-                .lines
-                .as_ref()
-                .is_some_and(|l| l.thumb_drag.is_some());
-            let bar = Bounds::new(
-                point(bounds.right() - px(BAR_W) - px(1.), bounds.top() + top),
-                size(px(BAR_W), h),
+        // The scroll bar, when the text is longer than the field: the one
+        // every area has.
+        if let Some(drag) = drag {
+            let scrolls: std::rc::Rc<dyn crate::scrollbar::Scrolls> =
+                std::rc::Rc::new(FieldScroll(self.input.downgrade()));
+            crate::scrollbar::paint(
+                crate::scrollbar::Axis::Down,
+                bar_strip(field),
+                Some(&area.bar),
+                &scrolls,
+                &drag,
+                window,
+                cx,
             );
-            let color = if dragging {
-                colors().soft
-            } else {
-                colors().muted
-            };
-            window.paint_quad(
-                fill(bar, rgba(crate::colors::with_alpha(color, 0x99)))
-                    .corner_radii(px(BAR_W / 2.)),
-            );
-            drag_thumb(&self.input, bounds, window);
         }
     }
 }

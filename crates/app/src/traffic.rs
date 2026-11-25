@@ -7,7 +7,7 @@
 use crate::text_size::ui;
 // The list's scroll bar is the body's, so that two bars on one screen are
 // not two thicknesses: 6 px of thumb beside the body's 9 px was the difference.
-use crate::scrollbar::{BAR_W, THUMB_W};
+use crate::scrollbar::BAR_W;
 use crate::{
     chrome,
     colors::{self, colors, with_alpha},
@@ -70,7 +70,6 @@ const HOSTS_SHOWN: i64 = 500;
 /// How long after the last change of the window's size to write it down: a drag
 /// changes it many times a second.
 const SAVE_BOUNDS: Duration = Duration::from_millis(400);
-const THUMB_MIN: f32 = 28.;
 /// The least the inspector's - button leaves of it, wide or high, in pixels.
 pub const PANE_MIN: f32 = 100.;
 /// The most of the sidebar's height its apps and its devices take; the hosts
@@ -79,6 +78,10 @@ const APPS_SHARE: f32 = 0.3;
 const DEVICES_SHARE: f32 = 0.2;
 /// A divider between panels, at the design's size.
 const SPLITTER_W: f32 = 10.;
+/// The grip in the middle of a divider, across it, at the design's size. A
+/// scroll bar's thumb at rest is exactly this wide (`scrollbar.rs`), so the
+/// two read as one frame.
+pub(crate) const GRIP_W: f32 = 6.;
 /// The least the inspector's - and + buttons move it by, in pixels.
 pub const STEP_MIN: f32 = 100.;
 
@@ -316,8 +319,31 @@ pub enum Drag {
         from_y: f32,
         from_h: f32,
     },
-    /// The list's scroll bar.
-    ListBar,
+}
+
+/// The flow list, as its bar sees it. Moved by [`Traffic::set_scroll_y`],
+/// as a wheel moves it, so that a drag stops the list following the newest
+/// flow -- which is why the list once drew a bar of its own: one that set
+/// the handle's offset straight would have been pulled back to the bottom
+/// by the next flow to arrive.
+struct ListScroll(gpui::WeakEntity<Traffic>);
+
+impl crate::scrollbar::Scrolls for ListScroll {
+    fn reach(&self, _: crate::scrollbar::Axis, cx: &gpui::App) -> (f32, f32) {
+        self.0.upgrade().map_or((0., 0.), |list| {
+            let list = list.read(cx);
+            (list.list_max_scroll(), list.list_scrolled())
+        })
+    }
+
+    fn scroll_to(&self, _: crate::scrollbar::Axis, to: f32, cx: &mut gpui::App) {
+        if let Some(list) = self.0.upgrade() {
+            list.update(cx, |list, cx| {
+                list.set_scroll_y(to);
+                cx.notify();
+            });
+        }
+    }
 }
 
 /// What the rail switches between.
@@ -504,6 +530,8 @@ pub struct Traffic {
     /// The sidebar's lists, each scrolled by itself under a heading that
     /// stays: apps, devices, hosts.
     pub sidebar_scrolls: [crate::scrollbar::Scrolled; 3],
+    /// The flow list's thumb, while it is held.
+    list_bar: crate::scrollbar::Drag,
     /// The inspector was pressed in last, rather than the list: Ctrl+F then
     /// finds in it.
     pub(crate) inspector_active: bool,
@@ -687,6 +715,7 @@ impl Traffic {
             going: false,
             installed_fonts: None,
             sidebar_scrolls: Default::default(),
+            list_bar: Default::default(),
             inspector_active: false,
             mono_fonts: None,
             network_form: None,
@@ -1797,7 +1826,6 @@ impl Traffic {
                     ));
                 }
             }
-            Drag::ListBar => self.drag_list_bar(event.position.y),
             Drag::Column {
                 column,
                 from_x,
@@ -1868,14 +1896,9 @@ impl Traffic {
         (self.count() as f32 * self.row_h() - f32::from(self.list.get().size.height)).max(0.)
     }
 
-    fn thumb_height(&self) -> f32 {
-        let height = f32::from(self.list.get().size.height);
-        let content = self.count() as f32 * self.row_h();
-        if content <= height {
-            height
-        } else {
-            (height * height / content).max(THUMB_MIN)
-        }
+    /// How far down the list is scrolled, in pixels.
+    fn list_scrolled(&self) -> f32 {
+        -f32::from(self.scroll.0.borrow().base_handle.offset().y)
     }
 
     /// Scrolls the list so its top edge is `y` pixels into the content.
@@ -1892,12 +1915,16 @@ impl Traffic {
         self.list_max_scroll()
     }
 
-    fn drag_list_bar(&mut self, y: Pixels) {
-        let list = self.list.get();
-        let thumb = self.thumb_height();
-        let track = (f32::from(list.size.height) - thumb).max(1.);
-        let at = (f32::from(y - list.origin.y) - thumb / 2.) / track;
-        self.set_scroll_y(at.clamp(0., 1.) * self.list_max_scroll());
+    /// Whether the list keeps the newest flow in view. For tests.
+    #[doc(hidden)]
+    pub fn following(&self) -> bool {
+        self.follow
+    }
+
+    /// How far down the list is scrolled, and where it was drawn. For tests.
+    #[doc(hidden)]
+    pub fn list_at(&self) -> (f32, Bounds<Pixels>) {
+        (self.list_scrolled(), self.list.get())
     }
 
     fn on_mouse_up(&mut self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
@@ -2676,39 +2703,13 @@ impl Traffic {
                         .size_full(),
                     )
                     .child(body)
-                    .when(self.list_max_scroll() > 0., |d| {
-                        let max = self.list_max_scroll();
-                        let thumb = self.thumb_height();
-                        let track = f32::from(self.list.get().size.height) - thumb;
-                        let offset = -f32::from(self.scroll.0.borrow().base_handle.offset().y);
-                        d.child(
-                            div()
-                                .id("list-bar")
-                                .absolute()
-                                .top_0()
-                                .bottom_0()
-                                .right_0()
-                                .w(px(BAR_W))
-                                .on_mouse_down(
-                                    MouseButton::Left,
-                                    cx.listener(|this, event: &MouseDownEvent, _, cx| {
-                                        this.drag = Some(Drag::ListBar);
-                                        this.drag_list_bar(event.position.y);
-                                        cx.notify();
-                                    }),
-                                )
-                                .child(
-                                    div()
-                                        .absolute()
-                                        .top(px((offset / max).clamp(0., 1.) * track))
-                                        .h(px(thumb))
-                                        .left(px((BAR_W - THUMB_W) / 2.))
-                                        .w(px(THUMB_W))
-                                        .rounded(px(THUMB_W / 2.))
-                                        .bg(rgb(c.splitter)),
-                                ),
-                        )
-                    })
+                    // Drawn by the bar every other area has: it shows itself only
+                    // when there is more than fits.
+                    .child(crate::scrollbar::bar(
+                        crate::scrollbar::Axis::Down,
+                        ListScroll(cx.entity().downgrade()),
+                        Rc::clone(&self.list_bar),
+                    ))
                     .when(!self.follow && self.list_max_scroll() > 0., |d| {
                         d.child(
                             div()
@@ -2793,9 +2794,9 @@ impl Traffic {
     ) -> impl IntoElement {
         let c = colors();
         let handle = if vertical {
-            div().w(ui(6.)).h(ui(56.))
+            div().w(ui(GRIP_W)).h(ui(56.))
         } else {
-            div().h(ui(6.)).w(ui(56.))
+            div().h(ui(GRIP_W)).w(ui(56.))
         };
         let holder = div()
             .id(id)
@@ -2809,7 +2810,7 @@ impl Traffic {
             holder.h(ui(SPLITTER_W)).w_full().cursor_row_resize()
         };
         holder
-            .child(handle.rounded(ui(3.)).bg(rgb(c.splitter)))
+            .child(handle.rounded(ui(GRIP_W / 2.)).bg(rgb(c.splitter)))
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, _: &MouseDownEvent, _, cx| {
