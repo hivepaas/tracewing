@@ -8866,7 +8866,7 @@ checksum = "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3"
 
 [[package]]
 name = "tracewing"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -8910,14 +8910,14 @@ dependencies = [
 
 [[package]]
 name = "tracewing-console"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "winresource",
 ]
 
 [[package]]
 name = "tracewing-convert"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "brotli",
@@ -8933,7 +8933,7 @@ dependencies = [
 
 [[package]]
 name = "tracewing-dev"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -8973,7 +8973,7 @@ dependencies = [
 
 [[package]]
 name = "tracewing-e2e"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "bytes",
@@ -8994,7 +8994,7 @@ dependencies = [
 
 [[package]]
 name = "tracewing-handoff"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "getrandom 0.3.4",
  "hmac 0.12.1",
@@ -9003,7 +9003,7 @@ dependencies = [
 
 [[package]]
 name = "tracewing-i18n"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "fluent-bundle",
  "sys-locale",
@@ -9012,7 +9012,7 @@ dependencies = [
 
 [[package]]
 name = "tracewing-netext"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "block2 0.6.2",
  "log",
@@ -9025,7 +9025,7 @@ dependencies = [
 
 [[package]]
 name = "tracewing-proxy"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -9073,7 +9073,7 @@ dependencies = [
 
 [[package]]
 name = "tracewing-store"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
@@ -9108,7 +9108,7 @@ dependencies = [
 
 [[package]]
 name = "tracewing-system"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -9138,7 +9138,7 @@ dependencies = [
 
 [[package]]
 name = "tracewing-update"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "curve25519-dalek",
