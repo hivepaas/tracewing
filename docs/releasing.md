@@ -35,13 +35,16 @@ extension, when it is signed for people.
   administrator's permission (Windows asks), or the user alone into
   `%LOCALAPPDATA%\Programs\tracewing` with none. `/ALLUSERS` or
   `/CURRENTUSER` says it without the page, as `/S` does for a quiet install;
-  where tracewing is installed already, it goes there again, as it was. Its
+  where tracewing is installed already, it goes there again, as it was.
+  `tracewing.exe` has a window and no console; beside it, `tracewing.com`
+  (crates/console) is the command line's: a terminal finds it first for
+  `tracewing`, and it runs `tracewing.exe` there and waits for it. Their
   folder goes in the PATH, so a terminal opened after runs `tracewing
   capture`, and uninstalling takes it out again and runs `tracewing uninstall`
   — the certificate authority out of the stores that trust it, and the system
   proxy back. It is not signed: SmartScreen asks the first time (More info ›
-  Run anyway). The `.zip` is the same program to run from a folder, with no
-  installer.
+  Run anyway). The `.zip` is the same two files to run from a folder, with
+  no installer.
 - **macOS**: `tracewing.app` in a disk image, with a link to `/Applications`
   beside it. It runs on macOS 13 Ventura and newer, as
   `packaging/macos/Info.plist` says and the build is told. Signed with the

@@ -127,6 +127,11 @@ jobs:
       - name: Build
         run: cargo build --release --locked -p tracewing
 
+      # tracewing.com, the command line's way into a Windows terminal.
+      - name: Build the console launcher (Windows)
+        if: runner.os == 'Windows'
+        run: cargo build --release --locked -p tracewing-console
+
       # macOS's alone; packaged only with the profiles that allow it.
       - name: Build the network extension (macOS)
         if: runner.os == 'macOS'

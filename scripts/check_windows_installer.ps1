@@ -50,15 +50,19 @@ $modes = @(
 foreach ($m in $modes) {
     Write-Host "== $($m.Flag)"
     Run $Setup @('/S', $m.Flag)
-    foreach ($file in 'tracewing.exe', 'uninstall.exe', 'LICENSE.txt', 'THIRD-PARTY-LICENSES.txt') {
+    foreach ($file in 'tracewing.exe', 'tracewing.com', 'uninstall.exe', 'LICENSE.txt', 'THIRD-PARTY-LICENSES.txt') {
         if (-not (Test-Path (Join-Path $m.Dir $file))) { Fail "$($m.Flag): no $file in $($m.Dir)" }
     }
     $at = Installed $m.Hive
     if ($at -ne $m.Dir) { Fail "$($m.Flag): the $($m.Hive)'s uninstall key says '$at', not '$($m.Dir)'" }
     if ($null -ne (Installed $m.Other)) { Fail "$($m.Flag): the $($m.Other)'s uninstall key was written too" }
     if (-not (Holds (PathOf $m.Hive) $m.Dir)) { Fail "$($m.Flag): $($m.Dir) is not in the $($m.Hive)'s PATH" }
-    $said = & (Join-Path $m.Dir 'tracewing.exe') --version
+    # Through tracewing.com, as a terminal finds `tracewing`: it runs
+    # tracewing.exe, which has no console of its own, and hands on what it
+    # said and how it ended.
+    $said = & (Join-Path $m.Dir 'tracewing.com') --version
     if ($LASTEXITCODE -ne 0) { Fail "$($m.Flag): tracewing --version ended with $LASTEXITCODE" }
+    if ("$said" -notmatch '^tracewing ') { Fail "$($m.Flag): tracewing --version said '$said'" }
     Write-Host "tracewing: $said"
 
     # Again, saying nothing of whom for: where it is, as it was.

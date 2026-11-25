@@ -2,6 +2,7 @@
 ; scripts/package_windows.sh, as packwing's is:
 ;
 ;   makensis /DVERSION=0.1.0 /DFILEVERSION=0.1.0.0 /DEXE=path\to\tracewing.exe
+;            /DCOM=path\to\tracewing-console.exe
 ;            /DLICENSES=path\to\THIRD-PARTY-LICENSES /DWINTUN=path\to\wintun.dll
 ;            /DWINTUN_LICENSE=path\to\Wintun's\LICENSE.txt /DOUT=setup.exe installer.nsi
 ;
@@ -20,9 +21,12 @@
 ; starts at the end is the user's, never the administrator's.
 ;
 ; One file is the program: the window, the proxy, the command line and the MCP
-; server are all tracewing.exe. Beside it, Wintun's wintun.dll, which the local
-; way in (capture with no proxy settings) loads from there, with its licence. Its folder goes in the PATH (path.ps1), the
-; user's or, for everyone, the computer's, so a terminal opened after runs
+; server are all tracewing.exe, which has a window and no console. Beside it,
+; tracewing.com (crates/console), built for the console: a terminal finds it
+; first for `tracewing`, and it runs tracewing.exe there and waits for it. And
+; Wintun's wintun.dll, which the local way in (capture with no proxy settings)
+; loads from there, with its licence. Its folder goes in the PATH (path.ps1),
+; the user's or, for everyone, the computer's, so a terminal opened after runs
 ; `tracewing capture`; uninstalling takes it out again.
 ;
 ; The settings and what was recorded are each user's, under %LOCALAPPDATA%:
@@ -49,6 +53,9 @@ SetCompressor /SOLID lzma
 !endif
 !ifndef EXE
   !error "EXE is not given"
+!endif
+!ifndef COM
+  !error "COM is not given"
 !endif
 !ifndef LICENSES
   !error "LICENSES is not given"
@@ -276,7 +283,8 @@ Section "tracewing"
   copied:
 
   ; Once the program has been replaced, nothing of tracewing's is running to
-  ; hold the library either.
+  ; hold the library, or the command line's tracewing.com, either.
+  File "/oname=tracewing.com" "${COM}"
   File "/oname=wintun.dll" "${WINTUN}"
   File "/oname=LICENSE.txt" "..\..\LICENSE"
   File "/oname=THIRD-PARTY-LICENSES.txt" "${LICENSES}"
@@ -370,6 +378,7 @@ Section "Uninstall"
   SetOutPath "$TEMP"
 
   Delete "$INSTDIR\tracewing.exe"
+  Delete "$INSTDIR\tracewing.com"
   Delete /REBOOTOK "$INSTDIR\wintun.dll"
   Delete "$INSTDIR\LICENSE.txt"
   Delete "$INSTDIR\THIRD-PARTY-LICENSES.txt"
