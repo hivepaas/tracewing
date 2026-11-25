@@ -306,8 +306,22 @@ jobs:
         with:
           tool: cargo-about@0.9.3
 
+      # Twice GitHub kept no log of this step at all ("log not found") after
+      # an hour of it, so what it says is kept as a file of the run's too.
       - name: Tests that change the computer
-        run: scripts/e2e_macos.sh --this-machine-may-be-changed --packages
+        shell: bash
+        run: |
+          set -o pipefail
+          scripts/e2e_macos.sh --this-machine-may-be-changed --packages 2>&1 \
+            | tee "$RUNNER_TEMP/e2e-macos.log"
+
+      - name: The log, kept
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-macos-log
+          path: ${{ runner.temp }}/e2e-macos.log
+          if-no-files-found: ignore
 
   release:
     name: Draft release
@@ -319,9 +333,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The packages only: the run keeps other files too (e2e-macos-log).
       - uses: actions/download-artifact@v4
         with:
           path: dist
+          pattern: tracewing-*
           merge-multiple: true
 
       - name: SHA-256

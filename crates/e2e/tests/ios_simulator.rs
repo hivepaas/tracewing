@@ -12,7 +12,12 @@
 //! Changes this Mac's proxy setting. See `tracewing_e2e`.
 #![cfg(target_os = "macos")]
 
-use std::{collections::BTreeMap, path::Path, process::Command, time::Duration};
+use std::{
+    collections::BTreeMap,
+    path::Path,
+    process::Command,
+    time::{Duration, Instant},
+};
 use tracewing_e2e::{
     Capture, desktop, har_of,
     helper::Helper,
@@ -109,35 +114,51 @@ fn a_simulator_set_up_reaches_everything_through_tracewing() {
     let _put_back = desktop::the_users_own();
     let holder = Helper::system_proxy(&capture.data_dir, capture.port, true);
 
-    // A simulator just booted can take longer to start Safari than
-    // `openurl` waits ("Operation timed out"), and Safari may open the page
-    // all the same: tried again, and what the page says is what counts.
-    for attempt in 1..=3 {
+    // A simulator just made and booted can take longer to start Safari than
+    // `openurl` waits ("Operation timed out", about a minute each), and
+    // Safari may open the page all the same: tried again until it takes or
+    // the page has spoken, for up to six minutes. Three tries ten seconds
+    // apart were not enough on a busy runner (run 45576493603): the first
+    // boot of a new simulator is still settling well after `bootstatus`.
+    let mut report: Option<BTreeMap<String, String>> = None;
+    let started = Instant::now();
+    let give_up = started + Duration::from_secs(360);
+    for attempt in 1.. {
         let out = Command::new(&xcrun)
             .args(["simctl", "openurl", &sim.udid, &site.page()])
             .output()
             .unwrap();
         if out.status.success() {
+            eprintln!(
+                "openurl, try {attempt}: opened after {:?}",
+                started.elapsed()
+            );
             break;
         }
         eprintln!(
-            "openurl, try {attempt}: {}",
+            "openurl, try {attempt}, {:?} in: {}",
+            started.elapsed(),
             String::from_utf8_lossy(&out.stderr)
                 .lines()
                 .next()
                 .unwrap_or("")
         );
+        report = site.take_report();
+        if report.is_some() || Instant::now() >= give_up {
+            break;
+        }
         std::thread::sleep(Duration::from_secs(10));
     }
-    let mut report: Option<BTreeMap<String, String>> = None;
-    wait_for(
-        "Safari in the simulator to say how the page went",
-        Duration::from_secs(180),
-        || {
-            report = site.take_report();
-            report.is_some()
-        },
-    );
+    if report.is_none() {
+        wait_for(
+            "Safari in the simulator to say how the page went",
+            Duration::from_secs(180),
+            || {
+                report = site.take_report();
+                report.is_some()
+            },
+        );
+    }
     let report = report.unwrap();
     let get = |name: &str| report.get(name).map(String::as_str).unwrap_or("");
     // What reached tracewing, by URL and status: whether a request that
