@@ -346,6 +346,26 @@ impl crate::scrollbar::Scrolls for ListScroll {
     }
 }
 
+/// The bars of the pages that scroll by themselves, each kept from frame to
+/// frame: a thumb's drag outlives the frame it began in, and a page is
+/// scrolled where it was left. These pages scrolled with no bar at all, and
+/// were the one place in the window where a long page gave no sign of
+/// being longer than the screen.
+#[derive(Default)]
+pub(crate) struct PageBars {
+    pub setup: crate::scrollbar::Scrolled,
+    pub rules: crate::scrollbar::Scrolled,
+    pub sessions: crate::scrollbar::Scrolled,
+    pub compose: crate::scrollbar::Scrolled,
+    pub compare: crate::scrollbar::Scrolled,
+    pub paused_editor: crate::scrollbar::Scrolled,
+    pub paused_list: crate::scrollbar::Scrolled,
+    pub read_as: crate::scrollbar::Scrolled,
+    /// One a part of Settings: each part keeps where it was scrolled to, as
+    /// it did when its scroll was kept by the part's own element id.
+    pub settings: [crate::scrollbar::Scrolled; crate::layout::SettingsSection::ALL.len()],
+}
+
 /// What the rail switches between.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Screen {
@@ -532,6 +552,8 @@ pub struct Traffic {
     pub sidebar_scrolls: [crate::scrollbar::Scrolled; 3],
     /// The flow list's thumb, while it is held.
     list_bar: crate::scrollbar::Drag,
+    /// The bars of the pages that scroll by themselves.
+    pub(crate) page_bars: PageBars,
     /// The inspector was pressed in last, rather than the list: Ctrl+F then
     /// finds in it.
     pub(crate) inspector_active: bool,
@@ -716,6 +738,7 @@ impl Traffic {
             installed_fonts: None,
             sidebar_scrolls: Default::default(),
             list_bar: Default::default(),
+            page_bars: Default::default(),
             inspector_active: false,
             mono_fonts: None,
             network_form: None,
@@ -3196,22 +3219,30 @@ impl Render for Traffic {
         let (face, mono) = self.fonts_chosen(window);
         crate::use_fonts(face, mono);
         self.ui_scale = crate::text_size::scale(window);
-        let setup =
-            (self.screen == Screen::Setup).then(|| self.render_setup(cx).into_any_element());
-        let sessions =
-            (self.screen == Screen::Sessions).then(|| self.render_sessions(cx).into_any_element());
+        let setup = (self.screen == Screen::Setup).then(|| {
+            let bars = self.page_bars.setup.clone();
+            bars.in_place(self.render_setup(cx))
+        });
+        let sessions = (self.screen == Screen::Sessions).then(|| {
+            let bars = self.page_bars.sessions.clone();
+            bars.in_place(self.render_sessions(cx))
+        });
         let banner = self
             .render_viewing_banner(cx)
             .map(IntoElement::into_any_element);
         let update_row = self
             .render_update_row(cx)
             .map(IntoElement::into_any_element);
-        let rules =
-            (self.screen == Screen::Rules).then(|| self.render_rules(cx).into_any_element());
+        let rules = (self.screen == Screen::Rules).then(|| {
+            let bars = self.page_bars.rules.clone();
+            bars.in_place(self.render_rules(cx))
+        });
         let paused =
             (self.screen == Screen::Paused).then(|| self.render_paused(cx).into_any_element());
-        let compose =
-            (self.screen == Screen::Compose).then(|| self.render_compose(cx).into_any_element());
+        let compose = (self.screen == Screen::Compose).then(|| {
+            let bars = self.page_bars.compose.clone();
+            bars.in_place(self.render_compose(cx))
+        });
         let compare =
             (self.screen == Screen::Compare).then(|| self.render_compare(cx).into_any_element());
         let picking = self.render_compare_pick(cx);

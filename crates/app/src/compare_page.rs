@@ -807,48 +807,58 @@ impl Traffic {
         };
         let note = |text: String| div().py(ui(8.)).text_color(rgb(c.muted)).child(text);
 
+        // Headers and the query scroll by themselves; a body has the bars a
+        // body has. One handle for both: the part shown is one at a time, as
+        // the one element id they shared was.
+        let bars = self.page_bars.compare.clone();
         let content: AnyElement = match page.part {
             ComparePart::Headers => {
                 let headers = page.headers(side);
                 let trailers = (side == Side::Response)
                     .then(|| page.trailers())
                     .filter(|t| !t.is_empty());
-                div()
-                    .id("compare-pairs")
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_y_scroll()
-                    .flex()
-                    .flex_col()
-                    .gap(ui(10.))
-                    .child(if headers.is_empty() {
-                        note(tr!("Neither has headers kept."))
-                    } else {
-                        pairs_table(headers)
-                    })
-                    .children(trailers.map(|trailers| {
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap(ui(4.))
-                            .child(eyebrow(tr!("Trailers")))
-                            .child(pairs_table(trailers))
-                    }))
-                    .into_any_element()
+                bars.in_place(
+                    div()
+                        .id("compare-pairs")
+                        .flex_1()
+                        .min_h_0()
+                        .overflow_y_scroll()
+                        .track_scroll(&bars.handle)
+                        .when(bars.scrolls(), |d| d.pr(gpui::px(crate::scrollbar::BAR_W)))
+                        .flex()
+                        .flex_col()
+                        .gap(ui(10.))
+                        .child(if headers.is_empty() {
+                            note(tr!("Neither has headers kept."))
+                        } else {
+                            pairs_table(headers)
+                        })
+                        .children(trailers.map(|trailers| {
+                            div()
+                                .flex()
+                                .flex_col()
+                                .gap(ui(4.))
+                                .child(eyebrow(tr!("Trailers")))
+                                .child(pairs_table(trailers))
+                        })),
+                )
             }
             ComparePart::Query => {
                 let query = page.query();
-                div()
-                    .id("compare-pairs")
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_y_scroll()
-                    .child(if query.is_empty() {
-                        note(tr!("Neither URL has a query."))
-                    } else {
-                        pairs_table(query)
-                    })
-                    .into_any_element()
+                bars.in_place(
+                    div()
+                        .id("compare-pairs")
+                        .flex_1()
+                        .min_h_0()
+                        .overflow_y_scroll()
+                        .track_scroll(&bars.handle)
+                        .when(bars.scrolls(), |d| d.pr(gpui::px(crate::scrollbar::BAR_W)))
+                        .child(if query.is_empty() {
+                            note(tr!("Neither URL has a query."))
+                        } else {
+                            pairs_table(query)
+                        }),
+                )
             }
             ComparePart::Body => match page.body(side) {
                 BodyLoad::Loading => note(tr!("Comparing…")).into_any_element(),
