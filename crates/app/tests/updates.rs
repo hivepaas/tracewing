@@ -113,6 +113,10 @@ fn open(dir: &Path) -> (HeadlessAppContext, WindowHandle<Traffic>) {
     (cx, window)
 }
 
+/// Taken by each test for as long as it runs: how this copy was installed,
+/// and the list's address, are said for the whole process.
+static ONE_AT_A_TIME: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Reads the view.
 fn read<T>(
     cx: &mut HeadlessAppContext,
@@ -150,6 +154,7 @@ fn check(cx: &mut HeadlessAppContext, window: WindowHandle<Traffic>) {
 
 #[test]
 fn a_newer_release_is_told_of_downloaded_and_installed_as_tracewing_quits() {
+    let _one = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
     let _ = tracewing_proxy::crypto_provider().install_default();
     let dir = std::env::temp_dir().join(format!("tracewing-updates-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
@@ -269,5 +274,50 @@ fn a_newer_release_is_told_of_downloaded_and_installed_as_tracewing_quits() {
     assert!(problem.contains("no valid"), "{problem}");
     assert_eq!(read(cx, window, |v| v.updates.offered()), None);
     shot(cx, window, "updates-8-refused");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Closing the window is quitting, and installs what was downloaded as
+/// quitting does. It once did not: the window's closing released the view
+/// before the quit, and the quit handler, which reaches the view through a
+/// weak handle, found nothing to run on. On Windows that is the close button
+/// in the title bar, the way most people quit.
+#[test]
+fn closing_the_window_installs_the_update_downloaded() {
+    let _one = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir = std::env::temp_dir().join(format!("tracewing-updates-close-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let image = dir.join("tracewing.AppImage");
+    std::fs::write(&image, b"the copy running").unwrap();
+    tracewing_update::set_test_install(Install::AppImage(image.clone()));
+    let staged = dir.join("v99.0.0.AppImage");
+    std::fs::write(&staged, RELEASE).unwrap();
+    let (mut cx, window) = open(&dir);
+    // Downloaded and checked, as the first test does it from a list.
+    window
+        .update(&mut cx, |view, _, _| {
+            view.updates.state.staged = Some(("v99.0.0".into(), staged.display().to_string()));
+            view.updates.stage = Stage::Ready(Version::parse("v99.0.0").unwrap());
+        })
+        .unwrap();
+    // The window closed, as its close button does it, and the app quitting
+    // after, as main's `on_window_closed` has it.
+    window
+        .update(&mut cx, |_, window, _| window.remove_window())
+        .unwrap();
+    cx.run_until_parked();
+    assert_eq!(
+        std::fs::read(&image).unwrap(),
+        b"the copy running",
+        "nothing is installed while the app still runs"
+    );
+    drop(cx);
+    assert_eq!(
+        std::fs::read(&image).unwrap(),
+        RELEASE,
+        "the copy is the release once the app has quit"
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }
