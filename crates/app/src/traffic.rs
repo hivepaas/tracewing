@@ -387,6 +387,13 @@ fn looks_dark(window: &Window) -> bool {
     )
 }
 
+/// The window's view, held by the app until it quits (see `Traffic::new`).
+struct KeptUntilQuit {
+    _view: Entity<Traffic>,
+}
+
+impl gpui::Global for KeptUntilQuit {}
+
 pub struct Traffic {
     pub engine: Engine,
     /// An old session on show, with recording going on behind it.
@@ -654,6 +661,12 @@ impl Traffic {
             async {}
         })
         .detach();
+        // Held until the app has quit. Closing the window releases the view
+        // it shows before the quit that follows, and the handler above
+        // reaches the view through a weak handle: with the view gone, none of
+        // it ran, so closing the window left the settings typed unsaved and
+        // the update downloaded never installed.
+        cx.set_global(KeptUntilQuit { _view: cx.entity() });
 
         let focus = cx.focus_handle();
         window.focus(&focus, cx);

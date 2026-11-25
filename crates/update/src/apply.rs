@@ -152,7 +152,12 @@ fn run_installer(setup: &Path, relaunch: bool) -> io::Result<()> {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt as _;
-        const DETACHED_PROCESS: u32 = 0x0000_0008;
+        use std::process::Stdio;
+        // A console of its own that is never shown, which outlives this app.
+        // Not DETACHED_PROCESS: PowerShell started with no console at all
+        // ends at once and runs nothing (measured on Windows 11 with 5.1,
+        // with that flag alone and with both), and the update was never
+        // installed.
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         let exe = std::env::current_exe()?;
         let system = std::env::var_os("SystemRoot").unwrap_or_else(|| r"C:\Windows".into());
@@ -171,7 +176,11 @@ fn run_installer(setup: &Path, relaunch: bool) -> io::Result<()> {
                 everyone,
                 relaunch,
             ))
-            .creation_flags(DETACHED_PROCESS | CREATE_NO_WINDOW)
+            // Nothing of this app's: its handles go as it does.
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .creation_flags(CREATE_NO_WINDOW)
             .spawn()?;
         Ok(())
     }
