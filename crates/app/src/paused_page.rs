@@ -365,66 +365,83 @@ impl Traffic {
                                 )),
                         ),
                 };
+                // The card is a shell that does not scroll, and what is in it
+                // does: a bar laid over the card itself would run into its
+                // rounded corners, where this one stays inside the padding.
+                let bars = self.page_bars.paused_editor.clone();
                 div()
-                    .id("paused-editor")
                     .flex_1()
                     .min_w_0()
                     .min_h_0()
-                    .overflow_y_scroll()
                     .flex()
                     .flex_col()
-                    .gap(ui(10.))
                     .p(ui(14.))
                     .rounded(ui(22.))
                     .bg(rgb(c.surface))
-                    .child(eyebrow(match paused.stage {
-                        Stage::Request => tr!("The request, before the server gets it"),
-                        Stage::Response => tr!("The response, before the app gets it"),
-                        Stage::ToServer => {
-                            tr!("A socket's message, before the server gets it")
-                        }
-                        Stage::ToApp => tr!("A socket's message, before the app gets it"),
-                    }))
-                    .child(first_line)
-                    .when(!paused.stage.is_message(), |d| {
-                        d.child(eyebrow(tr!("Headers")))
-                            .child(field(&page.headers))
-                            .child(eyebrow(tr!("Body")))
-                    })
-                    .when(paused.stage.is_message(), |d| {
-                        d.child(eyebrow(tr!("Message")))
-                    })
-                    .child(field(&page.body))
-                    .children(
-                        page.problem
-                            .clone()
-                            .map(|problem| div().text_color(rgb(c.error)).child(problem)),
-                    )
                     .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .flex_wrap()
-                            .gap(ui(8.))
-                            .child(
-                                chip("paused-send", tr!("Send"), true)
-                                    .on_click(cx.listener(|this, _, _, cx| this.send_paused(cx))),
-                            )
-                            .child(
-                                chip("paused-unchanged", tr!("Send as it came"), false).on_click(
-                                    cx.listener(|this, _, _, cx| this.send_paused_unchanged(cx)),
+                        bars.in_place(
+                            div()
+                                .id("paused-editor")
+                                .flex_1()
+                                .min_h_0()
+                                .overflow_y_scroll()
+                                .track_scroll(&bars.handle)
+                                .when(bars.scrolls(), |d| d.pr(gpui::px(crate::scrollbar::BAR_W)))
+                                .flex()
+                                .flex_col()
+                                .gap(ui(10.))
+                                .child(eyebrow(match paused.stage {
+                                    Stage::Request => tr!("The request, before the server gets it"),
+                                    Stage::Response => tr!("The response, before the app gets it"),
+                                    Stage::ToServer => {
+                                        tr!("A socket's message, before the server gets it")
+                                    }
+                                    Stage::ToApp => {
+                                        tr!("A socket's message, before the app gets it")
+                                    }
+                                }))
+                                .child(first_line)
+                                .when(!paused.stage.is_message(), |d| {
+                                    d.child(eyebrow(tr!("Headers")))
+                                        .child(field(&page.headers))
+                                        .child(eyebrow(tr!("Body")))
+                                })
+                                .when(paused.stage.is_message(), |d| {
+                                    d.child(eyebrow(tr!("Message")))
+                                })
+                                .child(field(&page.body))
+                                .children(
+                                    page.problem.clone().map(|problem| {
+                                        div().text_color(rgb(c.error)).child(problem)
+                                    }),
+                                )
+                                .child(
+                                    div()
+                                        .flex()
+                                        .flex_row()
+                                        .flex_wrap()
+                                        .gap(ui(8.))
+                                        .child(chip("paused-send", tr!("Send"), true).on_click(
+                                            cx.listener(|this, _, _, cx| this.send_paused(cx)),
+                                        ))
+                                        .child(
+                                            chip("paused-unchanged", tr!("Send as it came"), false)
+                                                .on_click(cx.listener(|this, _, _, cx| {
+                                                    this.send_paused_unchanged(cx)
+                                                })),
+                                        )
+                                        .child(chip("paused-drop", tr!("Drop"), false).on_click(
+                                            cx.listener(|this, _, _, cx| this.drop_paused(cx)),
+                                        )),
                                 ),
-                            )
-                            .child(
-                                chip("paused-drop", tr!("Drop"), false)
-                                    .on_click(cx.listener(|this, _, _, cx| this.drop_paused(cx))),
-                            ),
+                        ),
                     )
                     .into_any_element()
             }
         };
 
         let count = page.held.len();
+        let list_bars = self.page_bars.paused_list.clone();
         div()
             .flex_1()
             .min_h_0()
@@ -473,16 +490,32 @@ impl Traffic {
                     .flex_row()
                     .gap(ui(10.))
                     .when(count > 0, |d| {
+                        // As wide as it always was, and no wider: laid out by
+                        // hand rather than by `in_place`, which grows.
                         d.child(
                             div()
-                                .id("paused-list")
+                                .relative()
                                 .w(ui(320.))
                                 .flex_shrink_0()
-                                .overflow_y_scroll()
+                                .min_h_0()
                                 .flex()
                                 .flex_col()
-                                .gap(ui(6.))
-                                .children(list),
+                                .child(
+                                    div()
+                                        .id("paused-list")
+                                        .flex_1()
+                                        .min_h_0()
+                                        .overflow_y_scroll()
+                                        .track_scroll(&list_bars.handle)
+                                        .when(list_bars.scrolls(), |d| {
+                                            d.pr(gpui::px(crate::scrollbar::BAR_W))
+                                        })
+                                        .flex()
+                                        .flex_col()
+                                        .gap(ui(6.))
+                                        .children(list),
+                                )
+                                .children(list_bars.bars()),
                         )
                     })
                     .child(editor),

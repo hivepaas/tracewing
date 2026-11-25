@@ -487,6 +487,7 @@ impl Traffic {
     /// The list of messages, narrowed by what is typed, in place of the body.
     pub(crate) fn render_read_as(&self, cx: &mut Context<Self>) -> Option<gpui::Div> {
         let c = colors();
+        let bars = self.page_bars.read_as.clone();
         let input = self.inspector.read_as.clone()?;
         let (host, path, side) = self.read_as_target()?;
         let chosen = self.protos.chosen(&host, &path, side == Side::Request);
@@ -557,54 +558,60 @@ impl Traffic {
                         .child(where_),
                 )
                 .child(
-                    div()
-                        .id("read-as-list")
-                        .flex_1()
-                        .min_h_0()
-                        .overflow_y_scroll()
-                        .flex()
-                        .flex_col()
-                        .gap(ui(1.))
-                        .child(
-                            line(
-                                "read-as-found".into(),
-                                tr!("Automatic (gRPC path or messageType)").into(),
-                                chosen.is_none(),
-                            )
-                            .font_family(crate::ui_font())
-                            .on_click(cx.listener(|this, _, _, cx| this.read_body_as(None, cx))),
-                        )
-                        .children(matching.into_iter().take(MESSAGES_SHOWN).enumerate().map(
-                            |(i, name)| {
-                                let on = chosen.as_deref() == Some(name.as_str());
-                                let picked = name.clone();
+                    bars.in_place(
+                        div()
+                            .id("read-as-list")
+                            .flex_1()
+                            .min_h_0()
+                            .overflow_y_scroll()
+                            .track_scroll(&bars.handle)
+                            .when(bars.scrolls(), |d| d.pr(gpui::px(crate::scrollbar::BAR_W)))
+                            .flex()
+                            .flex_col()
+                            .gap(ui(1.))
+                            .child(
                                 line(
-                                    ElementId::NamedInteger("read-as-message".into(), i as u64),
-                                    name.into(),
-                                    on,
+                                    "read-as-found".into(),
+                                    tr!("Automatic (gRPC path or messageType)").into(),
+                                    chosen.is_none(),
                                 )
-                                .on_click(cx.listener(
-                                    move |this, _, _, cx| {
-                                        this.read_body_as(Some(picked.clone()), cx)
-                                    },
-                                ))
-                            },
-                        ))
-                        .when(more > 0, |d| {
-                            d.child(
-                                div()
-                                    .px(ui(10.))
-                                    .py(ui(5.))
-                                    .text_size(ui(12.))
-                                    .text_color(rgb(c.muted))
-                                    .child(tr_n!(
-                                        more,
-                                        "and {count} more: type to narrow them",
-                                        "and {count} more: type to narrow them",
-                                        count = more
-                                    )),
+                                .font_family(crate::ui_font())
+                                .on_click(
+                                    cx.listener(|this, _, _, cx| this.read_body_as(None, cx)),
+                                ),
                             )
-                        }),
+                            .children(matching.into_iter().take(MESSAGES_SHOWN).enumerate().map(
+                                |(i, name)| {
+                                    let on = chosen.as_deref() == Some(name.as_str());
+                                    let picked = name.clone();
+                                    line(
+                                        ElementId::NamedInteger("read-as-message".into(), i as u64),
+                                        name.into(),
+                                        on,
+                                    )
+                                    .on_click(cx.listener(
+                                        move |this, _, _, cx| {
+                                            this.read_body_as(Some(picked.clone()), cx)
+                                        },
+                                    ))
+                                },
+                            ))
+                            .when(more > 0, |d| {
+                                d.child(
+                                    div()
+                                        .px(ui(10.))
+                                        .py(ui(5.))
+                                        .text_size(ui(12.))
+                                        .text_color(rgb(c.muted))
+                                        .child(tr_n!(
+                                            more,
+                                            "and {count} more: type to narrow them",
+                                            "and {count} more: type to narrow them",
+                                            count = more
+                                        )),
+                                )
+                            }),
+                    ),
                 ),
         )
     }

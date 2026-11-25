@@ -490,11 +490,15 @@ impl Traffic {
                 }
             }
         }
+        let bars = self.page_bars.setup.clone();
         div()
             .id("setup")
             .flex_1()
             .min_h_0()
             .overflow_y_scroll()
+            .track_scroll(&bars.handle)
+            // Room for the bar, only when there is one.
+            .when(bars.scrolls(), |d| d.pr(gpui::px(crate::scrollbar::BAR_W)))
             .flex()
             .flex_col()
             .gap(ui(10.))

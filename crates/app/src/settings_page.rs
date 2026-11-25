@@ -1885,13 +1885,18 @@ impl Traffic {
             _ => None,
         };
         let undo = page.undo.is_some();
+        // Each part keeps where it was scrolled to: a handle of its own, as
+        // its own element id gave it before there was a bar.
+        let bars = self.page_bars.settings[section as usize].clone();
         let content = div()
-            // Each part keeps where it was scrolled to.
             .id(("settings", section as usize))
             .flex_1()
             .min_w_0()
             .min_h_0()
             .overflow_y_scroll()
+            .track_scroll(&bars.handle)
+            // Room for the bar, only when there is one.
+            .when(bars.scrolls(), |d| d.pr(gpui::px(crate::scrollbar::BAR_W)))
             .flex()
             .flex_col()
             .gap(ui(10.))
@@ -1935,7 +1940,7 @@ impl Traffic {
             .flex_row()
             .gap(ui(10.))
             .child(menu)
-            .child(content)
+            .child(bars.in_place(content))
     }
 
     /// The fields that are always read a certain way, to look over and to

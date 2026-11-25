@@ -255,6 +255,30 @@ impl Scrolled {
         }
     }
 
+    /// Whether there is more than fits up and down, as last laid out: for an
+    /// area that leaves room beside its text for a bar only when it has one.
+    pub fn scrolls(&self) -> bool {
+        self.handle.max_offset().y > px(0.)
+    }
+
+    /// `area` -- a flex child that grows into its parent (`flex_1`) and
+    /// scrolls up and down with [`Scrolled::handle`] -- with its bars over
+    /// it, in the room the area took. For a page, whose scrolling area is
+    /// laid out among others rather than filling a box of its own as
+    /// [`Scrolled::around`]'s does.
+    pub fn in_place(&self, area: impl IntoElement) -> AnyElement {
+        div()
+            .relative()
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_w_0()
+            .min_h_0()
+            .child(area)
+            .children(self.bars())
+            .into_any_element()
+    }
+
     /// `area`, which scrolls with [`Scrolled::handle`], with its bars over it.
     pub fn around(&self, area: impl IntoElement) -> AnyElement {
         div()
