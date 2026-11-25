@@ -75,6 +75,7 @@ use std::{
     path::{Path, PathBuf},
     process::{Child, ChildStdin, Command, Stdio},
     sync::Arc,
+    time::Duration,
 };
 
 use tracewing_proxy::ca::LocalCa;
@@ -365,8 +366,36 @@ pub enum Recovered {
     StillRunning,
 }
 
+/// How long a recovery waits for another one on the same folder to finish:
+/// a few `networksetup` calls a service on macOS take a second or two.
+const RECOVERY_TURN: Duration = Duration::from_secs(30);
+
 /// Puts back the settings in the journal, if there is one.
+///
+/// One at a time for each folder (`alive::take_turn`): the watchdog, the
+/// launchd waiter or the timer, `tracewing recover` and the app starting
+/// again can all be here at once, and the second must not start while the
+/// first is halfway through.
 pub fn recover(data_dir: &Path) -> Result<Recovered> {
+    let _turn = match alive::take_turn(data_dir, RECOVERY_TURN) {
+        Ok(Some(turn)) => Some(turn),
+        Ok(None) => {
+            if data_dir.exists() {
+                tracing::warn!(
+                    "another recovery of {} is still going after {RECOVERY_TURN:?}; going ahead",
+                    data_dir.display()
+                );
+            }
+            None
+        }
+        Err(e) => {
+            tracing::warn!(
+                "no turn to recover {}: {e}; going ahead",
+                data_dir.display()
+            );
+            None
+        }
+    };
     let path = data_dir.join(JOURNAL_FILE);
     let Ok(text) = fs::read_to_string(&path) else {
         // Nothing of ours is pending, so neither net has anything to put

@@ -11,7 +11,11 @@
 //! else's program.
 
 use anyhow::{Context, Result};
-use std::{fs, io, path::Path};
+use std::{
+    fs, io,
+    path::Path,
+    time::{Duration, Instant},
+};
 
 pub(crate) const ALIVE_FILE: &str = "sysproxy.alive";
 
@@ -22,6 +26,47 @@ pub struct Alive(
     #[allow(dead_code)]
     fs::File,
 );
+
+/// The lock one recovery holds while it puts the settings back.
+pub(crate) const RECOVERY_FILE: &str = "sysproxy.recovering";
+
+/// Waits up to `limit` for the turn to put the settings back, and holds it
+/// until this is dropped.
+///
+/// More than one process recovers the same folder at the same moment: on
+/// macOS the watchdog and the launchd waiter both wake as the app goes. The
+/// one that came second found the other's work half done, took the service
+/// for somebody else's and left its bypass list as tracewing's, and on its
+/// way out ended the other before that one reached the list (macOS runner,
+/// run 45576493603). With the turn, whoever comes second finds the journal
+/// gone and nothing left to do.
+///
+/// `None` when the turn did not come within `limit`: a recovery stuck that
+/// long is not one to wait behind for ever, and going ahead is how things
+/// were before there was a turn. Also `None` for a folder that does not
+/// exist, which holds no journal to recover.
+pub(crate) fn take_turn(data_dir: &Path, limit: Duration) -> io::Result<Option<Alive>> {
+    let path = data_dir.join(RECOVERY_FILE);
+    let until = Instant::now() + limit;
+    loop {
+        match open(&path, true) {
+            Ok(file) => match lock(&file) {
+                Ok(()) => return Ok(Some(Alive(file))),
+                Err(e) if e.kind() != io::ErrorKind::WouldBlock => return Err(e),
+                Err(_) => {}
+            },
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
+            // Windows: somebody else has the file open, which is the turn.
+            #[cfg(windows)]
+            Err(e) if e.raw_os_error() == Some(32) => {}
+            Err(e) => return Err(e),
+        }
+        if Instant::now() >= until {
+            return Ok(None);
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
 
 /// Takes the lock for this process. An error means somebody else holds it,
 /// which is another tracewing with the same data folder.
@@ -219,6 +264,57 @@ mod tests {
         );
         // It let the lock go again on its way out, for the next tracewing.
         assert!(gone_within(&dir, Duration::from_secs(5)));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    /// Two recoveries of one folder: the second starts only once the first
+    /// has finished, and never halfway through it.
+    #[test]
+    fn a_recovery_waits_for_the_one_before_it() {
+        let dir = folder("turn");
+        let first = take_turn(&dir, Duration::from_secs(5)).unwrap();
+        assert!(first.is_some(), "nobody else is recovering");
+
+        let (done, ended) = std::sync::mpsc::channel();
+        let waiting = dir.clone();
+        std::thread::spawn(move || {
+            let second = take_turn(&waiting, Duration::from_secs(30));
+            done.send(second.map(|turn| turn.is_some()).ok())
+        });
+        assert!(
+            ended.recv_timeout(Duration::from_millis(300)).is_err(),
+            "the second waits for as long as the first holds the turn"
+        );
+        drop(first);
+        assert_eq!(
+            ended.recv_timeout(Duration::from_secs(10)),
+            Ok(Some(true)),
+            "and has it once the first lets it go"
+        );
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    /// One stuck for longer than the limit is gone ahead of rather than
+    /// waited on for ever.
+    #[test]
+    fn a_turn_not_given_in_time_is_not_waited_for() {
+        let dir = folder("stuck");
+        let stuck = take_turn(&dir, Duration::from_secs(5)).unwrap();
+        assert!(stuck.is_some());
+        let started = Instant::now();
+        assert!(
+            take_turn(&dir, Duration::from_millis(200))
+                .unwrap()
+                .is_none()
+        );
+        assert!(started.elapsed() < Duration::from_secs(5));
+        drop(stuck);
+        // A folder that is not there holds no journal to wait over.
+        assert!(
+            take_turn(&dir.join("not-there"), Duration::from_secs(5))
+                .unwrap()
+                .is_none()
+        );
         fs::remove_dir_all(&dir).ok();
     }
 
