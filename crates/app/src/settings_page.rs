@@ -946,18 +946,21 @@ impl Traffic {
             }))
     }
 
-    /// What the open tab's way in catches, what it does not, and whatever it
-    /// is turned on or off by that is not a setting in `settings.toml`.
+    /// What a way in catches and what it does not, as its tab says them.
     ///
-    /// The second line is the one worth the room. Somebody whose Java program
-    /// shows nothing has a way in that cannot catch it, not a tracewing that
-    /// is broken, and the tab is where that can be said before the issue
-    /// tracker hears about it.
-    fn render_way(&mut self, cx: &mut Context<Self>) -> gpui::Div {
-        let c = colors();
-        let way = self.layout.capture_way;
-        let addr = self.engine.addr.to_string();
-        let (catches, misses) = match way {
+    /// Out of the view for the same reason as [`trust_for`], and one more: the
+    /// Apps pair is the only one that turns on a setting rather than on the
+    /// platform, so it is the only one that can go stale while everything
+    /// still compiles -- and a pair asked for with the setting each way is
+    /// something a test can hold, where a reading of the window is not.
+    ///
+    /// Here, just above the view, rather than beside `trust_for`: the
+    /// message catalogues are in the order the code says them, and a pair of
+    /// some twenty-five sentences moved eight hundred lines up reorders every
+    /// one of fifteen files -- a diff nobody can review, in the files every
+    /// pull request touches.
+    fn catches_for(way: Way, addr: &str, http3: bool) -> (String, String) {
+        match way {
             Way::SystemProxy => (
                 tr!(
                     "Apps that use this computer's own proxy setting: most browsers, and anything on the system's networking."
@@ -983,7 +986,7 @@ impl Traffic {
             Way::OtherDevices => (
                 tr!(
                     "A phone or another computer on your network, once it is told {addr} as its proxy by hand.",
-                    addr = addr.clone()
+                    addr = addr.to_owned()
                 ),
                 tr!(
                     "Whatever on that device ignores its proxy setting, which on a phone is most apps: a tunnel catches those."
@@ -1018,15 +1021,61 @@ impl Traffic {
                     "UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead."
                 ),
             ),
+            // What this one catches is not fixed. "Read chosen programs'
+            // HTTP/3" (Settings > Network) sends a chosen program's QUIC to
+            // a door of tracewing's own instead of refusing it. Until 0.1.0
+            // this tab had one pair, and said UDP was never caught whatever
+            // the setting -- which denied in the present tense what the app
+            // was doing the moment that setting went on: the failure this
+            // file's other comments are about, in the one place that is a
+            // setting away rather than a platform away, so no `cfg!` would
+            // have caught it.
+            //
+            // Both pairs name HTTP/3 as what is refused and the rest of UDP
+            // as what is passed on, because those are two different fates:
+            // the stack turns away a datagram to port 443 (`datagrams.rs`),
+            // which is what makes a program fall back to HTTP/2, and only
+            // the rest goes through. The old sentence joined them with "so",
+            // as if passing UDP on were why HTTP/3 failed.
+            //
+            // The macOS arm above needs no such pair: `local_source::catching`
+            // is Windows and Linux only, so there is no HTTP/3 of ours to read
+            // there and "UDP, so HTTP/3" stays true however that setting is
+            // left.
+            Way::Apps if http3 => (
+                tr!(
+                    "Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose."
+                ),
+                tr!(
+                    "The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead."
+                ),
+            ),
             Way::Apps => (
                 tr!(
                     "Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose."
                 ),
                 tr!(
-                    "UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead."
+                    "HTTP/3, which is refused so that the program falls back to HTTP/2 (Settings › Network can read it instead); other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead."
                 ),
             ),
-        };
+        }
+    }
+
+    /// What the open tab's way in catches, what it does not, and whatever it
+    /// is turned on or off by that is not a setting in `settings.toml`.
+    ///
+    /// The second line is the one worth the room. Somebody whose Java program
+    /// shows nothing has a way in that cannot catch it, not a tracewing that
+    /// is broken, and the tab is where that can be said before the issue
+    /// tracker hears about it.
+    fn render_way(&mut self, cx: &mut Context<Self>) -> gpui::Div {
+        let c = colors();
+        let way = self.layout.capture_way;
+        let addr = self.engine.addr.to_string();
+        // Asked of `live` rather than of the stored settings because the
+        // setting applies at once, and this tab is read to find out what is
+        // happening now.
+        let (catches, misses) = Self::catches_for(way, &addr, self.engine.live.capture_http3());
         let (trusts, goes_to) = trust_for(way);
         // When this way in became able to deliver anything. A switch the
         // window owns is remembered when it is flipped; one that needs a
@@ -2440,6 +2489,49 @@ mod tests {
                 installs_here.then_some(SettingsSection::Certificates),
                 "{} points the wrong way",
                 way.name()
+            );
+        }
+    }
+
+    /// Of every pair a tab says, only the Apps one turns on a setting, and
+    /// only off macOS: "Read chosen programs' HTTP/3" sends a chosen
+    /// program's QUIC to tracewing instead of refusing it. Said flatly, the
+    /// tab denied in the present tense what the app was doing the moment
+    /// that setting went on -- shipped that way in 0.1.0, and nothing a
+    /// platform `cfg!` or a window shot would have caught, because both
+    /// states compile and both draw.
+    #[test]
+    fn the_apps_tab_says_whether_http3_is_being_read() {
+        let addr = "127.0.0.1:9090";
+        for way in Way::ALL {
+            let (off, on) = (
+                Traffic::catches_for(way, addr, false),
+                Traffic::catches_for(way, addr, true),
+            );
+            // macOS has no HTTP/3 of ours to read: `local_source::catching`
+            // is Windows and Linux only, so its tab must not move either.
+            if way != Way::Apps || cfg!(target_os = "macos") {
+                assert_eq!(
+                    off,
+                    on,
+                    "{} changes with a setting it has nothing to do with",
+                    way.name()
+                );
+                continue;
+            }
+            assert_ne!(
+                off.1, on.1,
+                "the Apps tab says the same about UDP either way"
+            );
+            assert!(
+                on.0.contains("HTTP/3"),
+                "the Apps tab does not say it is reading HTTP/3 while it is: {}",
+                on.0
+            );
+            assert!(
+                !off.0.contains("HTTP/3"),
+                "the Apps tab says it reads HTTP/3 while that is off: {}",
+                off.0
             );
         }
     }

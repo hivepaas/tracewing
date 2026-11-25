@@ -2344,11 +2344,17 @@ t30f507c6 = Усе, що вибраний застосунок надсилає 
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, тобто HTTP/3; з'єднання з цим самим комп'ютером, які macOS не передає; і go run, який щоразу збирає програму в новому місці: додайте натомість теку, куди пише go build -o.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = Усе, що вибрана програма надсилає через TCP, читає вона налаштування проксі чи ні, і її HTTP/3 також: трафік цього комп'ютера йде через власний адаптер tracewing, а зберігаються вибрані вами програми.
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = HTTP/3 програми, якої ніхто не вибирав: він отримує відмову, і програма повертається до HTTP/2; решта UDP, що проходить наскрізь; з'єднання із самим цим комп'ютером, які його не залишають; і go run, який щоразу збирає програму в новому місці: додайте натомість теку, куди пише go build -o.
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = Усе, що вибрана програма надсилає через TCP, читає вона налаштування проксі чи ні: трафік цього комп'ютера йде через власний адаптер tracewing, а зберігаються вибрані вами програми.
 
-# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
-t3c7f9a98 = UDP, що проходить наскрізь, тож сервер із пропозицією HTTP/3 отримує відмову і програма повертається до HTTP/2; з'єднання із самим цим комп'ютером, які його не залишають; і go run, який щоразу збирає програму в новому місці: додайте натомість теку, куди пише go build -o.
+# HTTP/3, which is refused so that the program falls back to HTTP/2 (Settings › Network can read it instead); other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+tef2b5781 = HTTP/3, що отримує відмову, і програма повертається до HTTP/2 (натомість його можна читати: Налаштування › Мережа); решта UDP, що проходить наскрізь; з'єднання із самим цим комп'ютером, які його не залишають; і go run, який щоразу збирає програму в новому місці: додайте натомість теку, куди пише go build -o.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Відколи це ввімкнено, на порт проксі нічого не надійшло — ні через системний проксі, ні через браузер самого tracewing, ні через термінал: усі вони входять там. Програма, якій указали проксі і яка його нехтує, виглядає саме так.

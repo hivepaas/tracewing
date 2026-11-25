@@ -2274,11 +2274,17 @@ t30f507c6 = Tutto ciò che un'app scelta invia via TCP, che legga o no un'impost
 # UDP, so HTTP/3; connections to this computer itself, which macOS does not hand over; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
 t767f449d = UDP, quindi HTTP/3; le connessioni verso questo stesso computer, che macOS non passa; e go run, che crea il suo programma in un posto nuovo ogni volta: aggiungi invece la cartella in cui scrive go build -o.
 
+# Whatever a chosen program sends over TCP, whether or not it reads any proxy setting, and its HTTP/3 with it: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
+tfad9bd80 = Tutto ciò che un programma scelto manda su TCP, che legga o no un'impostazione di proxy, e anche il suo HTTP/3: il traffico di questo computer passa per l'adattatore di tracewing, e ciò che viene tenuto sono i programmi che hai scelto.
+
+# The HTTP/3 of a program nobody chose, which is refused so that it falls back to HTTP/2; other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+t4e8ad2a0 = L'HTTP/3 di un programma che nessuno ha scelto, che viene rifiutato e perciò torna a HTTP/2; il resto dell'UDP, che passa così com'è; le connessioni al computer stesso, che non lo lasciano mai; e go run, che compila il programma ogni volta altrove: aggiungi invece la cartella in cui scrive go build -o.
+
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = Tutto ciò che un programma scelto manda su TCP, che legga o no un'impostazione di proxy: il traffico di questo computer passa per l'adattatore di tracewing, e ciò che viene tenuto sono i programmi che hai scelto.
 
-# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
-t3c7f9a98 = UDP, che passa così com'è, per cui un server che offre HTTP/3 viene rifiutato e il programma torna a HTTP/2; le connessioni al computer stesso, che non lo lasciano mai; e go run, che compila il programma ogni volta altrove: aggiungi invece la cartella in cui scrive go build -o.
+# HTTP/3, which is refused so that the program falls back to HTTP/2 (Settings › Network can read it instead); other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+tef2b5781 = HTTP/3, che viene rifiutato e perciò il programma torna a HTTP/2 (Impostazioni › Rete può leggerlo invece); il resto dell'UDP, che passa così com'è; le connessioni al computer stesso, che non lo lasciano mai; e go run, che compila il programma ogni volta altrove: aggiungi invece la cartella in cui scrive go build -o.
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = Dall'attivazione non è arrivato nulla sulla porta del proxy: né dal proxy di sistema, né da un browser di tracewing, né da un terminale, che entrano tutti da lì. Un programma a cui è stato indicato il proxy e lo ignora si presenta esattamente così.
