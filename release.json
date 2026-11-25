@@ -1,6 +1,6 @@
 {
   "channels": {
-    "stable": "v0.1.1"
+    "stable": "v0.1.2"
   },
   "releases": {
     "v0.1.0": {
@@ -70,6 +70,41 @@
         "rpm_aarch64": {
           "file": "tracewing_0.1.1_aarch64.rpm",
           "sha256": "13848dc74bfe8b09749829138c18facfd78d6a141811ab0b40b48e0f1fd58dd0"
+        }
+      }
+    },
+    "v0.1.2": {
+      "releaseDate": "2026-11-25",
+      "archives": {
+        "macos_aarch64": {
+          "file": "tracewing_0.1.2_macos_aarch64.app.tar.gz",
+          "sha256": "f5768c4b88ae319e56fa94b3fcd86553d4556f3f6ce5d9176a23c8ff469ca39f"
+        },
+        "macos_x86_64": {
+          "file": "tracewing_0.1.2_macos_x86_64.app.tar.gz",
+          "sha256": "25384dadf8b292f88099d2fb305b7d0d4d51d82d288d14270374b31272da4022"
+        },
+        "windows_x86_64": {
+          "file": "tracewing_0.1.2_windows_x86_64-setup.exe",
+          "sha256": "58efdc1d38909dd86a744b1792d6fd354c8cffc7cf7dd206fe884fcb028f968e"
+        }
+      },
+      "packages": {
+        "deb_x86_64": {
+          "file": "tracewing_0.1.2_amd64.deb",
+          "sha256": "c404e6c309c4a76fcee752915e4da9e45949359b7d77004bdbc80dc5cf1e38f5"
+        },
+        "deb_aarch64": {
+          "file": "tracewing_0.1.2_arm64.deb",
+          "sha256": "deb92797a02d7ef1a6a9d42f57938cf7bc08751b82daa6a8a2c163d9842e8ce3"
+        },
+        "rpm_x86_64": {
+          "file": "tracewing_0.1.2_x86_64.rpm",
+          "sha256": "818c108d4b75c85b7acf2f109ccf070ed7dbed2af0a11ccc1d7245e65622bc23"
+        },
+        "rpm_aarch64": {
+          "file": "tracewing_0.1.2_aarch64.rpm",
+          "sha256": "44af3fe4af3529d2815ffad3a5c5d29f403494f9073fd134516cbf6122507c5b"
         }
       }
     }
