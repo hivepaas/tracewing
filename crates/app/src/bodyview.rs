@@ -8,7 +8,7 @@ mod find;
 use find::found_style;
 pub use find::{FOUND_MAX, FindCount};
 
-use crate::scrollbar::Scrolled;
+use crate::scrollbar::{Axis, Scrolled};
 use crate::text_size::ui;
 use crate::{
     body::{Body, Kind, Line, Token},
@@ -74,7 +74,6 @@ const FOLD_TEXT: f32 = 24.;
 const INDENT_W: f32 = 14.;
 /// Past this the indent says what it is instead of pushing the text away.
 const INDENT_MAX: u32 = 40;
-const THUMB_MIN: f32 = 28.;
 const BAR_W: f32 = crate::scrollbar::BAR_W;
 /// The rounding of the well a body sits in, which the body reaches the bottom of.
 const CORNER: f32 = 16.;
@@ -264,7 +263,6 @@ pub struct BodyView {
     /// How much larger than the design the window draws: rows are this much
     /// taller, as the text in them is.
     scale: f32,
-    dragging: bool,
     /// How far the lines are scrolled sideways, in pixels. Text that wraps
     /// never is.
     scroll_x: f32,
@@ -274,9 +272,8 @@ pub struct BodyView {
     widest: Cell<f32>,
     /// A character's width in the font the lines are drawn in, as last drawn.
     char_w: f32,
-    /// The sideways thumb's drag: where the pointer and the lines were when
-    /// it was pressed.
-    dragging_x: Option<(f32, f32)>,
+    /// Its bars' thumb, while one is held.
+    bar_drag: crate::scrollbar::Drag,
     /// Where the view was last drawn: the height sets the scroll range, and a drag
     /// on the bar is measured from its top.
     bounds: Rc<Cell<Bounds<Pixels>>>,
@@ -356,11 +353,10 @@ impl BodyView {
             folds: Folds::default(),
             mode: BodyMode::Pretty,
             sub: 0.,
-            dragging: false,
             scroll_x: 0.,
             widest: Cell::new(0.),
             char_w: 7.2,
-            dragging_x: None,
+            bar_drag: Default::default(),
             bounds: Rc::new(Cell::new(Bounds::default())),
             select: Selection::default(),
             focus,
@@ -1142,7 +1138,6 @@ impl BodyView {
         (self.widest.get() + 2. * self.char_w - self.text_w()).max(0.)
     }
 
-    /// The sideways thumb dragged to `x`, or pressed there.
     /// Where the sideways bar starts, from the pane's left, and how long it
     /// is: past the rounded corner, up to the bar that goes up and down.
     fn across_track(&self) -> (f32, f32) {
@@ -1153,33 +1148,46 @@ impl BodyView {
         )
     }
 
-    fn drag_x_to(&mut self, x: f32, cx: &mut Context<Self>) {
-        let Some((x0, from)) = self.dragging_x else {
-            return;
-        };
-        let (_, view) = self.across_track();
-        if let Some((long, _)) = crate::scrollbar::thumb(view, self.max_x(), self.scroll_x) {
-            let per = self.max_x() / (view - long).max(1.);
-            self.scroll_x = (from + (x - x0) * per).clamp(0., self.max_x());
-            cx.notify();
+    /// How far the body scrolls that way at most, and how far it has, as
+    /// its bars see it.
+    fn bar_reach(&self, axis: Axis) -> (f32, f32) {
+        match axis {
+            Axis::Across => (self.max_x(), self.scroll_x),
+            Axis::Down if self.wrapping() => {
+                // The rows of the lines out of view are not known: every
+                // line counted as many as the one at the top has, as the
+                // thumb always counted them.
+                let rows = self
+                    .lines()
+                    .saturating_mul(self.rows_of(self.place.line) as u64);
+                let max = (rows as f32 * self.line_h() - self.height()).max(0.);
+                (max, self.wrapped_share() as f32 * max)
+            }
+            Axis::Down => (self.max_position() as f32, self.position() as f32),
         }
     }
 
-    fn drag_to(&mut self, y: Pixels, cx: &mut Context<Self>) {
-        let track = f64::from(self.height() - THUMB_MIN).max(1.);
-        let inside = f32::from(y - self.bounds.get().origin.y);
-        let at = ((f64::from(inside) - f64::from(THUMB_MIN) / 2.) / track).clamp(0., 1.);
-        if self.wrapping() {
-            let lines = self.lines();
-            let mut rows = |line| self.rows_of(line);
-            let max = self.last_place().fraction(&mut rows);
-            let place = Place::at_fraction(at * max, lines, &mut rows);
-            self.place = place;
-            self.sub = 0.;
-        } else {
-            self.set_position(at * self.max_position());
+    /// The body scrolled to `to` that way, in what [`BodyView::bar_reach`]
+    /// counts in.
+    fn bar_to(&mut self, axis: Axis, to: f32) {
+        match axis {
+            Axis::Across => self.scroll_x = to.clamp(0., self.max_x()),
+            Axis::Down if self.wrapping() => {
+                let (max, _) = self.bar_reach(axis);
+                let share = if max > 0. {
+                    f64::from(to / max).clamp(0., 1.)
+                } else {
+                    0.
+                };
+                let lines = self.lines();
+                let mut rows = |line| self.rows_of(line);
+                let most = self.last_place().fraction(&mut rows);
+                let place = Place::at_fraction(share * most, lines, &mut rows);
+                self.place = place;
+                self.sub = 0.;
+            }
+            Axis::Down => self.set_position(f64::from(to)),
         }
-        cx.notify();
     }
 
     /// As many characters a row as the view is wide. The place in view stays
@@ -1878,8 +1886,6 @@ impl BodyView {
         // Enough for any size of the panel; what does not fit is clipped.
         self.scale = crate::text_size::scale(window);
         let in_view = (f32::from(window.viewport_size().height) / self.line_h()).ceil() as u64 + 1;
-        let list_height = self.height();
-        let lines = self.lines();
         let wrapping = self.wrapping();
         if wrapping {
             self.fit_cols(window);
@@ -1887,32 +1893,15 @@ impl BodyView {
         } else {
             self.char_w = mono_char_w(window, 12. * self.scale);
         }
-        let (rows, thumb, share) = if wrapping {
-            // Every line's rows are not known: as many as the line in view
-            // has, for each.
-            let rows_at_top = self.rows_of(self.place.line) as u64;
-            (
-                self.wrapped_rows_in_view(in_view, cx),
-                thumb_size(
-                    list_height,
-                    lines.saturating_mul(rows_at_top),
-                    self.line_h(),
-                ),
-                self.wrapped_share(),
-            )
+        let rows = if wrapping {
+            self.wrapped_rows_in_view(in_view, cx)
         } else {
-            let max = self.max_position();
-            (
-                self.rows_in_view(in_view, cx),
-                thumb_size(list_height, self.folds.rows(lines), self.line_h()),
-                if max > 0. { self.position() / max } else { 0. },
-            )
+            self.rows_in_view(in_view, cx)
         };
-        let thumb_top = share as f32 * (list_height - thumb);
         // Sideways, once the lines in view have said how wide they are.
         self.scroll_x = self.scroll_x.min(self.max_x());
-        let (across_start, across_view) = self.across_track();
-        let across = crate::scrollbar::thumb(across_view, self.max_x(), self.scroll_x);
+        let (across_start, _) = self.across_track();
+        let bars = BodyScroll(cx.entity().downgrade());
         let bounds = Rc::clone(&self.bounds);
         let me = cx.entity().downgrade();
         let follow = select::follow_drag(&self.select, {
@@ -2120,21 +2109,9 @@ impl BodyView {
                     cx.notify();
                 }),
             )
-            .on_mouse_move(cx.listener(|this, event: &gpui::MouseMoveEvent, _, cx| {
-                if this.dragging {
-                    this.drag_to(event.position.y, cx);
-                }
-                if this.dragging_x.is_some() {
-                    this.drag_x_to(f32::from(event.position.x), cx);
-                }
-            }))
             .on_mouse_up(
                 gpui::MouseButton::Left,
                 cx.listener(|this, e: &gpui::MouseUpEvent, _, cx| {
-                    this.dragging = false;
-                    if this.dragging_x.take().is_some() {
-                        cx.notify();
-                    }
                     // A press that went nowhere, inside a value: the whole
                     // value is taken and read, so that nobody has to drag
                     // across a JWT exactly to have it read. A drag is left
@@ -2172,90 +2149,42 @@ impl BodyView {
             )
             .children(follow)
             .children(menu)
+            // The body's bars are every other area's: what differs is only
+            // what they scroll, which is lines up and down.
+            .child(crate::scrollbar::bar(
+                Axis::Down,
+                bars.clone(),
+                Rc::clone(&self.bar_drag),
+            ))
+            // Sideways, past the pane's rounded corner.
             .child(
-                div()
-                    .id("body-bar")
-                    .absolute()
-                    .top_0()
-                    .bottom_0()
-                    .right_0()
-                    .w(px(BAR_W))
-                    .cursor(gpui::CursorStyle::Arrow)
-                    .on_mouse_down(
-                        gpui::MouseButton::Left,
-                        cx.listener(|this, event: &gpui::MouseDownEvent, _, cx| {
-                            // The bar's, not the start of a selection.
-                            cx.stop_propagation();
-                            this.dragging = true;
-                            this.drag_to(event.position.y, cx);
-                        }),
-                    )
-                    // None when every line fits, as the other bars.
-                    .when(thumb < list_height, |d| {
-                        d.child(
-                            div()
-                                .absolute()
-                                .top(px(thumb_top))
-                                .h(px(thumb))
-                                .left(px((BAR_W - crate::scrollbar::THUMB_W) / 2.))
-                                .w(px(crate::scrollbar::THUMB_W))
-                                .rounded(px(crate::scrollbar::THUMB_W / 2.))
-                                .bg(rgb(c.splitter)),
-                        )
-                    }),
+                crate::scrollbar::bar(Axis::Across, bars, Rc::clone(&self.bar_drag))
+                    .left(px(across_start)),
             )
-            .when_some(across, |d, (long, at)| {
-                let held = self.dragging_x.is_some();
-                d.child(
-                    div()
-                        .id("body-bar-x")
-                        .absolute()
-                        .left(px(across_start))
-                        .right(px(BAR_W))
-                        .bottom_0()
-                        .h(px(BAR_W))
-                        .cursor(gpui::CursorStyle::Arrow)
-                        .on_mouse_down(
-                            gpui::MouseButton::Left,
-                            cx.listener(move |this, event: &gpui::MouseDownEvent, _, cx| {
-                                // The bar's, not the start of a selection.
-                                cx.stop_propagation();
-                                let x = f32::from(event.position.x - this.bounds.get().left())
-                                    - across_start;
-                                // A press off the thumb brings its middle there first.
-                                if x < at || x > at + long {
-                                    let track = (across_view - long).max(1.);
-                                    let max = this.max_x();
-                                    this.scroll_x =
-                                        (max * ((x - long / 2.).max(0.) / track)).clamp(0., max);
-                                }
-                                this.dragging_x =
-                                    Some((f32::from(event.position.x), this.scroll_x));
-                                cx.notify();
-                            }),
-                        )
-                        .child(
-                            div()
-                                .absolute()
-                                .left(px(at))
-                                .w(px(long))
-                                // On the pane's bottom edge.
-                                .bottom_0()
-                                .h(px(crate::scrollbar::THUMB_W))
-                                .rounded(px(crate::scrollbar::THUMB_W / 2.))
-                                .bg(rgb(if held { c.muted } else { c.splitter })),
-                        ),
-                )
-            })
     }
 }
 
-fn thumb_size(list_height: f32, lines: u64, line_h: f32) -> f32 {
-    let content = lines as f32 * line_h;
-    if content <= list_height {
-        list_height
-    } else {
-        (list_height * list_height / content).max(THUMB_MIN)
+/// A body, as its bars see it: up and down by its rows, sideways by its
+/// widest line. It drew bars of its own because it goes by lines rather
+/// than by a handle's offset; [`BodyView::bar_reach`] is that difference,
+/// and the drawing is the bar every other area has.
+#[derive(Clone)]
+struct BodyScroll(gpui::WeakEntity<BodyView>);
+
+impl crate::scrollbar::Scrolls for BodyScroll {
+    fn reach(&self, axis: Axis, cx: &gpui::App) -> (f32, f32) {
+        self.0
+            .upgrade()
+            .map_or((0., 0.), |body| body.read(cx).bar_reach(axis))
+    }
+
+    fn scroll_to(&self, axis: Axis, to: f32, cx: &mut gpui::App) {
+        if let Some(body) = self.0.upgrade() {
+            body.update(cx, |body, cx| {
+                body.bar_to(axis, to);
+                cx.notify();
+            });
+        }
     }
 }
 

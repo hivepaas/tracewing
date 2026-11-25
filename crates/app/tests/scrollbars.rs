@@ -266,3 +266,122 @@ fn a_part_longer_than_its_pane_has_a_bar_that_drags_it() {
     drop(cx);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// The flow list's bar is the one every area has, and a drag on it stops the
+/// list following the newest flow, as a wheel does. The list once drew a bar
+/// of its own for exactly this: a bar that moved the handle straight would
+/// leave the list following, and the next flow to arrive would pull it back
+/// to the bottom out from under the hand that had just moved it.
+///
+/// Claims `ports: 20_720..20_730` for its proxy, the next ten free.
+#[test]
+fn dragging_the_lists_bar_stops_it_following_the_newest_flow() {
+    let _ = tracewing_proxy::crypto_provider().install_default();
+    let dir = std::env::temp_dir().join(format!("tracewing-list-bar-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let listener = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .unwrap();
+    let origin = listener.local_addr().unwrap().port();
+    runtime.spawn(tracewing_dev::playground::serve(listener));
+    let engine = Engine::start(EngineOptions {
+        data_dir: dir.clone(),
+        settings: StorageSettings {
+            disk_reserve_mib: 1,
+            ..StorageSettings::default()
+        },
+        rules: Default::default(),
+        traffic_rules: Default::default(),
+        ports: 20_720..20_730,
+        extra_roots: Vec::new(),
+        key_store: Default::default(),
+        find_apps: false,
+    })
+    .unwrap();
+    let proxy = engine.addr;
+    let text = Arc::new(gpui_wgpu::CosmicTextSystem::new(tracewing::FONT));
+    let mut cx = HeadlessAppContext::with_platform(text, Arc::new(tracewing::Assets), || {
+        gpui_platform::current_headless_renderer()
+    });
+    cx.update(tracewing::load_fonts);
+    let data_dir = dir.clone();
+    let main: WindowHandle<Traffic> = cx
+        .open_window(size(px(1440.), px(900.)), move |window, cx| {
+            cx.new(|cx| Traffic::new(engine, &data_dir, window, cx))
+        })
+        .unwrap();
+    main.update(&mut cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
+        .unwrap();
+
+    let client = reqwest::Client::builder()
+        .proxy(reqwest::Proxy::all(format!("http://{proxy}")).unwrap())
+        .build()
+        .unwrap();
+    let send = |from: usize, to: usize| {
+        runtime.block_on(async {
+            for i in from..to {
+                client
+                    .get(format!("http://localhost:{origin}/json?n={i}"))
+                    .send()
+                    .await
+                    .unwrap()
+                    .bytes()
+                    .await
+                    .unwrap();
+            }
+        })
+    };
+    send(0, 80);
+    wait_for(&mut cx, main, "eighty flows", |view| view.count() >= 80);
+    // Drawn again: the list knows its height, and the bar its thumb, once
+    // the list has been laid out.
+    main.update(&mut cx, |_, window, _| window.refresh())
+        .unwrap();
+    cx.run_until_parked();
+    let at = |cx: &mut HeadlessAppContext| {
+        main.update(cx, |view, _, _| {
+            let (at, list) = view.list_at();
+            (at, list, view.max_scroll(), view.following())
+        })
+        .unwrap()
+    };
+    let (start, list, max, following) = at(&mut cx);
+    assert!(max > 0., "eighty flows are more than fit");
+    assert!(following, "a list nobody has moved follows the newest flow");
+    assert!(
+        (start - max).abs() < 1.,
+        "so it starts at its bottom: {start} of {max}"
+    );
+
+    // The thumb, at the bottom of the bar while the list follows, taken
+    // hold of and dragged to the top.
+    let x = list.right() - px(tracewing::scrollbar::BAR_W / 2.);
+    common::drag(
+        &mut cx,
+        main,
+        point(x, list.bottom() - px(8.)),
+        point(x, list.top() + px(8.)),
+    );
+    let (moved, _, _, following) = at(&mut cx);
+    assert!(!following, "the drag stopped the list following");
+    assert!(
+        moved < max / 2.,
+        "the drag took the list up: {moved} of {max}"
+    );
+    // Still under the pointer, let go: the thumb as wide as it grows.
+    shot(&mut cx, main.into(), "145-list-bar-under-the-pointer");
+
+    // Another flow: the list stays where the hand left it.
+    send(80, 81);
+    wait_for(&mut cx, main, "the eighty-first flow", |view| {
+        view.count() >= 81
+    });
+    let (after, _, _, _) = at(&mut cx);
+    assert_eq!(after, moved, "a new flow pulled the list back down");
+    let _ = std::fs::remove_dir_all(&dir);
+}
