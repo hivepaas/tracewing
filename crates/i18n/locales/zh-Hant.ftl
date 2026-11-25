@@ -2158,8 +2158,8 @@ t4e8ad2a0 = 沒有被選取的程式的 HTTP/3 會被拒絕，該程式退回 HT
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = 所選程式透過 TCP 送出的一切，無論它是否讀取代理設定：這台電腦的流量會經過 tracewing 自己的介面卡，而被保留的是你選擇的程式。
 
-# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
-t3c7f9a98 = UDP 會直接通過，因此提供 HTTP/3 的伺服器會被拒絕，程式退回 HTTP/2；送往這台電腦自身的連線從不離開本機；還有 go run，它每次都把程式編譯到新位置：請改為加入 go build -o 寫入的資料夾。
+# HTTP/3, which is refused so that the program falls back to HTTP/2 (Settings › Network can read it instead); other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+tef2b5781 = HTTP/3 會被拒絕，程式退回 HTTP/2（也可以改在 設定 › 網路 中讀取它）；其餘 UDP 會直接通過；送往這台電腦自身的連線從不離開本機；還有 go run，它每次都把程式編譯到新位置：請改為加入 go build -o 寫入的資料夾。
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = 自從開啟以來，代理連接埠上什麼都沒到過 — 系統代理、tracewing 自己的瀏覽器、終端機都從那裡進來，這三樣都沒有。一個被指定走代理卻忽略它的程式，看起來正是這樣。

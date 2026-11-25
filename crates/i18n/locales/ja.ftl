@@ -2158,8 +2158,8 @@ t4e8ad2a0 = 誰も選んでいないプログラムの HTTP/3 は拒否され、
 # Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose.
 t980d767e = 選んだプログラムが TCP で送るものすべて。プロキシ設定を読むかどうかは関係ありません。このコンピュータの通信は tracewing 自身のアダプターを通り、保持されるのは選んだプログラムです。
 
-# UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
-t3c7f9a98 = UDP はそのまま通過するため、HTTP/3 を提示するサーバーは拒否され、プログラムは HTTP/2 に戻ります。このコンピュータ自身への接続も外に出ません。また go run は毎回別の場所にプログラムを作るので、代わりに go build -o の書き込み先フォルダーを追加してください。
+# HTTP/3, which is refused so that the program falls back to HTTP/2 (Settings › Network can read it instead); other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead.
+tef2b5781 = HTTP/3 は拒否され、プログラムは HTTP/2 に戻ります（代わりに 設定 › ネットワーク で読むこともできます）。それ以外の UDP はそのまま通過します。このコンピュータ自身への接続も外に出ません。また go run は毎回別の場所にプログラムを作るので、代わりに go build -o の書き込み先フォルダーを追加してください。
 
 # Nothing has arrived on the proxy port since this was switched on — not by the system proxy, a browser of tracewing's own, or a terminal, which all come in there. A program that was told to use the proxy and ignores it looks exactly like this.
 t4294729b = オンにしてから、プロキシのポートには何も届いていません。システムプロキシ、tracewing 専用のブラウザー、ターミナルはどれもそこへ入ってきますが、そのいずれからも届いていません。プロキシを使うよう指定したのに無視するプログラムは、まさにこう見えます。

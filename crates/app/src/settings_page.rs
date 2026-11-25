@@ -1023,12 +1023,20 @@ impl Traffic {
             ),
             // What this one catches is not fixed. "Read chosen programs'
             // HTTP/3" (Settings > Network) sends a chosen program's QUIC to
-            // a door of tracewing's own instead of refusing it, and the line
-            // below says UDP is never caught. Said flatly, it denied in the
-            // present tense what the app was doing the moment that setting
-            // went on -- the failure this file's other comments are about,
-            // in the one place that is a setting away rather than a platform
-            // away, so no `cfg!` would have caught it.
+            // a door of tracewing's own instead of refusing it. Until 0.1.0
+            // this tab had one pair, and said UDP was never caught whatever
+            // the setting -- which denied in the present tense what the app
+            // was doing the moment that setting went on: the failure this
+            // file's other comments are about, in the one place that is a
+            // setting away rather than a platform away, so no `cfg!` would
+            // have caught it.
+            //
+            // Both pairs name HTTP/3 as what is refused and the rest of UDP
+            // as what is passed on, because those are two different fates:
+            // the stack turns away a datagram to port 443 (`datagrams.rs`),
+            // which is what makes a program fall back to HTTP/2, and only
+            // the rest goes through. The old sentence joined them with "so",
+            // as if passing UDP on were why HTTP/3 failed.
             //
             // The macOS arm above needs no such pair: `local_source::catching`
             // is Windows and Linux only, so there is no HTTP/3 of ours to read
@@ -1047,7 +1055,7 @@ impl Traffic {
                     "Whatever a chosen program sends over TCP, whether or not it reads any proxy setting: this machine's traffic comes through tracewing's own adapter, and what is kept is the programs you chose."
                 ),
                 tr!(
-                    "UDP, which is passed straight through, so a server offering HTTP/3 is refused and the program falls back to HTTP/2; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead."
+                    "HTTP/3, which is refused so that the program falls back to HTTP/2 (Settings › Network can read it instead); other UDP, which is passed straight through; connections to this computer itself, which never leave it; and go run, which builds its program somewhere new each time: add the folder go build -o writes to instead."
                 ),
             ),
         }
