@@ -205,6 +205,33 @@ pub fn appearance_switch(now: Appearance) -> Stateful<Div> {
         .child(svg().path(icon).size(ui(14.)).text_color(rgb(c.text)))
 }
 
+/// The title bar's word that a newer tracewing is out, or ready to install,
+/// as packwing's: a click leads to About, where it is got. It takes the press
+/// itself, as the appearance switch does, so the bar under it neither moves
+/// the window nor, on Windows, counts it its own.
+pub fn update_badge(said: String, tooltip: String) -> Stateful<Div> {
+    let c = colors();
+    div()
+        .id("update-badge")
+        .flex()
+        .flex_shrink_0()
+        .items_center()
+        .h(ui(24.))
+        .px(ui(10.))
+        .rounded_full()
+        .bg(rgb(c.accent))
+        .hover(|s| s.opacity(0.88))
+        .text_color(rgb(c.on_accent))
+        .text_size(ui(12.))
+        .font_weight(FontWeight::SEMIBOLD)
+        .whitespace_nowrap()
+        .cursor_pointer()
+        .occlude()
+        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .tooltip(tip(tooltip))
+        .child(said)
+}
+
 /// Flat full-height buttons, as Windows draws them. They do nothing on a
 /// click themselves: as window control areas, Windows sees its own caption
 /// buttons there and GPUI carries out the press.
@@ -255,11 +282,13 @@ fn windows_buttons(window: &Window) -> Div {
 
 /// The window frame around `content`, with a title bar in `bg` above it where
 /// the app draws one: the window's name and buttons, and beside them the
-/// appearance `switch` ([`appearance_switch`]).
+/// appearance `switch` ([`appearance_switch`]) with the update `badge` before
+/// it if there is one ([`update_badge`]).
 pub fn window_chrome(
     content: Div,
     bg: Hsla,
     switch: Stateful<Div>,
+    badge: Option<Stateful<Div>>,
     window: &mut Window,
     cx: &App,
 ) -> Div {
@@ -273,7 +302,7 @@ pub fn window_chrome(
     let fullscreen = window.is_fullscreen();
     let (mac, windows) = (cfg!(target_os = "macos"), cfg!(target_os = "windows"));
     let row = || div().flex().items_center().h_full();
-    let mut switch = Some(switch);
+    let mut switch = Some(row().gap(ui(8.)).children(badge).child(switch));
     // On Windows the bar is no drag area itself: what is marked inside it is,
     // and the caption buttons come after, outside any. GPUI answers Windows
     // with the first control area painted under the pointer, and a parent

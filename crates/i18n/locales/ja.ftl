@@ -2984,26 +2984,26 @@ taee668c2 = ダウンロード中… { $got } / { $total }
 # Downloading… {got}
 t4873b921 = ダウンロード中… { $got }
 
-# tracewing {version} is ready
-t134f1b96 = tracewing { $version } の準備ができました
+# Update available
+t676409df = アップデートがあります
 
 # tracewing {version} is out
 tee561919 = tracewing { $version } が公開されました
 
-# Restart now
-t54001a7c = 今すぐ再起動
+# Restart to update
+tbbbbda26 = 再起動して更新
 
-# Update
-t6e230e94 = アップデート
-
-# Skip this version
-t2c33d756 = このバージョンをスキップ
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } の準備ができました
 
 # This build cannot tell of updates: it was built without the release keys.
 t5ae24518 = このビルドはアップデートを通知できません。リリース鍵なしでビルドされています。
 
 # tracewing {version} is ready: it is installed when you quit, or now with Restart now.
 t0dcfc991 = tracewing { $version } の準備ができました。終了するとき、または「今すぐ再起動」でインストールされます。
+
+# Restart now
+t54001a7c = 今すぐ再起動
 
 # tracewing {version} is out.
 t6889b195 = tracewing { $version } が公開されました。
@@ -3025,6 +3025,9 @@ t1ffa3279 = ターミナルで { $tool } を使ってインストールしてく
 
 # Copy the commands
 t09e7cd5b = コマンドをコピー
+
+# Skip this version
+t2c33d756 = このバージョンをスキップ
 
 # Could not look for a new version: {problem}
 t356c9a25 = 新しいバージョンを確認できませんでした: { $problem }

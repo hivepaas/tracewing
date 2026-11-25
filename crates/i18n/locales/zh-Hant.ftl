@@ -2984,26 +2984,26 @@ taee668c2 = 下載中… { $got } / { $total }
 # Downloading… {got}
 t4873b921 = 下載中… { $got }
 
-# tracewing {version} is ready
-t134f1b96 = tracewing { $version } 已就緒
+# Update available
+t676409df = 有可用更新
 
 # tracewing {version} is out
 tee561919 = tracewing { $version } 已推出
 
-# Restart now
-t54001a7c = 立即重新啟動
+# Restart to update
+tbbbbda26 = 重新啟動以更新
 
-# Update
-t6e230e94 = 更新
-
-# Skip this version
-t2c33d756 = 略過此版本
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } 已就緒
 
 # This build cannot tell of updates: it was built without the release keys.
 t5ae24518 = 此組建無法通知更新：它在建置時沒有版本金鑰。
 
 # tracewing {version} is ready: it is installed when you quit, or now with Restart now.
 t0dcfc991 = tracewing { $version } 已就緒：會在你結束時安裝，或按「立即重新啟動」馬上安裝。
+
+# Restart now
+t54001a7c = 立即重新啟動
 
 # tracewing {version} is out.
 t6889b195 = tracewing { $version } 已推出。
@@ -3025,6 +3025,9 @@ t1ffa3279 = 請在終端機中用 { $tool } 安裝：
 
 # Copy the commands
 t09e7cd5b = 複製指令
+
+# Skip this version
+t2c33d756 = 略過此版本
 
 # Could not look for a new version: {problem}
 t356c9a25 = 無法檢查新版本：{ $problem }

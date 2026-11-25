@@ -78,7 +78,7 @@ impl Render for InspectorWindow {
                 traffic.set_appearance(next, window, cx);
             });
         });
-        chrome::window_chrome(body, rgb(c.page).into(), switch, window, cx)
+        chrome::window_chrome(body, rgb(c.page).into(), switch, None, window, cx)
     }
 }
 

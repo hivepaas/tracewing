@@ -1,5 +1,5 @@
 //! Telling that a newer tracewing is out, in the window, from a signed list
-//! served on this machine: looked for, said in About and over the traffic,
+//! served on this machine: looked for, said in About and on the title bar,
 //! downloaded, checked, installed as tracewing quits, and skipped. And a list
 //! signed by keys this build does not trust, refused and said.
 //!
@@ -26,7 +26,7 @@ use tracewing::{
     engine::{Engine, EngineOptions},
     layout::SettingsSection,
     traffic::{Screen, Traffic},
-    updates::Stage,
+    updates::{Badge, Stage},
 };
 use tracewing_store::settings::StorageSettings;
 use tracewing_update::{Install, PackageTool, Version};
@@ -189,11 +189,23 @@ fn a_newer_release_is_told_of_downloaded_and_installed_as_tracewing_quits() {
     let kept = std::fs::read_to_string(dir.join("updates.json")).unwrap();
     assert!(kept.contains("v99.0.0"), "{kept}");
 
-    // And over the traffic, while looking is on.
+    // And on the title bar, while looking is on, as packwing says it: a
+    // badge, which leads to About. Looking turned off, it says nothing.
     window
         .update(cx, |view, _, cx| view.set_screen(Screen::Traffic, cx))
         .unwrap();
-    shot(cx, window, "updates-3-row");
+    assert_eq!(
+        read(cx, window, |v| v.update_badge_says()),
+        Some(Badge::Out(v99.clone()))
+    );
+    shot(cx, window, "updates-3-badge");
+    window
+        .update(cx, |view, _, _| view.engine.settings.check_updates = false)
+        .unwrap();
+    assert_eq!(read(cx, window, |v| v.update_badge_says()), None);
+    window
+        .update(cx, |view, _, _| view.engine.settings.check_updates = true)
+        .unwrap();
 
     // A copy from the release's .deb: the commands that install the next one,
     // with the list's SHA-256 for it.
@@ -231,6 +243,11 @@ fn a_newer_release_is_told_of_downloaded_and_installed_as_tracewing_quits() {
         read(cx, window, |v| v.updates.stage.clone()),
         Stage::Ready(v99.clone())
     );
+    // Ready: the badge says so, whether or not looking is on.
+    assert_eq!(
+        read(cx, window, |v| v.update_badge_says()),
+        Some(Badge::Ready(v99.clone()))
+    );
     shot(cx, window, "updates-6-ready");
     let staged = read(cx, window, |v| v.updates.state.staged.clone()).expect("staged");
     assert_eq!(std::fs::read(&staged.1).unwrap(), RELEASE);
@@ -245,7 +262,7 @@ fn a_newer_release_is_told_of_downloaded_and_installed_as_tracewing_quits() {
     assert!(!Path::new(&staged.1).exists(), "and its download is gone");
     assert_eq!(read(cx, window, |v| v.updates.state.staged.clone()), None);
 
-    // Skipped: not offered again, in About or over the traffic.
+    // Skipped: not offered again, in About or on the title bar.
     window
         .update(cx, |view, _, cx| {
             view.updates.stage = Stage::Idle;
@@ -253,6 +270,7 @@ fn a_newer_release_is_told_of_downloaded_and_installed_as_tracewing_quits() {
         })
         .unwrap();
     assert_eq!(read(cx, window, |v| v.updates.offered()), None);
+    assert_eq!(read(cx, window, |v| v.update_badge_says()), None);
     shot(cx, window, "updates-7-skipped");
 
     // A list this build does not trust the keys of: refused, and said.

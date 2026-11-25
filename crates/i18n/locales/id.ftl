@@ -2984,26 +2984,26 @@ taee668c2 = Mengunduh… { $got } dari { $total }
 # Downloading… {got}
 t4873b921 = Mengunduh… { $got }
 
-# tracewing {version} is ready
-t134f1b96 = tracewing { $version } siap
+# Update available
+t676409df = Pembaruan tersedia
 
 # tracewing {version} is out
 tee561919 = tracewing { $version } sudah keluar
 
-# Restart now
-t54001a7c = Mulai ulang sekarang
+# Restart to update
+tbbbbda26 = Mulai ulang untuk memperbarui
 
-# Update
-t6e230e94 = Perbarui
-
-# Skip this version
-t2c33d756 = Lewati versi ini
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } siap
 
 # This build cannot tell of updates: it was built without the release keys.
 t5ae24518 = Build ini tidak dapat memberi tahu pembaruan: build ini dibuat tanpa kunci rilis.
 
 # tracewing {version} is ready: it is installed when you quit, or now with Restart now.
 t0dcfc991 = tracewing { $version } siap: dipasang saat Anda keluar, atau sekarang dengan Mulai ulang sekarang.
+
+# Restart now
+t54001a7c = Mulai ulang sekarang
 
 # tracewing {version} is out.
 t6889b195 = tracewing { $version } sudah keluar.
@@ -3025,6 +3025,9 @@ t1ffa3279 = Pasang dengan { $tool }, di terminal:
 
 # Copy the commands
 t09e7cd5b = Salin perintahnya
+
+# Skip this version
+t2c33d756 = Lewati versi ini
 
 # Could not look for a new version: {problem}
 t356c9a25 = Tidak dapat mencari versi baru: { $problem }

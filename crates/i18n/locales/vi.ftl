@@ -2984,26 +2984,26 @@ taee668c2 = Đang tải về… { $got } trên { $total }
 # Downloading… {got}
 t4873b921 = Đang tải về… { $got }
 
-# tracewing {version} is ready
-t134f1b96 = tracewing { $version } đã sẵn sàng
+# Update available
+t676409df = Có bản cập nhật
 
 # tracewing {version} is out
 tee561919 = Đã có tracewing { $version }
 
-# Restart now
-t54001a7c = Khởi động lại ngay
+# Restart to update
+tbbbbda26 = Khởi động lại để cập nhật
 
-# Update
-t6e230e94 = Cập nhật
-
-# Skip this version
-t2c33d756 = Bỏ qua phiên bản này
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } đã sẵn sàng
 
 # This build cannot tell of updates: it was built without the release keys.
 t5ae24518 = Bản dựng này không báo được bản cập nhật: nó được dựng mà không có khóa phát hành.
 
 # tracewing {version} is ready: it is installed when you quit, or now with Restart now.
 t0dcfc991 = tracewing { $version } đã sẵn sàng: được cài khi bạn thoát, hoặc ngay bằng Khởi động lại ngay.
+
+# Restart now
+t54001a7c = Khởi động lại ngay
 
 # tracewing {version} is out.
 t6889b195 = Đã có tracewing { $version }.
@@ -3025,6 +3025,9 @@ t1ffa3279 = Cài bằng { $tool }, trong một terminal:
 
 # Copy the commands
 t09e7cd5b = Sao chép các lệnh
+
+# Skip this version
+t2c33d756 = Bỏ qua phiên bản này
 
 # Could not look for a new version: {problem}
 t356c9a25 = Không tìm được phiên bản mới: { $problem }

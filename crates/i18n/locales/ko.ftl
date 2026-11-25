@@ -2984,26 +2984,26 @@ taee668c2 = 다운로드 중… { $got } / { $total }
 # Downloading… {got}
 t4873b921 = 다운로드 중… { $got }
 
-# tracewing {version} is ready
-t134f1b96 = tracewing { $version } 준비됨
+# Update available
+t676409df = 업데이트 가능
 
 # tracewing {version} is out
 tee561919 = tracewing { $version } 출시됨
 
-# Restart now
-t54001a7c = 지금 다시 시작
+# Restart to update
+tbbbbda26 = 다시 시작하여 업데이트
 
-# Update
-t6e230e94 = 업데이트
-
-# Skip this version
-t2c33d756 = 이 버전 건너뛰기
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } 준비됨
 
 # This build cannot tell of updates: it was built without the release keys.
 t5ae24518 = 이 빌드는 업데이트를 알릴 수 없습니다. 릴리스 키 없이 빌드되었습니다.
 
 # tracewing {version} is ready: it is installed when you quit, or now with Restart now.
 t0dcfc991 = tracewing { $version } 준비가 끝났습니다. 종료할 때 설치되며, 지금 다시 시작을 누르면 바로 설치됩니다.
+
+# Restart now
+t54001a7c = 지금 다시 시작
 
 # tracewing {version} is out.
 t6889b195 = tracewing { $version }이(가) 출시되었습니다.
@@ -3025,6 +3025,9 @@ t1ffa3279 = 터미널에서 { $tool }(으)로 설치하세요:
 
 # Copy the commands
 t09e7cd5b = 명령 복사
+
+# Skip this version
+t2c33d756 = 이 버전 건너뛰기
 
 # Could not look for a new version: {problem}
 t356c9a25 = 새 버전을 확인할 수 없습니다: { $problem }

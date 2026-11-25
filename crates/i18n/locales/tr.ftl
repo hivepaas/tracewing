@@ -3076,26 +3076,26 @@ taee668c2 = İndiriliyor… { $got } / { $total }
 # Downloading… {got}
 t4873b921 = İndiriliyor… { $got }
 
-# tracewing {version} is ready
-t134f1b96 = tracewing { $version } hazır
+# Update available
+t676409df = Güncelleme var
 
 # tracewing {version} is out
 tee561919 = tracewing { $version } çıktı
 
-# Restart now
-t54001a7c = Şimdi yeniden başlat
+# Restart to update
+tbbbbda26 = Güncellemek için yeniden başlat
 
-# Update
-t6e230e94 = Güncelle
-
-# Skip this version
-t2c33d756 = Bu sürümü atla
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } hazır
 
 # This build cannot tell of updates: it was built without the release keys.
 t5ae24518 = Bu derleme güncellemeleri bildiremez: sürüm anahtarları olmadan derlenmiş.
 
 # tracewing {version} is ready: it is installed when you quit, or now with Restart now.
 t0dcfc991 = tracewing { $version } hazır: çıkarken ya da şimdi Şimdi yeniden başlat ile kurulur.
+
+# Restart now
+t54001a7c = Şimdi yeniden başlat
 
 # tracewing {version} is out.
 t6889b195 = tracewing { $version } çıktı.
@@ -3117,6 +3117,9 @@ t1ffa3279 = Bir terminalde { $tool } ile kurun:
 
 # Copy the commands
 t09e7cd5b = Komutları kopyala
+
+# Skip this version
+t2c33d756 = Bu sürümü atla
 
 # Could not look for a new version: {problem}
 t356c9a25 = Yeni sürüm aranamadı: { $problem }

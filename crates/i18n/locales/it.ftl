@@ -3129,26 +3129,26 @@ taee668c2 = Download in corso… { $got } di { $total }
 # Downloading… {got}
 t4873b921 = Download in corso… { $got }
 
-# tracewing {version} is ready
-t134f1b96 = tracewing { $version } è pronto
+# Update available
+t676409df = Aggiornamento disponibile
 
 # tracewing {version} is out
 tee561919 = È uscito tracewing { $version }
 
-# Restart now
-t54001a7c = Riavvia ora
+# Restart to update
+tbbbbda26 = Riavvia per aggiornare
 
-# Update
-t6e230e94 = Aggiorna
-
-# Skip this version
-t2c33d756 = Salta questa versione
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } è pronto
 
 # This build cannot tell of updates: it was built without the release keys.
 t5ae24518 = Questa build non può segnalare aggiornamenti: è stata compilata senza le chiavi delle release.
 
 # tracewing {version} is ready: it is installed when you quit, or now with Restart now.
 t0dcfc991 = tracewing { $version } è pronto: viene installato quando esci, o subito con Riavvia ora.
+
+# Restart now
+t54001a7c = Riavvia ora
 
 # tracewing {version} is out.
 t6889b195 = È uscito tracewing { $version }.
@@ -3170,6 +3170,9 @@ t1ffa3279 = Installalo con { $tool }, in un terminale:
 
 # Copy the commands
 t09e7cd5b = Copia i comandi
+
+# Skip this version
+t2c33d756 = Salta questa versione
 
 # Could not look for a new version: {problem}
 t356c9a25 = Impossibile cercare una nuova versione: { $problem }
