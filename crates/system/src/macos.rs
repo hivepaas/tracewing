@@ -140,6 +140,14 @@ fn on_off(value: &str) -> &'static str {
 
 /// Goes through each service and each protocol on its own: the user may have
 /// changed one of them since, and that choice stays.
+///
+/// A service is put back only while its proxy still names tracewing, so the
+/// proxy is what goes back last: the rest first (the automatic proxy,
+/// discovery, the bypass list), then each protocol, the secure one at the
+/// very end since that is the one `proxy_is` reads. A recovery cut short
+/// anywhere before then leaves a service that still names tracewing, and the
+/// next one puts all of it back. The other way round, one ended between the
+/// proxy and the bypass list left the list as tracewing's for good.
 pub fn restore_proxy(saved: &Saved, addr: SocketAddr) -> Result<()> {
     let (host, port) = (addr.ip().to_string(), addr.port().to_string());
     for i in 0.. {
@@ -147,7 +155,7 @@ pub fn restore_proxy(saved: &Saved, addr: SocketAddr) -> Result<()> {
         if service.is_empty() {
             break;
         }
-        let mut still_ours = false;
+        let mut ours = Vec::new();
         for (key, get, set, state) in [
             ("web", "-getwebproxy", "-setwebproxy", "-setwebproxystate"),
             (
@@ -158,24 +166,14 @@ pub fn restore_proxy(saved: &Saved, addr: SocketAddr) -> Result<()> {
             ),
         ] {
             let now = networksetup(&[get, service])?;
-            if field(&now, "Enabled") != "Yes"
-                || field(&now, "Server") != host
-                || field(&now, "Port") != port
+            if field(&now, "Enabled") == "Yes"
+                && field(&now, "Server") == host
+                && field(&now, "Port") == port
             {
-                continue;
+                ours.push((key, set, state));
             }
-            still_ours = true;
-            // This also turns the protocol on, so the state comes after it.
-            networksetup(&[
-                set,
-                service,
-                saved.get(&format!("{i}.{key}.server")),
-                saved.get(&format!("{i}.{key}.port")),
-            ])?;
-            let enabled = on_off(saved.get(&format!("{i}.{key}.enabled")));
-            networksetup(&[state, service, enabled])?;
         }
-        if !still_ours {
+        if ours.is_empty() {
             continue;
         }
         let url = saved.get(&format!("{i}.auto.url"));
@@ -195,6 +193,18 @@ pub fn restore_proxy(saved: &Saved, addr: SocketAddr) -> Result<()> {
             args.extend(bypass.split(' '));
         }
         networksetup(&args)?;
+
+        for (key, set, state) in ours {
+            // This also turns the protocol on, so the state comes after it.
+            networksetup(&[
+                set,
+                service,
+                saved.get(&format!("{i}.{key}.server")),
+                saved.get(&format!("{i}.{key}.port")),
+            ])?;
+            let enabled = on_off(saved.get(&format!("{i}.{key}.enabled")));
+            networksetup(&[state, service, enabled])?;
+        }
     }
     Ok(())
 }
