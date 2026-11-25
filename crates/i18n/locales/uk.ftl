@@ -3214,26 +3214,26 @@ taee668c2 = Завантаження… { $got } з { $total }
 # Downloading… {got}
 t4873b921 = Завантаження… { $got }
 
-# tracewing {version} is ready
-t134f1b96 = tracewing { $version } готовий
+# Update available
+t676409df = Є оновлення
 
 # tracewing {version} is out
 tee561919 = Вийшов tracewing { $version }
 
-# Restart now
-t54001a7c = Перезапустити
+# Restart to update
+tbbbbda26 = Перезапустіть, щоб оновити
 
-# Update
-t6e230e94 = Оновити
-
-# Skip this version
-t2c33d756 = Пропустити цю версію
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } готовий
 
 # This build cannot tell of updates: it was built without the release keys.
 t5ae24518 = Ця збірка не може повідомляти про оновлення: її зібрано без ключів випусків.
 
 # tracewing {version} is ready: it is installed when you quit, or now with Restart now.
 t0dcfc991 = tracewing { $version } готовий: його буде встановлено під час виходу або одразу кнопкою «Перезапустити».
+
+# Restart now
+t54001a7c = Перезапустити
 
 # tracewing {version} is out.
 t6889b195 = Вийшов tracewing { $version }.
@@ -3255,6 +3255,9 @@ t1ffa3279 = Установіть його за допомогою { $tool } у �
 
 # Copy the commands
 t09e7cd5b = Копіювати команди
+
+# Skip this version
+t2c33d756 = Пропустити цю версію
 
 # Could not look for a new version: {problem}
 t356c9a25 = Не вдалося перевірити нову версію: { $problem }

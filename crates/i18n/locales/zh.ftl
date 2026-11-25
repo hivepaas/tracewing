@@ -2984,26 +2984,26 @@ taee668c2 = 正在下载… { $got } / { $total }
 # Downloading… {got}
 t4873b921 = 正在下载… { $got }
 
-# tracewing {version} is ready
-t134f1b96 = tracewing { $version } 已就绪
+# Update available
+t676409df = 有可用更新
 
 # tracewing {version} is out
 tee561919 = tracewing { $version } 已发布
 
-# Restart now
-t54001a7c = 立即重启
+# Restart to update
+tbbbbda26 = 重启以更新
 
-# Update
-t6e230e94 = 更新
-
-# Skip this version
-t2c33d756 = 跳过此版本
+# tracewing {version} is ready
+t134f1b96 = tracewing { $version } 已就绪
 
 # This build cannot tell of updates: it was built without the release keys.
 t5ae24518 = 此构建无法提示更新：它在构建时没有发布密钥。
 
 # tracewing {version} is ready: it is installed when you quit, or now with Restart now.
 t0dcfc991 = tracewing { $version } 已就绪：会在你退出时安装，或点击“立即重启”马上安装。
+
+# Restart now
+t54001a7c = 立即重启
 
 # tracewing {version} is out.
 t6889b195 = tracewing { $version } 已发布。
@@ -3025,6 +3025,9 @@ t1ffa3279 = 请在终端中用 { $tool } 安装：
 
 # Copy the commands
 t09e7cd5b = 复制命令
+
+# Skip this version
+t2c33d756 = 跳过此版本
 
 # Could not look for a new version: {problem}
 t356c9a25 = 无法检查新版本：{ $problem }

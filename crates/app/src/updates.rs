@@ -1,7 +1,8 @@
 //! Telling that a newer tracewing is out, and installing it (see
 //! `tracewing_update` and docs/updates.md): a look once a day while
 //! `check_updates` is on, or when asked in Settings › About. What is offered
-//! shows as a row over the traffic and in About; it never takes the keyboard.
+//! shows as a badge on the title bar, which leads to About, as packwing's
+//! does; it never takes the keyboard.
 //!
 //! A copy the app can replace (one its installer put on Windows, an `.app` on
 //! macOS) downloads the release when told to, checks it against the signed
@@ -26,7 +27,6 @@ use crate::about_page::button;
 use crate::colors::colors;
 use crate::text_size::ui;
 use crate::traffic::Traffic;
-use crate::widgets::{Reachable, icon};
 
 /// How often a look is due, and how often whether one is due is asked.
 const CHECK_EVERY: Duration = Duration::from_secs(24 * 60 * 60);
@@ -101,9 +101,13 @@ pub struct Updates {
     pub stage: Stage,
     /// Quitting to install the update starts the app again.
     relaunch: bool,
-    /// The release whose row over the traffic was closed: back at the next
-    /// start.
-    row_closed: Option<Version>,
+}
+
+/// What the title bar's badge says.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Badge {
+    Out(Version),
+    Ready(Version),
 }
 
 impl Updates {
@@ -119,7 +123,6 @@ impl Updates {
             problem: None,
             stage: Stage::Idle,
             relaunch: false,
-            row_closed: None,
         };
         if let Some((version, file)) = updates.state.staged.clone() {
             let path = PathBuf::from(&file);
@@ -429,94 +432,34 @@ impl Traffic {
         cx.notify();
     }
 
-    /// Closes the row over the traffic until the next start.
-    fn close_update_row(&mut self, v: Version, cx: &mut Context<Self>) {
-        self.updates.row_closed = Some(v);
-        cx.notify();
+    /// What the title bar says, if anything: a release that is ready, or,
+    /// while looking for updates is on, one that is out. Nothing while one
+    /// downloads: About shows that, and it was asked for there.
+    pub fn update_badge_says(&self) -> Option<Badge> {
+        match &self.updates.stage {
+            Stage::Ready(v) => Some(Badge::Ready(v.clone())),
+            Stage::Downloading(..) => None,
+            _ if self.engine.settings.check_updates => self.updates.offered().map(Badge::Out),
+            _ => None,
+        }
     }
 
-    /// The row over the traffic: a release that is ready, or, while looking
-    /// for updates is on, one that is out. Nothing while one downloads: About
-    /// shows that, and it was asked for there.
-    pub(crate) fn render_update_row(&self, cx: &mut Context<Self>) -> Option<gpui::Stateful<Div>> {
-        let (version, ready) = match &self.updates.stage {
-            Stage::Ready(v) => (v.clone(), true),
-            Stage::Downloading(..) => return None,
-            _ if self.engine.settings.check_updates => (self.updates.offered()?, false),
-            _ => return None,
-        };
-        if self.updates.row_closed.as_ref() == Some(&version) {
-            return None;
-        }
-        let c = colors();
-        let said = version.to_string();
-        let row = div()
-            .id("update-row")
-            .flex()
-            .flex_row()
-            .flex_wrap()
-            .items_center()
-            .gap(ui(10.))
-            .px(ui(14.))
-            .py(ui(8.))
-            .rounded(ui(16.))
-            .bg(rgb(c.tonal))
-            .text_color(rgb(c.on_tonal))
-            .child(div().size(ui(8.)).rounded_full().bg(rgb(c.accent)))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .font_weight(FontWeight::BOLD)
-                    .child(if ready {
-                        tr!("tracewing {version} is ready", version = said)
-                    } else {
-                        tr!("tracewing {version} is out", version = said)
-                    }),
-            );
-        let row = if ready {
-            row.child(
-                button("update-row-restart", tr!("Restart now"), true)
-                    .bg(rgb(c.accent))
-                    .text_color(rgb(c.on_accent))
-                    .on_click(cx.listener(|this, _, _, cx| this.restart_to_update(cx))),
-            )
-        } else {
-            row.child(
-                button("update-row-open", tr!("Update"), true)
-                    .bg(rgb(c.accent))
-                    .text_color(rgb(c.on_accent))
-                    .on_click(cx.listener(|this, _, _, cx| this.show_about(cx))),
-            )
-            .child(
-                div()
-                    .id("update-row-skip")
-                    .cursor_pointer()
-                    .reachable()
-                    .text_size(ui(12.))
-                    .hover(|s| s.underline())
-                    .on_click(cx.listener(|this, _, _, cx| this.skip_update(cx)))
-                    .child(tr!("Skip this version")),
-            )
+    /// The title bar's badge, if there is something to say: it leads to
+    /// About, where the update is got.
+    pub(crate) fn update_badge(&self, cx: &mut Context<Self>) -> Option<gpui::Stateful<Div>> {
+        let (said, tooltip) = match self.update_badge_says()? {
+            Badge::Out(v) => (
+                tr!("Update available"),
+                tr!("tracewing {version} is out", version = v.to_string()),
+            ),
+            Badge::Ready(v) => (
+                tr!("Restart to update"),
+                tr!("tracewing {version} is ready", version = v.to_string()),
+            ),
         };
         Some(
-            row.child(
-                div()
-                    .id("update-row-close")
-                    .size(ui(24.))
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .rounded(ui(12.))
-                    .cursor_pointer()
-                    .reachable()
-                    .on_click(
-                        cx.listener(move |this, _, _, cx| {
-                            this.close_update_row(version.clone(), cx)
-                        }),
-                    )
-                    .child(icon("close", 12., c.on_tonal)),
-            ),
+            crate::chrome::update_badge(said, tooltip)
+                .on_click(cx.listener(|this, _, _, cx| this.show_about(cx))),
         )
     }
 

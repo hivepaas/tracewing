@@ -2905,7 +2905,9 @@ impl Traffic {
             )
     }
 
-    fn render_rail(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    /// The rail down the left, with a dot on the logo when `update` (a newer
+    /// tracewing, with no title bar to say it).
+    fn render_rail(&self, update: bool, cx: &mut Context<Self>) -> impl IntoElement {
         let c = colors();
         let current = self.screen;
         let waiting = self.paused_count();
@@ -2960,9 +2962,24 @@ impl Traffic {
                     .justify_center()
                     .cursor_pointer()
                     .reachable()
+                    .relative()
                     .tooltip(tip(tr!("About")))
                     .bg(rgb(c.accent))
                     .child(icon("logo", 24., c.on_accent))
+                    .when(update, |d| {
+                        d.child(
+                            div()
+                                .id("rail-update-dot")
+                                .absolute()
+                                .top(px(-2.))
+                                .right(px(-2.))
+                                .size(ui(12.))
+                                .rounded_full()
+                                .border_2()
+                                .border_color(rgb(c.page))
+                                .bg(rgb(c.record)),
+                        )
+                    })
                     .on_click(cx.listener(|this, _, _, cx| this.show_about(cx))),
             )
             .child(item("rail-setup", tr!("Set up"), "setup", Screen::Setup))
@@ -3230,9 +3247,6 @@ impl Render for Traffic {
         let banner = self
             .render_viewing_banner(cx)
             .map(IntoElement::into_any_element);
-        let update_row = self
-            .render_update_row(cx)
-            .map(IntoElement::into_any_element);
         let rules = (self.screen == Screen::Rules).then(|| {
             let bars = self.page_bars.rules.clone();
             bars.in_place(self.render_rules(cx))
@@ -3338,7 +3352,12 @@ impl Render for Traffic {
             .text_color(rgb(c.text))
             .font_family(crate::ui_font())
             .text_size(ui(13.))
-            .child(self.render_rail(cx))
+            .child(self.render_rail(
+                // Where the system draws the title bar, the badge has no
+                // place: a dot on the logo, which leads to About, says it.
+                !chrome::draws_title_bar(window) && self.update_badge_says().is_some(),
+                cx,
+            ))
             .child(
                 div()
                     .flex_1()
@@ -3361,7 +3380,6 @@ impl Render for Traffic {
                     .when_some(settings, |d, settings| d.child(settings))
                     .when(self.screen == Screen::Traffic, |d| {
                         d.child(self.render_toolbar(cx))
-                            .children(update_row)
                             .children(banner)
                             .children(picking)
                             .child(
@@ -3402,7 +3420,8 @@ impl Render for Traffic {
                 this.set_appearance(next, window, cx);
             },
         ));
-        chrome::window_chrome(body, rgb(c.page).into(), switch, window, cx)
+        let badge = self.update_badge(cx);
+        chrome::window_chrome(body, rgb(c.page).into(), switch, badge, window, cx)
     }
 }
 

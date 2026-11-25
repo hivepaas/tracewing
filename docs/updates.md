@@ -1,7 +1,7 @@
 # Updates
 
-tracewing tells its user when a newer version is out: a row over the traffic,
-and a line in *Settings › About*. It looks once a day while *Look for a new
+tracewing tells its user when a newer version is out: a badge on the title bar,
+as packwing's, and a line in *Settings › About*. It looks once a day while *Look for a new
 version once a day* is on (`check_updates` in `settings.toml`, on by default),
 and when asked (*Check now*). Nothing is downloaded or installed until the user
 says so (see [Installing](#installing)).
@@ -12,9 +12,12 @@ signed list below, made straight and not through any proxy (the system's or
 address and nothing else. The window tests never make it: a build for them
 looks only at a list a test names.
 
-The row never takes the keyboard. *Update* opens About, *Skip this version*
-offers it no more, and ✕ closes the row until the next start. With the daily
-look off, the row shows only a release already downloaded.
+The badge never takes the keyboard. It says *Update available*, or *Restart to
+update* once a release is downloaded, and a click on it opens About, where the
+release is got, installed or skipped (*Skip this version* offers it no more).
+With the daily look off, it shows only a release already downloaded. Where the
+system draws the title bar (X11 with no client-side decorations), a dot on the
+logo at the top of the rail says it instead, and the logo opens About.
 
 The design is shellwing's (its `docs/updates.md`), ported: the same list, the
 same envelope, the same keys, under a context of tracewing's own.
