@@ -1,5 +1,10 @@
 //! `tracewing`: the window. The proxy starts with it and stops with it.
 
+// A program with a window on Windows: none of a console opens beside it. The
+// command line reaches a terminal through `tracewing.com` (crates/console),
+// and through [`attach_console`].
+#![cfg_attr(windows, windows_subsystem = "windows")]
+
 use anyhow::Result;
 use gpui::{AppContext as _, TitlebarOptions, WindowDecorations, WindowOptions, px, size};
 use std::path::PathBuf;
@@ -45,8 +50,35 @@ fn helper_command(args: &[String]) -> Option<Result<()>> {
     }
 }
 
+/// A command run from a terminal on Windows speaks in it: this program has
+/// no console of its own (`windows_subsystem`), so it takes the one of the
+/// program that started it, which is `tracewing.com`, or the terminal itself
+/// when `tracewing.exe` is named. Its own handles stay as they were given,
+/// so output sent to a file or a pipe still goes there; attached, the
+/// terminal's Ctrl+C reaches it too. Started by a program with no console
+/// (Explorer, the Start menu), it does nothing.
+///
+/// The command line alone: a helper started from the window (the watchdog,
+/// the recovery) is to outlive any terminal, and `mcp` talks over the pipes
+/// it was given.
+#[cfg(windows)]
+fn attach_console() {
+    const ATTACH_PARENT_PROCESS: u32 = u32::MAX;
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn AttachConsole(process: u32) -> i32;
+    }
+    // SAFETY: takes a number, and fails harmlessly when there is nothing to
+    // attach to.
+    unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
+    #[cfg(windows)]
+    if args.get(1).is_some_and(|a| tracewing::cli::is_command(a)) {
+        attach_console();
+    }
     if let Some(result) = helper_command(&args) {
         return result;
     }

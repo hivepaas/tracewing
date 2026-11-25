@@ -299,11 +299,11 @@ fn whose() -> Result<String> {
 /// the user's password** (S4U), and that it repeats for ever rather than for
 /// a day.
 ///
-/// S4U is not a detail. tracewing is one program for the window and the
-/// command line, so it is built for the console; a task running in the user's
-/// own session would put a console window on their screen once a minute, for
-/// as long as the system proxy was on. S4U has no session and no desktop, so
-/// there is nothing to see.
+/// S4U is not a detail. A task running in the user's own session would start
+/// a program on their desktop once a minute, for as long as the system proxy
+/// was on, and up to 0.1.1, when tracewing.exe was built for the console, a
+/// console window with it. S4U has no session and no desktop, so there is
+/// nothing to see.
 fn task_xml(command: &[String], user: &str) -> Result<String> {
     let (program, args) = command.split_first().context("no program for the timer")?;
     let arguments = args

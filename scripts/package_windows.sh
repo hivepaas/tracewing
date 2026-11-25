@@ -5,15 +5,18 @@
 # with NSIS 3 installed (or makensis on PATH; on Linux the nsis package's
 # works too).
 #
-#   cargo build --release --locked -p tracewing
+#   cargo build --release --locked -p tracewing -p tracewing-console
 #   scripts/package_windows.sh
 #
 #   dist/tracewing_0.1.0_windows_x86_64-setup.exe
 #   dist/tracewing_0.1.0_windows_x86_64.zip
 #
 # One file is the program: the window, the proxy, the command line and the MCP
-# server are all tracewing.exe. The installer puts its folder in the PATH, so a
-# terminal opened after runs `tracewing capture` (installer.nsi).
+# server are all tracewing.exe, built with a window and no console. Beside it
+# goes tracewing.com (crates/console), built for the console, which a terminal
+# finds first for `tracewing`, and which runs tracewing.exe in it and waits.
+# The installer puts their folder in the PATH, so a terminal opened after runs
+# `tracewing capture` (installer.nsi).
 #
 # Beside it goes Wintun's own wintun.dll, which the local way in (capture
 # with no proxy settings) loads from the program's folder: WireGuard LLC's
@@ -25,7 +28,8 @@
 # Neither is signed (no Authenticode certificate yet): SmartScreen asks the
 # first time the installer runs (More info > Run anyway).
 #
-# Environment: EXE (default target/release/tracewing.exe), ARCH (default
+# Environment: EXE (default target/release/tracewing.exe), COM (default
+# tracewing-console.exe beside EXE), ARCH (default
 # x86_64), DIST (default dist), MAKENSIS (default: on PATH, else where NSIS
 # installs itself), LICENSES (the third-party licenses; default: made by
 # cargo-about), WINTUN_ZIP (wintun-0.14.1.zip; default: downloaded once into
@@ -39,6 +43,7 @@ cd "$ROOT"
 VERSION="$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)"
 ARCH="${ARCH:-x86_64}"
 EXE="$(realpath "${EXE:-target/release/tracewing.exe}")"
+COM="$(realpath "${COM:-$(dirname "$EXE")/tracewing-console.exe}")"
 DIST="${DIST:-dist}"
 WORK="target/package-windows"
 
@@ -50,6 +55,7 @@ if [ -z "${MAKENSIS:-}" ]; then
 fi
 [ -n "$MAKENSIS" ] || { echo "no makensis: install NSIS 3 (choco install nsis)" >&2; exit 1; }
 [ -f "$EXE" ] || { echo "no build at $EXE: cargo build --release -p tracewing" >&2; exit 1; }
+[ -f "$COM" ] || { echo "no build at $COM: cargo build --release -p tracewing-console" >&2; exit 1; }
 rm -rf "$WORK"
 mkdir -p "$WORK" "$DIST"
 DIST="$(realpath "$DIST")"
@@ -99,7 +105,7 @@ SETUP="$DIST/tracewing_${VERSION}_windows_${ARCH}-setup.exe"
 # The paths are Windows' already: MSYS is not to rewrite them.
 MSYS2_ARG_CONV_EXCL='*' "$MAKENSIS" -V3 \
 	"-DVERSION=$VERSION" "-DFILEVERSION=$FILEVERSION" \
-	"-DEXE=$(native "$EXE")" "-DLICENSES=$(native "$LICENSES")" \
+	"-DEXE=$(native "$EXE")" "-DCOM=$(native "$COM")" "-DLICENSES=$(native "$LICENSES")" \
 	"-DWINTUN=$(native "$WINTUN_DLL")" "-DWINTUN_LICENSE=$(native "$WINTUN_LICENSE")" \
 	"-DOUT=$(native "$SETUP")" \
 	"$(native "$ROOT/packaging/windows/installer.nsi")"
@@ -110,6 +116,7 @@ MSYS2_ARG_CONV_EXCL='*' "$MAKENSIS" -V3 \
 NAME="tracewing-${VERSION}-windows-${ARCH}"
 mkdir -p "$WORK/$NAME"
 cp "$EXE" "$WORK/$NAME/tracewing.exe"
+cp "$COM" "$WORK/$NAME/tracewing.com"
 cp LICENSE "$WORK/$NAME/LICENSE.txt"
 cp "$LICENSES" "$WORK/$NAME/THIRD-PARTY-LICENSES.txt"
 cp "$WINTUN_DLL" "$WORK/$NAME/wintun.dll"

@@ -47,7 +47,7 @@ if ($ThisMachineMayBeChanged) {
 
 $target = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { 'target' }
 if (-not $SkipBuild) {
-    cargo build --release --locked -p tracewing
+    cargo build --release --locked -p tracewing -p tracewing-console
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 $dist = "$target\e2e-dist"
