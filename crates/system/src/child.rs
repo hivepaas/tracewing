@@ -387,7 +387,8 @@ fn as_the_shell(command: std::process::Command) -> anyhow::Result<()> {
     use windows_sys::Win32::{
         Foundation::{CloseHandle, HANDLE},
         Security::{
-            DuplicateTokenEx, SecurityImpersonation, TOKEN_DUPLICATE, TOKEN_QUERY, TokenPrimary,
+            DuplicateTokenEx, SecurityImpersonation, TOKEN_ADJUST_DEFAULT, TOKEN_ADJUST_SESSIONID,
+            TOKEN_ASSIGN_PRIMARY, TOKEN_DUPLICATE, TOKEN_QUERY, TokenPrimary,
         },
         System::Threading::{
             CREATE_UNICODE_ENVIRONMENT, OpenProcess, OpenProcessToken, PROCESS_INFORMATION,
@@ -456,10 +457,21 @@ fn as_the_shell(command: std::process::Command) -> anyhow::Result<()> {
     let mut ours: HANDLE = std::ptr::null_mut();
     // SAFETY: a token of ours, duplicated as a primary one so that it can
     // start a process rather than only impersonate.
+    //
+    // With the rights `CreateProcessWithTokenW` needs of the token it is
+    // handed: assigning it as a process's primary token above all. Asking for
+    // `0` here means "the rights of the handle copied", which was opened for
+    // duplicating and reading only, and every start then failed with "Access
+    // is denied" (os error 5) -- an elevated tracewing on Windows could open
+    // no browser and no terminal at all (0.1.0 to 0.1.2).
     let copied = unsafe {
         DuplicateTokenEx(
             theirs,
-            0,
+            TOKEN_QUERY
+                | TOKEN_DUPLICATE
+                | TOKEN_ASSIGN_PRIMARY
+                | TOKEN_ADJUST_DEFAULT
+                | TOKEN_ADJUST_SESSIONID,
             std::ptr::null(),
             SecurityImpersonation,
             TokenPrimary,
