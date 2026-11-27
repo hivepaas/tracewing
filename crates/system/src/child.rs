@@ -804,8 +804,17 @@ mod tests {
         let mut command = std::process::Command::new("cmd");
         command.args([
             "/c".to_owned(),
-            format!("whoami /groups > \"{}\"", out.display()),
+            // No quotes around the path: the argument is quoted for
+            // `CommandLineToArgvW`, which writes a quote inside it as `\"`,
+            // and `cmd` reads that as part of the file name -- the redirect
+            // then fails and nothing is written.
+            format!("whoami /groups > {}", out.display()),
         ]);
+        assert!(
+            !out.display().to_string().contains(' '),
+            "{} has a space in it, which this redirect cannot take unquoted",
+            out.display()
+        );
         start(command, want).expect("start the child");
         let deadline = Instant::now() + Duration::from_secs(20);
         loop {
